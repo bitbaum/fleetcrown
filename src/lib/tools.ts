@@ -1,0 +1,36 @@
+import { exec } from "child_process";
+import { homedir } from "os";
+
+const HOME = homedir();
+const TOOL_PATH = [
+  `${HOME}/.nvm/versions/node/v22.22.0/bin`,
+  "/home/linuxbrew/.linuxbrew/bin",
+  `${HOME}/.local/bin`,
+  `${HOME}/go/bin`,
+  "/usr/local/bin",
+  "/usr/bin",
+  "/bin",
+].join(":");
+
+export function runTool(
+  command: string,
+  timeout = 15000,
+): Promise<{ ok: boolean; data?: string; error?: string }> {
+  return new Promise((resolve) => {
+    exec(
+      command,
+      {
+        timeout,
+        shell: "/bin/bash",
+        env: { ...process.env, PATH: TOOL_PATH, HOME },
+      },
+      (err, stdout, stderr) => {
+        if (err) {
+          resolve({ ok: false, error: err.message });
+        } else {
+          resolve({ ok: true, data: stdout.trim() });
+        }
+      },
+    );
+  });
+}

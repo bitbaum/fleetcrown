@@ -7,7 +7,7 @@ import { homedir } from "os";
 import * as schema from "../src/db/schema";
 
 const HOME = homedir();
-const DATABASE_URL = process.env.DATABASE_URL ?? `postgresql://g:cockpit_local@127.0.0.1:5432/cockpit`;
+const DATABASE_URL = process.env.DATABASE_URL!;
 
 function safeDate(v: string | null | undefined): Date | null {
   if (!v) return null;
