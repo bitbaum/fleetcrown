@@ -1,11 +1,5 @@
 import type { PersonWithAttributes } from "@/db/queries/people";
-import { MessageCircle, Mail, Send } from "lucide-react";
-
-const CHANNEL_ICONS: Record<string, { icon: typeof MessageCircle; label: string }> = {
-  "channel:whatsapp": { icon: MessageCircle, label: "WhatsApp" },
-  "channel:telegram": { icon: Send, label: "Telegram" },
-  "channel:email": { icon: Mail, label: "Email" },
-};
+import { CHANNEL_CONFIG } from "@/config/channels";
 
 export function PersonCard({
   person,
@@ -34,12 +28,12 @@ export function PersonCard({
         </div>
         <div className="flex gap-1 shrink-0">
           {channels.map((ch) => {
-            const config = CHANNEL_ICONS[ch];
+            const config = CHANNEL_CONFIG[ch];
             if (!config) return null;
             const Icon = config.icon;
             return (
               <span key={ch} title={config.label}>
-                <Icon className="h-3.5 w-3.5 text-white/30" />
+                <Icon className={`h-3.5 w-3.5 ${config.color}`} />
               </span>
             );
           })}

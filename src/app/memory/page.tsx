@@ -1,44 +1,30 @@
 import { Brain, Database, Link2 } from "lucide-react";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats } from "@/db/queries/memory";
 
 export default async function MemoryPage() {
   const stats = await getEntityStats();
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Memory</h1>
-        <p className="text-sm text-white/40 mt-1">What Ivy knows — the knowledge graph</p>
-      </div>
-
+    <PageLayout title="Memory" subtitle="What Ivy knows — the knowledge graph">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Database className="h-4 w-4 text-white/50" />
-            <span className="text-xs text-white/40 uppercase tracking-wider">Entities</span>
-          </div>
+        <Card>
+          <CardHeader icon={Database} title="Entities" />
           <div className="text-2xl font-bold">{stats.totalEntities}</div>
-        </div>
-
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Link2 className="h-4 w-4 text-white/50" />
-            <span className="text-xs text-white/40 uppercase tracking-wider">Relations</span>
-          </div>
+        </Card>
+        <Card>
+          <CardHeader icon={Link2} title="Relations" />
           <div className="text-2xl font-bold">{stats.totalRelations}</div>
-        </div>
-
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Brain className="h-4 w-4 text-white/50" />
-            <span className="text-xs text-white/40 uppercase tracking-wider">Types</span>
-          </div>
+        </Card>
+        <Card>
+          <CardHeader icon={Brain} title="Types" />
           <div className="text-2xl font-bold">{stats.entityTypes.length}</div>
-        </div>
+        </Card>
       </div>
 
-      <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-        <h2 className="text-sm font-medium text-white/70 mb-4">Entity Distribution</h2>
+      <Card>
+        <CardHeader icon={Database} title="Entity Distribution" />
         <div className="space-y-3">
           {stats.entityTypes.map((row) => {
             const pct = Math.round((Number(row.count) / stats.totalEntities) * 100);
@@ -58,7 +44,7 @@ export default async function MemoryPage() {
             );
           })}
         </div>
-      </div>
-    </div>
+      </Card>
+    </PageLayout>
   );
 }

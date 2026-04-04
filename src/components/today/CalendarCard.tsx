@@ -1,44 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Calendar } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/card";
+import { useFetch } from "@/hooks/use-fetch";
 
 type CalendarEvent = {
   summary?: string;
   title?: string;
   start?: string;
   startTime?: string;
-  end?: string;
-  endTime?: string;
   location?: string;
 };
 
 export function CalendarCard() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/calendar")
-      .then((res) => res.json())
-      .then((data) => {
-        setEvents(Array.isArray(data.events) ? data.events : []);
-        if (data.error) setError(data.error);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, error } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar");
+  const events = data?.events ?? [];
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Calendar className="h-4 w-4 text-white/50" />
-        <h3 className="text-sm font-medium text-white/70">Calendar</h3>
-      </div>
+    <Card>
+      <CardHeader icon={Calendar} title="Calendar" />
       {loading ? (
         <div className="text-sm text-white/30 animate-pulse">Loading...</div>
-      ) : error && events.length === 0 ? (
-        <div className="text-sm text-white/30">{error}</div>
+      ) : error || (data?.error && events.length === 0) ? (
+        <div className="text-sm text-white/30">{error ?? data?.error}</div>
       ) : events.length === 0 ? (
         <div className="text-sm text-white/30">No events today</div>
       ) : (
@@ -58,7 +42,7 @@ export function CalendarCard() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

@@ -1,4 +1,5 @@
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
 import { formatDistanceToNow } from "date-fns";
 
@@ -6,12 +7,12 @@ export async function CommitmentsCard() {
   const items = await getActiveCommitments();
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <CheckCircle className="h-4 w-4 text-white/50" />
-        <h3 className="text-sm font-medium text-white/70">Commitments</h3>
-        <span className="ml-auto text-xs text-white/30">{items.length} active</span>
-      </div>
+    <Card>
+      <CardHeader
+        icon={CheckCircle}
+        title="Commitments"
+        right={<span className="text-xs text-white/30">{items.length} active</span>}
+      />
       {items.length === 0 ? (
         <div className="text-sm text-white/30">No active commitments</div>
       ) : (
@@ -42,6 +43,6 @@ export async function CommitmentsCard() {
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,8 +1,7 @@
+import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { commitments, events, subscriptions } from "@/db/schema";
 import { eq, and, lte, gte, sql } from "drizzle-orm";
-
-const GEORGE_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 export async function getActiveCommitments() {
   return db
@@ -10,7 +9,7 @@ export async function getActiveCommitments() {
     .from(commitments)
     .where(
       and(
-        eq(commitments.userId, GEORGE_USER_ID),
+        eq(commitments.userId, DEFAULT_USER_ID),
         eq(commitments.status, "active"),
       ),
     )
@@ -27,7 +26,7 @@ export async function getUpcomingEvents(days = 7) {
     .from(events)
     .where(
       and(
-        eq(events.userId, GEORGE_USER_ID),
+        eq(events.userId, DEFAULT_USER_ID),
         eq(events.status, "active"),
         gte(events.dateStart, now),
         lte(events.dateStart, future),
@@ -46,7 +45,7 @@ export async function getUpcomingSubscriptions(days = 7) {
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.userId, GEORGE_USER_ID),
+        eq(subscriptions.userId, DEFAULT_USER_ID),
         eq(subscriptions.status, "active"),
         lte(subscriptions.nextDue, future),
       ),

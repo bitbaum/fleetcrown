@@ -1,8 +1,7 @@
+import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-
-const GEORGE_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 export async function getProjects() {
   const projects = await db
@@ -10,7 +9,7 @@ export async function getProjects() {
     .from(entities)
     .where(
       and(
-        eq(entities.userId, GEORGE_USER_ID),
+        eq(entities.userId, DEFAULT_USER_ID),
         eq(entities.type, "project"),
       ),
     )

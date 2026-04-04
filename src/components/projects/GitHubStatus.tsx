@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { GitBranch, CheckCircle, XCircle, Loader2, Clock } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/card";
+import { useFetch } from "@/hooks/use-fetch";
 
 type RepoStatus = {
   repo: string;
@@ -9,7 +10,6 @@ type RepoStatus = {
   dependabot_prs?: number;
   ci_name?: string;
   ci_status?: string;
-  ci_date?: string;
 };
 
 const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string }> = {
@@ -20,31 +20,16 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
 };
 
 export function GitHubStatus() {
-  const [repos, setRepos] = useState<RepoStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/github")
-      .then((res) => res.json())
-      .then((data) => {
-        setRepos(Array.isArray(data.repos) ? data.repos : []);
-        if (data.error) setError(data.error);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading, error } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github");
+  const repos = data?.repos ?? [];
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
-      <div className="flex items-center gap-2 mb-4">
-        <GitBranch className="h-4 w-4 text-white/50" />
-        <h2 className="text-sm font-medium text-white/70">CI / GitHub</h2>
-      </div>
+    <Card>
+      <CardHeader icon={GitBranch} title="CI / GitHub" />
       {loading ? (
         <div className="text-sm text-white/30 animate-pulse">Checking repos...</div>
-      ) : error && repos.length === 0 ? (
-        <div className="text-sm text-white/30">{error}</div>
+      ) : error || (data?.error && repos.length === 0) ? (
+        <div className="text-sm text-white/30">{error ?? data?.error}</div>
       ) : repos.length === 0 ? (
         <div className="text-sm text-white/30">No repo data</div>
       ) : (
@@ -72,6 +57,6 @@ export function GitHubStatus() {
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

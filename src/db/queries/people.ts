@@ -1,8 +1,11 @@
+import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes, entityRelations } from "@/db/schema";
 import { eq, and, ilike, sql } from "drizzle-orm";
 
-const GEORGE_USER_ID = "00000000-0000-0000-0000-000000000001";
+function escapeLike(s: string): string {
+  return s.replace(/[%_\\]/g, "\\$&");
+}
 
 export type PersonWithAttributes = {
   id: string;
@@ -20,12 +23,12 @@ export async function searchPeople(
 ): Promise<{ people: PersonWithAttributes[]; total: number }> {
   const where = query.trim()
     ? and(
-        eq(entities.userId, GEORGE_USER_ID),
+        eq(entities.userId, DEFAULT_USER_ID),
         eq(entities.type, "person"),
-        ilike(entities.name, `%${query.trim()}%`),
+        ilike(entities.name, `%${escapeLike(query.trim())}%`),
       )
     : and(
-        eq(entities.userId, GEORGE_USER_ID),
+        eq(entities.userId, DEFAULT_USER_ID),
         eq(entities.type, "person"),
       );
 
@@ -82,7 +85,7 @@ export async function getPersonDetail(id: string) {
   const [person] = await db
     .select()
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, GEORGE_USER_ID)));
+    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)));
 
   if (!person) return null;
 

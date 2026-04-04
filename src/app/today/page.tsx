@@ -1,20 +1,10 @@
 import { Suspense } from "react";
+import { DEFAULT_USER_NAME } from "@/lib/constants";
+import { CardSkeleton } from "@/components/ui/card";
 import { CalendarCard } from "@/components/today/CalendarCard";
 import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
-
-function CardSkeleton() {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 animate-pulse">
-      <div className="h-4 bg-white/10 rounded w-24 mb-3" />
-      <div className="space-y-2">
-        <div className="h-3 bg-white/5 rounded w-full" />
-        <div className="h-3 bg-white/5 rounded w-3/4" />
-      </div>
-    </div>
-  );
-}
 
 export default function TodayPage() {
   const now = new Date();
@@ -49,9 +39,9 @@ export default function TodayPage() {
 }
 
 function getGreeting(hour: number): string {
-  if (hour < 5) return "Good night, George";
-  if (hour < 12) return "Good morning, George";
-  if (hour < 17) return "Good afternoon, George";
-  if (hour < 21) return "Good evening, George";
-  return "Good night, George";
+  if (hour < 5) return `Good night, ${DEFAULT_USER_NAME}`;
+  if (hour < 12) return `Good morning, ${DEFAULT_USER_NAME}`;
+  if (hour < 17) return `Good afternoon, ${DEFAULT_USER_NAME}`;
+  if (hour < 21) return `Good evening, ${DEFAULT_USER_NAME}`;
+  return `Good night, ${DEFAULT_USER_NAME}`;
 }

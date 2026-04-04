@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, MessageCircle, Mail, Send, Link2 } from "lucide-react";
+import { X, MessageCircle, Link2 } from "lucide-react";
+import { CHANNEL_CONFIG } from "@/config/channels";
 
 type PersonDetailData = {
   id: string;
@@ -130,10 +131,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function ChannelIcon({ channel }: { channel: string }) {
-  if (channel.includes("whatsapp")) return <MessageCircle className="h-3.5 w-3.5 text-green-400/60" />;
-  if (channel.includes("telegram")) return <Send className="h-3.5 w-3.5 text-blue-400/60" />;
-  if (channel.includes("email")) return <Mail className="h-3.5 w-3.5 text-white/40" />;
-  return <MessageCircle className="h-3.5 w-3.5 text-white/30" />;
+  const config = CHANNEL_CONFIG[channel];
+  if (!config) return <MessageCircle className="h-3.5 w-3.5 text-white/30" />;
+  const Icon = config.icon;
+  return <Icon className={`h-3.5 w-3.5 ${config.color}`} />;
 }
 
 function parseAliases(raw: string): string[] {
