@@ -7,3 +7,4 @@ export * from "./goals";
 export * from "./commitments";
 export * from "./subscriptions";
 export * from "./events";
+export * from "./alerts";

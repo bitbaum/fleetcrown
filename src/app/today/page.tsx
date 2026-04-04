@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
 import { CardSkeleton } from "@/components/ui/card";
+import { AlertsCard } from "@/components/today/AlertsCard";
 import { CalendarCard } from "@/components/today/CalendarCard";
 import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
@@ -25,6 +26,9 @@ export default function TodayPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Suspense fallback={<CardSkeleton />}>
+          <AlertsCard />
+        </Suspense>
         <CalendarCard />
         <WeatherCard />
         <Suspense fallback={<CardSkeleton />}>
