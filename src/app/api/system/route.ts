@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
+import { OPENCLAW_GATEWAY_URL } from "@/lib/constants";
 
 export async function GET() {
   const [memory, disk, uptime] = await Promise.all([
@@ -8,9 +9,8 @@ export async function GET() {
     runTool("uptime -p", 5000),
   ]);
 
-  // Check OpenClaw gateway
   const gateway = await runTool(
-    "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18789/health 2>/dev/null || echo 'down'",
+    `curl -s -o /dev/null -w '%{http_code}' ${OPENCLAW_GATEWAY_URL}/health 2>/dev/null || echo 'down'`,
     5000,
   );
 

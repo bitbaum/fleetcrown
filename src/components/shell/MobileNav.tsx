@@ -11,7 +11,7 @@ export function MobileNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 flex md:hidden border-t border-white/10 bg-[#0a0b0f]/95 backdrop-blur-sm">
+    <nav className="fixed bottom-0 inset-x-0 z-50 flex md:hidden border-t border-border bg-sidebar/95 backdrop-blur-sm">
       {MOBILE_TABS.map((item) => {
         const isActive = pathname.startsWith(item.href);
         const Icon = item.icon;

@@ -41,8 +41,8 @@ export function PersonDetail({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-[#0f1117] border-l border-white/10 overflow-y-auto">
-        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-[#0f1117]">
+      <div className="relative w-full max-w-md bg-background border-l border-white/10 overflow-y-auto">
+        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
           <h2 className="text-lg font-semibold truncate">{data?.name ?? "Loading..."}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-white/10">
             <X className="h-5 w-5" />

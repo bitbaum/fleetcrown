@@ -2,6 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes, entityRelations } from "@/db/schema";
 import { eq, and, ilike, sql } from "drizzle-orm";
+import { fetchAttributesByEntityIds } from "./utils";
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, "\\$&");
@@ -45,28 +46,7 @@ export async function searchPeople(
     .limit(limit)
     .offset(offset);
 
-  // Batch fetch attributes for these people
-  const peopleIds = people.map((p) => p.id);
-  const allAttrs =
-    peopleIds.length > 0
-      ? await db
-          .select()
-          .from(attributes)
-          .where(
-            sql`${attributes.entityId} IN (${sql.join(
-              peopleIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-          )
-      : [];
-
-  // Group attributes by entity
-  const attrsByEntity = new Map<string, Record<string, string>>();
-  for (const attr of allAttrs) {
-    const existing = attrsByEntity.get(attr.entityId) ?? {};
-    existing[attr.key] = attr.value;
-    attrsByEntity.set(attr.entityId, existing);
-  }
+  const attrsByEntity = await fetchAttributesByEntityIds(people.map((p) => p.id));
 
   return {
     people: people.map((p) => ({

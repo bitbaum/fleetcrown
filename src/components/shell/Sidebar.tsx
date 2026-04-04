@@ -9,8 +9,8 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-white/10 bg-[#0a0b0f]">
-      <div className="flex h-14 items-center px-4 border-b border-white/10">
+    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-border bg-sidebar">
+      <div className="flex h-14 items-center px-4 border-b border-border">
         <span className="text-lg font-semibold tracking-tight">
           <span className="mr-1.5">🌿</span>Cockpit
         </span>

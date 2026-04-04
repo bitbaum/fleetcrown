@@ -1,7 +1,8 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { entities, attributes } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { entities } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+import { fetchAttributesByEntityIds } from "./utils";
 
 export async function getProjects() {
   const projects = await db
@@ -15,26 +16,7 @@ export async function getProjects() {
     )
     .orderBy(entities.name);
 
-  const projectIds = projects.map((p) => p.id);
-  const allAttrs =
-    projectIds.length > 0
-      ? await db
-          .select()
-          .from(attributes)
-          .where(
-            sql`${attributes.entityId} IN (${sql.join(
-              projectIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-          )
-      : [];
-
-  const attrsByEntity = new Map<string, Record<string, string>>();
-  for (const attr of allAttrs) {
-    const existing = attrsByEntity.get(attr.entityId) ?? {};
-    existing[attr.key] = attr.value;
-    attrsByEntity.set(attr.entityId, existing);
-  }
+  const attrsByEntity = await fetchAttributesByEntityIds(projects.map((p) => p.id));
 
   return projects.map((p) => ({
     ...p,
