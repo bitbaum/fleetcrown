@@ -18,6 +18,12 @@ type PersonDetailData = {
     targetName: string;
     targetType: string;
   }>;
+  interactions: Array<{
+    channel: string;
+    direction: string;
+    summary: string | null;
+    occurredAt: string;
+  }>;
 };
 
 export function PersonDetail({
@@ -98,6 +104,26 @@ export function PersonDetail({
                     </span>
                   ))}
                 </div>
+              </Section>
+            )}
+
+            {/* Recent Interactions */}
+            {data.interactions && data.interactions.length > 0 && (
+              <Section title="Recent Activity">
+                {data.interactions.map((ix, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${ix.direction === "inbound" ? "text-blue-400/60" : "text-emerald-400/60"}`}>
+                        {ix.direction === "inbound" ? "←" : "→"}
+                      </span>
+                      <span className="text-white/50">{ix.channel}</span>
+                      {ix.summary && <span className="text-xs text-white/30">{ix.summary}</span>}
+                    </div>
+                    <span className="text-xs text-white/30">
+                      {new Date(ix.occurredAt).toLocaleDateString("de-CH")}
+                    </span>
+                  </div>
+                ))}
               </Section>
             )}
 

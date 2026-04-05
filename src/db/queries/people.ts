@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { entities, attributes, entityRelations } from "@/db/schema";
-import { eq, and, ilike, sql } from "drizzle-orm";
+import { entities, attributes, entityRelations, interactions } from "@/db/schema";
+import { eq, and, ilike, sql, desc } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 
 function escapeLike(s: string): string {
@@ -98,9 +98,17 @@ export async function getPersonDetail(id: string) {
     .innerJoin(entities, eq(entities.id, entityRelations.fromEntityId))
     .where(eq(entityRelations.toEntityId, id));
 
+  const recentInteractions = await db
+    .select()
+    .from(interactions)
+    .where(eq(interactions.entityId, id))
+    .orderBy(desc(interactions.occurredAt))
+    .limit(10);
+
   return {
     ...person,
     attrs: Object.fromEntries(attrs.map((a) => [a.key, a.value])),
     relations: [...relationsFrom, ...relationsTo],
+    interactions: recentInteractions,
   };
 }
