@@ -1,0 +1,25 @@
+"use client";
+
+import { X } from "lucide-react";
+import { useState } from "react";
+import { handleDismissAlert } from "@/app/actions";
+
+export function DismissAlertButton({ alertId }: { alertId: string }) {
+  const [busy, setBusy] = useState(false);
+
+  async function onClick() {
+    setBusy(true);
+    await handleDismissAlert(alertId);
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className="p-1 rounded hover:bg-white/10 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
+      title="Dismiss"
+    >
+      <X className="h-3.5 w-3.5" />
+    </button>
+  );
+}

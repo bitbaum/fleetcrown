@@ -16,3 +16,19 @@ export async function getActiveAlerts() {
     .orderBy(desc(alerts.createdAt))
     .limit(20);
 }
+
+export async function dismissAlert(id: string) {
+  return db
+    .update(alerts)
+    .set({
+      dismissed: true,
+      dismissedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(alerts.id, id),
+        eq(alerts.userId, DEFAULT_USER_ID),
+      ),
+    )
+    .returning();
+}
