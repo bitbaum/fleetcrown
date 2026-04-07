@@ -1,6 +1,8 @@
 import { CreditCard, AlertCircle, HelpCircle, ExternalLink } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
+import { SubscriptionActions } from "@/components/money/SubscriptionActions";
+import { SUBSCRIPTION_META } from "@/config/subscriptions";
 import {
   getActiveSubscriptions,
   getAllSubscriptions,
@@ -9,18 +11,7 @@ import {
 } from "@/db/queries/money";
 import { format, isPast, formatDistanceToNow } from "date-fns";
 
-const VERIFY_LINKS: Record<string, string> = {
-  "Claude Max": "https://claude.ai/settings/billing",
-  "Salt Mobile": "https://www.salt.ch/en/my-account",
-  "Grok xAI": "https://grok.com/settings",
-  "Google Cloud Platform": "https://console.cloud.google.com/billing",
-  "SoundCloud Go+": "https://soundcloud.com/settings/account",
-  "ChatGPT Plus": "https://chat.openai.com/account/subscription",
-  "YouTube Premium": "https://www.youtube.com/paid_memberships",
-  "Cursor Pro": "https://www.cursor.com/settings",
-  "iCloud Storage": "https://www.icloud.com/settings/",
-  "Algoriddim djay": "https://www.algoriddim.com/support",
-};
+// Verify links now come from SUBSCRIPTION_META (config/subscriptions.ts)
 
 const STATUS_STYLE: Record<string, string> = {
   active: "text-green-400 bg-green-400/10",
@@ -59,7 +50,7 @@ export default async function MoneyPage() {
         <div className="space-y-3">
           {allSubs.map((sub) => {
             const isOverdue = sub.nextDue && isPast(new Date(sub.nextDue));
-            const verifyUrl = VERIFY_LINKS[sub.name];
+            const verifyUrl = SUBSCRIPTION_META[sub.name]?.verifyUrl;
             const statusStyle = STATUS_STYLE[sub.status ?? "active"] ?? STATUS_STYLE.active;
             const isCancelled = sub.status === "cancelled";
 
@@ -91,6 +82,7 @@ export default async function MoneyPage() {
                   {sub.notes && (
                     <div className="text-[10px] text-white/25 mt-0.5 max-w-md">{sub.notes}</div>
                   )}
+                  <SubscriptionActions subId={sub.id} subName={sub.name} status={sub.status} />
                 </div>
                 <div className="text-right shrink-0">
                   <div className={`text-sm font-mono ${isCancelled ? "line-through" : ""}`}>
