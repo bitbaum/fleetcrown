@@ -13,7 +13,23 @@ export async function getActiveSubscriptions() {
         eq(subscriptions.status, "active"),
       ),
     )
-    .orderBy(subscriptions.nextDue);
+    .orderBy(sql`${subscriptions.amount} DESC NULLS LAST`);
+}
+
+export async function getAllSubscriptions() {
+  return db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.userId, DEFAULT_USER_ID))
+    .orderBy(sql`
+      CASE status
+        WHEN 'active' THEN 1
+        WHEN 'unverified' THEN 2
+        WHEN 'cancelled' THEN 3
+        ELSE 4
+      END,
+      ${subscriptions.amount} DESC NULLS LAST
+    `);
 }
 
 export async function getFinancialCommitments() {
