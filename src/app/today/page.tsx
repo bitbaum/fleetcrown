@@ -21,6 +21,7 @@ export default function TodayPage() {
         </Suspense>
       </div>
 
+      {/* Actionable first — what needs your decision */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Suspense fallback={<CardSkeleton />}>
           <ActionQueueCard />
@@ -28,8 +29,16 @@ export default function TodayPage() {
         <Suspense fallback={<CardSkeleton />}>
           <AlertsCard />
         </Suspense>
+      </div>
+
+      {/* Context — what's happening today */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CalendarCard />
         <WeatherCard />
+      </div>
+
+      {/* State — what's pending */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Suspense fallback={<CardSkeleton />}>
           <CommitmentsCard />
         </Suspense>

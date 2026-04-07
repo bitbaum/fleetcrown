@@ -4,17 +4,57 @@ import { Check, X } from "lucide-react";
 import { handleApprove, handleReject } from "@/app/actions";
 import { useState } from "react";
 
-export function ActionButtons({ actionId }: { actionId: string }) {
+export function ActionButtons({
+  actionId,
+  compact,
+}: {
+  actionId: string;
+  compact?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<"approved" | "rejected" | null>(null);
 
   async function onApprove() {
     setBusy(true);
     await handleApprove(actionId);
+    setDone("approved");
   }
 
   async function onReject() {
     setBusy(true);
     await handleReject(actionId);
+    setDone("rejected");
+  }
+
+  if (done) {
+    return (
+      <span className={`text-[10px] ${done === "approved" ? "text-emerald-400" : "text-white/30"}`}>
+        {done === "approved" ? "✓" : "✗"}
+      </span>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="flex gap-1 shrink-0">
+        <button
+          onClick={onApprove}
+          disabled={busy}
+          className="p-1 rounded hover:bg-emerald-600/20 text-emerald-400/60 hover:text-emerald-400 transition-colors disabled:opacity-50"
+          title="Approve"
+        >
+          <Check className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={onReject}
+          disabled={busy}
+          className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
+          title="Reject"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
   }
 
   return (

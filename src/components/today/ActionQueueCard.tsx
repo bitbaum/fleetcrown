@@ -1,4 +1,4 @@
-import { Inbox, Send, Calendar, CheckCircle, MessageCircle } from "lucide-react";
+import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions } from "@/db/queries/actions";
 import { ActionButtons } from "./ActionButtons";
@@ -11,10 +11,51 @@ const TYPE_ICONS: Record<string, typeof Send> = {
   follow_up: MessageCircle,
 };
 
+type ActionGroup = {
+  type: string;
+  reasoning: string;
+  actions: Array<{ id: string; title: string; payload: Record<string, unknown> | null }>;
+};
+
+function groupSimilarActions(
+  actions: Awaited<ReturnType<typeof getPendingActions>>,
+): { groups: ActionGroup[]; standalone: typeof actions } {
+  // Group "Check in with X" actions (same type + same reasoning pattern)
+  const checkins: typeof actions = [];
+  const standalone: typeof actions = [];
+
+  for (const a of actions) {
+    if (a.type === "send_message" && a.title.startsWith("Check in with ")) {
+      checkins.push(a);
+    } else {
+      standalone.push(a);
+    }
+  }
+
+  const groups: ActionGroup[] = [];
+  if (checkins.length > 1) {
+    groups.push({
+      type: "send_message",
+      reasoning: "No interaction in 30+ days. Maintaining relationships matters.",
+      actions: checkins.map((a) => ({
+        id: a.id,
+        title: a.title.replace("Check in with ", ""),
+        payload: a.payload as Record<string, unknown> | null,
+      })),
+    });
+  } else {
+    standalone.push(...checkins);
+  }
+
+  return { groups, standalone };
+}
+
 export async function ActionQueueCard() {
   const pending = await getPendingActions();
 
   if (pending.length === 0) return null;
+
+  const { groups, standalone } = groupSimilarActions(pending);
 
   return (
     <div className="md:col-span-2">
@@ -24,12 +65,49 @@ export async function ActionQueueCard() {
           title="Action Queue"
           right={
             <span className="text-xs text-amber-400 font-medium">
-              {pending.length} pending review
+              {pending.length} pending
             </span>
           }
         />
         <div className="space-y-3">
-          {pending.map((action) => {
+          {/* Grouped check-ins */}
+          {groups.map((group, gi) => (
+            <div
+              key={`group-${gi}`}
+              className="border border-white/10 rounded-md p-3 bg-white/[0.02]"
+            >
+              <div className="flex items-start gap-3">
+                <Users className="h-4 w-4 text-white/40 shrink-0 mt-1" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium">
+                    Check in with {group.actions.length} people
+                  </div>
+                  <div className="mt-2 space-y-1.5">
+                    {group.actions.map((a) => {
+                      const body = a.payload?.body ? String(a.payload.body) : null;
+                      return (
+                        <div key={a.id} className="flex items-center justify-between gap-2 p-1.5 rounded bg-white/[0.02]">
+                          <div className="min-w-0">
+                            <span className="text-sm">{a.title}</span>
+                            {body && (
+                              <div className="text-[10px] text-white/30 truncate mt-0.5">{body}</div>
+                            )}
+                          </div>
+                          <ActionButtons actionId={a.id} compact />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="text-xs text-white/30 mt-2 italic">
+                    Ivy: {group.reasoning}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Standalone actions */}
+          {standalone.map((action) => {
             const Icon = TYPE_ICONS[action.type] ?? Inbox;
             const payload = action.payload as Record<string, unknown> | null;
 
@@ -43,7 +121,6 @@ export async function ActionQueueCard() {
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">{action.title}</div>
 
-                    {/* Show recipient and channel */}
                     {payload?.to != null && (
                       <div className="text-xs text-white/40 mt-0.5">
                         {"To: "}{String(payload.to)}
@@ -51,7 +128,6 @@ export async function ActionQueueCard() {
                       </div>
                     )}
 
-                    {/* Show the actual content to review */}
                     {(payload?.body != null || payload?.subject != null) && (
                       <div className="mt-2 p-2 rounded bg-white/[0.03] border border-white/5">
                         {payload?.subject != null && (
@@ -65,7 +141,6 @@ export async function ActionQueueCard() {
                       </div>
                     )}
 
-                    {/* Why Ivy suggests this */}
                     {action.reasoning && (
                       <div className="text-xs text-white/30 mt-2 italic">
                         Ivy: {action.reasoning}

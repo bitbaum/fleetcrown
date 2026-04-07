@@ -56,26 +56,26 @@ export async function getUpcomingSubscriptions(days = 7) {
 export async function getTodaySummary() {
   const [goalStats] = await db
     .select({
-      active: sql<number>`count(*) filter (where ${goals.status} = 'active')`,
-      avgProgress: sql<number>`coalesce(avg(${goals.progress}) filter (where ${goals.status} = 'active'), 0)`,
+      active: sql<number>`count(*)`,
+      avgProgress: sql<number>`coalesce(avg(${goals.progress}), 0)`,
     })
     .from(goals)
-    .where(eq(goals.userId, DEFAULT_USER_ID));
+    .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active")));
 
   const [alertStats] = await db
-    .select({
-      total: sql<number>`count(*)`,
-      urgent: sql<number>`count(*) filter (where ${alerts.severity} = 'urgent')`,
-    })
+    .select({ total: sql<number>`count(*)` })
     .from(alerts)
     .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false)));
 
+  const [urgentStats] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(alerts)
+    .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, "urgent")));
+
   const [actionStats] = await db
-    .select({
-      drafts: sql<number>`count(*) filter (where ${actions.status} = 'draft')`,
-    })
+    .select({ drafts: sql<number>`count(*)` })
     .from(actions)
-    .where(eq(actions.userId, DEFAULT_USER_ID));
+    .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, "draft")));
 
   const [overdueStats] = await db
     .select({ count: sql<number>`count(*)` })
@@ -90,7 +90,7 @@ export async function getTodaySummary() {
     activeGoals: Number(goalStats.active),
     avgGoalProgress: Math.round(Number(goalStats.avgProgress)),
     activeAlerts: Number(alertStats.total),
-    urgentAlerts: Number(alertStats.urgent),
+    urgentAlerts: Number(urgentStats.count),
     pendingDrafts: Number(actionStats.drafts),
     overdueCommitments: Number(overdueStats.count),
   };

@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
-import { eq, and, ilike, sql, desc } from "drizzle-orm";
+import { eq, and, ne, ilike, sql, desc } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 
 function escapeLike(s: string): string {
@@ -40,11 +40,13 @@ export async function searchPeople(
     ? and(
         eq(entities.userId, DEFAULT_USER_ID),
         eq(entities.type, "person"),
+        ne(entities.externalId, "george"),
         ilike(entities.name, `%${escapeLike(query.trim())}%`),
       )
     : and(
         eq(entities.userId, DEFAULT_USER_ID),
         eq(entities.type, "person"),
+        ne(entities.externalId, "george"),
       );
 
   const [countResult] = await db
@@ -73,7 +75,7 @@ export async function searchPeople(
            count(i.id)::text as interaction_count
     FROM entities e
     LEFT JOIN interactions i ON i.entity_id = e.id
-    WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person'
+    WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
     ${query.trim() ? sql`AND e.name ILIKE ${"%" + escapeLike(query.trim()) + "%"}` : sql``}
     GROUP BY e.id
     ORDER BY ${orderClause}
