@@ -12,7 +12,13 @@ export async function GET() {
   }
 
   try {
-    const events = JSON.parse(result.data ?? "[]");
+    const parsed = JSON.parse(result.data ?? "[]");
+    // gog returns {"events": [...]} or just [...] depending on version
+    const events = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed.events)
+        ? parsed.events
+        : [];
     return NextResponse.json({ events });
   } catch {
     return NextResponse.json({ events: [], raw: result.data });
