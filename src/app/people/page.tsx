@@ -3,7 +3,7 @@ import { searchPeople } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
 
 export default async function PeoplePage() {
-  const { people, total } = await searchPeople("", 50, 0);
+  const { people, total } = await searchPeople("", 50, 0, "recent");
 
   return (
     <PageLayout

@@ -7,6 +7,7 @@ import { CalendarCard } from "@/components/today/CalendarCard";
 import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
+import { SummaryBar } from "@/components/today/SummaryBar";
 
 export default function TodayPage() {
   const now = new Date();
@@ -24,6 +25,11 @@ export default function TodayPage() {
             day: "numeric",
           })}
         </p>
+        <Suspense fallback={null}>
+          <div className="mt-2">
+            <SummaryBar />
+          </div>
+        </Suspense>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
