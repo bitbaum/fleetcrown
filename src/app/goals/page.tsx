@@ -45,17 +45,19 @@ function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const milestoneTotal = goal.milestones?.length ?? 0;
 
   return (
-    <div style={{ marginLeft: depth * 24 }}>
+    <div>
       <Card className={isCompleted ? "opacity-60" : ""}>
         <div className="flex items-start gap-3">
           {isCompleted ? (
             <CheckCircle className="h-5 w-5 text-green-400 shrink-0 mt-0.5" />
+          ) : depth === 0 ? (
+            <Target className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
           ) : (
-            <Target className="h-5 w-5 text-white/40 shrink-0 mt-0.5" />
+            <div className="h-4 w-4 rounded border border-white/20 shrink-0 mt-1" />
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <div className="text-sm font-medium">{goal.title}</div>
+              <div className={depth === 0 ? "text-sm font-semibold" : "text-sm font-medium text-white/80"}>{goal.title}</div>
               {goal.status && goal.status !== "active" && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">
                   {goal.status}
@@ -112,7 +114,7 @@ function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
 
       {/* Children */}
       {goal.children.length > 0 && (
-        <div className="mt-2 space-y-2">
+        <div className="mt-2 ml-6 pl-5 border-l-2 border-emerald-500/20 space-y-2">
           {goal.children.map((child) => (
             <GoalCard key={child.id} goal={child} depth={depth + 1} />
           ))}

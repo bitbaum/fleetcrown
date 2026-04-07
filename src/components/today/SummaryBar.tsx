@@ -5,38 +5,39 @@ export async function SummaryBar() {
   const s = await getTodaySummary();
 
   return (
-    <div className="flex flex-wrap gap-4 text-xs text-white/50">
-      <Stat icon={Target} label="Goals" value={`${s.activeGoals} active · ${s.avgGoalProgress}% avg`} />
+    <div className="flex flex-wrap gap-3">
+      <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} />
       {s.pendingDrafts > 0 && (
-        <Stat icon={Inbox} label="Drafts" value={`${s.pendingDrafts} pending`} highlight />
+        <Pill icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" />
       )}
       {s.overdueCommitments > 0 && (
-        <Stat icon={AlertCircle} label="Overdue" value={`${s.overdueCommitments}`} danger />
+        <Pill icon={AlertCircle} value={`${s.overdueCommitments} overdue`} variant="red" />
       )}
       {s.urgentAlerts > 0 && (
-        <Stat icon={Bell} label="Urgent" value={`${s.urgentAlerts}`} danger />
+        <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" />
       )}
     </div>
   );
 }
 
-function Stat({
+function Pill({
   icon: Icon,
-  label,
   value,
-  highlight,
-  danger,
+  variant,
 }: {
   icon: typeof Target;
-  label: string;
   value: string;
-  highlight?: boolean;
-  danger?: boolean;
+  variant?: "amber" | "red";
 }) {
+  const colors = variant === "red"
+    ? "bg-red-400/10 text-red-400 border-red-400/20"
+    : variant === "amber"
+      ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+      : "bg-white/5 text-white/60 border-white/10";
+
   return (
-    <div className={`flex items-center gap-1.5 ${danger ? "text-red-400/70" : highlight ? "text-amber-400/70" : ""}`}>
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors}`}>
       <Icon className="h-3 w-3" />
-      <span className="font-medium">{label}:</span>
       <span>{value}</span>
     </div>
   );

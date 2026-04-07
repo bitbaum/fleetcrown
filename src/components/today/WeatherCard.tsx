@@ -1,24 +1,79 @@
 "use client";
 
-import { Sun } from "lucide-react";
+import { Sun, CloudRain, Cloud, CloudSnow, CloudFog, Thermometer } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useFetch } from "@/hooks/use-fetch";
+
+function parseWeather(raw: string) {
+  // Format: "Now: Mainly clear, 22.3°C, wind 6.1 km/h, humidity 31%\n2026-04-07: 6.8-22.3°C, Foggy"
+  const lines = raw.split("\n").filter(Boolean);
+  const now = lines[0] ?? "";
+  const forecast = lines[1] ?? "";
+
+  const tempMatch = now.match(/([\d.]+)°C/);
+  const condMatch = now.match(/Now:\s*([^,]+)/);
+  const windMatch = now.match(/wind\s+([\d.]+)\s*km/);
+  const humMatch = now.match(/humidity\s+(\d+)/);
+  const rangeMatch = forecast.match(/([\d.]+-[\d.]+)°C/);
+  const foreCondMatch = forecast.match(/°C,\s*(.+)/);
+
+  return {
+    temp: tempMatch?.[1] ?? "--",
+    condition: condMatch?.[1]?.trim() ?? "Unknown",
+    wind: windMatch?.[1] ?? "--",
+    humidity: humMatch?.[1] ?? "--",
+    range: rangeMatch?.[1] ?? "",
+    forecastCondition: foreCondMatch?.[1]?.trim() ?? "",
+  };
+}
+
+function getWeatherIcon(condition: string) {
+  const c = condition.toLowerCase();
+  if (c.includes("rain") || c.includes("drizzle")) return CloudRain;
+  if (c.includes("snow")) return CloudSnow;
+  if (c.includes("fog") || c.includes("mist")) return CloudFog;
+  if (c.includes("cloud") || c.includes("overcast")) return Cloud;
+  return Sun;
+}
 
 export function WeatherCard() {
   const { data, loading } = useFetch<{ weather: string | null }>("/api/weather");
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader icon={Sun} title="Weather" />
+        <div className="text-sm text-white/30 animate-pulse">Loading...</div>
+      </Card>
+    );
+  }
+
+  if (!data?.weather) {
+    return (
+      <Card>
+        <CardHeader icon={Sun} title="Weather" />
+        <div className="text-sm text-white/30">Unavailable</div>
+      </Card>
+    );
+  }
+
+  const w = parseWeather(data.weather);
+  const Icon = getWeatherIcon(w.condition);
+
   return (
     <Card>
-      <CardHeader icon={Sun} title="Weather — Zurich" />
-      {loading ? (
-        <div className="text-sm text-white/30 animate-pulse">Loading...</div>
-      ) : data?.weather ? (
-        <pre className="text-xs text-white/60 whitespace-pre-wrap font-mono leading-relaxed">
-          {data.weather.split("\n").slice(0, 8).join("\n")}
-        </pre>
-      ) : (
-        <div className="text-sm text-white/30">Weather unavailable</div>
-      )}
+      <CardHeader icon={Sun} title="Zurich" />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Icon className="h-8 w-8 text-amber-400/80" />
+          <div className="text-2xl font-semibold">{w.temp}°</div>
+        </div>
+        <div className="text-xs text-white/40 space-y-0.5">
+          <div>{w.condition}</div>
+          <div>Wind {w.wind} km/h · Humidity {w.humidity}%</div>
+          {w.range && <div>Today {w.range}° · {w.forecastCondition}</div>}
+        </div>
+      </div>
     </Card>
   );
 }
