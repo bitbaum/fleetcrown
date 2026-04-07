@@ -1,5 +1,6 @@
 import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG } from "@/config/channels";
+import { Link2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const HEALTH_COLORS = {
@@ -38,12 +39,20 @@ export function PersonCard({
                 {[profession, location].filter(Boolean).join(" · ")}
               </div>
             )}
-            {person.lastInteraction && (
-              <div className="text-[10px] text-white/30 mt-0.5">
-                {formatDistanceToNow(person.lastInteraction, { addSuffix: true })}
-                {person.interactionCount > 0 && ` · ${person.interactionCount} msgs`}
-              </div>
-            )}
+            <div className="text-[10px] text-white/30 mt-0.5 flex items-center gap-1.5">
+              {person.lastInteraction && (
+                <span>
+                  {formatDistanceToNow(person.lastInteraction, { addSuffix: true })}
+                  {person.interactionCount > 0 && ` · ${person.interactionCount} msgs`}
+                </span>
+              )}
+              {person.relationCount > 0 && (
+                <span className="flex items-center gap-0.5 text-purple-400/60">
+                  <Link2 className="h-2.5 w-2.5" />
+                  {person.relationCount}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-1 shrink-0">

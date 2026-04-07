@@ -17,6 +17,7 @@ export type PersonWithAttributes = {
   attrs: Record<string, string>;
   lastInteraction: Date | null;
   interactionCount: number;
+  relationCount: number;
   health: "active" | "fading" | "stale" | "unknown";
 };
 
@@ -69,10 +70,13 @@ export async function searchPeople(
     source: string | null;
     last_interaction: Date | null;
     interaction_count: string;
+    relation_count: string;
   }>(sql`
     SELECT e.id, e.name, e.external_id, e.description, e.source,
            max(i.occurred_at) as last_interaction,
-           count(i.id)::text as interaction_count
+           count(DISTINCT i.id)::text as interaction_count,
+           (SELECT count(*) FROM entity_relations r
+            WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
     FROM entities e
     LEFT JOIN interactions i ON i.entity_id = e.id
     WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
@@ -97,6 +101,7 @@ export async function searchPeople(
         attrs: attrsByEntity.get(r.id) ?? {},
         lastInteraction,
         interactionCount: Number(r.interaction_count),
+        relationCount: Number(r.relation_count),
         health: deriveHealth(lastInteraction),
       };
     }),
