@@ -6,6 +6,7 @@ import {
   FolderKanban,
   Server,
   Brain,
+  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -23,6 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "money", label: "Money", href: "/money", icon: Wallet, active: true },
   { id: "goals", label: "Goals", href: "/goals", icon: Target, active: true },
   { id: "projects", label: "Projects", href: "/projects", icon: FolderKanban, active: true },
+  { id: "prompts", label: "Prompts", href: "/prompts", icon: Zap, active: true },
   { id: "system", label: "System", href: "/system", icon: Server, active: true },
   { id: "memory", label: "Memory", href: "/memory", icon: Brain, active: true },
 ];
