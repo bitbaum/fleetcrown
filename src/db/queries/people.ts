@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
-import { eq, and, ne, ilike, sql, desc } from "drizzle-orm";
+import { eq, and, ne, ilike, sql, desc, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
 
@@ -24,58 +24,72 @@ export type PersonWithAttributes = {
 
 export type SortMode = "recent" | "name" | "health";
 
+// Build HAVING clause for health filtering — all health values are enum literals, not user input
+function buildHealthHaving(health: RelationshipHealth[]): SQL {
+  const clauses: SQL[] = [];
+  if (health.includes("active"))  clauses.push(sql`max(i.occurred_at) >= now() - interval '14 days'`);
+  if (health.includes("fading"))  clauses.push(sql`max(i.occurred_at) BETWEEN now() - interval '30 days' AND now() - interval '14 days'`);
+  if (health.includes("stale"))   clauses.push(sql`max(i.occurred_at) < now() - interval '30 days'`);
+  if (health.includes("unknown")) clauses.push(sql`max(i.occurred_at) IS NULL`);
+  if (clauses.length === 0) return sql``;
+  return sql`HAVING (${sql.join(clauses, sql` OR `)})`;
+}
+
 export async function searchPeople(
   query: string,
   limit = 50,
   offset = 0,
   sort: SortMode = "recent",
+  health: RelationshipHealth[] = [],
 ): Promise<{ people: PersonWithAttributes[]; total: number }> {
-  const where = query.trim()
-    ? and(
-        eq(entities.userId, DEFAULT_USER_ID),
-        eq(entities.type, "person"),
-        ne(entities.externalId, "george"),
-        ilike(entities.name, `%${escapeLike(query.trim())}%`),
-      )
-    : and(
-        eq(entities.userId, DEFAULT_USER_ID),
-        eq(entities.type, "person"),
-        ne(entities.externalId, "george"),
-      );
+  // User input — parameterized via sql tagged template (never string-interpolated)
+  const nameFilter: SQL = query.trim()
+    ? sql`AND e.name ILIKE ${"%" + escapeLike(query.trim()) + "%"}`
+    : sql``;
+  const having: SQL = buildHealthHaving(health);
 
-  // Join with interaction stats
-  const orderClause = sort === "name"
+  const orderBy: SQL = sort === "name"
     ? sql`e.name ASC`
     : sort === "health"
       ? sql`last_interaction ASC NULLS FIRST`
       : sql`last_interaction DESC NULLS LAST`;
 
-  // Count and rows are independent — run in parallel
-  const [[countResult], rows] = await Promise.all([
-    db.select({ count: sql<number>`count(*)` }).from(entities).where(where),
+  const [countResult, rows] = await Promise.all([
+    db.execute<{ count: string }>(sql`
+      SELECT count(*)::text as count FROM (
+        SELECT e.id
+        FROM entities e
+        LEFT JOIN interactions i ON i.entity_id = e.id
+        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
+        ${nameFilter}
+        GROUP BY e.id
+        ${having}
+      ) sub
+    `),
     db.execute<{
-    id: string;
-    name: string;
-    external_id: string | null;
-    description: string | null;
-    source: string | null;
-    last_interaction: Date | null;
-    interaction_count: string;
-    relation_count: string;
-  }>(sql`
-    SELECT e.id, e.name, e.external_id, e.description, e.source,
-           max(i.occurred_at) as last_interaction,
-           count(DISTINCT i.id)::text as interaction_count,
-           (SELECT count(*) FROM entity_relations r
-            WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
-    FROM entities e
-    LEFT JOIN interactions i ON i.entity_id = e.id
-    WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
-    ${query.trim() ? sql`AND e.name ILIKE ${"%" + escapeLike(query.trim()) + "%"}` : sql``}
-    GROUP BY e.id
-    ORDER BY ${orderClause}
-    LIMIT ${limit} OFFSET ${offset}
-  `),
+      id: string;
+      name: string;
+      external_id: string | null;
+      description: string | null;
+      source: string | null;
+      last_interaction: Date | null;
+      interaction_count: string;
+      relation_count: string;
+    }>(sql`
+      SELECT e.id, e.name, e.external_id, e.description, e.source,
+             max(i.occurred_at) as last_interaction,
+             count(DISTINCT i.id)::text as interaction_count,
+             (SELECT count(*) FROM entity_relations r
+              WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
+      FROM entities e
+      LEFT JOIN interactions i ON i.entity_id = e.id
+      WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
+      ${nameFilter}
+      GROUP BY e.id
+      ${having}
+      ORDER BY ${orderBy}
+      LIMIT ${limit} OFFSET ${offset}
+    `),
   ]);
 
   const peopleIds = rows.map((r) => r.id);
@@ -97,7 +111,7 @@ export async function searchPeople(
         health: deriveRelationshipHealth(lastInteraction),
       };
     }),
-    total: Number(countResult.count),
+    total: Number(countResult[0].count),
   };
 }
 

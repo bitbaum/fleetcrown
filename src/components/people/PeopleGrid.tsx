@@ -5,6 +5,14 @@ import { Search, ArrowUpDown } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
 import type { PersonWithAttributes } from "@/db/queries/people";
+import { type RelationshipHealth, HEALTH_DOT_COLOR } from "@/lib/utils";
+
+const HEALTH_FILTERS: { value: RelationshipHealth; label: string }[] = [
+  { value: "active",  label: "Active" },
+  { value: "fading",  label: "Fading" },
+  { value: "stale",   label: "Stale" },
+  { value: "unknown", label: "Unknown" },
+];
 
 type SortMode = "recent" | "name" | "health";
 
@@ -27,6 +35,7 @@ export function PeopleGrid({
   const [total, setTotal] = useState(initialTotal);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("recent");
+  const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -35,7 +44,7 @@ export function PeopleGrid({
   const skipInitialFetch = useRef(true);
 
   const search = useCallback(
-    async (q: string, s: SortMode, newOffset = 0) => {
+    async (q: string, s: SortMode, hf: RelationshipHealth[], newOffset = 0) => {
       setLoading(true);
       try {
         const params = new URLSearchParams({
@@ -44,6 +53,7 @@ export function PeopleGrid({
           limit: String(LIMIT),
           offset: String(newOffset),
         });
+        if (hf.length > 0) params.set("health", hf.join(","));
         const res = await fetch(`/api/people?${params}`);
         const data = await res.json();
         if (newOffset === 0) {
@@ -65,9 +75,15 @@ export function PeopleGrid({
       skipInitialFetch.current = false;
       return;
     }
-    const timer = setTimeout(() => search(query, sort, 0), 300);
+    const timer = setTimeout(() => search(query, sort, healthFilter, 0), 300);
     return () => clearTimeout(timer);
-  }, [query, sort, search]);
+  }, [query, sort, healthFilter, search]);
+
+  function toggleHealth(h: RelationshipHealth) {
+    setHealthFilter((prev) =>
+      prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h],
+    );
+  }
 
   function cycleSort() {
     const idx = SORT_ORDER.indexOf(sort);
@@ -100,6 +116,34 @@ export function PeopleGrid({
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-1.5">
+        {HEALTH_FILTERS.map(({ value, label }) => {
+          const active = healthFilter.includes(value);
+          return (
+            <button
+              key={value}
+              onClick={() => toggleHealth(value)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                active
+                  ? "border-white/30 bg-white/10 text-white/70"
+                  : "border-white/10 bg-transparent text-white/30 hover:text-white/50 hover:border-white/20"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT_COLOR[value]}`} />
+              {label}
+            </button>
+          );
+        })}
+        {healthFilter.length > 0 && (
+          <button
+            onClick={() => setHealthFilter([])}
+            className="px-2.5 py-1 rounded-full text-xs border border-white/10 text-white/25 hover:text-white/50 transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {people.map((person) => (
           <PersonCard
@@ -112,7 +156,7 @@ export function PeopleGrid({
 
       {people.length < total && (
         <button
-          onClick={() => search(query, sort, offset + LIMIT)}
+          onClick={() => search(query, sort, healthFilter, offset + LIMIT)}
           disabled={loading}
           className="w-full py-2 text-sm text-white/40 hover:text-white/60 transition-colors"
         >
