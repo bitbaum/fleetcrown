@@ -14,24 +14,37 @@ export async function PATCH(
   if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const body = await req.json();
-  const allowed = ["description"] as const;
   const patch: Record<string, unknown> = {};
-  for (const key of allowed) {
-    if (key in body) patch[key] = body[key] === "" ? null : String(body[key]).trim() || null;
+
+  if ("description" in body) {
+    patch.description = body.description === "" ? null : String(body.description).trim() || null;
   }
+  if ("name" in body) {
+    const name = String(body.name ?? "").trim();
+    if (!name) return NextResponse.json({ error: "name cannot be empty" }, { status: 400 });
+    patch.name = name;
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
   patch.updatedAt = new Date();
 
-  const [updated] = await db
-    .update(entities)
-    .set(patch)
-    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
-    .returning({ id: entities.id });
+  try {
+    const [updated] = await db
+      .update(entities)
+      .set(patch)
+      .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+      .returning({ id: entities.id });
 
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true });
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (e: unknown) {
+    if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+      return NextResponse.json({ error: "A person with that name already exists" }, { status: 409 });
+    }
+    throw e;
+  }
 }
 
 export async function DELETE(

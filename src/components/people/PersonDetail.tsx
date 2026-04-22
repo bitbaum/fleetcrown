@@ -51,6 +51,10 @@ export function PersonDetail({
   const [loading, setLoading] = useState(true);
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
   const [attrs, setAttrs] = useState<Record<string, string>>({});
+  const [name, setName] = useState<string>("");
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const [description, setDescription] = useState<string | null>(null);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
@@ -61,10 +65,27 @@ export function PersonDetail({
   useEffect(() => {
     fetch(`/api/people/${personId}`)
       .then((res) => res.json())
-      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); })
+      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [personId]);
+
+  const commitName = async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === name) { setEditingName(false); return; }
+    setSavingName(true);
+    try {
+      const res = await fetch(`/api/people/${personId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if ((await res.json()).ok) setName(trimmed);
+    } finally {
+      setSavingName(false);
+      setEditingName(false);
+    }
+  };
 
   const commitDescription = async () => {
     const trimmed = descValue.trim();
@@ -109,7 +130,30 @@ export function PersonDetail({
       <div className="relative w-full max-w-md bg-background border-l border-white/10 overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
           <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-lg font-semibold truncate">{data?.name ?? "Loading..."}</h2>
+            {editingName ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitName();
+                    if (e.key === "Escape") { setEditingName(false); setNameValue(name); }
+                  }}
+                  onBlur={commitName}
+                  autoFocus
+                  className="text-lg font-semibold bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 w-48"
+                />
+                {savingName && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+              </div>
+            ) : (
+              <h2
+                className="text-lg font-semibold truncate cursor-text hover:text-white/80 transition-colors"
+                onClick={() => data && (setNameValue(name), setEditingName(true))}
+                title="Click to rename"
+              >
+                {name || (data?.name ?? "Loading...")}
+              </h2>
+            )}
             {data && (() => {
               const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
               const health = deriveRelationshipHealth(lastDate);
