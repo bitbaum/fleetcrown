@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { goals } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function GET() {
+  const items = await db
+    .select({ id: goals.id, title: goals.title, status: goals.status, entityId: goals.entityId })
+    .from(goals)
+    .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active")))
+    .orderBy(goals.title);
+  return NextResponse.json({ goals: items });
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

@@ -548,30 +548,75 @@ function PromptsTab({
   );
 }
 
-function GoalsTab({ goals }: { goals: LinkedGoal[] }) {
-  if (goals.length === 0) {
-    return (
-      <p className="text-xs text-white/25 pt-2">
-        No goals linked to this project. Create goals via the Goals page or ask Ivy.
-      </p>
-    );
-  }
+function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; projectId: string }) {
+  const [linked, setLinked] = useState<LinkedGoal[]>(initialGoals);
+  const [linking, setLinking] = useState(false);
+  const [allGoals, setAllGoals] = useState<Array<{ id: string; title: string; entityId: string | null }>>([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const openLink = async () => {
+    setLinking(true);
+    setSelectedId("");
+    const res = await fetch("/api/goals");
+    const data = await res.json();
+    // Exclude already-linked goals
+    const linkedIds = new Set(linked.map((g) => g.id));
+    setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
+  };
+
+  const handleLink = async () => {
+    if (!selectedId) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/goals/${selectedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId: projectId }),
+      });
+      const chosen = allGoals.find((g) => g.id === selectedId);
+      if (chosen) {
+        setLinked((prev) => [...prev, { id: chosen.id, title: chosen.title, description: null, status: "active", progress: 0, targetDate: null, milestones: null }]);
+      }
+      setLinking(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUnlink = async (goalId: string) => {
+    await fetch(`/api/goals/${goalId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ entityId: null }),
+    });
+    setLinked((prev) => prev.filter((g) => g.id !== goalId));
+  };
 
   return (
     <div className="space-y-3">
-      {goals.map((goal) => {
+      {linked.map((goal) => {
         const progress = goal.progress ?? 0;
         const milestones = goal.milestones ?? [];
         const done = milestones.filter((m) => m.done).length;
         const isCompleted = goal.status === "completed";
         return (
-          <div key={goal.id} className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+          <div key={goal.id} className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 group">
             <div className="flex items-start gap-2.5">
               {isCompleted
                 ? <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                 : <Target className="h-4 w-4 text-emerald-500/50 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white/85">{goal.title}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm font-medium text-white/85">{goal.title}</div>
+                  <button
+                    onClick={() => handleUnlink(goal.id)}
+                    className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all ml-auto shrink-0"
+                    title="Unlink from project"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
                 {goal.description && (
                   <p className="text-[11px] text-white/40 mt-0.5">{goal.description}</p>
                 )}
@@ -606,6 +651,41 @@ function GoalsTab({ goals }: { goals: LinkedGoal[] }) {
           </div>
         );
       })}
+
+      {linked.length === 0 && !linking && (
+        <p className="text-xs text-white/25 pt-1">No goals linked to this project.</p>
+      )}
+
+      {linking ? (
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            autoFocus
+            className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white/80 focus:outline-none focus:border-white/25"
+          >
+            <option value="">— Select a goal —</option>
+            {allGoals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
+          </select>
+          <button
+            onClick={handleLink}
+            disabled={!selectedId || saving}
+            className="px-2.5 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
+          </button>
+          <button onClick={() => setLinking(false)} className="px-2 py-1.5 text-xs text-white/30 hover:text-white/60">
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={openLink}
+          className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" /> Link existing goal
+        </button>
+      )}
     </div>
   );
 }
@@ -758,7 +838,7 @@ export function ProjectDetail({
           ) : tab === "prompts" ? (
             <PromptsTab data={data} projectId={projectId} jobs={jobs} setJobs={setJobs} />
           ) : (
-            <GoalsTab goals={data.linkedGoals} />
+            <GoalsTab goals={data.linkedGoals} projectId={data.id} />
           )}
         </div>
       </div>
