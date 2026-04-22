@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { CRON_FILE } from "@/lib/constants";
+import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
 
 export type CronJob = {
   id: string;
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         thinking: "low",
         model: model ?? "codex",
       },
-      delivery: { mode: "announce", channel: "telegram", to: "575014778", bestEffort: true },
+      delivery: { mode: "announce", channel: "telegram", to: TELEGRAM_CHAT_ID, bestEffort: true },
       state: {},
       ...(projectId ? { projectId, projectName: projectName ?? "" } : {}),
     };
