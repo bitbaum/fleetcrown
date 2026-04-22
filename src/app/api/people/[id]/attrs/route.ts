@@ -12,12 +12,11 @@ export async function POST(
   const { id } = await params;
   if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
-  // Verify project belongs to user
-  const [project] = await db
+  const [person] = await db
     .select({ id: entities.id })
     .from(entities)
     .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)));
-  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!person) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const { key, value } = body as { key: string; value: string };
@@ -25,7 +24,6 @@ export async function POST(
     return NextResponse.json({ error: "key and value required" }, { status: 400 });
   }
 
-  // Upsert: insert or update on conflict (entity_id, key)
   await db
     .insert(attributes)
     .values({

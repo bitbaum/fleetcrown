@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X, MessageCircle, Link2, Plus, Loader2, Trash2 } from "lucide-react";
+import { X, MessageCircle, Link2, Plus, Loader2, Trash2, Pencil, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CHANNEL_CONFIG } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
@@ -56,6 +56,7 @@ export function PersonDetail({
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
+  const [attrs, setAttrs] = useState<Record<string, string>>({});
   const [description, setDescription] = useState<string | null>(null);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
@@ -66,7 +67,7 @@ export function PersonDetail({
   useEffect(() => {
     fetch(`/api/people/${personId}`)
       .then((res) => res.json())
-      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); })
+      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [personId]);
@@ -223,21 +224,7 @@ export function PersonDetail({
             </Section>
 
             {/* Attributes */}
-            <Section title="Details">
-              {Object.entries(data.attrs)
-                .filter(([k]) => !k.startsWith("channel:") && k !== "aliases")
-                .map(([key, value]) => (
-                  <div key={key} className="flex justify-between gap-2 text-sm">
-                    <span className="text-white/50">{formatKey(key)}</span>
-                    <span className="text-right truncate">{value}</span>
-                  </div>
-                ))}
-              {Object.keys(data.attrs).filter(
-                (k) => !k.startsWith("channel:") && k !== "aliases",
-              ).length === 0 && (
-                <div className="text-sm text-white/30">No details yet</div>
-              )}
-            </Section>
+            <DetailAttrs personId={data.id} attrs={attrs} onUpdate={setAttrs} />
 
             {/* Aliases */}
             {data.attrs["aliases"] && (
@@ -387,6 +374,147 @@ function InteractionsSection({
           className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors mt-1"
         >
           <Plus className="h-3.5 w-3.5" /> Log interaction
+        </button>
+      )}
+    </Section>
+  );
+}
+
+function DetailAttrs({
+  personId,
+  attrs,
+  onUpdate,
+}: {
+  personId: string;
+  attrs: Record<string, string>;
+  onUpdate: (updated: Record<string, string>) => void;
+}) {
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [addingNew, setAddingNew] = useState(false);
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+
+  const detailAttrs = Object.entries(attrs).filter(
+    ([k]) => !k.startsWith("channel:") && k !== "aliases",
+  );
+
+  const saveEdit = async (key: string) => {
+    if (!editValue.trim() || saving) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/people/${personId}/attrs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value: editValue.trim() }),
+      });
+      onUpdate({ ...attrs, [key]: editValue.trim() });
+    } finally {
+      setSaving(false);
+      setEditingKey(null);
+    }
+  };
+
+  const saveNew = async () => {
+    if (!newKey.trim() || !newValue.trim() || saving) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/people/${personId}/attrs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
+      });
+      const normalizedKey = newKey.trim().toLowerCase().replace(/\s+/g, "_");
+      onUpdate({ ...attrs, [normalizedKey]: newValue.trim() });
+      setNewKey("");
+      setNewValue("");
+      setAddingNew(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Section title="Details">
+      {detailAttrs.map(([key, value]) => (
+        <div key={key} className="group flex justify-between gap-2 text-sm">
+          <span className="text-white/50 shrink-0">{formatKey(key)}</span>
+          {editingKey === key ? (
+            <div className="flex items-center gap-1 flex-1 justify-end">
+              <input
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveEdit(key);
+                  if (e.key === "Escape") setEditingKey(null);
+                }}
+                autoFocus
+                className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 rounded px-2 py-0.5 text-xs text-white/80 focus:outline-none focus:border-white/25 text-right"
+              />
+              <button
+                onClick={() => saveEdit(key)}
+                disabled={saving}
+                className="p-1 rounded bg-emerald-600/70 hover:bg-emerald-600 disabled:opacity-30 text-white shrink-0"
+              >
+                {saving ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
+              </button>
+              <button onClick={() => setEditingKey(null)} className="p-1 text-white/25 hover:text-white/60 shrink-0">
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-right truncate">{value}</span>
+              <button
+                onClick={() => { setEditValue(value); setEditingKey(key); }}
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-white/20 hover:text-white/60 transition-all shrink-0"
+              >
+                <Pencil className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+      {detailAttrs.length === 0 && !addingNew && (
+        <div className="text-sm text-white/30">No details yet</div>
+      )}
+      {addingNew ? (
+        <div className="flex gap-1.5 items-center pt-0.5">
+          <input
+            value={newKey}
+            onChange={(e) => setNewKey(e.target.value)}
+            placeholder="key"
+            className="w-20 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          />
+          <input
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder="value"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveNew();
+              if (e.key === "Escape") { setAddingNew(false); setNewKey(""); setNewValue(""); }
+            }}
+            autoFocus
+            className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          />
+          <button
+            onClick={saveNew}
+            disabled={!newKey.trim() || !newValue.trim() || saving}
+            className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white shrink-0"
+          >
+            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+          </button>
+          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className="p-1 text-white/25 hover:text-white/60">
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAddingNew(true)}
+          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-0.5"
+        >
+          <Plus className="h-3 w-3" /> Add detail
         </button>
       )}
     </Section>
