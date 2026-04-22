@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
-const MOBILE_TABS = NAV_ITEMS.filter((item) => item.active);
+const MOBILE_TABS = NAV_ITEMS.filter((item) => item.mobile);
 
 export function MobileNav() {
   const pathname = usePathname();
