@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
+import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle, Folder } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/app/api/crons/route";
@@ -32,6 +32,71 @@ function humanSchedule(expr: string): string {
   return map[expr] ?? expr;
 }
 
+function JobRow({
+  job,
+  onSelect,
+  onToggle,
+}: {
+  job: CronJob;
+  onSelect: () => void;
+  onToggle: (id: string, enabled: boolean) => void;
+}) {
+  const lastRun = job.state?.lastRunAtMs;
+  const nextRun = job.state?.nextRunAtMs;
+  const status = job.state?.lastStatus ?? job.state?.lastRunStatus;
+  const errors = job.state?.consecutiveErrors ?? 0;
+  const hasError = errors > 0;
+
+  return (
+    <div
+      onClick={onSelect}
+      className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-white/[0.04] transition-colors cursor-pointer"
+    >
+      <StatusDot status={status} errors={errors} />
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-white/30" : ""}`}>
+            {job.name}
+          </span>
+          {!job.enabled && (
+            <span className="text-[10px] uppercase tracking-wider text-white/20 shrink-0">off</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-xs text-white/30">{humanSchedule(job.schedule.expr)}</span>
+          {hasError && job.state?.lastError && (
+            <span className="flex items-center gap-1 text-[10px] text-red-400/70 truncate">
+              <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
+              {job.state.lastError}
+            </span>
+          )}
+          {!hasError && nextRun && (
+            <span className="flex items-center gap-1 text-[10px] text-white/20 shrink-0">
+              <Clock className="h-2.5 w-2.5" />
+              {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
+        className={`relative shrink-0 h-4 w-7 rounded-full transition-colors ${
+          job.enabled ? "bg-emerald-600" : "bg-white/10"
+        }`}
+        title={job.enabled ? "Disable" : "Enable"}
+      >
+        <span
+          className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
+            job.enabled ? "translate-x-3.5" : "translate-x-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
   const [jobs, setJobs] = useState(initialJobs);
   const [selected, setSelected] = useState<CronJob | null>(null);
@@ -56,9 +121,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
     });
     if (res.ok) {
       setJobs((prev) =>
-        prev.map((j) =>
-          j.id === id ? { ...j, payload: { ...j.payload, message } } : j,
-        ),
+        prev.map((j) => j.id === id ? { ...j, payload: { ...j.payload, message } } : j),
       );
       if (selected?.id === id)
         setSelected((prev) => prev && { ...prev, payload: { ...prev.payload, message } });
@@ -69,6 +132,23 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
     (j) => j.state?.lastStatus === "ok" || j.state?.lastRunStatus === "ok",
   ).length;
   const errCount = jobs.filter((j) => (j.state?.consecutiveErrors ?? 0) > 0).length;
+
+  // Group jobs: project-tagged first (grouped by project), then global
+  const projectGroups = new Map<string, { name: string; jobs: CronJob[] }>();
+  const globalJobs: CronJob[] = [];
+
+  for (const job of jobs) {
+    if (job.projectId && job.projectName) {
+      const existing = projectGroups.get(job.projectId);
+      if (existing) {
+        existing.jobs.push(job);
+      } else {
+        projectGroups.set(job.projectId, { name: job.projectName, jobs: [job] });
+      }
+    } else {
+      globalJobs.push(job);
+    }
+  }
 
   return (
     <>
@@ -93,74 +173,52 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
             </div>
           }
         />
-        <div className="space-y-1">
-          {jobs.map((job) => {
-            const lastRun = job.state?.lastRunAtMs;
-            const nextRun = job.state?.nextRunAtMs;
-            const status = job.state?.lastStatus ?? job.state?.lastRunStatus;
-            const errors = job.state?.consecutiveErrors ?? 0;
-            const hasError = errors > 0;
 
-            return (
-              <div
-                key={job.id}
-                onClick={() => setSelected(job)}
-                className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-white/[0.04] transition-colors group cursor-pointer"
-              >
-                <StatusDot status={status} errors={errors} />
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-sm font-medium truncate ${!job.enabled ? "text-white/30" : ""}`}
-                    >
-                      {job.name}
-                    </span>
-                    {!job.enabled && (
-                      <span className="text-[10px] uppercase tracking-wider text-white/20 shrink-0">
-                        off
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-white/30">
-                      {humanSchedule(job.schedule.expr)}
-                    </span>
-                    {hasError && job.state?.lastError && (
-                      <span className="flex items-center gap-1 text-[10px] text-red-400/70 truncate">
-                        <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
-                        {job.state.lastError}
-                      </span>
-                    )}
-                    {!hasError && nextRun && (
-                      <span className="flex items-center gap-1 text-[10px] text-white/20 shrink-0">
-                        <Clock className="h-2.5 w-2.5" />
-                        {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Toggle */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggle(job.id, !job.enabled);
-                  }}
-                  className={`relative shrink-0 h-4 w-7 rounded-full transition-colors ${
-                    job.enabled ? "bg-emerald-600" : "bg-white/10"
-                  }`}
-                  title={job.enabled ? "Disable" : "Enable"}
-                >
-                  <span
-                    className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-transform ${
-                      job.enabled ? "translate-x-3.5" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
+        <div className="space-y-4">
+          {/* Project-scoped job groups */}
+          {Array.from(projectGroups.entries()).map(([pid, group]) => (
+            <div key={pid}>
+              <div className="flex items-center gap-1.5 px-2 mb-1">
+                <Folder className="h-3 w-3 text-white/25" />
+                <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+                  {group.name}
+                </span>
               </div>
-            );
-          })}
+              <div className="space-y-0.5 pl-2 border-l border-white/[0.06]">
+                {group.jobs.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onSelect={() => setSelected(job)}
+                    onToggle={handleToggle}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Global (untagged) jobs */}
+          {globalJobs.length > 0 && (
+            <div>
+              {projectGroups.size > 0 && (
+                <div className="flex items-center gap-1.5 px-2 mb-1">
+                  <span className="text-[10px] uppercase tracking-wider text-white/20 font-medium">
+                    Global
+                  </span>
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {globalJobs.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onSelect={() => setSelected(job)}
+                    onToggle={handleToggle}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 

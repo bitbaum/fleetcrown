@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { entities, entityRelations, interactions } from "@/db/schema";
+import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readFileSync, existsSync } from "fs";
@@ -10,16 +10,20 @@ import path from "path";
 
 const CRON_FILE = path.join(homedir(), ".openclaw", "cron", "jobs.json");
 
-function getLinkedJobs(projectName: string) {
+function getLinkedJobs(projectId: string, projectName: string) {
   try {
     if (!existsSync(CRON_FILE)) return [];
     const data = JSON.parse(readFileSync(CRON_FILE, "utf-8"));
-    const jobs: Array<{ id: string; name: string; message: string; enabled: boolean; schedule: string; lastStatus?: string; consecutiveErrors?: number }> = [];
+    const jobs: Array<{ id: string; name: string; message: string; enabled: boolean; schedule: string; lastStatus?: string; consecutiveErrors?: number; projectId?: string }> = [];
     const nameLower = projectName.toLowerCase();
     for (const job of data.jobs ?? []) {
+      // Primary: exact projectId match
+      const byId = job.projectId === projectId;
+      // Fallback: fuzzy name match in job name or message
       const jobNameLower = (job.name ?? "").toLowerCase();
       const msgLower = (job.payload?.message ?? "").toLowerCase();
-      if (jobNameLower.includes(nameLower) || msgLower.includes(nameLower)) {
+      const byFuzzy = !job.projectId && (jobNameLower.includes(nameLower) || msgLower.includes(nameLower));
+      if (byId || byFuzzy) {
         jobs.push({
           id: job.id,
           name: job.name,
@@ -28,6 +32,7 @@ function getLinkedJobs(projectName: string) {
           schedule: job.schedule?.expr ?? "",
           lastStatus: job.state?.lastStatus,
           consecutiveErrors: job.state?.consecutiveErrors ?? 0,
+          projectId: job.projectId,
         });
       }
     }
@@ -98,7 +103,22 @@ export async function GET(
     .orderBy(desc(interactions.occurredAt))
     .limit(5);
 
-  const linkedJobs = getLinkedJobs(project.name);
+  const linkedJobs = getLinkedJobs(project.id, project.name);
+
+  // Goals linked to this project
+  const linkedGoals = await db
+    .select({
+      id: goals.id,
+      title: goals.title,
+      description: goals.description,
+      status: goals.status,
+      progress: goals.progress,
+      targetDate: goals.targetDate,
+      milestones: goals.milestones,
+    })
+    .from(goals)
+    .where(and(eq(goals.entityId, id), eq(goals.userId, DEFAULT_USER_ID)))
+    .orderBy(desc(goals.progress));
 
   return NextResponse.json({
     id: project.id,
@@ -115,5 +135,6 @@ export async function GET(
       occurredAt: i.occurredAt,
     })),
     linkedJobs,
+    linkedGoals,
   });
 }

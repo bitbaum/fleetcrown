@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   X,
-  ExternalLink,
   Globe,
   GitBranch,
   AlertTriangle,
@@ -18,7 +17,21 @@ import {
   Loader2,
   ToggleLeft,
   ToggleRight,
+  Target,
+  CheckCircle,
 } from "lucide-react";
+
+type Milestone = { title: string; done: boolean };
+
+type LinkedGoal = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  progress: number | null;
+  targetDate: string | null;
+  milestones: Milestone[] | null;
+};
 
 type LinkedJob = {
   id: string;
@@ -51,6 +64,7 @@ type ProjectDetailData = {
     occurredAt: string;
   }>;
   linkedJobs: LinkedJob[];
+  linkedGoals: LinkedGoal[];
 };
 
 // Keys to show prominently at the top
@@ -146,7 +160,7 @@ function AddAttrForm({ projectId, onSaved }: { projectId: string; onSaved: () =>
   );
 }
 
-function NewJobForm({ projectName, onCreated }: { projectName: string; onCreated: (job: LinkedJob) => void }) {
+function NewJobForm({ projectId, projectName, onCreated }: { projectId: string; projectName: string; onCreated: (job: LinkedJob) => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(`${projectName} — `);
   const [schedule, setSchedule] = useState("0 9 * * 1");
@@ -159,7 +173,7 @@ function NewJobForm({ projectName, onCreated }: { projectName: string; onCreated
     const res = await fetch("/api/crons", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, scheduleExpr: schedule, message }),
+      body: JSON.stringify({ name, scheduleExpr: schedule, message, projectId, projectName }),
     });
     const data = await res.json();
     setSaving(false);
@@ -285,6 +299,7 @@ export function ProjectDetail({
   const [loading, setLoading] = useState(true);
   const [showAddAttr, setShowAddAttr] = useState(false);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
+  const [linkedGoals, setLinkedGoals] = useState<LinkedGoal[]>([]);
 
   const reload = () => {
     setLoading(true);
@@ -293,6 +308,7 @@ export function ProjectDetail({
       .then((d: ProjectDetailData) => {
         setData(d);
         setJobs(d.linkedJobs ?? []);
+        setLinkedGoals(d.linkedGoals ?? []);
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
@@ -463,10 +479,82 @@ export function ProjectDetail({
                 </div>
               )}
               <NewJobForm
+                projectId={projectId}
                 projectName={data.name}
                 onCreated={(job) => setJobs((prev) => [...prev, job])}
               />
             </section>
+
+            {/* Goals */}
+            {linkedGoals.length > 0 && (
+              <section>
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="h-3.5 w-3.5 text-white/30" />
+                  <div className="text-[10px] uppercase tracking-wider text-white/30">
+                    Goals ({linkedGoals.length})
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {linkedGoals.map((goal) => {
+                    const progress = goal.progress ?? 0;
+                    const milestones = goal.milestones ?? [];
+                    const done = milestones.filter((m) => m.done).length;
+                    const isCompleted = goal.status === "completed";
+                    return (
+                      <div key={goal.id} className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+                        <div className="flex items-start gap-2.5">
+                          {isCompleted
+                            ? <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                            : <Target className="h-4 w-4 text-emerald-500/60 shrink-0 mt-0.5" />
+                          }
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-white/80">{goal.title}</div>
+                            {goal.description && (
+                              <div className="text-[11px] text-white/40 mt-0.5">{goal.description}</div>
+                            )}
+                            {/* Progress bar */}
+                            {!isCompleted && (
+                              <div className="mt-2">
+                                <div className="flex items-center justify-between text-[10px] text-white/30 mb-1">
+                                  <span>{progress}%</span>
+                                  {milestones.length > 0 && (
+                                    <span>{done}/{milestones.length} milestones</span>
+                                  )}
+                                </div>
+                                <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all ${
+                                      progress >= 80 ? "bg-emerald-500" : progress >= 50 ? "bg-yellow-500" : "bg-blue-500"
+                                    }`}
+                                    style={{ width: `${Math.max(progress, 1)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            {/* Milestones */}
+                            {milestones.length > 0 && (
+                              <div className="mt-2.5 space-y-1">
+                                {milestones.map((m, i) => (
+                                  <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                                    {m.done
+                                      ? <CheckCircle className="h-3 w-3 text-emerald-500/60 shrink-0" />
+                                      : <div className="h-3 w-3 rounded-full border border-white/20 shrink-0" />
+                                    }
+                                    <span className={m.done ? "text-white/25 line-through" : "text-white/50"}>
+                                      {m.title}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
 
             {/* People */}
             {people.length > 0 && (

@@ -40,6 +40,9 @@ export type CronJob = {
   };
   createdAtMs: number;
   updatedAtMs: number;
+  // Optional project linkage (cockpit extension, not part of openclaw core)
+  projectId?: string;
+  projectName?: string;
 };
 
 function readJobs(): { version: number; jobs: CronJob[] } {
@@ -59,13 +62,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, scheduleExpr, message, model, timeoutSeconds, tz } = body as {
+    const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } = body as {
       name: string;
       scheduleExpr: string;
       message: string;
       model?: string;
       timeoutSeconds?: number;
       tz?: string;
+      projectId?: string;
+      projectName?: string;
     };
 
     if (!name?.trim() || !scheduleExpr?.trim() || !message?.trim()) {
@@ -92,6 +97,7 @@ export async function POST(req: NextRequest) {
       },
       delivery: { mode: "announce", channel: "telegram", to: "575014778", bestEffort: true },
       state: {},
+      ...(projectId ? { projectId, projectName: projectName ?? "" } : {}),
     };
 
     data.jobs.push(newJob);
@@ -105,10 +111,12 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { id, enabled, message } = body as {
+    const { id, enabled, message, projectId, projectName } = body as {
       id: string;
       enabled?: boolean;
       message?: string;
+      projectId?: string;
+      projectName?: string;
     };
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
@@ -119,6 +127,8 @@ export async function PATCH(req: NextRequest) {
 
     if (enabled !== undefined) job.enabled = enabled;
     if (message !== undefined) job.payload.message = message;
+    if (projectId !== undefined) job.projectId = projectId || undefined;
+    if (projectName !== undefined) job.projectName = projectName || undefined;
     job.updatedAtMs = Date.now();
 
     writeFileSync(CRON_FILE, JSON.stringify(data, null, 2));
