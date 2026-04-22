@@ -5,6 +5,51 @@ import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { isValidUuid } from "@/lib/utils";
 
+const VALID_FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
+const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const body = await req.json();
+  const patch: Record<string, unknown> = {};
+
+  if ("nextDue" in body) patch.nextDue = body.nextDue ? new Date(body.nextDue) : null;
+  if ("amount" in body) patch.amount = body.amount != null ? Number(body.amount) : null;
+  if ("notes" in body) patch.notes = body.notes ? String(body.notes).trim() : null;
+  if ("status" in body) patch.status = body.status;
+  if ("currency" in body) {
+    if (!VALID_CURRENCIES.includes(body.currency)) {
+      return NextResponse.json({ error: "Invalid currency" }, { status: 400 });
+    }
+    patch.currency = body.currency;
+  }
+  if ("frequency" in body) {
+    if (!VALID_FREQUENCIES.includes(body.frequency)) {
+      return NextResponse.json({ error: "Invalid frequency" }, { status: 400 });
+    }
+    patch.frequency = body.frequency;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+  patch.updatedAt = new Date();
+
+  const [updated] = await db
+    .update(subscriptions)
+    .set(patch)
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, DEFAULT_USER_ID)))
+    .returning();
+
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ok: true, subscription: updated });
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },

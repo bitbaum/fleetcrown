@@ -2,18 +2,33 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Trash2, Loader2 } from "lucide-react";
+import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Trash2, Loader2, CheckCheck } from "lucide-react";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META } from "@/config/subscriptions";
+
+function advanceDueDate(current: string | null, frequency: string | null): string {
+  const base = current ? new Date(current) : new Date();
+  switch (frequency) {
+    case "annual":     base.setFullYear(base.getFullYear() + 1); break;
+    case "quarterly":  base.setMonth(base.getMonth() + 3); break;
+    case "weekly":     base.setDate(base.getDate() + 7); break;
+    default:           base.setMonth(base.getMonth() + 1); break; // monthly
+  }
+  return base.toISOString();
+}
 
 export function SubscriptionActions({
   subId,
   subName,
   status,
+  nextDue,
+  frequency,
 }: {
   subId: string;
   subName: string;
   status: string | null;
+  nextDue: string | null;
+  frequency: string | null;
 }) {
   const router = useRouter();
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -23,9 +38,12 @@ export function SubscriptionActions({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [paid, setPaid] = useState(false);
 
   const meta = SUBSCRIPTION_META[subName];
   const isCancelled = status === "cancelled";
+  const isOneTime = frequency === "one-time";
 
   async function onCancel() {
     setCancelling(true);
@@ -41,6 +59,22 @@ export function SubscriptionActions({
       router.refresh();
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function onMarkPaid() {
+    setMarkingPaid(true);
+    try {
+      const newDue = advanceDueDate(nextDue, frequency);
+      await fetch(`/api/subscriptions/${subId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nextDue: newDue }),
+      });
+      setPaid(true);
+      router.refresh();
+    } finally {
+      setMarkingPaid(false);
     }
   }
 
@@ -72,6 +106,19 @@ export function SubscriptionActions({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2">
+      {/* Mark paid — advances nextDue by one billing period (not for one-time or cancelled) */}
+      {!isCancelled && !isOneTime && !paid && (
+        <button
+          onClick={onMarkPaid}
+          disabled={markingPaid}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-emerald-400/20 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5 transition-colors disabled:opacity-50"
+        >
+          {markingPaid ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <CheckCheck className="h-2.5 w-2.5" />}
+          Mark paid
+        </button>
+      )}
+      {paid && <span className="text-xs text-emerald-400/50">Next due updated</span>}
+
       {/* Cancel at provider — only when meta is configured */}
       {meta && (
         <a
