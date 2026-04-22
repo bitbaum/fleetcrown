@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Clock, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/app/api/crons/route";
@@ -72,6 +72,12 @@ export function JobDetail({
     await onToggle(job.id, !job.enabled);
     setToggling(false);
   };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const lastRun = job.state?.lastRunAtMs;
   const nextRun = job.state?.nextRunAtMs;
