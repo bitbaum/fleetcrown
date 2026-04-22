@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Target, CheckCircle, Loader2 } from "lucide-react";
+import { Target, CheckCircle, Loader2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 
@@ -76,6 +76,88 @@ function ProgressInput({
   );
 }
 
+function DateInput({
+  goalId,
+  initial,
+  onUpdate,
+}: {
+  goalId: string;
+  initial: Date | null;
+  onUpdate: (date: Date | null) => void;
+}) {
+  // Normalise to YYYY-MM-DD string for <input type="date">
+  const toDateStr = (d: Date | null) =>
+    d ? new Date(d).toISOString().split("T")[0] : "";
+
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(toDateStr(initial));
+  const [saving, setSaving] = useState(false);
+  const currentDate = initial ? new Date(initial) : null;
+  const overdue = currentDate && isPast(currentDate);
+
+  const commit = async (newVal: string) => {
+    const newDate = newVal ? new Date(newVal) : null;
+    setSaving(true);
+    try {
+      await patchGoal(goalId, { targetDate: newDate ? newDate.toISOString() : null });
+      onUpdate(newDate);
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  };
+
+  if (saving) return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
+
+  if (editing) {
+    return (
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => commit(value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit(value);
+          if (e.key === "Escape") { setEditing(false); setValue(toDateStr(initial)); }
+        }}
+        autoFocus
+        className="text-xs bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-white/70 focus:outline-none focus:border-white/35"
+      />
+    );
+  }
+
+  if (currentDate) {
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => { setValue(toDateStr(initial)); setEditing(true); }}
+          className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-red-400" : "text-white/40"}`}
+          title="Click to change deadline"
+        >
+          {overdue ? "Overdue" : "Due"} {formatDistanceToNow(currentDate, { addSuffix: true })}
+        </button>
+        <button
+          onClick={() => commit("")}
+          className="text-white/20 hover:text-white/50 transition-colors opacity-0 group-hover:opacity-100"
+          title="Clear deadline"
+        >
+          <X className="h-2.5 w-2.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { setValue(""); setEditing(true); }}
+      className="text-xs text-white/20 hover:text-white/50 transition-colors opacity-0 group-hover:opacity-100"
+      title="Set deadline"
+    >
+      Set deadline
+    </button>
+  );
+}
+
 type Milestone = { title: string; done: boolean; date?: string };
 
 function MilestoneRow({
@@ -137,6 +219,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [milestones, setMilestones] = useState<Milestone[]>(
     (goal.milestones as Milestone[]) ?? [],
   );
+  const [targetDate, setTargetDate] = useState<Date | null>(goal.targetDate);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(goal.title);
@@ -242,11 +325,11 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   ) : (
                     <ProgressInput goalId={goal.id} initial={progress} onUpdate={setProgress} />
                   )}
-                  {goal.targetDate && (
-                    <span className="text-xs text-white/40">
-                      Target: {formatDistanceToNow(new Date(goal.targetDate), { addSuffix: true })}
-                    </span>
-                  )}
+                  <DateInput
+                    goalId={goal.id}
+                    initial={targetDate}
+                    onUpdate={setTargetDate}
+                  />
                 </div>
                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div
