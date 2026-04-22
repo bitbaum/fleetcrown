@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, CRON_FILE } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readFileSync, existsSync } from "fs";
-import { CRON_FILE } from "@/lib/constants";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   try {
@@ -55,20 +54,37 @@ export async function GET(
 
   if (!project) return NextResponse.json(null, { status: 404 });
 
-  const attrMap = await fetchAttributesByEntityIds([id]);
+  // Parallel: attrs, relations, interactions, and linked goals are independent
+  const [attrMap, relations, recentInteractions, linkedGoals] = await Promise.all([
+    fetchAttributesByEntityIds([id]),
+    db
+      .select()
+      .from(entityRelations)
+      .where(and(eq(entityRelations.fromEntityId, id), eq(entityRelations.userId, DEFAULT_USER_ID))),
+    db
+      .select()
+      .from(interactions)
+      .where(and(eq(interactions.entityId, id), eq(interactions.userId, DEFAULT_USER_ID)))
+      .orderBy(desc(interactions.occurredAt))
+      .limit(5),
+    db
+      .select({
+        id: goals.id,
+        title: goals.title,
+        description: goals.description,
+        status: goals.status,
+        progress: goals.progress,
+        targetDate: goals.targetDate,
+        milestones: goals.milestones,
+      })
+      .from(goals)
+      .where(and(eq(goals.entityId, id), eq(goals.userId, DEFAULT_USER_ID)))
+      .orderBy(desc(goals.progress)),
+  ]);
+
   const attrs = attrMap.get(id) ?? {};
 
-  // Related entities (people, other projects)
-  const relations = await db
-    .select()
-    .from(entityRelations)
-    .where(
-      and(
-        eq(entityRelations.fromEntityId, id),
-        eq(entityRelations.userId, DEFAULT_USER_ID),
-      ),
-    );
-
+  // Related entity names require relation IDs from above
   const relatedIds = relations.map((r) => r.toEntityId);
   let relatedEntities: Array<{ id: string; name: string; type: string }> = [];
   if (relatedIds.length > 0) {
@@ -86,35 +102,7 @@ export async function GET(
     targetType: relatedEntities.find((e) => e.id === r.toEntityId)?.type ?? "unknown",
   }));
 
-  // Recent interactions
-  const recentInteractions = await db
-    .select()
-    .from(interactions)
-    .where(
-      and(
-        eq(interactions.entityId, id),
-        eq(interactions.userId, DEFAULT_USER_ID),
-      ),
-    )
-    .orderBy(desc(interactions.occurredAt))
-    .limit(5);
-
   const linkedJobs = getLinkedJobs(project.id, project.name);
-
-  // Goals linked to this project
-  const linkedGoals = await db
-    .select({
-      id: goals.id,
-      title: goals.title,
-      description: goals.description,
-      status: goals.status,
-      progress: goals.progress,
-      targetDate: goals.targetDate,
-      milestones: goals.milestones,
-    })
-    .from(goals)
-    .where(and(eq(goals.entityId, id), eq(goals.userId, DEFAULT_USER_ID)))
-    .orderBy(desc(goals.progress));
 
   return NextResponse.json({
     id: project.id,
