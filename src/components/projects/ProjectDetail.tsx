@@ -779,6 +779,10 @@ export function ProjectDetail({
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
+  const [descOverride, setDescOverride] = useState<string | null | undefined>(undefined);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
 
   const reload = () => {
     setLoading(true);
@@ -792,6 +796,22 @@ export function ProjectDetail({
       .finally(() => setLoading(false));
   };
 
+  const commitDescription = async () => {
+    const trimmed = descValue.trim();
+    setSavingDesc(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: trimmed }),
+      });
+      if ((await res.json()).ok) setDescOverride(trimmed || null);
+    } finally {
+      setSavingDesc(false);
+      setEditingDesc(false);
+    }
+  };
+
   useEffect(() => { reload(); }, [projectId]);
 
   // Close on Escape
@@ -802,7 +822,8 @@ export function ProjectDetail({
   }, [onClose]);
 
   const attrs = data?.attrs ?? {};
-  const description = data?.description ?? attrs["description"] ?? null;
+  // descOverride: undefined = not yet edited this session, null = cleared, string = updated
+  const description = descOverride !== undefined ? descOverride : (data?.description ?? attrs["description"] ?? null);
   const owner = attrs["owner"] ?? null;
   const prodUrl = attrs["production_url"] ?? attrs["url"];
   const repo = attrs["repo"] ?? attrs["github_repo"];
@@ -835,10 +856,44 @@ export function ProjectDetail({
                   <span className="text-[10px] text-white/25 border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
                 )}
               </div>
-              {description && (
-                <p className="text-xs text-white/40 mt-0.5 leading-relaxed line-clamp-2">
-                  {description}
-                </p>
+              {editingDesc ? (
+                <div className="mt-1.5 space-y-1.5">
+                  <textarea
+                    value={descValue}
+                    onChange={(e) => setDescValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") { setEditingDesc(false); setDescValue(description ?? ""); }
+                      if (e.key === "Enter" && e.metaKey) commitDescription();
+                    }}
+                    autoFocus
+                    rows={2}
+                    placeholder="Add a description…"
+                    className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1.5 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/30 resize-none transition-colors"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={commitDescription}
+                      disabled={savingDesc}
+                      className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                    >
+                      {savingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                    </button>
+                    <button
+                      onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
+                      className="text-xs text-white/30 hover:text-white/60 px-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setDescValue(description ?? ""); setEditingDesc(true); }}
+                  className="w-full text-left text-xs text-white/40 hover:text-white/60 mt-0.5 leading-relaxed transition-colors"
+                  title="Click to edit description"
+                >
+                  {description ?? <span className="italic text-white/20">Add a description…</span>}
+                </button>
               )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
