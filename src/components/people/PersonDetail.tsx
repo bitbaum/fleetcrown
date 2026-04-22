@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { X, MessageCircle, Link2, Plus, Loader2 } from "lucide-react";
 import { CHANNEL_CONFIG } from "@/config/channels";
+import { formatDistanceToNow } from "date-fns";
 
 const CHANNELS = ["whatsapp", "telegram", "email", "phone", "in-person", "other"] as const;
 type Channel = typeof CHANNELS[number];
@@ -29,6 +30,29 @@ type PersonDetailData = {
   }>;
 };
 
+type Health = "active" | "fading" | "stale" | "unknown";
+
+const HEALTH_DOT: Record<Health, string> = {
+  active:  "bg-green-400",
+  fading:  "bg-yellow-400",
+  stale:   "bg-red-400",
+  unknown: "bg-white/20",
+};
+const HEALTH_LABEL: Record<Health, string> = {
+  active:  "active",
+  fading:  "fading",
+  stale:   "stale",
+  unknown: "no interactions",
+};
+
+function deriveHealth(lastDate: Date | null): Health {
+  if (!lastDate) return "unknown";
+  const daysSince = (Date.now() - lastDate.getTime()) / 86_400_000;
+  if (daysSince < 14) return "active";
+  if (daysSince < 30) return "fading";
+  return "stale";
+}
+
 export function PersonDetail({
   personId,
   onClose,
@@ -38,11 +62,12 @@ export function PersonDetail({
 }) {
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
 
   useEffect(() => {
     fetch(`/api/people/${personId}`)
       .then((res) => res.json())
-      .then(setData)
+      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [personId]);
@@ -62,8 +87,23 @@ export function PersonDetail({
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
       <div className="relative w-full max-w-md bg-background border-l border-white/10 overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
-          <h2 className="text-lg font-semibold truncate">{data?.name ?? "Loading..."}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/10">
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-lg font-semibold truncate">{data?.name ?? "Loading..."}</h2>
+            {data && (() => {
+              const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
+              const health = deriveHealth(lastDate);
+              return (
+                <div
+                  className="flex items-center gap-1.5 shrink-0"
+                  title={lastDate ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}` : "No interactions recorded"}
+                >
+                  <div className={`h-2 w-2 rounded-full ${HEALTH_DOT[health]}`} />
+                  <span className="text-xs text-white/30">{HEALTH_LABEL[health]}</span>
+                </div>
+              );
+            })()}
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 shrink-0">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -121,7 +161,7 @@ export function PersonDetail({
             )}
 
             {/* Recent Interactions */}
-            <InteractionsSection personId={data.id} initialInteractions={data.interactions} />
+            <InteractionsSection personId={data.id} interactions={interactions} onAdd={(ix) => setInteractions((prev) => [ix, ...prev])} />
 
             {/* Relations */}
             {data.relations.length > 0 && (
@@ -147,12 +187,13 @@ type Interaction = PersonDetailData["interactions"][number];
 
 function InteractionsSection({
   personId,
-  initialInteractions,
+  interactions: list,
+  onAdd,
 }: {
   personId: string;
-  initialInteractions: Interaction[];
+  interactions: Interaction[];
+  onAdd: (ix: Interaction) => void;
 }) {
-  const [list, setList] = useState<Interaction[]>(initialInteractions);
   const [logging, setLogging] = useState(false);
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
@@ -170,10 +211,7 @@ function InteractionsSection({
       });
       const data = await res.json();
       if (data.ok) {
-        setList((prev) => [
-          { channel, direction, summary: summary || null, occurredAt },
-          ...prev,
-        ]);
+        onAdd({ channel, direction, summary: summary || null, occurredAt });
         setLogging(false);
         setSummary("");
       }
