@@ -54,14 +54,34 @@ export function PersonDetail({
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
+  const [description, setDescription] = useState<string | null>(null);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState("");
+  const [savingDesc, setSavingDesc] = useState(false);
 
   useEffect(() => {
     fetch(`/api/people/${personId}`)
       .then((res) => res.json())
-      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); })
+      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [personId]);
+
+  const commitDescription = async () => {
+    const trimmed = descValue.trim();
+    setSavingDesc(true);
+    try {
+      const res = await fetch(`/api/people/${personId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: trimmed }),
+      });
+      if ((await res.json()).ok) setDescription(trimmed || null);
+    } finally {
+      setSavingDesc(false);
+      setEditingDesc(false);
+    }
+  };
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); },
@@ -105,6 +125,47 @@ export function PersonDetail({
           <div className="p-4 text-white/30">Person not found</div>
         ) : (
           <div className="p-4 space-y-6">
+            {/* Description — click to edit */}
+            {editingDesc ? (
+              <div className="space-y-1.5">
+                <textarea
+                  value={descValue}
+                  onChange={(e) => setDescValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setEditingDesc(false); setDescValue(description ?? ""); }
+                    if (e.key === "Enter" && e.metaKey) commitDescription();
+                  }}
+                  autoFocus
+                  rows={3}
+                  placeholder="Add a note about this person…"
+                  className="w-full bg-white/[0.04] border border-white/15 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/30 resize-none transition-colors"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={commitDescription}
+                    disabled={savingDesc}
+                    className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                  >
+                    {savingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                  </button>
+                  <button
+                    onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
+                    className="text-xs text-white/30 hover:text-white/60 px-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setDescValue(description ?? ""); setEditingDesc(true); }}
+                className="w-full text-left text-sm text-white/40 hover:text-white/60 transition-colors"
+                title="Click to edit notes"
+              >
+                {description ?? <span className="italic text-white/20">Add a note…</span>}
+              </button>
+            )}
+
             {/* Channels */}
             <Section title="Channels">
               {Object.entries(data.attrs)
