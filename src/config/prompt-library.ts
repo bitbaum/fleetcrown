@@ -28,6 +28,7 @@ export type PromptTemplate = {
   template: string; // may contain {{project_name}} placeholder
   suggestedSchedule?: string; // cron expr, e.g. "0 9 * * 1"
   tags?: string[];
+  featured?: boolean; // show in Quick Access row
 };
 
 export const CATEGORY_META: Record<PromptCategory, { label: string; color: string }> = {
@@ -48,6 +49,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
   {
     id: "security-audit",
     name: "Security Audit",
+    featured: true,
     description: "Scan for vulnerabilities, auth gaps, exposed secrets, injection risks",
     category: "engineering",
     scope: "project",
@@ -103,6 +105,7 @@ Output: prioritized debt list with effort estimates (S/M/L).`,
   {
     id: "ux-audit",
     name: "UX & Accessibility Audit",
+    featured: true,
     description: "Check responsive design, touch targets, focus states, loading states",
     category: "frontend",
     scope: "project",
@@ -279,6 +282,7 @@ List violations by page/component.`,
   {
     id: "feature-gap-analysis",
     name: "Feature Gap Analysis",
+    featured: true,
     description: "Compare current features to goal milestones and find the critical gap",
     category: "business",
     scope: "project",
@@ -390,6 +394,7 @@ Format as: Pain points → Product improvements → Priority order.`,
   {
     id: "commit-push-deploy",
     name: "Commit → Push → Deploy → Verify",
+    featured: true,
     description: "Stage all changes, write commit message, push to GitHub, monitor Vercel deployment, run smoke tests",
     category: "devops",
     scope: "project",
@@ -411,6 +416,7 @@ Report: ✓ deployed at <url> or ✗ failed: <reason>`,
   {
     id: "project-status",
     name: "Project Status Report",
+    featured: true,
     description: "Full health check: git status, CI, Vercel, broken features, next action",
     category: "devops",
     scope: "project",
@@ -451,6 +457,7 @@ Check git logs and Cockpit database for current state.`,
   {
     id: "daily-dev-plan",
     name: "Daily Development Plan",
+    featured: true,
     description: "Given everything in flight, what should be built today?",
     category: "personal",
     scope: "global",

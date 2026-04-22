@@ -13,6 +13,7 @@ import {
   Copy,
   Check,
   X,
+  Star,
 } from "lucide-react";
 import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import {
@@ -300,7 +301,7 @@ function RunModal({
         </div>
       </div>
 
-      {/* Project detail overlay — opens on top of the run modal */}
+      {/* Project detail overlay */}
       {showProjectDetail && projectId && projectId !== "__global__" && (
         <ProjectDetail
           projectId={projectId}
@@ -311,9 +312,9 @@ function RunModal({
   );
 }
 
-// ─── Template Card ────────────────────────────────────────────────────────────
+// ─── Template Card (compact row for category sections) ────────────────────────
 
-function TemplateCard({
+function PromptRow({
   template,
   projects,
 }: {
@@ -327,52 +328,101 @@ function TemplateCard({
 
   return (
     <>
-      <div className="flex flex-col gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.07] hover:border-white/[0.12] transition-colors">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
+      <div className="group flex flex-col gap-0 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.10] hover:bg-white/[0.04] transition-colors">
+        {/* Main row */}
+        <div className="flex items-center gap-3 px-4 py-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
-                {meta.label}
-              </span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${
-                template.scope === "project"
-                  ? "bg-white/[0.04] text-white/30 border-white/10"
-                  : "bg-white/[0.04] text-white/30 border-white/10"
-              }`}>
-                {template.scope === "project"
-                  ? <><FolderOpen className="h-2.5 w-2.5" /> project</>
-                  : <><Globe className="h-2.5 w-2.5" /> global</>
-                }
-              </span>
+              <span className="text-sm font-medium text-white/80 truncate">{template.name}</span>
+              {template.scope === "global" ? (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-white/25 border border-white/[0.07] flex items-center gap-0.5 shrink-0">
+                  <Globe className="h-2 w-2" /> global
+                </span>
+              ) : (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-white/25 border border-white/[0.07] flex items-center gap-0.5 shrink-0">
+                  <FolderOpen className="h-2 w-2" /> project
+                </span>
+              )}
               {template.suggestedSchedule && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded border bg-white/[0.04] text-white/25 border-white/10 flex items-center gap-1">
-                  <Clock className="h-2.5 w-2.5" /> schedulable
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 border border-white/[0.06] flex items-center gap-0.5 shrink-0">
+                  <Clock className="h-2 w-2" /> schedulable
                 </span>
               )}
             </div>
-            <div className="text-sm font-medium mt-1.5">{template.name}</div>
-            <div className="text-xs text-white/40 mt-0.5 leading-relaxed">{template.description}</div>
+            <div className="text-xs text-white/35 mt-0.5 leading-relaxed truncate">{template.description}</div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-1.5 rounded text-white/20 hover:text-white/50 transition-colors"
+              title="Preview prompt"
+            >
+              {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            {template.suggestedSchedule && (
+              <button
+                onClick={() => setShowSchedule(true)}
+                className="p-1.5 rounded text-white/20 hover:text-white/50 transition-colors"
+                title="Schedule as cron job"
+              >
+                <Clock className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => setShowRun(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+            >
+              <Zap className="h-3 w-3" /> Run
+            </button>
           </div>
         </div>
 
-        {/* Prompt preview toggle */}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-[10px] text-white/25 hover:text-white/50 flex items-center gap-1 transition-colors text-left"
-        >
-          {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          {expanded ? "Hide prompt" : "Preview prompt"}
-        </button>
-
+        {/* Expandable prompt preview */}
         {expanded && (
-          <pre className="text-[11px] text-white/40 whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded-lg p-2.5 border border-white/[0.05] max-h-36 overflow-y-auto">
-            {template.template}
-          </pre>
+          <div className="px-4 pb-3 border-t border-white/[0.05] pt-3">
+            <pre className="text-[11px] text-white/40 whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded-lg p-2.5 border border-white/[0.05] max-h-36 overflow-y-auto">
+              {template.template}
+            </pre>
+          </div>
         )}
+      </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 mt-auto pt-1">
+      {showRun && (
+        <RunModal template={template} projects={projects} onClose={() => setShowRun(false)} />
+      )}
+      {showSchedule && (
+        <ScheduleModal template={template} projects={projects} onClose={() => setShowSchedule(false)} />
+      )}
+    </>
+  );
+}
+
+// ─── Featured Card (larger, for quick-access row) ─────────────────────────────
+
+function FeaturedCard({
+  template,
+  projects,
+}: {
+  template: PromptTemplate;
+  projects: Project[];
+}) {
+  const [showRun, setShowRun] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const meta = CATEGORY_META[template.category];
+
+  return (
+    <>
+      <div className="flex flex-col gap-3 p-4 rounded-xl bg-white/[0.04] border border-white/[0.09] hover:border-white/[0.15] hover:bg-white/[0.06] transition-colors">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
+              {meta.label}
+            </span>
+            <div className="text-sm font-semibold mt-1.5 leading-snug">{template.name}</div>
+            <div className="text-xs text-white/40 mt-0.5 leading-relaxed line-clamp-2">{template.description}</div>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-auto">
           <button
             onClick={() => setShowRun(true)}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
@@ -382,16 +432,8 @@ function TemplateCard({
           {template.suggestedSchedule && (
             <button
               onClick={() => setShowSchedule(true)}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/60 text-xs font-medium transition-colors border border-white/10"
-            >
-              <Clock className="h-3.5 w-3.5" /> Schedule
-            </button>
-          )}
-          {!template.suggestedSchedule && (
-            <button
-              onClick={() => setShowSchedule(true)}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/40 text-xs transition-colors border border-white/[0.07]"
-              title="Schedule as cron job"
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 text-xs transition-colors border border-white/10"
+              title="Schedule"
             >
               <Clock className="h-3.5 w-3.5" />
             </button>
@@ -409,9 +451,55 @@ function TemplateCard({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Category Tab Bar ─────────────────────────────────────────────────────────
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
+
+function CategoryBar({
+  active,
+  templates,
+  onSelect,
+}: {
+  active: PromptCategory | "all";
+  templates: PromptTemplate[];
+  onSelect: (cat: PromptCategory | "all") => void;
+}) {
+  const counts = new Map(
+    ALL_CATEGORIES.map((cat) => [cat, templates.filter((t) => t.category === cat).length])
+  );
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <button
+        onClick={() => onSelect("all")}
+        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+          active === "all"
+            ? "bg-white/10 border-white/20 text-white"
+            : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/70 hover:border-white/15"
+        }`}
+      >
+        All ({templates.length})
+      </button>
+      {ALL_CATEGORIES.filter((cat) => (counts.get(cat) ?? 0) > 0).map((cat) => {
+        const meta = CATEGORY_META[cat];
+        const isActive = active === cat;
+        return (
+          <button
+            key={cat}
+            onClick={() => onSelect(isActive ? "all" : cat)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+              isActive ? meta.color : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/70 hover:border-white/15"
+            }`}
+          >
+            {meta.label} ({counts.get(cat)})
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function PromptLibraryClient({
   templates,
@@ -423,6 +511,8 @@ export function PromptLibraryClient({
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<PromptCategory | "all">("all");
   const [activeScope, setActiveScope] = useState<"all" | "global" | "project">("all");
+
+  const isFiltered = search.length > 0 || activeCategory !== "all" || activeScope !== "all";
 
   const filtered = templates.filter((t) => {
     if (activeCategory !== "all" && t.category !== activeCategory) return false;
@@ -438,13 +528,16 @@ export function PromptLibraryClient({
     return true;
   });
 
-  const categoryCountsAll = ALL_CATEGORIES.map((cat) => ({
-    cat,
-    count: templates.filter((t) => t.category === cat).length,
-  })).filter((x) => x.count > 0);
+  const featured = templates.filter((t) => t.featured);
+
+  // When not filtering, show featured section + category sections
+  // When filtering, show flat list of results
+  const categoriesWithTemplates = ALL_CATEGORIES.filter((cat) =>
+    filtered.some((t) => t.category === cat)
+  );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Search + scope filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -473,48 +566,85 @@ export function PromptLibraryClient({
         </div>
       </div>
 
-      {/* Category filter pills */}
-      <div className="flex gap-2 flex-wrap">
-        <button
-          onClick={() => setActiveCategory("all")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-            activeCategory === "all"
-              ? "bg-white/10 border-white/20 text-white/80"
-              : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/60"
-          }`}
-        >
-          All ({templates.length})
-        </button>
-        {categoryCountsAll.map(({ cat, count }) => {
-          const meta = CATEGORY_META[cat];
-          const isActive = activeCategory === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(isActive ? "all" : cat)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                isActive
-                  ? `${meta.color}`
-                  : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/60"
-              }`}
-            >
-              {meta.label} ({count})
-            </button>
-          );
-        })}
-      </div>
+      {/* Category tab bar */}
+      <CategoryBar
+        active={activeCategory}
+        templates={templates}
+        onSelect={setActiveCategory}
+      />
 
-      {/* Grid */}
+      {/* Content */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-12 text-white/30">
           <Search className="h-8 w-8" />
           <div className="text-sm">No prompts match your filters</div>
         </div>
+      ) : isFiltered ? (
+        /* Filtered: flat list grouped by category */
+        <div className="space-y-6">
+          {categoriesWithTemplates.map((cat) => {
+            const group = filtered.filter((t) => t.category === cat);
+            const meta = CATEGORY_META[cat];
+            return (
+              <section key={cat}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
+                    {meta.label}
+                  </span>
+                  <span className="text-xs text-white/20">{group.length} prompt{group.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="space-y-2">
+                  {group.map((t) => (
+                    <PromptRow key={t.id} template={t} projects={projects} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((template) => (
-            <TemplateCard key={template.id} template={template} projects={projects} />
-          ))}
+        /* Default view: featured row + all categories */
+        <div className="space-y-8">
+          {/* Quick Access */}
+          {featured.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Star className="h-3.5 w-3.5 text-yellow-400/70" />
+                <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Quick Access</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {featured.map((t) => (
+                  <FeaturedCard key={t.id} template={t} projects={projects} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Category sections */}
+          {ALL_CATEGORIES.filter((cat) => templates.some((t) => t.category === cat)).map((cat) => {
+            const group = templates.filter((t) => t.category === cat);
+            const meta = CATEGORY_META[cat];
+            return (
+              <section key={cat}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
+                    {meta.label}
+                  </span>
+                  <button
+                    onClick={() => setActiveCategory(cat)}
+                    className="text-[10px] text-white/20 hover:text-white/50 transition-colors ml-auto"
+                  >
+                    filter →
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {group.map((t) => (
+                    <PromptRow key={t.id} template={t} projects={projects} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
