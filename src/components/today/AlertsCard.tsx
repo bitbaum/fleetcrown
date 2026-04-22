@@ -1,7 +1,8 @@
-import { Bell, AlertTriangle, Info, AlertCircle } from "lucide-react";
+import { Bell, AlertTriangle, Info, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveAlerts } from "@/db/queries/alerts";
 import { DismissAlertButton } from "./DismissAlertButton";
+import Link from "next/link";
 
 const SEVERITY_CONFIG = {
   urgent: { icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/20" },
@@ -44,6 +45,14 @@ export async function AlertsCard() {
                   <div className="text-sm md:text-base font-medium">{alert.title}</div>
                   {alert.description && (
                     <div className="text-xs md:text-sm text-white/50 mt-0.5">{alert.description}</div>
+                  )}
+                  {alert.actionUrl && (
+                    <Link
+                      href={alert.actionUrl}
+                      className={`inline-flex items-center gap-1 text-xs mt-1 ${config.color} opacity-70 hover:opacity-100 transition-opacity`}
+                    >
+                      View <ArrowRight className="h-3 w-3" />
+                    </Link>
                   )}
                 </div>
                 <DismissAlertButton alertId={alert.id} />
