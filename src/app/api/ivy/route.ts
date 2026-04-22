@@ -28,7 +28,12 @@ export async function POST(req: NextRequest) {
     );
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error ?? "Agent failed" }, { status: 500 });
+      // Log the real error server-side; send a friendly message to the client
+      console.error("[ivy] agent call failed:", result.error);
+      const friendly = result.error?.includes("timeout")
+        ? "Ivy timed out — the request took too long. Try again."
+        : "Ivy is unavailable right now — please try again in a moment.";
+      return NextResponse.json({ error: friendly }, { status: 500 });
     }
 
     try {
