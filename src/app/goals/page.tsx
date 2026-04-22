@@ -4,6 +4,7 @@ import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { GoalCard } from "@/components/goals/GoalCard";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
+import { CompletedGoals } from "@/components/goals/CompletedGoals";
 
 export default async function GoalsPage() {
   const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
@@ -54,18 +55,7 @@ export default async function GoalsPage() {
             </Card>
           )}
 
-          {completedGoals.length > 0 && (
-            <div>
-              <div className="text-xs font-medium text-white/30 uppercase tracking-wider mb-3">
-                Completed · {completedGoals.length}
-              </div>
-              <div className="space-y-3">
-                {completedGoals.map((goal) => (
-                  <GoalCard key={goal.id} goal={goal} depth={0} />
-                ))}
-              </div>
-            </div>
-          )}
+          <CompletedGoals goals={completedGoals} />
         </>
       )}
     </PageLayout>
