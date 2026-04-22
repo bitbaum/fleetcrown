@@ -61,37 +61,41 @@ export async function getUpcomingSubscriptions(days = 7) {
 }
 
 export async function getTodaySummary() {
-  const [goalStats] = await db
-    .select({
-      active: sql<number>`count(*)`,
-      avgProgress: sql<number>`coalesce(avg(${goals.progress}), 0)`,
-    })
-    .from(goals)
-    .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active")));
-
-  const [alertStats] = await db
-    .select({ total: sql<number>`count(*)` })
-    .from(alerts)
-    .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false)));
-
-  const [urgentStats] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(alerts)
-    .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, "urgent")));
-
-  const [actionStats] = await db
-    .select({ drafts: sql<number>`count(*)` })
-    .from(actions)
-    .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, "draft")));
-
-  const [overdueStats] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(commitments)
-    .where(and(
-      eq(commitments.userId, DEFAULT_USER_ID),
-      eq(commitments.status, "active"),
-      lte(commitments.dueDate, new Date()),
-    ));
+  const [
+    [goalStats],
+    [alertStats],
+    [urgentStats],
+    [actionStats],
+    [overdueStats],
+  ] = await Promise.all([
+    db
+      .select({
+        active: sql<number>`count(*)`,
+        avgProgress: sql<number>`coalesce(avg(${goals.progress}), 0)`,
+      })
+      .from(goals)
+      .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active"))),
+    db
+      .select({ total: sql<number>`count(*)` })
+      .from(alerts)
+      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false))),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(alerts)
+      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, "urgent"))),
+    db
+      .select({ drafts: sql<number>`count(*)` })
+      .from(actions)
+      .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, "draft"))),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(commitments)
+      .where(and(
+        eq(commitments.userId, DEFAULT_USER_ID),
+        eq(commitments.status, "active"),
+        lte(commitments.dueDate, new Date()),
+      )),
+  ]);
 
   return {
     activeGoals: Number(goalStats.active),
