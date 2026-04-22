@@ -310,6 +310,8 @@ function AttrRow({
   );
 }
 
+const PROJECT_CHANNELS = ["work-session", "meeting", "ivy", "review", "deployment", "call", "other"] as const;
+
 function OverviewTab({
   data,
   projectId,
@@ -321,6 +323,32 @@ function OverviewTab({
 }) {
   const [addingKey, setAddingKey] = useState<string | null>(null);
   const [showEmpty, setShowEmpty] = useState(false);
+  const [activityList, setActivityList] = useState(data.interactions);
+  const [loggingActivity, setLoggingActivity] = useState(false);
+  const [actChannel, setActChannel] = useState<string>("work-session");
+  const [actSummary, setActSummary] = useState("");
+  const [actDate, setActDate] = useState(new Date().toISOString().split("T")[0]);
+  const [actSaving, setActSaving] = useState(false);
+
+  const handleLogActivity = async () => {
+    setActSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/interactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: actChannel, direction: "outbound", summary: actSummary || undefined, occurredAt: actDate }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setActivityList((prev) => [{ channel: actChannel, direction: "outbound", summary: actSummary || null, occurredAt: actDate }, ...prev]);
+        setLoggingActivity(false);
+        setActSummary("");
+        setActDate(new Date().toISOString().split("T")[0]);
+      }
+    } finally {
+      setActSaving(false);
+    }
+  };
 
   const attrs = data.attrs;
 
@@ -473,23 +501,71 @@ function OverviewTab({
       )}
 
       {/* Recent activity */}
-      {data.interactions.length > 0 && (
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">
-            <MessageSquare className="h-3 w-3" /> Recent Activity
-          </div>
-          <div className="space-y-3">
-            {data.interactions.map((i, idx) => (
-              <div key={idx} className="text-xs">
-                <div className="text-white/25 mb-0.5">
-                  {i.channel} · {new Date(i.occurredAt).toLocaleDateString()}
-                </div>
-                {i.summary && <p className="text-white/50 leading-relaxed">{i.summary}</p>}
-              </div>
-            ))}
-          </div>
+      <div>
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">
+          <MessageSquare className="h-3 w-3" /> Recent Activity
         </div>
-      )}
+        <div className="space-y-3">
+          {activityList.map((i, idx) => (
+            <div key={idx} className="text-xs">
+              <div className="text-white/25 mb-0.5">
+                {i.channel} · {new Date(i.occurredAt).toLocaleDateString()}
+              </div>
+              {i.summary && <p className="text-white/50 leading-relaxed">{i.summary}</p>}
+            </div>
+          ))}
+          {activityList.length === 0 && !loggingActivity && (
+            <p className="text-xs text-white/20">No activity recorded yet.</p>
+          )}
+        </div>
+
+        {loggingActivity ? (
+          <div className="mt-3 space-y-2 pt-2 border-t border-white/[0.06]">
+            <div className="flex gap-2">
+              <select
+                value={actChannel}
+                onChange={(e) => setActChannel(e.target.value)}
+                className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              >
+                {PROJECT_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input
+                type="date"
+                value={actDate}
+                onChange={(e) => setActDate(e.target.value)}
+                className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              />
+            </div>
+            <input
+              value={actSummary}
+              onChange={(e) => setActSummary(e.target.value)}
+              placeholder="What happened? (optional)"
+              onKeyDown={(e) => { if (e.key === "Enter") handleLogActivity(); if (e.key === "Escape") setLoggingActivity(false); }}
+              autoFocus
+              className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleLogActivity}
+                disabled={actSaving}
+                className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
+              >
+                {actSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+              </button>
+              <button onClick={() => setLoggingActivity(false)} className="text-xs text-white/30 hover:text-white/60 px-1">
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setLoggingActivity(true)}
+            className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-2"
+          >
+            <Plus className="h-3.5 w-3.5" /> Log activity
+          </button>
+        )}
+      </div>
     </div>
   );
 }
