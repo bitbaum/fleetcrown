@@ -69,7 +69,7 @@ export function PersonDetail({
                   <div key={key} className="flex items-center gap-2 text-sm">
                     <ChannelIcon channel={key} />
                     <span className="text-white/70">{key.replace("channel:", "")}</span>
-                    <span className="text-white/40 font-mono text-xs truncate">{value}</span>
+                    <span className="text-white/40 font-mono text-xs truncate">{formatChannelValue(value)}</span>
                   </div>
                 ))}
             </Section>
@@ -80,7 +80,7 @@ export function PersonDetail({
                 .filter(([k]) => !k.startsWith("channel:") && k !== "aliases")
                 .map(([key, value]) => (
                   <div key={key} className="flex justify-between gap-2 text-sm">
-                    <span className="text-white/50">{key}</span>
+                    <span className="text-white/50">{formatKey(key)}</span>
                     <span className="text-right truncate">{value}</span>
                   </div>
                 ))}
@@ -169,4 +169,14 @@ function parseAliases(raw: string): string[] {
   } catch {
     return [raw];
   }
+}
+
+// "relationship_to_george" → "Relationship to george"
+function formatKey(key: string): string {
+  return key.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+// Strip storage format prefixes from channel values: "e164:+41763217721" → "+41763217721"
+function formatChannelValue(value: string): string {
+  return value.replace(/^e164:/, "");
 }
