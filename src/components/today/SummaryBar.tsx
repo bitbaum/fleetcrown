@@ -1,4 +1,4 @@
-import { Target, Bell, Inbox, AlertCircle } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock } from "lucide-react";
 import { getTodaySummary } from "@/db/queries/today";
 
 export async function SummaryBar() {
@@ -7,6 +7,9 @@ export async function SummaryBar() {
   return (
     <div className="flex flex-wrap gap-3">
       <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} />
+      {s.goalsDueSoon > 0 && (
+        <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" />
+      )}
       {s.pendingDrafts > 0 && (
         <Pill icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" />
       )}

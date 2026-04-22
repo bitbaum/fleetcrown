@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { commitments, events, subscriptions, goals, alerts, actions } from "@/db/schema";
-import { eq, and, lte, gte, sql } from "drizzle-orm";
+import { commitments, subscriptions, goals, alerts, actions } from "@/db/schema";
+import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 
 export async function fulfillCommitment(id: string) {
   await db
@@ -23,25 +23,6 @@ export async function getActiveCommitments() {
     .orderBy(commitments.dueDate);
 }
 
-export async function getUpcomingEvents(days = 7) {
-  const now = new Date();
-  const future = new Date();
-  future.setDate(future.getDate() + days);
-
-  return db
-    .select()
-    .from(events)
-    .where(
-      and(
-        eq(events.userId, DEFAULT_USER_ID),
-        eq(events.status, "active"),
-        gte(events.dateStart, now),
-        lte(events.dateStart, future),
-      ),
-    )
-    .orderBy(events.dateStart);
-}
-
 export async function getUpcomingSubscriptions(days = 7) {
   const now = new Date();
   const future = new Date();
@@ -61,12 +42,16 @@ export async function getUpcomingSubscriptions(days = 7) {
 }
 
 export async function getTodaySummary() {
+  const soon = new Date();
+  soon.setDate(soon.getDate() + 14);
+
   const [
     [goalStats],
     [alertStats],
     [urgentStats],
     [actionStats],
     [overdueStats],
+    [goalsDueSoonStats],
   ] = await Promise.all([
     db
       .select({
@@ -95,6 +80,16 @@ export async function getTodaySummary() {
         eq(commitments.status, "active"),
         lte(commitments.dueDate, new Date()),
       )),
+    // Goals with a target date within the next 14 days
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(goals)
+      .where(and(
+        eq(goals.userId, DEFAULT_USER_ID),
+        eq(goals.status, "active"),
+        isNotNull(goals.targetDate),
+        lte(goals.targetDate, soon),
+      )),
   ]);
 
   return {
@@ -104,5 +99,6 @@ export async function getTodaySummary() {
     urgentAlerts: Number(urgentStats.count),
     pendingDrafts: Number(actionStats.drafts),
     overdueCommitments: Number(overdueStats.count),
+    goalsDueSoon: Number(goalsDueSoonStats.count),
   };
 }
