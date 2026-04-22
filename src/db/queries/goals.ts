@@ -1,6 +1,6 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { goals } from "@/db/schema";
+import { goals, entities } from "@/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
 
 export type GoalWithChildren = {
@@ -12,18 +12,31 @@ export type GoalWithChildren = {
   targetDate: Date | null;
   completedAt: Date | null;
   milestones: Array<{ title: string; done: boolean; date?: string }> | null;
+  entityId: string | null;
+  entityName: string | null;
   children: GoalWithChildren[];
 };
 
 export async function getGoals(): Promise<GoalWithChildren[]> {
   const allGoals = await db
-    .select()
+    .select({
+      id: goals.id,
+      title: goals.title,
+      description: goals.description,
+      status: goals.status,
+      progress: goals.progress,
+      targetDate: goals.targetDate,
+      completedAt: goals.completedAt,
+      milestones: goals.milestones,
+      parentGoalId: goals.parentGoalId,
+      entityId: goals.entityId,
+      entityName: entities.name,
+    })
     .from(goals)
+    .leftJoin(entities, eq(goals.entityId, entities.id))
     .where(eq(goals.userId, DEFAULT_USER_ID))
     .orderBy(goals.createdAt);
 
-  // Build tree: top-level goals have no parentGoalId
-  const byId = new Map(allGoals.map((g) => [g.id, g]));
   const childrenMap = new Map<string | null, typeof allGoals>();
 
   for (const goal of allGoals) {
@@ -44,6 +57,8 @@ export async function getGoals(): Promise<GoalWithChildren[]> {
       targetDate: g.targetDate,
       completedAt: g.completedAt,
       milestones: g.milestones as GoalWithChildren["milestones"],
+      entityId: g.entityId,
+      entityName: g.entityName ?? null,
       children: buildTree(g.id),
     }));
   }

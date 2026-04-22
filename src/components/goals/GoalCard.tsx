@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Target, CheckCircle, Loader2, X } from "lucide-react";
+import { Target, CheckCircle, Loader2, X, FolderKanban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
@@ -314,6 +314,12 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             </div>
             {goal.description && (
               <div className="text-xs md:text-sm text-white/40 mt-1">{goal.description}</div>
+            )}
+            {goal.entityName && (
+              <div className="flex items-center gap-1 mt-1">
+                <FolderKanban className="h-3 w-3 text-emerald-400/50" />
+                <span className="text-xs text-emerald-400/60">{goal.entityName}</span>
+              </div>
             )}
 
             {/* Progress bar */}
