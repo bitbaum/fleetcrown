@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Target, CheckCircle, Loader2, X, FolderKanban } from "lucide-react";
+import { Target, CheckCircle, Loader2, X, Plus, FolderKanban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
@@ -159,6 +159,75 @@ function DateInput({
 }
 
 type Milestone = { title: string; done: boolean; date?: string };
+
+function AddMilestoneInline({
+  goalId,
+  milestones,
+  onAdded,
+}: {
+  goalId: string;
+  milestones: Milestone[];
+  onAdded: (updated: Milestone[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const title = value.trim();
+    if (!title || saving) return;
+    setSaving(true);
+    const updated = [...milestones, { title, done: false }];
+    try {
+      await patchGoal(goalId, { milestones: updated });
+      onAdded(updated);
+      setValue("");
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-1"
+      >
+        <Plus className="h-3 w-3" /> Add milestone
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") { setOpen(false); setValue(""); }
+        }}
+        placeholder="Milestone title…"
+        autoFocus
+        className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+      />
+      <button
+        onClick={save}
+        disabled={!value.trim() || saving}
+        className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white transition-colors shrink-0"
+      >
+        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+      </button>
+      <button
+        onClick={() => { setOpen(false); setValue(""); }}
+        className="p-1.5 rounded text-white/25 hover:text-white/60 transition-colors shrink-0"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
 
 function MilestoneRow({
   milestone,
@@ -347,7 +416,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             )}
 
             {/* Milestones */}
-            {milestoneTotal > 0 && (
+            {(milestoneTotal > 0 || !isCompleted) && (
               <div className="mt-2 space-y-1.5">
                 {milestones.map((m, i) => (
                   <MilestoneRow
@@ -362,9 +431,21 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     }}
                   />
                 ))}
-                <div className="text-xs text-white/30 mt-1">
-                  {milestoneDone}/{milestoneTotal} milestones
-                </div>
+                {milestoneTotal > 0 && (
+                  <div className="text-xs text-white/30 mt-1">
+                    {milestoneDone}/{milestoneTotal} milestones
+                  </div>
+                )}
+                {!isCompleted && (
+                  <AddMilestoneInline
+                    goalId={goal.id}
+                    milestones={milestones}
+                    onAdded={(updated) => {
+                      setMilestones(updated);
+                      // If first milestone added, progress stays manual until milestones drive it
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>
