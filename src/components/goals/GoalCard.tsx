@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Target, CheckCircle, Loader2, X, Plus, FolderKanban } from "lucide-react";
+import { Target, CheckCircle, Loader2, X, Plus, Check, FolderKanban } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
@@ -414,7 +414,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={savingDesc}
                     className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white">
-                    {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5 rotate-45" />}
+                    {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
                     className="p-1.5 text-white/25 hover:text-white/60">
