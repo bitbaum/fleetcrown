@@ -7,6 +7,7 @@ const CRON_FILE = path.join(homedir(), ".openclaw", "cron", "jobs.json");
 
 export type CronJob = {
   id: string;
+  agentId: string;
   name: string;
   enabled: boolean;
   schedule: { kind: string; expr: string; tz: string };
@@ -52,6 +53,52 @@ export async function GET() {
     return NextResponse.json({ jobs: data.jobs });
   } catch (e) {
     return NextResponse.json({ jobs: [], error: String(e) });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { name, scheduleExpr, message, model, timeoutSeconds, tz } = body as {
+      name: string;
+      scheduleExpr: string;
+      message: string;
+      model?: string;
+      timeoutSeconds?: number;
+      tz?: string;
+    };
+
+    if (!name?.trim() || !scheduleExpr?.trim() || !message?.trim()) {
+      return NextResponse.json({ error: "name, scheduleExpr, and message are required" }, { status: 400 });
+    }
+
+    const data = readJobs();
+    const newJob: CronJob = {
+      id: crypto.randomUUID(),
+      agentId: "main",
+      name: name.trim(),
+      enabled: true,
+      createdAtMs: Date.now(),
+      updatedAtMs: Date.now(),
+      schedule: { kind: "cron", expr: scheduleExpr.trim(), tz: tz ?? "Europe/Zurich" },
+      sessionTarget: "isolated",
+      wakeMode: "now",
+      payload: {
+        kind: "agentTurn",
+        message: message.trim(),
+        timeoutSeconds: timeoutSeconds ?? 120,
+        thinking: "low",
+        model: model ?? "codex",
+      },
+      delivery: { mode: "announce", channel: "telegram", to: "575014778", bestEffort: true },
+      state: {},
+    };
+
+    data.jobs.push(newJob);
+    writeFileSync(CRON_FILE, JSON.stringify(data, null, 2));
+    return NextResponse.json({ ok: true, job: newJob });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
 

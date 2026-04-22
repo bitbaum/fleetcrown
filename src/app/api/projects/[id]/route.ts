@@ -4,6 +4,38 @@ import { db } from "@/db";
 import { entities, entityRelations, interactions } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
+import { readFileSync, existsSync } from "fs";
+import { homedir } from "os";
+import path from "path";
+
+const CRON_FILE = path.join(homedir(), ".openclaw", "cron", "jobs.json");
+
+function getLinkedJobs(projectName: string) {
+  try {
+    if (!existsSync(CRON_FILE)) return [];
+    const data = JSON.parse(readFileSync(CRON_FILE, "utf-8"));
+    const jobs: Array<{ id: string; name: string; message: string; enabled: boolean; schedule: string; lastStatus?: string; consecutiveErrors?: number }> = [];
+    const nameLower = projectName.toLowerCase();
+    for (const job of data.jobs ?? []) {
+      const jobNameLower = (job.name ?? "").toLowerCase();
+      const msgLower = (job.payload?.message ?? "").toLowerCase();
+      if (jobNameLower.includes(nameLower) || msgLower.includes(nameLower)) {
+        jobs.push({
+          id: job.id,
+          name: job.name,
+          message: job.payload?.message ?? "",
+          enabled: job.enabled,
+          schedule: job.schedule?.expr ?? "",
+          lastStatus: job.state?.lastStatus,
+          consecutiveErrors: job.state?.consecutiveErrors ?? 0,
+        });
+      }
+    }
+    return jobs;
+  } catch {
+    return [];
+  }
+}
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -66,6 +98,8 @@ export async function GET(
     .orderBy(desc(interactions.occurredAt))
     .limit(5);
 
+  const linkedJobs = getLinkedJobs(project.name);
+
   return NextResponse.json({
     id: project.id,
     name: project.name,
@@ -80,5 +114,6 @@ export async function GET(
       summary: i.summary,
       occurredAt: i.occurredAt,
     })),
+    linkedJobs,
   });
 }
