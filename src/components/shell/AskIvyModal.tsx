@@ -64,6 +64,17 @@ function useSpeechRecognition(onResult: (text: string) => void) {
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
+function useElapsedTimer(active: boolean) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!active) { setElapsed(0); return; }
+    setElapsed(0);
+    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return elapsed;
+}
+
 export function AskIvyModal({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -71,6 +82,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
   const [showAllPrompts, setShowAllPrompts] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const elapsed = useElapsedTimer(loading);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
@@ -209,9 +221,17 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
-                <span className="text-xs text-white/40">Ivy is thinking…</span>
+              <div className="bg-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
+                <div>
+                  <span className="text-xs text-white/50">
+                    {elapsed < 5 ? "Ivy is thinking…" :
+                     elapsed < 15 ? "Searching your knowledge graph…" :
+                     elapsed < 25 ? "Composing a response…" :
+                     "Almost there…"}
+                  </span>
+                  <span className="text-[10px] text-white/20 ml-2">{elapsed}s</span>
+                </div>
               </div>
             </div>
           )}

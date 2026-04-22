@@ -253,6 +253,62 @@ function NewJobForm({
 
 // ─── Tab content ──────────────────────────────────────────────────────────────
 
+function AttrRow({
+  label,
+  value,
+  projectId,
+  attrKey,
+  onReload,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  projectId: string;
+  attrKey: string;
+  onReload: () => void;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <div className="py-1">
+        <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
+        <AddAttrInline
+          projectId={projectId}
+          presetKey={attrKey}
+          presetPlaceholder={placeholder ?? label}
+          initialValue={value}
+          onSaved={() => { setEditing(false); onReload(); }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
+  const isUrl = value.startsWith("http");
+  return (
+    <div className="group flex items-start gap-3 py-2 border-b border-white/[0.04] last:border-0">
+      <span className="text-[10px] text-white/30 uppercase tracking-wider w-24 shrink-0 pt-0.5 leading-relaxed">{label}</span>
+      <div className="flex-1 min-w-0 flex items-start gap-1.5">
+        {isUrl ? (
+          <a href={value} target="_blank" rel="noreferrer"
+            className="text-xs text-white/60 hover:text-white/85 underline underline-offset-2 break-all leading-relaxed">
+            {value.replace(/^https?:\/\//, "")}
+          </a>
+        ) : (
+          <span className="text-xs text-white/75 leading-relaxed break-words">{value}</span>
+        )}
+        <button
+          onClick={() => setEditing(true)}
+          className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
+          title="Edit"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function OverviewTab({
   data,
   projectId,
@@ -263,11 +319,23 @@ function OverviewTab({
   onReload: () => void;
 }) {
   const [addingKey, setAddingKey] = useState<string | null>(null);
+  const [showEmpty, setShowEmpty] = useState(false);
 
   const attrs = data.attrs;
-  const prodUrl = attrs["production_url"] ?? attrs["url"];
-  const repo = attrs["repo"] ?? attrs["github_repo"];
-  const otherAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
+
+  // All attrs except reserved ones (links/issues/status/maturity shown in header)
+  const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
+
+  // Which suggested attrs are missing
+  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
+
+  // Label map for suggested attrs
+  const suggestedLabel: Record<string, string> = Object.fromEntries(
+    SUGGESTED_ATTRS.map(({ key, label }) => [key, label])
+  );
+  const suggestedPlaceholder: Record<string, string> = Object.fromEntries(
+    SUGGESTED_ATTRS.map(({ key, placeholder }) => [key, placeholder])
+  );
 
   return (
     <div className="space-y-5">
@@ -301,76 +369,73 @@ function OverviewTab({
         </div>
       )}
 
-      {/* Suggested fields (mission/vision/customers/stack/next_step) */}
-      <div>
-        <div className="text-[10px] uppercase tracking-wider text-white/25 mb-3 font-medium">Intelligence</div>
-        <div className="grid grid-cols-1 gap-3">
-          {SUGGESTED_ATTRS.map(({ key, label, placeholder }) => {
-            const value = attrs[key];
-            const isEditing = addingKey === key;
-            return (
-              <div key={key} className="flex flex-col gap-1">
-                <div className="text-[10px] text-white/30 uppercase tracking-wider">{label}</div>
-                {isEditing ? (
-                  <AddAttrInline
-                    projectId={projectId}
-                    presetKey={key}
-                    presetPlaceholder={placeholder}
-                    initialValue={value}
-                    onSaved={() => { setAddingKey(null); onReload(); }}
-                    onCancel={() => setAddingKey(null)}
-                  />
-                ) : value ? (
-                  <div className="group flex items-start gap-2">
-                    <p className="text-sm text-white/75 leading-relaxed flex-1">{value}</p>
+      {/* All present attributes */}
+      {displayAttrs.length > 0 ? (
+        <div>
+          {displayAttrs.map(([key, value]) => (
+            <AttrRow
+              key={key}
+              label={suggestedLabel[key] ?? key.replace(/_/g, " ")}
+              value={value}
+              projectId={projectId}
+              attrKey={key}
+              onReload={onReload}
+              placeholder={suggestedPlaceholder[key]}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-white/25 italic">No details recorded yet.</p>
+      )}
+
+      {/* Missing suggested fields — collapsed by default */}
+      {missingSuggested.length > 0 && (
+        <div>
+          {showEmpty ? (
+            <div className="space-y-1">
+              <div className="text-[10px] uppercase tracking-wider text-white/20 mb-2">Add missing context</div>
+              {missingSuggested.map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  {addingKey === key ? (
+                    <div className="py-1">
+                      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
+                      <AddAttrInline
+                        projectId={projectId}
+                        presetKey={key}
+                        presetPlaceholder={placeholder}
+                        onSaved={() => { setAddingKey(null); setShowEmpty(false); onReload(); }}
+                        onCancel={() => setAddingKey(null)}
+                      />
+                    </div>
+                  ) : (
                     <button
                       onClick={() => setAddingKey(key)}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
-                      title="Edit"
+                      className="flex items-center gap-1.5 w-full text-left py-1.5 text-xs text-white/25 hover:text-white/50 transition-colors"
                     >
-                      <Pencil className="h-3 w-3" />
+                      <Plus className="h-3 w-3 shrink-0" />
+                      <span className="font-medium text-white/35">{label}</span>
+                      <span className="text-white/20 italic ml-1">— {placeholder}</span>
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setAddingKey(key)}
-                    className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/50 transition-colors text-left"
-                  >
-                    <Plus className="h-3 w-3" />
-                    <span className="italic">{placeholder}</span>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Other attrs */}
-      {otherAttrs.filter(([k]) => !SUGGESTED_ATTRS.some((s) => s.key === k)).length > 0 && (
-        <div>
-          <div className="text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">More</div>
-          <div className="space-y-2">
-            {otherAttrs
-              .filter(([k]) => !SUGGESTED_ATTRS.some((s) => s.key === k))
-              .map(([key, value]) => (
-                <div key={key} className="flex items-start gap-3 text-xs">
-                  <span className="text-white/25 w-28 shrink-0 pt-0.5 capitalize">{key.replace(/_/g, " ")}</span>
-                  {value.startsWith("http") ? (
-                    <a href={value} target="_blank" rel="noreferrer"
-                      className="text-white/50 hover:text-white/80 underline underline-offset-2 truncate">
-                      {value.replace(/^https?:\/\//, "")}
-                    </a>
-                  ) : (
-                    <span className="text-white/60 leading-relaxed">{value}</span>
                   )}
                 </div>
               ))}
-          </div>
+              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-white/20 hover:text-white/40 transition-colors mt-1">
+                Collapse
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowEmpty(true)}
+              className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/45 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add {missingSuggested.map((s) => s.label.toLowerCase()).join(", ")}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Generic add attribute */}
+      {/* Custom attribute */}
       {addingKey === "__custom__" ? (
         <div className="pt-1">
           <AddAttrInline
@@ -382,9 +447,9 @@ function OverviewTab({
       ) : (
         <button
           onClick={() => setAddingKey("__custom__")}
-          className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" /> Add attribute
+          <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>
       )}
 

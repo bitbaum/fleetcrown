@@ -26,7 +26,9 @@ export function runTool(
       },
       (err, stdout, stderr) => {
         if (err) {
-          resolve({ ok: false, error: err.message });
+          // Include stderr in error for debugging
+          const detail = stderr?.trim() ? ` | stderr: ${stderr.trim().slice(0, 500)}` : "";
+          resolve({ ok: false, error: err.message + detail });
         } else {
           resolve({ ok: true, data: stdout.trim() });
         }

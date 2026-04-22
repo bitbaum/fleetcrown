@@ -96,15 +96,15 @@ function ProjectCard({
         </div>
       )}
 
-      {/* Footer: attr tags for projects without status/maturity */}
+      {/* Footer: attr preview for projects without status/maturity */}
       {!status && !maturity && !hasIssues && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {Object.entries(attrs)
-            .filter(([k]) => !["production_url", "url", "repo", "github_repo"].includes(k))
-            .slice(0, 3)
+            .filter(([k]) => !["production_url", "url", "repo", "github_repo", "owner"].includes(k))
+            .slice(0, 2)
             .map(([key, value]) => (
-              <span key={key} className="px-1.5 py-0.5 rounded text-[10px] bg-white/[0.04] text-white/30 border border-white/[0.06]">
-                {key}: {String(value).slice(0, 25)}
+              <span key={key} className="px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-white/35 border border-white/[0.07]">
+                {String(value).slice(0, 30)}
               </span>
             ))}
         </div>
