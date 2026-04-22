@@ -781,6 +781,10 @@ export function ProjectDetail({
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
+  const [nameOverride, setNameOverride] = useState<string | undefined>(undefined);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const [descOverride, setDescOverride] = useState<string | null | undefined>(undefined);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
@@ -798,6 +802,24 @@ export function ProjectDetail({
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  };
+
+  const commitName = async () => {
+    const trimmed = nameValue.trim();
+    const current = nameOverride ?? data?.name ?? "";
+    if (!trimmed || trimmed === current) { setEditingName(false); return; }
+    setSavingName(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if ((await res.json()).ok) setNameOverride(trimmed);
+    } finally {
+      setSavingName(false);
+      setEditingName(false);
+    }
   };
 
   const commitDescription = async () => {
@@ -864,9 +886,30 @@ export function ProjectDetail({
           <div className="flex items-start gap-3 px-5 pt-4 pb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base font-semibold truncate">
-                  {loading ? "Loading…" : (data?.name ?? "Not found")}
-                </h2>
+                {editingName ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      value={nameValue}
+                      onChange={(e) => setNameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitName();
+                        if (e.key === "Escape") { setEditingName(false); setNameValue(nameOverride ?? data?.name ?? ""); }
+                      }}
+                      onBlur={commitName}
+                      autoFocus
+                      className="text-base font-semibold bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 w-48"
+                    />
+                    {savingName && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+                  </div>
+                ) : (
+                  <h2
+                    className={`text-base font-semibold truncate ${data && !loading ? "cursor-text hover:text-white/80 transition-colors" : ""}`}
+                    onClick={() => data && !loading && (setNameValue(nameOverride ?? data.name), setEditingName(true))}
+                    title={data && !loading ? "Click to rename" : undefined}
+                  >
+                    {loading ? "Loading…" : (nameOverride ?? data?.name ?? "Not found")}
+                  </h2>
+                )}
                 {owner && (
                   <span className="text-[10px] text-white/25 border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
                 )}
