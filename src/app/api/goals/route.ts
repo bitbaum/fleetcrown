@@ -3,8 +3,7 @@ import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidUuid } from "@/lib/utils";
 
 export async function GET() {
   const items = await db
@@ -27,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!title?.trim()) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
   }
-  if (parentGoalId && !UUID_RE.test(parentGoalId)) {
+  if (parentGoalId && !isValidUuid(parentGoalId)) {
     return NextResponse.json({ error: "Invalid parentGoalId" }, { status: 400 });
   }
 

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { isValidUuid } from "@/lib/utils";
 
 export async function PATCH(
   req: NextRequest,
@@ -11,7 +12,7 @@ export async function PATCH(
   const { id } = await params;
 
   // Validate UUID format
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+  if (!isValidUuid(id)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
 
@@ -30,7 +31,7 @@ export async function PATCH(
   // Coerce entityId "" → null (unlink)
   if ("entityId" in patch) {
     const eid = patch.entityId as string | null;
-    if (eid && !UUID_RE.test(eid)) return NextResponse.json({ error: "Invalid entityId" }, { status: 400 });
+    if (eid && !isValidUuid(eid)) return NextResponse.json({ error: "Invalid entityId" }, { status: 400 });
     patch.entityId = eid || null;
   }
   // Reject empty title
@@ -65,14 +66,12 @@ export async function PATCH(
   return NextResponse.json({ ok: true, goal: updated });
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   // Verify ownership
   const [goal] = await db

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
+import { isValidUuid } from "@/lib/utils";
 import { readFileSync, existsSync } from "fs";
 
 function getLinkedJobs(projectId: string, projectName: string) {
@@ -38,14 +39,12 @@ function getLinkedJobs(projectId: string, projectName: string) {
   }
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return NextResponse.json(null, { status: 400 });
+  if (!isValidUuid(id)) return NextResponse.json(null, { status: 400 });
 
   const [project] = await db
     .select()

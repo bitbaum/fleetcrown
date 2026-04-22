@@ -3,15 +3,14 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidUuid } from "@/lib/utils";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  if (!!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   // Verify project belongs to user
   const [project] = await db
@@ -49,7 +48,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  if (!UUID_RE.test(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  if (!!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
   const { key } = await req.json();
   if (!key) return NextResponse.json({ error: "key required" }, { status: 400 });
