@@ -23,6 +23,27 @@ export async function getActiveCommitments() {
     .orderBy(commitments.dueDate);
 }
 
+export async function getGoalsDueSoon(days = 14) {
+  const soon = new Date();
+  soon.setDate(soon.getDate() + days);
+
+  return db
+    .select({
+      id: goals.id,
+      title: goals.title,
+      progress: goals.progress,
+      targetDate: goals.targetDate,
+    })
+    .from(goals)
+    .where(and(
+      eq(goals.userId, DEFAULT_USER_ID),
+      eq(goals.status, "active"),
+      isNotNull(goals.targetDate),
+      lte(goals.targetDate, soon),
+    ))
+    .orderBy(goals.targetDate);
+}
+
 export async function getUpcomingSubscriptions(days = 7) {
   const now = new Date();
   const future = new Date();
