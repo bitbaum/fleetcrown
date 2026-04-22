@@ -28,7 +28,7 @@ export function CalendarCard() {
       ) : (
         <div className="space-y-2">
           {events.map((event, i) => (
-            <div key={i} className="flex gap-3 items-start">
+            <div key={`${event.start ?? event.startTime ?? i}-${event.summary ?? event.title ?? i}`} className="flex gap-3 items-start">
               <div className="text-xs text-white/40 font-mono w-12 shrink-0 pt-0.5">
                 {formatTime(event.start ?? event.startTime)}
               </div>
