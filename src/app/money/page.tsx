@@ -2,6 +2,7 @@ import { CreditCard, AlertCircle, HelpCircle, ExternalLink } from "lucide-react"
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { SubscriptionActions } from "@/components/money/SubscriptionActions";
+import { NewSubscriptionButton } from "@/components/money/NewSubscriptionButton";
 import { SUBSCRIPTION_META } from "@/config/subscriptions";
 import {
   getActiveSubscriptions,
@@ -20,13 +21,15 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default async function MoneyPage() {
-  const activeSubs = await getActiveSubscriptions();
-  const allSubs = await getAllSubscriptions();
-  const commitments = await getFinancialCommitments();
+  const [activeSubs, allSubs, commitments] = await Promise.all([
+    getActiveSubscriptions(),
+    getAllSubscriptions(),
+    getFinancialCommitments(),
+  ]);
   const burn = calculateMonthlyBurn(activeSubs);
 
   return (
-    <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments">
+    <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           label="Monthly Burn"

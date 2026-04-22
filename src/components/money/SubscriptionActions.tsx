@@ -15,6 +15,7 @@ export function SubscriptionActions({
   status: string | null;
 }) {
   const [showAlternatives, setShowAlternatives] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
 
@@ -22,9 +23,6 @@ export function SubscriptionActions({
   if (!meta || status === "cancelled") return null;
 
   async function onCancel() {
-    if (!confirm(`Mark "${subName}" as cancelled in Cockpit?\n\nThis does NOT cancel the actual subscription — you still need to cancel at the provider's website.`)) {
-      return;
-    }
     setCancelling(true);
     await handleCancelSubscription(subId);
     setCancelled(true);
@@ -47,15 +45,33 @@ export function SubscriptionActions({
         Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
       </a>
 
-      {/* Mark as cancelled in Cockpit */}
-      <button
-        onClick={onCancel}
-        disabled={cancelling}
-        className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
-      >
-        <X className="h-2.5 w-2.5" />
-        Mark cancelled
-      </button>
+      {/* Mark as cancelled — inline confirm instead of browser dialog */}
+      {confirmCancel ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-white/40">Mark cancelled?</span>
+          <button
+            onClick={onCancel}
+            disabled={cancelling}
+            className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50"
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => setConfirmCancel(false)}
+            className="text-xs text-white/30 hover:text-white/60 transition-colors px-1"
+          >
+            No
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirmCancel(true)}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+        >
+          <X className="h-2.5 w-2.5" />
+          Mark cancelled
+        </button>
+      )}
 
       {/* Show alternatives */}
       {!meta.essential && meta.alternatives.length > 0 && (
