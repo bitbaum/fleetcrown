@@ -25,6 +25,7 @@ function ProjectCard({
   onOpen: () => void;
 }) {
   const { attrs } = project;
+  const description = project.description ?? attrs["description"] ?? null;
   const prodUrl = attrs["production_url"] ?? attrs["url"];
   const repo = attrs["repo"] ?? attrs["github_repo"];
   const maturity = attrs["maturity"];
@@ -43,9 +44,9 @@ function ProjectCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold truncate">{project.name}</div>
-          {project.description && (
+          {description && (
             <div className="text-xs text-white/40 mt-0.5 line-clamp-2 leading-relaxed">
-              {project.description}
+              {description}
             </div>
           )}
         </div>
@@ -100,7 +101,7 @@ function ProjectCard({
       {!status && !maturity && !hasIssues && (
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(attrs)
-            .filter(([k]) => !["production_url", "url", "repo", "github_repo", "owner"].includes(k))
+            .filter(([k]) => !["production_url", "url", "repo", "github_repo", "owner", "description"].includes(k))
             .slice(0, 2)
             .map(([key, value]) => (
               <span key={key} className="px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-white/35 border border-white/[0.07]">

@@ -52,7 +52,8 @@ const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
 // Issue keys rendered as warning cards
 const ISSUE_ATTRS = ["broken_features", "security_vulnerability", "deployment_issue"];
 // Keys with dedicated rendering (not shown in generic grid)
-const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity"];
+// "description" is shown in the panel header, "owner" shown as badge
+const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner"];
 
 // Suggested attrs to prompt the user to fill in if missing
 const SUGGESTED_ATTRS: { key: string; label: string; placeholder: string }[] = [
@@ -645,6 +646,8 @@ export function ProjectDetail({
   }, [onClose]);
 
   const attrs = data?.attrs ?? {};
+  const description = data?.description ?? attrs["description"] ?? null;
+  const owner = attrs["owner"] ?? null;
   const prodUrl = attrs["production_url"] ?? attrs["url"];
   const repo = attrs["repo"] ?? attrs["github_repo"];
   const hasIssues = ["security_vulnerability", "broken_features", "deployment_issue"].some((k) => attrs[k]);
@@ -668,12 +671,17 @@ export function ProjectDetail({
           {/* Top row: name + links + close */}
           <div className="flex items-start gap-3 px-5 pt-4 pb-3">
             <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold truncate">
-                {loading ? "Loading…" : (data?.name ?? "Not found")}
-              </h2>
-              {data?.description && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-semibold truncate">
+                  {loading ? "Loading…" : (data?.name ?? "Not found")}
+                </h2>
+                {owner && (
+                  <span className="text-[10px] text-white/25 border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
+                )}
+              </div>
+              {description && (
                 <p className="text-xs text-white/40 mt-0.5 leading-relaxed line-clamp-2">
-                  {data.description}
+                  {description}
                 </p>
               )}
             </div>
