@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { X, MessageCircle, Link2 } from "lucide-react";
 import { CHANNEL_CONFIG } from "@/config/channels";
 
@@ -43,6 +43,16 @@ export function PersonDetail({
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, [personId]);
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); },
+    [onClose],
+  );
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
