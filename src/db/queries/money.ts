@@ -59,13 +59,15 @@ export function calculateMonthlyBurn(
   let totalUsd = 0;
 
   for (const sub of subs) {
-    if (!sub.amount) continue;
+    if (!sub.amount || sub.frequency === "one-time") continue;
     const monthly =
       sub.frequency === "annual"
         ? sub.amount / 12
         : sub.frequency === "quarterly"
           ? sub.amount / 3
-          : sub.amount;
+          : sub.frequency === "weekly"
+            ? sub.amount * (52 / 12)
+            : sub.amount; // monthly
 
     if (sub.currency === "CHF") totalChf += monthly;
     else if (sub.currency === "USD") totalUsd += monthly;
