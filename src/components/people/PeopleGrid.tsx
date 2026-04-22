@@ -78,7 +78,7 @@ export function PeopleGrid({
             placeholder="Search people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-white/20 placeholder:text-white/30"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-4 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-white/30"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
             {total}

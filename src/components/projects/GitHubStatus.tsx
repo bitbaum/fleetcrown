@@ -41,9 +41,9 @@ export function GitHubStatus() {
               <div key={repo.repo} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
                   <Icon className={`h-3.5 w-3.5 ${status.className}`} />
-                  <span className="text-sm font-medium">{repo.repo}</span>
+                  <span className="text-sm md:text-base font-medium">{repo.repo}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-white/40">
+                <div className="flex items-center gap-3 text-xs md:text-sm text-white/40">
                   {(repo.open_prs ?? 0) > 0 && (
                     <span>{repo.open_prs} PR{repo.open_prs !== 1 ? "s" : ""}</span>
                   )}

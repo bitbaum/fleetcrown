@@ -57,21 +57,21 @@ function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <div className={depth === 0 ? "text-sm font-semibold" : "text-sm font-medium text-white/80"}>{goal.title}</div>
+              <div className={depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-white/80"}>{goal.title}</div>
               {goal.status && goal.status !== "active" && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/40">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/40">
                   {goal.status}
                 </span>
               )}
             </div>
             {goal.description && (
-              <div className="text-xs text-white/40 mt-1">{goal.description}</div>
+              <div className="text-xs md:text-sm text-white/40 mt-1">{goal.description}</div>
             )}
 
             {/* Progress bar */}
             {!isCompleted && (
               <div className="mt-2">
-                <div className="flex items-center justify-between text-xs text-white/40 mb-1">
+                <div className="flex items-center justify-between text-xs md:text-sm text-white/40 mb-1">
                   <span>{progress}%</span>
                   {goal.targetDate && (
                     <span>
@@ -92,18 +92,18 @@ function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
             {milestoneTotal > 0 && (
               <div className="mt-2 space-y-1">
                 {goal.milestones!.map((m, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
+                  <div key={i} className="flex items-center gap-2 text-xs md:text-sm">
                     {m.done ? (
-                      <CheckCircle className="h-3 w-3 text-green-400/60" />
+                      <CheckCircle className="h-3.5 w-3.5 text-green-400/60" />
                     ) : (
-                      <div className="h-3 w-3 rounded-full border border-white/20" />
+                      <div className="h-3.5 w-3.5 rounded-full border border-white/20" />
                     )}
                     <span className={m.done ? "text-white/40 line-through" : "text-white/60"}>
                       {m.title}
                     </span>
                   </div>
                 ))}
-                <div className="text-[10px] text-white/30 mt-1">
+                <div className="text-xs text-white/30 mt-1">
                   {milestoneDone}/{milestoneTotal} milestones
                 </div>
               </div>

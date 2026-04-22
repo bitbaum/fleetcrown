@@ -31,7 +31,7 @@ export function SubscriptionActions({
   }
 
   if (cancelled) {
-    return <span className="text-[10px] text-white/30">Marked cancelled</span>;
+    return <span className="text-xs text-white/30">Marked cancelled</span>;
   }
 
   return (
@@ -41,7 +41,7 @@ export function SubscriptionActions({
         href={meta.cancelUrl}
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-red-400/20 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 transition-colors"
+        className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-red-400/20 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 transition-colors"
       >
         <ExternalLink className="h-2.5 w-2.5" />
         Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
@@ -51,7 +51,7 @@ export function SubscriptionActions({
       <button
         onClick={onCancel}
         disabled={cancelling}
-        className="flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
+        className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors disabled:opacity-50"
       >
         <X className="h-2.5 w-2.5" />
         Mark cancelled
@@ -61,7 +61,7 @@ export function SubscriptionActions({
       {!meta.essential && meta.alternatives.length > 0 && (
         <button
           onClick={() => setShowAlternatives(!showAlternatives)}
-          className="flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-emerald-400/20 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-emerald-400/20 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5 transition-colors"
         >
           <Lightbulb className="h-2.5 w-2.5" />
           Free alternatives
@@ -71,9 +71,9 @@ export function SubscriptionActions({
 
       {showAlternatives && (
         <div className="w-full mt-1 p-2 rounded bg-emerald-400/5 border border-emerald-400/10">
-          <div className="text-[10px] text-emerald-400/60 font-medium mb-1">Alternatives:</div>
+          <div className="text-xs text-emerald-400/60 font-medium mb-1">Alternatives:</div>
           {meta.alternatives.map((alt, i) => (
-            <div key={i} className="text-[10px] text-white/40">• {alt}</div>
+            <div key={i} className="text-xs text-white/40">• {alt}</div>
           ))}
         </div>
       )}

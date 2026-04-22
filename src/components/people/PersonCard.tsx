@@ -24,22 +24,22 @@ export function PersonCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border border-white/10 bg-white/[0.03] p-3 hover:bg-white/[0.06] transition-colors"
+      className="w-full text-left rounded-lg border border-white/10 bg-white/[0.03] p-3 md:p-4 hover:bg-white/[0.06] transition-colors"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2.5 min-w-0">
           <span
-            className={`h-2 w-2 rounded-full shrink-0 mt-1.5 ${HEALTH_COLORS[person.health]}`}
+            className={`h-2.5 w-2.5 rounded-full shrink-0 mt-1.5 ${HEALTH_COLORS[person.health]}`}
             title={`${person.health}${person.lastInteraction ? ` — last ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })}` : ""}`}
           />
           <div className="min-w-0">
-            <div className="text-sm font-medium truncate">{person.name}</div>
+            <div className="text-sm md:text-base font-medium truncate">{person.name}</div>
             {(profession || location) && (
-              <div className="text-xs text-white/40 truncate mt-0.5">
+              <div className="text-xs md:text-sm text-white/40 truncate mt-0.5">
                 {[profession, location].filter(Boolean).join(" · ")}
               </div>
             )}
-            <div className="text-[10px] text-white/30 mt-0.5 flex items-center gap-1.5">
+            <div className="text-xs text-white/30 mt-0.5 flex items-center gap-1.5">
               {person.lastInteraction && (
                 <span>
                   {formatDistanceToNow(person.lastInteraction, { addSuffix: true })}
@@ -48,21 +48,21 @@ export function PersonCard({
               )}
               {person.relationCount > 0 && (
                 <span className="flex items-center gap-0.5 text-purple-400/60">
-                  <Link2 className="h-2.5 w-2.5" />
+                  <Link2 className="h-3 w-3" />
                   {person.relationCount}
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="flex gap-1 shrink-0">
+        <div className="flex gap-1.5 shrink-0">
           {channels.map((ch) => {
             const config = CHANNEL_CONFIG[ch];
             if (!config) return null;
             const Icon = config.icon;
             return (
               <span key={ch} title={config.label}>
-                <Icon className={`h-3.5 w-3.5 ${config.color}`} />
+                <Icon className={`h-4 w-4 md:h-5 md:w-5 ${config.color}`} />
               </span>
             );
           })}

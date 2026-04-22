@@ -79,18 +79,18 @@ export async function ActionQueueCard() {
               <div className="flex items-start gap-3">
                 <Users className="h-4 w-4 text-white/40 shrink-0 mt-1" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">
+                  <div className="text-sm md:text-base font-medium">
                     Check in with {group.actions.length} people
                   </div>
                   <div className="mt-2 space-y-1.5">
                     {group.actions.map((a) => {
                       const body = a.payload?.body ? String(a.payload.body) : null;
                       return (
-                        <div key={a.id} className="flex items-center justify-between gap-2 p-1.5 rounded bg-white/[0.02]">
+                        <div key={a.id} className="flex items-center justify-between gap-2 p-2 rounded bg-white/[0.02]">
                           <div className="min-w-0">
-                            <span className="text-sm">{a.title}</span>
+                            <span className="text-sm md:text-base">{a.title}</span>
                             {body && (
-                              <div className="text-[10px] text-white/30 truncate mt-0.5">{body}</div>
+                              <div className="text-xs text-white/30 truncate mt-0.5">{body}</div>
                             )}
                           </div>
                           <ActionButtons actionId={a.id} compact />
@@ -98,7 +98,7 @@ export async function ActionQueueCard() {
                       );
                     })}
                   </div>
-                  <div className="text-xs text-white/30 mt-2 italic">
+                  <div className="text-xs md:text-sm text-white/30 mt-2 italic">
                     Ivy: {group.reasoning}
                   </div>
                 </div>
@@ -119,10 +119,10 @@ export async function ActionQueueCard() {
                 <div className="flex items-start gap-3">
                   <Icon className="h-4 w-4 text-white/40 shrink-0 mt-1" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">{action.title}</div>
+                    <div className="text-sm md:text-base font-medium">{action.title}</div>
 
                     {payload?.to != null && (
-                      <div className="text-xs text-white/40 mt-0.5">
+                      <div className="text-xs md:text-sm text-white/40 mt-0.5">
                         {"To: "}{String(payload.to)}
                         {payload.channel != null ? ` via ${String(payload.channel)}` : ""}
                       </div>
@@ -142,7 +142,7 @@ export async function ActionQueueCard() {
                     )}
 
                     {action.reasoning && (
-                      <div className="text-xs text-white/30 mt-2 italic">
+                      <div className="text-xs md:text-sm text-white/30 mt-2 italic">
                         Ivy: {action.reasoning}
                       </div>
                     )}

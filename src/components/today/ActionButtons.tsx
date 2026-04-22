@@ -28,7 +28,7 @@ export function ActionButtons({
 
   if (done) {
     return (
-      <span className={`text-[10px] ${done === "approved" ? "text-emerald-400" : "text-white/30"}`}>
+      <span className={`text-xs ${done === "approved" ? "text-emerald-400" : "text-white/30"}`}>
         {done === "approved" ? "✓" : "✗"}
       </span>
     );
@@ -43,15 +43,15 @@ export function ActionButtons({
           className="p-1 rounded hover:bg-emerald-600/20 text-emerald-400/60 hover:text-emerald-400 transition-colors disabled:opacity-50"
           title="Approve"
         >
-          <Check className="h-3.5 w-3.5" />
+          <Check className="h-4 w-4" />
         </button>
         <button
           onClick={onReject}
           disabled={busy}
-          className="p-1 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
+          className="p-1.5 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
           title="Reject"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
     );

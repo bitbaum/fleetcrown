@@ -24,9 +24,9 @@ export async function AlertsCard() {
           title="Alerts"
           right={
             urgentCount > 0 ? (
-              <span className="text-xs text-red-400 font-medium">{urgentCount} urgent</span>
+              <span className="text-xs md:text-sm text-red-400 font-medium">{urgentCount} urgent</span>
             ) : (
-              <span className="text-xs text-white/30">{items.length} active</span>
+              <span className="text-xs md:text-sm text-white/30">{items.length} active</span>
             )
           }
         />
@@ -39,11 +39,11 @@ export async function AlertsCard() {
                 key={alert.id}
                 className={`flex gap-3 items-start p-2 rounded-md ${config.bg} border ${config.border}`}
               >
-                <Icon className={`h-4 w-4 ${config.color} shrink-0 mt-0.5`} />
+                <Icon className={`h-4 w-4 md:h-5 md:w-5 ${config.color} shrink-0 mt-0.5`} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium">{alert.title}</div>
+                  <div className="text-sm md:text-base font-medium">{alert.title}</div>
                   {alert.description && (
-                    <div className="text-xs text-white/50 mt-0.5">{alert.description}</div>
+                    <div className="text-xs md:text-sm text-white/50 mt-0.5">{alert.description}</div>
                   )}
                 </div>
                 <DismissAlertButton alertId={alert.id} />

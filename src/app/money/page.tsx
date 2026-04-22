@@ -42,7 +42,7 @@ export default async function MoneyPage() {
           icon={CreditCard}
           title="All Subscriptions"
           right={
-            <span className="text-[10px] text-white/20">
+            <span className="text-xs text-white/20">
               Verified against email receipts Apr 2026
             </span>
           }
@@ -58,10 +58,10 @@ export default async function MoneyPage() {
               <div key={sub.id} className={`flex items-center justify-between py-1 ${isCancelled ? "opacity-40" : ""}`}>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${statusStyle}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${statusStyle}`}>
                       {sub.status}
                     </span>
-                    <span className={`text-sm font-medium ${isCancelled ? "line-through" : ""}`}>{sub.name}</span>
+                    <span className={`text-sm md:text-base font-medium ${isCancelled ? "line-through" : ""}`}>{sub.name}</span>
                     {verifyUrl && (
                       <a
                         href={verifyUrl}
@@ -74,13 +74,13 @@ export default async function MoneyPage() {
                       </a>
                     )}
                   </div>
-                  <div className="text-xs text-white/40">
+                  <div className="text-xs md:text-sm text-white/40">
                     {sub.vendor}
                     {sub.paymentMethod ? ` · ${sub.paymentMethod}` : ""}
                     {sub.frequency !== "monthly" ? ` · ${sub.frequency}` : ""}
                   </div>
                   {sub.notes && (
-                    <div className="text-[10px] text-white/25 mt-0.5 max-w-md">{sub.notes}</div>
+                    <div className="text-xs text-white/25 mt-0.5 max-w-md">{sub.notes}</div>
                   )}
                   <SubscriptionActions subId={sub.id} subName={sub.name} status={sub.status} />
                 </div>
@@ -98,7 +98,7 @@ export default async function MoneyPage() {
             );
           })}
         </div>
-        <div className="mt-4 pt-3 border-t border-white/5 flex items-start gap-2 text-[10px] text-white/20">
+        <div className="mt-4 pt-3 border-t border-white/5 flex items-start gap-2 text-xs text-white/20">
           <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
           <span>
             Click the arrow icon to verify at the source. Unverified = no billing email found. Ask Ivy to re-scan if something looks wrong.
