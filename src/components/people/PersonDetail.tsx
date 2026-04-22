@@ -5,7 +5,7 @@ import { X, MessageCircle, Link2, Plus, Loader2, Trash2, Pencil, Save } from "lu
 import { useRouter } from "next/navigation";
 import { CHANNEL_CONFIG } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
-import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
+import { deriveRelationshipHealth, HEALTH_DOT_COLOR, type RelationshipHealth } from "@/lib/utils";
 
 const CHANNELS = ["whatsapp", "telegram", "email", "phone", "in-person", "other"] as const;
 type Channel = typeof CHANNELS[number];
@@ -32,12 +32,6 @@ type PersonDetailData = {
   }>;
 };
 
-const HEALTH_DOT: Record<RelationshipHealth, string> = {
-  active:  "bg-green-400",
-  fading:  "bg-yellow-400",
-  stale:   "bg-red-400",
-  unknown: "bg-white/20",
-};
 const HEALTH_LABEL: Record<RelationshipHealth, string> = {
   active:  "active",
   fading:  "fading",
@@ -124,7 +118,7 @@ export function PersonDetail({
                   className="flex items-center gap-1.5 shrink-0"
                   title={lastDate ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}` : "No interactions recorded"}
                 >
-                  <div className={`h-2 w-2 rounded-full ${HEALTH_DOT[health]}`} />
+                  <div className={`h-2 w-2 rounded-full ${HEALTH_DOT_COLOR[health]}`} />
                   <span className="text-xs text-white/30">{HEALTH_LABEL[health]}</span>
                 </div>
               );

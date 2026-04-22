@@ -1,14 +1,8 @@
 import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG } from "@/config/channels";
+import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-const HEALTH_COLORS = {
-  active: "bg-green-400",
-  fading: "bg-yellow-400",
-  stale: "bg-red-400",
-  unknown: "bg-white/20",
-} as const;
 
 export function PersonCard({
   person,
@@ -29,7 +23,7 @@ export function PersonCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2.5 min-w-0">
           <span
-            className={`h-2.5 w-2.5 rounded-full shrink-0 mt-1.5 ${HEALTH_COLORS[person.health]}`}
+            className={`h-2.5 w-2.5 rounded-full shrink-0 mt-1.5 ${HEALTH_DOT_COLOR[person.health]}`}
             title={`${person.health}${person.lastInteraction ? ` — last ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })}` : ""}`}
           />
           <div className="min-w-0">

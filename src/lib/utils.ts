@@ -18,3 +18,11 @@ export function deriveRelationshipHealth(lastInteraction: Date | null): Relation
   if (daysSince <= 30) return "fading";
   return "stale";
 }
+
+/** Tailwind dot color per health state — single source of truth */
+export const HEALTH_DOT_COLOR: Record<RelationshipHealth, string> = {
+  active:  "bg-green-400",
+  fading:  "bg-yellow-400",
+  stale:   "bg-red-400",
+  unknown: "bg-white/20",
+};
