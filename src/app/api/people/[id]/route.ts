@@ -34,6 +34,22 @@ export async function PATCH(
   return NextResponse.json({ ok: true });
 }
 
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const [deleted] = await db
+    .delete(entities)
+    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+    .returning({ id: entities.id });
+
+  if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },

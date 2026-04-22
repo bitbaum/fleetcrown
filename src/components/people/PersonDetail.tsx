@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X, MessageCircle, Link2, Plus, Loader2 } from "lucide-react";
+import { X, MessageCircle, Link2, Plus, Loader2, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { CHANNEL_CONFIG } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
@@ -51,6 +52,7 @@ export function PersonDetail({
   personId: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
@@ -58,6 +60,8 @@ export function PersonDetail({
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetch(`/api/people/${personId}`)
@@ -80,6 +84,17 @@ export function PersonDetail({
     } finally {
       setSavingDesc(false);
       setEditingDesc(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await fetch(`/api/people/${personId}`, { method: "DELETE" });
+      onClose();
+      router.refresh();
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -114,9 +129,37 @@ export function PersonDetail({
               );
             })()}
           </div>
-          <button onClick={onClose} className="p-1 rounded hover:bg-white/10 shrink-0">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {data && (confirmDelete ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-white/40">Delete?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50"
+                >
+                  {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-white/30 hover:text-white/60 transition-colors px-1"
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/5 transition-colors"
+                title="Delete person"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ))}
+            <button onClick={onClose} className="p-1 rounded hover:bg-white/10">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {loading ? (
