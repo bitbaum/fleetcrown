@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { GoalCard } from "@/components/goals/GoalCard";
+import { NewGoalButton } from "@/components/goals/NewGoalButton";
 
 export default async function GoalsPage() {
   const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
@@ -11,7 +12,11 @@ export default async function GoalsPage() {
   const completedGoals = goalTree.filter((g) => g.status === "completed");
 
   return (
-    <PageLayout title="Goals" subtitle="Where you're going — and how you're getting there">
+    <PageLayout
+      title="Goals"
+      subtitle="Where you're going — and how you're getting there"
+      right={<NewGoalButton goals={activeGoals} />}
+    >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Active Goals" value={String(stats.active)} sub={`${stats.completed} completed`} />
         <StatCard label="Avg Progress" value={`${stats.avgProgress}%`} sub="across active goals" />
