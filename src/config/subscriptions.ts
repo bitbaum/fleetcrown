@@ -1,7 +1,13 @@
 /**
  * SSOT for subscription metadata that isn't in the DB.
- * Verify links, cancel links, and free alternatives — all in one place.
+ * Verify links, cancel links, free alternatives, and valid field values.
  */
+
+export const VALID_FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
+export type SubscriptionFrequency = typeof VALID_FREQUENCIES[number];
+
+export const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
+export type SubscriptionCurrency = typeof VALID_CURRENCIES[number];
 
 export type SubscriptionMeta = {
   verifyUrl: string;

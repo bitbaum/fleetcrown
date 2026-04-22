@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-
-const VALID_FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
-const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
+import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();

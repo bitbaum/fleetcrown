@@ -4,9 +4,7 @@ import { subscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { isValidUuid } from "@/lib/utils";
-
-const VALID_FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
-const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
+import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
 
 export async function PATCH(
   req: NextRequest,
