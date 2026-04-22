@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, ArrowUpDown } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
@@ -31,6 +31,8 @@ export function PeopleGrid({
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const LIMIT = 50;
+  // Skip the first effect firing — SSR already rendered the default (q="", sort="recent") data
+  const skipInitialFetch = useRef(true);
 
   const search = useCallback(
     async (q: string, s: SortMode, newOffset = 0) => {
@@ -59,6 +61,10 @@ export function PeopleGrid({
   );
 
   useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     const timer = setTimeout(() => search(query, sort, 0), 300);
     return () => clearTimeout(timer);
   }, [query, sort, search]);
