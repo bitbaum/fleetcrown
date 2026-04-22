@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Clock, Bot, Send, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { X, Clock, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/app/api/crons/route";
 
 function humanSchedule(expr: string, tz: string): string {
@@ -36,8 +36,28 @@ export function JobDetail({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [runOutput, setRunOutput] = useState<{ ok: boolean; text: string } | null>(null);
 
   const isDirty = prompt !== job.payload.message;
+
+  const handleRunNow = async () => {
+    setRunning(true);
+    setRunOutput(null);
+    try {
+      const res = await fetch("/api/crons/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: job.id }),
+      });
+      const data = await res.json();
+      setRunOutput({ ok: data.ok, text: data.output ?? data.error ?? "Done" });
+    } catch (e) {
+      setRunOutput({ ok: false, text: String(e) });
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -74,6 +94,16 @@ export function JobDetail({
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Run Now */}
+            <button
+              onClick={handleRunNow}
+              disabled={running}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 disabled:opacity-40 transition-colors"
+              title="Run now (debug)"
+            >
+              <Play className="h-3 w-3" />
+              {running ? "Running…" : "Run now"}
+            </button>
             {/* Enable toggle */}
             <button
               onClick={handleToggle}
@@ -168,6 +198,19 @@ export function JobDetail({
               <span className="ml-2 text-white/60 capitalize">{job.delivery.channel}</span>
             </div>
           </div>
+
+          {/* Run output */}
+          {runOutput && (
+            <div className={`rounded-md border p-3 ${runOutput.ok ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
+              <div className={`flex items-center gap-2 text-xs font-medium mb-1.5 ${runOutput.ok ? "text-emerald-400" : "text-red-400"}`}>
+                {runOutput.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                {runOutput.ok ? "Job triggered" : "Run failed"}
+              </div>
+              <pre className={`text-xs whitespace-pre-wrap font-mono ${runOutput.ok ? "text-emerald-300/70" : "text-red-300/70"}`}>
+                {runOutput.text}
+              </pre>
+            </div>
+          )}
 
           {/* Prompt editor */}
           <div>
