@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
-  X, Globe, GitBranch, AlertTriangle, ShieldAlert, Bot, Plus, Save,
+  X, Globe, GitBranch, AlertTriangle, ShieldAlert, Bot, Plus, Save, Pencil,
   Users, MessageSquare, ChevronDown, ChevronUp, Loader2,
   ToggleLeft, ToggleRight, Target, CheckCircle, Zap,
 } from "lucide-react";
@@ -69,15 +69,19 @@ function AddAttrInline({
   projectId,
   presetKey,
   presetPlaceholder,
+  initialValue,
   onSaved,
+  onCancel,
 }: {
   projectId: string;
   presetKey?: string;
   presetPlaceholder?: string;
+  initialValue?: string;
   onSaved: () => void;
+  onCancel?: () => void;
 }) {
   const [key, setKey] = useState(presetKey ?? "");
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue ?? "");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -108,9 +112,15 @@ function AddAttrInline({
         placeholder={presetPlaceholder ?? "value"}
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && save()}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
+        autoFocus
         className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1.5 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
       />
+      {onCancel && (
+        <button onClick={onCancel} className="p-1.5 rounded text-white/25 hover:text-white/60 transition-colors shrink-0">
+          <X className="h-3 w-3" />
+        </button>
+      )}
       <button
         onClick={save}
         disabled={!key.trim() || !value.trim() || saving}
@@ -297,19 +307,30 @@ function OverviewTab({
         <div className="grid grid-cols-1 gap-3">
           {SUGGESTED_ATTRS.map(({ key, label, placeholder }) => {
             const value = attrs[key];
-            const isAdding = addingKey === key;
+            const isEditing = addingKey === key;
             return (
               <div key={key} className="flex flex-col gap-1">
                 <div className="text-[10px] text-white/30 uppercase tracking-wider">{label}</div>
-                {value ? (
-                  <p className="text-sm text-white/75 leading-relaxed">{value}</p>
-                ) : isAdding ? (
+                {isEditing ? (
                   <AddAttrInline
                     projectId={projectId}
                     presetKey={key}
                     presetPlaceholder={placeholder}
+                    initialValue={value}
                     onSaved={() => { setAddingKey(null); onReload(); }}
+                    onCancel={() => setAddingKey(null)}
                   />
+                ) : value ? (
+                  <div className="group flex items-start gap-2">
+                    <p className="text-sm text-white/75 leading-relaxed flex-1">{value}</p>
+                    <button
+                      onClick={() => setAddingKey(key)}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
+                      title="Edit"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => setAddingKey(key)}
@@ -355,6 +376,7 @@ function OverviewTab({
           <AddAttrInline
             projectId={projectId}
             onSaved={() => { setAddingKey(null); onReload(); }}
+            onCancel={() => setAddingKey(null)}
           />
         </div>
       ) : (
