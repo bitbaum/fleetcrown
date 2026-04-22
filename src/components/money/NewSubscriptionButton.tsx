@@ -3,9 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
-
-const CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
-const FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
+import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES } from "@/config/subscriptions";
 
 export function NewSubscriptionButton() {
   const router = useRouter();
