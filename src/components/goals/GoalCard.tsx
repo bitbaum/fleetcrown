@@ -138,6 +138,22 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     (goal.milestones as Milestone[]) ?? [],
   );
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(goal.title);
+  const [savingTitle, setSavingTitle] = useState(false);
+
+  const commitTitle = async () => {
+    const trimmed = titleValue.trim();
+    if (!trimmed || trimmed === goal.title) { setEditingTitle(false); setTitleValue(goal.title); return; }
+    setSavingTitle(true);
+    try {
+      await patchGoal(goal.id, { title: trimmed });
+      goal.title = trimmed; // local ref update so re-mount shows correct value
+    } finally {
+      setSavingTitle(false);
+      setEditingTitle(false);
+    }
+  };
 
   const isCompleted = status === "completed";
   const milestoneDone = milestones.filter((m) => m.done).length;
@@ -182,9 +198,28 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <div className={depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-white/80"}>
-                {goal.title}
-              </div>
+              {editingTitle ? (
+                savingTitle ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-white/30" />
+                ) : (
+                  <input
+                    value={titleValue}
+                    onChange={(e) => setTitleValue(e.target.value)}
+                    onBlur={commitTitle}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditingTitle(false); setTitleValue(goal.title); } }}
+                    autoFocus
+                    className={`bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
+                  />
+                )
+              ) : (
+                <div
+                  className={`cursor-text hover:text-white transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-white/80"}`}
+                  onClick={() => !isCompleted && setEditingTitle(true)}
+                  title={isCompleted ? undefined : "Click to edit title"}
+                >
+                  {titleValue}
+                </div>
+              )}
               {status && status !== "active" && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/40">
                   {status}

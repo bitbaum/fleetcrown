@@ -16,12 +16,22 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const allowed = ["progress", "status", "milestones"] as const;
+  const allowed = ["progress", "status", "milestones", "title", "description", "targetDate"] as const;
   const patch: Record<string, unknown> = {};
 
   for (const key of allowed) {
     if (key in body) patch[key] = body[key];
   }
+
+  // Coerce targetDate string → Date (or null to clear)
+  if ("targetDate" in patch) {
+    patch.targetDate = patch.targetDate ? new Date(patch.targetDate as string) : null;
+  }
+  // Reject empty title
+  if ("title" in patch && !(patch.title as string)?.trim()) {
+    return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
+  }
+  if ("title" in patch) patch.title = (patch.title as string).trim();
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
