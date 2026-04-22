@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Loader2, Mic, MicOff, Zap } from "lucide-react";
-import { PROMPT_TEMPLATES } from "@/config/prompt-library";
+import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { PROMPT_TEMPLATES, CATEGORY_META } from "@/config/prompt-library";
 
 type Message = {
   role: "user" | "ivy";
@@ -12,9 +12,9 @@ type Message = {
   error?: boolean;
 };
 
-// Featured prompts shown as quick-access chips (global scope only for AskIvy)
+// Featured prompts shown in the quick-access grid
 const QUICK_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "global").concat(
-  PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 3)
+  PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4)
 );
 
 // ─── Mic hook ─────────────────────────────────────────────────────────────────
@@ -155,37 +155,57 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
         {/* Quick prompts */}
         {messages.length === 0 && (
-          <div className="px-4 pt-3 pb-2 border-b border-white/[0.06] shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] uppercase tracking-wider text-white/25 flex items-center gap-1.5">
-                <Zap className="h-3 w-3" /> Quick prompts
+          <div className="px-4 pt-3 pb-3 border-b border-white/[0.06] shrink-0">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+                Prompts
               </span>
               <button
                 onClick={() => setShowAllPrompts(!showAllPrompts)}
-                className="text-[10px] text-white/25 hover:text-white/60 transition-colors"
+                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/55 transition-colors"
               >
-                {showAllPrompts ? "show less" : `show all (${PROMPT_TEMPLATES.filter(t => t.scope === "global").length})`}
+                {showAllPrompts ? (
+                  <><ChevronUp className="h-3 w-3" /> show less</>
+                ) : (
+                  <><ChevronDown className="h-3 w-3" /> all global ({PROMPT_TEMPLATES.filter(t => t.scope === "global").length})</>
+                )}
               </button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {displayedPrompts.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => {
-                    if (t.scope === "global") {
-                      send(t.template);
-                    } else {
-                      // For project-scoped, put in input so user can review/edit
-                      setInput(t.template);
-                      inputRef.current?.focus();
-                    }
-                  }}
-                  disabled={loading}
-                  className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-xs text-white/55 hover:text-white/80 transition-colors disabled:opacity-30 text-left"
-                >
-                  {t.name}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-1.5">
+              {displayedPrompts.map((t) => {
+                const meta = CATEGORY_META[t.category];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      if (t.scope === "global") {
+                        send(t.template);
+                      } else {
+                        setInput(t.template);
+                        inputRef.current?.focus();
+                      }
+                    }}
+                    disabled={loading}
+                    className="group flex flex-col gap-1 rounded-lg border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.12] px-3 py-2.5 text-left transition-all disabled:opacity-30"
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-xs font-medium text-white/70 group-hover:text-white/90 transition-colors leading-tight">
+                        {t.name}
+                      </span>
+                      {t.scope === "global"
+                        ? <Globe className="h-3 w-3 text-white/20 shrink-0" />
+                        : <FolderOpen className="h-3 w-3 text-white/20 shrink-0" />
+                      }
+                    </div>
+                    <p className="text-[10px] text-white/35 leading-snug line-clamp-2">
+                      {t.description}
+                    </p>
+                    <span className={`self-start mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
+                      {meta.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
