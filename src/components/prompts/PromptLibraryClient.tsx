@@ -14,6 +14,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import {
   PROMPT_TEMPLATES,
   CATEGORY_META,
@@ -154,6 +155,7 @@ function RunModal({
     template.scope === "global" ? "__global__" : "",
   );
   const [projectName, setProjectName] = useState("");
+  const [showProjectDetail, setShowProjectDetail] = useState(false);
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +216,17 @@ function RunModal({
           {/* Project selector */}
           {template.scope === "project" && (
             <div>
-              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Project</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] uppercase tracking-wider text-white/30">Project</label>
+                {projectId && projectId !== "__global__" && (
+                  <button
+                    onClick={() => setShowProjectDetail(true)}
+                    className="text-[10px] text-emerald-400/70 hover:text-emerald-400 transition-colors flex items-center gap-1"
+                  >
+                    <FolderOpen className="h-3 w-3" /> View project →
+                  </button>
+                )}
+              </div>
               <select
                 value={projectId}
                 onChange={(e) => {
@@ -287,6 +299,14 @@ function RunModal({
           </button>
         </div>
       </div>
+
+      {/* Project detail overlay — opens on top of the run modal */}
+      {showProjectDetail && projectId && projectId !== "__global__" && (
+        <ProjectDetail
+          projectId={projectId}
+          onClose={() => setShowProjectDetail(false)}
+        />
+      )}
     </div>
   );
 }
