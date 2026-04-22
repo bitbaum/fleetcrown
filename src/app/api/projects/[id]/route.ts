@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readFileSync, existsSync } from "fs";
 import { homedir } from "os";
@@ -78,8 +78,7 @@ export async function GET(
     relatedEntities = await db
       .select({ id: entities.id, name: entities.name, type: entities.type })
       .from(entities)
-      .where(and(eq(entities.userId, DEFAULT_USER_ID)));
-    relatedEntities = relatedEntities.filter((e) => relatedIds.includes(e.id));
+      .where(and(eq(entities.userId, DEFAULT_USER_ID), inArray(entities.id, relatedIds)));
   }
 
   const relationsWithNames = relations.map((r) => ({
