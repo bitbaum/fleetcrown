@@ -50,11 +50,6 @@ export async function searchPeople(
         ne(entities.externalId, "george"),
       );
 
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(entities)
-    .where(where);
-
   // Join with interaction stats
   const orderClause = sort === "name"
     ? sql`e.name ASC`
@@ -62,7 +57,10 @@ export async function searchPeople(
       ? sql`last_interaction ASC NULLS FIRST`
       : sql`last_interaction DESC NULLS LAST`;
 
-  const rows = await db.execute<{
+  // Count and rows are independent — run in parallel
+  const [[countResult], rows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(entities).where(where),
+    db.execute<{
     id: string;
     name: string;
     external_id: string | null;
@@ -84,7 +82,8 @@ export async function searchPeople(
     GROUP BY e.id
     ORDER BY ${orderClause}
     LIMIT ${limit} OFFSET ${offset}
-  `);
+  `),
+  ]);
 
   const peopleIds = rows.map((r) => r.id);
   const attrsByEntity = await fetchAttributesByEntityIds(peopleIds);
@@ -117,41 +116,37 @@ export async function getPersonDetail(id: string) {
 
   if (!person) return null;
 
-  const attrs = await db
-    .select()
-    .from(attributes)
-    .where(eq(attributes.entityId, id));
-
-  const relationsFrom = await db
-    .select({
-      type: entityRelations.type,
-      strength: entityRelations.strength,
-      targetId: entityRelations.toEntityId,
-      targetName: entities.name,
-      targetType: entities.type,
-    })
-    .from(entityRelations)
-    .innerJoin(entities, eq(entities.id, entityRelations.toEntityId))
-    .where(eq(entityRelations.fromEntityId, id));
-
-  const relationsTo = await db
-    .select({
-      type: entityRelations.type,
-      strength: entityRelations.strength,
-      targetId: entityRelations.fromEntityId,
-      targetName: entities.name,
-      targetType: entities.type,
-    })
-    .from(entityRelations)
-    .innerJoin(entities, eq(entities.id, entityRelations.fromEntityId))
-    .where(eq(entityRelations.toEntityId, id));
-
-  const recentInteractions = await db
-    .select()
-    .from(interactions)
-    .where(eq(interactions.entityId, id))
-    .orderBy(desc(interactions.occurredAt))
-    .limit(10);
+  const [attrs, relationsFrom, relationsTo, recentInteractions] = await Promise.all([
+    db.select().from(attributes).where(eq(attributes.entityId, id)),
+    db
+      .select({
+        type: entityRelations.type,
+        strength: entityRelations.strength,
+        targetId: entityRelations.toEntityId,
+        targetName: entities.name,
+        targetType: entities.type,
+      })
+      .from(entityRelations)
+      .innerJoin(entities, eq(entities.id, entityRelations.toEntityId))
+      .where(eq(entityRelations.fromEntityId, id)),
+    db
+      .select({
+        type: entityRelations.type,
+        strength: entityRelations.strength,
+        targetId: entityRelations.fromEntityId,
+        targetName: entities.name,
+        targetType: entities.type,
+      })
+      .from(entityRelations)
+      .innerJoin(entities, eq(entities.id, entityRelations.fromEntityId))
+      .where(eq(entityRelations.toEntityId, id)),
+    db
+      .select()
+      .from(interactions)
+      .where(eq(interactions.entityId, id))
+      .orderBy(desc(interactions.occurredAt))
+      .limit(10),
+  ]);
 
   return {
     ...person,
