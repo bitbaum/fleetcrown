@@ -20,6 +20,9 @@ export async function PATCH(
   if ("amount" in body) patch.amount = body.amount != null ? Number(body.amount) : null;
   if ("notes" in body) patch.notes = body.notes ? String(body.notes).trim() : null;
   if ("status" in body) patch.status = body.status;
+  if ("name" in body && body.name) patch.name = String(body.name).trim();
+  if ("vendor" in body) patch.vendor = body.vendor ? String(body.vendor).trim() : null;
+  if ("paymentMethod" in body) patch.paymentMethod = body.paymentMethod ? String(body.paymentMethod).trim() : null;
   if ("currency" in body) {
     if (!VALID_CURRENCIES.includes(body.currency)) {
       return NextResponse.json({ error: "Invalid currency" }, { status: 400 });

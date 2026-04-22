@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Trash2, Loader2, CheckCheck } from "lucide-react";
+import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Trash2, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
 import { handleCancelSubscription } from "@/app/actions";
-import { SUBSCRIPTION_META } from "@/config/subscriptions";
+import { SUBSCRIPTION_META, VALID_CURRENCIES } from "@/config/subscriptions";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
@@ -23,12 +23,18 @@ export function SubscriptionActions({
   status,
   nextDue,
   frequency,
+  amount,
+  currency,
+  notes,
 }: {
   subId: string;
   subName: string;
   status: string | null;
   nextDue: string | null;
   frequency: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  notes?: string | null;
 }) {
   const router = useRouter();
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -40,6 +46,11 @@ export function SubscriptionActions({
   const [deleted, setDeleted] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
+  const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
+  const [editNotes, setEditNotes] = useState(notes ?? "");
+  const [saving, setSaving] = useState(false);
 
   const meta = SUBSCRIPTION_META[subName];
   const isCancelled = status === "cancelled";
@@ -75,6 +86,25 @@ export function SubscriptionActions({
       router.refresh();
     } finally {
       setMarkingPaid(false);
+    }
+  }
+
+  async function onSaveEdit() {
+    setSaving(true);
+    try {
+      await fetch(`/api/subscriptions/${subId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: editAmount ? parseFloat(editAmount) : null,
+          currency: editCurrency,
+          notes: editNotes || null,
+        }),
+      });
+      setEditing(false);
+      router.refresh();
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -118,6 +148,18 @@ export function SubscriptionActions({
         </button>
       )}
       {paid && <span className="text-xs text-emerald-400/50">Next due updated</span>}
+
+      {/* Inline edit for amount/currency/notes */}
+      {!isCancelled && (
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/25 hover:text-white/60 hover:bg-white/5 transition-colors"
+          title="Edit amount, currency, notes"
+        >
+          <Pencil className="h-2.5 w-2.5" />
+          Edit
+        </button>
+      )}
 
       {/* Cancel at provider — only when meta is configured */}
       {meta && (
@@ -172,6 +214,47 @@ export function SubscriptionActions({
           title="Delete subscription record">
           <Trash2 className="h-2.5 w-2.5" />
         </button>
+      )}
+
+      {editing && (
+        <div className="w-full mt-1 p-2.5 rounded bg-white/[0.03] border border-white/10 space-y-2">
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              placeholder="Amount"
+              className="w-24 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+            />
+            <select
+              value={editCurrency}
+              onChange={(e) => setEditCurrency(e.target.value)}
+              className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+            >
+              {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <input
+            value={editNotes}
+            onChange={(e) => setEditNotes(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") onSaveEdit(); if (e.key === "Escape") setEditing(false); }}
+            placeholder="Notes (optional)"
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onSaveEdit}
+              disabled={saving}
+              className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Save
+            </button>
+            <button onClick={() => setEditing(false)} className="text-xs text-white/30 hover:text-white/60 px-1">Cancel</button>
+          </div>
+        </div>
       )}
 
       {/* Free alternatives — only when meta is configured */}
