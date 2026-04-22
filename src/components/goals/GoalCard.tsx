@@ -5,6 +5,7 @@ import { Target, CheckCircle, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
+import { DeleteGoalButton } from "./DeleteGoalButton";
 
 async function patchGoal(id: string, patch: Record<string, unknown>) {
   const res = await fetch(`/api/goals/${id}`, {
@@ -159,7 +160,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
 
   return (
     <div>
-      <Card className={isCompleted ? "opacity-60" : ""}>
+      <Card className={`group ${isCompleted ? "opacity-60" : ""}`}>
         <div className="flex items-start gap-3">
           {/* Status toggle */}
           <button
@@ -189,6 +190,9 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   {status}
                 </span>
               )}
+              <div className="ml-auto">
+                <DeleteGoalButton goalId={goal.id} />
+              </div>
             </div>
             {goal.description && (
               <div className="text-xs md:text-sm text-white/40 mt-1">{goal.description}</div>

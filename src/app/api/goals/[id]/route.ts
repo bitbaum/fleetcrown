@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { goals } from "@/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 
 export async function PATCH(
@@ -47,4 +47,40 @@ export async function PATCH(
   }
 
   return NextResponse.json({ ok: true, goal: updated });
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  if (!UUID_RE.test(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  // Verify ownership
+  const [goal] = await db
+    .select({ id: goals.id })
+    .from(goals)
+    .where(and(eq(goals.id, id), eq(goals.userId, DEFAULT_USER_ID)));
+  if (!goal) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Collect entire subtree to delete (no DB cascade on parentGoalId)
+  const allGoals = await db
+    .select({ id: goals.id, parentGoalId: goals.parentGoalId })
+    .from(goals)
+    .where(eq(goals.userId, DEFAULT_USER_ID));
+
+  function collectSubtree(rootId: string): string[] {
+    const ids = [rootId];
+    for (const g of allGoals) {
+      if (g.parentGoalId === rootId) ids.push(...collectSubtree(g.id));
+    }
+    return ids;
+  }
+
+  const idsToDelete = collectSubtree(id);
+  await db.delete(goals).where(inArray(goals.id, idsToDelete));
+
+  return NextResponse.json({ ok: true, deleted: idsToDelete.length });
 }
