@@ -7,6 +7,9 @@ import { GoalCard } from "@/components/goals/GoalCard";
 export default async function GoalsPage() {
   const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
 
+  const activeGoals = goalTree.filter((g) => g.status !== "completed");
+  const completedGoals = goalTree.filter((g) => g.status === "completed");
+
   return (
     <PageLayout title="Goals" subtitle="Where you're going — and how you're getting there">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -28,11 +31,37 @@ export default async function GoalsPage() {
           </div>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {goalTree.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} depth={0} />
-          ))}
-        </div>
+        <>
+          {activeGoals.length > 0 && (
+            <div className="space-y-3">
+              {activeGoals.map((goal) => (
+                <GoalCard key={goal.id} goal={goal} depth={0} />
+              ))}
+            </div>
+          )}
+
+          {activeGoals.length === 0 && completedGoals.length > 0 && (
+            <Card>
+              <div className="flex flex-col items-center gap-2 py-6 text-white/30">
+                <Target className="h-8 w-8" />
+                <div className="text-sm">All goals completed</div>
+              </div>
+            </Card>
+          )}
+
+          {completedGoals.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-white/30 uppercase tracking-wider mb-3">
+                Completed · {completedGoals.length}
+              </div>
+              <div className="space-y-3">
+                {completedGoals.map((goal) => (
+                  <GoalCard key={goal.id} goal={goal} depth={0} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </PageLayout>
   );
