@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { X, MessageCircle, Link2, Plus, Loader2 } from "lucide-react";
 import { CHANNEL_CONFIG } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
+import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
 
 const CHANNELS = ["whatsapp", "telegram", "email", "phone", "in-person", "other"] as const;
 type Channel = typeof CHANNELS[number];
@@ -30,28 +31,18 @@ type PersonDetailData = {
   }>;
 };
 
-type Health = "active" | "fading" | "stale" | "unknown";
-
-const HEALTH_DOT: Record<Health, string> = {
+const HEALTH_DOT: Record<RelationshipHealth, string> = {
   active:  "bg-green-400",
   fading:  "bg-yellow-400",
   stale:   "bg-red-400",
   unknown: "bg-white/20",
 };
-const HEALTH_LABEL: Record<Health, string> = {
+const HEALTH_LABEL: Record<RelationshipHealth, string> = {
   active:  "active",
   fading:  "fading",
   stale:   "stale",
   unknown: "no interactions",
 };
-
-function deriveHealth(lastDate: Date | null): Health {
-  if (!lastDate) return "unknown";
-  const daysSince = (Date.now() - lastDate.getTime()) / 86_400_000;
-  if (daysSince < 14) return "active";
-  if (daysSince < 30) return "fading";
-  return "stale";
-}
 
 export function PersonDetail({
   personId,
@@ -91,7 +82,7 @@ export function PersonDetail({
             <h2 className="text-lg font-semibold truncate">{data?.name ?? "Loading..."}</h2>
             {data && (() => {
               const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
-              const health = deriveHealth(lastDate);
+              const health = deriveRelationshipHealth(lastDate);
               return (
                 <div
                   className="flex items-center gap-1.5 shrink-0"

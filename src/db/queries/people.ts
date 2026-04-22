@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, ne, ilike, sql, desc } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
+import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, "\\$&");
@@ -18,16 +19,8 @@ export type PersonWithAttributes = {
   lastInteraction: Date | null;
   interactionCount: number;
   relationCount: number;
-  health: "active" | "fading" | "stale" | "unknown";
+  health: RelationshipHealth;
 };
-
-function deriveHealth(lastInteraction: Date | null): PersonWithAttributes["health"] {
-  if (!lastInteraction) return "unknown";
-  const daysSince = (Date.now() - lastInteraction.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysSince <= 14) return "active";
-  if (daysSince <= 30) return "fading";
-  return "stale";
-}
 
 export type SortMode = "recent" | "name" | "health";
 
@@ -101,7 +94,7 @@ export async function searchPeople(
         lastInteraction,
         interactionCount: Number(r.interaction_count),
         relationCount: Number(r.relation_count),
-        health: deriveHealth(lastInteraction),
+        health: deriveRelationshipHealth(lastInteraction),
       };
     }),
     total: Number(countResult.count),
