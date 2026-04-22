@@ -5,10 +5,7 @@ import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readFileSync, existsSync } from "fs";
-import { homedir } from "os";
-import path from "path";
-
-const CRON_FILE = path.join(homedir(), ".openclaw", "cron", "jobs.json");
+import { CRON_FILE } from "@/lib/constants";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   try {

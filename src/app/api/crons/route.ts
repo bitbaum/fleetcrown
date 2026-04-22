@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { homedir } from "os";
-import path from "path";
-
-const CRON_FILE = path.join(homedir(), ".openclaw", "cron", "jobs.json");
+import { CRON_FILE } from "@/lib/constants";
 
 export type CronJob = {
   id: string;
