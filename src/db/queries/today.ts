@@ -3,6 +3,13 @@ import { db } from "@/db";
 import { commitments, events, subscriptions, goals, alerts, actions } from "@/db/schema";
 import { eq, and, lte, gte, sql } from "drizzle-orm";
 
+export async function fulfillCommitment(id: string) {
+  await db
+    .update(commitments)
+    .set({ status: "fulfilled", updatedAt: new Date() })
+    .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)));
+}
+
 export async function getActiveCommitments() {
   return db
     .select()

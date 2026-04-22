@@ -2,6 +2,7 @@ import { CheckCircle, AlertCircle } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
 import { formatDistanceToNow } from "date-fns";
+import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
 
 export async function CommitmentsCard() {
   const items = await getActiveCommitments();
@@ -26,7 +27,7 @@ export async function CommitmentsCard() {
                 ) : (
                   <div className="h-4 w-4 rounded-full border border-white/20 shrink-0 mt-0.5" />
                 )}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="text-sm md:text-base truncate">{item.description}</div>
                   {item.dueDate && (
                     <div className={`text-xs md:text-sm ${isOverdue ? "text-red-400" : "text-white/40"}`}>
@@ -38,6 +39,7 @@ export async function CommitmentsCard() {
                     <div className="text-xs md:text-sm text-amber-400/70">{item.financialImpact}</div>
                   )}
                 </div>
+                <FulfillCommitmentButton commitmentId={item.id} />
               </div>
             );
           })}
