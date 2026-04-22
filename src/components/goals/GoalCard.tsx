@@ -293,6 +293,10 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(goal.title);
   const [savingTitle, setSavingTitle] = useState(false);
+  const [description, setDescription] = useState(goal.description);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState(goal.description ?? "");
+  const [savingDesc, setSavingDesc] = useState(false);
 
   const commitTitle = async () => {
     const trimmed = titleValue.trim();
@@ -304,6 +308,18 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     } finally {
       setSavingTitle(false);
       setEditingTitle(false);
+    }
+  };
+
+  const commitDesc = async () => {
+    const trimmed = descValue.trim();
+    setSavingDesc(true);
+    try {
+      await patchGoal(goal.id, { description: trimmed || null });
+      setDescription(trimmed || null);
+    } finally {
+      setSavingDesc(false);
+      setEditingDesc(false);
     }
   };
 
@@ -381,8 +397,43 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 <DeleteGoalButton goalId={goal.id} />
               </div>
             </div>
-            {goal.description && (
-              <div className="text-xs md:text-sm text-white/40 mt-1">{goal.description}</div>
+            {editingDesc ? (
+              <div className="mt-1 flex items-start gap-1.5">
+                <textarea
+                  value={descValue}
+                  onChange={(e) => setDescValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") { setEditingDesc(false); setDescValue(description ?? ""); }
+                    if (e.key === "Enter" && e.metaKey) commitDesc();
+                  }}
+                  autoFocus
+                  rows={2}
+                  placeholder="Add a description…"
+                  className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25 resize-none"
+                />
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button onClick={commitDesc} disabled={savingDesc}
+                    className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white">
+                    {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5 rotate-45" />}
+                  </button>
+                  <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
+                    className="p-1.5 text-white/25 hover:text-white/60">
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => !isCompleted && (setDescValue(description ?? ""), setEditingDesc(true))}
+                className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
+                  isCompleted ? "cursor-default" :
+                  description ? "text-white/40 hover:text-white/60" : "text-white/15 hover:text-white/30 italic"
+                }`}
+                disabled={isCompleted}
+                title={isCompleted ? undefined : "Click to edit description"}
+              >
+                {description ?? "Add a description…"}
+              </button>
             )}
             {goal.entityName && (
               <div className="flex items-center gap-1 mt-1">
