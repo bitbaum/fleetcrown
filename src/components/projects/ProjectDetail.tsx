@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { setAttr, removeAttr } from "@/lib/api/attrs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,11 +91,7 @@ function AddAttrInline({
   const save = async () => {
     if (!key.trim() || !value.trim() || saving) return;
     setSaving(true);
-    await fetch(`/api/projects/${projectId}/attrs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key, value }),
-    });
+    await setAttr(`/api/projects/${projectId}`, key, value);
     setSaving(false);
     setValue("");
     if (!presetKey) setKey("");
@@ -277,11 +274,7 @@ function AttrRow({
   const deleteAttr = async () => {
     setDeleting(true);
     try {
-      await fetch(`/api/projects/${projectId}/attrs`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: attrKey }),
-      });
+      await removeAttr(`/api/projects/${projectId}`, attrKey);
       onReload();
     } finally {
       setDeleting(false);
@@ -874,11 +867,7 @@ export function ProjectDetail({
     if (!trimmed) { setEditingStatus(false); return; }
     setSavingStatus(true);
     try {
-      await fetch(`/api/projects/${projectId}/attrs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "status", value: trimmed }),
-      });
+      await setAttr(`/api/projects/${projectId}`, "status", trimmed);
       setStatusOverride(trimmed);
     } finally {
       setSavingStatus(false);
@@ -890,11 +879,7 @@ export function ProjectDetail({
     const value = `${maturityScore}/10`;
     setSavingMaturity(true);
     try {
-      await fetch(`/api/projects/${projectId}/attrs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "maturity", value }),
-      });
+      await setAttr(`/api/projects/${projectId}`, "maturity", value);
       setMaturityOverride(value);
     } finally {
       setSavingMaturity(false);

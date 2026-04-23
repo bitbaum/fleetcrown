@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { X, MessageCircle, Link2, Plus, Loader2, Trash2, Pencil, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { CHANNEL_CONFIG, CHANNEL_NAMES } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, type RelationshipHealth } from "@/lib/utils";
@@ -396,11 +397,7 @@ function DetailAttrs({
     if (!editValue.trim() || saving) return;
     setSaving(true);
     try {
-      await fetch(`/api/people/${personId}/attrs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value: editValue.trim() }),
-      });
+      await setAttr(`/api/people/${personId}`, key, editValue.trim());
       onUpdate({ ...attrs, [key]: editValue.trim() });
     } finally {
       setSaving(false);
@@ -412,11 +409,7 @@ function DetailAttrs({
     if (!newKey.trim() || !newValue.trim() || saving) return;
     setSaving(true);
     try {
-      await fetch(`/api/people/${personId}/attrs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: newKey.trim(), value: newValue.trim() }),
-      });
+      await setAttr(`/api/people/${personId}`, newKey.trim(), newValue.trim());
       const normalizedKey = newKey.trim().toLowerCase().replace(/\s+/g, "_");
       onUpdate({ ...attrs, [normalizedKey]: newValue.trim() });
       setNewKey("");
@@ -430,11 +423,7 @@ function DetailAttrs({
   const deleteAttr = async (key: string) => {
     setDeletingKey(key);
     try {
-      await fetch(`/api/people/${personId}/attrs`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
+      await removeAttr(`/api/people/${personId}`, key);
       const next = { ...attrs };
       delete next[key];
       onUpdate(next);
@@ -560,11 +549,7 @@ function ChannelsSection({
     setSaving(true);
     const key = `channel:${channelType}`;
     try {
-      await fetch(`/api/people/${personId}/attrs`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value: channelValue.trim() }),
-      });
+      await setAttr(`/api/people/${personId}`, key, channelValue.trim());
       onUpdate({ ...attrs, [key]: channelValue.trim() });
       setChannelValue("");
       setAdding(false);
@@ -576,11 +561,7 @@ function ChannelsSection({
   const deleteChannel = async (key: string) => {
     setDeletingKey(key);
     try {
-      await fetch(`/api/people/${personId}/attrs`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
+      await removeAttr(`/api/people/${personId}`, key);
       const next = { ...attrs };
       delete next[key];
       onUpdate(next);

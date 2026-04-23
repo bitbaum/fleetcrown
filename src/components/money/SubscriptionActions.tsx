@@ -62,6 +62,12 @@ export function SubscriptionActions({
   const isCancelled = status === "cancelled";
   const isOneTime = frequency === "one-time";
 
+  async function onDeleteRecord() {
+    await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+    setDeleted(true);
+    router.refresh();
+  }
+
   async function onCancel() {
     setCancelling(true);
     await handleCancelSubscription(subId);
@@ -113,11 +119,7 @@ export function SubscriptionActions({
       <div className="mt-2 flex items-center gap-2">
         <span className="text-xs text-white/30">Marked cancelled</span>
         <DeleteButton
-          onDelete={async () => {
-            await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
-            setDeleted(true);
-            router.refresh();
-          }}
+          onDelete={onDeleteRecord}
           label="Delete record?"
           triggerClassName="flex items-center gap-1 text-xs text-white/20 hover:text-red-400 transition-colors"
         />
