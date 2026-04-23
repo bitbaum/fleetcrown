@@ -61,7 +61,7 @@ export function PersonCard({
   }
 
   return (
-    <div className="group relative w-full rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+    <div className="group w-full rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
       {/* Main clickable area */}
       <button onClick={onClick} className="w-full text-left p-3 md:p-4">
         <div className="flex items-start justify-between gap-2">
@@ -108,15 +108,17 @@ export function PersonCard({
         </div>
       </button>
 
-      {/* Quick-log button — revealed on hover when form is closed */}
+      {/* Quick-log button — always visible on mobile (no hover), revealed on hover for desktop */}
       {!logOpen && (
-        <button
-          onClick={openLog}
-          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded text-xs text-white/30 hover:text-emerald-400 hover:bg-white/[0.04]"
-          title="Log interaction"
-        >
-          <Plus className="h-3 w-3" /> Log
-        </button>
+        <div className="px-3 pb-2 md:px-4 flex justify-end">
+          <button
+            onClick={openLog}
+            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded text-xs text-white/25 hover:text-emerald-400 hover:bg-white/[0.04]"
+            title="Log interaction"
+          >
+            <Plus className="h-3 w-3" /> Log
+          </button>
+        </div>
       )}
 
       {/* Inline log form */}
