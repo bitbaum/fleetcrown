@@ -2,9 +2,8 @@ import { Target } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
-import { GoalCard } from "@/components/goals/GoalCard";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
-import { CompletedGoals } from "@/components/goals/CompletedGoals";
+import { GoalsGrid } from "@/components/goals/GoalsGrid";
 
 export default async function GoalsPage() {
   const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
@@ -37,26 +36,7 @@ export default async function GoalsPage() {
           </div>
         </Card>
       ) : (
-        <>
-          {activeGoals.length > 0 && (
-            <div className="space-y-3">
-              {activeGoals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} depth={0} />
-              ))}
-            </div>
-          )}
-
-          {activeGoals.length === 0 && completedGoals.length > 0 && (
-            <Card>
-              <div className="flex flex-col items-center gap-2 py-6 text-white/30">
-                <Target className="h-8 w-8" />
-                <div className="text-sm">All goals completed</div>
-              </div>
-            </Card>
-          )}
-
-          <CompletedGoals goals={completedGoals} />
-        </>
+        <GoalsGrid activeGoals={activeGoals} completedGoals={completedGoals} />
       )}
     </PageLayout>
   );
