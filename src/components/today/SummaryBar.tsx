@@ -1,4 +1,5 @@
 import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users } from "lucide-react";
+import Link from "next/link";
 import { getTodaySummary } from "@/db/queries/today";
 
 export async function SummaryBar() {
@@ -20,7 +21,12 @@ export async function SummaryBar() {
         <Pill icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" />
       )}
       {s.staleContacts > 0 && (
-        <Pill icon={Users} value={`${s.staleContacts} contacts need attention`} variant="amber" />
+        <Pill
+          icon={Users}
+          value={`${s.staleContacts} contacts need attention`}
+          variant="amber"
+          href="/people?health=fading%2Cstale%2Cunknown"
+        />
       )}
       {s.urgentAlerts > 0 && (
         <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" />
@@ -33,10 +39,12 @@ function Pill({
   icon: Icon,
   value,
   variant,
+  href,
 }: {
   icon: typeof Target;
   value: string;
   variant?: "amber" | "red";
+  href?: string;
 }) {
   const colors = variant === "red"
     ? "bg-red-400/10 text-red-400 border-red-400/20"
@@ -44,10 +52,24 @@ function Pill({
       ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
       : "bg-white/5 text-white/60 border-white/10";
 
-  return (
-    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors}`}>
+  const inner = (
+    <>
       <Icon className="h-3 w-3" />
       <span>{value}</span>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors}`}>
+      {inner}
     </div>
   );
 }

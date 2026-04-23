@@ -2,9 +2,25 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { searchPeople } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
 import { NewPersonButton } from "@/components/people/NewPersonButton";
+import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/utils";
 
-export default async function PeoplePage() {
-  const { people, total } = await searchPeople("", 50, 0, "recent");
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ health?: string; q?: string; sort?: string }>;
+}) {
+  const params = await searchParams;
+
+  // Parse health filter from URL (e.g. ?health=fading%2Cstale)
+  const initialHealthFilter: RelationshipHealth[] = params.health
+    ? params.health
+        .split(",")
+        .filter((v): v is RelationshipHealth =>
+          RELATIONSHIP_HEALTH_VALUES.includes(v as RelationshipHealth),
+        )
+    : [];
+
+  const { people, total } = await searchPeople("", 50, 0, "recent", initialHealthFilter);
 
   return (
     <PageLayout
@@ -13,7 +29,11 @@ export default async function PeoplePage() {
       maxWidth="max-w-5xl"
       right={<NewPersonButton />}
     >
-      <PeopleGrid initialPeople={people} initialTotal={total} />
+      <PeopleGrid
+        initialPeople={people}
+        initialTotal={total}
+        initialHealthFilter={initialHealthFilter}
+      />
     </PageLayout>
   );
 }

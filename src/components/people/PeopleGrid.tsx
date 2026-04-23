@@ -22,20 +22,22 @@ const SORT_ORDER: SortMode[] = ["recent", "name", "health"];
 export function PeopleGrid({
   initialPeople,
   initialTotal,
+  initialHealthFilter = [],
 }: {
   initialPeople: PersonWithAttributes[];
   initialTotal: number;
+  initialHealthFilter?: RelationshipHealth[];
 }) {
   const [people, setPeople] = useState(initialPeople);
   const [total, setTotal] = useState(initialTotal);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortMode>("recent");
-  const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>([]);
+  const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>(initialHealthFilter);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const LIMIT = 50;
-  // Skip the first effect firing — SSR already rendered the default (q="", sort="recent") data
+  // Skip the first effect firing — SSR already rendered the initial data (including any URL-driven filters)
   const skipInitialFetch = useRef(true);
 
   const search = useCallback(
