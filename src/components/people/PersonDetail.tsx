@@ -5,7 +5,7 @@ import { X, MessageCircle, Link2, Plus, Loader2, Trash2, Pencil, Save } from "lu
 import { useRouter } from "next/navigation";
 import { CHANNEL_CONFIG, CHANNEL_NAMES } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
-import { deriveRelationshipHealth, HEALTH_DOT_COLOR, type RelationshipHealth } from "@/lib/utils";
+import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, type RelationshipHealth } from "@/lib/utils";
 
 type PersonDetailData = {
   id: string;
@@ -27,13 +27,6 @@ type PersonDetailData = {
     summary: string | null;
     occurredAt: string;
   }>;
-};
-
-const HEALTH_LABEL: Record<RelationshipHealth, string> = {
-  active:  "active",
-  fading:  "fading",
-  stale:   "stale",
-  unknown: "no interactions",
 };
 
 export function PersonDetail({
