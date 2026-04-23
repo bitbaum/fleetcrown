@@ -68,10 +68,10 @@ export async function rejectAction(id: string) {
 export async function getActionStats() {
   const [result] = await db
     .select({
-      drafts: sql<number>`count(*) filter (where ${actions.status} = 'draft')`,
-      approved: sql<number>`count(*) filter (where ${actions.status} = 'approved')`,
-      executed: sql<number>`count(*) filter (where ${actions.status} = 'executed')`,
-      rejected: sql<number>`count(*) filter (where ${actions.status} = 'rejected')`,
+      drafts: sql<number>`count(*) filter (where ${actions.status} = ${ACTION_STATUS.DRAFT})`,
+      approved: sql<number>`count(*) filter (where ${actions.status} = ${ACTION_STATUS.APPROVED})`,
+      executed: sql<number>`count(*) filter (where ${actions.status} = ${ACTION_STATUS.EXECUTED})`,
+      rejected: sql<number>`count(*) filter (where ${actions.status} = ${ACTION_STATUS.REJECTED})`,
     })
     .from(actions)
     .where(eq(actions.userId, DEFAULT_USER_ID));

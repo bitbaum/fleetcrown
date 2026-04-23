@@ -1,4 +1,5 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities } from "@/db/schema";
 import { eq, and, isNull, sql } from "drizzle-orm";
@@ -70,9 +71,9 @@ export async function getGoalStats() {
   const [result] = await db
     .select({
       total: sql<number>`count(*)`,
-      active: sql<number>`count(*) filter (where ${goals.status} = 'active')`,
-      completed: sql<number>`count(*) filter (where ${goals.status} = 'completed')`,
-      avgProgress: sql<number>`coalesce(avg(${goals.progress}) filter (where ${goals.status} = 'active'), 0)`,
+      active: sql<number>`count(*) filter (where ${goals.status} = ${GOAL_STATUS.ACTIVE})`,
+      completed: sql<number>`count(*) filter (where ${goals.status} = ${GOAL_STATUS.COMPLETED})`,
+      avgProgress: sql<number>`coalesce(avg(${goals.progress}) filter (where ${goals.status} = ${GOAL_STATUS.ACTIVE}), 0)`,
     })
     .from(goals)
     .where(eq(goals.userId, DEFAULT_USER_ID));

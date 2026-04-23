@@ -28,7 +28,7 @@ export async function getEvents(): Promise<EventRow[]> {
   return db
     .select()
     .from(events)
-    .where(eq(events.userId, DEFAULT_USER_ID))
+    .where(and(eq(events.userId, DEFAULT_USER_ID), eq(events.status, EVENT_STATUS.ACTIVE)))
     .orderBy(
       // Events with deadlines first, then by deadline asc, then by name
       sql`CASE WHEN ${events.deadline} IS NOT NULL THEN 0 ELSE 1 END`,
