@@ -49,34 +49,34 @@ export async function getFinancialCommitments() {
 export type MonthlyBurn = {
   totalChf: number;
   totalUsd: number;
+  totalEur: number;
+  totalGbp: number;
   count: number;
 };
 
 export function calculateMonthlyBurn(
   subs: Awaited<ReturnType<typeof getActiveSubscriptions>>,
 ): MonthlyBurn {
-  let totalChf = 0;
-  let totalUsd = 0;
+  const totals: Record<string, number> = { CHF: 0, USD: 0, EUR: 0, GBP: 0 };
 
   for (const sub of subs) {
     if (!sub.amount || sub.frequency === "one-time") continue;
     const monthly =
-      sub.frequency === "annual"
-        ? sub.amount / 12
-        : sub.frequency === "quarterly"
-          ? sub.amount / 3
-          : sub.frequency === "weekly"
-            ? sub.amount * (52 / 12)
-            : sub.amount; // monthly
+      sub.frequency === "annual"    ? sub.amount / 12
+      : sub.frequency === "quarterly" ? sub.amount / 3
+      : sub.frequency === "weekly"    ? sub.amount * (52 / 12)
+      : sub.amount; // monthly
 
-    if (sub.currency === "CHF") totalChf += monthly;
-    else if (sub.currency === "USD") totalUsd += monthly;
-    else totalUsd += monthly; // default to USD for unknown
+    const key = sub.currency && sub.currency in totals ? sub.currency : "USD";
+    totals[key] += monthly;
   }
 
+  const round = (n: number) => Math.round(n * 100) / 100;
   return {
-    totalChf: Math.round(totalChf * 100) / 100,
-    totalUsd: Math.round(totalUsd * 100) / 100,
+    totalChf: round(totals.CHF),
+    totalUsd: round(totals.USD),
+    totalEur: round(totals.EUR),
+    totalGbp: round(totals.GBP),
     count: subs.length,
   };
 }

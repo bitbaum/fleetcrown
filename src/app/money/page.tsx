@@ -33,11 +33,24 @@ export default async function MoneyPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           label="Monthly Burn"
-          value={`${burn.totalChf} CHF + ${burn.totalUsd} USD`}
+          value={[
+            burn.totalChf > 0 ? `${burn.totalChf} CHF` : null,
+            burn.totalUsd > 0 ? `${burn.totalUsd} USD` : null,
+            burn.totalEur > 0 ? `${burn.totalEur} EUR` : null,
+            burn.totalGbp > 0 ? `${burn.totalGbp} GBP` : null,
+          ].filter(Boolean).join(" + ") || "—"}
           sub={`${burn.count} active subscriptions`}
         />
-        <StatCard label="Subscriptions (CHF)" value={`${burn.totalChf} /mo`} sub="Swiss francs" />
-        <StatCard label="Subscriptions (USD)" value={`${burn.totalUsd} /mo`} sub="US dollars" />
+        <StatCard label="CHF /mo" value={`${burn.totalChf}`} sub="Swiss francs" />
+        <StatCard
+          label="Other currencies /mo"
+          value={[
+            burn.totalUsd > 0 ? `${burn.totalUsd} USD` : null,
+            burn.totalEur > 0 ? `${burn.totalEur} EUR` : null,
+            burn.totalGbp > 0 ? `${burn.totalGbp} GBP` : null,
+          ].filter(Boolean).join(", ") || "—"}
+          sub="non-CHF"
+        />
       </div>
 
       <Card>
