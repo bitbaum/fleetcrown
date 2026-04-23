@@ -27,3 +27,11 @@ export const HEALTH_DOT_COLOR: Record<RelationshipHealth, string> = {
   stale:   "bg-red-400",
   unknown: "bg-white/20",
 };
+
+/** Display labels for health values — used in filter chips and badges */
+export const HEALTH_LABEL: Record<RelationshipHealth, string> = {
+  active:  "Active",
+  fading:  "Fading",
+  stale:   "Stale",
+  unknown: "Unknown",
+};

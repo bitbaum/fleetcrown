@@ -5,15 +5,9 @@ import { Search, ArrowUpDown } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
 import type { PersonWithAttributes } from "@/db/queries/people";
-import { type RelationshipHealth, HEALTH_DOT_COLOR, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
+import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
 
-const HEALTH_FILTER_LABELS: Record<RelationshipHealth, string> = {
-  active:  "Active",
-  fading:  "Fading",
-  stale:   "Stale",
-  unknown: "Unknown",
-};
-const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_FILTER_LABELS[value] }));
+const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 
 type SortMode = "recent" | "name" | "health";
 
