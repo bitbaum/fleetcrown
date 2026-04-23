@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { SUB_STATUS, COMMITMENT_STATUS } from "@/lib/constants/statuses";
+import { FREQUENCY } from "@/config/subscriptions";
 
 export async function getActiveSubscriptions() {
   return db
@@ -68,11 +69,11 @@ export function calculateMonthlyBurn(
   const totals: Record<string, number> = { CHF: 0, USD: 0, EUR: 0, GBP: 0 };
 
   for (const sub of subs) {
-    if (!sub.amount || sub.frequency === "one-time") continue;
+    if (!sub.amount || sub.frequency === FREQUENCY.ONE_TIME) continue;
     const monthly =
-      sub.frequency === "annual"    ? sub.amount / 12
-      : sub.frequency === "quarterly" ? sub.amount / 3
-      : sub.frequency === "weekly"    ? sub.amount * (52 / 12)
+      sub.frequency === FREQUENCY.ANNUAL    ? sub.amount / 12
+      : sub.frequency === FREQUENCY.QUARTERLY ? sub.amount / 3
+      : sub.frequency === FREQUENCY.WEEKLY    ? sub.amount * (52 / 12)
       : sub.amount; // monthly
 
     const key = sub.currency && sub.currency in totals ? sub.currency : "USD";

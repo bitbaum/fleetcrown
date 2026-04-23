@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
-import { SUBSCRIPTION_META, VALID_CURRENCIES } from "@/config/subscriptions";
+import { SUBSCRIPTION_META, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
   switch (frequency) {
-    case "annual":     base.setFullYear(base.getFullYear() + 1); break;
-    case "quarterly":  base.setMonth(base.getMonth() + 3); break;
-    case "weekly":     base.setDate(base.getDate() + 7); break;
-    default:           base.setMonth(base.getMonth() + 1); break; // monthly
+    case FREQUENCY.ANNUAL:     base.setFullYear(base.getFullYear() + 1); break;
+    case FREQUENCY.QUARTERLY:  base.setMonth(base.getMonth() + 3); break;
+    case FREQUENCY.WEEKLY:     base.setDate(base.getDate() + 7); break;
+    default:                   base.setMonth(base.getMonth() + 1); break; // monthly
   }
   return base.toISOString();
 }

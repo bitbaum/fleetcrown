@@ -3,7 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { SubscriptionActions } from "@/components/money/SubscriptionActions";
 import { NewSubscriptionButton } from "@/components/money/NewSubscriptionButton";
-import { SUBSCRIPTION_META } from "@/config/subscriptions";
+import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import {
   getActiveSubscriptions,
@@ -94,7 +94,7 @@ export default async function MoneyPage() {
                   <div className="text-xs md:text-sm text-white/40">
                     {sub.vendor}
                     {sub.paymentMethod ? ` · ${sub.paymentMethod}` : ""}
-                    {sub.frequency !== "monthly" ? ` · ${sub.frequency}` : ""}
+                    {sub.frequency !== FREQUENCY.MONTHLY ? ` · ${sub.frequency}` : ""}
                   </div>
                   {sub.notes && (
                     <div className="text-xs text-white/25 mt-0.5 max-w-md">{sub.notes}</div>

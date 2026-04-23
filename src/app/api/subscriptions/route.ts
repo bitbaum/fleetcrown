@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
+import { VALID_FREQUENCIES, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 
 export async function POST(req: NextRequest) {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       vendor: vendor?.trim() || null,
       amount: amount ?? null,
       currency: (currency as typeof VALID_CURRENCIES[number]) ?? "CHF",
-      frequency: (frequency as typeof VALID_FREQUENCIES[number]) ?? "monthly",
+      frequency: (frequency as typeof VALID_FREQUENCIES[number]) ?? FREQUENCY.MONTHLY,
       nextDue: nextDue ? new Date(nextDue) : null,
       paymentMethod: paymentMethod?.trim() || null,
       notes: notes?.trim() || null,

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
-import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES } from "@/config/subscriptions";
+import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 
 export function NewSubscriptionButton() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export function NewSubscriptionButton() {
   const [vendor, setVendor] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState<typeof CURRENCIES[number]>("CHF");
-  const [frequency, setFrequency] = useState<typeof FREQUENCIES[number]>("monthly");
+  const [frequency, setFrequency] = useState<typeof FREQUENCIES[number]>(FREQUENCY.MONTHLY);
   const [nextDue, setNextDue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [saving, setSaving] = useState(false);
@@ -20,7 +20,7 @@ export function NewSubscriptionButton() {
 
   const reset = () => {
     setName(""); setVendor(""); setAmount(""); setCurrency("CHF");
-    setFrequency("monthly"); setNextDue(""); setPaymentMethod(""); setError(null);
+    setFrequency(FREQUENCY.MONTHLY); setNextDue(""); setPaymentMethod(""); setError(null);
   };
   const close = () => { reset(); setOpen(false); };
 

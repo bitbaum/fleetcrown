@@ -6,6 +6,15 @@
 export const VALID_FREQUENCIES = ["monthly", "annual", "quarterly", "weekly", "one-time"] as const;
 export type SubscriptionFrequency = typeof VALID_FREQUENCIES[number];
 
+/** Named frequency constants — use these for comparisons to avoid typos */
+export const FREQUENCY = {
+  MONTHLY:   "monthly",
+  ANNUAL:    "annual",
+  QUARTERLY: "quarterly",
+  WEEKLY:    "weekly",
+  ONE_TIME:  "one-time",
+} as const satisfies Record<string, SubscriptionFrequency>;
+
 export const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
 export type SubscriptionCurrency = typeof VALID_CURRENCIES[number];
 
