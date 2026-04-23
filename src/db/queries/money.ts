@@ -23,10 +23,10 @@ export async function getAllSubscriptions() {
     .from(subscriptions)
     .where(eq(subscriptions.userId, DEFAULT_USER_ID))
     .orderBy(sql`
-      CASE status
-        WHEN 'active' THEN 1
-        WHEN 'unverified' THEN 2
-        WHEN 'cancelled' THEN 3
+      CASE ${subscriptions.status}
+        WHEN ${SUB_STATUS.ACTIVE} THEN 1
+        WHEN ${SUB_STATUS.UNVERIFIED} THEN 2
+        WHEN ${SUB_STATUS.CANCELLED} THEN 3
         ELSE 4
       END,
       ${subscriptions.amount} DESC NULLS LAST
