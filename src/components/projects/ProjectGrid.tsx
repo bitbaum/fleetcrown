@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, GitBranch, Globe, ShieldAlert, AlertTriangle, Zap } from "lucide-react";
+import { useState, useMemo } from "react";
+import { ExternalLink, GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
 import { ProjectDetail } from "./ProjectDetail";
 import {
   MaturityBar,
@@ -121,8 +121,19 @@ function ProjectCard({
 
 export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
-  // Compute health summary
+  const filtered = useMemo(() => {
+    if (!query) return projects;
+    const q = query.toLowerCase();
+    return projects.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      (p.description ?? "").toLowerCase().includes(q) ||
+      Object.values(p.attrs).some((v) => v.toLowerCase().includes(q)),
+    );
+  }, [projects, query]);
+
+  // Compute health summary across all projects (not filtered)
   const withIssues = projects.filter((p) => getHealthSignals(p.attrs).length > 0);
   const securityRisks = projects.filter((p) =>
     p.attrs["security_vulnerability"],
@@ -130,9 +141,24 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
 
   return (
     <>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        <input
+          type="text"
+          placeholder="Search projects..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-white/20 placeholder:text-white/30"
+        />
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+          {filtered.length}
+        </span>
+      </div>
+
       {/* Health summary bar */}
       {withIssues.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 px-1 pb-1 text-xs">
+        <div className="flex flex-wrap items-center gap-3 px-1 text-xs">
           {securityRisks > 0 && (
             <span className="flex items-center gap-1.5 text-red-400">
               <ShieldAlert className="h-3.5 w-3.5" />
@@ -150,13 +176,16 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {projects.map((project) => (
+        {filtered.map((project) => (
           <ProjectCard
             key={project.id}
             project={project}
             onOpen={() => setSelectedId(project.id)}
           />
         ))}
+        {filtered.length === 0 && (
+          <p className="col-span-2 text-sm text-white/30 py-4 text-center">No projects match "{query}"</p>
+        )}
       </div>
 
       {selectedId && (
