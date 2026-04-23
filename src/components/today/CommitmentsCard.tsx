@@ -3,6 +3,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
 import { formatDistanceToNow } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
+import { AddCommitmentButton } from "./AddCommitmentButton";
 
 export async function CommitmentsCard() {
   const items = await getActiveCommitments();
@@ -45,6 +46,7 @@ export async function CommitmentsCard() {
           })}
         </div>
       )}
+      <AddCommitmentButton />
     </Card>
   );
 }
