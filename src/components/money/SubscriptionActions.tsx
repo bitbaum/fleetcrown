@@ -27,6 +27,8 @@ export function SubscriptionActions({
   currency,
   notes,
   paymentMethod,
+  name,
+  vendor,
 }: {
   subId: string;
   subName: string;
@@ -37,6 +39,8 @@ export function SubscriptionActions({
   currency?: string | null;
   notes?: string | null;
   paymentMethod?: string | null;
+  name?: string | null;
+  vendor?: string | null;
 }) {
   const router = useRouter();
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -49,6 +53,8 @@ export function SubscriptionActions({
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(name ?? subName);
+  const [editVendor, setEditVendor] = useState(vendor ?? "");
   const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
   const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
   const [editNotes, setEditNotes] = useState(notes ?? "");
@@ -99,6 +105,8 @@ export function SubscriptionActions({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: editName.trim() || undefined,
+          vendor: editVendor.trim() || null,
           amount: editAmount ? parseFloat(editAmount) : null,
           currency: editCurrency,
           notes: editNotes || null,
@@ -222,6 +230,18 @@ export function SubscriptionActions({
 
       {editing && (
         <div className="w-full mt-1 p-2.5 rounded bg-white/[0.03] border border-white/10 space-y-2">
+          <input
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            placeholder="Name"
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+          />
+          <input
+            value={editVendor}
+            onChange={(e) => setEditVendor(e.target.value)}
+            placeholder="Vendor (optional)"
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          />
           <div className="flex gap-2">
             <input
               type="number"
