@@ -7,16 +7,8 @@ import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
-
-async function patchGoal(id: string, patch: Record<string, unknown>) {
-  const res = await fetch(`/api/goals/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-  if (!res.ok) throw new Error("Failed to update goal");
-  return res.json();
-}
+import { patchGoal } from "@/lib/api/goals";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 function ProgressInput({
   goalId,
@@ -282,7 +274,7 @@ function MilestoneRow({
 }
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
-  const [status, setStatus] = useState(goal.status ?? "active");
+  const [status, setStatus] = useState(goal.status ?? GOAL_STATUS.ACTIVE);
   const [progress, setProgress] = useState(goal.progress ?? 0);
   const [milestones, setMilestones] = useState<Milestone[]>(
     (goal.milestones as Milestone[]) ?? [],
@@ -322,7 +314,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     }
   };
 
-  const isCompleted = status === "completed";
+  const isCompleted = status === GOAL_STATUS.COMPLETED;
   const milestoneDone = milestones.filter((m) => m.done).length;
   const milestoneTotal = milestones.length;
   const hasMilestones = milestoneTotal > 0;
@@ -330,12 +322,12 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const toggleComplete = async () => {
     if (togglingStatus) return;
     setTogglingStatus(true);
-    const newStatus = isCompleted ? "active" : "completed";
-    const newProgress = newStatus === "completed" ? 100 : progress;
+    const newStatus = isCompleted ? GOAL_STATUS.ACTIVE : GOAL_STATUS.COMPLETED;
+    const newProgress = newStatus === GOAL_STATUS.COMPLETED ? 100 : progress;
     try {
       await patchGoal(goal.id, { status: newStatus, progress: newProgress });
       setStatus(newStatus);
-      if (newStatus === "completed") setProgress(100);
+      if (newStatus === GOAL_STATUS.COMPLETED) setProgress(100);
     } finally {
       setTogglingStatus(false);
     }
@@ -387,7 +379,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   {titleValue}
                 </div>
               )}
-              {status && status !== "active" && (
+              {status && status !== GOAL_STATUS.ACTIVE && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/40">
                   {status}
                 </span>

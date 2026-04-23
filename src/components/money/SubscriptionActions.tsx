@@ -6,6 +6,7 @@ import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES } from "@/config/subscriptions";
+import { SUB_STATUS } from "@/lib/constants/statuses";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
@@ -59,7 +60,7 @@ export function SubscriptionActions({
   const [saving, setSaving] = useState(false);
 
   const meta = SUBSCRIPTION_META[subName];
-  const isCancelled = status === "cancelled";
+  const isCancelled = status === SUB_STATUS.CANCELLED;
   const isOneTime = frequency === "one-time";
 
   async function onDeleteRecord() {

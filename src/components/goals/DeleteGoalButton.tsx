@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { deleteGoal } from "@/lib/api/goals";
 
 export function DeleteGoalButton({ goalId }: { goalId: string }) {
   const router = useRouter();
   return (
     <DeleteButton
       onDelete={async () => {
-        await fetch(`/api/goals/${goalId}`, { method: "DELETE" });
+        await deleteGoal(goalId);
         router.refresh();
       }}
       label="Delete?"

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import type { GoalWithChildren } from "@/db/queries/goals";
+import { createGoal } from "@/lib/api/goals";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
   const router = useRouter();
@@ -30,15 +32,11 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/goals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || undefined,
-          targetDate: targetDate || undefined,
-          parentGoalId: parentGoalId || undefined,
-        }),
+      const res = await createGoal({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        targetDate: targetDate || undefined,
+        parentGoalId: parentGoalId || undefined,
       });
       const data = await res.json();
       if (!data.ok) { setError(data.error ?? "Failed to create goal"); return; }
@@ -55,7 +53,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
   const flatGoals: Array<{ id: string; title: string; depth: number }> = [];
   function flatten(list: GoalWithChildren[], depth: number) {
     for (const g of list) {
-      if (g.status !== "completed") {
+      if (g.status !== GOAL_STATUS.COMPLETED) {
         flatGoals.push({ id: g.id, title: g.title, depth });
         flatten(g.children, depth + 1);
       }

@@ -4,6 +4,7 @@ import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { SubscriptionActions } from "@/components/money/SubscriptionActions";
 import { NewSubscriptionButton } from "@/components/money/NewSubscriptionButton";
 import { SUBSCRIPTION_META } from "@/config/subscriptions";
+import { SUB_STATUS } from "@/lib/constants/statuses";
 import {
   getActiveSubscriptions,
   getAllSubscriptions,
@@ -67,8 +68,8 @@ export default async function MoneyPage() {
           {allSubs.map((sub) => {
             const isOverdue = sub.nextDue && isPast(new Date(sub.nextDue));
             const verifyUrl = SUBSCRIPTION_META[sub.name]?.verifyUrl;
-            const statusStyle = STATUS_STYLE[sub.status ?? "active"] ?? STATUS_STYLE.active;
-            const isCancelled = sub.status === "cancelled";
+            const statusStyle = STATUS_STYLE[sub.status ?? SUB_STATUS.ACTIVE] ?? STATUS_STYLE.active;
+            const isCancelled = sub.status === SUB_STATUS.CANCELLED;
 
             return (
               <div key={sub.id} className={`flex items-center justify-between py-1 ${isCancelled ? "opacity-40" : ""}`}>

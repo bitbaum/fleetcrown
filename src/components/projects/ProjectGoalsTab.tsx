@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
+import { patchGoal, listGoals } from "@/lib/api/goals";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
 
 export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; projectId: string }) {
@@ -14,7 +16,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
   const openLink = async () => {
     setLinking(true);
     setSelectedId("");
-    const res = await fetch("/api/goals");
+    const res = await listGoals();
     const data = await res.json();
     const linkedIds = new Set(linked.map((g) => g.id));
     setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
@@ -24,14 +26,10 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
     if (!selectedId) return;
     setSaving(true);
     try {
-      await fetch(`/api/goals/${selectedId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entityId: projectId }),
-      });
+      await patchGoal(selectedId, { entityId: projectId });
       const chosen = allGoals.find((g) => g.id === selectedId);
       if (chosen) {
-        setLinked((prev) => [...prev, { id: chosen.id, title: chosen.title, description: null, status: "active", progress: 0, targetDate: null, milestones: null }]);
+        setLinked((prev) => [...prev, { id: chosen.id, title: chosen.title, description: null, status: GOAL_STATUS.ACTIVE, progress: 0, targetDate: null, milestones: null }]);
       }
       setLinking(false);
     } finally {
@@ -40,11 +38,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
   };
 
   const handleUnlink = async (goalId: string) => {
-    await fetch(`/api/goals/${goalId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entityId: null }),
-    });
+    await patchGoal(goalId, { entityId: null });
     setLinked((prev) => prev.filter((g) => g.id !== goalId));
   };
 
@@ -54,7 +48,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
         const progress = goal.progress ?? 0;
         const milestones = goal.milestones ?? [];
         const done = milestones.filter((m) => m.done).length;
-        const isCompleted = goal.status === "completed";
+        const isCompleted = goal.status === GOAL_STATUS.COMPLETED;
         return (
           <div key={goal.id} className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 group">
             <div className="flex items-start gap-2.5">

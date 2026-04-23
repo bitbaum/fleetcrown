@@ -4,12 +4,13 @@ import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 export default async function GoalsPage() {
   const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
 
-  const activeGoals = goalTree.filter((g) => g.status !== "completed");
-  const completedGoals = goalTree.filter((g) => g.status === "completed");
+  const activeGoals = goalTree.filter((g) => g.status !== GOAL_STATUS.COMPLETED);
+  const completedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.COMPLETED);
 
   return (
     <PageLayout
