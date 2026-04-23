@@ -1,4 +1,5 @@
 import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, ne, ilike, sql, desc, type SQL } from "drizzle-orm";
@@ -61,7 +62,7 @@ export async function searchPeople(
         SELECT e.id
         FROM entities e
         LEFT JOIN interactions i ON i.entity_id = e.id
-        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
         ${nameFilter}
         GROUP BY e.id
         ${having}
@@ -84,7 +85,7 @@ export async function searchPeople(
               WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
       FROM entities e
       LEFT JOIN interactions i ON i.entity_id = e.id
-      WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+      WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
       ${nameFilter}
       GROUP BY e.id
       ${having}

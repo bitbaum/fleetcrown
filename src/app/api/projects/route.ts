@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
       .values({
         userId: DEFAULT_USER_ID,
         name: name.trim(),
-        type: "project",
+        type: ENTITY_TYPE.PROJECT,
         description: description?.trim() || null,
         source: "cockpit-ui",
       })

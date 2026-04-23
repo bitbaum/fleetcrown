@@ -41,6 +41,18 @@ export const EVENT_STATUS = {
 } as const;
 export type EventStatus = (typeof EVENT_STATUS)[keyof typeof EVENT_STATUS];
 
+/** Entity type values — used in people queries, projects queries, and API routes */
+export const ENTITY_TYPE = {
+  PERSON:  "person",
+  PROJECT: "project",
+  COMPANY: "company",
+  GOAL:    "goal",
+  TOOL:    "tool",
+  CONCEPT: "concept",
+  EVENT:   "event",
+} as const;
+export type EntityType = (typeof ENTITY_TYPE)[keyof typeof ENTITY_TYPE];
+
 /** Alert severity values */
 export const ALERT_SEVERITY = {
   INFO: "info",

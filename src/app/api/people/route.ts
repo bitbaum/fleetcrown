@@ -3,6 +3,7 @@ import { searchPeople, type SortMode } from "@/db/queries/people";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
 
 const VALID_SORTS: SortMode[] = ["recent", "name", "health"];
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
       .values({
         userId: DEFAULT_USER_ID,
         name: name.trim(),
-        type: "person",
+        type: ENTITY_TYPE.PERSON,
         description: description?.trim() || null,
         source: "cockpit-ui",
       })

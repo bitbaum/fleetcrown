@@ -1,4 +1,5 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -11,7 +12,7 @@ export async function getProjects() {
     .where(
       and(
         eq(entities.userId, DEFAULT_USER_ID),
-        eq(entities.type, "project"),
+        eq(entities.type, ENTITY_TYPE.PROJECT),
       ),
     )
     .orderBy(entities.name);
