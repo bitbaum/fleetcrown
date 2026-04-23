@@ -2,7 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { SUB_STATUS } from "@/lib/constants/statuses";
+import { SUB_STATUS, COMMITMENT_STATUS } from "@/lib/constants/statuses";
 
 export async function getActiveSubscriptions() {
   return db
@@ -40,7 +40,7 @@ export async function getFinancialCommitments() {
     .where(
       and(
         eq(commitments.userId, DEFAULT_USER_ID),
-        eq(commitments.status, "active"),
+        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
         sql`${commitments.financialImpact} IS NOT NULL AND ${commitments.financialImpact} != ''`,
       ),
     )

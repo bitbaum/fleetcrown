@@ -84,7 +84,7 @@ export async function getTodaySummary() {
         avgProgress: sql<number>`coalesce(avg(${goals.progress}), 0)`,
       })
       .from(goals)
-      .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active"))),
+      .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, GOAL_STATUS.ACTIVE))),
     db
       .select({ total: sql<number>`count(*)` })
       .from(alerts)
