@@ -271,6 +271,22 @@ function AttrRow({
   placeholder?: string;
 }) {
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const deleteAttr = async () => {
+    setDeleting(true);
+    try {
+      await fetch(`/api/projects/${projectId}/attrs`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: attrKey }),
+      });
+      onReload();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (editing) {
     return (
       <div className="py-1">
@@ -305,6 +321,14 @@ function AttrRow({
           title="Edit"
         >
           <Pencil className="h-3 w-3" />
+        </button>
+        <button
+          onClick={deleteAttr}
+          disabled={deleting}
+          className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/15 hover:text-red-400 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
+          title="Delete attribute"
+        >
+          {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
         </button>
       </div>
     </div>
