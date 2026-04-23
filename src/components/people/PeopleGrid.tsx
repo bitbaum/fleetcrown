@@ -5,7 +5,7 @@ import { Search, ArrowUpDown } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
 import type { PersonWithAttributes } from "@/db/queries/people";
-import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
+import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/utils";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 
@@ -147,6 +147,15 @@ export function PeopleGrid({
             key={person.id}
             person={person}
             onClick={() => setSelectedId(person.id)}
+            onLogged={(id, at) =>
+              setPeople((prev) =>
+                prev.map((p) =>
+                  p.id === id
+                    ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: deriveRelationshipHealth(at) }
+                    : p,
+                ),
+              )
+            }
           />
         ))}
       </div>

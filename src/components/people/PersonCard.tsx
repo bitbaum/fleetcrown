@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG, CHANNEL_NAMES } from "@/config/channels";
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
@@ -11,11 +10,13 @@ import { formatDistanceToNow } from "date-fns";
 export function PersonCard({
   person,
   onClick,
+  onLogged,
 }: {
   person: PersonWithAttributes;
   onClick: () => void;
+  /** Called immediately after a successful interaction log so the grid can update local state */
+  onLogged?: (personId: string, at: Date) => void;
 }) {
-  const router = useRouter();
   const channels = Object.keys(person.attrs).filter((k) => k.startsWith("channel:"));
   const profession = person.attrs["profession"] ?? person.attrs["role"];
   const location = person.attrs["location"] ?? person.attrs["home_location"];
@@ -30,6 +31,7 @@ export function PersonCard({
   async function submitLog(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
     setSaving(true);
+    const occurredAt = new Date();
     try {
       await fetch(`/api/people/${person.id}/interactions`, {
         method: "POST",
@@ -38,10 +40,11 @@ export function PersonCard({
       });
       setDone(true);
       setSummary("");
+      // Update grid state immediately so the card reflects the new timestamp without a full refresh
+      onLogged?.(person.id, occurredAt);
       setTimeout(() => {
         setDone(false);
         setLogOpen(false);
-        router.refresh();
       }, 1200);
     } finally {
       setSaving(false);
