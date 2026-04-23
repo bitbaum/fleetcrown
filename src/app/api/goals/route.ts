@@ -4,12 +4,13 @@ import { goals } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { isValidUuid } from "@/lib/utils";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 export async function GET() {
   const items = await db
     .select({ id: goals.id, title: goals.title, status: goals.status, entityId: goals.entityId })
     .from(goals)
-    .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, "active")))
+    .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, GOAL_STATUS.ACTIVE)))
     .orderBy(goals.title);
   return NextResponse.json({ goals: items });
 }
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       description: description?.trim() || null,
       targetDate: targetDate ? new Date(targetDate) : null,
       parentGoalId: parentGoalId || null,
-      status: "active",
+      status: GOAL_STATUS.ACTIVE,
       progress: 0,
     })
     .returning();

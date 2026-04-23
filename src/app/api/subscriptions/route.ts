@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
+import { SUB_STATUS } from "@/lib/constants/statuses";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       nextDue: nextDue ? new Date(nextDue) : null,
       paymentMethod: paymentMethod?.trim() || null,
       notes: notes?.trim() || null,
-      status: "active",
+      status: SUB_STATUS.ACTIVE,
     })
     .returning();
 

@@ -4,6 +4,7 @@ import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { isValidUuid } from "@/lib/utils";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 export async function PATCH(
   req: NextRequest,
@@ -45,9 +46,9 @@ export async function PATCH(
   }
 
   // If marking completed, record completedAt; if reactivating, clear it
-  if (patch.status === "completed") {
+  if (patch.status === GOAL_STATUS.COMPLETED) {
     patch.completedAt = new Date();
-  } else if (patch.status === "active") {
+  } else if (patch.status === GOAL_STATUS.ACTIVE) {
     patch.completedAt = null;
   }
 
