@@ -3,6 +3,7 @@
 import { Check, X } from "lucide-react";
 import { handleApprove, handleReject } from "@/app/actions";
 import { useState } from "react";
+import { ACTION_STATUS } from "@/lib/constants/statuses";
 
 export function ActionButtons({
   actionId,
@@ -17,19 +18,19 @@ export function ActionButtons({
   async function onApprove() {
     setBusy(true);
     await handleApprove(actionId);
-    setDone("approved");
+    setDone(ACTION_STATUS.APPROVED);
   }
 
   async function onReject() {
     setBusy(true);
     await handleReject(actionId);
-    setDone("rejected");
+    setDone(ACTION_STATUS.REJECTED);
   }
 
   if (done) {
     return (
-      <span className={`text-xs ${done === "approved" ? "text-emerald-400" : "text-white/30"}`}>
-        {done === "approved" ? "✓" : "✗"}
+      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-emerald-400" : "text-white/30"}`}>
+        {done === ACTION_STATUS.APPROVED ? "✓" : "✗"}
       </span>
     );
   }
