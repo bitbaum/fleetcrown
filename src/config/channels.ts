@@ -15,3 +15,6 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
   "channel:in-person": { icon: Users,         label: "In person", color: "text-violet-400/60" },
   "channel:other":     { icon: HelpCircle,    label: "Other",     color: "text-white/30" },
 };
+
+/** Bare channel names (without "channel:" prefix), derived from CHANNEL_CONFIG — single source of truth */
+export const CHANNEL_NAMES = Object.keys(CHANNEL_CONFIG).map((k) => k.replace("channel:", ""));

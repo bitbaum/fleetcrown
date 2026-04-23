@@ -3,12 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { X, MessageCircle, Link2, Plus, Loader2, Trash2, Pencil, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { CHANNEL_CONFIG } from "@/config/channels";
+import { CHANNEL_CONFIG, CHANNEL_NAMES } from "@/config/channels";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, HEALTH_DOT_COLOR, type RelationshipHealth } from "@/lib/utils";
-
-const CHANNELS = ["whatsapp", "telegram", "email", "phone", "in-person", "other"] as const;
-type Channel = typeof CHANNELS[number];
 
 type PersonDetailData = {
   id: string;
@@ -305,7 +302,7 @@ function InteractionsSection({
   onAdd: (ix: Interaction) => void;
 }) {
   const [logging, setLogging] = useState(false);
-  const [channel, setChannel] = useState<Channel>("whatsapp");
+  const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
   const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
   const [summary, setSummary] = useState("");
   const [occurredAt, setOccurredAt] = useState(new Date().toISOString().split("T")[0]);
@@ -355,10 +352,10 @@ function InteractionsSection({
           <div className="flex gap-2">
             <select
               value={channel}
-              onChange={(e) => setChannel(e.target.value as Channel)}
+              onChange={(e) => setChannel(e.target.value)}
               className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
             >
-              {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+              {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={direction}
@@ -585,7 +582,7 @@ function ChannelsSection({
   onUpdate: (updated: Record<string, string>) => void;
 }) {
   const [adding, setAdding] = useState(false);
-  const [channelType, setChannelType] = useState<Channel>("whatsapp");
+  const [channelType, setChannelType] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
   const [channelValue, setChannelValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
@@ -649,10 +646,10 @@ function ChannelsSection({
         <div className="flex gap-1.5 items-center pt-0.5">
           <select
             value={channelType}
-            onChange={(e) => setChannelType(e.target.value as Channel)}
+            onChange={(e) => setChannelType(e.target.value)}
             className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25 shrink-0"
           >
-            {CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <input
             value={channelValue}
