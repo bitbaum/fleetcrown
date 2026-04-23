@@ -5,6 +5,7 @@ import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle, Folder } from "lucide
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
+import { patchCronJob } from "@/lib/api/crons";
 import { JobDetail } from "./JobDetail";
 
 function StatusDot({ status, errors }: { status?: string; errors?: number }) {
@@ -102,11 +103,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
   const [selected, setSelected] = useState<CronJob | null>(null);
 
   const handleToggle = async (id: string, enabled: boolean) => {
-    const res = await fetch("/api/crons", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, enabled }),
-    });
+    const res = await patchCronJob({ id, enabled });
     if (res.ok) {
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, enabled } : j)));
       if (selected?.id === id) setSelected((prev) => prev && { ...prev, enabled });
@@ -114,11 +111,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
   };
 
   const handleSavePrompt = async (id: string, message: string) => {
-    const res = await fetch("/api/crons", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, message }),
-    });
+    const res = await patchCronJob({ id, message });
     if (res.ok) {
       setJobs((prev) =>
         prev.map((j) => j.id === id ? { ...j, payload: { ...j.payload, message } } : j),

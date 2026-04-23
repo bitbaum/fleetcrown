@@ -26,3 +26,4 @@ export const goals = pgTable("goals", {
 
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
+export type Milestone = { title: string; done: boolean; date?: string };

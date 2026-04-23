@@ -5,6 +5,7 @@ import { Target, CheckCircle, Loader2, X, Plus, Check, FolderKanban } from "luci
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow, isPast } from "date-fns";
 import type { GoalWithChildren } from "@/db/queries/goals";
+import type { Milestone } from "@/db/schema/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 
 async function patchGoal(id: string, patch: Record<string, unknown>) {
@@ -157,8 +158,6 @@ function DateInput({
     </button>
   );
 }
-
-type Milestone = { title: string; done: boolean; date?: string };
 
 function AddMilestoneInline({
   goalId,

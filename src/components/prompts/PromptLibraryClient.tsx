@@ -16,6 +16,7 @@ import {
   Star,
 } from "lucide-react";
 import { ProjectDetail } from "@/components/projects/ProjectDetail";
+import { createCronJob } from "@/lib/api/crons";
 import {
   PROMPT_TEMPLATES,
   CATEGORY_META,
@@ -55,15 +56,11 @@ function ScheduleModal({
   const handleCreate = async () => {
     if (template.scope === "project" && !projectId) return;
     setSaving(true);
-    await fetch("/api/crons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: jobName,
-        scheduleExpr: schedule,
-        message: resolvedMessage,
-        ...(projectId ? { projectId, projectName } : {}),
-      }),
+    await createCronJob({
+      name: jobName,
+      scheduleExpr: schedule,
+      message: resolvedMessage,
+      ...(projectId ? { projectId, projectName } : {}),
     });
     setSaving(false);
     setDone(true);

@@ -10,10 +10,10 @@ import {
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
+import { createCronJob, patchCronJob } from "@/lib/api/crons";
+import type { Milestone } from "@/db/schema/goals";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type Milestone = { title: string; done: boolean };
 
 type LinkedGoal = {
   id: string;
@@ -201,11 +201,7 @@ function NewJobForm({
   const create = async () => {
     if (!name.trim() || !schedule.trim() || !message.trim() || saving) return;
     setSaving(true);
-    const res = await fetch("/api/crons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, scheduleExpr: schedule, message, projectId, projectName }),
-    });
+    const res = await createCronJob({ name, scheduleExpr: schedule, message, projectId, projectName });
     const data = await res.json();
     setSaving(false);
     if (data.ok) {
@@ -602,11 +598,7 @@ function PromptsTab({
 }) {
   const toggleJob = async (id: string, enabled: boolean) => {
     setJobs((prev) => prev.map((j) => j.id === id ? { ...j, enabled } : j));
-    await fetch("/api/crons", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, enabled }),
-    });
+    await patchCronJob({ id, enabled });
   };
 
   return (
