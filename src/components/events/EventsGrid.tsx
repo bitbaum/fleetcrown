@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ExternalLink, Trash2, Plus, X, Loader2, Calendar } from "lucide-react";
+import { Search, ExternalLink, Plus, X, Loader2, Calendar } from "lucide-react";
 import { isPast, format, formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
+import { DeleteButton } from "@/components/ui/delete-button";
 import type { EventRow } from "@/db/queries/events";
 
 // ─── EventCard ────────────────────────────────────────────────────────────────
@@ -15,21 +16,8 @@ function EventCard({
   event: EventRow;
   onDelete: (id: string) => void;
 }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
   const deadline = event.deadline ? new Date(event.deadline) : null;
   const overdue = deadline ? isPast(deadline) : false;
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await fetch(`/api/events/${event.id}`, { method: "DELETE" });
-      onDelete(event.id);
-    } finally {
-      setDeleting(false);
-    }
-  };
 
   return (
     <div className="group flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-0">
@@ -74,31 +62,15 @@ function EventCard({
 
       {/* Delete */}
       <div className="shrink-0 flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-        {confirmDelete ? (
-          <>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-xs text-red-400 hover:text-red-300 px-1 disabled:opacity-50"
-            >
-              {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="text-xs text-white/30 hover:text-white/60 px-1"
-            >
-              No
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="p-1 rounded text-white/20 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
-            title="Delete event"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
+        <DeleteButton
+          onDelete={async () => {
+            await fetch(`/api/events/${event.id}`, { method: "DELETE" });
+            onDelete(event.id);
+          }}
+          label=""
+          triggerTitle="Delete event"
+          triggerClassName="p-1 rounded text-white/20 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+        />
       </div>
     </div>
   );

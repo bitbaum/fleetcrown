@@ -8,6 +8,7 @@ import {
   ToggleLeft, ToggleRight, Target, CheckCircle, Zap,
 } from "lucide-react";
 import { MaturityBar, StatusBadge } from "./project-badges";
+import { DeleteButton } from "@/components/ui/delete-button";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -813,8 +814,6 @@ export function ProjectDetail({
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
   const [savingDesc, setSavingDesc] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusValue, setStatusValue] = useState("");
   const [statusOverride, setStatusOverride] = useState<string | undefined>(undefined);
@@ -900,17 +899,6 @@ export function ProjectDetail({
     } finally {
       setSavingMaturity(false);
       setEditingMaturity(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
-      onClose();
-      router.refresh();
-    } finally {
-      setDeleting(false);
     }
   };
 
@@ -1036,32 +1024,18 @@ export function ProjectDetail({
                   <GitBranch className="h-4 w-4" />
                 </a>
               )}
-              {data && (confirmDelete ? (
-                <div className="flex items-center gap-1 ml-1">
-                  <span className="text-xs text-white/40">Delete?</span>
-                  <button
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50"
-                  >
-                    {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-xs text-white/30 hover:text-white/60 transition-colors px-1"
-                  >
-                    No
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="ml-1 p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/5 transition-colors"
-                  title="Delete project"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              ))}
+              {data && (
+                <DeleteButton
+                  onDelete={async () => {
+                    await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+                    onClose();
+                    router.refresh();
+                  }}
+                  label="Delete?"
+                  triggerTitle="Delete project"
+                  triggerClassName="ml-1 p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/5 transition-colors"
+                />
+              )}
               <button onClick={onClose}
                 className="ml-1 p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors">
                 <X className="h-4 w-4" />
