@@ -1,4 +1,4 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
@@ -131,7 +131,7 @@ export async function getTodaySummary() {
         SELECT e.id
         FROM entities e
         LEFT JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${DEFAULT_USER_ID}
-        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
+        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
         GROUP BY e.id
         HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})
             OR max(i.occurred_at) IS NULL

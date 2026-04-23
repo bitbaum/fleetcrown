@@ -9,5 +9,7 @@ export const CRON_FILE = path.join(HOME, ".openclaw", "cron", "jobs.json");
 
 export const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 export const DEFAULT_USER_NAME = "George";
+/** External ID of the owner entity — used to exclude the user from people queries */
+export const DEFAULT_USER_EXTERNAL_ID = "george";
 export const TELEGRAM_CHAT_ID = "575014778";
 export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://127.0.0.1:18789";
