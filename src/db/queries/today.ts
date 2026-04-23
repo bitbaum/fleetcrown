@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
-import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS } from "@/lib/constants/statuses";
+import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY } from "@/lib/constants/statuses";
 
 export async function fulfillCommitment(id: string) {
   await db
@@ -92,11 +92,11 @@ export async function getTodaySummary() {
     db
       .select({ count: sql<number>`count(*)` })
       .from(alerts)
-      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, "urgent"))),
+      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, ALERT_SEVERITY.URGENT))),
     db
       .select({ drafts: sql<number>`count(*)` })
       .from(actions)
-      .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, "draft"))),
+      .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, ACTION_STATUS.DRAFT))),
     db
       .select({ count: sql<number>`count(*)` })
       .from(commitments)

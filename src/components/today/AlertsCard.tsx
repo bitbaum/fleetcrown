@@ -3,6 +3,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveAlerts } from "@/db/queries/alerts";
 import { DismissAlertButton } from "./DismissAlertButton";
 import Link from "next/link";
+import { ALERT_SEVERITY } from "@/lib/constants/statuses";
 
 const SEVERITY_CONFIG = {
   urgent: { icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/20" },
@@ -15,7 +16,7 @@ export async function AlertsCard() {
 
   if (items.length === 0) return null;
 
-  const urgentCount = items.filter((a) => a.severity === "urgent").length;
+  const urgentCount = items.filter((a) => a.severity === ALERT_SEVERITY.URGENT).length;
 
   return (
     <div className="md:col-span-2">

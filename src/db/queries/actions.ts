@@ -2,6 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { actions } from "@/db/schema";
 import { eq, and, desc, ne, sql } from "drizzle-orm";
+import { ACTION_STATUS } from "@/lib/constants/statuses";
 
 export async function getPendingActions() {
   return db
@@ -10,7 +11,7 @@ export async function getPendingActions() {
     .where(
       and(
         eq(actions.userId, DEFAULT_USER_ID),
-        eq(actions.status, "draft"),
+        eq(actions.status, ACTION_STATUS.DRAFT),
       ),
     )
     .orderBy(desc(actions.createdAt));
@@ -23,7 +24,7 @@ export async function getRecentActions(limit = 20) {
     .where(
       and(
         eq(actions.userId, DEFAULT_USER_ID),
-        ne(actions.status, "draft"),
+        ne(actions.status, ACTION_STATUS.DRAFT),
       ),
     )
     .orderBy(desc(actions.reviewedAt))
@@ -34,14 +35,14 @@ export async function approveAction(id: string) {
   return db
     .update(actions)
     .set({
-      status: "approved",
+      status: ACTION_STATUS.APPROVED,
       reviewedAt: new Date(),
     })
     .where(
       and(
         eq(actions.id, id),
         eq(actions.userId, DEFAULT_USER_ID),
-        eq(actions.status, "draft"),
+        eq(actions.status, ACTION_STATUS.DRAFT),
       ),
     )
     .returning();
@@ -51,14 +52,14 @@ export async function rejectAction(id: string) {
   return db
     .update(actions)
     .set({
-      status: "rejected",
+      status: ACTION_STATUS.REJECTED,
       reviewedAt: new Date(),
     })
     .where(
       and(
         eq(actions.id, id),
         eq(actions.userId, DEFAULT_USER_ID),
-        eq(actions.status, "draft"),
+        eq(actions.status, ACTION_STATUS.DRAFT),
       ),
     )
     .returning();

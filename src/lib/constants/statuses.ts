@@ -20,3 +20,24 @@ export const COMMITMENT_STATUS = {
   FULFILLED: "fulfilled",
 } as const;
 export type CommitmentStatus = (typeof COMMITMENT_STATUS)[keyof typeof COMMITMENT_STATUS];
+
+/**
+ * Action workflow status values — IRON RULE: only 'approved' actions execute.
+ * Flow: draft → approved → executed (or draft → rejected / expired)
+ */
+export const ACTION_STATUS = {
+  DRAFT: "draft",
+  APPROVED: "approved",
+  EXECUTED: "executed",
+  REJECTED: "rejected",
+  EXPIRED: "expired",
+} as const;
+export type ActionStatus = (typeof ACTION_STATUS)[keyof typeof ACTION_STATUS];
+
+/** Alert severity values */
+export const ALERT_SEVERITY = {
+  INFO: "info",
+  WARNING: "warning",
+  URGENT: "urgent",
+} as const;
+export type AlertSeverity = (typeof ALERT_SEVERITY)[keyof typeof ALERT_SEVERITY];
