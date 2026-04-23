@@ -420,6 +420,7 @@ function DetailAttrs({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -463,6 +464,23 @@ function DetailAttrs({
     }
   };
 
+  const deleteAttr = async (key: string) => {
+    setDeletingKey(key);
+    try {
+      await fetch(`/api/people/${personId}/attrs`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      });
+      const next = { ...attrs };
+      delete next[key];
+      onUpdate(next);
+      setEditingKey(null);
+    } finally {
+      setDeletingKey(null);
+    }
+  };
+
   return (
     <Section title="Details">
       {detailAttrs.map(([key, value]) => (
@@ -489,6 +507,14 @@ function DetailAttrs({
               </button>
               <button onClick={() => setEditingKey(null)} className="p-1 text-white/25 hover:text-white/60 shrink-0">
                 <X className="h-2.5 w-2.5" />
+              </button>
+              <button
+                onClick={() => deleteAttr(key)}
+                disabled={deletingKey === key}
+                className="p-1 text-white/15 hover:text-red-400 transition-colors shrink-0"
+                title="Delete attribute"
+              >
+                {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}
               </button>
             </div>
           ) : (
