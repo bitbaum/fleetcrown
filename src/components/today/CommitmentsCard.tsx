@@ -3,6 +3,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
 import { formatDistanceToNow } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
+import { DeleteCommitmentButton } from "./DeleteCommitmentButton";
 import { AddCommitmentButton } from "./AddCommitmentButton";
 
 export async function CommitmentsCard() {
@@ -40,7 +41,10 @@ export async function CommitmentsCard() {
                     <div className="text-xs md:text-sm text-amber-400/70">{item.financialImpact}</div>
                   )}
                 </div>
-                <FulfillCommitmentButton commitmentId={item.id} />
+                <div className="flex gap-0.5 shrink-0">
+                  <FulfillCommitmentButton commitmentId={item.id} />
+                  <DeleteCommitmentButton commitmentId={item.id} />
+                </div>
               </div>
             );
           })}

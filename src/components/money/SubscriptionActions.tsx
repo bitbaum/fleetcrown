@@ -27,7 +27,6 @@ export function SubscriptionActions({
   currency,
   notes,
   paymentMethod,
-  name,
   vendor,
 }: {
   subId: string;
@@ -39,7 +38,6 @@ export function SubscriptionActions({
   currency?: string | null;
   notes?: string | null;
   paymentMethod?: string | null;
-  name?: string | null;
   vendor?: string | null;
 }) {
   const router = useRouter();
@@ -53,7 +51,7 @@ export function SubscriptionActions({
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState(name ?? subName);
+  const [editName, setEditName] = useState(subName);
   const [editVendor, setEditVendor] = useState(vendor ?? "");
   const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
   const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
