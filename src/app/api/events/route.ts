@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { events } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { getEvents } from "@/db/queries/events";
 
 export async function GET() {
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       url: url?.trim() || null,
       deadline: deadline ? new Date(deadline) : null,
       category: category?.trim().toLowerCase() || null,
-      status: "active",
+      status: EVENT_STATUS.ACTIVE,
       source: "cockpit-ui",
     })
     .returning();

@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
-import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY } from "@/lib/constants/statuses";
+import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
 
 export async function fulfillCommitment(id: string) {
   await db
@@ -121,7 +121,7 @@ export async function getTodaySummary() {
       .from(events)
       .where(and(
         eq(events.userId, DEFAULT_USER_ID),
-        eq(events.status, "active"),
+        eq(events.status, EVENT_STATUS.ACTIVE),
         isNotNull(events.deadline),
         lte(events.deadline, (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()),
       )),

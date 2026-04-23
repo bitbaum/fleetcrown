@@ -34,6 +34,13 @@ export const ACTION_STATUS = {
 } as const;
 export type ActionStatus = (typeof ACTION_STATUS)[keyof typeof ACTION_STATUS];
 
+/** Event status values — used in events API, queries/events.ts, queries/today.ts */
+export const EVENT_STATUS = {
+  ACTIVE: "active",
+  ARCHIVED: "archived",
+} as const;
+export type EventStatus = (typeof EVENT_STATUS)[keyof typeof EVENT_STATUS];
+
 /** Alert severity values */
 export const ALERT_SEVERITY = {
   INFO: "info",
