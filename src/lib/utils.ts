@@ -11,12 +11,16 @@ export const isValidUuid = (s: string) => UUID_RE.test(s);
 export const RELATIONSHIP_HEALTH_VALUES = ["active", "fading", "stale", "unknown"] as const;
 export type RelationshipHealth = typeof RELATIONSHIP_HEALTH_VALUES[number];
 
+/** Threshold constants — single source of truth for both JS and SQL queries */
+export const HEALTH_ACTIVE_DAYS = 14;
+export const HEALTH_FADING_DAYS = 30;
+
 /** < 14 days → active, < 30 days → fading, older → stale, null → unknown */
 export function deriveRelationshipHealth(lastInteraction: Date | null): RelationshipHealth {
   if (!lastInteraction) return "unknown";
   const daysSince = (Date.now() - lastInteraction.getTime()) / 86_400_000;
-  if (daysSince <= 14) return "active";
-  if (daysSince <= 30) return "fading";
+  if (daysSince <= HEALTH_ACTIVE_DAYS) return "active";
+  if (daysSince <= HEALTH_FADING_DAYS) return "fading";
   return "stale";
 }
 

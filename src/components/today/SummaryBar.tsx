@@ -1,4 +1,4 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users } from "lucide-react";
 import { getTodaySummary } from "@/db/queries/today";
 
 export async function SummaryBar() {
@@ -18,6 +18,9 @@ export async function SummaryBar() {
       )}
       {s.eventsDueSoon > 0 && (
         <Pill icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" />
+      )}
+      {s.staleContacts > 0 && (
+        <Pill icon={Users} value={`${s.staleContacts} contacts need attention`} variant="amber" />
       )}
       {s.urgentAlerts > 0 && (
         <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" />

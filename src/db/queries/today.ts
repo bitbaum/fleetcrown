@@ -2,6 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
+import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 
 export async function fulfillCommitment(id: string) {
   await db
@@ -74,6 +75,7 @@ export async function getTodaySummary() {
     [overdueStats],
     [goalsDueSoonStats],
     [eventsDueSoonStats],
+    staleContactsResult,
   ] = await Promise.all([
     db
       .select({
@@ -122,7 +124,21 @@ export async function getTodaySummary() {
         isNotNull(events.deadline),
         lte(events.deadline, (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()),
       )),
+    // People with no interaction in the last HEALTH_ACTIVE_DAYS days (fading + stale + unknown)
+    db.execute<{ count: string }>(sql`
+      SELECT count(*)::text as count FROM (
+        SELECT e.id
+        FROM entities e
+        LEFT JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${DEFAULT_USER_ID}
+        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = 'person' AND e.external_id != 'george'
+        GROUP BY e.id
+        HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})
+            OR max(i.occurred_at) IS NULL
+      ) sub
+    `),
   ]);
+
+  const staleContacts = Number((staleContactsResult[0] as { count: string } | undefined)?.count ?? 0);
 
   return {
     activeGoals: Number(goalStats.active),
@@ -133,5 +149,6 @@ export async function getTodaySummary() {
     overdueCommitments: Number(overdueStats.count),
     goalsDueSoon: Number(goalsDueSoonStats.count),
     eventsDueSoon: Number(eventsDueSoonStats.count),
+    staleContacts,
   };
 }

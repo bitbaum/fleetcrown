@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, ne, ilike, sql, desc, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
-import { deriveRelationshipHealth, type RelationshipHealth } from "@/lib/utils";
+import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/utils";
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, "\\$&");
@@ -25,11 +25,12 @@ export type PersonWithAttributes = {
 export type SortMode = "recent" | "name" | "health";
 
 // Build HAVING clause for health filtering — all health values are enum literals, not user input
+// Thresholds sourced from HEALTH_ACTIVE_DAYS / HEALTH_FADING_DAYS in lib/utils.ts
 function buildHealthHaving(health: RelationshipHealth[]): SQL {
   const clauses: SQL[] = [];
-  if (health.includes("active"))  clauses.push(sql`max(i.occurred_at) >= now() - interval '14 days'`);
-  if (health.includes("fading"))  clauses.push(sql`max(i.occurred_at) BETWEEN now() - interval '30 days' AND now() - interval '14 days'`);
-  if (health.includes("stale"))   clauses.push(sql`max(i.occurred_at) < now() - interval '30 days'`);
+  if (health.includes("active"))  clauses.push(sql`max(i.occurred_at) >= now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
+  if (health.includes("fading"))  clauses.push(sql`max(i.occurred_at) BETWEEN now() - make_interval(days => ${HEALTH_FADING_DAYS}) AND now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
+  if (health.includes("stale"))   clauses.push(sql`max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})`);
   if (health.includes("unknown")) clauses.push(sql`max(i.occurred_at) IS NULL`);
   if (clauses.length === 0) return sql``;
   return sql`HAVING (${sql.join(clauses, sql` OR `)})`;
