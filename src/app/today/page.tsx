@@ -5,6 +5,7 @@ import { SummaryBar } from "@/components/today/SummaryBar";
 import { ActionQueueCard } from "@/components/today/ActionQueueCard";
 import { AlertsCard } from "@/components/today/AlertsCard";
 import { GoalsDueCard } from "@/components/today/GoalsDueCard";
+import { EventsDueCard } from "@/components/today/EventsDueCard";
 import { CalendarCard } from "@/components/today/CalendarCard";
 import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
@@ -32,6 +33,9 @@ export default function TodayPage() {
         </Suspense>
         <Suspense fallback={null}>
           <GoalsDueCard />
+        </Suspense>
+        <Suspense fallback={null}>
+          <EventsDueCard />
         </Suspense>
       </div>
 

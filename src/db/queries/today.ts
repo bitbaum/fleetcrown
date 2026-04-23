@@ -1,6 +1,6 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions } from "@/db/schema";
+import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 
 export async function fulfillCommitment(id: string) {
@@ -73,6 +73,7 @@ export async function getTodaySummary() {
     [actionStats],
     [overdueStats],
     [goalsDueSoonStats],
+    [eventsDueSoonStats],
   ] = await Promise.all([
     db
       .select({
@@ -111,6 +112,16 @@ export async function getTodaySummary() {
         isNotNull(goals.targetDate),
         lte(goals.targetDate, soon),
       )),
+    // Events with a deadline within the next 30 days
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(events)
+      .where(and(
+        eq(events.userId, DEFAULT_USER_ID),
+        eq(events.status, "active"),
+        isNotNull(events.deadline),
+        lte(events.deadline, (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()),
+      )),
   ]);
 
   return {
@@ -121,5 +132,6 @@ export async function getTodaySummary() {
     pendingDrafts: Number(actionStats.drafts),
     overdueCommitments: Number(overdueStats.count),
     goalsDueSoon: Number(goalsDueSoonStats.count),
+    eventsDueSoon: Number(eventsDueSoonStats.count),
   };
 }
