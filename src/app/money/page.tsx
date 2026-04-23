@@ -102,7 +102,7 @@ export default async function MoneyPage() {
                 </div>
                 <div className="text-right shrink-0">
                   <div className={`text-sm font-mono ${isCancelled ? "line-through" : ""}`}>
-                    {sub.amount} {sub.currency}
+                    {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-white/30">— {sub.currency}</span>}
                   </div>
                   {sub.nextDue && !isCancelled && (
                     <div className={`text-xs ${isOverdue ? "text-red-400" : "text-white/40"}`}>
