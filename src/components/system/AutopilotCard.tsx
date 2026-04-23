@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle, Folder } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
-import type { CronJob } from "@/app/api/crons/route";
+import type { CronJob } from "@/lib/crons";
 import { JobDetail } from "./JobDetail";
 
 function StatusDot({ status, errors }: { status?: string; errors?: number }) {

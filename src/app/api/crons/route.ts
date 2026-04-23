@@ -1,56 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
+import { type CronJob, readCronJobs } from "@/lib/crons";
 
-export type CronJob = {
-  id: string;
-  agentId: string;
-  name: string;
-  enabled: boolean;
-  schedule: { kind: string; expr: string; tz: string };
-  sessionTarget: string;
-  wakeMode: string;
-  payload: {
-    kind: string;
-    message: string;
-    timeoutSeconds: number;
-    thinking: string;
-    model: string;
-  };
-  delivery: {
-    mode: string;
-    channel: string;
-    to: string;
-    bestEffort: boolean;
-  };
-  state: {
-    lastRunAtMs?: number;
-    lastStatus?: string;
-    lastRunStatus?: string;
-    lastDurationMs?: number;
-    consecutiveErrors?: number;
-    lastError?: string;
-    lastErrorReason?: string;
-    lastDelivered?: string;
-    lastDeliveryStatus?: string;
-    nextRunAtMs?: number;
-  };
-  createdAtMs: number;
-  updatedAtMs: number;
-  // Optional project linkage (cockpit extension, not part of openclaw core)
-  projectId?: string;
-  projectName?: string;
-};
+// Re-export so existing imports from this path keep working
+export type { CronJob };
 
-function readJobs(): { version: number; jobs: CronJob[] } {
+function readJobsFile(): { version: number; jobs: CronJob[] } {
   if (!existsSync(CRON_FILE)) return { version: 1, jobs: [] };
   return JSON.parse(readFileSync(CRON_FILE, "utf-8"));
 }
 
 export async function GET() {
   try {
-    const data = readJobs();
-    return NextResponse.json({ jobs: data.jobs });
+    const jobs = readCronJobs();
+    return NextResponse.json({ jobs });
   } catch (e) {
     return NextResponse.json({ jobs: [], error: String(e) });
   }
@@ -74,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "name, scheduleExpr, and message are required" }, { status: 400 });
     }
 
-    const data = readJobs();
+    const data = readJobsFile();
     const newJob: CronJob = {
       id: crypto.randomUUID(),
       agentId: "main",
@@ -118,7 +82,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-    const data = readJobs();
+    const data = readJobsFile();
     const job = data.jobs.find((j) => j.id === id);
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 

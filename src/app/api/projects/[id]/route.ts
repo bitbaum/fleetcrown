@@ -1,42 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEFAULT_USER_ID, CRON_FILE } from "@/lib/constants";
+import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { isValidUuid } from "@/lib/utils";
-import { readFileSync, existsSync } from "fs";
+import { readCronJobs } from "@/lib/crons";
 
 function getLinkedJobs(projectId: string, projectName: string) {
-  try {
-    if (!existsSync(CRON_FILE)) return [];
-    const data = JSON.parse(readFileSync(CRON_FILE, "utf-8"));
-    const jobs: Array<{ id: string; name: string; message: string; enabled: boolean; schedule: string; lastStatus?: string; consecutiveErrors?: number; projectId?: string }> = [];
-    const nameLower = projectName.toLowerCase();
-    for (const job of data.jobs ?? []) {
-      // Primary: exact projectId match
+  const nameLower = projectName.toLowerCase();
+  return readCronJobs()
+    .filter((job) => {
       const byId = job.projectId === projectId;
-      // Fallback: fuzzy name match in job name or message
       const jobNameLower = (job.name ?? "").toLowerCase();
       const msgLower = (job.payload?.message ?? "").toLowerCase();
+      // Fallback: fuzzy name match when no projectId set on the job
       const byFuzzy = !job.projectId && (jobNameLower.includes(nameLower) || msgLower.includes(nameLower));
-      if (byId || byFuzzy) {
-        jobs.push({
-          id: job.id,
-          name: job.name,
-          message: job.payload?.message ?? "",
-          enabled: job.enabled,
-          schedule: job.schedule?.expr ?? "",
-          lastStatus: job.state?.lastStatus,
-          consecutiveErrors: job.state?.consecutiveErrors ?? 0,
-          projectId: job.projectId,
-        });
-      }
-    }
-    return jobs;
-  } catch {
-    return [];
-  }
+      return byId || byFuzzy;
+    })
+    .map((job) => ({
+      id: job.id,
+      name: job.name,
+      message: job.payload?.message ?? "",
+      enabled: job.enabled,
+      schedule: job.schedule?.expr ?? "",
+      lastStatus: job.state?.lastStatus,
+      consecutiveErrors: job.state?.consecutiveErrors ?? 0,
+      projectId: job.projectId,
+    }));
 }
 
 export async function PATCH(

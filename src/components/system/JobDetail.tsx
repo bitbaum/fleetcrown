@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Clock, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { CronJob } from "@/app/api/crons/route";
+import type { CronJob } from "@/lib/crons";
 
 function humanSchedule(expr: string, tz: string): string {
   const map: Record<string, string> = {
