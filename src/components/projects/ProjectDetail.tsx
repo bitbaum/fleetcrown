@@ -815,6 +815,14 @@ export function ProjectDetail({
   const [savingDesc, setSavingDesc] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [statusValue, setStatusValue] = useState("");
+  const [statusOverride, setStatusOverride] = useState<string | undefined>(undefined);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [editingMaturity, setEditingMaturity] = useState(false);
+  const [maturityScore, setMaturityScore] = useState(5);
+  const [maturityOverride, setMaturityOverride] = useState<string | undefined>(undefined);
+  const [savingMaturity, setSavingMaturity] = useState(false);
 
   const reload = () => {
     setLoading(true);
@@ -862,6 +870,39 @@ export function ProjectDetail({
     }
   };
 
+  const commitStatus = async () => {
+    const trimmed = statusValue.trim();
+    if (!trimmed) { setEditingStatus(false); return; }
+    setSavingStatus(true);
+    try {
+      await fetch(`/api/projects/${projectId}/attrs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "status", value: trimmed }),
+      });
+      setStatusOverride(trimmed);
+    } finally {
+      setSavingStatus(false);
+      setEditingStatus(false);
+    }
+  };
+
+  const commitMaturity = async () => {
+    const value = `${maturityScore}/10`;
+    setSavingMaturity(true);
+    try {
+      await fetch(`/api/projects/${projectId}/attrs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "maturity", value }),
+      });
+      setMaturityOverride(value);
+    } finally {
+      setSavingMaturity(false);
+      setEditingMaturity(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
@@ -886,6 +927,8 @@ export function ProjectDetail({
   // descOverride: undefined = not yet edited this session, null = cleared, string = updated
   const description = descOverride !== undefined ? descOverride : (data?.description ?? attrs["description"] ?? null);
   const owner = attrs["owner"] ?? null;
+  const effectiveStatus = statusOverride ?? attrs["status"] ?? null;
+  const effectiveMaturity = maturityOverride ?? attrs["maturity"] ?? null;
   const prodUrl = attrs["production_url"] ?? attrs["url"];
   const repo = attrs["repo"] ?? attrs["github_repo"];
   const hasIssues = ["security_vulnerability", "broken_features", "deployment_issue"].some((k) => attrs[k]);
@@ -1026,11 +1069,72 @@ export function ProjectDetail({
             </div>
           </div>
 
-          {/* Status + Maturity row */}
-          {data && (attrs["status"] || attrs["maturity"]) && (
+          {/* Status + Maturity row — always shown when data loaded so both can be added */}
+          {data && (
             <div className="flex flex-wrap items-center gap-2 px-5 pb-3">
-              {attrs["status"] && <StatusBadge value={attrs["status"]} />}
-              {attrs["maturity"] && <MaturityBar value={attrs["maturity"]} />}
+              {/* Status */}
+              {editingStatus ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={statusValue}
+                    onChange={(e) => setStatusValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitStatus(); if (e.key === "Escape") setEditingStatus(false); }}
+                    onBlur={commitStatus}
+                    autoFocus
+                    placeholder="e.g. Production"
+                    className="bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/35 w-36"
+                  />
+                  {savingStatus && <Loader2 className="h-3 w-3 animate-spin text-white/30 shrink-0" />}
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setStatusValue(effectiveStatus ?? ""); setEditingStatus(true); }}
+                  title="Click to edit status"
+                  className="flex items-center"
+                >
+                  {effectiveStatus
+                    ? <StatusBadge value={effectiveStatus} />
+                    : <span className="text-[10px] text-white/20 hover:text-white/50 transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ status</span>}
+                </button>
+              )}
+
+              {/* Maturity */}
+              {editingMaturity ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={maturityScore}
+                    onChange={(e) => setMaturityScore(Number(e.target.value))}
+                    className="w-24 accent-emerald-500"
+                  />
+                  <span className="text-[10px] text-white/50 w-8">{maturityScore}/10</span>
+                  <button
+                    onClick={commitMaturity}
+                    disabled={savingMaturity}
+                    className="px-2 py-0.5 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-[10px] transition-colors"
+                  >
+                    {savingMaturity ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                  </button>
+                  <button onClick={() => setEditingMaturity(false)} className="text-[10px] text-white/30 hover:text-white/60">✕</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    const match = effectiveMaturity?.match(/^(\d+)\/10/);
+                    setMaturityScore(match ? parseInt(match[1]) : 5);
+                    setEditingMaturity(true);
+                  }}
+                  title="Click to edit maturity"
+                  className="flex items-center"
+                >
+                  {effectiveMaturity
+                    ? <MaturityBar value={effectiveMaturity} />
+                    : <span className="text-[10px] text-white/20 hover:text-white/50 transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ maturity</span>}
+                </button>
+              )}
+
               {hasIssues && (
                 <span className="flex items-center gap-1 text-[10px] text-red-400/70 ml-auto">
                   <AlertTriangle className="h-3 w-3" /> Issues detected
