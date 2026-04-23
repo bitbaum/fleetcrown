@@ -1,0 +1,170 @@
+"use client";
+
+import { useState } from "react";
+import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
+import { createCronJob, patchCronJob } from "@/lib/api/crons";
+import type { LinkedJob, ProjectData } from "./project-detail-types";
+
+// ─── JobRow ───────────────────────────────────────────────────────────────────
+
+function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enabled: boolean) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasError = (job.consecutiveErrors ?? 0) > 0;
+
+  return (
+    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <div
+        className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-white/[0.03] transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasError ? "bg-red-500" : job.enabled ? "bg-emerald-500" : "bg-white/20"}`} />
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-white/80 truncate">{job.name}</div>
+          <div className="text-[10px] text-white/30 font-mono mt-0.5">{job.schedule}</div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
+            className="text-white/30 hover:text-white/70 transition-colors"
+          >
+            {job.enabled
+              ? <ToggleRight className="h-4 w-4 text-emerald-500" />
+              : <ToggleLeft className="h-4 w-4" />}
+          </button>
+          {expanded ? <ChevronUp className="h-3 w-3 text-white/20" /> : <ChevronDown className="h-3 w-3 text-white/20" />}
+        </div>
+      </div>
+      {expanded && (
+        <div className="px-3 pb-3 border-t border-white/[0.06]">
+          <div className="text-[10px] text-white/30 uppercase tracking-wider mt-2.5 mb-1.5">Prompt</div>
+          <pre className="text-[11px] text-white/50 whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded p-2.5 max-h-48 overflow-y-auto">
+            {job.message}
+          </pre>
+          {hasError && (
+            <div className="mt-2 text-[10px] text-red-400/70 flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              {job.consecutiveErrors} consecutive error{(job.consecutiveErrors ?? 0) > 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── NewJobForm ───────────────────────────────────────────────────────────────
+
+function NewJobForm({
+  projectId,
+  projectName,
+  onCreated,
+}: {
+  projectId: string;
+  projectName: string;
+  onCreated: (job: LinkedJob) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(`${projectName} — `);
+  const [schedule, setSchedule] = useState("0 9 * * 1");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const create = async () => {
+    if (!name.trim() || !schedule.trim() || !message.trim() || saving) return;
+    setSaving(true);
+    const res = await createCronJob({ name, scheduleExpr: schedule, message, projectId, projectName });
+    const data = await res.json();
+    setSaving(false);
+    if (data.ok) {
+      onCreated({
+        id: data.job.id, name: data.job.name,
+        message: data.job.payload.message, enabled: data.job.enabled,
+        schedule: data.job.schedule.expr, consecutiveErrors: 0,
+      });
+      setOpen(false);
+      setMessage("");
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors"
+      >
+        <Plus className="h-3.5 w-3.5" /> New autopilot job for this project
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] text-emerald-400/70 uppercase tracking-wider">New Autopilot Job</div>
+        <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60"><X className="h-3.5 w-3.5" /></button>
+      </div>
+      <input placeholder="Job name" value={name} onChange={(e) => setName(e.target.value)}
+        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25" />
+      <input placeholder="Cron (e.g. 0 9 * * 1 = Mon 9am)" value={schedule} onChange={(e) => setSchedule(e.target.value)}
+        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 font-mono placeholder:text-white/20 focus:outline-none focus:border-white/25" />
+      <textarea placeholder="Prompt / instructions for Ivy…" value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
+        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-2 text-xs text-white/80 placeholder:text-white/20 resize-none focus:outline-none focus:border-white/25" />
+      <button onClick={create} disabled={!name.trim() || !schedule.trim() || !message.trim() || saving}
+        className="w-full py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
+        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+        Create Job
+      </button>
+    </div>
+  );
+}
+
+// ─── PromptsTab ───────────────────────────────────────────────────────────────
+
+export function PromptsTab({
+  data,
+  projectId,
+  jobs,
+  setJobs,
+}: {
+  data: ProjectData;
+  projectId: string;
+  jobs: LinkedJob[];
+  setJobs: React.Dispatch<React.SetStateAction<LinkedJob[]>>;
+}) {
+  const toggleJob = async (id: string, enabled: boolean) => {
+    setJobs((prev) => prev.map((j) => j.id === id ? { ...j, enabled } : j));
+    await patchCronJob({ id, enabled });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-white/25 font-medium">
+        <Bot className="h-3.5 w-3.5" />
+        Autopilot Jobs {jobs.length > 0 && <span className="text-white/20 normal-case">({jobs.length})</span>}
+      </div>
+
+      {jobs.length === 0 ? (
+        <p className="text-xs text-white/25">No autopilot jobs linked to this project yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {jobs.map((job) => (
+            <JobRow key={job.id} job={job} onToggle={toggleJob} />
+          ))}
+        </div>
+      )}
+
+      <NewJobForm
+        projectId={projectId}
+        projectName={data.name}
+        onCreated={(job) => setJobs((prev) => [...prev, job])}
+      />
+
+      <a
+        href="/prompts"
+        className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
+      >
+        <Zap className="h-3.5 w-3.5" /> Browse Prompt Library →
+      </a>
+    </div>
+  );
+}

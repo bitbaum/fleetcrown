@@ -1,0 +1,53 @@
+import type { Milestone } from "@/db/schema/goals";
+
+export type LinkedGoal = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string | null;
+  progress: number | null;
+  targetDate: string | null;
+  milestones: Milestone[] | null;
+};
+
+export type LinkedJob = {
+  id: string;
+  name: string;
+  message: string;
+  enabled: boolean;
+  schedule: string;
+  lastStatus?: string;
+  consecutiveErrors?: number;
+};
+
+export type ProjectData = {
+  id: string;
+  name: string;
+  type: string;
+  description: string | null;
+  source: string | null;
+  attrs: Record<string, string>;
+  relations: Array<{ type: string; strength: number | null; targetId: string; targetName: string; targetType: string }>;
+  interactions: Array<{ channel: string; direction: string; summary: string | null; occurredAt: string }>;
+  linkedJobs: LinkedJob[];
+  linkedGoals: LinkedGoal[];
+};
+
+export type Tab = "overview" | "prompts" | "goals";
+
+// Keys shown as quick-links in header
+export const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
+// Issue keys rendered as warning cards
+export const ISSUE_ATTRS = ["broken_features", "security_vulnerability", "deployment_issue"];
+// Keys with dedicated rendering (not shown in generic grid)
+export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner"];
+
+export const SUGGESTED_ATTRS: { key: string; label: string; placeholder: string }[] = [
+  { key: "mission",   label: "Mission",   placeholder: "Why this project exists" },
+  { key: "vision",    label: "Vision",    placeholder: "Where it's going in 3 years" },
+  { key: "customers", label: "Customers", placeholder: "Who uses this and why" },
+  { key: "stack",     label: "Stack",     placeholder: "Tech stack used" },
+  { key: "next_step", label: "Next Step", placeholder: "Single most important next action" },
+];
+
+export const PROJECT_CHANNELS = ["work-session", "meeting", "ivy", "review", "deployment", "call", "other"] as const;
