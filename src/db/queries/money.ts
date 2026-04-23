@@ -54,6 +54,13 @@ export type MonthlyBurn = {
   count: number;
 };
 
+export async function cancelSubscription(id: string) {
+  await db
+    .update(subscriptions)
+    .set({ status: "cancelled", updatedAt: new Date() })
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, DEFAULT_USER_ID)));
+}
+
 export function calculateMonthlyBurn(
   subs: Awaited<ReturnType<typeof getActiveSubscriptions>>,
 ): MonthlyBurn {
