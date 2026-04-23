@@ -3,11 +3,12 @@ import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
+import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS } from "@/lib/constants/statuses";
 
 export async function fulfillCommitment(id: string) {
   await db
     .update(commitments)
-    .set({ status: "fulfilled", updatedAt: new Date() })
+    .set({ status: COMMITMENT_STATUS.FULFILLED, updatedAt: new Date() })
     .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)));
 }
 
@@ -18,7 +19,7 @@ export async function getActiveCommitments() {
     .where(
       and(
         eq(commitments.userId, DEFAULT_USER_ID),
-        eq(commitments.status, "active"),
+        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
       ),
     )
     .orderBy(commitments.dueDate);
@@ -38,7 +39,7 @@ export async function getGoalsDueSoon(days = 14) {
     .from(goals)
     .where(and(
       eq(goals.userId, DEFAULT_USER_ID),
-      eq(goals.status, "active"),
+      eq(goals.status, GOAL_STATUS.ACTIVE),
       isNotNull(goals.targetDate),
       lte(goals.targetDate, soon),
     ))
@@ -56,7 +57,7 @@ export async function getUpcomingSubscriptions(days = 7) {
     .where(
       and(
         eq(subscriptions.userId, DEFAULT_USER_ID),
-        eq(subscriptions.status, "active"),
+        eq(subscriptions.status, SUB_STATUS.ACTIVE),
         lte(subscriptions.nextDue, future),
       ),
     )
@@ -101,7 +102,7 @@ export async function getTodaySummary() {
       .from(commitments)
       .where(and(
         eq(commitments.userId, DEFAULT_USER_ID),
-        eq(commitments.status, "active"),
+        eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
         lte(commitments.dueDate, new Date()),
       )),
     // Goals with a target date within the next 14 days
@@ -110,7 +111,7 @@ export async function getTodaySummary() {
       .from(goals)
       .where(and(
         eq(goals.userId, DEFAULT_USER_ID),
-        eq(goals.status, "active"),
+        eq(goals.status, GOAL_STATUS.ACTIVE),
         isNotNull(goals.targetDate),
         lte(goals.targetDate, soon),
       )),

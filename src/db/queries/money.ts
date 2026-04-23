@@ -2,6 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
+import { SUB_STATUS } from "@/lib/constants/statuses";
 
 export async function getActiveSubscriptions() {
   return db
@@ -10,7 +11,7 @@ export async function getActiveSubscriptions() {
     .where(
       and(
         eq(subscriptions.userId, DEFAULT_USER_ID),
-        eq(subscriptions.status, "active"),
+        eq(subscriptions.status, SUB_STATUS.ACTIVE),
       ),
     )
     .orderBy(sql`${subscriptions.amount} DESC NULLS LAST`);
@@ -57,7 +58,7 @@ export type MonthlyBurn = {
 export async function cancelSubscription(id: string) {
   await db
     .update(subscriptions)
-    .set({ status: "cancelled", updatedAt: new Date() })
+    .set({ status: SUB_STATUS.CANCELLED, updatedAt: new Date() })
     .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, DEFAULT_USER_ID)));
 }
 
