@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Trash2, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
+import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES } from "@/config/subscriptions";
 
@@ -45,8 +46,6 @@ export function SubscriptionActions({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [deleted, setDeleted] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -67,17 +66,6 @@ export function SubscriptionActions({
     setCancelling(true);
     await handleCancelSubscription(subId);
     setCancelled(true);
-  }
-
-  async function onDelete() {
-    setDeleting(true);
-    try {
-      await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
-      setDeleted(true);
-      router.refresh();
-    } finally {
-      setDeleting(false);
-    }
   }
 
   async function onMarkPaid() {
@@ -124,22 +112,15 @@ export function SubscriptionActions({
     return (
       <div className="mt-2 flex items-center gap-2">
         <span className="text-xs text-white/30">Marked cancelled</span>
-        {confirmDelete ? (
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-white/40">Delete record?</span>
-            <button onClick={onDelete} disabled={deleting}
-              className="text-xs text-red-400 hover:text-red-300 px-1 disabled:opacity-50">
-              {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
-            </button>
-            <button onClick={() => setConfirmDelete(false)}
-              className="text-xs text-white/30 hover:text-white/60 px-1">No</button>
-          </div>
-        ) : (
-          <button onClick={() => setConfirmDelete(true)}
-            className="flex items-center gap-1 text-xs text-white/20 hover:text-red-400 transition-colors">
-            <Trash2 className="h-3 w-3" />
-          </button>
-        )}
+        <DeleteButton
+          onDelete={async () => {
+            await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+            setDeleted(true);
+            router.refresh();
+          }}
+          label="Delete record?"
+          triggerClassName="flex items-center gap-1 text-xs text-white/20 hover:text-red-400 transition-colors"
+        />
       </div>
     );
   }
@@ -206,25 +187,16 @@ export function SubscriptionActions({
       ))}
 
       {/* Delete record permanently */}
-      {confirmDelete ? (
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-white/40">Delete record?</span>
-          <button onClick={onDelete} disabled={deleting}
-            className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50">
-            {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
-          </button>
-          <button onClick={() => setConfirmDelete(false)}
-            className="text-xs text-white/30 hover:text-white/60 transition-colors px-1">
-            No
-          </button>
-        </div>
-      ) : (
-        <button onClick={() => setConfirmDelete(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-400/5 transition-colors"
-          title="Delete subscription record">
-          <Trash2 className="h-2.5 w-2.5" />
-        </button>
-      )}
+      <DeleteButton
+        onDelete={async () => {
+          await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+          setDeleted(true);
+          router.refresh();
+        }}
+        label="Delete record?"
+        triggerTitle="Delete subscription record"
+        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-400/5 transition-colors"
+      />
 
       {editing && (
         <div className="w-full mt-1 p-2.5 rounded bg-white/[0.03] border border-white/10 space-y-2">
