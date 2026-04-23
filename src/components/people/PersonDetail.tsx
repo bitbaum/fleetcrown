@@ -519,7 +519,7 @@ function DetailAttrs({
               <span className="text-right truncate">{value}</span>
               <button
                 onClick={() => { setEditValue(value); setEditingKey(key); }}
-                className="opacity-0 group-hover:opacity-100 p-0.5 text-white/20 hover:text-white/60 transition-all shrink-0"
+                className="sm:opacity-0 sm:group-hover:opacity-100 p-0.5 text-white/20 hover:text-white/60 transition-all shrink-0"
               >
                 <Pencil className="h-2.5 w-2.5" />
               </button>
@@ -633,7 +633,7 @@ function ChannelsSection({
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
-            className="opacity-0 group-hover:opacity-100 p-0.5 text-white/20 hover:text-red-400 transition-all shrink-0"
+            className="sm:opacity-0 sm:group-hover:opacity-100 p-0.5 text-white/20 hover:text-red-400 transition-all shrink-0"
           >
             {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <X className="h-2.5 w-2.5" />}
           </button>

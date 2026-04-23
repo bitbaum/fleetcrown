@@ -138,7 +138,7 @@ function DateInput({
         </button>
         <button
           onClick={() => commit("")}
-          className="text-white/20 hover:text-white/50 transition-colors opacity-0 group-hover:opacity-100"
+          className="text-white/20 hover:text-white/50 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           title="Clear deadline"
         >
           <X className="h-2.5 w-2.5" />
@@ -150,7 +150,7 @@ function DateInput({
   return (
     <button
       onClick={() => { setValue(""); setEditing(true); }}
-      className="text-xs text-white/20 hover:text-white/50 transition-colors opacity-0 group-hover:opacity-100"
+      className="text-xs text-white/20 hover:text-white/50 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
       title="Set deadline"
     >
       Set deadline

@@ -46,7 +46,7 @@ export function DeleteGoalButton({ goalId }: { goalId: string }) {
   return (
     <button
       onClick={() => setConfirming(true)}
-      className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/20 hover:text-red-400 transition-all shrink-0"
+      className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/20 hover:text-red-400 transition-all shrink-0"
       title="Delete goal"
     >
       <Trash2 className="h-3.5 w-3.5" />

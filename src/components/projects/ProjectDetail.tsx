@@ -317,7 +317,7 @@ function AttrRow({
         )}
         <button
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
           title="Edit"
         >
           <Pencil className="h-3 w-3" />
@@ -325,7 +325,7 @@ function AttrRow({
         <button
           onClick={deleteAttr}
           disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded text-white/15 hover:text-red-400 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/15 hover:text-red-400 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
           title="Delete attribute"
         >
           {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
@@ -712,7 +712,7 @@ function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; pro
                   <div className="text-sm font-medium text-white/85">{goal.title}</div>
                   <button
                     onClick={() => handleUnlink(goal.id)}
-                    className="opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all ml-auto shrink-0"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all ml-auto shrink-0"
                     title="Unlink from project"
                   >
                     <X className="h-3 w-3" />
