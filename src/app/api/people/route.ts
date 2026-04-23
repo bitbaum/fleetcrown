@@ -3,10 +3,9 @@ import { searchPeople, type SortMode } from "@/db/queries/people";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { type RelationshipHealth } from "@/lib/utils";
+import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
 
 const VALID_SORTS: SortMode[] = ["recent", "name", "health"];
-const VALID_HEALTH: RelationshipHealth[] = ["active", "fading", "stale", "unknown"];
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -50,7 +49,7 @@ export async function GET(request: Request) {
   const health = healthRaw
     .split(",")
     .map((h) => h.trim())
-    .filter((h): h is RelationshipHealth => VALID_HEALTH.includes(h as RelationshipHealth));
+    .filter((h): h is RelationshipHealth => (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h));
 
   const result = await searchPeople(q, limit, offset, sort, health);
   return NextResponse.json(result);

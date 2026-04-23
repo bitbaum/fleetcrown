@@ -8,7 +8,8 @@ export function cn(...inputs: ClassValue[]) {
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isValidUuid = (s: string) => UUID_RE.test(s);
 
-export type RelationshipHealth = "active" | "fading" | "stale" | "unknown";
+export const RELATIONSHIP_HEALTH_VALUES = ["active", "fading", "stale", "unknown"] as const;
+export type RelationshipHealth = typeof RELATIONSHIP_HEALTH_VALUES[number];
 
 /** < 14 days → active, < 30 days → fading, older → stale, null → unknown */
 export function deriveRelationshipHealth(lastInteraction: Date | null): RelationshipHealth {
