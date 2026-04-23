@@ -26,6 +26,7 @@ export function SubscriptionActions({
   amount,
   currency,
   notes,
+  paymentMethod,
 }: {
   subId: string;
   subName: string;
@@ -35,6 +36,7 @@ export function SubscriptionActions({
   amount?: number | null;
   currency?: string | null;
   notes?: string | null;
+  paymentMethod?: string | null;
 }) {
   const router = useRouter();
   const [showAlternatives, setShowAlternatives] = useState(false);
@@ -50,6 +52,7 @@ export function SubscriptionActions({
   const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
   const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
   const [editNotes, setEditNotes] = useState(notes ?? "");
+  const [editPaymentMethod, setEditPaymentMethod] = useState(paymentMethod ?? "");
   const [saving, setSaving] = useState(false);
 
   const meta = SUBSCRIPTION_META[subName];
@@ -99,6 +102,7 @@ export function SubscriptionActions({
           amount: editAmount ? parseFloat(editAmount) : null,
           currency: editCurrency,
           notes: editNotes || null,
+          paymentMethod: editPaymentMethod || null,
         }),
       });
       setEditing(false);
@@ -236,6 +240,12 @@ export function SubscriptionActions({
               {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          <input
+            value={editPaymentMethod}
+            onChange={(e) => setEditPaymentMethod(e.target.value)}
+            placeholder="Payment method (e.g. Visa ····1234)"
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          />
           <input
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
