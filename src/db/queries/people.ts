@@ -164,3 +164,30 @@ export async function getPersonDetail(id: string) {
     interactions: recentInteractions,
   };
 }
+
+export async function createInteraction({
+  entityId,
+  channel,
+  direction,
+  summary,
+  occurredAt,
+}: {
+  entityId: string;
+  channel: string;
+  direction: "inbound" | "outbound";
+  summary?: string | null;
+  occurredAt?: Date;
+}) {
+  const [created] = await db
+    .insert(interactions)
+    .values({
+      userId: DEFAULT_USER_ID,
+      entityId,
+      channel,
+      direction,
+      summary: summary ?? null,
+      occurredAt: occurredAt ?? new Date(),
+    })
+    .returning();
+  return created;
+}
