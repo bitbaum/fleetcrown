@@ -77,8 +77,8 @@ export async function getTodaySummary() {
     [overdueStats],
     [goalsDueSoonStats],
     [eventsDueSoonStats],
-    staleContactsResult,
     habitStatsResult,
+    staleContactsResult,
   ] = await Promise.all([
     db
       .select({
