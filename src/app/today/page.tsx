@@ -10,6 +10,7 @@ import { CalendarCard } from "@/components/today/CalendarCard";
 import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
+import { LogConversationButton } from "@/components/today/LogConversationButton";
 
 export default function TodayPage() {
   return (
@@ -21,6 +22,9 @@ export default function TodayPage() {
             <SummaryBar />
           </div>
         </Suspense>
+        <div className="mt-3">
+          <LogConversationButton />
+        </div>
       </div>
 
       {/* Actionable first — what needs your decision */}
