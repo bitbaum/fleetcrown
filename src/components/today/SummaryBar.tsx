@@ -1,4 +1,4 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { getTodaySummary } from "@/db/queries/today";
 
@@ -8,6 +8,13 @@ export async function SummaryBar() {
   return (
     <div className="flex flex-wrap gap-3">
       <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} />
+      {s.habitsTotal > 0 && (
+        <Pill
+          icon={Repeat2}
+          value={`${s.habitsDone}/${s.habitsTotal} habits`}
+          variant={s.habitsDone === s.habitsTotal ? "green" : undefined}
+        />
+      )}
       {s.goalsDueSoon > 0 && (
         <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" />
       )}
@@ -43,14 +50,16 @@ function Pill({
 }: {
   icon: typeof Target;
   value: string;
-  variant?: "amber" | "red";
+  variant?: "amber" | "red" | "green";
   href?: string;
 }) {
   const colors = variant === "red"
     ? "bg-red-400/10 text-red-400 border-red-400/20"
     : variant === "amber"
       ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
-      : "bg-white/5 text-white/60 border-white/10";
+      : variant === "green"
+        ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
+        : "bg-white/5 text-white/60 border-white/10";
 
   const inner = (
     <>

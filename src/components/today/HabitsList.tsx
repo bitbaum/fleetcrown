@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Plus, X, Flame } from "lucide-react";
 import type { HabitWithStatus } from "@/db/queries/habits";
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 
 const FREQ_LABELS: Record<string, string> = {
   [HABIT_FREQUENCY.DAILY]:    "daily",
@@ -18,7 +18,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   const [toggling, setToggling] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newFreq, setNewFreq] = useState(HABIT_FREQUENCY.DAILY);
+  const [newFreq, setNewFreq] = useState<HabitFrequency>(HABIT_FREQUENCY.DAILY);
   const [saving, setSaving] = useState(false);
 
   const toggle = async (id: string, currentDone: boolean) => {
@@ -155,7 +155,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
           />
           <select
             value={newFreq}
-            onChange={(e) => setNewFreq(e.target.value)}
+            onChange={(e) => setNewFreq(e.target.value as HabitFrequency)}
             className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 focus:outline-none focus:border-white/25"
           >
             {Object.values(HABIT_FREQUENCY).map((f) => (
