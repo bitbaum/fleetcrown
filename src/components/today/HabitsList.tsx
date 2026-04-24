@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Plus, X, Flame } from "lucide-react";
+import { Check, Loader2, Plus, X, Flame, Pencil } from "lucide-react";
 import type { HabitWithStatus } from "@/db/queries/habits";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 
@@ -12,19 +12,23 @@ const FREQ_LABELS: Record<string, string> = {
   [HABIT_FREQUENCY.WEEKLY]:   "weekly",
 };
 
+type EditState = { title: string; frequency: HabitFrequency };
+
 export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[] }) {
   const router = useRouter();
   const [habits, setHabits] = useState(initialHabits);
   const [toggling, setToggling] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState>({ title: "", frequency: HABIT_FREQUENCY.DAILY });
+  const [editSaving, setEditSaving] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newFreq, setNewFreq] = useState<HabitFrequency>(HABIT_FREQUENCY.DAILY);
   const [saving, setSaving] = useState(false);
 
   const toggle = async (id: string, currentDone: boolean) => {
-    if (toggling.has(id)) return;
+    if (toggling.has(id) || editingId === id) return;
     setToggling((s) => new Set(s).add(id));
-    // Optimistic update
     setHabits((prev) =>
       prev.map((h) =>
         h.id === id
@@ -39,12 +43,42 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
         body: JSON.stringify({ done: !currentDone }),
       });
     } catch {
-      // Revert on failure
       setHabits((prev) =>
         prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)),
       );
     } finally {
       setToggling((s) => { const n = new Set(s); n.delete(id); return n; });
+    }
+  };
+
+  const startEdit = (h: HabitWithStatus) => {
+    setEditingId(h.id);
+    setEditState({ title: h.title, frequency: h.frequency as HabitFrequency });
+  };
+
+  const cancelEdit = () => { setEditingId(null); };
+
+  const saveEdit = async () => {
+    if (!editingId || !editState.title.trim() || editSaving) return;
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/habits/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editState.title.trim(), frequency: editState.frequency }),
+      });
+      if (res.ok) {
+        setHabits((prev) =>
+          prev.map((h) =>
+            h.id === editingId
+              ? { ...h, title: editState.title.trim(), frequency: editState.frequency }
+              : h,
+          ),
+        );
+        setEditingId(null);
+      }
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -96,6 +130,42 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
     <div className="space-y-2">
       {habits.map((h) => {
         const busy = toggling.has(h.id);
+        const isEditing = editingId === h.id;
+
+        if (isEditing) {
+          return (
+            <div key={h.id} className="flex gap-2 items-center">
+              <div className="h-4 w-4 shrink-0" />
+              <input
+                value={editState.title}
+                onChange={(e) => setEditState((s) => ({ ...s, title: e.target.value }))}
+                onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") cancelEdit(); }}
+                autoFocus
+                className="flex-1 bg-white/[0.04] border border-white/15 rounded px-2 py-0.5 text-sm text-white/85 focus:outline-none focus:border-white/30"
+              />
+              <select
+                value={editState.frequency}
+                onChange={(e) => setEditState((s) => ({ ...s, frequency: e.target.value as HabitFrequency }))}
+                className="bg-white/[0.04] border border-white/10 rounded px-1.5 py-0.5 text-xs text-white/70 focus:outline-none focus:border-white/25"
+              >
+                {Object.values(HABIT_FREQUENCY).map((f) => (
+                  <option key={f} value={f}>{FREQ_LABELS[f]}</option>
+                ))}
+              </select>
+              <button
+                onClick={saveEdit}
+                disabled={!editState.title.trim() || editSaving}
+                className="p-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white transition-colors shrink-0"
+              >
+                {editSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              </button>
+              <button onClick={cancelEdit} className="p-1 rounded text-white/25 hover:text-white/60 transition-colors shrink-0">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          );
+        }
+
         return (
           <div key={h.id} className="group flex items-center gap-3">
             <button
@@ -131,6 +201,13 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
                   {h.streak}
                 </span>
               )}
+              <button
+                onClick={() => startEdit(h)}
+                className="p-1 rounded text-white/10 hover:text-white/50 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
+                title="Edit habit"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
               <button
                 onClick={() => remove(h.id)}
                 className="p-1 rounded text-white/10 hover:text-red-400/60 hover:bg-red-400/5 transition-colors opacity-0 group-hover:opacity-100"

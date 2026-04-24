@@ -125,3 +125,17 @@ export async function deleteHabit(id: string): Promise<void> {
     .delete(habits)
     .where(and(eq(habits.id, id), eq(habits.userId, DEFAULT_USER_ID)));
 }
+
+export async function updateHabit(
+  id: string,
+  fields: { title?: string; frequency?: string },
+): Promise<void> {
+  const set: Record<string, unknown> = {};
+  if (fields.title)     set.title     = fields.title.trim();
+  if (fields.frequency) set.frequency = fields.frequency;
+  if (Object.keys(set).length === 0) return;
+  await db
+    .update(habits)
+    .set(set)
+    .where(and(eq(habits.id, id), eq(habits.userId, DEFAULT_USER_ID)));
+}
