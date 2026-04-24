@@ -1,9 +1,7 @@
-import { CheckCircle, AlertCircle } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
-import { formatDistanceToNow } from "date-fns";
-import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
-import { DeleteCommitmentButton } from "./DeleteCommitmentButton";
+import { CommitmentItem } from "./CommitmentItem";
 import { AddCommitmentButton } from "./AddCommitmentButton";
 
 export async function CommitmentsCard() {
@@ -20,34 +18,15 @@ export async function CommitmentsCard() {
         <div className="text-sm md:text-base text-white/30">No active commitments</div>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => {
-            const isOverdue = item.dueDate && new Date(item.dueDate) < new Date();
-            return (
-              <div key={item.id} className="flex gap-3 items-start">
-                {isOverdue ? (
-                  <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                ) : (
-                  <div className="h-4 w-4 rounded-full border border-white/20 shrink-0 mt-0.5" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm md:text-base truncate">{item.description}</div>
-                  {item.dueDate && (
-                    <div className={`text-xs md:text-sm ${isOverdue ? "text-red-400" : "text-white/40"}`}>
-                      {isOverdue ? "Overdue" : "Due"}{" "}
-                      {formatDistanceToNow(new Date(item.dueDate), { addSuffix: true })}
-                    </div>
-                  )}
-                  {item.financialImpact && (
-                    <div className="text-xs md:text-sm text-amber-400/70">{item.financialImpact}</div>
-                  )}
-                </div>
-                <div className="flex gap-0.5 shrink-0">
-                  <FulfillCommitmentButton commitmentId={item.id} />
-                  <DeleteCommitmentButton commitmentId={item.id} />
-                </div>
-              </div>
-            );
-          })}
+          {items.map((item) => (
+            <CommitmentItem
+              key={item.id}
+              id={item.id}
+              description={item.description}
+              dueDate={item.dueDate}
+              financialImpact={item.financialImpact}
+            />
+          ))}
         </div>
       )}
       <AddCommitmentButton />

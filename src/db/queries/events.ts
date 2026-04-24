@@ -36,3 +36,15 @@ export async function getEvents(): Promise<EventRow[]> {
       asc(events.name),
     );
 }
+
+export async function getArchivedEvents(): Promise<EventRow[]> {
+  return db
+    .select()
+    .from(events)
+    .where(and(eq(events.userId, DEFAULT_USER_ID), eq(events.status, EVENT_STATUS.ARCHIVED)))
+    .orderBy(
+      sql`CASE WHEN ${events.deadline} IS NOT NULL THEN 0 ELSE 1 END`,
+      asc(events.deadline),
+      asc(events.name),
+    );
+}

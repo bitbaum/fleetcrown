@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, ExternalLink, Plus, X, Loader2, Calendar } from "lucide-react";
+import { Search, ExternalLink, Plus, X, Loader2, Calendar, Archive, ChevronDown, ChevronRight } from "lucide-react";
 import { isPast, format, formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -12,15 +12,30 @@ import type { EventRow } from "@/db/queries/events";
 function EventCard({
   event,
   onDelete,
+  onArchive,
+  dimmed = false,
 }: {
   event: EventRow;
   onDelete: (id: string) => void;
+  onArchive?: (id: string) => void;
+  dimmed?: boolean;
 }) {
+  const [archiving, setArchiving] = useState(false);
   const deadline = event.deadline ? new Date(event.deadline) : null;
   const overdue = deadline ? isPast(deadline) : false;
 
+  const handleArchive = async () => {
+    setArchiving(true);
+    await fetch(`/api/events/${event.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "archived" }),
+    });
+    onArchive?.(event.id);
+  };
+
   return (
-    <div className="group flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-0">
+    <div className={`group flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-0 ${dimmed ? "opacity-50" : ""}`}>
       {/* Type + category badges */}
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -60,8 +75,18 @@ function EventCard({
         )}
       </div>
 
-      {/* Delete */}
-      <div className="shrink-0 flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      {/* Actions */}
+      <div className="shrink-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        {onArchive && (
+          <button
+            onClick={handleArchive}
+            disabled={archiving}
+            title="Archive event"
+            className="p-1 rounded text-white/20 hover:text-amber-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+          >
+            {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+          </button>
+        )}
         <DeleteButton
           onDelete={async () => {
             await fetch(`/api/events/${event.id}`, { method: "DELETE" });
@@ -199,12 +224,20 @@ function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => void }) {
 
 // ─── EventsGrid ───────────────────────────────────────────────────────────────
 
-export function EventsGrid({ initialEvents }: { initialEvents: EventRow[] }) {
+export function EventsGrid({
+  initialEvents,
+  initialArchived = [],
+}: {
+  initialEvents: EventRow[];
+  initialArchived?: EventRow[];
+}) {
   const [items, setItems] = useState(initialEvents);
+  const [archived, setArchived] = useState(initialArchived);
+  const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  // Unique types derived from data — SSOT, no hardcoding
+  // Unique types derived from active events — SSOT, no hardcoding
   const types = [...new Set(items.map((e) => e.type).filter(Boolean))].sort() as string[];
 
   const q = query.trim().toLowerCase();
@@ -221,13 +254,16 @@ export function EventsGrid({ initialEvents }: { initialEvents: EventRow[] }) {
   const withoutDeadline = filtered.filter((e) => !e.deadline);
 
   const handleDelete = (id: string) => setItems((prev) => prev.filter((e) => e.id !== id));
+  const handleDeleteArchived = (id: string) => setArchived((prev) => prev.filter((e) => e.id !== id));
+
+  const handleArchive = (id: string) => {
+    const event = items.find((e) => e.id === id);
+    setItems((prev) => prev.filter((e) => e.id !== id));
+    if (event) setArchived((prev) => [{ ...event, status: "archived" }, ...prev]);
+  };
 
   const handleCreated = (event: EventRow) => {
-    // Insert with deadline at front of deadline group, else at end
-    setItems((prev) => {
-      if (event.deadline) return [event, ...prev];
-      return [...prev, event];
-    });
+    setItems((prev) => event.deadline ? [event, ...prev] : [...prev, event]);
   };
 
   return (
@@ -276,7 +312,7 @@ export function EventsGrid({ initialEvents }: { initialEvents: EventRow[] }) {
         </div>
       )}
 
-      {/* Events list */}
+      {/* Active events */}
       <Card>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-8 text-white/25">
@@ -287,23 +323,20 @@ export function EventsGrid({ initialEvents }: { initialEvents: EventRow[] }) {
           </div>
         ) : (
           <div>
-            {/* With deadline — ordered by deadline */}
             {withDeadline.length > 0 && (
               <div>
                 {withDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} />
+                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} />
                 ))}
               </div>
             )}
-
-            {/* Without deadline */}
             {withoutDeadline.length > 0 && (
               <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-white/[0.05]" : ""}>
                 {withDeadline.length > 0 && (
                   <div className="text-[10px] uppercase tracking-wider text-white/20 mb-2">No deadline</div>
                 )}
                 {withoutDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} />
+                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} />
                 ))}
               </div>
             )}
@@ -312,6 +345,27 @@ export function EventsGrid({ initialEvents }: { initialEvents: EventRow[] }) {
 
         <AddEventForm onCreated={handleCreated} />
       </Card>
+
+      {/* Archived events — collapsible */}
+      {archived.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors"
+          >
+            {showArchived ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            <Archive className="h-3 w-3" />
+            {archived.length} archived
+          </button>
+          {showArchived && (
+            <Card className="mt-2">
+              {archived.map((event) => (
+                <EventCard key={event.id} event={event} onDelete={handleDeleteArchived} dimmed />
+              ))}
+            </Card>
+          )}
+        </div>
+      )}
     </>
   );
 }
