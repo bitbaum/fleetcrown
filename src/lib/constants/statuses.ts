@@ -53,6 +53,14 @@ export const ENTITY_TYPE = {
 } as const;
 export type EntityType = (typeof ENTITY_TYPE)[keyof typeof ENTITY_TYPE];
 
+/** Habit frequency values */
+export const HABIT_FREQUENCY = {
+  DAILY: "daily",
+  WEEKDAYS: "weekdays",
+  WEEKLY: "weekly",
+} as const;
+export type HabitFrequency = (typeof HABIT_FREQUENCY)[keyof typeof HABIT_FREQUENCY];
+
 /** Alert severity values */
 export const ALERT_SEVERITY = {
   INFO: "info",

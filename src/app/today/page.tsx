@@ -11,6 +11,7 @@ import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
 import { LogConversationButton } from "@/components/today/LogConversationButton";
+import { HabitsCard } from "@/components/today/HabitsCard";
 
 export default function TodayPage() {
   return (
@@ -51,6 +52,9 @@ export default function TodayPage() {
 
       {/* State — what's pending */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Suspense fallback={<CardSkeleton />}>
+          <HabitsCard />
+        </Suspense>
         <Suspense fallback={<CardSkeleton />}>
           <CommitmentsCard />
         </Suspense>
