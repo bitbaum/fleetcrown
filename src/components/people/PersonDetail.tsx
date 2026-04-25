@@ -12,6 +12,7 @@ import { ChannelsSection } from "./PersonChannelsSection";
 import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 
 export function PersonDetail({
   personId,
@@ -26,13 +27,9 @@ export function PersonDetail({
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
   const [attrs, setAttrs] = useState<Record<string, string>>({});
   const [name, setName] = useState<string>("");
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState("");
-  const [savingName, setSavingName] = useState(false);
   const [description, setDescription] = useState<string | null>(null);
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [descValue, setDescValue] = useState("");
-  const [savingDesc, setSavingDesc] = useState(false);
+  const nameEdit = useInlineEdit<string>("");
+  const descEdit = useInlineEdit<string>("");
 
   useEffect(() => {
     fetch(`/api/people/${personId}`)
@@ -42,62 +39,54 @@ export function PersonDetail({
       .finally(() => setLoading(false));
   }, [personId]);
 
-  const commitName = async () => {
-    const trimmed = nameValue.trim();
-    if (!trimmed || trimmed === name) { setEditingName(false); return; }
-    setSavingName(true);
-    try {
+  const commitName = () => {
+    const trimmed = nameEdit.draft.trim();
+    if (!trimmed || trimmed === name) { nameEdit.cancel(); return; }
+    nameEdit.commit(async () => {
       const res = await fetch(`/api/people/${personId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: trimmed }),
       });
       if ((await res.json()).ok) setName(trimmed);
-    } finally {
-      setSavingName(false);
-      setEditingName(false);
-    }
+    });
   };
 
-  const commitDescription = async () => {
-    const trimmed = descValue.trim();
-    setSavingDesc(true);
-    try {
+  const commitDescription = () => {
+    const trimmed = descEdit.draft.trim();
+    descEdit.commit(async () => {
       const res = await fetch(`/api/people/${personId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: trimmed }),
       });
       if ((await res.json()).ok) setDescription(trimmed || null);
-    } finally {
-      setSavingDesc(false);
-      setEditingDesc(false);
-    }
+    });
   };
 
   return (
     <Drawer onClose={onClose} size="md" surface="background" className="overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
           <div className="flex items-center gap-2 min-w-0">
-            {editingName ? (
+            {nameEdit.editing ? (
               <div className="flex items-center gap-1.5">
                 <input
-                  value={nameValue}
-                  onChange={(e) => setNameValue(e.target.value)}
+                  value={nameEdit.draft}
+                  onChange={(e) => nameEdit.setDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") commitName();
-                    if (e.key === "Escape") { setEditingName(false); setNameValue(name); }
+                    if (e.key === "Escape") nameEdit.cancel();
                   }}
                   onBlur={commitName}
                   autoFocus
                   className="text-lg font-semibold bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 w-48"
                 />
-                {savingName && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+                {nameEdit.saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
               </div>
             ) : (
               <h2
                 className="text-lg font-semibold truncate cursor-text hover:text-white/80 transition-colors"
-                onClick={() => data && (setNameValue(name), setEditingName(true))}
+                onClick={() => data && nameEdit.start(name)}
                 title="Click to rename"
               >
                 {name || (data?.name ?? "Loading...")}
@@ -142,13 +131,13 @@ export function PersonDetail({
         ) : (
           <div className="p-4 space-y-6">
             {/* Description — click to edit */}
-            {editingDesc ? (
+            {descEdit.editing ? (
               <div className="space-y-1.5">
                 <textarea
-                  value={descValue}
-                  onChange={(e) => setDescValue(e.target.value)}
+                  value={descEdit.draft}
+                  onChange={(e) => descEdit.setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") { setEditingDesc(false); setDescValue(description ?? ""); }
+                    if (e.key === "Escape") descEdit.cancel();
                     if (e.key === "Enter" && e.metaKey) commitDescription();
                   }}
                   autoFocus
@@ -159,13 +148,13 @@ export function PersonDetail({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={commitDescription}
-                    disabled={savingDesc}
+                    disabled={descEdit.saving}
                     className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
                   >
-                    {savingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                    {descEdit.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                   </button>
                   <button
-                    onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
+                    onClick={descEdit.cancel}
                     className="text-xs text-white/30 hover:text-white/60 px-1"
                   >
                     Cancel
@@ -174,7 +163,7 @@ export function PersonDetail({
               </div>
             ) : (
               <button
-                onClick={() => { setDescValue(description ?? ""); setEditingDesc(true); }}
+                onClick={() => descEdit.start(description ?? "")}
                 className="w-full text-left text-sm text-white/40 hover:text-white/60 transition-colors"
                 title="Click to edit notes"
               >
