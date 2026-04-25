@@ -9,6 +9,7 @@ import {
   HealthBadge,
   getHealthSignals,
 } from "./project-badges";
+import { getProjectLinks } from "./project-detail-types";
 
 type Project = {
   id: string;
@@ -26,8 +27,7 @@ function ProjectCard({
 }) {
   const { attrs } = project;
   const description = project.description ?? attrs["description"] ?? null;
-  const prodUrl = attrs["production_url"] ?? attrs["url"];
-  const repo = attrs["repo"] ?? attrs["github_repo"];
+  const { prodUrl, repo } = getProjectLinks(attrs);
   const maturity = attrs["maturity"];
   const status = attrs["status"];
   const signals = getHealthSignals(attrs);
@@ -55,7 +55,7 @@ function ProjectCard({
         <div className="flex items-center gap-1 shrink-0">
           {prodUrl && (
             <a
-              href={prodUrl.startsWith("http") ? prodUrl : `https://${prodUrl}`}
+              href={prodUrl}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -67,7 +67,7 @@ function ProjectCard({
           )}
           {repo && (
             <a
-              href={repo.startsWith("http") ? repo : `https://github.com/${repo}`}
+              href={repo}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}

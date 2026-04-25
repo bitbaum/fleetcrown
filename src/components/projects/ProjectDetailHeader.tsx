@@ -6,7 +6,7 @@ import { X, Globe, GitBranch, AlertTriangle } from "lucide-react";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { setAttr } from "@/lib/api/attrs";
 import type { ProjectData, Tab } from "./project-detail-types";
-import { LINK_ATTRS, ISSUE_ATTRS } from "./project-detail-types";
+import { ISSUE_ATTRS, getProjectLinks } from "./project-detail-types";
 import {
   NameEditor,
   DescriptionEditor,
@@ -49,8 +49,7 @@ export function ProjectDetailHeader({
   const owner = attrs["owner"] ?? null;
   const effectiveStatus = statusOverride ?? attrs["status"] ?? null;
   const effectiveMaturity = maturityOverride ?? attrs["maturity"] ?? null;
-  const prodUrl = attrs[LINK_ATTRS[0]] ?? attrs[LINK_ATTRS[3]];
-  const repo    = attrs[LINK_ATTRS[1]] ?? attrs[LINK_ATTRS[2]];
+  const { prodUrl, repo } = getProjectLinks(attrs);
   const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
 
   const saveName = async (next: string) => {
@@ -97,7 +96,7 @@ export function ProjectDetailHeader({
         <div className="flex items-center gap-1 shrink-0">
           {prodUrl && (
             <a
-              href={prodUrl.startsWith("http") ? prodUrl : `https://${prodUrl}`}
+              href={prodUrl}
               target="_blank"
               rel="noreferrer"
               className="p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors"
@@ -108,7 +107,7 @@ export function ProjectDetailHeader({
           )}
           {repo && (
             <a
-              href={repo.startsWith("http") ? repo : `https://github.com/${repo}`}
+              href={repo}
               target="_blank"
               rel="noreferrer"
               className="p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors"

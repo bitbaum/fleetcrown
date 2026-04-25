@@ -42,6 +42,23 @@ export const ISSUE_ATTRS = ["broken_features", "security_vulnerability", "deploy
 // Keys with dedicated rendering (not shown in generic grid)
 export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner"];
 
+/**
+ * Resolve project quick-link attrs into ready-to-use href strings.
+ * Single source of truth for which attrs feed each link plus the
+ * "bare host → https://, bare slug → https://github.com/" prefixing.
+ */
+export function getProjectLinks(attrs: Record<string, string>): {
+  prodUrl: string | null;
+  repo: string | null;
+} {
+  const prod = attrs["production_url"] ?? attrs["url"];
+  const repo = attrs["repo"] ?? attrs["github_repo"];
+  return {
+    prodUrl: prod ? (prod.startsWith("http") ? prod : `https://${prod}`) : null,
+    repo:    repo ? (repo.startsWith("http") ? repo : `https://github.com/${repo}`) : null,
+  };
+}
+
 export const SUGGESTED_ATTRS: { key: string; label: string; placeholder: string }[] = [
   { key: "mission",   label: "Mission",   placeholder: "Why this project exists" },
   { key: "vision",    label: "Vision",    placeholder: "Where it's going in 3 years" },
