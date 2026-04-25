@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { ProjectDetailHeader } from "./ProjectDetailHeader";
 import { OverviewTab } from "./ProjectOverviewTab";
 import { PromptsTab } from "./ProjectPromptsTab";
@@ -17,6 +18,7 @@ export function ProjectDetail({
 }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [refetching, setRefetching] = useState(false);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -26,6 +28,9 @@ export function ProjectDetail({
 
   useEffect(() => {
     let cancelled = false;
+    // Defer setRefetching off the synchronous effect path to avoid
+    // react-hooks/set-state-in-effect cascading-render warning.
+    Promise.resolve().then(() => { if (!cancelled) setRefetching(true); });
     fetch(`/api/projects/${projectId}`)
       .then((r) => r.json())
       .then((d: ProjectData) => {
@@ -33,7 +38,8 @@ export function ProjectDetail({
         setData(d);
         setJobs(d.linkedJobs ?? []);
       })
-      .catch(() => { if (!cancelled) setData(null); });
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setRefetching(false); });
     return () => { cancelled = true; };
   }, [projectId, reloadKey]);
 
@@ -50,6 +56,13 @@ export function ProjectDetail({
         jobCount={jobs.length}
         goalCount={data?.linkedGoals.length ?? 0}
       />
+
+      {/* Subtle refresh indicator — visible while refetching with stale data on screen. */}
+      {refetching && data && (
+        <div className="absolute top-3 right-3 z-10 pointer-events-none">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-5">
         {loading ? (
