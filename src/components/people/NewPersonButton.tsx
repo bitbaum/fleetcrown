@@ -1,43 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 export function NewPersonButton() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { create, saving, error, setError } = useCreateMutation<{
+    name: string;
+    description?: string;
+  }>({
+    request: (body) =>
+      fetch("/api/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    errorLabel: "person",
+  });
 
-  const reset = () => { setName(""); setDescription(""); setError(null); };
-  const close = () => { reset(); setOpen(false); };
+  const close = () => {
+    setName(""); setDescription(""); setError(null);
+    setOpen(false);
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) { setError("Name is required"); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/people", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) { setError(data.error ?? "Failed to create person"); return; }
-      close();
-      router.refresh();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSaving(false);
-    }
+    const ok = await create({
+      name: name.trim(),
+      description: description.trim() || undefined,
+    });
+    if (ok) close();
   };
 
   return (

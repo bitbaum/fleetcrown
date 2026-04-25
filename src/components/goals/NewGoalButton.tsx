@@ -1,53 +1,39 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import type { GoalWithChildren } from "@/db/queries/goals";
-import { createGoal } from "@/lib/api/goals";
+import { createGoal, type CreateGoalBody } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { Modal } from "@/components/ui/modal";
+import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [targetDate, setTargetDate] = useState("");
   const [parentGoalId, setParentGoalId] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { create, saving, error, setError } = useCreateMutation<CreateGoalBody>({
+    request: createGoal,
+    errorLabel: "goal",
+  });
 
-  const reset = () => {
-    setTitle("");
-    setDescription("");
-    setTargetDate("");
-    setParentGoalId("");
+  const close = () => {
+    setTitle(""); setDescription(""); setTargetDate(""); setParentGoalId("");
     setError(null);
+    setOpen(false);
   };
-
-  const close = () => { reset(); setOpen(false); };
 
   const handleCreate = async () => {
     if (!title.trim()) { setError("Title is required"); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await createGoal({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        targetDate: targetDate || undefined,
-        parentGoalId: parentGoalId || undefined,
-      });
-      const data = await res.json();
-      if (!data.ok) { setError(data.error ?? "Failed to create goal"); return; }
-      close();
-      router.refresh();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSaving(false);
-    }
+    const ok = await create({
+      title: title.trim(),
+      description: description.trim() || undefined,
+      targetDate: targetDate || undefined,
+      parentGoalId: parentGoalId || undefined,
+    });
+    if (ok) close();
   };
 
   // Flatten goal tree for parent selector

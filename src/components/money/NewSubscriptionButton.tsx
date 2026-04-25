@@ -1,13 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { Modal } from "@/components/ui/modal";
+import { useCreateMutation } from "@/hooks/use-create-mutation";
+
+type CreateSubscriptionBody = {
+  name: string;
+  vendor?: string;
+  amount?: number;
+  currency: typeof CURRENCIES[number];
+  frequency: typeof FREQUENCIES[number];
+  nextDue?: string;
+  paymentMethod?: string;
+};
 
 export function NewSubscriptionButton() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [vendor, setVendor] = useState("");
@@ -16,42 +25,35 @@ export function NewSubscriptionButton() {
   const [frequency, setFrequency] = useState<typeof FREQUENCIES[number]>(FREQUENCY.MONTHLY);
   const [nextDue, setNextDue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { create, saving, error, setError } = useCreateMutation<CreateSubscriptionBody>({
+    request: (body) =>
+      fetch("/api/subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    errorLabel: "subscription",
+  });
 
-  const reset = () => {
+  const close = () => {
     setName(""); setVendor(""); setAmount(""); setCurrency("CHF");
-    setFrequency(FREQUENCY.MONTHLY); setNextDue(""); setPaymentMethod(""); setError(null);
+    setFrequency(FREQUENCY.MONTHLY); setNextDue(""); setPaymentMethod("");
+    setError(null);
+    setOpen(false);
   };
-  const close = () => { reset(); setOpen(false); };
 
   const handleCreate = async () => {
     if (!name.trim()) { setError("Name is required"); return; }
-    setSaving(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          vendor: vendor.trim() || undefined,
-          amount: amount ? parseFloat(amount) : undefined,
-          currency,
-          frequency,
-          nextDue: nextDue || undefined,
-          paymentMethod: paymentMethod.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!data.ok) { setError(data.error ?? "Failed to create subscription"); return; }
-      close();
-      router.refresh();
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setSaving(false);
-    }
+    const ok = await create({
+      name: name.trim(),
+      vendor: vendor.trim() || undefined,
+      amount: amount ? parseFloat(amount) : undefined,
+      currency,
+      frequency,
+      nextDue: nextDue || undefined,
+      paymentMethod: paymentMethod.trim() || undefined,
+    });
+    if (ok) close();
   };
 
   return (
