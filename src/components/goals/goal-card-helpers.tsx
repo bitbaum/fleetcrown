@@ -5,6 +5,7 @@ import { CheckCircle, Loader2, Plus, X } from "lucide-react";
 import { formatDistanceToNow, isPast } from "date-fns";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 
 export function ProgressInput({
   goalId,
@@ -15,38 +16,32 @@ export function ProgressInput({
   initial: number;
   onUpdate: (progress: number) => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(String(initial));
-  const [saving, setSaving] = useState(false);
+  const ie = useInlineEdit<string>("");
 
-  const commit = async () => {
-    const n = Math.min(100, Math.max(0, parseInt(value) || 0));
-    setSaving(true);
-    try {
+  const commit = () => {
+    const n = Math.min(100, Math.max(0, parseInt(ie.draft) || 0));
+    ie.commit(async () => {
       await patchGoal(goalId, { progress: n });
       onUpdate(n);
-    } finally {
-      setSaving(false);
-      setEditing(false);
-    }
+    });
   };
 
-  if (saving) {
+  if (ie.saving) {
     return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
   }
 
-  if (editing) {
+  if (ie.editing) {
     return (
       <input
         type="number"
         min={0}
         max={100}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
+        value={ie.draft}
+        onChange={(e) => ie.setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
-          if (e.key === "Escape") setEditing(false);
+          if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
         className="w-12 bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-xs text-white/80 text-right focus:outline-none"
@@ -56,7 +51,7 @@ export function ProgressInput({
 
   return (
     <button
-      onClick={() => { setValue(String(initial)); setEditing(true); }}
+      onClick={() => ie.start(String(initial))}
       className="text-xs text-white/40 hover:text-white/70 transition-colors tabular-nums"
       title="Click to edit progress"
     >
@@ -78,36 +73,30 @@ export function DateInput({
   const toDateStr = (d: Date | null) =>
     d ? new Date(d).toISOString().split("T")[0] : "";
 
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(toDateStr(initial));
-  const [saving, setSaving] = useState(false);
+  const ie = useInlineEdit<string>(toDateStr(initial));
   const currentDate = initial ? new Date(initial) : null;
   const overdue = currentDate && isPast(currentDate);
 
-  const commit = async (newVal: string) => {
+  const commit = (newVal: string) => {
     const newDate = newVal ? new Date(newVal) : null;
-    setSaving(true);
-    try {
+    ie.commit(async () => {
       await patchGoal(goalId, { targetDate: newDate ? newDate.toISOString() : null });
       onUpdate(newDate);
-    } finally {
-      setSaving(false);
-      setEditing(false);
-    }
+    });
   };
 
-  if (saving) return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
+  if (ie.saving) return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
 
-  if (editing) {
+  if (ie.editing) {
     return (
       <input
         type="date"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={() => commit(value)}
+        value={ie.draft}
+        onChange={(e) => ie.setDraft(e.target.value)}
+        onBlur={() => commit(ie.draft)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") commit(value);
-          if (e.key === "Escape") { setEditing(false); setValue(toDateStr(initial)); }
+          if (e.key === "Enter") commit(ie.draft);
+          if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
         className="text-xs bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-white/70 focus:outline-none focus:border-white/35"
@@ -119,7 +108,7 @@ export function DateInput({
     return (
       <div className="flex items-center gap-1">
         <button
-          onClick={() => { setValue(toDateStr(initial)); setEditing(true); }}
+          onClick={() => ie.start(toDateStr(initial))}
           className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-red-400" : "text-white/40"}`}
           title="Click to change deadline"
         >
@@ -138,7 +127,7 @@ export function DateInput({
 
   return (
     <button
-      onClick={() => { setValue(""); setEditing(true); }}
+      onClick={() => ie.start("")}
       className="text-xs text-white/20 hover:text-white/50 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
       title="Set deadline"
     >
