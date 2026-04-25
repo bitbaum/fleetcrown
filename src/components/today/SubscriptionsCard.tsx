@@ -4,7 +4,7 @@ import { getUpcomingSubscriptions } from "@/db/queries/today";
 import { format } from "date-fns";
 
 export async function SubscriptionsCard() {
-  const items = await getUpcomingSubscriptions(14);
+  const items = await getUpcomingSubscriptions();
 
   return (
     <Card>

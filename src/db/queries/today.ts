@@ -1,4 +1,10 @@
-import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
+import {
+  DEFAULT_USER_ID,
+  DEFAULT_USER_EXTERNAL_ID,
+  GOALS_DUE_SOON_DAYS,
+  EVENTS_DUE_SOON_DAYS,
+  SUBSCRIPTIONS_UPCOMING_DAYS,
+} from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
@@ -26,7 +32,7 @@ export async function getActiveCommitments() {
     .orderBy(commitments.dueDate);
 }
 
-export async function getGoalsDueSoon(days = 14) {
+export async function getGoalsDueSoon(days = GOALS_DUE_SOON_DAYS) {
   const soon = new Date();
   soon.setDate(soon.getDate() + days);
 
@@ -47,7 +53,7 @@ export async function getGoalsDueSoon(days = 14) {
     .orderBy(goals.targetDate);
 }
 
-export async function getUpcomingSubscriptions(days = 7) {
+export async function getUpcomingSubscriptions(days = SUBSCRIPTIONS_UPCOMING_DAYS) {
   const future = new Date();
   future.setDate(future.getDate() + days);
 
@@ -65,8 +71,11 @@ export async function getUpcomingSubscriptions(days = 7) {
 }
 
 export async function getTodaySummary() {
-  const soon = new Date();
-  soon.setDate(soon.getDate() + 14);
+  const goalsSoon = new Date();
+  goalsSoon.setDate(goalsSoon.getDate() + GOALS_DUE_SOON_DAYS);
+
+  const eventsSoon = new Date();
+  eventsSoon.setDate(eventsSoon.getDate() + EVENTS_DUE_SOON_DAYS);
 
   const [
     [goalStats],
@@ -106,7 +115,7 @@ export async function getTodaySummary() {
         eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
         lte(commitments.dueDate, new Date()),
       )),
-    // Goals with a target date within the next 14 days
+    // Goals with a target date within the goals-due-soon window
     db
       .select({ count: sql<number>`count(*)` })
       .from(goals)
@@ -114,9 +123,9 @@ export async function getTodaySummary() {
         eq(goals.userId, DEFAULT_USER_ID),
         eq(goals.status, GOAL_STATUS.ACTIVE),
         isNotNull(goals.targetDate),
-        lte(goals.targetDate, soon),
+        lte(goals.targetDate, goalsSoon),
       )),
-    // Events with a deadline within the next 30 days
+    // Events with a deadline within the events-due-soon window
     db
       .select({ count: sql<number>`count(*)` })
       .from(events)
@@ -124,7 +133,7 @@ export async function getTodaySummary() {
         eq(events.userId, DEFAULT_USER_ID),
         eq(events.status, EVENT_STATUS.ACTIVE),
         isNotNull(events.deadline),
-        lte(events.deadline, (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })()),
+        lte(events.deadline, eventsSoon),
       )),
     // Habits due today and how many are done — frequency logic in SQL
     db.execute<{ total: string; done: string }>(sql`

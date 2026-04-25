@@ -16,3 +16,8 @@ export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://
 
 /** How many days of history the /habits page (and its heatmap) covers. */
 export const HABIT_HISTORY_DAYS = 30;
+
+/** Lookahead windows for the /today summary cards. */
+export const GOALS_DUE_SOON_DAYS = 14;
+export const EVENTS_DUE_SOON_DAYS = 30;
+export const SUBSCRIPTIONS_UPCOMING_DAYS = 14;

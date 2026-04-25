@@ -3,10 +3,11 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getEventsDueSoon } from "@/db/queries/events";
 import { isPast, format } from "date-fns";
 import { deadlineLabel } from "@/lib/dates";
+import { EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 
 export async function EventsDueCard() {
-  const items = await getEventsDueSoon(30);
+  const items = await getEventsDueSoon();
 
   if (items.length === 0) return null;
 
@@ -23,7 +24,7 @@ export async function EventsDueCard() {
               <span className="text-xs text-red-400 font-medium">{overdueCount} overdue</span>
             ) : (
               <span className="text-xs text-amber-400 font-medium">
-                {items.length} within 30 days
+                {items.length} within {EVENTS_DUE_SOON_DAYS} days
               </span>
             )
           }

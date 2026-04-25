@@ -1,4 +1,4 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { events } from "@/db/schema";
@@ -6,7 +6,7 @@ import { eq, asc, and, lte, isNotNull, sql } from "drizzle-orm";
 
 export type EventRow = typeof events.$inferSelect;
 
-export async function getEventsDueSoon(days = 14): Promise<EventRow[]> {
+export async function getEventsDueSoon(days = EVENTS_DUE_SOON_DAYS): Promise<EventRow[]> {
   const soon = new Date();
   soon.setDate(soon.getDate() + days);
 

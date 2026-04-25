@@ -2,10 +2,11 @@ import { Target, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getGoalsDueSoon } from "@/db/queries/today";
 import { deadlineLabel } from "@/lib/dates";
+import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 
 export async function GoalsDueCard() {
-  const items = await getGoalsDueSoon(14);
+  const items = await getGoalsDueSoon();
 
   if (items.length === 0) return null;
 
@@ -17,7 +18,7 @@ export async function GoalsDueCard() {
           title="Goals Due Soon"
           right={
             <span className="text-xs text-amber-400 font-medium">
-              {items.length} within 14 days
+              {items.length} within {GOALS_DUE_SOON_DAYS} days
             </span>
           }
         />
