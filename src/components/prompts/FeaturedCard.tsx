@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Zap, Clock } from "lucide-react";
-import { ScheduleModal } from "./ScheduleModal";
-import { RunModal } from "./RunModal";
+import { usePromptModals } from "./use-prompt-modals";
 import { CATEGORY_META, type PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 
@@ -15,8 +13,7 @@ export function FeaturedCard({
   template: PromptTemplate;
   projects: Project[];
 }) {
-  const [showRun, setShowRun] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
+  const { openRun, openSchedule, modals } = usePromptModals(template, projects);
   const meta = CATEGORY_META[template.category];
 
   return (
@@ -33,14 +30,14 @@ export function FeaturedCard({
         </div>
         <div className="flex gap-2 mt-auto">
           <button
-            onClick={() => setShowRun(true)}
+            onClick={openRun}
             className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
           >
             <Zap className="h-3.5 w-3.5" /> Run now
           </button>
           {template.suggestedSchedule && (
             <button
-              onClick={() => setShowSchedule(true)}
+              onClick={openSchedule}
               className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] text-white/50 text-xs transition-colors border border-white/10"
               title="Schedule"
             >
@@ -50,12 +47,7 @@ export function FeaturedCard({
         </div>
       </div>
 
-      {showRun && (
-        <RunModal template={template} projects={projects} onClose={() => setShowRun(false)} />
-      )}
-      {showSchedule && (
-        <ScheduleModal template={template} projects={projects} onClose={() => setShowSchedule(false)} />
-      )}
+      {modals}
     </>
   );
 }

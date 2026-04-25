@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Zap, Clock, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { ScheduleModal } from "./ScheduleModal";
-import { RunModal } from "./RunModal";
+import { usePromptModals } from "./use-prompt-modals";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 
@@ -15,8 +14,7 @@ export function PromptRow({
   template: PromptTemplate;
   projects: Project[];
 }) {
-  const [showRun, setShowRun] = useState(false);
-  const [showSchedule, setShowSchedule] = useState(false);
+  const { openRun, openSchedule, modals } = usePromptModals(template, projects);
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -53,7 +51,7 @@ export function PromptRow({
             </button>
             {template.suggestedSchedule && (
               <button
-                onClick={() => setShowSchedule(true)}
+                onClick={openSchedule}
                 className="p-1.5 rounded text-white/20 hover:text-white/50 transition-colors"
                 title="Schedule as cron job"
               >
@@ -61,7 +59,7 @@ export function PromptRow({
               </button>
             )}
             <button
-              onClick={() => setShowRun(true)}
+              onClick={openRun}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
             >
               <Zap className="h-3 w-3" /> Run
@@ -78,12 +76,7 @@ export function PromptRow({
         )}
       </div>
 
-      {showRun && (
-        <RunModal template={template} projects={projects} onClose={() => setShowRun(false)} />
-      )}
-      {showSchedule && (
-        <ScheduleModal template={template} projects={projects} onClose={() => setShowSchedule(false)} />
-      )}
+      {modals}
     </>
   );
 }
