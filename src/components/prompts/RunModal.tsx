@@ -64,7 +64,7 @@ export function RunModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={!running ? onClose : undefined} />
-      <div className="relative w-full max-w-2xl bg-[#0f1117] border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+      <div className="relative w-full max-w-2xl bg-surface-modal border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 p-5 border-b border-white/10 shrink-0">
           <div>

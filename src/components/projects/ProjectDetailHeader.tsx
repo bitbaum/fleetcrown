@@ -115,7 +115,7 @@ export function ProjectDetailHeader({
   const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
 
   return (
-    <div className="shrink-0 bg-[#0c0e14] border-b border-white/10">
+    <div className="shrink-0 bg-surface-drawer border-b border-white/10">
       <div className="flex items-start gap-3 px-5 pt-4 pb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

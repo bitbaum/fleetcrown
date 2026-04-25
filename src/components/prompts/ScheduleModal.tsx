@@ -48,7 +48,7 @@ export function ScheduleModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[#0f1117] border border-white/10 rounded-2xl shadow-2xl p-5 space-y-4">
+      <div className="relative w-full max-w-lg bg-surface-modal border border-white/10 rounded-2xl shadow-2xl p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold">Schedule Job</div>
           <button onClick={onClose} className="p-1 text-white/40 hover:text-white/70 rounded">

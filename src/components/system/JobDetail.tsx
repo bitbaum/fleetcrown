@@ -87,9 +87,9 @@ export function JobDetail({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-[#0f1117] border-l border-white/10 overflow-y-auto flex flex-col">
+      <div className="relative w-full max-w-lg bg-surface-modal border-l border-white/10 overflow-y-auto flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-white/10 bg-[#0f1117]">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-white/10 bg-surface-modal">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-emerald-400 shrink-0" />
