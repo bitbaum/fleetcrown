@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { events } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { getEvents } from "@/db/queries/events";

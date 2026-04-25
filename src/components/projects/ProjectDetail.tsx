@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ProjectDetailHeader } from "./ProjectDetailHeader";
 import { OverviewTab } from "./ProjectOverviewTab";
 import { PromptsTab } from "./ProjectPromptsTab";
@@ -15,20 +15,26 @@ export function ProjectDetail({
   onClose: () => void;
 }) {
   const [data, setData] = useState<ProjectData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
 
-  const reload = () => {
-    setLoading(true);
+  const loading = data?.id !== projectId;
+
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  useEffect(() => {
+    let cancelled = false;
     fetch(`/api/projects/${projectId}`)
       .then((r) => r.json())
-      .then((d: ProjectData) => { setData(d); setJobs(d.linkedJobs ?? []); })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { reload(); }, [projectId]);
+      .then((d: ProjectData) => {
+        if (cancelled) return;
+        setData(d);
+        setJobs(d.linkedJobs ?? []);
+      })
+      .catch(() => { if (!cancelled) setData(null); });
+    return () => { cancelled = true; };
+  }, [projectId, reloadKey]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };

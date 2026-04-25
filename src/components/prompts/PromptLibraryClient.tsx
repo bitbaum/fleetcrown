@@ -14,7 +14,6 @@ import {
 import { ScheduleModal } from "./ScheduleModal";
 import { RunModal } from "./RunModal";
 import {
-  PROMPT_TEMPLATES,
   CATEGORY_META,
   type PromptTemplate,
   type PromptCategory,
@@ -33,7 +32,6 @@ function PromptRow({
   const [showRun, setShowRun] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const meta = CATEGORY_META[template.category];
 
   return (
     <>

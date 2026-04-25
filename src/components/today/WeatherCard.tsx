@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, CloudRain, Cloud, CloudSnow, CloudFog, Thermometer } from "lucide-react";
+import { Sun, CloudRain, Cloud, CloudSnow, CloudFog } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useFetch } from "@/hooks/use-fetch";
 
@@ -27,13 +27,13 @@ function parseWeather(raw: string) {
   };
 }
 
-function getWeatherIcon(condition: string) {
+function WeatherIcon({ condition, className }: { condition: string; className?: string }) {
   const c = condition.toLowerCase();
-  if (c.includes("rain") || c.includes("drizzle")) return CloudRain;
-  if (c.includes("snow")) return CloudSnow;
-  if (c.includes("fog") || c.includes("mist")) return CloudFog;
-  if (c.includes("cloud") || c.includes("overcast")) return Cloud;
-  return Sun;
+  if (c.includes("rain") || c.includes("drizzle")) return <CloudRain className={className} />;
+  if (c.includes("snow")) return <CloudSnow className={className} />;
+  if (c.includes("fog") || c.includes("mist")) return <CloudFog className={className} />;
+  if (c.includes("cloud") || c.includes("overcast")) return <Cloud className={className} />;
+  return <Sun className={className} />;
 }
 
 export function WeatherCard() {
@@ -58,14 +58,13 @@ export function WeatherCard() {
   }
 
   const w = parseWeather(data.weather);
-  const Icon = getWeatherIcon(w.condition);
 
   return (
     <Card>
       <CardHeader icon={Sun} title="Zurich" />
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <Icon className="h-8 w-8 text-amber-400/80" />
+          <WeatherIcon condition={w.condition} className="h-8 w-8 text-amber-400/80" />
           <div className="text-2xl font-semibold">{w.temp}°</div>
         </div>
         <div className="text-xs text-white/40 space-y-0.5">

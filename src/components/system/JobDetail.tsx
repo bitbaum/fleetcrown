@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Clock, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
+import { X, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
 

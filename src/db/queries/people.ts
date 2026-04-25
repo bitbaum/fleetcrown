@@ -2,7 +2,7 @@ import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
-import { eq, and, ne, ilike, sql, desc, type SQL } from "drizzle-orm";
+import { eq, and, sql, desc, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/utils";
 

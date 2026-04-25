@@ -33,7 +33,6 @@ function useSpeechRecognition(onResult: (text: string) => void) {
     const w = window as any;
     const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!SR) return;
-    setSupported(true);
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
@@ -45,6 +44,7 @@ function useSpeechRecognition(onResult: (text: string) => void) {
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
     recognitionRef.current = recognition;
+    queueMicrotask(() => setSupported(true));
   }, [onResult]);
 
   const toggle = useCallback(() => {
@@ -67,8 +67,8 @@ function useSpeechRecognition(onResult: (text: string) => void) {
 function useElapsedTimer(active: boolean) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
-    if (!active) { setElapsed(0); return; }
-    setElapsed(0);
+    queueMicrotask(() => setElapsed(0));
+    if (!active) return;
     const id = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, [active]);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ExternalLink, GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
+import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
 import { ProjectDetail } from "./ProjectDetail";
 import {
   MaturityBar,
@@ -184,7 +184,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           />
         ))}
         {filtered.length === 0 && (
-          <p className="col-span-2 text-sm text-white/30 py-4 text-center">No projects match "{query}"</p>
+          <p className="col-span-2 text-sm text-white/30 py-4 text-center">No projects match &ldquo;{query}&rdquo;</p>
         )}
       </div>
 

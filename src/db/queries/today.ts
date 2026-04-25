@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events, habits, habitCompletions } from "@/db/schema";
+import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
@@ -48,7 +48,6 @@ export async function getGoalsDueSoon(days = 14) {
 }
 
 export async function getUpcomingSubscriptions(days = 7) {
-  const now = new Date();
   const future = new Date();
   future.setDate(future.getDate() + days);
 

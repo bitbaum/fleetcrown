@@ -1,6 +1,6 @@
 "use client";
 
-import { Server, Cpu, HardDrive, Clock, Radio } from "lucide-react";
+import { Cpu, HardDrive, Clock, Radio } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useFetch } from "@/hooks/use-fetch";
 

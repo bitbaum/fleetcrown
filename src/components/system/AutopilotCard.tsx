@@ -42,7 +42,6 @@ function JobRow({
   onSelect: () => void;
   onToggle: (id: string, enabled: boolean) => void;
 }) {
-  const lastRun = job.state?.lastRunAtMs;
   const nextRun = job.state?.nextRunAtMs;
   const status = job.state?.lastStatus ?? job.state?.lastRunStatus;
   const errors = job.state?.consecutiveErrors ?? 0;

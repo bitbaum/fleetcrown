@@ -2,7 +2,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities } from "@/db/schema";
-import { eq, and, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export type GoalWithChildren = {
   id: string;

@@ -11,9 +11,7 @@ import {
   getFinancialCommitments,
   calculateMonthlyBurn,
 } from "@/db/queries/money";
-import { format, isPast, formatDistanceToNow } from "date-fns";
-
-// Verify links now come from SUBSCRIPTION_META (config/subscriptions.ts)
+import { format, isPast } from "date-fns";
 
 const STATUS_STYLE: Record<string, string> = {
   active: "text-green-400 bg-green-400/10",
