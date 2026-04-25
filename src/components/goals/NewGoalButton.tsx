@@ -6,6 +6,7 @@ import type { GoalWithChildren } from "@/db/queries/goals";
 import { createGoal, type CreateGoalBody } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { Modal } from "@/components/ui/modal";
+import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
@@ -68,67 +69,55 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                Title <span className="text-red-400">*</span>
-              </label>
+            <Field label="Title" required>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleCreate(); }}
                 placeholder="What are you working toward?"
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                className={FIELD_INPUT_CLASS}
               />
-            </div>
+            </Field>
 
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                  Description
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Optional context or motivation"
-                  rows={2}
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors resize-none"
+            <Field label="Description">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional context or motivation"
+                rows={2}
+                className={`${FIELD_INPUT_CLASS} resize-none`}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Target Date">
+                <input
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => setTargetDate(e.target.value)}
+                  className={FIELD_INPUT_CLASS}
                 />
-              </div>
+              </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                    Target Date
-                  </label>
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(e) => setTargetDate(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25 transition-colors"
-                  />
-                </div>
-
-                {flatGoals.length > 0 && (
-                  <div>
-                    <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                      Parent Goal
-                    </label>
-                    <select
-                      value={parentGoalId}
-                      onChange={(e) => setParentGoalId(e.target.value)}
-                      className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25 transition-colors"
-                    >
-                      <option value="">— None —</option>
-                      {flatGoals.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {"  ".repeat(g.depth)}{g.depth > 0 ? "↳ " : ""}{g.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              {flatGoals.length > 0 && (
+                <Field label="Parent Goal">
+                  <select
+                    value={parentGoalId}
+                    onChange={(e) => setParentGoalId(e.target.value)}
+                    className={FIELD_INPUT_CLASS}
+                  >
+                    <option value="">— None —</option>
+                    {flatGoals.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {"  ".repeat(g.depth)}{g.depth > 0 ? "↳ " : ""}{g.title}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
             </div>
+          </div>
 
             {error && (
               <div className="text-xs text-red-400 bg-red-500/[0.08] border border-red-500/20 rounded-lg px-3 py-2">

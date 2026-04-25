@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { Modal } from "@/components/ui/modal";
+import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 type CreateSubscriptionBody = {
@@ -76,86 +77,77 @@ export function NewSubscriptionButton() {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                Name <span className="text-red-400">*</span>
-              </label>
+            <Field label="Name" required>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. GitHub Copilot"
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                className={FIELD_INPUT_CLASS}
               />
+            </Field>
+
+            <Field label="Vendor">
+              <input
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                placeholder="e.g. GitHub Inc."
+                className={FIELD_INPUT_CLASS}
+              />
+            </Field>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Amount">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className={FIELD_INPUT_CLASS}
+                />
+              </Field>
+              <Field label="Currency">
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as typeof CURRENCIES[number])}
+                  className={FIELD_INPUT_CLASS}
+                >
+                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </Field>
             </div>
 
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Vendor</label>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Frequency">
+                <select
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value as typeof FREQUENCIES[number])}
+                  className={FIELD_INPUT_CLASS}
+                >
+                  {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </Field>
+              <Field label="Next Due">
                 <input
-                  value={vendor}
-                  onChange={(e) => setVendor(e.target.value)}
-                  placeholder="e.g. GitHub Inc."
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                  type="date"
+                  value={nextDue}
+                  onChange={(e) => setNextDue(e.target.value)}
+                  className={FIELD_INPUT_CLASS}
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Amount</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Currency</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value as typeof CURRENCIES[number])}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25 transition-colors"
-                  >
-                    {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Frequency</label>
-                  <select
-                    value={frequency}
-                    onChange={(e) => setFrequency(e.target.value as typeof FREQUENCIES[number])}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25 transition-colors"
-                  >
-                    {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Next Due</label>
-                  <input
-                    type="date"
-                    value={nextDue}
-                    onChange={(e) => setNextDue(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Payment Method</label>
-                <input
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  placeholder="e.g. Visa ····1234"
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
-                />
-              </div>
+              </Field>
             </div>
+
+            <Field label="Payment Method">
+              <input
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                placeholder="e.g. Visa ····1234"
+                className={FIELD_INPUT_CLASS}
+              />
+            </Field>
+          </div>
 
             {error && (
               <div className="text-xs text-red-400 bg-red-500/[0.08] border border-red-500/20 rounded-lg px-3 py-2">

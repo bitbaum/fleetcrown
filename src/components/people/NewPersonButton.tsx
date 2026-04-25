@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 
 export function NewPersonButton() {
@@ -56,29 +57,25 @@ export function NewPersonButton() {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                Name <span className="text-red-400">*</span>
-              </label>
+            <Field label="Name" required>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
                 placeholder="e.g. Jane Smith"
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                className={FIELD_INPUT_CLASS}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">Notes</label>
+            <Field label="Notes">
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Met at ETH conference"
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+                className={FIELD_INPUT_CLASS}
               />
-            </div>
+            </Field>
           </div>
 
           {error && (
