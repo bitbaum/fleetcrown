@@ -11,7 +11,8 @@ set -u
 
 BASE="${BASE:-http://localhost:3000}"
 
-ROUTES=(
+# Page routes — match config/navigation.ts NAV_ITEMS plus the / redirect.
+PAGE_ROUTES=(
   "/"
   "/today"
   "/people"
@@ -24,6 +25,21 @@ ROUTES=(
   "/system"
   "/memory"
 )
+
+# DB-backed API GETs. Exercises drizzle, the postgres connection, and the
+# query layer — catches silent regressions a page-only smoke would miss.
+# Tool-dependent endpoints (/api/calendar, /api/weather, /api/github) are
+# omitted because they depend on the local Ivy gateway being up.
+API_ROUTES=(
+  "/api/goals"
+  "/api/habits"
+  "/api/people"
+  "/api/events"
+  "/api/crons"
+  "/api/system"
+)
+
+ROUTES=("${PAGE_ROUTES[@]}" "${API_ROUTES[@]}")
 
 # 1) Probe the base URL once so we fail fast with a clear message
 # instead of dribbling out one curl error per route.
