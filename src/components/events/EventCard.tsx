@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { ExternalLink, Loader2, Archive } from "lucide-react";
-import { isPast, format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { deadlineLabel } from "@/lib/dates";
 import type { EventRow } from "@/db/queries/events";
 
 export function EventCard({
@@ -19,7 +20,7 @@ export function EventCard({
 }) {
   const [archiving, setArchiving] = useState(false);
   const deadline = event.deadline ? new Date(event.deadline) : null;
-  const overdue = deadline ? isPast(deadline) : false;
+  const { label: deadlineText, overdue } = deadlineLabel(deadline);
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -45,7 +46,7 @@ export function EventCard({
           )}
           {deadline && (
             <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-red-400" : "text-white/35"}`}>
-              {overdue ? "Overdue" : "Due"} {formatDistanceToNow(deadline, { addSuffix: true })}
+              {deadlineText}
               <span className="text-white/20 ml-1">· {format(deadline, "d MMM yyyy")}</span>
             </span>
           )}

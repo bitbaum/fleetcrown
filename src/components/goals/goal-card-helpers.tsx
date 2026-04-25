@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { CheckCircle, Loader2, Plus, X } from "lucide-react";
-import { formatDistanceToNow, isPast } from "date-fns";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
+import { deadlineLabel } from "@/lib/dates";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 
 export function ProgressInput({
@@ -75,7 +75,7 @@ export function DateInput({
 
   const ie = useInlineEdit<string>(toDateStr(initial));
   const currentDate = initial ? new Date(initial) : null;
-  const overdue = currentDate && isPast(currentDate);
+  const { label: deadlineText, overdue } = deadlineLabel(currentDate);
 
   const commit = (newVal: string) => {
     const newDate = newVal ? new Date(newVal) : null;
@@ -112,7 +112,7 @@ export function DateInput({
           className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-red-400" : "text-white/40"}`}
           title="Click to change deadline"
         >
-          {overdue ? "Overdue" : "Due"} {formatDistanceToNow(currentDate, { addSuffix: true })}
+          {deadlineText}
         </button>
         <button
           onClick={() => commit("")}

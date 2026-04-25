@@ -1,7 +1,8 @@
 import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEventsDueSoon } from "@/db/queries/events";
-import { formatDistanceToNow, isPast, format } from "date-fns";
+import { isPast, format } from "date-fns";
+import { deadlineLabel } from "@/lib/dates";
 import Link from "next/link";
 
 export async function EventsDueCard() {
@@ -30,7 +31,7 @@ export async function EventsDueCard() {
         <div className="space-y-3">
           {items.map((event) => {
             const deadline = new Date(event.deadline!);
-            const overdue = isPast(deadline);
+            const { label: deadlineText, overdue } = deadlineLabel(deadline);
 
             return (
               <div key={event.id} className="flex items-start gap-3">
@@ -62,8 +63,7 @@ export async function EventsDueCard() {
                   </div>
                   <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-red-400" : "text-amber-400/70"}`}>
                     <Clock className="h-3 w-3 shrink-0" />
-                    {overdue ? "Overdue" : "Due"}{" "}
-                    {formatDistanceToNow(deadline, { addSuffix: true })}
+                    {deadlineText}
                   </div>
                   {event.type && (
                     <span className="text-[10px] text-white/25 uppercase tracking-wide">{event.type}</span>

@@ -1,7 +1,7 @@
 import { Target, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getGoalsDueSoon } from "@/db/queries/today";
-import { formatDistanceToNow, isPast } from "date-fns";
+import { deadlineLabel } from "@/lib/dates";
 import Link from "next/link";
 
 export async function GoalsDueCard() {
@@ -24,7 +24,7 @@ export async function GoalsDueCard() {
         <div className="space-y-3">
           {items.map((goal) => {
             const date = goal.targetDate ? new Date(goal.targetDate) : null;
-            const overdue = date ? isPast(date) : false;
+            const { label: deadlineText, overdue } = deadlineLabel(date);
             const progress = goal.progress ?? 0;
 
             return (
@@ -47,8 +47,7 @@ export async function GoalsDueCard() {
                   {date && (
                     <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-red-400" : "text-amber-400/80"}`}>
                       <Clock className="h-3 w-3 shrink-0" />
-                      {overdue ? "Overdue" : "Due"}{" "}
-                      {formatDistanceToNow(date, { addSuffix: true })}
+                      {deadlineText}
                     </div>
                   )}
                 </div>
