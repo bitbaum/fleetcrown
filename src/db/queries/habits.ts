@@ -3,12 +3,9 @@ import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { toLocalDateStr } from "@/lib/dates";
 
-/** Returns today's date as YYYY-MM-DD in local time */
-function todayDate(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+const todayDate = () => toLocalDateStr(new Date());
 
 /** Whether a habit should appear today given its frequency */
 function isDueToday(frequency: string): boolean {
@@ -47,7 +44,7 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
   // Completions for today and the last 6 days (for streak calculation)
   const since = new Date();
   since.setDate(since.getDate() - 6);
-  const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
+  const sinceStr = toLocalDateStr(since);
 
   const completions = await db
     .select()
@@ -74,8 +71,7 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
     for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (dates.has(ds)) streak++;
+      if (dates.has(toLocalDateStr(d))) streak++;
       else break;
     }
     return { id: h.id, title: h.title, frequency: h.frequency, sortOrder: h.sortOrder, doneToday, streak };
@@ -153,7 +149,7 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
 
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));
-  const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
+  const sinceStr = toLocalDateStr(since);
 
   const completions = await db
     .select()
@@ -179,8 +175,7 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
     for (let i = 0; i < days; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (dates.has(ds)) streak++;
+      if (dates.has(toLocalDateStr(d))) streak++;
       else break;
     }
     return {

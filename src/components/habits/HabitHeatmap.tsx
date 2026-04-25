@@ -2,6 +2,7 @@
 
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
+import { toLocalDateStr } from "@/lib/dates";
 
 /** Generate last N calendar dates as YYYY-MM-DD, oldest first */
 function lastNDates(n: number): string[] {
@@ -9,9 +10,7 @@ function lastNDates(n: number): string[] {
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    dates.push(
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-    );
+    dates.push(toLocalDateStr(d));
   }
   return dates;
 }
