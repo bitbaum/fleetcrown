@@ -81,6 +81,7 @@ src/
 ```bash
 npm run dev          # Start dev server (default port 3000)
 npm run build        # Production build
+npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
 npx drizzle-kit push # Push schema changes to Postgres
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
 ```
