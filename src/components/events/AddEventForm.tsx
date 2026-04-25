@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
+import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import type { EventRow } from "@/db/queries/events";
 
 export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => void }) {
@@ -68,20 +69,20 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
         onChange={(e) => setName(e.target.value)}
         placeholder="Event name *"
         autoFocus
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
       />
       <div className="flex gap-2">
         <input
           value={type}
           onChange={(e) => setType(e.target.value)}
           placeholder="Type * (e.g. workshop)"
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
         <input
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           placeholder="Category"
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
       </div>
       <div className="flex gap-2">
@@ -89,13 +90,13 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="URL (optional)"
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
         <input
           type="date"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
-          className="bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 focus:outline-none focus:border-white/25"
+          className={FIELD_INPUT_CLASS_COMPACT}
         />
       </div>
       <input
@@ -103,7 +104,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
         onChange={(e) => setDescription(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
         placeholder="Description (optional)"
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
       />
       {error && <p className="text-xs text-red-400">{error}</p>}
       <div className="flex items-center gap-2 pt-0.5">

@@ -6,6 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES } from "@/config/channels";
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 
 export function PersonCard({
   person,
@@ -173,7 +174,7 @@ export function PersonCard({
                 }}
                 placeholder="Optional note..."
                 autoFocus
-                className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+                className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
               />
               <div className="flex items-center gap-2">
                 <button

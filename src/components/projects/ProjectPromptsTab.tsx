@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
+import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
@@ -104,9 +105,9 @@ function NewJobForm({
         <button onClick={() => setOpen(false)} className="text-white/30 hover:text-white/60"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input placeholder="Job name" value={name} onChange={(e) => setName(e.target.value)}
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25" />
+        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`} />
       <input placeholder="Cron (e.g. 0 9 * * 1 = Mon 9am)" value={schedule} onChange={(e) => setSchedule(e.target.value)}
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 font-mono placeholder:text-white/20 focus:outline-none focus:border-white/25" />
+        className={`w-full font-mono ${FIELD_INPUT_CLASS_COMPACT}`} />
       <textarea placeholder="Prompt / instructions for Ivy…" value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
         className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-2 text-xs text-white/80 placeholder:text-white/20 resize-none focus:outline-none focus:border-white/25" />
       <button onClick={create} disabled={!name.trim() || !schedule.trim() || !message.trim() || saving}

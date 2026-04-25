@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
+import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 
 export function AddCommitmentButton() {
   const router = useRouter();
@@ -69,21 +70,21 @@ export function AddCommitmentButton() {
         placeholder="What did you commit to? *"
         autoFocus
         onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); reset(); } }}
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
       />
       <div className="flex gap-2">
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className="bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 focus:outline-none focus:border-white/25"
+          className={FIELD_INPUT_CLASS_COMPACT}
         />
         <input
           value={financialImpact}
           onChange={(e) => setFinancialImpact(e.target.value)}
           placeholder="Financial impact (optional)"
           onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
-          className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
