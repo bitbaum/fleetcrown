@@ -1,4 +1,4 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
@@ -142,7 +142,7 @@ export type HabitWithHistory = {
 };
 
 /** Get all habits with their last `days` days of completion data */
-export async function getAllHabitsWithHistory(days = 30): Promise<HabitWithHistory[]> {
+export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promise<HabitWithHistory[]> {
   const allHabits = await db
     .select()
     .from(habits)

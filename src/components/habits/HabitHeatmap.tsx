@@ -1,8 +1,7 @@
 "use client";
 
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
-
-const DAYS = 30;
+import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 /** Generate last N calendar dates as YYYY-MM-DD, oldest first */
 function lastNDates(n: number): string[] {
@@ -34,7 +33,7 @@ export function HabitHeatmap({
   frequency: string;
 }) {
   const done = new Set(completedDates);
-  const dates = lastNDates(DAYS);
+  const dates = lastNDates(HABIT_HISTORY_DAYS);
 
   return (
     <div className="flex gap-0.5 flex-wrap">

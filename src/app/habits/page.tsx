@@ -4,6 +4,7 @@ import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 const FREQ_LABELS: Record<string, string> = {
   [HABIT_FREQUENCY.DAILY]:    "daily",
@@ -12,7 +13,7 @@ const FREQ_LABELS: Record<string, string> = {
 };
 
 export default async function HabitsPage() {
-  const habits = await getAllHabitsWithHistory(30);
+  const habits = await getAllHabitsWithHistory(HABIT_HISTORY_DAYS);
   const active = habits.filter((h) => h.active);
   const totalCompletions = habits.reduce((s, h) => s + h.completionsInWindow, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
@@ -20,12 +21,12 @@ export default async function HabitsPage() {
   return (
     <PageLayout
       title="Habits"
-      subtitle="30-day history — consistency compounds"
+      subtitle={`${HABIT_HISTORY_DAYS}-day history — consistency compounds`}
     >
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
-        <StatCard label="Completions (30d)" value={String(totalCompletions)} sub="across all habits" />
+        <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
         <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />
       </div>
 
@@ -42,9 +43,7 @@ export default async function HabitsPage() {
       ) : (
         <div className="space-y-3">
           {habits.map((h) => {
-            const pct = h.completionsInWindow === 0
-              ? 0
-              : Math.round((h.completionsInWindow / 30) * 100);
+            const pct = Math.round((h.completionsInWindow / HABIT_HISTORY_DAYS) * 100);
 
             return (
               <Card key={h.id} className={h.active ? "" : "opacity-50"}>
@@ -70,7 +69,7 @@ export default async function HabitsPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-sm font-medium">{pct}%</div>
-                    <div className="text-xs text-white/30">{h.completionsInWindow}/30d</div>
+                    <div className="text-xs text-white/30">{h.completionsInWindow}/{HABIT_HISTORY_DAYS}d</div>
                   </div>
                 </div>
                 <HabitHeatmap

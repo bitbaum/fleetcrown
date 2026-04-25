@@ -13,3 +13,6 @@ export const DEFAULT_USER_NAME = "George";
 export const DEFAULT_USER_EXTERNAL_ID = "george";
 export const TELEGRAM_CHAT_ID = "575014778";
 export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://127.0.0.1:18789";
+
+/** How many days of history the /habits page (and its heatmap) covers. */
+export const HABIT_HISTORY_DAYS = 30;
