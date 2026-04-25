@@ -8,6 +8,7 @@ import {
   Brain,
   Zap,
   Calendar,
+  Repeat2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -27,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "goals",    label: "Goals",    href: "/goals",    icon: Target,       active: true,  mobile: true  },
   { id: "projects", label: "Projects", href: "/projects", icon: FolderKanban, active: true,  mobile: true  },
   { id: "money",    label: "Money",    href: "/money",    icon: Wallet,       active: true,  mobile: true  },
+  { id: "habits",   label: "Habits",   href: "/habits",   icon: Repeat2,      active: true,  mobile: false },
   { id: "events",   label: "Events",   href: "/events",   icon: Calendar,     active: true,  mobile: false },
   { id: "prompts",  label: "Prompts",  href: "/prompts",  icon: Zap,          active: true,  mobile: false },
   { id: "system",   label: "System",   href: "/system",   icon: Server,       active: true,  mobile: false },

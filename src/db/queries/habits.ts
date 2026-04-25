@@ -126,6 +126,77 @@ export async function deleteHabit(id: string): Promise<void> {
     .where(and(eq(habits.id, id), eq(habits.userId, DEFAULT_USER_ID)));
 }
 
+export type HabitWithHistory = {
+  id: string;
+  title: string;
+  frequency: string;
+  sortOrder: number;
+  active: boolean;
+  createdAt: Date;
+  /** Set of YYYY-MM-DD strings with completions in the window */
+  completedDates: Set<string>;
+  /** Total completions in the window */
+  completionsInWindow: number;
+  /** Current consecutive streak (days) */
+  streak: number;
+};
+
+/** Get all habits with their last `days` days of completion data */
+export async function getAllHabitsWithHistory(days = 30): Promise<HabitWithHistory[]> {
+  const allHabits = await db
+    .select()
+    .from(habits)
+    .where(eq(habits.userId, DEFAULT_USER_ID))
+    .orderBy(habits.active, habits.sortOrder, habits.createdAt);
+
+  if (allHabits.length === 0) return [];
+
+  const since = new Date();
+  since.setDate(since.getDate() - (days - 1));
+  const sinceStr = `${since.getFullYear()}-${String(since.getMonth() + 1).padStart(2, "0")}-${String(since.getDate()).padStart(2, "0")}`;
+
+  const completions = await db
+    .select()
+    .from(habitCompletions)
+    .where(
+      and(
+        eq(habitCompletions.userId, DEFAULT_USER_ID),
+        inArray(habitCompletions.habitId, allHabits.map((h) => h.id)),
+        sql`${habitCompletions.completedDate} >= ${sinceStr}`,
+      ),
+    );
+
+  const byHabit = new Map<string, Set<string>>();
+  for (const c of completions) {
+    if (!byHabit.has(c.habitId)) byHabit.set(c.habitId, new Set());
+    byHabit.get(c.habitId)!.add(c.completedDate);
+  }
+
+  return allHabits.map((h) => {
+    const dates = byHabit.get(h.id) ?? new Set<string>();
+    // Streak: consecutive days ending today (or yesterday if not yet done today)
+    let streak = 0;
+    for (let i = 0; i < days; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      if (dates.has(ds)) streak++;
+      else break;
+    }
+    return {
+      id: h.id,
+      title: h.title,
+      frequency: h.frequency,
+      sortOrder: h.sortOrder,
+      active: h.active,
+      createdAt: h.createdAt,
+      completedDates: dates,
+      completionsInWindow: dates.size,
+      streak,
+    };
+  });
+}
+
 export async function updateHabit(
   id: string,
   fields: { title?: string; frequency?: string },
