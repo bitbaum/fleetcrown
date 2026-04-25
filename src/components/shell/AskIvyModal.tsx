@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { PROMPT_TEMPLATES, CATEGORY_META } from "@/config/prompt-library";
+import { Modal } from "@/components/ui/modal";
 
 type Message = {
   role: "user" | "ivy";
@@ -87,12 +88,6 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
   useEffect(() => { inputRef.current?.focus(); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape" && !loading) onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [loading, onClose]);
-
   const appendTranscript = useCallback((text: string) => {
     setInput((prev) => (prev ? prev + " " + text : text));
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -136,11 +131,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
     : QUICK_PROMPTS;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !loading && onClose()} />
-
-      <div className="relative w-full max-w-2xl mx-4 mb-4 md:mb-0 bg-surface-modal border border-white/10 rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
-
+    <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2">
@@ -301,7 +292,6 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
             {supported && <span> · 🎤 mic available</span>}
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -6,6 +6,7 @@ import { OverviewTab } from "./ProjectOverviewTab";
 import { PromptsTab } from "./ProjectPromptsTab";
 import { GoalsTab } from "./ProjectGoalsTab";
 import type { ProjectData, Tab, LinkedJob } from "./project-detail-types";
+import { Drawer } from "@/components/ui/modal";
 
 export function ProjectDetail({
   projectId,
@@ -36,45 +37,35 @@ export function ProjectDetail({
     return () => { cancelled = true; };
   }, [projectId, reloadKey]);
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+    <Drawer onClose={onClose} size="xl" surface="drawer">
+      <ProjectDetailHeader
+        data={data}
+        loading={loading}
+        projectId={projectId}
+        tab={tab}
+        setTab={setTab}
+        onClose={onClose}
+        onDeleteSuccess={onClose}
+        jobCount={jobs.length}
+        goalCount={data?.linkedGoals.length ?? 0}
+      />
 
-      <div className="relative w-full max-w-xl bg-surface-drawer border-l border-white/10 flex flex-col shadow-2xl">
-        <ProjectDetailHeader
-          data={data}
-          loading={loading}
-          projectId={projectId}
-          tab={tab}
-          setTab={setTab}
-          onClose={onClose}
-          onDeleteSuccess={onClose}
-          jobCount={jobs.length}
-          goalCount={data?.linkedGoals.length ?? 0}
-        />
-
-        <div className="flex-1 overflow-y-auto p-5">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-white/30" />
-            </div>
-          ) : !data ? (
-            <p className="text-sm text-white/30">Project not found</p>
-          ) : tab === "overview" ? (
-            <OverviewTab data={data} projectId={projectId} onReload={reload} />
-          ) : tab === "prompts" ? (
-            <PromptsTab data={data} projectId={projectId} jobs={jobs} setJobs={setJobs} />
-          ) : (
-            <GoalsTab goals={data.linkedGoals} projectId={data.id} />
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto p-5">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-white/30" />
+          </div>
+        ) : !data ? (
+          <p className="text-sm text-white/30">Project not found</p>
+        ) : tab === "overview" ? (
+          <OverviewTab data={data} projectId={projectId} onReload={reload} />
+        ) : tab === "prompts" ? (
+          <PromptsTab data={data} projectId={projectId} jobs={jobs} setJobs={setJobs} />
+        ) : (
+          <GoalsTab goals={data.linkedGoals} projectId={data.id} />
+        )}
       </div>
-    </div>
+    </Drawer>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -11,6 +11,7 @@ import { DetailAttrs } from "./PersonDetailAttrs";
 import { ChannelsSection } from "./PersonChannelsSection";
 import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
+import { Drawer } from "@/components/ui/modal";
 
 export function PersonDetail({
   personId,
@@ -74,20 +75,8 @@ export function PersonDetail({
     }
   };
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); },
-    [onClose],
-  );
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-background border-l border-white/10 overflow-y-auto">
+    <Drawer onClose={onClose} size="md" surface="background" className="overflow-y-auto">
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
           <div className="flex items-center gap-2 min-w-0">
             {editingName ? (
@@ -229,7 +218,6 @@ export function PersonDetail({
             )}
           </div>
         )}
-      </div>
-    </div>
+    </Drawer>
   );
 }

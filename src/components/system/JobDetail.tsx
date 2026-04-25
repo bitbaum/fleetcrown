@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
+import { Drawer } from "@/components/ui/modal";
 
 function humanSchedule(expr: string, tz: string): string {
   const map: Record<string, string> = {
@@ -73,21 +74,13 @@ export function JobDetail({
     setToggling(false);
   };
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
   const lastRun = job.state?.lastRunAtMs;
   const nextRun = job.state?.nextRunAtMs;
   const hasError = (job.state?.consecutiveErrors ?? 0) > 0;
   const status = job.state?.lastStatus ?? job.state?.lastRunStatus;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-surface-modal border-l border-white/10 overflow-y-auto flex flex-col">
+    <Drawer onClose={onClose} size="lg" surface="modal" className="overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-white/10 bg-surface-modal">
           <div className="min-w-0">
@@ -248,7 +241,6 @@ export function JobDetail({
             />
           </div>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

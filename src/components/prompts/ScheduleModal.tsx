@@ -5,6 +5,7 @@ import { Check, Clock, Loader2, X } from "lucide-react";
 import { createCronJob } from "@/lib/api/crons";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
+import { Modal } from "@/components/ui/modal";
 
 export function ScheduleModal({
   template,
@@ -46,15 +47,13 @@ export function ScheduleModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-surface-modal border border-white/10 rounded-2xl shadow-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Schedule Job</div>
-          <button onClick={onClose} className="p-1 text-white/40 hover:text-white/70 rounded">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+    <Modal onClose={onClose} size="lg">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">Schedule Job</div>
+        <button onClick={onClose} className="p-1 text-white/40 hover:text-white/70 rounded">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
         <div className="text-xs text-white/50 bg-white/[0.03] rounded-lg p-3 border border-white/[0.06]">
           <div className="font-medium text-white/70 mb-1">{template.name}</div>
@@ -98,20 +97,19 @@ export function ScheduleModal({
           </div>
         </div>
 
-        <button
-          onClick={handleCreate}
-          disabled={saving || done || (template.scope === "project" && !projectId)}
-          className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          {done ? (
-            <><Check className="h-4 w-4" /> Scheduled!</>
-          ) : saving ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
-          ) : (
-            <><Clock className="h-4 w-4" /> Create Scheduled Job</>
-          )}
-        </button>
-      </div>
-    </div>
+      <button
+        onClick={handleCreate}
+        disabled={saving || done || (template.scope === "project" && !projectId)}
+        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        {done ? (
+          <><Check className="h-4 w-4" /> Scheduled!</>
+        ) : saving ? (
+          <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+        ) : (
+          <><Clock className="h-4 w-4" /> Create Scheduled Job</>
+        )}
+      </button>
+    </Modal>
   );
 }

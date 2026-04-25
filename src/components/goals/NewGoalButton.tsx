@@ -6,6 +6,7 @@ import { Plus, X, Loader2 } from "lucide-react";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import { createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { Modal } from "@/components/ui/modal";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
   const router = useRouter();
@@ -72,30 +73,28 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={close} />
-          <div className="relative w-full max-w-md bg-surface-modal border border-white/10 rounded-2xl shadow-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold">New Goal</div>
-              <button onClick={close} className="p-1 text-white/40 hover:text-white/70 rounded">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+        <Modal onClose={close} size="md">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">New Goal</div>
+            <button onClick={close} className="p-1 text-white/40 hover:text-white/70 rounded">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-                  Title <span className="text-red-400">*</span>
-                </label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleCreate(); if (e.key === "Escape") close(); }}
-                  placeholder="What are you working toward?"
-                  autoFocus
-                  className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
-                />
-              </div>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
+                Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleCreate(); }}
+                placeholder="What are you working toward?"
+                autoFocus
+                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+              />
+            </div>
 
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
@@ -151,19 +150,18 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
               </div>
             )}
 
-            <button
-              onClick={handleCreate}
-              disabled={saving || !title.trim()}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
-              ) : (
-                <><Plus className="h-4 w-4" /> Create Goal</>
-              )}
-            </button>
-          </div>
-        </div>
+          <button
+            onClick={handleCreate}
+            disabled={saving || !title.trim()}
+            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+            ) : (
+              <><Plus className="h-4 w-4" /> Create Goal</>
+            )}
+          </button>
+        </Modal>
       )}
     </>
   );
