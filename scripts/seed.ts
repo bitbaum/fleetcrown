@@ -5,7 +5,7 @@ import postgres from "postgres";
 import { readFileSync } from "fs";
 import { homedir } from "os";
 import * as schema from "../src/db/schema";
-import type { EntityType, SubStatus } from "../src/lib/constants/statuses";
+import type { EntityType, SubStatus, CommitmentStatus, EventStatus } from "../src/lib/constants/statuses";
 
 const HOME = homedir();
 const DATABASE_URL = process.env.DATABASE_URL!;
@@ -129,7 +129,7 @@ async function main() {
       entityId: entityId ?? null,
       description: c.description,
       dueDate: safeDate(c.due_date),
-      status: c.status,
+      status: c.status as CommitmentStatus,
       financialImpact: c.financial_impact,
       source: c.source ?? "knowledge.sqlite",
       createdAt: safeDateRequired(c.created_at),
@@ -186,7 +186,7 @@ async function main() {
       dateEnd: safeDate(e.date_end),
       deadline: safeDate(e.deadline),
       category: e.category,
-      status: e.status,
+      status: e.status as EventStatus,
       source: e.source ?? "knowledge.sqlite",
       metadata: e.metadata ? JSON.parse(e.metadata) : null,
       createdAt: safeDateRequired(e.created_at),

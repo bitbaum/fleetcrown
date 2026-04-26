@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
+import { COMMITMENT_STATUS, type CommitmentStatus } from "@/lib/constants/statuses";
 
 export const commitments = pgTable("commitments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8,7 +9,7 @@ export const commitments = pgTable("commitments", {
   entityId: uuid("entity_id").references(() => entities.id, { onDelete: "set null" }),
   description: text("description").notNull(),
   dueDate: timestamp("due_date", { withTimezone: true }),
-  status: text("status").default("active"),
+  status: text("status").$type<CommitmentStatus>().default(COMMITMENT_STATUS.ACTIVE),
   financialImpact: text("financial_impact"),
   source: text("source"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

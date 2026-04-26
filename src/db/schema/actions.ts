@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { ACTION_STATUS, type ActionStatus } from "@/lib/constants/statuses";
 
 /** Shape of the JSONB `payload` column on actions — the union of fields
  *  Ivy fills in for each action type. Exported so render code can pick
@@ -38,7 +39,7 @@ export const actions = pgTable("actions", {
   // send_message, send_email, create_event, create_commitment, follow_up, other
 
   // Workflow status — the critical field
-  status: text("status").notNull().default("draft"),
+  status: text("status").$type<ActionStatus>().notNull().default(ACTION_STATUS.DRAFT),
   // draft     = Ivy proposes, George hasn't seen it yet
   // approved  = George said yes, ready to execute
   // executed  = Done, action was taken

@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { EVENT_STATUS, type EventStatus } from "@/lib/constants/statuses";
 
 export const events = pgTable("events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -13,7 +14,7 @@ export const events = pgTable("events", {
   dateEnd: timestamp("date_end", { withTimezone: true }),
   deadline: timestamp("deadline", { withTimezone: true }),
   category: text("category"),
-  status: text("status").default("active"),
+  status: text("status").$type<EventStatus>().default(EVENT_STATUS.ACTIVE),
   source: text("source"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
