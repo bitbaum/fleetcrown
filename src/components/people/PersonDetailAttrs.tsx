@@ -5,6 +5,7 @@ import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { isChannelAttrKey } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "./PersonDetailHelpers";
 import { formatKey } from "./person-detail-types";
 
@@ -119,7 +120,7 @@ export function DetailAttrs({
         </div>
       ))}
       {detailAttrs.length === 0 && !addingNew && (
-        <div className="text-sm text-white/30">No details yet</div>
+        <EmptyState>No details yet</EmptyState>
       )}
       {addingNew ? (
         <div className="flex gap-1.5 items-center pt-0.5">

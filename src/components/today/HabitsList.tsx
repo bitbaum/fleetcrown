@@ -6,6 +6,7 @@ import type { HabitWithStatus } from "@/db/queries/habits";
 import type { HabitFrequency } from "@/lib/constants/statuses";
 import { HabitRow } from "./HabitRow";
 import { AddHabitForm } from "./AddHabitForm";
+import { EmptyState } from "@/components/ui/empty-state";
 import { postJson, patchJson, deleteJson } from "@/lib/api/fetch";
 
 export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[] }) {
@@ -66,7 +67,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   if (habits.length === 0) {
     return (
       <div className="space-y-3">
-        <div className="text-sm text-white/30">No habits tracked yet</div>
+        <EmptyState>No habits tracked yet</EmptyState>
         <AddHabitForm onCreated={addHabit} emptyState />
       </div>
     );

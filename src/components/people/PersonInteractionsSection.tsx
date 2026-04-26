@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
 import { Section } from "./PersonDetailHelpers";
 import type { Interaction } from "./person-detail-types";
@@ -47,7 +48,7 @@ export function InteractionsSection({
   return (
     <Section title="Recent Activity">
       {list.length === 0 && !logging && (
-        <div className="text-sm text-white/30">No interactions recorded</div>
+        <EmptyState>No interactions recorded</EmptyState>
       )}
       {list.map((ix, i) => (
         <div key={i} className="flex items-center justify-between text-sm">

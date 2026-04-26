@@ -5,6 +5,7 @@ import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
 
@@ -68,7 +69,7 @@ export function ChannelsSection({
         </div>
       ))}
       {channels.length === 0 && !adding && (
-        <div className="text-sm text-white/30">No channels yet</div>
+        <EmptyState>No channels yet</EmptyState>
       )}
       {adding ? (
         <div className="flex gap-1.5 items-center pt-0.5">

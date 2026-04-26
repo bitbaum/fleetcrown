@@ -2,6 +2,7 @@
 
 import { Calendar } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useFetch } from "@/hooks/use-fetch";
 
 type CalendarEvent = {
@@ -24,7 +25,7 @@ export function CalendarCard() {
       ) : error || (data?.error && events.length === 0) ? (
         <div className="text-sm text-white/30">{error ?? data?.error}</div>
       ) : events.length === 0 ? (
-        <div className="text-sm text-white/30">No events today</div>
+        <EmptyState>No events today</EmptyState>
       ) : (
         <div className="space-y-2">
           {events.map((event, i) => (

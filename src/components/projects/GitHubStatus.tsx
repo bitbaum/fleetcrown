@@ -2,6 +2,7 @@
 
 import { GitBranch, CheckCircle, XCircle, Loader2, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useFetch } from "@/hooks/use-fetch";
 
 type RepoStatus = {
@@ -31,7 +32,7 @@ export function GitHubStatus() {
       ) : error || (data?.error && repos.length === 0) ? (
         <div className="text-sm text-white/30">{error ?? data?.error}</div>
       ) : repos.length === 0 ? (
-        <div className="text-sm text-white/30">No repo data</div>
+        <EmptyState>No repo data</EmptyState>
       ) : (
         <div className="space-y-2">
           {repos.map((repo) => {
