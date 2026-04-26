@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
-import { CHANNEL_NAMES } from "@/config/channels";
+import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
 
@@ -22,12 +22,12 @@ export function ChannelsSection({
   const [saving, setSaving] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
-  const channels = Object.entries(attrs).filter(([k]) => k.startsWith("channel:"));
+  const channels = Object.entries(attrs).filter(([k]) => isChannelAttrKey(k));
 
   const saveChannel = async () => {
     if (!channelValue.trim() || saving) return;
     setSaving(true);
-    const key = `channel:${channelType}`;
+    const key = withChannelPrefix(channelType);
     try {
       await setAttr(`/api/people/${personId}`, key, channelValue.trim());
       onUpdate({ ...attrs, [key]: channelValue.trim() });
@@ -55,7 +55,7 @@ export function ChannelsSection({
       {channels.map(([key, value]) => (
         <div key={key} className="group flex items-center gap-2 text-sm">
           <ChannelIcon channel={key} />
-          <span className="text-white/70 shrink-0">{key.replace("channel:", "")}</span>
+          <span className="text-white/70 shrink-0">{stripChannelPrefix(key)}</span>
           <span className="text-white/40 font-mono text-xs truncate flex-1">{formatChannelValue(value)}</span>
           <button
             onClick={() => deleteChannel(key)}

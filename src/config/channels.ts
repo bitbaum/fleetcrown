@@ -1,6 +1,9 @@
 import { MessageCircle, Mail, Send, Phone, Users, HelpCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+/** Prefix used to mark a person attribute as a contact channel. */
+export const CHANNEL_ATTR_PREFIX = "channel:";
+
 export type ChannelConfig = {
   icon: LucideIcon;
   label: string;
@@ -16,5 +19,20 @@ export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
   "channel:other":     { icon: HelpCircle,    label: "Other",     color: "text-white/30" },
 };
 
+/** Whether a person-attr key marks a contact channel. */
+export function isChannelAttrKey(key: string): boolean {
+  return key.startsWith(CHANNEL_ATTR_PREFIX);
+}
+
+/** "channel:whatsapp" → "whatsapp". Safe to call on already-bare names. */
+export function stripChannelPrefix(key: string): string {
+  return key.startsWith(CHANNEL_ATTR_PREFIX) ? key.slice(CHANNEL_ATTR_PREFIX.length) : key;
+}
+
+/** "whatsapp" → "channel:whatsapp". Safe to call on already-prefixed keys. */
+export function withChannelPrefix(name: string): string {
+  return name.startsWith(CHANNEL_ATTR_PREFIX) ? name : `${CHANNEL_ATTR_PREFIX}${name}`;
+}
+
 /** Bare channel names (without "channel:" prefix), derived from CHANNEL_CONFIG — single source of truth */
-export const CHANNEL_NAMES = Object.keys(CHANNEL_CONFIG).map((k) => k.replace("channel:", ""));
+export const CHANNEL_NAMES = Object.keys(CHANNEL_CONFIG).map(stripChannelPrefix);

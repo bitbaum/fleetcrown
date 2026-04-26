@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
+import { isChannelAttrKey } from "@/config/channels";
 import { Section } from "./PersonDetailHelpers";
 import { formatKey } from "./person-detail-types";
 
@@ -24,7 +25,7 @@ export function DetailAttrs({
   const [newValue, setNewValue] = useState("");
 
   const detailAttrs = Object.entries(attrs).filter(
-    ([k]) => !k.startsWith("channel:") && k !== "aliases",
+    ([k]) => !isChannelAttrKey(k) && k !== "aliases",
   );
 
   const saveEdit = async (key: string) => {
