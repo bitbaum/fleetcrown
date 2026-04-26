@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
@@ -20,7 +20,6 @@ export function LogConversationButton() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
-  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -32,22 +31,29 @@ export function LogConversationButton() {
     setOpen(false);
   };
 
-  const search = useCallback((q: string) => {
-    if (searchRef.current) clearTimeout(searchRef.current);
-    if (!q.trim()) { setResults([]); return; }
-    searchRef.current = setTimeout(async () => {
+  // Debounced search with AbortController so a slow earlier response
+  // can't clobber a faster later one when the user types continuously.
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    const ctrl = new AbortController();
+    const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(`/api/people?q=${encodeURIComponent(q)}&limit=6&sort=recent`);
+        const res = await fetch(
+          `/api/people?q=${encodeURIComponent(query)}&limit=6&sort=recent`,
+          { signal: ctrl.signal },
+        );
         const data = await res.json() as { people?: PersonResult[] };
-        setResults(data.people ?? []);
+        if (!ctrl.signal.aborted) setResults(data.people ?? []);
+      } catch (err) {
+        if ((err as { name?: string }).name === "AbortError") return;
+        throw err;
       } finally {
-        setSearching(false);
+        if (!ctrl.signal.aborted) setSearching(false);
       }
     }, 200);
-  }, []);
-
-  useEffect(() => { search(query); }, [query, search]);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [query]);
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 50);
