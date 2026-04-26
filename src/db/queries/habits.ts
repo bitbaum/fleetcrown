@@ -196,7 +196,7 @@ export async function updateHabit(
   id: string,
   fields: { title?: string; frequency?: HabitFrequency },
 ): Promise<void> {
-  const set: Record<string, unknown> = {};
+  const set: Partial<typeof habits.$inferInsert> = {};
   if (fields.title)     set.title     = fields.title.trim();
   if (fields.frequency) set.frequency = fields.frequency;
   if (Object.keys(set).length === 0) return;
