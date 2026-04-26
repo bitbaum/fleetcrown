@@ -34,6 +34,17 @@ export const ACTION_STATUS = {
 } as const;
 export type ActionStatus = (typeof ACTION_STATUS)[keyof typeof ACTION_STATUS];
 
+/** Action type — what kind of action Ivy is proposing. */
+export const ACTION_TYPE = {
+  SEND_MESSAGE:      "send_message",
+  SEND_EMAIL:        "send_email",
+  CREATE_EVENT:      "create_event",
+  CREATE_COMMITMENT: "create_commitment",
+  FOLLOW_UP:         "follow_up",
+  OTHER:             "other",
+} as const;
+export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];
+
 /** Event status values — used in events API, queries/events.ts, queries/today.ts */
 export const EVENT_STATUS = {
   ACTIVE: "active",

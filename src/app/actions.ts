@@ -5,11 +5,15 @@ import { dismissAlert } from "@/db/queries/alerts";
 import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
-import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
 // Action types that imply a real-world interaction with a person occurred
-const INTERACTION_ACTION_TYPES = new Set(["send_message", "send_email", "follow_up"]);
+const INTERACTION_ACTION_TYPES = new Set<ActionType>([
+  ACTION_TYPE.SEND_MESSAGE,
+  ACTION_TYPE.SEND_EMAIL,
+  ACTION_TYPE.FOLLOW_UP,
+]);
 
 export async function handleApprove(id: string) {
   const [action] = await approveAction(id);

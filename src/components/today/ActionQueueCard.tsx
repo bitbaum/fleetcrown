@@ -2,14 +2,16 @@ import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users } from "lucide
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions } from "@/db/queries/actions";
 import { type ActionPayload } from "@/db/schema/actions";
+import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
 
-const TYPE_ICONS: Record<string, typeof Send> = {
-  send_message: MessageCircle,
-  send_email: Send,
-  create_event: Calendar,
-  create_commitment: CheckCircle,
-  follow_up: MessageCircle,
+const TYPE_ICONS: Record<ActionType, typeof Send> = {
+  [ACTION_TYPE.SEND_MESSAGE]:      MessageCircle,
+  [ACTION_TYPE.SEND_EMAIL]:        Send,
+  [ACTION_TYPE.CREATE_EVENT]:      Calendar,
+  [ACTION_TYPE.CREATE_COMMITMENT]: CheckCircle,
+  [ACTION_TYPE.FOLLOW_UP]:         MessageCircle,
+  [ACTION_TYPE.OTHER]:             Inbox,
 };
 
 type ActionGroup = {
@@ -26,7 +28,7 @@ function groupSimilarActions(
   const standalone: typeof actions = [];
 
   for (const a of actions) {
-    if (a.type === "send_message" && a.title.startsWith("Check in with ")) {
+    if (a.type === ACTION_TYPE.SEND_MESSAGE && a.title.startsWith("Check in with ")) {
       checkins.push(a);
     } else {
       standalone.push(a);
@@ -36,7 +38,7 @@ function groupSimilarActions(
   const groups: ActionGroup[] = [];
   if (checkins.length > 1) {
     groups.push({
-      type: "send_message",
+      type: ACTION_TYPE.SEND_MESSAGE,
       reasoning: "No interaction in 30+ days. Maintaining relationships matters.",
       actions: checkins.map((a) => ({
         id: a.id,
