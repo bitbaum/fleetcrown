@@ -12,7 +12,7 @@ type OpenclawResult = {
 };
 
 const AskIvyBody = z.object({
-  message: z.string().trim().min(1, "Missing message"),
+  message: z.string().trim().min(1, "message is required"),
 });
 
 export async function POST(req: NextRequest) {

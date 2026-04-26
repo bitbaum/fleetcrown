@@ -19,7 +19,7 @@ const CreateCronBody = z.object({
 });
 
 const PatchCronBody = z.object({
-  id: z.string().min(1, "Missing id"),
+  id: z.string().min(1, "id is required"),
   enabled: z.boolean().optional(),
   message: z.string().optional(),
   projectId: z.string().optional(),

@@ -6,7 +6,7 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 
 const PatchCommitmentBody = z.object({
-  description: z.string().trim().min(1, "Description cannot be empty").optional(),
+  description: z.string().trim().min(1, "description cannot be empty").optional(),
   dueDate: z.string().nullable().optional(),
   financialImpact: z.string().nullable().optional(),
 });
