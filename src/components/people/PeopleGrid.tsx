@@ -41,7 +41,7 @@ export function PeopleGrid({
   const skipInitialFetch = useRef(true);
 
   const search = useCallback(
-    async (q: string, s: SortMode, hf: RelationshipHealth[], newOffset = 0) => {
+    async (q: string, s: SortMode, hf: RelationshipHealth[], newOffset: number, signal?: AbortSignal) => {
       setLoading(true);
       try {
         const params = new URLSearchParams({
@@ -51,8 +51,9 @@ export function PeopleGrid({
           offset: String(newOffset),
         });
         if (hf.length > 0) params.set("health", hf.join(","));
-        const res = await fetch(`/api/people?${params}`);
+        const res = await fetch(`/api/people?${params}`, { signal });
         const data = await res.json();
+        if (signal?.aborted) return;
         if (newOffset === 0) {
           setPeople(data.people);
         } else {
@@ -60,8 +61,11 @@ export function PeopleGrid({
         }
         setTotal(data.total);
         setOffset(newOffset);
+      } catch (err) {
+        if ((err as { name?: string }).name === "AbortError") return;
+        throw err;
       } finally {
-        setLoading(false);
+        if (!signal?.aborted) setLoading(false);
       }
     },
     [],
@@ -72,8 +76,9 @@ export function PeopleGrid({
       skipInitialFetch.current = false;
       return;
     }
-    const timer = setTimeout(() => search(query, sort, healthFilter, 0), 300);
-    return () => clearTimeout(timer);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => search(query, sort, healthFilter, 0, ctrl.signal), 300);
+    return () => { clearTimeout(timer); ctrl.abort(); };
   }, [query, sort, healthFilter, search]);
 
   function toggleHealth(h: RelationshipHealth) {

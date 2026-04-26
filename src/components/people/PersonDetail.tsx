@@ -33,11 +33,16 @@ export function PersonDetail({
   const descEdit = useInlineEdit<string>("");
 
   useEffect(() => {
+    let cancelled = false;
     fetch(`/api/people/${personId}`)
       .then((res) => res.json())
-      .then((d: PersonDetailData) => { setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name); })
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+      .then((d: PersonDetailData) => {
+        if (cancelled) return;
+        setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name);
+      })
+      .catch(() => { if (!cancelled) setData(null); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [personId]);
 
   const commitName = () => {
