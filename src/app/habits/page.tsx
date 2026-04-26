@@ -3,14 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
-
-const FREQ_LABELS: Record<string, string> = {
-  [HABIT_FREQUENCY.DAILY]:    "daily",
-  [HABIT_FREQUENCY.WEEKDAYS]: "weekdays",
-  [HABIT_FREQUENCY.WEEKLY]:   "weekly",
-};
 
 export default async function HabitsPage() {
   const habits = await getAllHabitsWithHistory(HABIT_HISTORY_DAYS);
@@ -58,7 +51,7 @@ export default async function HabitsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-white/35">{FREQ_LABELS[h.frequency] ?? h.frequency}</span>
+                      <span className="text-xs text-white/35">{h.frequency}</span>
                       {h.streak >= 2 && (
                         <span className="flex items-center gap-0.5 text-xs text-amber-400/70">
                           <Flame className="h-3 w-3" />

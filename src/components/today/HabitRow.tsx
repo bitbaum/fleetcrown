@@ -6,12 +6,6 @@ import type { HabitWithStatus } from "@/db/queries/habits";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 
-const FREQ_LABELS: Record<string, string> = {
-  [HABIT_FREQUENCY.DAILY]:    "daily",
-  [HABIT_FREQUENCY.WEEKDAYS]: "weekdays",
-  [HABIT_FREQUENCY.WEEKLY]:   "weekly",
-};
-
 type EditDraft = { title: string; frequency: HabitFrequency };
 
 export function HabitRow({
@@ -71,7 +65,7 @@ export function HabitRow({
           className="bg-white/[0.04] border border-white/10 rounded px-1.5 py-0.5 text-xs text-white/70 focus:outline-none focus:border-white/25"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
-            <option key={f} value={f}>{FREQ_LABELS[f]}</option>
+            <option key={f} value={f}>{f}</option>
           ))}
         </select>
         <button
@@ -112,7 +106,7 @@ export function HabitRow({
           {habit.title}
         </span>
         {habit.frequency !== HABIT_FREQUENCY.DAILY && (
-          <span className="ml-1.5 text-xs text-white/25">{FREQ_LABELS[habit.frequency]}</span>
+          <span className="ml-1.5 text-xs text-white/25">{habit.frequency}</span>
         )}
       </div>
 

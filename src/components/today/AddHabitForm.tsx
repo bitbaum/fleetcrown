@@ -5,12 +5,6 @@ import { Check, Loader2, Plus, X } from "lucide-react";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
-const FREQ_LABELS: Record<string, string> = {
-  [HABIT_FREQUENCY.DAILY]:    "daily",
-  [HABIT_FREQUENCY.WEEKDAYS]: "weekdays",
-  [HABIT_FREQUENCY.WEEKLY]:   "weekly",
-};
-
 export function AddHabitForm({
   onCreated,
   initiallyOpen = false,
@@ -62,7 +56,7 @@ export function AddHabitForm({
           className={FIELD_INPUT_CLASS_TIGHT}
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
-            <option key={f} value={f}>{FREQ_LABELS[f]}</option>
+            <option key={f} value={f}>{f}</option>
           ))}
         </select>
         <button
