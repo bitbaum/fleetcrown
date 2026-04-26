@@ -1,25 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
+import { useCreateMutation } from "@/hooks/use-create-mutation";
+
+type CreateCommitmentBody = {
+  description: string;
+  dueDate?: string;
+  financialImpact?: string;
+};
 
 export function AddCommitmentButton() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [financialImpact, setFinancialImpact] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const { create, saving, error, setError } = useCreateMutation<CreateCommitmentBody>({
+    request: (body) => postJson("/api/commitments", body),
+    errorLabel: "commitment",
+  });
 
   const reset = () => {
     setDescription("");
     setDueDate("");
     setFinancialImpact("");
-    setError("");
+    setError(null);
   };
 
   const submit = async () => {
@@ -27,25 +34,12 @@ export function AddCommitmentButton() {
       setError("Description is required");
       return;
     }
-    setSaving(true);
-    setError("");
-    try {
-      const res = await postJson("/api/commitments", {
-        description,
-        dueDate: dueDate || undefined,
-        financialImpact: financialImpact || undefined,
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Failed to save");
-        return;
-      }
-      reset();
-      setOpen(false);
-      router.refresh();
-    } finally {
-      setSaving(false);
-    }
+    const ok = await create({
+      description,
+      dueDate: dueDate || undefined,
+      financialImpact: financialImpact || undefined,
+    });
+    if (ok) { reset(); setOpen(false); }
   };
 
   if (!open) {
