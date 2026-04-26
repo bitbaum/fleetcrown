@@ -42,12 +42,26 @@ export type CronJob = {
   projectName?: string;
 };
 
-/** Read all jobs from the cron file. Returns [] if the file doesn't exist or is malformed. */
+/** Top-level shape of CRON_FILE — `version` is preserved on writes. */
+export type CronFileData = { version: number; jobs: CronJob[] };
+
+/** Read the full cron file (jobs + version). Returns a default-shaped
+ *  object if the file is missing; throws if the file is unreadable or
+ *  malformed (callers that mutate-and-write need to know that, instead
+ *  of silently overwriting good data with an empty file).
+ */
+export function readCronFile(): CronFileData {
+  if (!existsSync(CRON_FILE)) return { version: 1, jobs: [] };
+  return JSON.parse(readFileSync(CRON_FILE, "utf-8"));
+}
+
+/** Read just the jobs list. Returns [] for any missing/malformed file —
+ *  this is the read-only path, used by display code that should never
+ *  crash on a bad file.
+ */
 export function readCronJobs(): CronJob[] {
-  if (!existsSync(CRON_FILE)) return [];
   try {
-    const data = JSON.parse(readFileSync(CRON_FILE, "utf-8"));
-    return data.jobs ?? [];
+    return readCronFile().jobs ?? [];
   } catch {
     return [];
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { writeFileSync } from "fs";
 import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
-import { type CronJob, readCronJobs } from "@/lib/crons";
+import { type CronJob, readCronJobs, readCronFile } from "@/lib/crons";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 // Re-export so existing imports from this path keep working
@@ -26,11 +26,6 @@ const PatchCronBody = z.object({
   projectName: z.string().optional(),
 });
 
-function readJobsFile(): { version: number; jobs: CronJob[] } {
-  if (!existsSync(CRON_FILE)) return { version: 1, jobs: [] };
-  return JSON.parse(readFileSync(CRON_FILE, "utf-8"));
-}
-
 export async function GET() {
   try {
     const jobs = readCronJobs();
@@ -46,7 +41,7 @@ export async function POST(req: NextRequest) {
   const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } = dataOrResp;
 
   try {
-    const data = readJobsFile();
+    const data = readCronFile();
     const newJob: CronJob = {
       id: crypto.randomUUID(),
       agentId: "main",
@@ -83,7 +78,7 @@ export async function PATCH(req: NextRequest) {
   const { id, enabled, message, projectId, projectName } = dataOrResp;
 
   try {
-    const data = readJobsFile();
+    const data = readCronFile();
     const job = data.jobs.find((j) => j.id === id);
     if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 });
 
