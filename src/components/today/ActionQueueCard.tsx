@@ -1,6 +1,7 @@
 import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions } from "@/db/queries/actions";
+import { type ActionPayload } from "@/db/schema/actions";
 import { ActionButtons } from "./ActionButtons";
 
 const TYPE_ICONS: Record<string, typeof Send> = {
@@ -14,7 +15,7 @@ const TYPE_ICONS: Record<string, typeof Send> = {
 type ActionGroup = {
   type: string;
   reasoning: string;
-  actions: Array<{ id: string; title: string; payload: Record<string, unknown> | null }>;
+  actions: Array<{ id: string; title: string; payload: ActionPayload | null }>;
 };
 
 function groupSimilarActions(
@@ -40,7 +41,7 @@ function groupSimilarActions(
       actions: checkins.map((a) => ({
         id: a.id,
         title: a.title.replace("Check in with ", ""),
-        payload: a.payload as Record<string, unknown> | null,
+        payload: a.payload,
       })),
     });
   } else {
@@ -109,7 +110,7 @@ export async function ActionQueueCard() {
           {/* Standalone actions */}
           {standalone.map((action) => {
             const Icon = TYPE_ICONS[action.type] ?? Inbox;
-            const payload = action.payload as Record<string, unknown> | null;
+            const payload = action.payload;
 
             return (
               <div

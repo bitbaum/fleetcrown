@@ -1,6 +1,26 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
+/** Shape of the JSONB `payload` column on actions — the union of fields
+ *  Ivy fills in for each action type. Exported so render code can pick
+ *  it up via the schema rather than re-declaring `Record<string,unknown>`. */
+export type ActionPayload = {
+  // For messages:
+  to?: string;          // recipient name or ID
+  channel?: string;     // whatsapp, telegram, email
+  body?: string;        // message text
+  subject?: string;     // email subject
+  // For events:
+  eventTitle?: string;
+  eventDate?: string;
+  eventLocation?: string;
+  // For commitments:
+  commitment?: string;
+  dueDate?: string;
+  // Generic:
+  [key: string]: unknown;
+};
+
 /**
  * Action Queue — Ivy's hands.
  *
@@ -30,22 +50,7 @@ export const actions = pgTable("actions", {
   description: text("description"),
 
   // The actual content (message body, event details, etc.)
-  payload: jsonb("payload").$type<{
-    // For messages:
-    to?: string;          // recipient name or ID
-    channel?: string;     // whatsapp, telegram, email
-    body?: string;        // message text
-    subject?: string;     // email subject
-    // For events:
-    eventTitle?: string;
-    eventDate?: string;
-    eventLocation?: string;
-    // For commitments:
-    commitment?: string;
-    dueDate?: string;
-    // Generic:
-    [key: string]: unknown;
-  }>(),
+  payload: jsonb("payload").$type<ActionPayload>(),
 
   // Why Ivy thinks this action is needed
   reasoning: text("reasoning"),
