@@ -18,8 +18,8 @@ const TYPE_COLOR: Record<EntityType, string> = {
   [ENTITY_TYPE.EVENT]:   "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
-function TypeBadge({ type }: { type: string }) {
-  const cls = TYPE_COLOR[type as EntityType] ?? "bg-white/5 text-white/30 border-white/10";
+function TypeBadge({ type }: { type: EntityType }) {
+  const cls = TYPE_COLOR[type] ?? "bg-white/5 text-white/30 border-white/10";
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${cls}`}>
       {type}

@@ -66,8 +66,7 @@ export default async function MoneyPage() {
           {allSubs.map((sub) => {
             const isOverdue = sub.nextDue && isPast(new Date(sub.nextDue));
             const verifyUrl = SUBSCRIPTION_META[sub.name]?.verifyUrl;
-            const statusKey = (sub.status ?? SUB_STATUS.ACTIVE) as SubStatus;
-            const statusStyle = STATUS_STYLE[statusKey] ?? STATUS_STYLE[SUB_STATUS.ACTIVE];
+            const statusStyle = STATUS_STYLE[sub.status ?? SUB_STATUS.ACTIVE] ?? STATUS_STYLE[SUB_STATUS.ACTIVE];
             const isCancelled = sub.status === SUB_STATUS.CANCELLED;
 
             return (

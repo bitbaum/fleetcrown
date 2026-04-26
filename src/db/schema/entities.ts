@@ -1,11 +1,12 @@
 import { pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { type EntityType } from "@/lib/constants/statuses";
 
 export const entities = pgTable("entities", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   name: text("name").notNull(),
-  type: text("type").notNull(),
+  type: text("type").$type<EntityType>().notNull(),
   externalId: text("external_id"),
   description: text("description"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),

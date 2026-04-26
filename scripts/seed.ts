@@ -5,6 +5,7 @@ import postgres from "postgres";
 import { readFileSync } from "fs";
 import { homedir } from "os";
 import * as schema from "../src/db/schema";
+import type { EntityType, SubStatus } from "../src/lib/constants/statuses";
 
 const HOME = homedir();
 const DATABASE_URL = process.env.DATABASE_URL!;
@@ -57,7 +58,8 @@ async function main() {
     const [inserted] = await db.insert(schema.entities).values({
       userId: GEORGE_USER_ID,
       name: e.name,
-      type: e.type,
+      // Sqlite is the legacy boundary; types are validated upstream of the import.
+      type: e.type as EntityType,
       source: "knowledge.sqlite",
       createdAt: safeDateRequired(e.created_at),
       updatedAt: safeDateRequired(e.updated_at),
@@ -154,7 +156,7 @@ async function main() {
       currency: s.currency ?? "CHF",
       frequency: s.frequency ?? "monthly",
       category: s.category,
-      status: s.status,
+      status: s.status as SubStatus,
       nextDue: safeDate(s.next_due),
       paymentMethod: s.payment_method,
       notes: s.notes,
