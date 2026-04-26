@@ -6,7 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function PersonCard({
   person,
@@ -142,7 +142,7 @@ export function PersonCard({
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
-                  className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 focus:outline-none focus:border-white/25"
+                  className={FIELD_INPUT_CLASS_TIGHT}
                 >
                   {CHANNEL_NAMES.map((ch) => (
                     <option key={ch} value={ch}>{ch}</option>

@@ -5,6 +5,7 @@ import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from 
 import type { ProjectData } from "./project-detail-types";
 import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./project-detail-types";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
@@ -211,7 +212,7 @@ export function OverviewTab({
               <select
                 value={actChannel}
                 onChange={(e) => setActChannel(e.target.value)}
-                className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+                className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
               >
                 {PROJECT_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -219,7 +220,7 @@ export function OverviewTab({
                 type="date"
                 value={actDate}
                 onChange={(e) => setActDate(e.target.value)}
-                className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+                className={FIELD_INPUT_CLASS_TIGHT}
               />
             </div>
             <input
@@ -228,7 +229,7 @@ export function OverviewTab({
               placeholder="What happened? (optional)"
               onKeyDown={(e) => { if (e.key === "Enter") handleLogActivity(); if (e.key === "Escape") setLoggingActivity(false); }}
               autoFocus
-              className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+              className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
             />
             <div className="flex gap-2">
               <button

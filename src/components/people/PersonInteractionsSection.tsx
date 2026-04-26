@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { Section } from "./PersonDetailHelpers";
 import type { Interaction } from "./person-detail-types";
 
@@ -67,14 +68,14 @@ export function InteractionsSection({
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
             >
               {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value as "inbound" | "outbound")}
-              className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              className={FIELD_INPUT_CLASS_TIGHT}
             >
               <option value="outbound">→ out</option>
               <option value="inbound">← in</option>
@@ -86,14 +87,14 @@ export function InteractionsSection({
             placeholder="Brief note (optional)"
             onKeyDown={(e) => { if (e.key === "Enter") handleLog(); if (e.key === "Escape") setLogging(false); }}
             autoFocus
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <div className="flex items-center gap-2">
             <input
               type="date"
               value={occurredAt}
               onChange={(e) => setOccurredAt(e.target.value)}
-              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
             />
             <button
               onClick={handleLog}

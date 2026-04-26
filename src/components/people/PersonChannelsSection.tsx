@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
 
@@ -74,7 +75,7 @@ export function ChannelsSection({
           <select
             value={channelType}
             onChange={(e) => setChannelType(e.target.value)}
-            className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25 shrink-0"
+            className={`${FIELD_INPUT_CLASS_TIGHT} shrink-0`}
           >
             {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -87,7 +88,7 @@ export function ChannelsSection({
               if (e.key === "Escape") { setAdding(false); setChannelValue(""); }
             }}
             autoFocus
-            className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+            className={`flex-1 min-w-0 ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <button
             onClick={saveChannel}

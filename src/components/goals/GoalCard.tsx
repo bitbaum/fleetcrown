@@ -9,6 +9,7 @@ import { DeleteGoalButton } from "./DeleteGoalButton";
 import { patchGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const [status, setStatus] = useState(goal.status ?? GOAL_STATUS.ACTIVE);
@@ -137,7 +138,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   autoFocus
                   rows={2}
                   placeholder="Add a description…"
-                  className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25 resize-none"
+                  className={`flex-1 resize-none ${FIELD_INPUT_CLASS_TIGHT}`}
                 />
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={savingDesc}

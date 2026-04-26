@@ -6,6 +6,7 @@ import { AlertCircle, Pencil, X, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
 import { DeleteCommitmentButton } from "./DeleteCommitmentButton";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 type CommitmentItemProps = {
   id: string;
@@ -76,14 +77,14 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 focus:outline-none focus:border-white/25"
+              className={FIELD_INPUT_CLASS_TIGHT}
             />
             <input
               value={impact}
               onChange={(e) => setImpact(e.target.value)}
               placeholder="Financial impact"
               onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
             />
           </div>
           {error && <p className="text-xs text-red-400">{error}</p>}

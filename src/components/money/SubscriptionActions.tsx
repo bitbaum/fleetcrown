@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
@@ -207,13 +208,13 @@ export function SubscriptionActions({
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             placeholder="Name"
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <input
             value={editVendor}
             onChange={(e) => setEditVendor(e.target.value)}
             placeholder="Vendor (optional)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <div className="flex gap-2">
             <input
@@ -223,12 +224,12 @@ export function SubscriptionActions({
               value={editAmount}
               onChange={(e) => setEditAmount(e.target.value)}
               placeholder="Amount"
-              className="w-24 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25"
+              className={`w-24 ${FIELD_INPUT_CLASS_TIGHT}`}
             />
             <select
               value={editCurrency}
               onChange={(e) => setEditCurrency(e.target.value)}
-              className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              className={FIELD_INPUT_CLASS_TIGHT}
             >
               {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -237,14 +238,14 @@ export function SubscriptionActions({
             value={editPaymentMethod}
             onChange={(e) => setEditPaymentMethod(e.target.value)}
             placeholder="Payment method (e.g. Visa ····1234)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <input
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") onSaveEdit(); if (e.key === "Escape") setEditing(false); }}
             placeholder="Notes (optional)"
-            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
           />
           <div className="flex items-center gap-2">
             <button

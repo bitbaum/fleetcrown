@@ -6,6 +6,7 @@ import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel } from "@/lib/dates";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function ProgressInput({
   goalId,
@@ -186,7 +187,7 @@ export function AddMilestoneInline({
         }}
         placeholder="Milestone title…"
         autoFocus
-        className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+        className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
       />
       <button
         onClick={save}

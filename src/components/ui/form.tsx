@@ -14,6 +14,13 @@ export const FIELD_INPUT_CLASS =
 export const FIELD_INPUT_CLASS_COMPACT =
   "bg-white/[0.04] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25";
 
+/**
+ * Tight variant for the smallest inline-edit slots (table cells, badges,
+ * progress inputs). One step tighter than COMPACT — px-2 py-1.
+ */
+export const FIELD_INPUT_CLASS_TIGHT =
+  "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25";
+
 /** Label + child wrapper used by every "New X" form field. */
 export function Field({
   label,

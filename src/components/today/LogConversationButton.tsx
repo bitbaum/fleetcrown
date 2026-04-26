@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
+import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 type PersonResult = { id: string; name: string };
 
@@ -109,7 +110,7 @@ export function LogConversationButton() {
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className="bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 focus:outline-none focus:border-white/25"
+              className={FIELD_INPUT_CLASS_TIGHT}
             >
               {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -119,7 +120,7 @@ export function LogConversationButton() {
               onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") reset(); }}
               placeholder="Brief note (optional)"
               autoFocus
-              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/25"
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
             />
           </div>
           <div className="flex gap-2">
