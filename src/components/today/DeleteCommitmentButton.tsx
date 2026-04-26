@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2 } from "lucide-react";
+import { deleteJson } from "@/lib/api/fetch";
 
 export function DeleteCommitmentButton({ commitmentId }: { commitmentId: string }) {
   const router = useRouter();
@@ -12,7 +13,7 @@ export function DeleteCommitmentButton({ commitmentId }: { commitmentId: string 
   async function onDelete() {
     setDeleting(true);
     try {
-      await fetch(`/api/commitments/${commitmentId}`, { method: "DELETE" });
+      await deleteJson(`/api/commitments/${commitmentId}`);
       router.refresh();
     } finally {
       setDeleting(false);

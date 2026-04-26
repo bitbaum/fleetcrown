@@ -8,7 +8,7 @@ import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
-import { patchJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson } from "@/lib/api/fetch";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
@@ -66,7 +66,7 @@ export function SubscriptionActions({
   const isOneTime = frequency === "one-time";
 
   async function onDeleteRecord() {
-    await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+    await deleteJson(`/api/subscriptions/${subId}`);
     setDeleted(true);
     router.refresh();
   }
@@ -186,7 +186,7 @@ export function SubscriptionActions({
       {/* Delete record permanently */}
       <DeleteButton
         onDelete={async () => {
-          await fetch(`/api/subscriptions/${subId}`, { method: "DELETE" });
+          await deleteJson(`/api/subscriptions/${subId}`);
           setDeleted(true);
           router.refresh();
         }}

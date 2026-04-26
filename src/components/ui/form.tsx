@@ -21,6 +21,13 @@ export const FIELD_INPUT_CLASS_COMPACT =
 export const FIELD_INPUT_CLASS_TIGHT =
   "bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/25";
 
+/**
+ * Standard primary submit button at the bottom of a modal form.
+ * Caller still places the button label / spinner JSX inside.
+ */
+export const PRIMARY_BUTTON_CLASS =
+  "w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2";
+
 /** Label + child wrapper used by every "New X" form field. */
 export function Field({
   label,

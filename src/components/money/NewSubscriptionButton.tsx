@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { Modal } from "@/components/ui/modal";
-import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { Field, FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
 
@@ -154,7 +154,7 @@ export function NewSubscriptionButton() {
           <button
             onClick={handleCreate}
             disabled={saving || !name.trim()}
-            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            className={PRIMARY_BUTTON_CLASS}
           >
             {saving ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Adding…</>

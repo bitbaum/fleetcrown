@@ -14,7 +14,7 @@ import {
   MaturityEditor,
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
-import { patchJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson } from "@/lib/api/fetch";
 
 export function ProjectDetailHeader({
   data,
@@ -112,7 +112,7 @@ export function ProjectDetailHeader({
           {data && (
             <DeleteButton
               onDelete={async () => {
-                await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+                await deleteJson(`/api/projects/${projectId}`);
                 onDeleteSuccess();
                 router.refresh();
               }}

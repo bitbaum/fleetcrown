@@ -13,7 +13,7 @@ import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { patchJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson } from "@/lib/api/fetch";
 
 export function PersonDetail({
   personId,
@@ -103,7 +103,7 @@ export function PersonDetail({
             {data && (
               <DeleteButton
                 onDelete={async () => {
-                  await fetch(`/api/people/${personId}`, { method: "DELETE" });
+                  await deleteJson(`/api/people/${personId}`);
                   onClose();
                   router.refresh();
                 }}

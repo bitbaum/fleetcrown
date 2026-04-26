@@ -6,7 +6,7 @@ import { createCronJob } from "@/lib/api/crons";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
-import { FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
 
 export function ScheduleModal({
   template,
@@ -101,7 +101,7 @@ export function ScheduleModal({
       <button
         onClick={handleCreate}
         disabled={saving || done || (template.scope === "project" && !projectId)}
-        className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        className={PRIMARY_BUTTON_CLASS}
       >
         {done ? (
           <><Check className="h-4 w-4" /> Scheduled!</>
