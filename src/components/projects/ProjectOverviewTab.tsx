@@ -7,6 +7,7 @@ import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./proj
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
+import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ export function OverviewTab({
   const [loggingActivity, setLoggingActivity] = useState(false);
   const [actChannel, setActChannel] = useState<string>("work-session");
   const [actSummary, setActSummary] = useState("");
-  const [actDate, setActDate] = useState(new Date().toISOString().split("T")[0]);
+  const [actDate, setActDate] = useState(toLocalDateStr(new Date()));
   const [actSaving, setActSaving] = useState(false);
 
   const handleLogActivity = async () => {
@@ -43,7 +44,7 @@ export function OverviewTab({
         setActivityList((prev) => [{ channel: actChannel, direction: "outbound", summary: actSummary || null, occurredAt: actDate }, ...prev]);
         setLoggingActivity(false);
         setActSummary("");
-        setActDate(new Date().toISOString().split("T")[0]);
+        setActDate(toLocalDateStr(new Date()));
       }
     } finally {
       setActSaving(false);

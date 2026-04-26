@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CheckCircle, Loader2, Plus, X } from "lucide-react";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
-import { deadlineLabel } from "@/lib/dates";
+import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
@@ -72,7 +72,7 @@ export function DateInput({
 }) {
   // Normalise to YYYY-MM-DD string for <input type="date">
   const toDateStr = (d: Date | null) =>
-    d ? new Date(d).toISOString().split("T")[0] : "";
+    d ? toLocalDateStr(new Date(d)) : "";
 
   const ie = useInlineEdit<string>(toDateStr(initial));
   const currentDate = initial ? new Date(initial) : null;

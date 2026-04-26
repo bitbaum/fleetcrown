@@ -6,6 +6,7 @@ import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
+import { toLocalDateStr } from "@/lib/dates";
 
 type PersonResult = { id: string; name: string };
 
@@ -67,7 +68,7 @@ export function LogConversationButton() {
         channel,
         direction: "outbound",
         summary: note || undefined,
-        occurredAt: new Date().toISOString().split("T")[0],
+        occurredAt: toLocalDateStr(new Date()),
       });
       setDone(true);
       setTimeout(() => { reset(); router.refresh(); }, 1200);

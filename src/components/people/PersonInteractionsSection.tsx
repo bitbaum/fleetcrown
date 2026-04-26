@@ -6,6 +6,7 @@ import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
+import { toLocalDateStr } from "@/lib/dates";
 import { Section } from "./PersonDetailHelpers";
 import type { Interaction } from "./person-detail-types";
 
@@ -22,7 +23,7 @@ export function InteractionsSection({
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
   const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
   const [summary, setSummary] = useState("");
-  const [occurredAt, setOccurredAt] = useState(new Date().toISOString().split("T")[0]);
+  const [occurredAt, setOccurredAt] = useState(toLocalDateStr(new Date()));
   const [saving, setSaving] = useState(false);
 
   const handleLog = async () => {
