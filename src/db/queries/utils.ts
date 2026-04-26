@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { attributes, entities, interactions, type Interaction } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { type InteractionDirection } from "@/lib/constants/statuses";
 
 export async function fetchAttributesByEntityIds(
@@ -48,7 +48,7 @@ export async function upsertEntityAttribute(
       entityId,
       key: key.toLowerCase().replace(/\s+/g, "_"),
       value,
-      source: "cockpit-ui",
+      source: SOURCE_COCKPIT_UI,
     })
     .onConflictDoUpdate({
       target: [attributes.entityId, attributes.key],

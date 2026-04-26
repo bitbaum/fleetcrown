@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         name,
         type: ENTITY_TYPE.PROJECT,
         description: description || null,
-        source: "cockpit-ui",
+        source: SOURCE_COCKPIT_UI,
       })
       .returning({ id: entities.id, name: entities.name });
 

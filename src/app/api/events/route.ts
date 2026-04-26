@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { events } from "@/db/schema";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { getEvents } from "@/db/queries/events";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       deadline: deadline ? new Date(deadline) : null,
       category: category?.toLowerCase() || null,
       status: EVENT_STATUS.ACTIVE,
-      source: "cockpit-ui",
+      source: SOURCE_COCKPIT_UI,
     })
     .returning();
 

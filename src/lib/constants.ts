@@ -14,6 +14,11 @@ export const DEFAULT_USER_EXTERNAL_ID = "george";
 export const TELEGRAM_CHAT_ID = "575014778";
 export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://127.0.0.1:18789";
 
+/** Source attribution for rows created via the Cockpit UI. Distinguishes
+ *  manual-from-app rows from the seeded knowledge.sqlite + contact-resolver
+ *  imports so future audit/cleanup queries can filter by origin. */
+export const SOURCE_COCKPIT_UI = "cockpit-ui";
+
 /** How many days of history the /habits page (and its heatmap) covers. */
 export const HABIT_HISTORY_DAYS = 30;
 

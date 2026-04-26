@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { commitments } from "@/db/schema";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { COMMITMENT_STATUS } from "@/lib/constants/statuses";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       dueDate: dueDate ? new Date(dueDate) : null,
       financialImpact: financialImpact || null,
       status: COMMITMENT_STATUS.ACTIVE,
-      source: "cockpit-ui",
+      source: SOURCE_COCKPIT_UI,
     })
     .returning();
 

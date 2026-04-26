@@ -25,7 +25,7 @@ export function OverviewTab({
   const [showEmpty, setShowEmpty] = useState(false);
   const [activityList, setActivityList] = useState(data.interactions);
   const [loggingActivity, setLoggingActivity] = useState(false);
-  const [actChannel, setActChannel] = useState<string>("work-session");
+  const [actChannel, setActChannel] = useState<string>(PROJECT_CHANNELS[0]);
   const [actSummary, setActSummary] = useState("");
   const [actDate, setActDate] = useState(toLocalDateStr(new Date()));
   const [actSaving, setActSaving] = useState(false);
