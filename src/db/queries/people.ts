@@ -1,5 +1,5 @@
 import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
-import { ENTITY_TYPE, type InteractionDirection } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, sql, desc, type SQL } from "drizzle-orm";
@@ -23,7 +23,10 @@ export type PersonWithAttributes = {
   health: RelationshipHealth;
 };
 
-export type SortMode = "recent" | "name" | "health";
+// Re-export so existing `import { SORT_MODE } from "@/db/queries/people"`
+// callers keep working — but the canonical home is lib/constants/statuses,
+// and client components should import from there.
+export { SORT_MODE, type SortMode };
 
 // Build HAVING clause for health filtering — all health values are enum literals, not user input
 // Thresholds sourced from HEALTH_ACTIVE_DAYS / HEALTH_FADING_DAYS in lib/utils.ts
@@ -41,7 +44,7 @@ export async function searchPeople(
   query: string,
   limit = 50,
   offset = 0,
-  sort: SortMode = "recent",
+  sort: SortMode = SORT_MODE.RECENT,
   health: RelationshipHealth[] = [],
 ): Promise<{ people: PersonWithAttributes[]; total: number }> {
   // User input — parameterized via sql tagged template (never string-interpolated)

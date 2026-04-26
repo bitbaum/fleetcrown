@@ -68,6 +68,17 @@ export const INTERACTION_DIRECTION = {
 } as const;
 export type InteractionDirection = (typeof INTERACTION_DIRECTION)[keyof typeof INTERACTION_DIRECTION];
 
+/** People-list sort modes — shared between the API parser, the UI cycle
+ *  button, and the queries layer. Lives here (not in queries/people.ts)
+ *  so client components can import the values without dragging in the
+ *  server-only db module. */
+export const SORT_MODE = {
+  RECENT: "recent",
+  NAME:   "name",
+  HEALTH: "health",
+} as const;
+export type SortMode = (typeof SORT_MODE)[keyof typeof SORT_MODE];
+
 /** Alert severity values */
 export const ALERT_SEVERITY = {
   INFO: "info",

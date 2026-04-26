@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchPeople, type SortMode } from "@/db/queries/people";
+import { searchPeople, SORT_MODE, type SortMode } from "@/db/queries/people";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
@@ -7,7 +7,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
-const VALID_SORTS: SortMode[] = ["recent", "name", "health"];
+const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);
 
 const CreatePersonBody = z.object({
   name: z.string().trim().min(1, "name is required"),
@@ -46,8 +46,8 @@ export async function GET(request: Request) {
   const q = (searchParams.get("q") ?? "").slice(0, 200);
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "50", 10) || 50, 1), 200);
   const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0);
-  const sortRaw = searchParams.get("sort") ?? "recent";
-  const sort: SortMode = VALID_SORTS.includes(sortRaw as SortMode) ? (sortRaw as SortMode) : "recent";
+  const sortRaw = searchParams.get("sort") ?? SORT_MODE.RECENT;
+  const sort: SortMode = VALID_SORTS.includes(sortRaw as SortMode) ? (sortRaw as SortMode) : SORT_MODE.RECENT;
 
   const healthRaw = searchParams.get("health") ?? "";
   const health = healthRaw

@@ -4,20 +4,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, ArrowUpDown } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
-import type { PersonWithAttributes } from "@/db/queries/people";
+import { type PersonWithAttributes } from "@/db/queries/people";
+import { SORT_MODE, type SortMode } from "@/lib/constants/statuses";
 import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/utils";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 
-type SortMode = "recent" | "name" | "health";
-
 const SORT_LABELS: Record<SortMode, string> = {
-  recent: "Recent",
-  name: "A–Z",
-  health: "Needs attention",
+  [SORT_MODE.RECENT]: "Recent",
+  [SORT_MODE.NAME]:   "A–Z",
+  [SORT_MODE.HEALTH]: "Needs attention",
 };
 
-const SORT_ORDER: SortMode[] = ["recent", "name", "health"];
+const SORT_ORDER: SortMode[] = Object.values(SORT_MODE);
 
 export function PeopleGrid({
   initialPeople,
@@ -31,7 +30,7 @@ export function PeopleGrid({
   const [people, setPeople] = useState(initialPeople);
   const [total, setTotal] = useState(initialTotal);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortMode>("recent");
+  const [sort, setSort] = useState<SortMode>(SORT_MODE.RECENT);
   const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>(initialHealthFilter);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

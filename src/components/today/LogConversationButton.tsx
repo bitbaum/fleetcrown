@@ -7,7 +7,7 @@ import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
-import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import { INTERACTION_DIRECTION, SORT_MODE } from "@/lib/constants/statuses";
 
 type PersonResult = { id: string; name: string };
 
@@ -42,7 +42,7 @@ export function LogConversationButton() {
       setSearching(true);
       try {
         const res = await fetch(
-          `/api/people?q=${encodeURIComponent(query)}&limit=6&sort=recent`,
+          `/api/people?q=${encodeURIComponent(query)}&limit=6&sort=${SORT_MODE.RECENT}`,
           { signal: ctrl.signal },
         );
         const data = await res.json() as { people?: PersonResult[] };

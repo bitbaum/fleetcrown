@@ -1,5 +1,5 @@
 import { PageLayout } from "@/components/ui/page-layout";
-import { searchPeople } from "@/db/queries/people";
+import { searchPeople, SORT_MODE } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
 import { NewPersonButton } from "@/components/people/NewPersonButton";
 import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/utils";
@@ -20,7 +20,7 @@ export default async function PeoplePage({
         )
     : [];
 
-  const { people, total } = await searchPeople("", 50, 0, "recent", initialHealthFilter);
+  const { people, total } = await searchPeople("", 50, 0, SORT_MODE.RECENT, initialHealthFilter);
 
   return (
     <PageLayout
