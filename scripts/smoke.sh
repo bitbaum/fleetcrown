@@ -59,10 +59,33 @@ for route in "${ROUTES[@]}"; do
   fi
 done
 
+# Dynamic [id] routes — discover an id from a list endpoint, then hit
+# the detail route. Catches regressions in the parameter handlers and
+# the per-row drizzle queries that the static-list smoke can't.
+# Optional: skipped silently if jq isn't installed or the list is empty.
+dynamic_total=0
+if command -v jq >/dev/null 2>&1; then
+  person_id=$(curl -s --max-time 5 "$BASE/api/people" 2>/dev/null \
+    | jq -r '.people[0].id // empty' 2>/dev/null)
+  if [ -n "$person_id" ]; then
+    dynamic_total=$((dynamic_total + 1))
+    code=$(curl -s -o /dev/null --max-time 30 -w "%{http_code}" "$BASE/api/people/$person_id" || echo "000")
+    route="/api/people/<id>"
+    if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
+      printf "  ok   %3s  %s\n" "$code" "$route"
+    else
+      printf "  FAIL %3s  %s\n" "$code" "$route"
+      failed=$((failed + 1))
+    fi
+  fi
+fi
+
+total=$((${#ROUTES[@]} + dynamic_total))
+
 echo ""
 if [ "$failed" -gt 0 ]; then
-  echo "✗ $failed/${#ROUTES[@]} route(s) failed"
+  echo "✗ $failed/$total route(s) failed"
   exit 1
 fi
 
-echo "✓ all ${#ROUTES[@]} routes ok"
+echo "✓ all $total routes ok"
