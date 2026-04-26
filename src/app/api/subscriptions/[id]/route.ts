@@ -36,7 +36,7 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchSubscriptionBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  const patch: Partial<typeof subscriptions.$inferInsert> = { updatedAt: new Date() };
   if (dataOrResp.nextDue !== undefined) patch.nextDue = dataOrResp.nextDue ? new Date(dataOrResp.nextDue) : null;
   if (dataOrResp.amount !== undefined) patch.amount = dataOrResp.amount;
   if (dataOrResp.notes !== undefined) patch.notes = dataOrResp.notes.trim() || null;

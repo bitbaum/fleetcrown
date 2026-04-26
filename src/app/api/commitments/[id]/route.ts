@@ -22,7 +22,7 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchCommitmentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  const patch: Partial<typeof commitments.$inferInsert> = { updatedAt: new Date() };
   if (dataOrResp.description !== undefined) patch.description = dataOrResp.description;
   if (dataOrResp.dueDate !== undefined) patch.dueDate = dataOrResp.dueDate ? new Date(dataOrResp.dueDate) : null;
   if (dataOrResp.financialImpact !== undefined) patch.financialImpact = dataOrResp.financialImpact?.trim() || null;

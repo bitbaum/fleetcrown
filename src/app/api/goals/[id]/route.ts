@@ -8,13 +8,19 @@ import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
 
 const STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
 
+const MilestoneSchema = z.object({
+  title: z.string(),
+  done: z.boolean(),
+  date: z.string().optional(),
+});
+
 const PatchGoalBody = z
   .object({
     title: z.string().trim().min(1, "title cannot be empty").optional(),
     description: z.string().optional(),
     progress: z.number().min(0).max(100).optional(),
     status: z.enum(STATUSES).optional(),
-    milestones: z.array(z.unknown()).optional(),
+    milestones: z.array(MilestoneSchema).optional(),
     targetDate: z.string().nullable().optional(),
     // Empty string is allowed (unlink); non-empty must be a UUID.
     entityId: z.string().refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" }).nullable().optional(),
@@ -32,7 +38,7 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchGoalBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  const patch: Partial<typeof goals.$inferInsert> = { updatedAt: new Date() };
   if (dataOrResp.title !== undefined) patch.title = dataOrResp.title;
   if (dataOrResp.description !== undefined) patch.description = dataOrResp.description;
   if (dataOrResp.progress !== undefined) patch.progress = dataOrResp.progress;

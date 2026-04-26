@@ -24,7 +24,7 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchPersonBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
   if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
   if (dataOrResp.description !== undefined) patch.description = dataOrResp.description.trim() || null;
 
