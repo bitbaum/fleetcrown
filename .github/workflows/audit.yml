@@ -1,0 +1,36 @@
+name: Audit
+
+# Surfaces new CVEs without waiting for someone to remember `npm audit`.
+# Runs every day at 07:13 UTC (off-the-hour to spread fleet load) and on
+# demand via the Actions tab. Failing means a high+ severity vuln has
+# entered the dep graph.
+
+on:
+  schedule:
+    - cron: "13 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # --audit-level=high → exit non-zero only when a high or critical
+      # vuln is present. Moderate transitive vulns flap too often (esbuild
+      # via drizzle-kit, postcss-via-next) to be a useful daily signal.
+      - name: npm audit (fail on high+)
+        run: npm audit --audit-level=high
+
+      # Always print the full report so the run page shows context even
+      # when the audit step itself passed.
+      - name: Full report (informational)
+        if: always()
+        run: npm audit || true
