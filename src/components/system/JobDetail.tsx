@@ -5,6 +5,7 @@ import { X, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
 import { Drawer } from "@/components/ui/modal";
+import { postJson } from "@/lib/api/fetch";
 
 function humanSchedule(expr: string, tz: string): string {
   const map: Record<string, string> = {
@@ -46,11 +47,7 @@ export function JobDetail({
     setRunning(true);
     setRunOutput(null);
     try {
-      const res = await fetch("/api/crons/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: job.id }),
-      });
+      const res = await postJson("/api/crons/run", { id: job.id });
       const data = await res.json();
       setRunOutput({ ok: data.ok, text: data.output ?? data.error ?? "Done" });
     } catch (e) {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 
 type PersonResult = { id: string; name: string };
 
@@ -56,10 +57,11 @@ export function LogConversationButton() {
     if (!selected) return;
     setSaving(true);
     try {
-      await fetch(`/api/people/${selected.id}/interactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, direction: "outbound", summary: note || undefined, occurredAt: new Date().toISOString().split("T")[0] }),
+      await postJson(`/api/people/${selected.id}/interactions`, {
+        channel,
+        direction: "outbound",
+        summary: note || undefined,
+        occurredAt: new Date().toISOString().split("T")[0],
       });
       setDone(true);
       setTimeout(() => { reset(); router.refresh(); }, 1200);

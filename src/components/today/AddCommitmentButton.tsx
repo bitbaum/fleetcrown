@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, Loader2 } from "lucide-react";
 import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 
 export function AddCommitmentButton() {
   const router = useRouter();
@@ -29,14 +30,10 @@ export function AddCommitmentButton() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/commitments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description,
-          dueDate: dueDate || undefined,
-          financialImpact: financialImpact || undefined,
-        }),
+      const res = await postJson("/api/commitments", {
+        description,
+        dueDate: dueDate || undefined,
+        financialImpact: financialImpact || undefined,
       });
       if (!res.ok) {
         const data = await res.json();

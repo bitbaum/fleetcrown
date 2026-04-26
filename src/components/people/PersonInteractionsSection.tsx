@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 import { Section } from "./PersonDetailHelpers";
 import type { Interaction } from "./person-detail-types";
 
@@ -26,10 +27,11 @@ export function InteractionsSection({
   const handleLog = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/people/${personId}/interactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, direction, summary: summary || undefined, occurredAt }),
+      const res = await postJson(`/api/people/${personId}/interactions`, {
+        channel,
+        direction,
+        summary: summary || undefined,
+        occurredAt,
       });
       const data = await res.json();
       if (data.ok) {

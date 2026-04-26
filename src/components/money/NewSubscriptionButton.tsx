@@ -6,6 +6,7 @@ import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQU
 import { Modal } from "@/components/ui/modal";
 import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
+import { postJson } from "@/lib/api/fetch";
 
 type CreateSubscriptionBody = {
   name: string;
@@ -27,12 +28,7 @@ export function NewSubscriptionButton() {
   const [nextDue, setNextDue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
   const { create, saving, error, setError } = useCreateMutation<CreateSubscriptionBody>({
-    request: (body) =>
-      fetch("/api/subscriptions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }),
+    request: (body) => postJson("/api/subscriptions", body),
     errorLabel: "subscription",
   });
 

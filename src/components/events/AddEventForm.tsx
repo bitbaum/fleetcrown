@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
 export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => void }) {
@@ -29,11 +30,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, type, url, deadline, category, description }),
-      });
+      const res = await postJson("/api/events", { name, type, url, deadline, category, description });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Failed to save"); return; }
       onCreated(data.event as EventRow);

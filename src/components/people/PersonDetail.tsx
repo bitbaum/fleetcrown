@@ -13,6 +13,7 @@ import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { patchJson } from "@/lib/api/fetch";
 
 export function PersonDetail({
   personId,
@@ -43,11 +44,7 @@ export function PersonDetail({
     const trimmed = nameEdit.draft.trim();
     if (!trimmed || trimmed === name) { nameEdit.cancel(); return; }
     nameEdit.commit(async () => {
-      const res = await fetch(`/api/people/${personId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: trimmed }),
-      });
+      const res = await patchJson(`/api/people/${personId}`, { name: trimmed });
       if ((await res.json()).ok) setName(trimmed);
     });
   };
@@ -55,11 +52,7 @@ export function PersonDetail({
   const commitDescription = () => {
     const trimmed = descEdit.draft.trim();
     descEdit.commit(async () => {
-      const res = await fetch(`/api/people/${personId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: trimmed }),
-      });
+      const res = await patchJson(`/api/people/${personId}`, { description: trimmed });
       if ((await res.json()).ok) setDescription(trimmed || null);
     });
   };

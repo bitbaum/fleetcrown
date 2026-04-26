@@ -14,6 +14,7 @@ import {
   MaturityEditor,
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
+import { patchJson } from "@/lib/api/fetch";
 
 export function ProjectDetailHeader({
   data,
@@ -53,20 +54,12 @@ export function ProjectDetailHeader({
   const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
 
   const saveName = async (next: string) => {
-    const res = await fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: next }),
-    });
+    const res = await patchJson(`/api/projects/${projectId}`, { name: next });
     if ((await res.json()).ok) setNameOverride(next);
   };
 
   const saveDescription = async (next: string) => {
-    const res = await fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: next }),
-    });
+    const res = await patchJson(`/api/projects/${projectId}`, { description: next });
     if ((await res.json()).ok) setDescOverride(next || null);
   };
 

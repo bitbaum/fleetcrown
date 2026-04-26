@@ -6,6 +6,7 @@ import type { ProjectData } from "./project-detail-types";
 import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./project-detail-types";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
@@ -30,10 +31,11 @@ export function OverviewTab({
   const handleLogActivity = async () => {
     setActSaving(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/interactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: actChannel, direction: "outbound", summary: actSummary || undefined, occurredAt: actDate }),
+      const res = await postJson(`/api/projects/${projectId}/interactions`, {
+        channel: actChannel,
+        direction: "outbound",
+        summary: actSummary || undefined,
+        occurredAt: actDate,
       });
       const json = await res.json();
       if (json.ok) {

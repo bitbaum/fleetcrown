@@ -7,6 +7,7 @@ import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 
 export function PersonCard({
   person,
@@ -34,10 +35,10 @@ export function PersonCard({
     setSaving(true);
     const occurredAt = new Date();
     try {
-      await fetch(`/api/people/${person.id}/interactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, direction, summary: summary.trim() || undefined }),
+      await postJson(`/api/people/${person.id}/interactions`, {
+        channel,
+        direction,
+        summary: summary.trim() || undefined,
       });
       setDone(true);
       setSummary("");

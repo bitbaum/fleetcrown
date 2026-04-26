@@ -1,4 +1,4 @@
-const JSON_HEADERS = { "Content-Type": "application/json" };
+import { postJson, patchJson } from "./fetch";
 
 export interface CreateCronJobBody {
   name: string;
@@ -18,18 +18,10 @@ export interface PatchCronJobBody {
 
 /** Create a new cron job via POST /api/crons */
 export function createCronJob(body: CreateCronJobBody) {
-  return fetch("/api/crons", {
-    method: "POST",
-    headers: JSON_HEADERS,
-    body: JSON.stringify(body),
-  });
+  return postJson("/api/crons", body);
 }
 
 /** Patch an existing cron job via PATCH /api/crons */
 export function patchCronJob(body: PatchCronJobBody) {
-  return fetch("/api/crons", {
-    method: "PATCH",
-    headers: JSON_HEADERS,
-    body: JSON.stringify(body),
-  });
+  return patchJson("/api/crons", body);
 }

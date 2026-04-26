@@ -7,6 +7,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
 import { DeleteCommitmentButton } from "./DeleteCommitmentButton";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { patchJson } from "@/lib/api/fetch";
 
 type CommitmentItemProps = {
   id: string;
@@ -31,14 +32,10 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/commitments/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: desc,
-          dueDate: date || null,
-          financialImpact: impact || null,
-        }),
+      const res = await patchJson(`/api/commitments/${id}`, {
+        description: desc,
+        dueDate: date || null,
+        financialImpact: impact || null,
       });
       if (!res.ok) {
         const data = await res.json() as { error?: string };

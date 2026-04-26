@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, Archive } from "lucide-react";
 import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel } from "@/lib/dates";
+import { patchJson, deleteJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
 export function EventCard({
@@ -24,11 +25,7 @@ export function EventCard({
 
   const handleArchive = async () => {
     setArchiving(true);
-    await fetch(`/api/events/${event.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "archived" }),
-    });
+    await patchJson(`/api/events/${event.id}`, { status: "archived" });
     onArchive?.(event.id);
   };
 
@@ -85,7 +82,7 @@ export function EventCard({
         )}
         <DeleteButton
           onDelete={async () => {
-            await fetch(`/api/events/${event.id}`, { method: "DELETE" });
+            await deleteJson(`/api/events/${event.id}`);
             onDelete(event.id);
           }}
           label=""

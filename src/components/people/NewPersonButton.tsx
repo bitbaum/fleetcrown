@@ -5,6 +5,7 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
+import { postJson } from "@/lib/api/fetch";
 
 export function NewPersonButton() {
   const [open, setOpen] = useState(false);
@@ -14,12 +15,7 @@ export function NewPersonButton() {
     name: string;
     description?: string;
   }>({
-    request: (body) =>
-      fetch("/api/people", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }),
+    request: (body) => postJson("/api/people", body),
     errorLabel: "person",
   });
 

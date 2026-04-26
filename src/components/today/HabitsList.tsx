@@ -6,6 +6,7 @@ import type { HabitWithStatus } from "@/db/queries/habits";
 import type { HabitFrequency } from "@/lib/constants/statuses";
 import { HabitRow } from "./HabitRow";
 import { AddHabitForm } from "./AddHabitForm";
+import { postJson, patchJson, deleteJson } from "@/lib/api/fetch";
 
 export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[] }) {
   const router = useRouter();
@@ -20,11 +21,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
       ),
     );
     try {
-      await fetch(`/api/habits/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ done: !currentDone }),
-      });
+      await patchJson(`/api/habits/${id}`, { done: !currentDone });
     } catch {
       setHabits((prev) =>
         prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)),
@@ -36,27 +33,19 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
     id: string,
     patch: { title: string; frequency: HabitFrequency },
   ): Promise<boolean> => {
-    const res = await fetch(`/api/habits/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
+    const res = await patchJson(`/api/habits/${id}`, patch);
     if (!res.ok) return false;
     setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, ...patch } : h)));
     return true;
   };
 
   const removeHabit = async (id: string) => {
-    await fetch(`/api/habits/${id}`, { method: "DELETE" });
+    await deleteJson(`/api/habits/${id}`);
     setHabits((prev) => prev.filter((h) => h.id !== id));
   };
 
   const addHabit = async (input: { title: string; frequency: HabitFrequency }): Promise<boolean> => {
-    const res = await fetch("/api/habits", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
+    const res = await postJson("/api/habits", input);
     const data = await res.json() as { habit?: { id: string; title: string } };
     if (!data.habit) return false;
     setHabits((prev) => [

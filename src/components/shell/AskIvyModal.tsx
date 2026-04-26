@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { PROMPT_TEMPLATES, CATEGORY_META } from "@/config/prompt-library";
 import { Modal } from "@/components/ui/modal";
+import { postJson } from "@/lib/api/fetch";
 
 type Message = {
   role: "user" | "ivy";
@@ -102,11 +103,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
     setMessages((prev) => [...prev, { role: "user", text }]);
     setLoading(true);
     try {
-      const res = await fetch("/api/ivy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-      });
+      const res = await postJson("/api/ivy", { message: text });
       const data = await res.json();
       if (!res.ok || data.error) {
         setMessages((prev) => [...prev, { role: "ivy", text: data.error ?? "Something went wrong.", error: true }]);

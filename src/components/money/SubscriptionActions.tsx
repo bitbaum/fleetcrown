@@ -8,6 +8,7 @@ import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { patchJson } from "@/lib/api/fetch";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
   const base = current ? new Date(current) : new Date();
@@ -80,11 +81,7 @@ export function SubscriptionActions({
     setMarkingPaid(true);
     try {
       const newDue = advanceDueDate(nextDue, frequency);
-      await fetch(`/api/subscriptions/${subId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nextDue: newDue }),
-      });
+      await patchJson(`/api/subscriptions/${subId}`, { nextDue: newDue });
       setPaid(true);
       router.refresh();
     } finally {
@@ -95,17 +92,13 @@ export function SubscriptionActions({
   async function onSaveEdit() {
     setSaving(true);
     try {
-      await fetch(`/api/subscriptions/${subId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName.trim() || undefined,
-          vendor: editVendor.trim() || null,
-          amount: editAmount ? parseFloat(editAmount) : null,
-          currency: editCurrency,
-          notes: editNotes || null,
-          paymentMethod: editPaymentMethod || null,
-        }),
+      await patchJson(`/api/subscriptions/${subId}`, {
+        name: editName.trim() || undefined,
+        vendor: editVendor.trim() || null,
+        amount: editAmount ? parseFloat(editAmount) : null,
+        currency: editCurrency,
+        notes: editNotes || null,
+        paymentMethod: editPaymentMethod || null,
       });
       setEditing(false);
       router.refresh();

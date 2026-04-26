@@ -7,6 +7,7 @@ import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { postJson } from "@/lib/api/fetch";
 
 export function RunModal({
   template,
@@ -40,11 +41,7 @@ export function RunModal({
     setResult(null);
     setError(null);
     try {
-      const res = await fetch("/api/ivy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: resolvedMessage }),
-      });
+      const res = await postJson("/api/ivy", { message: resolvedMessage });
       const data = await res.json();
       if (data.error) setError(data.error);
       else setResult(data.text ?? "");
