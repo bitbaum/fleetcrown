@@ -4,7 +4,7 @@ import { Card, CardHeader, StatCard } from "@/components/ui/card";
 import { SubscriptionActions } from "@/components/money/SubscriptionActions";
 import { NewSubscriptionButton } from "@/components/money/NewSubscriptionButton";
 import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
-import { SUB_STATUS } from "@/lib/constants/statuses";
+import { SUB_STATUS, type SubStatus } from "@/lib/constants/statuses";
 import {
   getActiveSubscriptions,
   getAllSubscriptions,
@@ -13,10 +13,10 @@ import {
 } from "@/db/queries/money";
 import { format, isPast } from "date-fns";
 
-const STATUS_STYLE: Record<string, string> = {
-  active: "text-green-400 bg-green-400/10",
-  unverified: "text-amber-400 bg-amber-400/10",
-  cancelled: "text-white/30 bg-white/5",
+const STATUS_STYLE: Record<SubStatus, string> = {
+  [SUB_STATUS.ACTIVE]:     "text-green-400 bg-green-400/10",
+  [SUB_STATUS.UNVERIFIED]: "text-amber-400 bg-amber-400/10",
+  [SUB_STATUS.CANCELLED]:  "text-white/30 bg-white/5",
 };
 
 export default async function MoneyPage() {
@@ -66,7 +66,8 @@ export default async function MoneyPage() {
           {allSubs.map((sub) => {
             const isOverdue = sub.nextDue && isPast(new Date(sub.nextDue));
             const verifyUrl = SUBSCRIPTION_META[sub.name]?.verifyUrl;
-            const statusStyle = STATUS_STYLE[sub.status ?? SUB_STATUS.ACTIVE] ?? STATUS_STYLE.active;
+            const statusKey = (sub.status ?? SUB_STATUS.ACTIVE) as SubStatus;
+            const statusStyle = STATUS_STYLE[statusKey] ?? STATUS_STYLE[SUB_STATUS.ACTIVE];
             const isCancelled = sub.status === SUB_STATUS.CANCELLED;
 
             return (

@@ -4,11 +4,11 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, type EntityType } from "@/lib/constants/statuses";
 
-// Keys derived from ENTITY_TYPE so that adding a new entity type to the
-// SSOT enum doesn't silently fall back to the unknown-type colour here.
-const TYPE_COLOR: Record<string, string> = {
+// Record<EntityType,…> makes TS fail the build if a new ENTITY_TYPE
+// member is added without a colour here — no silent fallback.
+const TYPE_COLOR: Record<EntityType, string> = {
   [ENTITY_TYPE.PERSON]:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
   [ENTITY_TYPE.PROJECT]: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
   [ENTITY_TYPE.GOAL]:    "bg-violet-500/10 text-violet-400 border-violet-500/20",
@@ -19,7 +19,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 function TypeBadge({ type }: { type: string }) {
-  const cls = TYPE_COLOR[type] ?? "bg-white/5 text-white/30 border-white/10";
+  const cls = TYPE_COLOR[type as EntityType] ?? "bg-white/5 text-white/30 border-white/10";
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${cls}`}>
       {type}
