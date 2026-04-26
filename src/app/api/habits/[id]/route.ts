@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleHabitCompletion, deleteHabit, updateHabit } from "@/db/queries/habits";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 
-const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [string, ...string[]];
+const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [HabitFrequency, ...HabitFrequency[]];
 
 const PatchHabitBody = z
   .object({

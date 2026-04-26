@@ -194,7 +194,7 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
 
 export async function updateHabit(
   id: string,
-  fields: { title?: string; frequency?: string },
+  fields: { title?: string; frequency?: HabitFrequency },
 ): Promise<void> {
   const set: Record<string, unknown> = {};
   if (fields.title)     set.title     = fields.title.trim();

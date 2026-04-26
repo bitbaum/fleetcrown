@@ -4,9 +4,9 @@ import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
 
-const STATUSES = Object.values(GOAL_STATUS) as [string, ...string[]];
+const STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
 
 const PatchGoalBody = z
   .object({
