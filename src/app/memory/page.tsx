@@ -4,7 +4,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ENTITY_TYPE, type EntityType } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
 
 // Record<EntityType,…> makes TS fail the build if a new ENTITY_TYPE
 // member is added without a colour here — no silent fallback.
@@ -90,8 +90,8 @@ export default async function MemoryPage() {
             <div className="space-y-2">
               {activity.map((ix) => (
                 <div key={ix.id} className="flex items-start gap-2.5">
-                  <span className={`text-xs mt-0.5 shrink-0 ${ix.direction === "inbound" ? "text-blue-400/60" : "text-emerald-400/60"}`}>
-                    {ix.direction === "inbound" ? "←" : "→"}
+                  <span className={`text-xs mt-0.5 shrink-0 ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-blue-400/60" : "text-emerald-400/60"}`}>
+                    {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">

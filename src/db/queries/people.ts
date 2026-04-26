@@ -1,5 +1,5 @@
 import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, type InteractionDirection } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, sql, desc, type SQL } from "drizzle-orm";
@@ -174,7 +174,7 @@ export async function createInteraction({
 }: {
   entityId: string;
   channel: string;
-  direction: "inbound" | "outbound";
+  direction: InteractionDirection;
   summary?: string | null;
   occurredAt?: Date;
 }) {

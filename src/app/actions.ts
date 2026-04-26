@@ -5,6 +5,7 @@ import { dismissAlert } from "@/db/queries/alerts";
 import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
+import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
 // Action types that imply a real-world interaction with a person occurred
@@ -19,7 +20,7 @@ export async function handleApprove(id: string) {
     await createInteraction({
       entityId: action.entityId,
       channel,
-      direction: "outbound",
+      direction: INTERACTION_DIRECTION.OUTBOUND,
       summary: action.title,
     });
   }

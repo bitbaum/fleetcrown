@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { attributes, entities, interactions, type Interaction } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+import { type InteractionDirection } from "@/lib/constants/statuses";
 
 export async function fetchAttributesByEntityIds(
   entityIds: string[],
@@ -73,7 +74,7 @@ export async function deleteEntityAttribute(entityId: string, key: string): Prom
  *  Returns the created row, or null if the entity wasn't found (caller should 404). */
 export async function createEntityInteraction(
   entityId: string,
-  body: { channel: string; direction: "inbound" | "outbound"; summary?: string; occurredAt?: string },
+  body: { channel: string; direction: InteractionDirection; summary?: string; occurredAt?: string },
 ): Promise<Interaction | null> {
   const [owner] = await db
     .select({ id: entities.id })

@@ -1,13 +1,14 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
+import { type InteractionDirection } from "@/lib/constants/statuses";
 
 export const interactions = pgTable("interactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   entityId: uuid("entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
   channel: text("channel").notNull(),
-  direction: text("direction").notNull(),
+  direction: text("direction").$type<InteractionDirection>().notNull(),
   summary: text("summary"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),

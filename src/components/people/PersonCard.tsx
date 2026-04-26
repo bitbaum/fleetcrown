@@ -8,6 +8,7 @@ import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
+import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 
 export function PersonCard({
   person,
@@ -25,7 +26,7 @@ export function PersonCard({
 
   const [logOpen, setLogOpen] = useState(false);
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
-  const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
+  const [direction, setDirection] = useState<InteractionDirection>(INTERACTION_DIRECTION.OUTBOUND);
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -151,7 +152,7 @@ export function PersonCard({
                 </select>
                 {/* Direction toggle */}
                 <div className="flex rounded overflow-hidden border border-white/10 text-xs">
-                  {(["outbound", "inbound"] as const).map((d) => (
+                  {([INTERACTION_DIRECTION.OUTBOUND, INTERACTION_DIRECTION.INBOUND] as const).map((d) => (
                     <button
                       key={d}
                       onClick={(e) => { e.stopPropagation(); setDirection(d); }}
@@ -161,7 +162,7 @@ export function PersonCard({
                           : "text-white/30 hover:text-white/50"
                       }`}
                     >
-                      {d === "outbound" ? "out" : "in"}
+                      {d === INTERACTION_DIRECTION.OUTBOUND ? "out" : "in"}
                     </button>
                   ))}
                 </div>

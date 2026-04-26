@@ -8,7 +8,7 @@ import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
@@ -35,13 +35,13 @@ export function OverviewTab({
     try {
       const res = await postJson(`/api/projects/${projectId}/interactions`, {
         channel: actChannel,
-        direction: "outbound",
+        direction: INTERACTION_DIRECTION.OUTBOUND,
         summary: actSummary || undefined,
         occurredAt: actDate,
       });
       const json = await res.json();
       if (json.ok) {
-        setActivityList((prev) => [{ channel: actChannel, direction: "outbound", summary: actSummary || null, occurredAt: actDate }, ...prev]);
+        setActivityList((prev) => [{ channel: actChannel, direction: INTERACTION_DIRECTION.OUTBOUND, summary: actSummary || null, occurredAt: actDate }, ...prev]);
         setLoggingActivity(false);
         setActSummary("");
         setActDate(toLocalDateStr(new Date()));

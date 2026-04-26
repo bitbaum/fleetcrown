@@ -7,6 +7,7 @@ import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
+import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { Section } from "./PersonDetailHelpers";
 import type { Interaction } from "./person-detail-types";
 
@@ -21,7 +22,7 @@ export function InteractionsSection({
 }) {
   const [logging, setLogging] = useState(false);
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
-  const [direction, setDirection] = useState<"inbound" | "outbound">("outbound");
+  const [direction, setDirection] = useState<InteractionDirection>(INTERACTION_DIRECTION.OUTBOUND);
   const [summary, setSummary] = useState("");
   const [occurredAt, setOccurredAt] = useState(toLocalDateStr(new Date()));
   const [saving, setSaving] = useState(false);
@@ -54,8 +55,8 @@ export function InteractionsSection({
       {list.map((ix, i) => (
         <div key={i} className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${ix.direction === "inbound" ? "text-blue-400/60" : "text-emerald-400/60"}`}>
-              {ix.direction === "inbound" ? "←" : "→"}
+            <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-blue-400/60" : "text-emerald-400/60"}`}>
+              {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
             </span>
             <span className="text-white/50">{ix.channel}</span>
             {ix.summary && <span className="text-xs text-white/30 truncate max-w-[140px]">{ix.summary}</span>}
@@ -78,11 +79,11 @@ export function InteractionsSection({
             </select>
             <select
               value={direction}
-              onChange={(e) => setDirection(e.target.value as "inbound" | "outbound")}
+              onChange={(e) => setDirection(e.target.value as InteractionDirection)}
               className={FIELD_INPUT_CLASS_TIGHT}
             >
-              <option value="outbound">→ out</option>
-              <option value="inbound">← in</option>
+              <option value={INTERACTION_DIRECTION.OUTBOUND}>→ out</option>
+              <option value={INTERACTION_DIRECTION.INBOUND}>← in</option>
             </select>
           </div>
           <input

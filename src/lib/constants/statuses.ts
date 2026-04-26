@@ -61,6 +61,13 @@ export const HABIT_FREQUENCY = {
 } as const;
 export type HabitFrequency = (typeof HABIT_FREQUENCY)[keyof typeof HABIT_FREQUENCY];
 
+/** Interaction direction — inbound = they reached out, outbound = we did */
+export const INTERACTION_DIRECTION = {
+  INBOUND: "inbound",
+  OUTBOUND: "outbound",
+} as const;
+export type InteractionDirection = (typeof INTERACTION_DIRECTION)[keyof typeof INTERACTION_DIRECTION];
+
 /** Alert severity values */
 export const ALERT_SEVERITY = {
   INFO: "info",

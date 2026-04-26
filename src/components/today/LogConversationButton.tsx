@@ -7,6 +7,7 @@ import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
+import { INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 
 type PersonResult = { id: string; name: string };
 
@@ -66,7 +67,7 @@ export function LogConversationButton() {
     try {
       await postJson(`/api/people/${selected.id}/interactions`, {
         channel,
-        direction: "outbound",
+        direction: INTERACTION_DIRECTION.OUTBOUND,
         summary: note || undefined,
         occurredAt: toLocalDateStr(new Date()),
       });
