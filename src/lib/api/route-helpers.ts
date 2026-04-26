@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z, type ZodSchema } from "zod";
 import { isValidUuid } from "@/lib/utils";
 
 /**
@@ -21,3 +22,44 @@ export async function readIdParam(
   }
   return id;
 }
+
+/**
+ * Read + validate a JSON request body against a zod schema. Caller gets
+ * back either the parsed (and typed) data, or a 400 NextResponse with a
+ * single human-readable error message — same callsite shape as
+ * readIdParam so handlers branch the same way.
+ *
+ *   const dataOrResp = await readJsonBody(req, CreateEventBody);
+ *   if (dataOrResp instanceof NextResponse) return dataOrResp;
+ *   const { name, type } = dataOrResp;
+ */
+export async function readJsonBody<T>(
+  req: NextRequest,
+  schema: ZodSchema<T>,
+): Promise<T | NextResponse> {
+  const raw = await req.json().catch(() => null) as unknown;
+  if (raw === null) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    return NextResponse.json({ error: friendlyZodMessage(parsed.error) }, { status: 400 });
+  }
+  return parsed.data;
+}
+
+/** Pick a human-readable message from the first zod issue, with a
+ *  special case for "field is missing" (zod's default there reads as
+ *  "Invalid input: expected string, received undefined"). */
+function friendlyZodMessage(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Invalid input";
+  if (issue.code === "invalid_type" && issue.path.length > 0) {
+    return `${issue.path.join(".")} is required`;
+  }
+  return issue.message;
+}
+
+// Re-export zod so route files don't have to import from "zod" + this
+// helper file — keeps the validation surface in one place.
+export { z };
