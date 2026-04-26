@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { createEntityInteraction } from "@/db/queries/utils";
-import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
-
-const DIRECTIONS = Object.values(INTERACTION_DIRECTION) as [InteractionDirection, ...InteractionDirection[]];
-
-const CreateInteractionBody = z.object({
-  channel: z.string().trim().min(1, "channel is required"),
-  direction: z.enum(DIRECTIONS, { error: "direction must be inbound or outbound" }),
-  summary: z.string().trim().optional(),
-  occurredAt: z.string().optional(),
-});
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { createEntityInteraction, CreateInteractionBody } from "@/db/queries/utils";
 
 export async function POST(
   req: NextRequest,

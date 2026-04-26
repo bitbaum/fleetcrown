@@ -2,7 +2,17 @@ import { db } from "@/db";
 import { attributes, entities, interactions, type Interaction } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
-import { type InteractionDirection } from "@/lib/constants/statuses";
+import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
+import { z } from "zod";
+
+/** Shared validator for the two `/api/<entity>/[id]/interactions` POST routes. */
+const DIRECTIONS = Object.values(INTERACTION_DIRECTION) as [InteractionDirection, ...InteractionDirection[]];
+export const CreateInteractionBody = z.object({
+  channel: z.string().trim().min(1, "channel is required"),
+  direction: z.enum(DIRECTIONS, { error: "direction must be inbound or outbound" }),
+  summary: z.string().trim().optional(),
+  occurredAt: z.string().optional(),
+});
 
 export async function fetchAttributesByEntityIds(
   entityIds: string[],
