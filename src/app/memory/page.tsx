@@ -2,6 +2,8 @@ import { Brain, Database, Link2, Clock, Zap } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
+import { compactRelativeDate } from "@/lib/dates";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const TYPE_COLOR: Record<string, string> = {
   person:      "bg-blue-500/10 text-blue-400 border-blue-500/20",
@@ -20,18 +22,6 @@ function TypeBadge({ type }: { type: string }) {
       {type}
     </span>
   );
-}
-
-function relativeDate(date: Date | string): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
-  if (diffDays === 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-  return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
 export default async function MemoryPage() {
@@ -67,7 +57,7 @@ export default async function MemoryPage() {
         <Card>
           <CardHeader icon={Zap} title="Recently Added" />
           {recent.length === 0 ? (
-            <p className="text-sm text-white/30">Nothing added yet</p>
+            <EmptyState>Nothing added yet</EmptyState>
           ) : (
             <div className="space-y-2">
               {recent.map((e) => (
@@ -80,7 +70,7 @@ export default async function MemoryPage() {
                     )}
                   </div>
                   <span className="text-[10px] text-white/25 shrink-0 pt-0.5">
-                    {relativeDate(e.createdAt)}
+                    {compactRelativeDate(e.createdAt)}
                   </span>
                 </div>
               ))}
@@ -92,7 +82,7 @@ export default async function MemoryPage() {
         <Card>
           <CardHeader icon={Clock} title="Recent Activity" />
           {activity.length === 0 ? (
-            <p className="text-sm text-white/30">No interactions logged yet</p>
+            <EmptyState>No interactions logged yet</EmptyState>
           ) : (
             <div className="space-y-2">
               {activity.map((ix) => (
@@ -110,7 +100,7 @@ export default async function MemoryPage() {
                     )}
                   </div>
                   <span className="text-[10px] text-white/25 shrink-0 pt-0.5">
-                    {relativeDate(ix.occurredAt)}
+                    {compactRelativeDate(ix.occurredAt)}
                   </span>
                 </div>
               ))}
