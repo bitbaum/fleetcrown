@@ -4,7 +4,6 @@ import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
-import { isValidUuid } from "@/lib/utils";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 
@@ -91,8 +90,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json(null, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const [project] = await db
     .select()

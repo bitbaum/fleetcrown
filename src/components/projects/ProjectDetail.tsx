@@ -32,7 +32,10 @@ export function ProjectDetail({
     // react-hooks/set-state-in-effect cascading-render warning.
     Promise.resolve().then(() => { if (!cancelled) setRefetching(true); });
     fetch(`/api/projects/${projectId}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((d: ProjectData) => {
         if (cancelled) return;
         setData(d);

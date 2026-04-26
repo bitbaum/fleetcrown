@@ -35,7 +35,10 @@ export function PersonDetail({
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/people/${personId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((d: PersonDetailData) => {
         if (cancelled) return;
         setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name);

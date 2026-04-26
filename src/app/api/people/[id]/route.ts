@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPersonDetail } from "@/db/queries/people";
-import { isValidUuid } from "@/lib/utils";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
@@ -67,17 +66,11 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
 
-  if (!isValidUuid(id)) {
-    return NextResponse.json(null, { status: 400 });
-  }
-
-  const person = await getPersonDetail(id);
-
-  if (!person) {
-    return NextResponse.json(null, { status: 404 });
-  }
+  const person = await getPersonDetail(idOrResp);
+  if (!person) return NextResponse.json(null, { status: 404 });
 
   return NextResponse.json(person);
 }
