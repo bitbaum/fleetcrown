@@ -25,5 +25,7 @@ export const events = pgTable("events", {
   index("idx_events_date_start").on(table.dateStart),
 ]);
 
-export type Event = typeof events.$inferSelect;
-export type NewEvent = typeof events.$inferInsert;
+// Avoids clashing with the DOM `Event` global, and matches the
+// public name already used everywhere this type is consumed.
+export type EventRow = typeof events.$inferSelect;
+export type NewEventRow = typeof events.$inferInsert;

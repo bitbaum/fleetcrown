@@ -1,10 +1,12 @@
 import { DEFAULT_USER_ID, EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { events } from "@/db/schema";
+import { events, type EventRow } from "@/db/schema";
 import { eq, asc, and, lte, isNotNull, sql } from "drizzle-orm";
 
-export type EventRow = typeof events.$inferSelect;
+// Re-export so existing `import type { EventRow } from "@/db/queries/events"`
+// callers keep working without a sweep.
+export type { EventRow };
 
 export async function getEventsDueSoon(days = EVENTS_DUE_SOON_DAYS): Promise<EventRow[]> {
   const soon = new Date();
