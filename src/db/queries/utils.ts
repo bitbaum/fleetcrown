@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { attributes, entities } from "@/db/schema";
+import { attributes, entities, interactions, type Interaction } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 
@@ -67,4 +67,30 @@ export async function deleteEntityAttribute(entityId: string, key: string): Prom
         eq(attributes.userId, DEFAULT_USER_ID),
       ),
     );
+}
+
+/** Verifies the entity belongs to the user before recording an interaction.
+ *  Returns the created row, or null if the entity wasn't found (caller should 404). */
+export async function createEntityInteraction(
+  entityId: string,
+  body: { channel: string; direction: "inbound" | "outbound"; summary?: string; occurredAt?: string },
+): Promise<Interaction | null> {
+  const [owner] = await db
+    .select({ id: entities.id })
+    .from(entities)
+    .where(and(eq(entities.id, entityId), eq(entities.userId, DEFAULT_USER_ID)));
+  if (!owner) return null;
+
+  const [created] = await db
+    .insert(interactions)
+    .values({
+      userId: DEFAULT_USER_ID,
+      entityId,
+      channel: body.channel,
+      direction: body.direction,
+      summary: body.summary || null,
+      occurredAt: body.occurredAt ? new Date(body.occurredAt) : new Date(),
+    })
+    .returning();
+  return created;
 }
