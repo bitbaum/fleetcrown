@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-progress runs of the same workflow on the same branch — saves
+# minutes when commits land in quick succession.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint src/
+
+      - name: Build
+        run: npm run build
+        env:
+          # Fail fast if a real DB connection is needed during build —
+          # the build should be DB-agnostic. If a route imports server
+          # code that hits the DB at module load, the build will surface it.
+          DATABASE_URL: postgresql://ci:ci@localhost/ci_unused
