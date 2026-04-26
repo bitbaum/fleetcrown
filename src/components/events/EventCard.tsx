@@ -7,6 +7,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel } from "@/lib/dates";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
+import { EVENT_STATUS } from "@/lib/constants/statuses";
 
 export function EventCard({
   event,
@@ -25,7 +26,7 @@ export function EventCard({
 
   const handleArchive = async () => {
     setArchiving(true);
-    await patchJson(`/api/events/${event.id}`, { status: "archived" });
+    await patchJson(`/api/events/${event.id}`, { status: EVENT_STATUS.ARCHIVED });
     onArchive?.(event.id);
   };
 

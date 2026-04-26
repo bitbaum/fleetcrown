@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { EventCard } from "./EventCard";
 import { AddEventForm } from "./AddEventForm";
 import type { EventRow } from "@/db/queries/events";
+import { EVENT_STATUS } from "@/lib/constants/statuses";
 
 export function EventsGrid({
   initialEvents,
@@ -41,7 +42,7 @@ export function EventsGrid({
   const handleArchive = (id: string) => {
     const event = items.find((e) => e.id === id);
     setItems((prev) => prev.filter((e) => e.id !== id));
-    if (event) setArchived((prev) => [{ ...event, status: "archived" }, ...prev]);
+    if (event) setArchived((prev) => [{ ...event, status: EVENT_STATUS.ARCHIVED }, ...prev]);
   };
 
   const handleCreated = (event: EventRow) => {
