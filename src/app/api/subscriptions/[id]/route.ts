@@ -4,11 +4,11 @@ import { subscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
+import { VALID_FREQUENCIES, VALID_CURRENCIES, type SubscriptionCurrency, type SubscriptionFrequency } from "@/config/subscriptions";
 import { SUB_STATUS, type SubStatus } from "@/lib/constants/statuses";
 
-const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [string, ...string[]];
-const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [string, ...string[]];
+const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [SubscriptionCurrency, ...SubscriptionCurrency[]];
+const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [SubscriptionFrequency, ...SubscriptionFrequency[]];
 const STATUSES = Object.values(SUB_STATUS) as [SubStatus, ...SubStatus[]];
 
 const PatchSubscriptionBody = z

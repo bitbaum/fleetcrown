@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { VALID_FREQUENCIES, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
+import { VALID_FREQUENCIES, VALID_CURRENCIES, FREQUENCY, type SubscriptionCurrency, type SubscriptionFrequency } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
-const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [string, ...string[]];
-const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [string, ...string[]];
+const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [SubscriptionCurrency, ...SubscriptionCurrency[]];
+const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [SubscriptionFrequency, ...SubscriptionFrequency[]];
 
 const CreateSubscriptionBody = z.object({
   name: z.string().trim().min(1, "name is required"),

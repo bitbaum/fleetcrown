@@ -63,7 +63,7 @@ export function SubscriptionActions({
 
   const meta = SUBSCRIPTION_META[subName];
   const isCancelled = status === SUB_STATUS.CANCELLED;
-  const isOneTime = frequency === "one-time";
+  const isOneTime = frequency === FREQUENCY.ONE_TIME;
 
   async function onDeleteRecord() {
     await deleteJson(`/api/subscriptions/${subId}`);

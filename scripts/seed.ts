@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 import { homedir } from "os";
 import * as schema from "../src/db/schema";
 import type { EntityType, SubStatus, CommitmentStatus, EventStatus } from "../src/lib/constants/statuses";
+import type { SubscriptionCurrency, SubscriptionFrequency } from "../src/config/subscriptions";
 
 const HOME = homedir();
 const DATABASE_URL = process.env.DATABASE_URL!;
@@ -153,8 +154,8 @@ async function main() {
       name: s.name,
       vendor: s.vendor,
       amount: s.amount,
-      currency: s.currency ?? "CHF",
-      frequency: s.frequency ?? "monthly",
+      currency: (s.currency ?? "CHF") as SubscriptionCurrency,
+      frequency: (s.frequency ?? "monthly") as SubscriptionFrequency,
       category: s.category,
       status: s.status as SubStatus,
       nextDue: safeDate(s.next_due),

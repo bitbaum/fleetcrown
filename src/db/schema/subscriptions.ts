@@ -2,6 +2,7 @@ import { pgTable, uuid, text, timestamp, real, index } from "drizzle-orm/pg-core
 import { users } from "./users";
 import { entities } from "./entities";
 import { SUB_STATUS, type SubStatus } from "@/lib/constants/statuses";
+import { FREQUENCY, type SubscriptionFrequency, type SubscriptionCurrency } from "@/config/subscriptions";
 
 export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -10,8 +11,8 @@ export const subscriptions = pgTable("subscriptions", {
   name: text("name").notNull(),
   vendor: text("vendor"),
   amount: real("amount"),
-  currency: text("currency").default("CHF"),
-  frequency: text("frequency").default("monthly"),
+  currency: text("currency").$type<SubscriptionCurrency>().default("CHF"),
+  frequency: text("frequency").$type<SubscriptionFrequency>().default(FREQUENCY.MONTHLY),
   category: text("category"),
   status: text("status").$type<SubStatus>().default(SUB_STATUS.ACTIVE),
   nextDue: timestamp("next_due", { withTimezone: true }),
