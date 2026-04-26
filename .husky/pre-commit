@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+# Run quick correctness checks on every commit. Smoke (which needs a
+# running dev server) is intentionally NOT here — run `npm run smoke`
+# manually before opening a PR.
+
+set -e
+
+echo "→ tsc --noEmit"
+npx tsc --noEmit
+
+echo "→ eslint src/"
+npx eslint src/

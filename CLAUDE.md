@@ -86,6 +86,9 @@ npx drizzle-kit push # Push schema changes to Postgres
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
 ```
 
+A husky pre-commit hook runs `tsc --noEmit` and `eslint src/` automatically.
+Smoke is opt-in (needs the dev server running) — run before opening a PR.
+
 ## Views
 
 | View | Route | Status |
