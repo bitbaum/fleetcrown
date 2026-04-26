@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Smoke test: hit every page route and fail if any returns non-2xx/3xx.
+# Smoke test: hit every page route and fail if any returns non-2xx/3xx
+# OR if the body contains the error-boundary marker (a 200 response that
+# renders src/app/error.tsx still indicates a broken server component).
 # Usage: npm run smoke   (defaults to http://localhost:3000)
 #        BASE=https://cockpit.example.com npm run smoke
 #
@@ -10,6 +12,11 @@
 set -u
 
 BASE="${BASE:-http://localhost:3000}"
+
+# String that src/app/error.tsx renders when a Server Component throws.
+# Page responses still carry HTTP 200 in that case, so status-only
+# checking misses the regression — body grep is the correction.
+ERROR_BOUNDARY_MARKER="Something went wrong"
 
 # Page routes — match config/navigation.ts NAV_ITEMS plus the / redirect.
 PAGE_ROUTES=(
@@ -39,8 +46,6 @@ API_ROUTES=(
   "/api/system"
 )
 
-ROUTES=("${PAGE_ROUTES[@]}" "${API_ROUTES[@]}")
-
 # 1) Probe the base URL once so we fail fast with a clear message
 # instead of dribbling out one curl error per route.
 if ! curl -s -o /dev/null --max-time 5 "$BASE/"; then
@@ -49,14 +54,43 @@ if ! curl -s -o /dev/null --max-time 5 "$BASE/"; then
 fi
 
 failed=0
-for route in "${ROUTES[@]}"; do
-  code=$(curl -s -o /dev/null --max-time 30 -w "%{http_code}" "$BASE$route" || echo "000")
-  if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
-    printf "  ok   %3s  %s\n" "$code" "$route"
-  else
-    printf "  FAIL %3s  %s\n" "$code" "$route"
+
+# check_route URL [check_body=1|0]
+# Pages get the body-content check (catches error.tsx renders); APIs
+# don't, since the error-boundary string would only appear in HTML.
+check_route() {
+  local route="$1"
+  local check_body="${2:-0}"
+  local label="${3:-$route}"
+
+  local body_file
+  body_file=$(mktemp)
+  local code
+  code=$(curl -s -o "$body_file" --max-time 30 -w "%{http_code}" "$BASE$route" || echo "000")
+
+  if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+    printf "  FAIL %3s  %s\n" "$code" "$label"
+    rm -f "$body_file"
     failed=$((failed + 1))
+    return
   fi
+
+  if [ "$check_body" = "1" ] && grep -q "$ERROR_BOUNDARY_MARKER" "$body_file"; then
+    printf "  FAIL %3s  %s  (error boundary rendered)\n" "$code" "$label"
+    rm -f "$body_file"
+    failed=$((failed + 1))
+    return
+  fi
+
+  printf "  ok   %3s  %s\n" "$code" "$label"
+  rm -f "$body_file"
+}
+
+for route in "${PAGE_ROUTES[@]}"; do
+  check_route "$route" 1
+done
+for route in "${API_ROUTES[@]}"; do
+  check_route "$route" 0
 done
 
 # Dynamic [id] routes — discover an id from a list endpoint, then hit
@@ -69,18 +103,11 @@ if command -v jq >/dev/null 2>&1; then
     | jq -r '.people[0].id // empty' 2>/dev/null)
   if [ -n "$person_id" ]; then
     dynamic_total=$((dynamic_total + 1))
-    code=$(curl -s -o /dev/null --max-time 30 -w "%{http_code}" "$BASE/api/people/$person_id" || echo "000")
-    route="/api/people/<id>"
-    if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
-      printf "  ok   %3s  %s\n" "$code" "$route"
-    else
-      printf "  FAIL %3s  %s\n" "$code" "$route"
-      failed=$((failed + 1))
-    fi
+    check_route "/api/people/$person_id" 0 "/api/people/<id>"
   fi
 fi
 
-total=$((${#ROUTES[@]} + dynamic_total))
+total=$((${#PAGE_ROUTES[@]} + ${#API_ROUTES[@]} + dynamic_total))
 
 echo ""
 if [ "$failed" -gt 0 ]; then
