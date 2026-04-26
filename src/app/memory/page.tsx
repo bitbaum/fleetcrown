@@ -4,15 +4,18 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
+// Keys derived from ENTITY_TYPE so that adding a new entity type to the
+// SSOT enum doesn't silently fall back to the unknown-type colour here.
 const TYPE_COLOR: Record<string, string> = {
-  person:      "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  project:     "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  goal:        "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  company:     "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  tool:        "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  concept:     "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  event:       "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  [ENTITY_TYPE.PERSON]:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  [ENTITY_TYPE.PROJECT]: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  [ENTITY_TYPE.GOAL]:    "bg-violet-500/10 text-violet-400 border-violet-500/20",
+  [ENTITY_TYPE.COMPANY]: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  [ENTITY_TYPE.TOOL]:    "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  [ENTITY_TYPE.CONCEPT]: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+  [ENTITY_TYPE.EVENT]:   "bg-orange-500/10 text-orange-400 border-orange-500/20",
 };
 
 function TypeBadge({ type }: { type: string }) {
