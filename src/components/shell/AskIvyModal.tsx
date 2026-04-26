@@ -21,25 +21,44 @@ const QUICK_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "
 
 // ─── Mic hook ─────────────────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySpeechRecognition = any;
+// Web Speech API isn't in lib.dom.d.ts (the spec is non-standard and
+// vendor-prefixed). Declare just the surface we touch — keeps callers
+// strongly typed and lets us drop the no-explicit-any escape hatches.
+type SpeechResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
+interface SpeechRecognitionInstance {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: (e: SpeechResultEvent) => void;
+  onend: () => void;
+  onerror: () => void;
+  start(): void;
+  stop(): void;
+}
+type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
+
+function getSpeechRecognitionCtor(): SpeechRecognitionCtor | undefined {
+  if (typeof window === "undefined") return undefined;
+  const w = window as Window & {
+    SpeechRecognition?: SpeechRecognitionCtor;
+    webkitSpeechRecognition?: SpeechRecognitionCtor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
+}
 
 function useSpeechRecognition(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(false);
-  const recognitionRef = useRef<AnySpeechRecognition>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    const SR = getSpeechRecognitionCtor();
     if (!SR) return;
     const recognition = new SR();
     recognition.lang = "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.onresult = (e: AnySpeechRecognition) => {
+    recognition.onresult = (e) => {
       const transcript: string = e.results[0]?.[0]?.transcript ?? "";
       if (transcript) onResult(transcript);
     };
