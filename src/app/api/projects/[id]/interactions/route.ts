@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { interactions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { isValidUuid } from "@/lib/utils";
+import { readIdParam } from "@/lib/api/route-helpers";
 
 const VALID_DIRECTIONS = ["inbound", "outbound"] as const;
 
@@ -10,8 +10,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const body = await req.json();
   const { channel, direction, summary, occurredAt } = body as {

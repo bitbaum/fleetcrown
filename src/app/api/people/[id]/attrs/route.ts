@@ -3,14 +3,15 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, attributes } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { isValidUuid } from "@/lib/utils";
+import { readIdParam } from "@/lib/api/route-helpers";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const [person] = await db
     .select({ id: entities.id })
@@ -45,8 +46,9 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const { key } = await req.json();
   if (!key) return NextResponse.json({ error: "key required" }, { status: 400 });

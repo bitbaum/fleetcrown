@@ -5,6 +5,7 @@ import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { isValidUuid } from "@/lib/utils";
+import { readIdParam } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 
 function getLinkedJobs(projectId: string, projectName: string) {
@@ -34,8 +35,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const body = await req.json();
   const patch: Record<string, unknown> = {};
@@ -75,8 +77,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const [deleted] = await db
     .delete(entities)

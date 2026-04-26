@@ -3,14 +3,15 @@ import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { isValidUuid } from "@/lib/utils";
+import { readIdParam } from "@/lib/api/route-helpers";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const body = await req.json() as { description?: string; dueDate?: string | null; financialImpact?: string | null };
   if (body.description !== undefined && !body.description.trim()) {
@@ -35,8 +36,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   await db
     .delete(commitments)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleHabitCompletion, deleteHabit, updateHabit } from "@/db/queries/habits";
-import { isValidUuid } from "@/lib/utils";
+import { readIdParam } from "@/lib/api/route-helpers";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 
 const VALID_FREQUENCIES = Object.values(HABIT_FREQUENCY);
@@ -9,8 +9,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const id = idOrResp;
 
   const body = await req.json() as { done?: boolean; title?: string; frequency?: string };
 
@@ -42,9 +43,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  if (!isValidUuid(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
 
-  await deleteHabit(id);
+  await deleteHabit(idOrResp);
   return NextResponse.json({ ok: true });
 }
