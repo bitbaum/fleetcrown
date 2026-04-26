@@ -7,6 +7,7 @@ import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./proj
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
@@ -172,14 +173,14 @@ export function OverviewTab({
       )}
 
       {/* People relations */}
-      {data.relations.filter((r) => r.targetType === "person").length > 0 && (
+      {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
         <div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">
             <Users className="h-3 w-3" /> People
           </div>
           <div className="flex flex-wrap gap-1.5">
             {data.relations
-              .filter((r) => r.targetType === "person")
+              .filter((r) => r.targetType === ENTITY_TYPE.PERSON)
               .map((r, i) => (
                 <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-white/55">
                   {r.targetName}

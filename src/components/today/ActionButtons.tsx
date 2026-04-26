@@ -5,6 +5,8 @@ import { handleApprove, handleReject } from "@/app/actions";
 import { useState } from "react";
 import { ACTION_STATUS } from "@/lib/constants/statuses";
 
+type DoneStatus = typeof ACTION_STATUS.APPROVED | typeof ACTION_STATUS.REJECTED;
+
 export function ActionButtons({
   actionId,
   compact,
@@ -13,7 +15,7 @@ export function ActionButtons({
   compact?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<"approved" | "rejected" | null>(null);
+  const [done, setDone] = useState<DoneStatus | null>(null);
 
   async function onApprove() {
     setBusy(true);
