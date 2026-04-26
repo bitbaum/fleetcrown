@@ -14,9 +14,7 @@ import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const [status, setStatus] = useState(goal.status ?? GOAL_STATUS.ACTIVE);
   const [progress, setProgress] = useState(goal.progress ?? 0);
-  const [milestones, setMilestones] = useState<Milestone[]>(
-    (goal.milestones as Milestone[]) ?? [],
-  );
+  const [milestones, setMilestones] = useState<Milestone[]>(goal.milestones ?? []);
   const [targetDate, setTargetDate] = useState<Date | null>(goal.targetDate);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);

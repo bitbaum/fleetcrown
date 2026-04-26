@@ -1,7 +1,7 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { goals, entities } from "@/db/schema";
+import { goals, entities, type Milestone } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 export type GoalWithChildren = {
@@ -12,7 +12,7 @@ export type GoalWithChildren = {
   progress: number | null;
   targetDate: Date | null;
   completedAt: Date | null;
-  milestones: Array<{ title: string; done: boolean; date?: string }> | null;
+  milestones: Milestone[] | null;
   entityId: string | null;
   entityName: string | null;
   children: GoalWithChildren[];

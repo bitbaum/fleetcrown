@@ -2,6 +2,11 @@ import { pgTable, uuid, text, timestamp, integer, jsonb, index } from "drizzle-o
 import { users } from "./users";
 import { entities } from "./entities";
 
+/** Shape of one entry in the JSONB `milestones` column on goals.
+ *  Defined first so the schema's `.$type<>` and any consumers
+ *  share the same source of truth. */
+export type Milestone = { title: string; done: boolean; date?: string };
+
 export const goals = pgTable("goals", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
@@ -13,7 +18,7 @@ export const goals = pgTable("goals", {
   progress: integer("progress").default(0),
   targetDate: timestamp("target_date", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
-  milestones: jsonb("milestones").$type<Array<{ title: string; done: boolean; date?: string }>>(),
+  milestones: jsonb("milestones").$type<Milestone[]>(),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -26,4 +31,3 @@ export const goals = pgTable("goals", {
 
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
-export type Milestone = { title: string; done: boolean; date?: string };
