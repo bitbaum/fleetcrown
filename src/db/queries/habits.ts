@@ -2,13 +2,13 @@ import { DEFAULT_USER_ID, HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { toLocalDateStr } from "@/lib/dates";
 
 const todayDate = () => toLocalDateStr(new Date());
 
 /** Whether a habit should appear today given its frequency */
-function isDueToday(frequency: string): boolean {
+function isDueToday(frequency: HabitFrequency): boolean {
   const dow = new Date().getDay(); // 0=Sun, 6=Sat
   if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
   if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1; // Mondays
@@ -18,7 +18,7 @@ function isDueToday(frequency: string): boolean {
 export type HabitWithStatus = {
   id: string;
   title: string;
-  frequency: string;
+  frequency: HabitFrequency;
   sortOrder: number;
   doneToday: boolean;
   /** 7-day streak count */
@@ -98,7 +98,7 @@ export async function toggleHabitCompletion(habitId: string, done: boolean): Pro
   }
 }
 
-export async function createHabit(title: string, frequency: string): Promise<{ id: string; title: string }> {
+export async function createHabit(title: string, frequency: HabitFrequency): Promise<{ id: string; title: string }> {
   const [maxOrder] = await db
     .select({ max: sql<number>`coalesce(max(${habits.sortOrder}), -1)` })
     .from(habits)
@@ -125,7 +125,7 @@ export async function deleteHabit(id: string): Promise<void> {
 export type HabitWithHistory = {
   id: string;
   title: string;
-  frequency: string;
+  frequency: HabitFrequency;
   sortOrder: number;
   active: boolean;
   createdAt: Date;

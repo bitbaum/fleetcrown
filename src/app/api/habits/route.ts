@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHabit, getTodayHabits } from "@/db/queries/habits";
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
-const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [string, ...string[]];
+const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [HabitFrequency, ...HabitFrequency[]];
 
 const CreateHabitBody = z.object({
   title: z.string().trim().min(1, "title is required"),

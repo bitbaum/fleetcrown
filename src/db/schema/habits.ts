@@ -1,12 +1,12 @@
 import { pgTable, uuid, text, date, boolean, integer, timestamp, index, unique } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 
 export const habits = pgTable("habits", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
-  /** daily | weekdays | weekly */
-  frequency: text("frequency").notNull().default("daily"),
+  frequency: text("frequency").$type<HabitFrequency>().notNull().default(HABIT_FREQUENCY.DAILY),
   /** Display order (lower = first) */
   sortOrder: integer("sort_order").notNull().default(0),
   active: boolean("active").notNull().default(true),

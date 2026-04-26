@@ -26,7 +26,7 @@ export function HabitRow({
 
   const startEdit = () => ie.start({
     title: habit.title,
-    frequency: habit.frequency as HabitFrequency,
+    frequency: habit.frequency,
   });
 
   const commitEdit = () => {
