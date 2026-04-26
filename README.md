@@ -56,12 +56,23 @@ created. Set `DATABASE_URL` in `.env.local`:
 echo 'DATABASE_URL=postgresql://localhost/cockpit' >> .env.local
 ```
 
-Push the schema and seed:
+Push the schema:
 
 ```bash
 DATABASE_URL=$YOUR_URL npx drizzle-kit push
-DATABASE_URL=$YOUR_URL npx tsx scripts/seed.ts   # imports knowledge.sqlite + contacts
 ```
+
+The seed script (`scripts/seed.ts`) reads from George's personal
+knowledge graph at `~/.openclaw/knowledge.sqlite` and contacts at
+`~/.openclaw/workspace/data/contact-resolver.json`. **A fresh clone
+will not have those files** — the schema-only setup gives you an
+empty database that the UI handles gracefully (every page has an
+empty state). To populate with real data, either:
+
+- Provide the two `~/.openclaw/*` files yourself, then run
+  `DATABASE_URL=$YOUR_URL npx tsx scripts/seed.ts`, or
+- Add rows directly via the Cockpit UI (every "New X" button works
+  against an empty database).
 
 ## Dev Commands
 
