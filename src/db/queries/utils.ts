@@ -1,6 +1,7 @@
 import { db } from "@/db";
-import { attributes } from "@/db/schema";
-import { sql } from "drizzle-orm";
+import { attributes, entities } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
+import { DEFAULT_USER_ID } from "@/lib/constants";
 
 export async function fetchAttributesByEntityIds(
   entityIds: string[],
@@ -24,4 +25,46 @@ export async function fetchAttributesByEntityIds(
     grouped.set(attr.entityId, existing);
   }
   return grouped;
+}
+
+/** Verifies the entity belongs to the user before upserting an attribute.
+ *  Returns false if the entity wasn't found (caller should 404). */
+export async function upsertEntityAttribute(
+  entityId: string,
+  key: string,
+  value: string,
+): Promise<boolean> {
+  const [owner] = await db
+    .select({ id: entities.id })
+    .from(entities)
+    .where(and(eq(entities.id, entityId), eq(entities.userId, DEFAULT_USER_ID)));
+  if (!owner) return false;
+
+  await db
+    .insert(attributes)
+    .values({
+      userId: DEFAULT_USER_ID,
+      entityId,
+      key: key.toLowerCase().replace(/\s+/g, "_"),
+      value,
+      source: "cockpit-ui",
+    })
+    .onConflictDoUpdate({
+      target: [attributes.entityId, attributes.key],
+      set: { value, updatedAt: new Date() },
+    });
+  return true;
+}
+
+/** Deletes the (entity, key) attribute for the current user. */
+export async function deleteEntityAttribute(entityId: string, key: string): Promise<void> {
+  await db
+    .delete(attributes)
+    .where(
+      and(
+        eq(attributes.entityId, entityId),
+        eq(attributes.key, key),
+        eq(attributes.userId, DEFAULT_USER_ID),
+      ),
+    );
 }
