@@ -14,6 +14,15 @@ export const CreateInteractionBody = z.object({
   occurredAt: z.string().optional(),
 });
 
+/** Shared validators for the two `/api/<entity>/[id]/attrs` routes. */
+export const SetAttrBody = z.object({
+  key: z.string().trim().min(1, "key and value required"),
+  value: z.string().trim().min(1, "key and value required"),
+});
+export const DeleteAttrBody = z.object({
+  key: z.string().trim().min(1, "key required"),
+});
+
 export async function fetchAttributesByEntityIds(
   entityIds: string[],
 ): Promise<Map<string, Record<string, string>>> {

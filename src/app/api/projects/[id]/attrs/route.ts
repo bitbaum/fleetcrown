@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { upsertEntityAttribute, deleteEntityAttribute } from "@/db/queries/utils";
-
-const SetAttrBody = z.object({
-  key: z.string().trim().min(1, "key and value required"),
-  value: z.string().trim().min(1, "key and value required"),
-});
-
-const DeleteAttrBody = z.object({
-  key: z.string().trim().min(1, "key required"),
-});
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import {
+  upsertEntityAttribute,
+  deleteEntityAttribute,
+  SetAttrBody,
+  DeleteAttrBody,
+} from "@/db/queries/utils";
 
 export async function POST(
   req: NextRequest,
