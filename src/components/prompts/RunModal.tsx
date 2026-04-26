@@ -6,6 +6,7 @@ import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
+import { FIELD_INPUT_CLASS } from "@/components/ui/form";
 
 export function RunModal({
   template,
@@ -98,7 +99,7 @@ export function RunModal({
                   setProjectId(e.target.value);
                   setProjectName(p?.name ?? "");
                 }}
-                className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-white/25"
+                className={FIELD_INPUT_CLASS}
               >
                 <option value="">— Select project —</option>
                 {projects.map((p) => (
