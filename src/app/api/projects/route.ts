@@ -3,23 +3,26 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+
+const CreateProjectBody = z.object({
+  name: z.string().trim().min(1, "name is required"),
+  description: z.string().trim().optional(),
+});
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { name, description } = body as { name?: string; description?: string };
-
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "name is required" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, CreateProjectBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { name, description } = dataOrResp;
 
   try {
     const [created] = await db
       .insert(entities)
       .values({
         userId: DEFAULT_USER_ID,
-        name: name.trim(),
+        name,
         type: ENTITY_TYPE.PROJECT,
-        description: description?.trim() || null,
+        description: description || null,
         source: "cockpit-ui",
       })
       .returning({ id: entities.id, name: entities.name });

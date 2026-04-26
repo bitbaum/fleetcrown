@@ -3,9 +3,23 @@ import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { isValidUuid } from "@/lib/utils";
-import { readIdParam } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+
+const STATUSES = Object.values(GOAL_STATUS) as [string, ...string[]];
+
+const PatchGoalBody = z
+  .object({
+    title: z.string().trim().min(1, "title cannot be empty").optional(),
+    description: z.string().optional(),
+    progress: z.number().min(0).max(100).optional(),
+    status: z.enum(STATUSES).optional(),
+    milestones: z.array(z.unknown()).optional(),
+    targetDate: z.string().nullable().optional(),
+    // Empty string is allowed (unlink); non-empty must be a UUID.
+    entityId: z.string().refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" }).nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 export async function PATCH(
   req: NextRequest,
@@ -15,42 +29,21 @@ export async function PATCH(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const body = await req.json();
-  const allowed = ["progress", "status", "milestones", "title", "description", "targetDate", "entityId"] as const;
-  const patch: Record<string, unknown> = {};
+  const dataOrResp = await readJsonBody(req, PatchGoalBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  for (const key of allowed) {
-    if (key in body) patch[key] = body[key];
-  }
-
-  // Coerce targetDate string → Date (or null to clear)
-  if ("targetDate" in patch) {
-    patch.targetDate = patch.targetDate ? new Date(patch.targetDate as string) : null;
-  }
-  // Coerce entityId "" → null (unlink)
-  if ("entityId" in patch) {
-    const eid = patch.entityId as string | null;
-    if (eid && !isValidUuid(eid)) return NextResponse.json({ error: "Invalid entityId" }, { status: 400 });
-    patch.entityId = eid || null;
-  }
-  // Reject empty title
-  if ("title" in patch && !(patch.title as string)?.trim()) {
-    return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
-  }
-  if ("title" in patch) patch.title = (patch.title as string).trim();
-
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-  }
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (dataOrResp.title !== undefined) patch.title = dataOrResp.title;
+  if (dataOrResp.description !== undefined) patch.description = dataOrResp.description;
+  if (dataOrResp.progress !== undefined) patch.progress = dataOrResp.progress;
+  if (dataOrResp.status !== undefined) patch.status = dataOrResp.status;
+  if (dataOrResp.milestones !== undefined) patch.milestones = dataOrResp.milestones;
+  if (dataOrResp.targetDate !== undefined) patch.targetDate = dataOrResp.targetDate ? new Date(dataOrResp.targetDate) : null;
+  if (dataOrResp.entityId !== undefined) patch.entityId = dataOrResp.entityId || null;
 
   // If marking completed, record completedAt; if reactivating, clear it
-  if (patch.status === GOAL_STATUS.COMPLETED) {
-    patch.completedAt = new Date();
-  } else if (patch.status === GOAL_STATUS.ACTIVE) {
-    patch.completedAt = null;
-  }
-
-  patch.updatedAt = new Date();
+  if (patch.status === GOAL_STATUS.COMPLETED) patch.completedAt = new Date();
+  else if (patch.status === GOAL_STATUS.ACTIVE) patch.completedAt = null;
 
   const [updated] = await db
     .update(goals)

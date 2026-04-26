@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHabit, getTodayHabits } from "@/db/queries/habits";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 
-const VALID_FREQUENCIES = Object.values(HABIT_FREQUENCY);
+const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [string, ...string[]];
+
+const CreateHabitBody = z.object({
+  title: z.string().trim().min(1, "title is required"),
+  frequency: z.enum(FREQUENCIES).default(HABIT_FREQUENCY.DAILY),
+});
 
 export async function GET() {
   const habits = await getTodayHabits();
@@ -10,12 +16,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json() as { title?: string; frequency?: string };
-  const title = body.title?.trim();
-  if (!title) return NextResponse.json({ error: "title is required" }, { status: 400 });
-  const frequency = VALID_FREQUENCIES.includes(body.frequency as typeof VALID_FREQUENCIES[number])
-    ? body.frequency!
-    : HABIT_FREQUENCY.DAILY;
-  const habit = await createHabit(title, frequency);
+  const dataOrResp = await readJsonBody(req, CreateHabitBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const habit = await createHabit(dataOrResp.title, dataOrResp.frequency);
   return NextResponse.json({ ok: true, habit }, { status: 201 });
 }

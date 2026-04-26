@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleHabitCompletion, deleteHabit, updateHabit } from "@/db/queries/habits";
-import { readIdParam } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
 
-const VALID_FREQUENCIES = Object.values(HABIT_FREQUENCY);
+const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [string, ...string[]];
+
+const PatchHabitBody = z
+  .object({
+    done: z.boolean().optional(),
+    title: z.string().trim().min(1, "title cannot be empty").optional(),
+    frequency: z.enum(FREQUENCIES).optional(),
+  })
+  .refine((v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined, {
+    message: "done, title, or frequency is required",
+  });
 
 export async function PATCH(
   req: NextRequest,
@@ -13,29 +23,16 @@ export async function PATCH(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const body = await req.json() as { done?: boolean; title?: string; frequency?: string };
+  const dataOrResp = await readJsonBody(req, PatchHabitBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  // Toggle completion
-  if (typeof body.done === "boolean") {
-    await toggleHabitCompletion(id, body.done);
+  // Toggle completion takes precedence: it's a separate operation from edit.
+  if (dataOrResp.done !== undefined) {
+    await toggleHabitCompletion(id, dataOrResp.done);
     return NextResponse.json({ ok: true });
   }
 
-  // Edit title / frequency
-  const title = body.title?.trim();
-  const frequency = body.frequency;
-
-  if (!title && !frequency) {
-    return NextResponse.json({ error: "done, title, or frequency is required" }, { status: 400 });
-  }
-  if (frequency && !VALID_FREQUENCIES.includes(frequency as typeof VALID_FREQUENCIES[number])) {
-    return NextResponse.json({ error: "invalid frequency" }, { status: 400 });
-  }
-  if (title !== undefined && !title) {
-    return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
-  }
-
-  await updateHabit(id, { title, frequency });
+  await updateHabit(id, { title: dataOrResp.title, frequency: dataOrResp.frequency });
   return NextResponse.json({ ok: true });
 }
 

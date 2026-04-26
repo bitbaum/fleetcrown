@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 // openclaw agent --json output shape
 type OpenclawResult = {
@@ -10,15 +11,17 @@ type OpenclawResult = {
   };
 };
 
-export async function POST(req: NextRequest) {
-  try {
-    const { message } = await req.json();
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
-      return NextResponse.json({ error: "Missing message" }, { status: 400 });
-    }
+const AskIvyBody = z.object({
+  message: z.string().trim().min(1, "Missing message"),
+});
 
+export async function POST(req: NextRequest) {
+  const dataOrResp = await readJsonBody(req, AskIvyBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+
+  try {
     // Escape for shell — wrap in single quotes, escape any single quotes inside
-    const safe = message.trim().replace(/'/g, "'\\''");
+    const safe = dataOrResp.message.replace(/'/g, "'\\''");
 
     // Use gateway mode (no --local): openclaw connects to the running gateway service
     // which has API keys loaded. Takes ~20-30s for a typical response.

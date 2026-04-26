@@ -3,26 +3,26 @@ import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { COMMITMENT_STATUS } from "@/lib/constants/statuses";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+
+const CreateCommitmentBody = z.object({
+  description: z.string().trim().min(1, "description is required"),
+  dueDate: z.string().optional(),
+  financialImpact: z.string().trim().optional(),
+});
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { description, dueDate, financialImpact } = body as {
-    description?: string;
-    dueDate?: string;
-    financialImpact?: string;
-  };
-
-  if (!description?.trim()) {
-    return NextResponse.json({ error: "description is required" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, CreateCommitmentBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { description, dueDate, financialImpact } = dataOrResp;
 
   const [created] = await db
     .insert(commitments)
     .values({
       userId: DEFAULT_USER_ID,
-      description: description.trim(),
+      description,
       dueDate: dueDate ? new Date(dueDate) : null,
-      financialImpact: financialImpact?.trim() || null,
+      financialImpact: financialImpact || null,
       status: COMMITMENT_STATUS.ACTIVE,
       source: "cockpit-ui",
     })

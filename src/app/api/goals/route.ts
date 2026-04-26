@@ -3,8 +3,15 @@ import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { isValidUuid } from "@/lib/utils";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+
+const CreateGoalBody = z.object({
+  title: z.string().trim().min(1, "title is required"),
+  description: z.string().trim().optional(),
+  targetDate: z.string().optional(),
+  parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
+});
 
 export async function GET() {
   const items = await db
@@ -16,27 +23,16 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const { title, description, targetDate, parentGoalId } = body as {
-    title?: string;
-    description?: string;
-    targetDate?: string;
-    parentGoalId?: string;
-  };
-
-  if (!title?.trim()) {
-    return NextResponse.json({ error: "title is required" }, { status: 400 });
-  }
-  if (parentGoalId && !isValidUuid(parentGoalId)) {
-    return NextResponse.json({ error: "Invalid parentGoalId" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, CreateGoalBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { title, description, targetDate, parentGoalId } = dataOrResp;
 
   const [created] = await db
     .insert(goals)
     .values({
       userId: DEFAULT_USER_ID,
-      title: title.trim(),
-      description: description?.trim() || null,
+      title,
+      description: description || null,
       targetDate: targetDate ? new Date(targetDate) : null,
       parentGoalId: parentGoalId || null,
       status: GOAL_STATUS.ACTIVE,

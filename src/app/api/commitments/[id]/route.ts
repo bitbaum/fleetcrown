@@ -3,7 +3,13 @@ import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { readIdParam } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
+
+const PatchCommitmentBody = z.object({
+  description: z.string().trim().min(1, "Description cannot be empty").optional(),
+  dueDate: z.string().nullable().optional(),
+  financialImpact: z.string().nullable().optional(),
+});
 
 export async function PATCH(
   req: NextRequest,
@@ -13,15 +19,13 @@ export async function PATCH(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const body = await req.json() as { description?: string; dueDate?: string | null; financialImpact?: string | null };
-  if (body.description !== undefined && !body.description.trim()) {
-    return NextResponse.json({ error: "Description cannot be empty" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, PatchCommitmentBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const patch: Record<string, unknown> = { updatedAt: new Date() };
-  if (body.description !== undefined) patch.description = body.description.trim();
-  if ("dueDate" in body) patch.dueDate = body.dueDate ? new Date(body.dueDate) : null;
-  if ("financialImpact" in body) patch.financialImpact = body.financialImpact?.trim() || null;
+  if (dataOrResp.description !== undefined) patch.description = dataOrResp.description;
+  if (dataOrResp.dueDate !== undefined) patch.dueDate = dataOrResp.dueDate ? new Date(dataOrResp.dueDate) : null;
+  if (dataOrResp.financialImpact !== undefined) patch.financialImpact = dataOrResp.financialImpact?.trim() || null;
 
   const [updated] = await db
     .update(commitments)

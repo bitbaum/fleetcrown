@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPersonDetail } from "@/db/queries/people";
 import { isValidUuid } from "@/lib/utils";
-import { readIdParam } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+
+const PatchPersonBody = z
+  .object({
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    description: z.string().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 export async function PATCH(
   req: NextRequest,
@@ -15,22 +22,12 @@ export async function PATCH(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const body = await req.json();
-  const patch: Record<string, unknown> = {};
+  const dataOrResp = await readJsonBody(req, PatchPersonBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  if ("description" in body) {
-    patch.description = body.description === "" ? null : String(body.description).trim() || null;
-  }
-  if ("name" in body) {
-    const name = String(body.name ?? "").trim();
-    if (!name) return NextResponse.json({ error: "name cannot be empty" }, { status: 400 });
-    patch.name = name;
-  }
-
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-  }
-  patch.updatedAt = new Date();
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
+  if (dataOrResp.description !== undefined) patch.description = dataOrResp.description.trim() || null;
 
   try {
     const [updated] = await db

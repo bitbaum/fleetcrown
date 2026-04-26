@@ -3,8 +3,27 @@ import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { readIdParam } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { VALID_FREQUENCIES, VALID_CURRENCIES } from "@/config/subscriptions";
+import { SUB_STATUS } from "@/lib/constants/statuses";
+
+const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [string, ...string[]];
+const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [string, ...string[]];
+const STATUSES = Object.values(SUB_STATUS) as [string, ...string[]];
+
+const PatchSubscriptionBody = z
+  .object({
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    vendor: z.string().optional(),
+    amount: z.number().nullable().optional(),
+    currency: z.enum(CURRENCIES_ENUM, { error: "Invalid currency" }).optional(),
+    frequency: z.enum(FREQUENCIES_ENUM, { error: "Invalid frequency" }).optional(),
+    nextDue: z.string().nullable().optional(),
+    paymentMethod: z.string().optional(),
+    notes: z.string().optional(),
+    status: z.enum(STATUSES).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 export async function PATCH(
   req: NextRequest,
@@ -14,33 +33,19 @@ export async function PATCH(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const body = await req.json();
-  const patch: Record<string, unknown> = {};
+  const dataOrResp = await readJsonBody(req, PatchSubscriptionBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  if ("nextDue" in body) patch.nextDue = body.nextDue ? new Date(body.nextDue) : null;
-  if ("amount" in body) patch.amount = body.amount != null ? Number(body.amount) : null;
-  if ("notes" in body) patch.notes = body.notes ? String(body.notes).trim() : null;
-  if ("status" in body) patch.status = body.status;
-  if ("name" in body && body.name) patch.name = String(body.name).trim();
-  if ("vendor" in body) patch.vendor = body.vendor ? String(body.vendor).trim() : null;
-  if ("paymentMethod" in body) patch.paymentMethod = body.paymentMethod ? String(body.paymentMethod).trim() : null;
-  if ("currency" in body) {
-    if (!VALID_CURRENCIES.includes(body.currency)) {
-      return NextResponse.json({ error: "Invalid currency" }, { status: 400 });
-    }
-    patch.currency = body.currency;
-  }
-  if ("frequency" in body) {
-    if (!VALID_FREQUENCIES.includes(body.frequency)) {
-      return NextResponse.json({ error: "Invalid frequency" }, { status: 400 });
-    }
-    patch.frequency = body.frequency;
-  }
-
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
-  }
-  patch.updatedAt = new Date();
+  const patch: Record<string, unknown> = { updatedAt: new Date() };
+  if (dataOrResp.nextDue !== undefined) patch.nextDue = dataOrResp.nextDue ? new Date(dataOrResp.nextDue) : null;
+  if (dataOrResp.amount !== undefined) patch.amount = dataOrResp.amount;
+  if (dataOrResp.notes !== undefined) patch.notes = dataOrResp.notes.trim() || null;
+  if (dataOrResp.status !== undefined) patch.status = dataOrResp.status;
+  if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
+  if (dataOrResp.vendor !== undefined) patch.vendor = dataOrResp.vendor.trim() || null;
+  if (dataOrResp.paymentMethod !== undefined) patch.paymentMethod = dataOrResp.paymentMethod.trim() || null;
+  if (dataOrResp.currency !== undefined) patch.currency = dataOrResp.currency;
+  if (dataOrResp.frequency !== undefined) patch.frequency = dataOrResp.frequency;
 
   const [updated] = await db
     .update(subscriptions)
