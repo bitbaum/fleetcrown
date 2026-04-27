@@ -101,29 +101,55 @@ function parseSession(tab: string): SessionState | null {
   }
 }
 
-async function parseGit(dir: string): Promise<GitState | null> {
-  if (!fs.existsSync(dir)) return null;
+// Single bash invocation for ALL projects — avoids N×fork() overhead in the heavy Next.js process.
+// Each fork() blocks the event loop for ~800ms; one batch script with background jobs costs 1 fork.
+// All repos are queried in parallel (bash background jobs), output collected via wait.
+// Output: one line per project: "<dir>\t<branch>\t<lastWhen>|<msg>\t<dirtyCount>\t<todayCount>"
+async function fetchAllGitStates(
+  dirs: string[]
+): Promise<Map<string, GitState>> {
+  if (dirs.length === 0) return new Map();
+
+  // Build a bash function + parallel invocation. Background jobs run all repos simultaneously.
+  const dirArgs = dirs.map((d) => `'${d}'`).join(" ");
+  const script = `
+_git_row() {
+  local d="$1"
+  [ -d "$d/.git" ] || return
+  local b l di t
+  b=$(git -C "$d" branch --show-current 2>/dev/null)
+  l=$(git -C "$d" log -1 '--format=%ar|%s' 2>/dev/null)
+  di=$(git -C "$d" status --porcelain 2>/dev/null | wc -l)
+  t=$(git -C "$d" log --since=midnight --format=%H 2>/dev/null | wc -l)
+  printf '%s\\t%s\\t%s\\t%s\\t%s\\n' "$d" "$b" "$l" "$di" "$t"
+}
+for _d in ${dirArgs}; do _git_row "$_d" & done
+wait
+`;
+
+  const result = new Map<string, GitState>();
   try {
-    // Run all 4 git queries in parallel — each is independent
-    const [branchResult, logResult, dirtyResult, todayResult] = await Promise.all([
-      execAsync("git branch --show-current", { cwd: dir, timeout: 3000 }),
-      execAsync("git log -1 --format=%ar|%s", { cwd: dir, timeout: 3000 }),
-      execAsync("git status --porcelain", { cwd: dir, timeout: 3000 }),
-      execAsync("git log --since=midnight --format=%H", { cwd: dir, timeout: 3000 }),
-    ]);
-    const log = logResult.stdout.trim();
-    const [when = "", msg = ""] = log.split("|");
-    const todayRaw = todayResult.stdout.trim();
-    return {
-      branch: branchResult.stdout.trim(),
-      lastMsg: msg.slice(0, 80),
-      lastWhen: when,
-      dirty: dirtyResult.stdout.trim().length > 0,
-      todayCount: todayRaw ? todayRaw.split("\n").filter(Boolean).length : 0,
-    };
+    const { stdout } = await execAsync(`bash -c '${script.replace(/'/g, "'\\''")}'`, {
+      timeout: 15000,
+      maxBuffer: 1024 * 1024,
+    });
+    for (const line of stdout.split("\n")) {
+      if (!line.trim()) continue;
+      const [dir, branch, logStr, dirtyStr, todayStr] = line.split("\t");
+      if (!dir || !branch) continue;
+      const [when = "", msg = ""] = (logStr ?? "").split("|");
+      result.set(dir, {
+        branch: branch.trim(),
+        lastMsg: msg.slice(0, 80),
+        lastWhen: when.trim(),
+        dirty: parseInt(dirtyStr ?? "0", 10) > 0,
+        todayCount: parseInt(todayStr ?? "0", 10),
+      });
+    }
   } catch {
-    return null;
+    // git queries failed — return empty map, projects will show null git state
   }
+  return result;
 }
 
 function readTmpTs(filename: string): number | null {
@@ -150,37 +176,30 @@ export async function GET() {
   const projects = parseProjects();
   const prompts = readPromptMeta();
 
-  // Resolve all project states in parallel — no more sequential execSync blocking
-  const [states, claudePidsRaw] = await Promise.all([
-    Promise.all(
-      projects.map(async ({ tab, dir }) => ({
-        tab,
-        dir,
-        session: parseSession(tab),
-        git: await parseGit(dir),
-        claudeRunning: false, // populated below
-        readyAt: readTmpTs(path.join("/tmp", `claude-ready-${tab}`)),
-        closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
-      }))
-    ),
-    // Single pgrep call runs in parallel with git operations
+  const dirs = projects.map((p) => p.dir);
+
+  // Single shell script for all git queries + single pgrep — only 2 forks total
+  const [gitMap, claudePidsRaw] = await Promise.all([
+    fetchAllGitStates(dirs),
     execAsync("pgrep -f 'claude' 2>/dev/null || true", { timeout: 2000 })
       .then((r) => r.stdout.trim().split("\n").filter(Boolean))
       .catch(() => [] as string[]),
   ]);
 
-  // Map each claude PID's cwd to the matching project
-  for (const state of states) {
-    for (const pid of claudePidsRaw) {
-      try {
-        const cwd = fs.readlinkSync(`/proc/${pid}/cwd`);
-        if (cwd === state.dir || cwd.startsWith(state.dir + "/")) {
-          state.claudeRunning = true;
-          break;
-        }
-      } catch { /* process may have died */ }
-    }
-  }
+  // Resolve claude PID → cwd once, then match against project dirs
+  const claudeCwds = claudePidsRaw.flatMap((pid) => {
+    try { return [fs.readlinkSync(`/proc/${pid}/cwd`)]; } catch { return []; }
+  });
+
+  const states: ProjectState[] = projects.map(({ tab, dir }) => ({
+    tab,
+    dir,
+    session: parseSession(tab),
+    git: gitMap.get(dir) ?? null,
+    claudeRunning: claudeCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+    readyAt: readTmpTs(path.join("/tmp", `claude-ready-${tab}`)),
+    closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
+  }));
 
   return NextResponse.json({ projects: states, prompts } satisfies ControlData);
 }
