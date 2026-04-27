@@ -22,6 +22,9 @@ export const SOURCE_COCKPIT_UI = "cockpit-ui";
 /** How many days of history the /habits page (and its heatmap) covers. */
 export const HABIT_HISTORY_DAYS = 30;
 
+/** Default timezone for schedule-related operations (cron jobs, calendar). */
+export const DEFAULT_TIMEZONE = "Europe/Zurich";
+
 /** Lookahead windows for the /today summary cards. */
 export const GOALS_DUE_SOON_DAYS = 14;
 export const EVENTS_DUE_SOON_DAYS = 30;

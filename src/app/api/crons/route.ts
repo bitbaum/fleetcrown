@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFileSync } from "fs";
-import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
+import { CRON_FILE, DEFAULT_TIMEZONE, TELEGRAM_CHAT_ID } from "@/lib/constants";
 import { type CronJob, readCronJobs, readCronFile, CreateCronBody, PatchCronBody } from "@/lib/crons";
 import { readJsonBody } from "@/lib/api/route-helpers";
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       enabled: true,
       createdAtMs: Date.now(),
       updatedAtMs: Date.now(),
-      schedule: { kind: "cron", expr: scheduleExpr, tz: tz ?? "Europe/Zurich" },
+      schedule: { kind: "cron", expr: scheduleExpr, tz: tz ?? DEFAULT_TIMEZONE },
       sessionTarget: "isolated",
       wakeMode: "now",
       payload: {
