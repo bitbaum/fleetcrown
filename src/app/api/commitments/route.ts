@@ -3,13 +3,8 @@ import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { COMMITMENT_STATUS } from "@/lib/constants/statuses";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const CreateCommitmentBody = z.object({
-  description: z.string().trim().min(1, "description is required"),
-  dueDate: z.string().optional(),
-  financialImpact: z.string().trim().optional(),
-});
+import { readJsonBody } from "@/lib/api/route-helpers";
+import { CreateCommitmentBody } from "@/db/queries/today";
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateCommitmentBody);

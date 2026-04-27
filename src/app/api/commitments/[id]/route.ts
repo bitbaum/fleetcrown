@@ -3,13 +3,8 @@ import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-
-const PatchCommitmentBody = z.object({
-  description: z.string().trim().min(1, "description cannot be empty").optional(),
-  dueDate: z.string().nullable().optional(),
-  financialImpact: z.string().nullable().optional(),
-});
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { PatchCommitmentBody } from "@/db/queries/today";
 
 export async function PATCH(
   req: NextRequest,

@@ -1,5 +1,29 @@
 import { readFileSync, existsSync } from "fs";
 import { CRON_FILE } from "@/lib/constants";
+import { z } from "zod";
+
+export const CreateCronBody = z.object({
+  name: z.string().trim().min(1, "name is required"),
+  scheduleExpr: z.string().trim().min(1, "scheduleExpr is required"),
+  message: z.string().trim().min(1, "message is required"),
+  model: z.string().optional(),
+  timeoutSeconds: z.number().optional(),
+  tz: z.string().optional(),
+  projectId: z.string().optional(),
+  projectName: z.string().optional(),
+});
+
+export const PatchCronBody = z.object({
+  id: z.string().min(1, "id is required"),
+  enabled: z.boolean().optional(),
+  message: z.string().optional(),
+  projectId: z.string().optional(),
+  projectName: z.string().optional(),
+});
+
+export const RunCronBody = z.object({
+  id: z.string().uuid("Invalid job id"),
+});
 
 /** Mirrors the openclaw cron job schema. Cockpit-specific fields are optional. */
 export type CronJob = {

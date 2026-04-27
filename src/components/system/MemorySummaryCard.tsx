@@ -32,15 +32,12 @@ export async function MemorySummaryCard() {
           <div className="text-2xl font-bold">{stats.totalRelations.toLocaleString()}</div>
         </div>
         <div className="space-y-1.5 pt-0.5">
-          {stats.entityTypes.slice(0, 4).map((row) => {
-            const pct = Math.round((Number(row.count) / stats.totalEntities) * 100);
-            return (
-              <div key={row.type} className="flex items-center justify-between gap-2">
-                <span className="text-[10px] text-white/35 capitalize">{row.type}</span>
-                <span className="text-[10px] text-white/25 font-mono">{Number(row.count).toLocaleString()}</span>
-              </div>
-            );
-          })}
+          {stats.entityTypes.slice(0, 4).map((row) => (
+            <div key={row.type} className="flex items-center justify-between gap-2">
+              <span className="text-[10px] text-white/35 capitalize">{row.type}</span>
+              <span className="text-[10px] text-white/25 font-mono">{Number(row.count).toLocaleString()}</span>
+            </div>
+          ))}
         </div>
       </div>
     </Card>

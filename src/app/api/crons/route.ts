@@ -1,30 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFileSync } from "fs";
 import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
-import { type CronJob, readCronJobs, readCronFile } from "@/lib/crons";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { type CronJob, readCronJobs, readCronFile, CreateCronBody, PatchCronBody } from "@/lib/crons";
+import { readJsonBody } from "@/lib/api/route-helpers";
 
 // Re-export so existing imports from this path keep working
 export type { CronJob };
-
-const CreateCronBody = z.object({
-  name: z.string().trim().min(1, "name is required"),
-  scheduleExpr: z.string().trim().min(1, "scheduleExpr is required"),
-  message: z.string().trim().min(1, "message is required"),
-  model: z.string().optional(),
-  timeoutSeconds: z.number().optional(),
-  tz: z.string().optional(),
-  projectId: z.string().optional(),
-  projectName: z.string().optional(),
-});
-
-const PatchCronBody = z.object({
-  id: z.string().min(1, "id is required"),
-  enabled: z.boolean().optional(),
-  message: z.string().optional(),
-  projectId: z.string().optional(),
-  projectName: z.string().optional(),
-});
 
 export async function GET() {
   try {

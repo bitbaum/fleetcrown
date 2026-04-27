@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const RunCronBody = z.object({
-  id: z.string().uuid("Invalid job id"),
-});
+import { readJsonBody } from "@/lib/api/route-helpers";
+import { RunCronBody } from "@/lib/crons";
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunCronBody);

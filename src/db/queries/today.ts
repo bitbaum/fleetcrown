@@ -11,6 +11,19 @@ import { commitments, subscriptions, goals, alerts, actions, events } from "@/db
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
+import { z } from "zod";
+
+export const CreateCommitmentBody = z.object({
+  description: z.string().trim().min(1, "description is required"),
+  dueDate: z.string().optional(),
+  financialImpact: z.string().trim().optional(),
+});
+
+export const PatchCommitmentBody = z.object({
+  description: z.string().trim().min(1, "description cannot be empty").optional(),
+  dueDate: z.string().nullable().optional(),
+  financialImpact: z.string().nullable().optional(),
+});
 
 export async function fulfillCommitment(id: string) {
   await db
