@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
+import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 export default async function HabitsPage() {
@@ -28,9 +29,7 @@ export default async function HabitsPage() {
           <div className="flex flex-col items-center gap-3 py-8 text-white/30">
             <Repeat2 className="h-10 w-10" />
             <div className="text-sm">No habits tracked yet</div>
-            <div className="text-xs text-center">
-              Add habits from the Today page to start tracking.
-            </div>
+            <AddHabitButton emptyState />
           </div>
         </Card>
       ) : (
@@ -72,6 +71,7 @@ export default async function HabitsPage() {
               </Card>
             );
           })}
+          <AddHabitButton />
         </div>
       )}
     </PageLayout>
