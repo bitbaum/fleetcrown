@@ -5,7 +5,6 @@ import {
   Target,
   FolderKanban,
   Server,
-  Brain,
   Zap,
   Calendar,
   Repeat2,
@@ -32,5 +31,4 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "events",   label: "Events",   href: "/events",   icon: Calendar,     active: true,  mobile: false },
   { id: "prompts",  label: "Prompts",  href: "/prompts",  icon: Zap,          active: true,  mobile: false },
   { id: "system",   label: "System",   href: "/system",   icon: Server,       active: true,  mobile: false },
-  { id: "memory",   label: "Memory",   href: "/memory",   icon: Brain,        active: true,  mobile: false },
 ];
