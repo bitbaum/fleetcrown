@@ -4,15 +4,9 @@ import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-
-const PatchProjectBody = z
-  .object({
-    name: z.string().trim().min(1, "name cannot be empty").optional(),
-    description: z.string().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+import { PatchProjectBody } from "@/db/queries/projects";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   const nameLower = projectName.toLowerCase();

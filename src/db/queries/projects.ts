@@ -11,6 +11,13 @@ export const CreateProjectBody = z.object({
   description: z.string().trim().optional(),
 });
 
+export const PatchProjectBody = z
+  .object({
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    description: z.string().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+
 export async function getProjects() {
   const projects = await db
     .select()
