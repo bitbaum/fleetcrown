@@ -31,6 +31,7 @@ PAGE_ROUTES=(
   "/prompts"
   "/system"
   "/memory"
+  "/control"
 )
 
 # DB-backed API GETs. Exercises drizzle, the postgres connection, and the
@@ -44,11 +45,13 @@ API_ROUTES=(
   "/api/events"
   "/api/crons"
   "/api/system"
+  "/api/control"
 )
 
 # 1) Probe the base URL once so we fail fast with a clear message
 # instead of dribbling out one curl error per route.
-if ! curl -s -o /dev/null --max-time 5 "$BASE/"; then
+# 20s timeout: dev mode compiles on first request which can be slow.
+if ! curl -s -o /dev/null --max-time 20 "$BASE/"; then
   echo "✗ no server reachable at $BASE — start the dev server first (npm run dev)" >&2
   exit 2
 fi

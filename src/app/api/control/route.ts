@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { execSync } from "child_process";
+import { exec } from "child_process";
+import { promisify } from "util";
 import fs from "fs";
 import path from "path";
+
+const execAsync = promisify(exec);
 
 const HOME = process.env.HOME ?? "/home/g";
 const PROJECTS_CONF = path.join(HOME, ".config", "claude-projects.conf");
@@ -98,19 +101,24 @@ function parseSession(tab: string): SessionState | null {
   }
 }
 
-function parseGit(dir: string): GitState | null {
+async function parseGit(dir: string): Promise<GitState | null> {
   if (!fs.existsSync(dir)) return null;
   try {
-    const branch = execSync("git branch --show-current", { cwd: dir, timeout: 3000 }).toString().trim();
-    const log = execSync("git log -1 --format=%ar|%s", { cwd: dir, timeout: 3000 }).toString().trim();
-    const dirty = execSync("git status --porcelain", { cwd: dir, timeout: 3000 }).toString().trim();
-    const todayRaw = execSync("git log --since=midnight --format=%H", { cwd: dir, timeout: 3000 }).toString().trim();
+    // Run all 4 git queries in parallel — each is independent
+    const [branchResult, logResult, dirtyResult, todayResult] = await Promise.all([
+      execAsync("git branch --show-current", { cwd: dir, timeout: 3000 }),
+      execAsync("git log -1 --format=%ar|%s", { cwd: dir, timeout: 3000 }),
+      execAsync("git status --porcelain", { cwd: dir, timeout: 3000 }),
+      execAsync("git log --since=midnight --format=%H", { cwd: dir, timeout: 3000 }),
+    ]);
+    const log = logResult.stdout.trim();
     const [when = "", msg = ""] = log.split("|");
+    const todayRaw = todayResult.stdout.trim();
     return {
-      branch,
+      branch: branchResult.stdout.trim(),
       lastMsg: msg.slice(0, 80),
       lastWhen: when,
-      dirty: dirty.length > 0,
+      dirty: dirtyResult.stdout.trim().length > 0,
       todayCount: todayRaw ? todayRaw.split("\n").filter(Boolean).length : 0,
     };
   } catch {
@@ -118,6 +126,15 @@ function parseGit(dir: string): GitState | null {
   }
 }
 
+function readTmpTs(filename: string): number | null {
+  try {
+    if (fs.existsSync(filename)) {
+      const ts = parseInt(fs.readFileSync(filename, "utf-8").trim(), 10);
+      return isNaN(ts) ? null : ts;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
 
 function readPromptMeta(): PromptMeta[] {
   try {
@@ -133,38 +150,33 @@ export async function GET() {
   const projects = parseProjects();
   const prompts = readPromptMeta();
 
-  const states: ProjectState[] = projects.map(({ tab, dir }) => {
-    const readTs = (filename: string): number | null => {
-      try {
-        if (fs.existsSync(filename)) {
-          const ts = parseInt(fs.readFileSync(filename, "utf-8").trim(), 10);
-          return isNaN(ts) ? null : ts;
-        }
-      } catch { /* ignore */ }
-      return null;
-    };
-    const readyAt = readTs(path.join("/tmp", `claude-ready-${tab}`));
-    const closedAt = readTs(path.join("/tmp", `claude-closed-${tab}`));
-    return { tab, dir, session: parseSession(tab), git: parseGit(dir), claudeRunning: false, readyAt, closedAt };
-  });
+  // Resolve all project states in parallel — no more sequential execSync blocking
+  const [states, claudePidsRaw] = await Promise.all([
+    Promise.all(
+      projects.map(async ({ tab, dir }) => ({
+        tab,
+        dir,
+        session: parseSession(tab),
+        git: await parseGit(dir),
+        claudeRunning: false, // populated below
+        readyAt: readTmpTs(path.join("/tmp", `claude-ready-${tab}`)),
+        closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
+      }))
+    ),
+    // Single pgrep call runs in parallel with git operations
+    execAsync("pgrep -f 'claude' 2>/dev/null || true", { timeout: 2000 })
+      .then((r) => r.stdout.trim().split("\n").filter(Boolean))
+      .catch(() => [] as string[]),
+  ]);
 
-  // Single pgrep call to detect if any claude process is running
-  let claudePids: string[] = [];
-  try {
-    claudePids = execSync("pgrep -f 'claude' 2>/dev/null || true", { timeout: 2000 })
-      .toString().trim().split("\n").filter(Boolean);
-  } catch { /* ignore */ }
-
-  if (claudePids.length > 0) {
-    // Check each project directory against running claude process CWDs
-    for (const state of states) {
+  // Map each claude PID's cwd to the matching project
+  for (const state of states) {
+    for (const pid of claudePidsRaw) {
       try {
-        for (const pid of claudePids) {
-          const cwd = fs.readlinkSync(`/proc/${pid}/cwd`);
-          if (cwd === state.dir || cwd.startsWith(state.dir + "/")) {
-            state.claudeRunning = true;
-            break;
-          }
+        const cwd = fs.readlinkSync(`/proc/${pid}/cwd`);
+        if (cwd === state.dir || cwd.startsWith(state.dir + "/")) {
+          state.claudeRunning = true;
+          break;
         }
       } catch { /* process may have died */ }
     }
