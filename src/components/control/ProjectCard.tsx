@@ -137,19 +137,22 @@ function ReadyBanner({
   prompts,
   onSend,
   onDismiss,
+  paused = false,
 }: {
   prompts: PromptMeta[];
   onSend: (key: string) => void;
   onDismiss: () => void;
+  paused?: boolean;
 }) {
   const [seconds, setSeconds] = useState(AUTO_INJECT_S);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
   useEffect(() => {
+    if (paused) return; // freeze while user is composing a custom prompt
     if (seconds <= 0) { onSend(primaryKey); return; }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [seconds, onSend, primaryKey]);
+  }, [seconds, paused, onSend, primaryKey]);
 
   return (
     <div className="border-t border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
@@ -159,7 +162,7 @@ function ReadyBanner({
           <span className="text-xs font-semibold text-emerald-400">Claude finished</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/40 tabular-nums">{seconds}s</span>
+          <span className="text-xs text-white/40 tabular-nums">{paused ? "⏸" : `${seconds}s`}</span>
           <button onClick={onDismiss} className="text-xs text-white/30 hover:text-white/60 transition-colors">
             dismiss
           </button>
@@ -270,6 +273,7 @@ export function ProjectCard({
 }) {
   const [showMore, setShowMore] = useState(false);
   const [custom, setCustom] = useState("");
+  const [customFocused, setCustomFocused] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -424,6 +428,7 @@ export function ProjectCard({
           prompts={prompts}
           onSend={(key) => send(key)}
           onDismiss={() => setDismissed(true)}
+          paused={customFocused || custom.trim().length > 0}
         />
       )}
       {showRunning && (
@@ -486,6 +491,8 @@ export function ProjectCard({
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && custom.trim() && send(undefined, custom.trim())}
+            onFocus={() => setCustomFocused(true)}
+            onBlur={() => setCustomFocused(false)}
             placeholder="Custom prompt…"
             className="flex-1 bg-white/5 border border-white/10 rounded-md px-3 py-2 text-xs text-white placeholder-white/25 focus:outline-none focus:border-white/25 min-w-0"
           />
