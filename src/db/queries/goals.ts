@@ -1,5 +1,5 @@
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities, type Milestone } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -17,6 +17,20 @@ export const CreateGoalBody = z.object({
   targetDate: z.string().optional(),
   parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
 });
+
+const GOAL_STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
+
+export const PatchGoalBody = z
+  .object({
+    title: z.string().trim().min(1, "title cannot be empty").optional(),
+    description: z.string().optional(),
+    progress: z.number().min(0).max(100).optional(),
+    status: z.enum(GOAL_STATUSES).optional(),
+    milestones: z.array(MilestoneSchema).optional(),
+    targetDate: z.string().nullable().optional(),
+    entityId: z.string().refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" }).nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 export type GoalWithChildren = {
   id: string;

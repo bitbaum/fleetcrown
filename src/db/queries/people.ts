@@ -5,6 +5,7 @@ import { entities, attributes, entityRelations, interactions } from "@/db/schema
 import { eq, and, sql, desc, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/utils";
+import { z } from "zod";
 
 function escapeLike(s: string): string {
   return s.replace(/[%_\\]/g, "\\$&");
@@ -27,6 +28,18 @@ export type PersonWithAttributes = {
 // callers keep working — but the canonical home is lib/constants/statuses,
 // and client components should import from there.
 export { SORT_MODE, type SortMode };
+
+export const CreatePersonBody = z.object({
+  name: z.string().trim().min(1, "name is required"),
+  description: z.string().trim().optional(),
+});
+
+export const PatchPersonBody = z
+  .object({
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    description: z.string().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 // Build HAVING clause for health filtering — all health values are enum literals, not user input
 // Thresholds sourced from HEALTH_ACTIVE_DAYS / HEALTH_FADING_DAYS in lib/utils.ts

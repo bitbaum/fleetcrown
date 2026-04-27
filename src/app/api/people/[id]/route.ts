@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPersonDetail } from "@/db/queries/people";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-
-const PatchPersonBody = z
-  .object({
-    name: z.string().trim().min(1, "name cannot be empty").optional(),
-    description: z.string().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+import { PatchPersonBody } from "@/db/queries/people";
 
 export async function PATCH(
   req: NextRequest,

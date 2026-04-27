@@ -4,6 +4,12 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
+import { z } from "zod";
+
+export const CreateProjectBody = z.object({
+  name: z.string().trim().min(1, "name is required"),
+  description: z.string().trim().optional(),
+});
 
 export async function getProjects() {
   const projects = await db

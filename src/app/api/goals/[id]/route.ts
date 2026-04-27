@@ -3,24 +3,9 @@ import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
-import { MilestoneSchema } from "@/db/queries/goals";
-
-const STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
-
-const PatchGoalBody = z
-  .object({
-    title: z.string().trim().min(1, "title cannot be empty").optional(),
-    description: z.string().optional(),
-    progress: z.number().min(0).max(100).optional(),
-    status: z.enum(STATUSES).optional(),
-    milestones: z.array(MilestoneSchema).optional(),
-    targetDate: z.string().nullable().optional(),
-    // Empty string is allowed (unlink); non-empty must be a UUID.
-    entityId: z.string().refine((v) => v === "" || /^[0-9a-f-]{36}$/i.test(v), { message: "Invalid entityId" }).nullable().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { PatchGoalBody } from "@/db/queries/goals";
 
 export async function PATCH(
   req: NextRequest,

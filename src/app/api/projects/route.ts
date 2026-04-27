@@ -3,12 +3,8 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const CreateProjectBody = z.object({
-  name: z.string().trim().min(1, "name is required"),
-  description: z.string().trim().optional(),
-});
+import { readJsonBody } from "@/lib/api/route-helpers";
+import { CreateProjectBody } from "@/db/queries/projects";
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateProjectBody);
