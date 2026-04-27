@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { RefreshCw, GitBranch, Circle, Send, ChevronDown, ChevronUp, Zap, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ControlData, ProjectState, PromptMeta } from "@/app/api/control/route";
@@ -337,6 +337,7 @@ export function ControlPanel() {
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   const refresh = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
@@ -354,9 +355,25 @@ export function ControlPanel() {
   }, []);
 
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 10_000);
-    return () => clearInterval(id);
+    const poll = async () => {
+      // Skip if tab is hidden or a request is already in flight — prevents server backlog
+      if (document.hidden || inFlight.current) return;
+      inFlight.current = true;
+      await refresh();
+      inFlight.current = false;
+    };
+
+    poll();
+
+    // Refresh immediately when tab becomes visible again
+    const onVisibilityChange = () => { if (!document.hidden) poll(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    const id = setInterval(poll, 10_000);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [refresh]);
 
   const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
