@@ -185,11 +185,7 @@ export function SubscriptionActions({
 
       {/* Delete record permanently */}
       <DeleteButton
-        onDelete={async () => {
-          await deleteJson(`/api/subscriptions/${subId}`);
-          setDeleted(true);
-          router.refresh();
-        }}
+        onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
         triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-400/5 transition-colors"

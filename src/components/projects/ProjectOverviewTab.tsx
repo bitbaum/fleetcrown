@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, Terminal } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./project-detail-types";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
@@ -9,6 +9,56 @@ import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import type { SessionData } from "@/app/api/sessions/route";
+
+// ─── ClaudeSession ────────────────────────────────────────────────────────────
+
+function ClaudeSession({ projectName }: { projectName: string }) {
+  const [session, setSession] = useState<SessionData | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/sessions?project=${encodeURIComponent(projectName)}`)
+      .then((r) => r.json())
+      .then((d: SessionData) => setSession(d))
+      .catch(() => {});
+  }, [projectName]);
+
+  if (!session || !session.found) return null;
+
+  const healthColor = session.health.startsWith("green") || session.health.startsWith("good")
+    ? "text-emerald-400"
+    : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
+    ? "text-red-400"
+    : "text-amber-400";
+
+  return (
+    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 font-medium">
+        <Terminal className="h-3 w-3" /> Claude Session
+      </div>
+      {session.done && (
+        <div>
+          <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Done</div>
+          <p className="text-xs text-white/55 leading-relaxed line-clamp-3">{session.done}</p>
+        </div>
+      )}
+      {session.next && (
+        <div>
+          <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Next</div>
+          <p className="text-xs text-white/70 leading-relaxed line-clamp-3">{session.next}</p>
+        </div>
+      )}
+      <div className="flex items-center gap-4 pt-0.5">
+        {session.tests && (
+          <div className="text-[10px] text-white/35">{session.tests}</div>
+        )}
+        {session.health && (
+          <div className={`text-[10px] font-medium ${healthColor}`}>{session.health.split("—")[0].trim()}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── OverviewTab ──────────────────────────────────────────────────────────────
 
@@ -59,6 +109,9 @@ export function OverviewTab({
 
   return (
     <div className="space-y-5">
+      {/* Claude session state — shown when a ~/.claude/sessions/<name>.md exists */}
+      <ClaudeSession projectName={data.name} />
+
       {/* Issues — most critical, shown first */}
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
