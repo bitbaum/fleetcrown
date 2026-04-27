@@ -11,6 +11,13 @@ export const MilestoneSchema = z.object({
   date: z.string().optional(),
 });
 
+export const CreateGoalBody = z.object({
+  title: z.string().trim().min(1, "title is required"),
+  description: z.string().trim().optional(),
+  targetDate: z.string().optional(),
+  parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
+});
+
 export type GoalWithChildren = {
   id: string;
   title: string;

@@ -3,14 +3,8 @@ import { db } from "@/db";
 import { events } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { EVENT_STATUS, type EventStatus } from "@/lib/constants/statuses";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-
-const STATUSES = Object.values(EVENT_STATUS) as [EventStatus, ...EventStatus[]];
-
-const PatchEventBody = z.object({
-  status: z.enum(STATUSES, { error: "Invalid status" }),
-});
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { PatchEventBody } from "@/db/queries/events";
 
 export async function PATCH(
   req: NextRequest,

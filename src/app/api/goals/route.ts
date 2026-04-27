@@ -4,14 +4,8 @@ import { goals } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const CreateGoalBody = z.object({
-  title: z.string().trim().min(1, "title is required"),
-  description: z.string().trim().optional(),
-  targetDate: z.string().optional(),
-  parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
-});
+import { readJsonBody } from "@/lib/api/route-helpers";
+import { CreateGoalBody } from "@/db/queries/goals";
 
 export async function GET() {
   const items = await db
