@@ -118,8 +118,9 @@ export async function POST(req: NextRequest) {
       JSON.stringify({ key: promptKey ?? "custom", label: promptLabel, startedAt: nowS })
     );
 
-    // Clear the "ready" signal — Claude is now busy
-    try { fs.unlinkSync(path.join("/tmp", `claude-ready-${canonical}`)); } catch { /* already gone */ }
+    // Any injection means we're continuing — clear stale close state from prior sessions
+    try { fs.unlinkSync(path.join("/tmp", `claude-ready-${canonical}`)); } catch { /* gone */ }
+    try { fs.unlinkSync(path.join("/tmp", `claude-closed-${canonical}`)); } catch { /* gone */ }
 
     if (promptKey === "close_session") {
       // Suppress the next stop-hook popup — infrastructure-side, reliable
@@ -127,8 +128,9 @@ export async function POST(req: NextRequest) {
       // Signal "closing in progress" — NOT "closed" yet (Claude is still running the close prompt).
       // stop.sh will write claude-closed-<tab> when Claude actually finishes.
       fs.writeFileSync(path.join("/tmp", `claude-closing-${canonical}`), String(nowS));
-      // Clear any stale closed file from a previous session
-      try { fs.unlinkSync(path.join("/tmp", `claude-closed-${canonical}`)); } catch { /* ok */ }
+    } else {
+      // Non-close injection: also clear any stale closing state
+      try { fs.unlinkSync(path.join("/tmp", `claude-closing-${canonical}`)); } catch { /* gone */ }
     }
 
     return NextResponse.json({ ok: true, tab: canonical });

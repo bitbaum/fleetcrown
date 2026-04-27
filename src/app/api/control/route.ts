@@ -74,6 +74,7 @@ export type PromptMeta = {
 export type ControlData = {
   projects: ProjectState[];
   prompts: PromptMeta[];
+  zellijTabs: string[];
 };
 
 // ── Slow-data cache (git + DB) ────────────────────────────────────────────────
@@ -83,6 +84,7 @@ export type ControlData = {
 type SlowCache = {
   gitMap: Map<string, GitState>;
   dbProjects: Awaited<ReturnType<typeof getProjects>>;
+  zellijTabs: string[];
   dirs: string[];        // dirs list used to build this cache
   builtAt: number;
 };
@@ -91,12 +93,22 @@ let slowCache: SlowCache | null = null;
 let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
+async function getZellijTabs(): Promise<string[]> {
+  try {
+    const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
+    return stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 async function buildSlowData(dirs: string[]): Promise<SlowCache> {
-  const [gitMap, dbProjects] = await Promise.all([
+  const [gitMap, dbProjects, zellijTabs] = await Promise.all([
     fetchAllGitStates(dirs),
     getProjects().catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
+    getZellijTabs(),
   ]);
-  return { gitMap, dbProjects, dirs, builtAt: Date.now() };
+  return { gitMap, dbProjects, zellijTabs, dirs, builtAt: Date.now() };
 }
 
 async function getSlowData(dirs: string[]): Promise<SlowCache> {
@@ -313,7 +325,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, dbProjects } = await getSlowData(dirs);
+  const { gitMap, dbProjects, zellijTabs } = await getSlowData(dirs);
   const claudeCwds = getClaudeCwds();
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => ({
@@ -329,5 +341,5 @@ export async function GET() {
     closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
   }));
 
-  return NextResponse.json({ projects: states, prompts } satisfies ControlData);
+  return NextResponse.json({ projects: states, prompts, zellijTabs } satisfies ControlData);
 }

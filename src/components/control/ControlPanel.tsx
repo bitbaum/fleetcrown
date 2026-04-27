@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   RefreshCw, GitBranch, Circle, Send, ChevronDown, ChevronUp,
-  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight,
+  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight, Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ControlData, ProjectState, PromptMeta } from "@/app/api/control/route";
@@ -292,10 +292,12 @@ function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"
 function ProjectCard({
   project,
   prompts,
+  zellijTabs,
   onInject,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
+  zellijTabs: string[];
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
 }) {
   const [showMore, setShowMore] = useState(false);
@@ -304,8 +306,10 @@ function ProjectCard({
   const [dismissed, setDismissed] = useState(false);
 
   const nowS = Math.floor(Date.now() / 1000);
+  // If Claude is running again, all "done" states are stale — a new session started
   const isClosed =
     !dismissed &&
+    !project.claudeRunning &&
     project.closedAt !== null &&
     nowS - project.closedAt < CLOSED_WINDOW_S;
   const isClosing =
@@ -342,6 +346,10 @@ function ProjectCard({
   const actionPrompts  = prompts.filter((p) => p.style === "action");
   const morePrompts    = prompts.filter((p) => p.style === "more");
 
+  const tabOpen = zellijTabs.some(
+    (t) => t.toLowerCase() === project.tab.toLowerCase()
+  );
+
   const { git, session, profile } = project;
 
   return (
@@ -375,6 +383,9 @@ function ProjectCard({
             )}
           />
           <span className="font-semibold text-white truncate">{project.tab}</span>
+          {tabOpen && (
+            <Terminal className="h-3 w-3 text-white/25 shrink-0" />
+          )}
           {session?.health && <SessionBadge health={session.health} />}
           {profile?.status && !session?.health && (
             <span className="text-xs text-white/30 truncate">{profile.status}</span>
@@ -622,6 +633,31 @@ export function ControlPanel() {
 
       {error && <p className="text-xs text-red-400 bg-red-400/10 rounded-md px-3 py-2">{error}</p>}
 
+      {/* Zellij open tabs strip */}
+      {data && data.zellijTabs.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Terminal className="h-3 w-3 text-white/20 shrink-0" />
+          {data.zellijTabs.map((t) => {
+            const hasProject = data.projects.some(
+              (p) => p.tab.toLowerCase() === t.toLowerCase()
+            );
+            return (
+              <span
+                key={t}
+                className={cn(
+                  "text-xs px-1.5 py-0.5 rounded font-mono",
+                  hasProject
+                    ? "text-white/50 bg-white/5"
+                    : "text-white/20 bg-white/[0.02]"
+                )}
+              >
+                {t}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {data ? (
         data.projects.length > 0 ? (
           <div className="space-y-3">
@@ -650,6 +686,7 @@ export function ControlPanel() {
                   key={project.tab}
                   project={project}
                   prompts={data.prompts}
+                  zellijTabs={data.zellijTabs}
                   onInject={inject}
                 />
               ))}
