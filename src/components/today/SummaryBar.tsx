@@ -7,16 +7,17 @@ export async function SummaryBar() {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} />
+      <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
       {s.habitsTotal > 0 && (
         <Pill
           icon={Repeat2}
           value={`${s.habitsDone}/${s.habitsTotal} habits`}
           variant={s.habitsDone === s.habitsTotal ? "green" : undefined}
+          href="/habits"
         />
       )}
       {s.goalsDueSoon > 0 && (
-        <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" />
+        <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href="/goals" />
       )}
       {s.pendingDrafts > 0 && (
         <Pill icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" />
@@ -25,7 +26,7 @@ export async function SummaryBar() {
         <Pill icon={AlertCircle} value={`${s.overdueCommitments} overdue`} variant="red" />
       )}
       {s.eventsDueSoon > 0 && (
-        <Pill icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" />
+        <Pill icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" href="/events" />
       )}
       {s.staleContacts > 0 && (
         <Pill
