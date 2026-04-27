@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
-import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ export function PromptsTab({
 
       <a
         href="/prompts"
-        className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
+        className={ADD_BUTTON_CLASS}
       >
         <Zap className="h-3.5 w-3.5" /> Browse Prompt Library →
       </a>

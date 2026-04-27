@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
-import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
@@ -116,7 +116,7 @@ export function InteractionsSection({
       ) : (
         <button
           onClick={() => setLogging(true)}
-          className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors mt-1"
+          className={`${ADD_BUTTON_CLASS} mt-1`}
         >
           <Plus className="h-3.5 w-3.5" /> Log interaction
         </button>

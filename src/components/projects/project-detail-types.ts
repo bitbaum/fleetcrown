@@ -67,4 +67,10 @@ export const SUGGESTED_ATTRS: { key: string; label: string; placeholder: string 
   { key: "next_step", label: "Next Step", placeholder: "Single most important next action" },
 ];
 
+export const SUGGESTED_ATTR_LABELS: Record<string, string> =
+  Object.fromEntries(SUGGESTED_ATTRS.map(({ key, label }) => [key, label]));
+
+export const SUGGESTED_ATTR_PLACEHOLDERS: Record<string, string> =
+  Object.fromEntries(SUGGESTED_ATTRS.map(({ key, placeholder }) => [key, placeholder]));
+
 export const PROJECT_CHANNELS = ["work-session", "meeting", "ivy", "review", "deployment", "call", "other"] as const;

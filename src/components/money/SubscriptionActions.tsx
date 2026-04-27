@@ -9,17 +9,7 @@ import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } fro
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
-
-function advanceDueDate(current: string | null, frequency: string | null): string {
-  const base = current ? new Date(current) : new Date();
-  switch (frequency) {
-    case FREQUENCY.ANNUAL:     base.setFullYear(base.getFullYear() + 1); break;
-    case FREQUENCY.QUARTERLY:  base.setMonth(base.getMonth() + 3); break;
-    case FREQUENCY.WEEKLY:     base.setDate(base.getDate() + 7); break;
-    default:                   base.setMonth(base.getMonth() + 1); break; // monthly
-  }
-  return base.toISOString();
-}
+import { advanceDueDate } from "@/lib/dates";
 
 export function SubscriptionActions({
   subId,

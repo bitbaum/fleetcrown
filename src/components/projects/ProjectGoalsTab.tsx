@@ -5,6 +5,7 @@ import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
 import { patchGoal, listGoals } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
+import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 
 export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; projectId: string }) {
   const [linked, setLinked] = useState<LinkedGoal[]>(initialGoals);
@@ -130,7 +131,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       ) : (
         <button
           onClick={openLink}
-          className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
+          className={ADD_BUTTON_CLASS}
         >
           <Plus className="h-3.5 w-3.5" /> Link existing goal
         </button>

@@ -3,14 +3,33 @@
 import { useState, useEffect } from "react";
 import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, Terminal } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
-import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./project-detail-types";
+import {
+  ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
+  SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
+} from "./project-detail-types";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import type { SessionData } from "@/app/api/sessions/route";
+import type { LucideProps } from "lucide-react";
+
+type IssueConfig = {
+  key: string;
+  icon: React.ComponentType<LucideProps>;
+  label: string;
+  border: string; bg: string; text: string; body: string;
+};
+
+const ISSUE_DISPLAY: IssueConfig[] = [
+  { key: "security_vulnerability", icon: ShieldAlert, label: "Security Risk",
+    border: "border-red-500/25",    bg: "bg-red-500/[0.05]",    text: "text-red-400",    body: "text-red-300/70" },
+  { key: "broken_features",        icon: AlertTriangle, label: "Broken Features",
+    border: "border-yellow-500/25", bg: "bg-yellow-500/[0.04]", text: "text-yellow-400", body: "text-yellow-300/70" },
+  { key: "deployment_issue",       icon: AlertTriangle, label: "Deployment Issue",
+    border: "border-orange-500/25", bg: "bg-orange-500/[0.04]", text: "text-orange-400", body: "text-orange-300/70" },
+];
 
 // ─── ClaudeSession ────────────────────────────────────────────────────────────
 
@@ -110,8 +129,6 @@ export function OverviewTab({
   const attrs = data.attrs;
   const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
   const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
-  const suggestedLabel: Record<string, string> = Object.fromEntries(SUGGESTED_ATTRS.map(({ key, label }) => [key, label]));
-  const suggestedPlaceholder: Record<string, string> = Object.fromEntries(SUGGESTED_ATTRS.map(({ key, placeholder }) => [key, placeholder]));
 
   return (
     <div className="space-y-5">
@@ -121,30 +138,14 @@ export function OverviewTab({
       {/* Issues — most critical, shown first */}
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
-          {attrs["security_vulnerability"] && (
-            <div className="rounded-lg border border-red-500/25 bg-red-500/[0.05] p-3">
-              <div className="flex items-center gap-1.5 text-red-400 text-[10px] uppercase tracking-wider font-semibold mb-1.5">
-                <ShieldAlert className="h-3.5 w-3.5" /> Security Risk
+          {ISSUE_DISPLAY.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, label, border, bg, text, body }) => (
+            <div key={key} className={`rounded-lg border ${border} ${bg} p-3`}>
+              <div className={`flex items-center gap-1.5 ${text} text-[10px] uppercase tracking-wider font-semibold mb-1.5`}>
+                <Icon className="h-3.5 w-3.5" /> {label}
               </div>
-              <p className="text-xs text-red-300/70 leading-relaxed">{attrs["security_vulnerability"]}</p>
+              <p className={`text-xs ${body} leading-relaxed`}>{attrs[key]}</p>
             </div>
-          )}
-          {attrs["broken_features"] && (
-            <div className="rounded-lg border border-yellow-500/25 bg-yellow-500/[0.04] p-3">
-              <div className="flex items-center gap-1.5 text-yellow-400 text-[10px] uppercase tracking-wider font-semibold mb-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" /> Broken Features
-              </div>
-              <p className="text-xs text-yellow-300/70 leading-relaxed">{attrs["broken_features"]}</p>
-            </div>
-          )}
-          {attrs["deployment_issue"] && (
-            <div className="rounded-lg border border-orange-500/25 bg-orange-500/[0.04] p-3">
-              <div className="flex items-center gap-1.5 text-orange-400 text-[10px] uppercase tracking-wider font-semibold mb-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" /> Deployment Issue
-              </div>
-              <p className="text-xs text-orange-300/70 leading-relaxed">{attrs["deployment_issue"]}</p>
-            </div>
-          )}
+          ))}
         </div>
       )}
 
@@ -154,12 +155,12 @@ export function OverviewTab({
           {displayAttrs.map(([key, value]) => (
             <AttrRow
               key={key}
-              label={suggestedLabel[key] ?? key.replace(/_/g, " ")}
+              label={SUGGESTED_ATTR_LABELS[key] ?? key.replace(/_/g, " ")}
               value={value}
               projectId={projectId}
               attrKey={key}
               onReload={onReload}
-              placeholder={suggestedPlaceholder[key]}
+              placeholder={SUGGESTED_ATTR_PLACEHOLDERS[key]}
             />
           ))}
         </div>

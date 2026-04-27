@@ -1,4 +1,5 @@
 import { isPast, formatDistanceToNow } from "date-fns";
+import { FREQUENCY } from "@/config/subscriptions";
 
 /** "just now" / "5m ago" / "2h ago" — minute-precision, from epoch ms */
 export function timeAgo(ms: number): string {
@@ -56,4 +57,16 @@ export function deadlineLabel(date: Date | string | null | undefined): {
     label: `${overdue ? "Overdue" : "Due"} ${formatDistanceToNow(d, { addSuffix: true })}`,
     overdue,
   };
+}
+
+/** Advance a subscription due date by one billing period. */
+export function advanceDueDate(current: string | null, frequency: string | null): string {
+  const base = current ? new Date(current) : new Date();
+  switch (frequency) {
+    case FREQUENCY.ANNUAL:    base.setFullYear(base.getFullYear() + 1); break;
+    case FREQUENCY.QUARTERLY: base.setMonth(base.getMonth() + 3); break;
+    case FREQUENCY.WEEKLY:    base.setDate(base.getDate() + 7); break;
+    default:                  base.setMonth(base.getMonth() + 1); break; // monthly
+  }
+  return base.toISOString();
 }

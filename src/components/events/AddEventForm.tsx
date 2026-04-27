@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
-import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
@@ -45,7 +45,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors pt-1"
+        className={`${ADD_BUTTON_CLASS} pt-1`}
       >
         <Plus className="h-3.5 w-3.5" /> Add event
       </button>

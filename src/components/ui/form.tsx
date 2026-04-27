@@ -36,6 +36,13 @@ export const PRIMARY_BUTTON_CLASS =
 export const INLINE_SAVE_CLASS =
   "flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors";
 
+/**
+ * Compact "＋ Add something" ghost button — low-visual-weight, turns emerald on hover.
+ * Append spacing utilities (mt-1, pt-1, etc.) at the call site when needed.
+ */
+export const ADD_BUTTON_CLASS =
+  "flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors";
+
 /** Label + child wrapper used by every "New X" form field. */
 export function Field({
   label,
