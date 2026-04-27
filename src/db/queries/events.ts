@@ -20,9 +20,17 @@ export const CreateEventBody = z.object({
   category: z.string().trim().optional(),
 });
 
-export const PatchEventBody = z.object({
-  status: z.enum(EVENT_STATUSES, { error: "Invalid status" }),
-});
+export const PatchEventBody = z
+  .object({
+    status: z.enum(EVENT_STATUSES, { error: "Invalid status" }).optional(),
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    description: z.string().nullable().optional(),
+    url: z.string().trim().nullable().optional(),
+    deadline: z.string().nullable().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+
+export type PatchEventInput = z.infer<typeof PatchEventBody>;
 
 export async function getEventsDueSoon(days = EVENTS_DUE_SOON_DAYS): Promise<EventRow[]> {
   const soon = new Date();

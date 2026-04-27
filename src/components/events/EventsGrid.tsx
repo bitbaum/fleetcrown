@@ -45,6 +45,9 @@ export function EventsGrid({
     if (event) setArchived((prev) => [{ ...event, status: EVENT_STATUS.ARCHIVED }, ...prev]);
   };
 
+  const handleEdit = (updated: EventRow) =>
+    setItems((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+
   const handleCreated = (event: EventRow) => {
     setItems((prev) => event.deadline ? [event, ...prev] : [...prev, event]);
   };
@@ -109,7 +112,7 @@ export function EventsGrid({
             {withDeadline.length > 0 && (
               <div>
                 {withDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} />
+                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />
                 ))}
               </div>
             )}
@@ -119,7 +122,7 @@ export function EventsGrid({
                   <div className="text-[10px] uppercase tracking-wider text-white/20 mb-2">No deadline</div>
                 )}
                 {withoutDeadline.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} />
+                  <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />
                 ))}
               </div>
             )}

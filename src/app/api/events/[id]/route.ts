@@ -17,9 +17,17 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchEventBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
+  const { status, name, description, url, deadline } = dataOrResp;
   const [updated] = await db
     .update(events)
-    .set({ status: dataOrResp.status, updatedAt: new Date() })
+    .set({
+      ...(status !== undefined && { status }),
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(url !== undefined && { url }),
+      ...(deadline !== undefined && { deadline: deadline ? new Date(deadline) : null }),
+      updatedAt: new Date(),
+    })
     .where(and(eq(events.id, id), eq(events.userId, DEFAULT_USER_ID)))
     .returning();
 
