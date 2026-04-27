@@ -1,20 +1,7 @@
 import { postJson, patchJson } from "./fetch";
+import type { CreateCronJobBody, PatchCronJobBody } from "@/lib/crons";
 
-export interface CreateCronJobBody {
-  name: string;
-  scheduleExpr: string;
-  message: string;
-  projectId?: string;
-  projectName?: string;
-}
-
-export interface PatchCronJobBody {
-  id: string;
-  enabled?: boolean;
-  message?: string;
-  projectId?: string;
-  projectName?: string;
-}
+export type { CreateCronJobBody, PatchCronJobBody };
 
 /** Create a new cron job via POST /api/crons */
 export function createCronJob(body: CreateCronJobBody) {
