@@ -1,5 +1,21 @@
 import { isPast, formatDistanceToNow } from "date-fns";
 
+/** "just now" / "5m ago" / "2h ago" — minute-precision, from epoch ms */
+export function timeAgo(ms: number): string {
+  const diff = Math.round((Date.now() - ms) / 60000);
+  if (diff < 1) return "just now";
+  if (diff < 60) return `${diff}m ago`;
+  return `${Math.round(diff / 60)}h ago`;
+}
+
+/** Compact elapsed display: "12s" / "3m" / "1h" — from epoch seconds */
+export function secondsAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  return `${Math.floor(diff / 3600)}h`;
+}
+
 /**
  * Format a Date as YYYY-MM-DD in *local* time. Habit tracking relies on
  * the local calendar day (not UTC), so toISOString is wrong here.
