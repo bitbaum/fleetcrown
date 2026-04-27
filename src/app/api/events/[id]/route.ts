@@ -31,6 +31,7 @@ export async function PATCH(
     .where(and(eq(events.id, id), eq(events.userId, DEFAULT_USER_ID)))
     .returning();
 
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true, event: updated });
 }
 

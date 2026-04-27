@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
-import { SUBSCRIPTION_META, VALID_CURRENCIES, FREQUENCY } from "@/config/subscriptions";
+import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
@@ -57,6 +57,8 @@ export function SubscriptionActions({
   const [editVendor, setEditVendor] = useState(vendor ?? "");
   const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
   const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
+  const [editFrequency, setEditFrequency] = useState(frequency ?? FREQUENCY.MONTHLY);
+  const [editNextDue, setEditNextDue] = useState(nextDue?.slice(0, 10) ?? "");
   const [editNotes, setEditNotes] = useState(notes ?? "");
   const [editPaymentMethod, setEditPaymentMethod] = useState(paymentMethod ?? "");
   const [saving, setSaving] = useState(false);
@@ -97,6 +99,8 @@ export function SubscriptionActions({
         vendor: editVendor.trim() || null,
         amount: editAmount ? parseFloat(editAmount) : null,
         currency: editCurrency,
+        frequency: editFrequency,
+        nextDue: editNextDue || null,
         notes: editNotes || null,
         paymentMethod: editPaymentMethod || null,
       });
@@ -222,6 +226,22 @@ export function SubscriptionActions({
             >
               {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            <select
+              value={editFrequency}
+              onChange={(e) => setEditFrequency(e.target.value)}
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+            >
+              {VALID_FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2 items-center">
+            <label className="text-[11px] text-white/30 shrink-0">Next due</label>
+            <input
+              type="date"
+              value={editNextDue}
+              onChange={(e) => setEditNextDue(e.target.value)}
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+            />
           </div>
           <input
             value={editPaymentMethod}

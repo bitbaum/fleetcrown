@@ -28,6 +28,7 @@ export async function PATCH(
     .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)))
     .returning();
 
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true, commitment: updated });
 }
 
