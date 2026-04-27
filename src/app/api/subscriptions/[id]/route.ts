@@ -3,27 +3,8 @@ import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { VALID_FREQUENCIES, VALID_CURRENCIES, type SubscriptionCurrency, type SubscriptionFrequency } from "@/config/subscriptions";
-import { SUB_STATUS, type SubStatus } from "@/lib/constants/statuses";
-
-const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [SubscriptionCurrency, ...SubscriptionCurrency[]];
-const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [SubscriptionFrequency, ...SubscriptionFrequency[]];
-const STATUSES = Object.values(SUB_STATUS) as [SubStatus, ...SubStatus[]];
-
-const PatchSubscriptionBody = z
-  .object({
-    name: z.string().trim().min(1, "name cannot be empty").optional(),
-    vendor: z.string().optional(),
-    amount: z.number().nullable().optional(),
-    currency: z.enum(CURRENCIES_ENUM, { error: "Invalid currency" }).optional(),
-    frequency: z.enum(FREQUENCIES_ENUM, { error: "Invalid frequency" }).optional(),
-    nextDue: z.string().nullable().optional(),
-    paymentMethod: z.string().optional(),
-    notes: z.string().optional(),
-    status: z.enum(STATUSES).optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { PatchSubscriptionBody } from "@/db/queries/money";
 
 export async function PATCH(
   req: NextRequest,

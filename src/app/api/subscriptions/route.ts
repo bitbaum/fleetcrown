@@ -2,23 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { DEFAULT_USER_ID } from "@/lib/constants";
-import { VALID_FREQUENCIES, VALID_CURRENCIES, FREQUENCY, type SubscriptionCurrency, type SubscriptionFrequency } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [SubscriptionCurrency, ...SubscriptionCurrency[]];
-const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [SubscriptionFrequency, ...SubscriptionFrequency[]];
-
-const CreateSubscriptionBody = z.object({
-  name: z.string().trim().min(1, "name is required"),
-  vendor: z.string().trim().optional(),
-  amount: z.number().optional(),
-  currency: z.enum(CURRENCIES_ENUM, { error: `currency must be one of: ${VALID_CURRENCIES.join(", ")}` }).default("CHF"),
-  frequency: z.enum(FREQUENCIES_ENUM, { error: `frequency must be one of: ${VALID_FREQUENCIES.join(", ")}` }).default(FREQUENCY.MONTHLY),
-  nextDue: z.string().optional(),
-  paymentMethod: z.string().trim().optional(),
-  notes: z.string().trim().optional(),
-});
+import { readJsonBody } from "@/lib/api/route-helpers";
+import { CreateSubscriptionBody } from "@/db/queries/money";
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateSubscriptionBody);

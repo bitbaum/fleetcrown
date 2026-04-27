@@ -2,8 +2,42 @@ import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
-import { SUB_STATUS, COMMITMENT_STATUS } from "@/lib/constants/statuses";
-import { FREQUENCY } from "@/config/subscriptions";
+import { SUB_STATUS, COMMITMENT_STATUS, type SubStatus } from "@/lib/constants/statuses";
+import {
+  FREQUENCY,
+  VALID_CURRENCIES, VALID_FREQUENCIES,
+  type SubscriptionCurrency, type SubscriptionFrequency,
+} from "@/config/subscriptions";
+import { z } from "zod";
+
+const CURRENCIES_ENUM = VALID_CURRENCIES as readonly [SubscriptionCurrency, ...SubscriptionCurrency[]];
+const FREQUENCIES_ENUM = VALID_FREQUENCIES as readonly [SubscriptionFrequency, ...SubscriptionFrequency[]];
+const SUB_STATUSES = Object.values(SUB_STATUS) as [SubStatus, ...SubStatus[]];
+
+export const CreateSubscriptionBody = z.object({
+  name: z.string().trim().min(1, "name is required"),
+  vendor: z.string().trim().optional(),
+  amount: z.number().optional(),
+  currency: z.enum(CURRENCIES_ENUM, { error: `currency must be one of: ${VALID_CURRENCIES.join(", ")}` }).default("CHF"),
+  frequency: z.enum(FREQUENCIES_ENUM, { error: `frequency must be one of: ${VALID_FREQUENCIES.join(", ")}` }).default(FREQUENCY.MONTHLY),
+  nextDue: z.string().optional(),
+  paymentMethod: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+});
+
+export const PatchSubscriptionBody = z
+  .object({
+    name: z.string().trim().min(1, "name cannot be empty").optional(),
+    vendor: z.string().optional(),
+    amount: z.number().nullable().optional(),
+    currency: z.enum(CURRENCIES_ENUM, { error: "Invalid currency" }).optional(),
+    frequency: z.enum(FREQUENCIES_ENUM, { error: "Invalid frequency" }).optional(),
+    nextDue: z.string().nullable().optional(),
+    paymentMethod: z.string().optional(),
+    notes: z.string().optional(),
+    status: z.enum(SUB_STATUSES).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 export async function getActiveSubscriptions() {
   return db
