@@ -6,15 +6,13 @@ import { Modal } from "@/components/ui/modal";
 import { Field, FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
+import type { CreatePersonInput } from "@/db/queries/people";
 
 export function NewPersonButton() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const { create, saving, error, setError } = useCreateMutation<{
-    name: string;
-    description?: string;
-  }>({
+  const { create, saving, error, setError } = useCreateMutation<CreatePersonInput>({
     request: (body) => postJson("/api/people", body),
     errorLabel: "person",
   });

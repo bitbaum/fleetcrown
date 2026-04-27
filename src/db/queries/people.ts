@@ -34,6 +34,8 @@ export const CreatePersonBody = z.object({
   description: z.string().trim().optional(),
 });
 
+export type CreatePersonInput = z.infer<typeof CreatePersonBody>;
+
 export const PatchPersonBody = z
   .object({
     name: z.string().trim().min(1, "name cannot be empty").optional(),

@@ -11,6 +11,8 @@ export const CreateProjectBody = z.object({
   description: z.string().trim().optional(),
 });
 
+export type CreateProjectInput = z.infer<typeof CreateProjectBody>;
+
 export const PatchProjectBody = z
   .object({
     name: z.string().trim().min(1, "name cannot be empty").optional(),
