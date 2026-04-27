@@ -2,59 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
-
-const HOME = process.env.HOME ?? "/home/g";
-const PROMPTS_FILE = path.join(HOME, ".config", "claude-prompts.json");
-const META_FILE = path.join(HOME, ".config", "claude-prompts-meta.json");
-const SESSIONS_DIR = path.join(HOME, ".claude", "sessions");
-const PROJECTS_CONF = path.join(HOME, ".config", "claude-projects.conf");
-
-function readProjects(): Map<string, string> {
-  const map = new Map<string, string>();
-  if (!fs.existsSync(PROJECTS_CONF)) return map;
-  for (const line of fs.readFileSync(PROJECTS_CONF, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const [tab, dir] = trimmed.split("|");
-    if (tab && dir) map.set(tab.trim().toLowerCase(), tab.trim());
-  }
-  return map;
-}
-
-function readPrompts(): Record<string, string> {
-  try {
-    return JSON.parse(fs.readFileSync(PROMPTS_FILE, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-type PromptMeta = { key: string; label: string; icon: string };
-function readPromptMeta(): PromptMeta[] {
-  try {
-    return JSON.parse(fs.readFileSync(META_FILE, "utf-8"));
-  } catch {
-    return [];
-  }
-}
-
-function readSession(tab: string): string | null {
-  const filePath = path.join(SESSIONS_DIR, `${tab}.md`);
-  try {
-    return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf-8") : null;
-  } catch {
-    return null;
-  }
-}
-
-function buildPrompt(base: string, tab: string): string {
-  const sessionFile = path.join(SESSIONS_DIR, `${tab}.md`);
-  const session = readSession(tab);
-  if (session) {
-    return `${base}\n\nSession state from last run:\n${session}\n\nUpdate ${sessionFile} when done: what you completed and what remains.`;
-  }
-  return `${base}\n\nBefore stopping, create ${sessionFile} with these lines: "done: <what you completed>", "next: <what remains>", "tests: <status>", "todos: <count>", "health: <good|degraded|critical>".`;
-}
+import {
+  SESSIONS_DIR,
+  readProjectsMap,
+  readPrompts,
+  readPromptMeta,
+  buildPromptWithSession,
+} from "@/lib/claude-config";
 
 function injectIntoTab(tab: string, prompt: string): void {
   const escaped = prompt.replace(/'/g, `'"'"'`);
@@ -79,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tab is required" }, { status: 400 });
   }
 
-  const projects = readProjects();
+  const projects = readProjectsMap();
   const canonical = projects.get(tab.toLowerCase());
   if (!canonical) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
@@ -100,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (!base) {
       return NextResponse.json({ error: `Unknown prompt key: ${promptKey}` }, { status: 400 });
     }
-    prompt = buildPrompt(base, canonical);
+    prompt = buildPromptWithSession(base, canonical);
     const meta = readPromptMeta().find((m) => m.key === promptKey);
     promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
   } else {
@@ -139,3 +93,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Injection failed: ${msg}` }, { status: 500 });
   }
 }
+
+// Unused by inject route — exported for session-file resolution by callers
+export { SESSIONS_DIR };

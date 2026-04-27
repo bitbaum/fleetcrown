@@ -5,7 +5,7 @@ import { entities } from "@/db/schema";
 import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
-import { readJsonBody } from "@/lib/api/route-helpers";
+import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 import { CreatePersonBody } from "@/db/queries/people";
 
 const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);
@@ -29,10 +29,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, person: created }, { status: 201 });
   } catch (e: unknown) {
-    // Unique constraint: (userId, name, type)
-    if (e instanceof Error && e.message.includes("uq_entities_user_name_type")) {
-      return NextResponse.json({ error: "A person with that name already exists" }, { status: 409 });
-    }
+    const dup = handleDuplicateEntityNameError(e, "person");
+    if (dup) return dup;
     throw e;
   }
 }

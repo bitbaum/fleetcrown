@@ -4,13 +4,17 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
+import {
+  SESSIONS_DIR,
+  parseProjectsConf,
+  readPromptMeta,
+  type PromptMeta,
+} from "@/lib/claude-config";
+
+// Re-export so the ControlPanel can import PromptMeta from this route file (its existing import path).
+export type { PromptMeta };
 
 const execAsync = promisify(exec);
-
-const HOME = process.env.HOME ?? "/home/g";
-const PROJECTS_CONF = path.join(HOME, ".config", "claude-projects.conf");
-const SESSIONS_DIR = path.join(HOME, ".claude", "sessions");
-const META_FILE = path.join(HOME, ".config", "claude-prompts-meta.json");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,15 +64,6 @@ export type GitState = {
   todayCount: number;
   /** Last 5 commits formatted as "HASH DATE: MESSAGE" */
   recentCommits: string[];
-};
-
-export type PromptMeta = {
-  key: string;
-  slot: number;
-  icon: string;
-  label: string;
-  style: string;
-  category: string;
 };
 
 export type ControlData = {
@@ -140,25 +135,6 @@ async function getSlowData(dirs: string[]): Promise<SlowCache> {
 }
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
-
-function parseProjects(): { tab: string; dir: string }[] {
-  if (!fs.existsSync(PROJECTS_CONF)) return [];
-  const seen = new Set<string>();
-  const result: { tab: string; dir: string }[] = [];
-  for (const line of fs.readFileSync(PROJECTS_CONF, "utf-8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const parts = trimmed.split("|");
-    if (parts.length < 2) continue;
-    const tab = parts[0].trim();
-    const dir = parts[1].trim();
-    if (!seen.has(tab.toLowerCase())) {
-      seen.add(tab.toLowerCase());
-      result.push({ tab, dir });
-    }
-  }
-  return result;
-}
 
 function parseSession(tab: string): SessionState | null {
   const file = path.join(SESSIONS_DIR, `${tab}.md`);
@@ -252,14 +228,6 @@ function readCurrentPrompt(tab: string): CurrentPrompt | null {
   return null;
 }
 
-function readPromptMeta(): PromptMeta[] {
-  try {
-    return JSON.parse(fs.readFileSync(META_FILE, "utf-8"));
-  } catch {
-    return [];
-  }
-}
-
 // ── Profile matching ──────────────────────────────────────────────────────────
 
 function matchProfile(
@@ -320,7 +288,7 @@ function getClaudeCwds(): string[] {
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const projects = parseProjects();
+  const projects = parseProjectsConf();
   const prompts = readPromptMeta();
   const dirs = projects.map((p) => p.dir);
 

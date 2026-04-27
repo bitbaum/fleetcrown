@@ -60,6 +60,29 @@ function friendlyZodMessage(error: z.ZodError): string {
   return issue.message;
 }
 
+/**
+ * Handle the unique constraint on (userId, name, type) in the entities table.
+ * Returns a 409 NextResponse when the error is a duplicate-name violation,
+ * or null if it's a different error (so the caller can re-throw).
+ *
+ * Usage:
+ *   const dup = handleDuplicateEntityNameError(e, "person");
+ *   if (dup) return dup;
+ *   throw e;
+ */
+export function handleDuplicateEntityNameError(
+  e: unknown,
+  entityLabel: string,
+): NextResponse | null {
+  if (e instanceof Error && e.message.includes("uq_entities_user_name_type")) {
+    return NextResponse.json(
+      { error: `A ${entityLabel} with that name already exists` },
+      { status: 409 },
+    );
+  }
+  return null;
+}
+
 // Re-export zod so route files don't have to import from "zod" + this
 // helper file — keeps the validation surface in one place.
 export { z };
