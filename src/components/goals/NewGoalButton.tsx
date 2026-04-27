@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import type { GoalWithChildren } from "@/db/queries/goals";
-import { createGoal, type CreateGoalBody } from "@/lib/api/goals";
+import { createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { Modal } from "@/components/ui/modal";
 import { Field, FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
@@ -15,7 +15,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
   const [description, setDescription] = useState("");
   const [targetDate, setTargetDate] = useState("");
   const [parentGoalId, setParentGoalId] = useState("");
-  const { create, saving, error, setError } = useCreateMutation<CreateGoalBody>({
+  const { create, saving, error, setError } = useCreateMutation({
     request: createGoal,
     errorLabel: "goal",
   });

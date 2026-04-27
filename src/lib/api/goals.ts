@@ -1,12 +1,5 @@
 import { postJson, patchJson, deleteJson } from "./fetch";
 
-export interface CreateGoalBody {
-  title: string;
-  description?: string;
-  targetDate?: string;
-  parentGoalId?: string;
-}
-
 /** PATCH /api/goals/:id — update any goal fields */
 export async function patchGoal(id: string, patch: Record<string, unknown>) {
   const res = await patchJson(`/api/goals/${id}`, patch);
@@ -20,7 +13,7 @@ export function deleteGoal(id: string) {
 }
 
 /** POST /api/goals — create a new goal */
-export function createGoal(body: CreateGoalBody) {
+export function createGoal(body: { title: string; description?: string; targetDate?: string; parentGoalId?: string }) {
   return postJson("/api/goals", body);
 }
 
