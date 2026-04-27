@@ -31,6 +31,10 @@ export function PersonDetail({
   const [description, setDescription] = useState<string | null>(null);
   const nameEdit = useInlineEdit<string>("");
   const descEdit = useInlineEdit<string>("");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [descSaving, setDescSaving] = useState(false);
+  const [descError, setDescError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,21 +52,45 @@ export function PersonDetail({
     return () => { cancelled = true; };
   }, [personId]);
 
-  const commitName = () => {
+  const commitName = async () => {
     const trimmed = nameEdit.draft.trim();
     if (!trimmed || trimmed === name) { nameEdit.cancel(); return; }
-    nameEdit.commit(async () => {
+    setNameSaving(true);
+    setNameError(null);
+    try {
       const res = await patchJson(`/api/people/${personId}`, { name: trimmed });
-      if ((await res.json()).ok) setName(trimmed);
-    });
+      const json = await res.json() as { ok?: boolean; error?: string };
+      if (json.ok) {
+        setName(trimmed);
+        nameEdit.cancel();
+      } else {
+        setNameError(json.error ?? "Failed to save");
+      }
+    } catch {
+      setNameError("Network error — try again");
+    } finally {
+      setNameSaving(false);
+    }
   };
 
-  const commitDescription = () => {
+  const commitDescription = async () => {
     const trimmed = descEdit.draft.trim();
-    descEdit.commit(async () => {
+    setDescSaving(true);
+    setDescError(null);
+    try {
       const res = await patchJson(`/api/people/${personId}`, { description: trimmed });
-      if ((await res.json()).ok) setDescription(trimmed || null);
-    });
+      const json = await res.json() as { ok?: boolean; error?: string };
+      if (json.ok) {
+        setDescription(trimmed || null);
+        descEdit.cancel();
+      } else {
+        setDescError(json.error ?? "Failed to save");
+      }
+    } catch {
+      setDescError("Network error — try again");
+    } finally {
+      setDescSaving(false);
+    }
   };
 
   return (
@@ -70,19 +98,21 @@ export function PersonDetail({
         <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
           <div className="flex items-center gap-2 min-w-0">
             {nameEdit.editing ? (
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={nameEdit.draft}
-                  onChange={(e) => nameEdit.setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitName();
-                    if (e.key === "Escape") nameEdit.cancel();
-                  }}
-                  onBlur={commitName}
-                  autoFocus
-                  className="text-lg font-semibold bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 w-48"
-                />
-                {nameEdit.saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    value={nameEdit.draft}
+                    onChange={(e) => { nameEdit.setDraft(e.target.value); setNameError(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitName();
+                      if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
+                    }}
+                    autoFocus
+                    className={`text-lg font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${nameError ? "border-red-400/60 focus:border-red-400" : "border-white/20 focus:border-white/35"}`}
+                  />
+                  {nameSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+                </div>
+                {nameError && <p className="text-xs text-red-400">{nameError}</p>}
               </div>
             ) : (
               <h2
@@ -136,9 +166,9 @@ export function PersonDetail({
               <div className="space-y-1.5">
                 <textarea
                   value={descEdit.draft}
-                  onChange={(e) => descEdit.setDraft(e.target.value)}
+                  onChange={(e) => { descEdit.setDraft(e.target.value); setDescError(null); }}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") descEdit.cancel();
+                    if (e.key === "Escape") { descEdit.cancel(); setDescError(null); }
                     if (e.key === "Enter" && e.metaKey) commitDescription();
                   }}
                   autoFocus
@@ -146,16 +176,17 @@ export function PersonDetail({
                   placeholder="Add a note about this person…"
                   className="w-full bg-white/[0.04] border border-white/15 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/30 resize-none transition-colors"
                 />
+                {descError && <p className="text-xs text-red-400">{descError}</p>}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={commitDescription}
-                    disabled={descEdit.saving}
+                    disabled={descSaving}
                     className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
                   >
-                    {descEdit.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                    {descSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                   </button>
                   <button
-                    onClick={descEdit.cancel}
+                    onClick={() => { descEdit.cancel(); setDescError(null); }}
                     className="text-xs text-white/30 hover:text-white/60 px-1"
                   >
                     Cancel
