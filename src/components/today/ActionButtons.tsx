@@ -44,7 +44,7 @@ export function ActionButtons({
           onClick={onApprove}
           disabled={busy}
           className="p-1 rounded hover:bg-emerald-600/20 text-emerald-400/60 hover:text-emerald-400 transition-colors disabled:opacity-50"
-          title="Approve"
+          title="Done — mark as completed"
         >
           <Check className="h-4 w-4" />
         </button>
@@ -52,7 +52,7 @@ export function ActionButtons({
           onClick={onReject}
           disabled={busy}
           className="p-1.5 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
-          title="Reject"
+          title="Skip — dismiss this action"
         >
           <X className="h-4 w-4" />
         </button>
@@ -68,7 +68,7 @@ export function ActionButtons({
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50"
       >
         <Check className="h-3 w-3" />
-        Approve
+        Done
       </button>
       <button
         onClick={onReject}
@@ -76,7 +76,7 @@ export function ActionButtons({
         className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 hover:bg-white/5 text-white/60 transition-colors disabled:opacity-50"
       >
         <X className="h-3 w-3" />
-        Reject
+        Skip
       </button>
     </div>
   );
