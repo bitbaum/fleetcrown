@@ -5,14 +5,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
 import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
+import { MilestoneSchema } from "@/db/queries/goals";
 
 const STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
-
-const MilestoneSchema = z.object({
-  title: z.string(),
-  done: z.boolean(),
-  date: z.string().optional(),
-});
 
 const PatchGoalBody = z
   .object({

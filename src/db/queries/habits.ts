@@ -4,6 +4,24 @@ import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { toLocalDateStr } from "@/lib/dates";
+import { z } from "zod";
+
+const HABIT_FREQUENCIES = Object.values(HABIT_FREQUENCY) as [HabitFrequency, ...HabitFrequency[]];
+
+export const CreateHabitBody = z.object({
+  title: z.string().trim().min(1, "title is required"),
+  frequency: z.enum(HABIT_FREQUENCIES).default(HABIT_FREQUENCY.DAILY),
+});
+
+export const PatchHabitBody = z
+  .object({
+    done: z.boolean().optional(),
+    title: z.string().trim().min(1, "title cannot be empty").optional(),
+    frequency: z.enum(HABIT_FREQUENCIES).optional(),
+  })
+  .refine((v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined, {
+    message: "done, title, or frequency is required",
+  });
 
 const todayDate = () => toLocalDateStr(new Date());
 

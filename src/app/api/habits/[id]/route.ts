@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { toggleHabitCompletion, deleteHabit, updateHabit } from "@/db/queries/habits";
-import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
-
-const FREQUENCIES = Object.values(HABIT_FREQUENCY) as [HabitFrequency, ...HabitFrequency[]];
-
-const PatchHabitBody = z
-  .object({
-    done: z.boolean().optional(),
-    title: z.string().trim().min(1, "title cannot be empty").optional(),
-    frequency: z.enum(FREQUENCIES).optional(),
-  })
-  .refine((v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined, {
-    message: "done, title, or frequency is required",
-  });
+import { toggleHabitCompletion, deleteHabit, updateHabit, PatchHabitBody } from "@/db/queries/habits";
+import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 
 export async function PATCH(
   req: NextRequest,

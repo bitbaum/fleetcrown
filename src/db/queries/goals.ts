@@ -3,6 +3,13 @@ import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities, type Milestone } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+
+export const MilestoneSchema = z.object({
+  title: z.string(),
+  done: z.boolean(),
+  date: z.string().optional(),
+});
 
 export type GoalWithChildren = {
   id: string;

@@ -9,7 +9,7 @@ import {
   HealthBadge,
   getHealthSignals,
 } from "./project-badges";
-import { getProjectLinks } from "./project-detail-types";
+import { getProjectLinks, RESERVED } from "./project-detail-types";
 
 type Project = {
   id: string;
@@ -101,7 +101,7 @@ function ProjectCard({
       {!status && !maturity && !hasIssues && (
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(attrs)
-            .filter(([k]) => !["production_url", "url", "repo", "github_repo", "owner", "description"].includes(k))
+            .filter(([k]) => !RESERVED.includes(k))
             .slice(0, 2)
             .map(([key, value]) => (
               <span key={key} className="px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-white/35 border border-white/[0.07]">
