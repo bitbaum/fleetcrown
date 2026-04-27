@@ -38,11 +38,8 @@ export type ProjectState = {
   claudeRunning: boolean;
   profile: ProjectProfile | null;
   currentPrompt: CurrentPrompt | null;
-  /** Unix seconds — set when Claude just finished, cleared by /api/inject */
   readyAt: number | null;
-  /** Unix seconds — close_session prompt is currently running (not yet finished) */
   closingAt: number | null;
-  /** Unix seconds — close_session prompt finished; shows celebration UI */
   closedAt: number | null;
 };
 
@@ -61,6 +58,8 @@ export type GitState = {
   lastWhen: string;
   dirty: boolean;
   todayCount: number;
+  /** Last 5 commits formatted as "HASH DATE: MESSAGE" */
+  recentCommits: string[];
 };
 
 export type PromptMeta = {
@@ -76,6 +75,57 @@ export type ControlData = {
   projects: ProjectState[];
   prompts: PromptMeta[];
 };
+
+// ── Slow-data cache (git + DB) ────────────────────────────────────────────────
+// git state and DB profiles change infrequently; PIDs/session/tmp files are always read fresh.
+// Stale-while-revalidate: return cached data immediately, refresh asynchronously when stale.
+
+type SlowCache = {
+  gitMap: Map<string, GitState>;
+  dbProjects: Awaited<ReturnType<typeof getProjects>>;
+  dirs: string[];        // dirs list used to build this cache
+  builtAt: number;
+};
+
+let slowCache: SlowCache | null = null;
+let cacheRefreshing = false;
+const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
+
+async function buildSlowData(dirs: string[]): Promise<SlowCache> {
+  const [gitMap, dbProjects] = await Promise.all([
+    fetchAllGitStates(dirs),
+    getProjects().catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
+  ]);
+  return { gitMap, dbProjects, dirs, builtAt: Date.now() };
+}
+
+async function getSlowData(dirs: string[]): Promise<SlowCache> {
+  const now = Date.now();
+  const dirsKey = dirs.join(",");
+
+  // Cache hit — return immediately, maybe kick off background refresh
+  if (slowCache && slowCache.dirs.join(",") === dirsKey) {
+    if (now - slowCache.builtAt < CACHE_TTL_MS) return slowCache;
+    // Stale: return stale immediately, refresh in background
+    if (!cacheRefreshing) {
+      cacheRefreshing = true;
+      buildSlowData(dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch(() => { cacheRefreshing = false; });
+    }
+    return slowCache;
+  }
+
+  // Cold cache or dirs changed — must wait for fresh data
+  if (!cacheRefreshing) {
+    cacheRefreshing = true;
+    slowCache = await buildSlowData(dirs);
+    cacheRefreshing = false;
+  } else if (slowCache) {
+    return slowCache; // another request is already building; return whatever we have
+  } else {
+    slowCache = await buildSlowData(dirs); // blocking: no stale fallback
+  }
+  return slowCache;
+}
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 
@@ -122,27 +172,24 @@ function parseSession(tab: string): SessionState | null {
   }
 }
 
-// Single bash invocation for ALL projects — avoids N×fork() overhead in the heavy Next.js process.
-// Each fork() blocks the event loop for ~800ms; one batch script with background jobs costs 1 fork.
-// All repos are queried in parallel (bash background jobs), output collected via wait.
-// Output: one line per project: "<dir>\t<branch>\t<lastWhen>|<msg>\t<dirtyCount>\t<todayCount>"
-async function fetchAllGitStates(
-  dirs: string[]
-): Promise<Map<string, GitState>> {
+// Single bash invocation — one fork() total. Background jobs run all repos in parallel.
+// Fields (tab-separated): dir | branch | lastWhen|lastMsg | dirtyCount | todayCount | recentCommits
+// recentCommits: last 5 commits joined by ~ ("HASH DATE: MSG~HASH DATE: MSG")
+async function fetchAllGitStates(dirs: string[]): Promise<Map<string, GitState>> {
   if (dirs.length === 0) return new Map();
 
-  // Build a bash function + parallel invocation. Background jobs run all repos simultaneously.
   const dirArgs = dirs.map((d) => `'${d}'`).join(" ");
   const script = `
 _git_row() {
   local d="$1"
   [ -d "$d/.git" ] || return
-  local b l di t
+  local b l di t h
   b=$(git -C "$d" branch --show-current 2>/dev/null)
   l=$(git -C "$d" log -1 '--format=%ar|%s' 2>/dev/null)
   di=$(git -C "$d" status --porcelain 2>/dev/null | wc -l)
   t=$(git -C "$d" log --since=midnight --format=%H 2>/dev/null | wc -l)
-  printf '%s\\t%s\\t%s\\t%s\\t%s\\n' "$d" "$b" "$l" "$di" "$t"
+  h=$(git -C "$d" log -5 '--format=%h %ar: %s' 2>/dev/null | tr '~' '-' | paste -sd '~' -)
+  printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$d" "$b" "$l" "$di" "$t" "$h"
 }
 for _d in ${dirArgs}; do _git_row "$_d" & done
 wait
@@ -152,23 +199,25 @@ wait
   try {
     const { stdout } = await execAsync(`bash -c '${script.replace(/'/g, "'\\''")}'`, {
       timeout: 15000,
-      maxBuffer: 1024 * 1024,
+      maxBuffer: 2 * 1024 * 1024,
     });
     for (const line of stdout.split("\n")) {
       if (!line.trim()) continue;
-      const [dir, branch, logStr, dirtyStr, todayStr] = line.split("\t");
+      const [dir, branch, logStr, dirtyStr, todayStr, historyStr] = line.split("\t");
       if (!dir || !branch) continue;
       const [when = "", msg = ""] = (logStr ?? "").split("|");
+      const recentCommits = (historyStr ?? "").split("~").map((s) => s.trim()).filter(Boolean);
       result.set(dir, {
         branch: branch.trim(),
         lastMsg: msg.slice(0, 80),
         lastWhen: when.trim(),
         dirty: parseInt(dirtyStr ?? "0", 10) > 0,
         todayCount: parseInt(todayStr ?? "0", 10),
+        recentCommits,
       });
     }
   } catch {
-    // git queries failed — return empty map, projects will show null git state
+    // git queries failed — projects show null git state
   }
   return result;
 }
@@ -186,9 +235,7 @@ function readTmpTs(filename: string): number | null {
 function readCurrentPrompt(tab: string): CurrentPrompt | null {
   try {
     const file = path.join("/tmp", `claude-current-prompt-${tab}`);
-    if (fs.existsSync(file)) {
-      return JSON.parse(fs.readFileSync(file, "utf-8"));
-    }
+    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8"));
   } catch { /* ignore */ }
   return null;
 }
@@ -203,8 +250,6 @@ function readPromptMeta(): PromptMeta[] {
 
 // ── Profile matching ──────────────────────────────────────────────────────────
 
-// Match a tab name to a DB project entity using fuzzy name comparison.
-// Handles: "AOZ" → "aoz-housing", "Ivy" → "ivy-portal", "OrangeCat" → "orangecat"
 function matchProfile(
   tab: string,
   dir: string,
@@ -214,14 +259,11 @@ function matchProfile(
   const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
 
   const match = dbProjects.find((p) => {
-    const nameLower = p.name.toLowerCase().replace(/[-_]/g, "");
+    const n = p.name.toLowerCase().replace(/[-_]/g, "");
     return (
-      nameLower === tabLower ||
-      nameLower === dirBaseLower ||
-      nameLower.includes(tabLower) ||
-      tabLower.includes(nameLower) ||
-      nameLower.includes(dirBaseLower) ||
-      dirBaseLower.includes(nameLower)
+      n === tabLower || n === dirBaseLower ||
+      n.includes(tabLower) || tabLower.includes(n) ||
+      n.includes(dirBaseLower) || dirBaseLower.includes(n)
     );
   });
 
@@ -238,6 +280,31 @@ function matchProfile(
   };
 }
 
+// ── Claude process detection (no fork — reads /proc directly) ─────────────────
+
+// Cache CWDs for 3s — avoids scanning /proc on every 10s poll
+let cwdCache: { cwds: string[]; builtAt: number } | null = null;
+
+function getClaudeCwds(): string[] {
+  const now = Date.now();
+  if (cwdCache && now - cwdCache.builtAt < 3000) return cwdCache.cwds;
+
+  const cwds: string[] = [];
+  try {
+    for (const entry of fs.readdirSync("/proc")) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
+        if (!cmdline.includes("claude")) continue;
+        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
+      } catch { /* process may have died */ }
+    }
+  } catch { /* /proc not available */ }
+
+  cwdCache = { cwds, builtAt: now };
+  return cwds;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -245,19 +312,9 @@ export async function GET() {
   const prompts = readPromptMeta();
   const dirs = projects.map((p) => p.dir);
 
-  // Run all IO in parallel: git queries + claude pids + DB project profiles
-  const [gitMap, claudePidsRaw, dbProjects] = await Promise.all([
-    fetchAllGitStates(dirs),
-    execAsync("pgrep -f 'claude' 2>/dev/null || true", { timeout: 2000 })
-      .then((r) => r.stdout.trim().split("\n").filter(Boolean))
-      .catch(() => [] as string[]),
-    getProjects().catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
-  ]);
-
-  // Resolve claude PID → cwd once, then match against project dirs
-  const claudeCwds = claudePidsRaw.flatMap((pid) => {
-    try { return [fs.readlinkSync(`/proc/${pid}/cwd`)]; } catch { return []; }
-  });
+  // Slow data (git + DB) served from cache — no fork needed for CWD check
+  const { gitMap, dbProjects } = await getSlowData(dirs);
+  const claudeCwds = getClaudeCwds();
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => ({
     tab,

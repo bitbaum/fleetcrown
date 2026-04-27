@@ -403,21 +403,34 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* Session summary (skip when closed banner shows it) */}
-      {!isClosed && session && (session.done || session.next) && (
-        <div className="px-4 pb-3 space-y-1 border-t border-white/5 pt-3">
-          {session.done && (
+      {/* Session summary + recent commits (skip when closed banner shows it) */}
+      {!isClosed && (session || git) && (
+        <div className="px-4 pb-3 space-y-1.5 border-t border-white/5 pt-3">
+          {session?.done && (
             <p className="text-xs text-white/50 line-clamp-2">
               <span className="text-white/25">done: </span>{session.done}
             </p>
           )}
-          {session.next && (
+          {session?.next && (
             <p className="text-xs text-white/70 line-clamp-2">
               <span className="text-white/40">next: </span>{session.next}
             </p>
           )}
-          {git?.lastMsg && (
-            <p className="text-xs text-white/25 truncate">{git.lastWhen} · {git.lastMsg}</p>
+          {/* Recent commits log */}
+          {git?.recentCommits && git.recentCommits.length > 0 && (
+            <div className="pt-0.5 space-y-0.5">
+              {git.recentCommits.slice(0, 4).map((c, i) => {
+                const spaceIdx = c.indexOf(" ");
+                const hash = c.slice(0, spaceIdx);
+                const desc = c.slice(spaceIdx + 1);
+                return (
+                  <p key={i} className="text-xs text-white/25 truncate font-mono">
+                    <span className="text-white/15 mr-1">{hash}</span>
+                    {desc}
+                  </p>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
