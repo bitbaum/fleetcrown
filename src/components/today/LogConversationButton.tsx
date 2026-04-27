@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
-import { postJson } from "@/lib/api/fetch";
+import { getJson, postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { INTERACTION_DIRECTION, SORT_MODE } from "@/lib/constants/statuses";
 
@@ -41,11 +41,10 @@ export function LogConversationButton() {
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
-        const res = await fetch(
+        const data = await getJson<{ people?: PersonResult[] }>(
           `/api/people?q=${encodeURIComponent(query)}&limit=6&sort=${SORT_MODE.RECENT}`,
           { signal: ctrl.signal },
         );
-        const data = await res.json() as { people?: PersonResult[] };
         if (!ctrl.signal.aborted) setResults(data.people ?? []);
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") return;

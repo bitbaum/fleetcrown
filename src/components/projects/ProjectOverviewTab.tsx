@@ -6,7 +6,7 @@ import type { ProjectData } from "./project-detail-types";
 import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./project-detail-types";
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
-import { postJson } from "@/lib/api/fetch";
+import { getJson, postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import type { SessionData } from "@/app/api/sessions/route";
@@ -17,9 +17,8 @@ function ClaudeSession({ projectName }: { projectName: string }) {
   const [session, setSession] = useState<SessionData | null>(null);
 
   useEffect(() => {
-    fetch(`/api/sessions?project=${encodeURIComponent(projectName)}`)
-      .then((r) => r.json())
-      .then((d: SessionData) => setSession(d))
+    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(projectName)}`)
+      .then((d) => setSession(d))
       .catch(() => {});
   }, [projectName]);
 

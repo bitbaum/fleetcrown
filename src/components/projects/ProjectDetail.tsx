@@ -8,6 +8,7 @@ import { PromptsTab } from "./ProjectPromptsTab";
 import { GoalsTab } from "./ProjectGoalsTab";
 import type { ProjectData, Tab, LinkedJob } from "./project-detail-types";
 import { Drawer } from "@/components/ui/modal";
+import { getJson } from "@/lib/api/fetch";
 
 export function ProjectDetail({
   projectId,
@@ -31,12 +32,8 @@ export function ProjectDetail({
     // Defer setRefetching off the synchronous effect path to avoid
     // react-hooks/set-state-in-effect cascading-render warning.
     Promise.resolve().then(() => { if (!cancelled) setRefetching(true); });
-    fetch(`/api/projects/${projectId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((d: ProjectData) => {
+    getJson<ProjectData>(`/api/projects/${projectId}`)
+      .then((d) => {
         if (cancelled) return;
         setData(d);
         setJobs(d.linkedJobs ?? []);

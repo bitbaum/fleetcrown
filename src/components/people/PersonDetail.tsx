@@ -13,7 +13,7 @@ import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { getJson, patchJson, deleteJson } from "@/lib/api/fetch";
 
 export function PersonDetail({
   personId,
@@ -38,12 +38,8 @@ export function PersonDetail({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/people/${personId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((d: PersonDetailData) => {
+    getJson<PersonDetailData>(`/api/people/${personId}`)
+      .then((d) => {
         if (cancelled) return;
         setData(d); setInteractions(d.interactions); setDescription(d.description); setAttrs(d.attrs); setName(d.name);
       })

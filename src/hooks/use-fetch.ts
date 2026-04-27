@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getJson } from "@/lib/api/fetch";
 
 export function useFetch<T>(url: string) {
   const [data, setData] = useState<T | null>(null);
@@ -10,16 +11,12 @@ export function useFetch<T>(url: string) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
+    getJson<T>(url)
       .then((json) => {
         if (!cancelled) setData(json);
       })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

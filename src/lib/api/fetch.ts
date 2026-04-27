@@ -1,5 +1,12 @@
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+/** GET a JSON endpoint and return the parsed response. Throws on non-2xx. */
+export async function getJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 /**
  * Thin wrappers around fetch() for the common JSON-body cases. Exists so
  * the `{ method, headers: { "Content-Type": "application/json" }, body:

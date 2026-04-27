@@ -5,6 +5,7 @@ import { Search, ArrowUpDown, Users } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
 import { type PersonWithAttributes } from "@/db/queries/people";
+import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, type SortMode } from "@/lib/constants/statuses";
 import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/utils";
 
@@ -50,8 +51,7 @@ export function PeopleGrid({
           offset: String(newOffset),
         });
         if (hf.length > 0) params.set("health", hf.join(","));
-        const res = await fetch(`/api/people?${params}`, { signal });
-        const data = await res.json();
+        const data = await getJson<{ people: PersonWithAttributes[]; total: number }>(`/api/people?${params}`, { signal });
         if (signal?.aborted) return;
         if (newOffset === 0) {
           setPeople(data.people);
