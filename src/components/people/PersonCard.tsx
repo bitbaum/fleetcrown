@@ -119,7 +119,7 @@ export function PersonCard({
         <div className="px-3 pb-2 md:px-4 flex justify-end">
           <button
             onClick={openLog}
-            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-0.5 rounded text-xs text-white/25 hover:text-emerald-400 hover:bg-white/[0.04]"
+            className="opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 rounded text-xs text-white/40 hover:text-emerald-400 hover:bg-white/[0.04]"
             title="Log interaction"
           >
             <Plus className="h-3 w-3" /> Log

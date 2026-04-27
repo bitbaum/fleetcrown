@@ -79,7 +79,7 @@ export function AddHabitForm({
       className={
         emptyState
           ? "flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
-          : "flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-1"
+          : "flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors mt-1"
       }
     >
       <Plus className="h-3.5 w-3.5" />

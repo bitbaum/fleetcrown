@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, ArrowUpDown } from "lucide-react";
+import { Search, ArrowUpDown, Users } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
 import { type PersonWithAttributes } from "@/db/queries/people";
@@ -145,24 +145,43 @@ export function PeopleGrid({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {people.map((person) => (
-          <PersonCard
-            key={person.id}
-            person={person}
-            onClick={() => setSelectedId(person.id)}
-            onLogged={(id, at) =>
-              setPeople((prev) =>
-                prev.map((p) =>
-                  p.id === id
-                    ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: deriveRelationshipHealth(at) }
-                    : p,
-                ),
-              )
-            }
-          />
-        ))}
-      </div>
+      {people.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-12 text-center text-white/25">
+          <Users className="h-8 w-8" />
+          <div className="text-sm">
+            {query || healthFilter.length > 0
+              ? "No people match your search"
+              : "No people yet"}
+          </div>
+          {(query || healthFilter.length > 0) && (
+            <button
+              onClick={() => { setQuery(""); setHealthFilter([]); }}
+              className="text-xs text-white/35 hover:text-white/60 underline underline-offset-2 transition-colors"
+            >
+              Clear filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {people.map((person) => (
+            <PersonCard
+              key={person.id}
+              person={person}
+              onClick={() => setSelectedId(person.id)}
+              onLogged={(id, at) =>
+                setPeople((prev) =>
+                  prev.map((p) =>
+                    p.id === id
+                      ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: deriveRelationshipHealth(at) }
+                      : p,
+                  ),
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {people.length < total && (
         <button
