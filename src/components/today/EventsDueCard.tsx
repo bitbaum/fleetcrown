@@ -67,7 +67,7 @@ export async function EventsDueCard() {
                     {deadlineText}
                   </div>
                   {event.type && (
-                    <span className="text-[10px] text-white/25 uppercase tracking-wide">{event.type}</span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-wide">{event.type}</span>
                   )}
                 </div>
               </div>
