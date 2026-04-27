@@ -28,6 +28,14 @@ export const FIELD_INPUT_CLASS_TIGHT =
 export const PRIMARY_BUTTON_CLASS =
   "w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2";
 
+/**
+ * Compact inline save button — used in drawers, cards, and edit-in-place
+ * slots. Slightly muted (80% opacity) to read as secondary to the primary CTA.
+ * Append additional layout classes (gap-1.5, w-full, etc.) at the call site.
+ */
+export const INLINE_SAVE_CLASS =
+  "flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors";
+
 /** Label + child wrapper used by every "New X" form field. */
 export function Field({
   label,

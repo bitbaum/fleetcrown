@@ -7,6 +7,7 @@ import { ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS } from "./proj
 import { AddAttrInline, AttrRow } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { getJson, postJson } from "@/lib/api/fetch";
+import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import type { SessionData } from "@/app/api/sessions/route";
@@ -297,7 +298,7 @@ export function OverviewTab({
               <button
                 onClick={handleLogActivity}
                 disabled={actSaving}
-                className="px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors flex items-center gap-1"
+                className={INLINE_SAVE_CLASS}
               >
                 {actSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
               </button>

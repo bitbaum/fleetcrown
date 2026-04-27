@@ -7,7 +7,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 
 function advanceDueDate(current: string | null, frequency: string | null): string {
@@ -260,7 +260,7 @@ export function SubscriptionActions({
             <button
               onClick={onSaveEdit}
               disabled={saving}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+              className={INLINE_SAVE_CLASS}
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Save

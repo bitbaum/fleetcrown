@@ -6,6 +6,7 @@ import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 import { getJson, postJson } from "@/lib/api/fetch";
+import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { toLocalDateStr } from "@/lib/dates";
 import { INTERACTION_DIRECTION, SORT_MODE } from "@/lib/constants/statuses";
 
@@ -136,7 +137,7 @@ export function LogConversationButton() {
             <button
               onClick={save}
               disabled={saving}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+              className={INLINE_SAVE_CLASS}
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Save
