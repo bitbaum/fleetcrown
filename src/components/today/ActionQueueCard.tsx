@@ -4,6 +4,7 @@ import { getPendingActions } from "@/db/queries/actions";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
+import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 
 const TYPE_ICONS: Record<ActionType, typeof Send> = {
   [ACTION_TYPE.SEND_MESSAGE]:      MessageCircle,
@@ -39,7 +40,7 @@ function groupSimilarActions(
   if (checkins.length > 1) {
     groups.push({
       type: ACTION_TYPE.SEND_MESSAGE,
-      reasoning: "No interaction in 30+ days. Maintaining relationships matters.",
+      reasoning: `No interaction in ${HEALTH_ACTIVE_DAYS}+ days. Maintaining relationships matters.`,
       actions: checkins.map((a) => ({
         id: a.id,
         title: a.title.replace("Check in with ", ""),
