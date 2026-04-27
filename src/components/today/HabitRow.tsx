@@ -87,7 +87,7 @@ export function HabitRow({
       <button
         onClick={handleToggle}
         disabled={toggling}
-        className="shrink-0 flex items-center justify-center disabled:opacity-50"
+        className="shrink-0 p-1 flex items-center justify-center disabled:opacity-50 rounded"
         title={habit.doneToday ? "Mark undone" : "Mark done"}
       >
         {toggling ? (
@@ -119,14 +119,14 @@ export function HabitRow({
         )}
         <button
           onClick={startEdit}
-          className="p-1 rounded text-white/10 hover:text-white/50 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-white/10 hover:text-white/50 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
           title="Edit habit"
         >
           <Pencil className="h-3 w-3" />
         </button>
         <button
           onClick={() => onRemove(habit.id)}
-          className="p-1 rounded text-white/10 hover:text-red-400/60 hover:bg-red-400/5 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-white/10 hover:text-red-400/60 hover:bg-red-400/5 transition-colors opacity-0 group-hover:opacity-100"
           title="Remove habit"
         >
           <X className="h-3 w-3" />

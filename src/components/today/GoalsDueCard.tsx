@@ -44,7 +44,7 @@ export async function GoalsDueCard() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{goal.title}</div>
+                  <div className="text-sm font-medium truncate" title={goal.title}>{goal.title}</div>
                   {date && (
                     <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-red-400" : "text-amber-400/80"}`}>
                       <Clock className="h-3 w-3 shrink-0" />
@@ -57,7 +57,7 @@ export async function GoalsDueCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-white/[0.05]">
-          <Link href="/goals" className="text-xs text-white/25 hover:text-white/50 transition-colors">
+          <Link href="/goals" className="text-xs text-white/40 hover:text-white/70 transition-colors">
             Open Goals →
           </Link>
         </div>

@@ -77,9 +77,9 @@ export function PersonCard({
               title={`${person.health}${person.lastInteraction ? ` — last ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })}` : ""}`}
             />
             <div className="min-w-0">
-              <div className="text-sm md:text-base font-medium truncate">{person.name}</div>
+              <div className="text-sm md:text-base font-medium truncate" title={person.name}>{person.name}</div>
               {(profession || location) && (
-                <div className="text-xs md:text-sm text-white/40 truncate mt-0.5">
+                <div className="text-xs md:text-sm text-white/40 truncate mt-0.5" title={[profession, location].filter(Boolean).join(" · ")}>
                   {[profession, location].filter(Boolean).join(" · ")}
                 </div>
               )}

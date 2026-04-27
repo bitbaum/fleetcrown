@@ -36,12 +36,12 @@ export async function EventsDueCard() {
 
             return (
               <div key={event.id} className="flex items-start gap-3">
-                <div className="shrink-0 flex flex-col items-center gap-1 w-16 pt-0.5">
-                  <span className={`text-[10px] font-mono font-medium ${overdue ? "text-red-400" : "text-white/40"}`}>
+                <div className="shrink-0 flex flex-col items-center gap-1 w-14 pt-0.5">
+                  <span className={`text-[11px] font-mono font-medium ${overdue ? "text-red-400" : "text-white/40"}`}>
                     {format(deadline, "d MMM")}
                   </span>
                   {event.category && (
-                    <span className="text-[9px] uppercase tracking-wide text-emerald-400/60 font-medium">
+                    <span className="text-[11px] uppercase tracking-wide text-emerald-400/60 font-medium">
                       {event.category}
                     </span>
                   )}
@@ -67,7 +67,7 @@ export async function EventsDueCard() {
                     {deadlineText}
                   </div>
                   {event.type && (
-                    <span className="text-[10px] text-white/40 uppercase tracking-wide">{event.type}</span>
+                    <span className="text-[11px] text-white/40 uppercase tracking-wide">{event.type}</span>
                   )}
                 </div>
               </div>
@@ -75,7 +75,7 @@ export async function EventsDueCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-white/[0.05]">
-          <Link href="/events" className="text-xs text-white/25 hover:text-white/50 transition-colors">
+          <Link href="/events" className="text-xs text-white/40 hover:text-white/70 transition-colors">
             Open Events →
           </Link>
         </div>

@@ -126,7 +126,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <button
           onClick={() => setEditing(true)}
           title="Edit commitment"
-          className="p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+          className="p-1.5 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>

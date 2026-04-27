@@ -167,7 +167,7 @@ export function EventCard({
           <button
             onClick={openEdit}
             title="Edit event"
-            className="p-1 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+            className="p-1.5 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
@@ -177,7 +177,7 @@ export function EventCard({
             onClick={handleArchive}
             disabled={archiving}
             title="Archive event"
-            className="p-1 rounded text-white/20 hover:text-amber-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+            className="p-1.5 rounded text-white/20 hover:text-amber-400 hover:bg-white/[0.06] transition-colors disabled:opacity-40"
           >
             {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
           </button>
@@ -189,7 +189,7 @@ export function EventCard({
           }}
           label=""
           triggerTitle="Delete event"
-          triggerClassName="p-1 rounded text-white/20 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
+          triggerClassName="p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/[0.06] transition-colors"
         />
       </div>
     </div>
