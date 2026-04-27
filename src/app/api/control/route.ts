@@ -6,6 +6,7 @@ import path from "path";
 import { getProjects } from "@/db/queries/projects";
 import {
   SESSIONS_DIR,
+  stateFile,
   parseProjectsConf,
   readPromptMeta,
   type PromptMeta,
@@ -222,8 +223,8 @@ function readTmpTs(filename: string): number | null {
 
 function readCurrentPrompt(tab: string): CurrentPrompt | null {
   try {
-    const file = path.join("/tmp", `claude-current-prompt-${tab}`);
-    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8"));
+    const file = stateFile.prompt(tab);
+    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8")) as CurrentPrompt;
   } catch { /* ignore */ }
   return null;
 }
@@ -304,9 +305,9 @@ export async function GET() {
     claudeRunning: claudeCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
     profile: matchProfile(tab, dir, dbProjects),
     currentPrompt: readCurrentPrompt(tab),
-    readyAt: readTmpTs(path.join("/tmp", `claude-ready-${tab}`)),
-    closingAt: readTmpTs(path.join("/tmp", `claude-closing-${tab}`)),
-    closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
+    readyAt: readTmpTs(stateFile.ready(tab)),
+    closingAt: readTmpTs(stateFile.closing(tab)),
+    closedAt: readTmpTs(stateFile.closed(tab)),
   }));
 
   return NextResponse.json({ projects: states, prompts, zellijTabs } satisfies ControlData);

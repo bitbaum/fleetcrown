@@ -2,6 +2,19 @@
  * Shared helpers for reading Claude's local configuration files.
  * SSOT for all path constants and file-reading logic used by the
  * /api/control and /api/inject routes.
+ *
+ * STATE FILE CONTRACT
+ * ───────────────────
+ * Cockpit (inject/control routes) and dotfiles (stop.sh, notification.sh)
+ * communicate exclusively through these /tmp sentinel files.
+ * The bash scripts duplicate the names as string literals — keep in sync.
+ *
+ *   claude-ready-<TAB>            Normal stop: Claude finished a turn, popup shown
+ *   claude-closing-<TAB>          close_session prompt is currently running
+ *   claude-closed-<TAB>           close_session finished (stop.sh consumed sentinel)
+ *   claude-session-closed-<TAB>   Sentinel: close_session was chosen; stop.sh consumes this
+ *   claude-current-prompt-<TAB>   JSON: { key, label, startedAt } of running prompt
+ *   claude-stop-active-<TAB>      Lock: stop-hook popup is open; notification.sh must wait
  */
 import fs from "fs";
 import path from "path";
@@ -11,6 +24,20 @@ export const PROJECTS_CONF = path.join(CLAUDE_HOME, ".config", "claude-projects.
 export const PROMPTS_FILE  = path.join(CLAUDE_HOME, ".config", "claude-prompts.json");
 export const META_FILE     = path.join(CLAUDE_HOME, ".config", "claude-prompts-meta.json");
 export const SESSIONS_DIR  = path.join(CLAUDE_HOME, ".claude", "sessions");
+
+// ── State file helpers ────────────────────────────────────────────────────────
+// Single place where the /tmp/<name>-<tab> file names are defined for TypeScript.
+// Bash scripts in ~/.claude/hooks/ duplicate these as string literals — if you
+// rename any of these, update stop.sh and notification.sh to match.
+
+export const stateFile = {
+  ready:    (tab: string) => path.join("/tmp", `claude-ready-${tab}`),
+  closing:  (tab: string) => path.join("/tmp", `claude-closing-${tab}`),
+  closed:   (tab: string) => path.join("/tmp", `claude-closed-${tab}`),
+  sentinel: (tab: string) => path.join("/tmp", `claude-session-closed-${tab}`),
+  prompt:   (tab: string) => path.join("/tmp", `claude-current-prompt-${tab}`),
+  lock:     (tab: string) => path.join("/tmp", `claude-stop-active-${tab}`),
+} as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
