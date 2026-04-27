@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
@@ -12,31 +13,45 @@ export function NameEditor({
 }: {
   value: string;
   editable: boolean;
+  /** Should throw with a user-facing message on failure (e.g. duplicate name). */
   onSave: (next: string) => Promise<void>;
 }) {
   const ie = useInlineEdit<string>("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const commit = () => {
+  const commit = async () => {
     const trimmed = ie.draft.trim();
     if (!trimmed || trimmed === value) { ie.cancel(); return; }
-    ie.commit(() => onSave(trimmed));
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await onSave(trimmed);
+      ie.cancel();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (ie.editing) {
     return (
-      <div className="flex items-center gap-1.5">
-        <input
-          value={ie.draft}
-          onChange={(e) => ie.setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit();
-            if (e.key === "Escape") ie.cancel();
-          }}
-          onBlur={commit}
-          autoFocus
-          className="text-base font-semibold bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 w-48"
-        />
-        {ie.saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-1.5">
+          <input
+            value={ie.draft}
+            onChange={(e) => { ie.setDraft(e.target.value); setSaveError(null); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              if (e.key === "Escape") { ie.cancel(); setSaveError(null); }
+            }}
+            autoFocus
+            className={`text-base font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-red-400/60 focus:border-red-400" : "border-white/20 focus:border-white/35"}`}
+          />
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+        </div>
+        {saveError && <p className="text-xs text-red-400">{saveError}</p>}
       </div>
     );
   }
