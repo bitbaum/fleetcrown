@@ -1,4 +1,5 @@
 import { postJson, patchJson, deleteJson } from "./fetch";
+import type { CreateGoalInput } from "@/db/queries/goals";
 
 /** PATCH /api/goals/:id — update any goal fields */
 export async function patchGoal(id: string, patch: Record<string, unknown>) {
@@ -13,7 +14,7 @@ export function deleteGoal(id: string) {
 }
 
 /** POST /api/goals — create a new goal */
-export function createGoal(body: { title: string; description?: string; targetDate?: string; parentGoalId?: string }) {
+export function createGoal(body: CreateGoalInput) {
   return postJson("/api/goals", body);
 }
 

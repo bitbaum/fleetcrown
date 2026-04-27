@@ -7,16 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Field, FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
-
-type CreateSubscriptionBody = {
-  name: string;
-  vendor?: string;
-  amount?: number;
-  currency: typeof CURRENCIES[number];
-  frequency: typeof FREQUENCIES[number];
-  nextDue?: string;
-  paymentMethod?: string;
-};
+import type { CreateSubscriptionInput } from "@/db/queries/money";
 
 export function NewSubscriptionButton() {
   const [open, setOpen] = useState(false);
@@ -27,14 +18,15 @@ export function NewSubscriptionButton() {
   const [frequency, setFrequency] = useState<typeof FREQUENCIES[number]>(FREQUENCY.MONTHLY);
   const [nextDue, setNextDue] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const { create, saving, error, setError } = useCreateMutation<CreateSubscriptionBody>({
+  const [notes, setNotes] = useState("");
+  const { create, saving, error, setError } = useCreateMutation<CreateSubscriptionInput>({
     request: (body) => postJson("/api/subscriptions", body),
     errorLabel: "subscription",
   });
 
   const close = () => {
     setName(""); setVendor(""); setAmount(""); setCurrency("CHF");
-    setFrequency(FREQUENCY.MONTHLY); setNextDue(""); setPaymentMethod("");
+    setFrequency(FREQUENCY.MONTHLY); setNextDue(""); setPaymentMethod(""); setNotes("");
     setError(null);
     setOpen(false);
   };
@@ -49,6 +41,7 @@ export function NewSubscriptionButton() {
       frequency,
       nextDue: nextDue || undefined,
       paymentMethod: paymentMethod.trim() || undefined,
+      notes: notes.trim() || undefined,
     });
     if (ok) close();
   };
@@ -77,6 +70,7 @@ export function NewSubscriptionButton() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) handleCreate(); }}
                 placeholder="e.g. GitHub Copilot"
                 autoFocus
                 className={FIELD_INPUT_CLASS}
@@ -140,6 +134,15 @@ export function NewSubscriptionButton() {
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 placeholder="e.g. Visa ····1234"
+                className={FIELD_INPUT_CLASS}
+              />
+            </Field>
+
+            <Field label="Notes">
+              <input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional notes"
                 className={FIELD_INPUT_CLASS}
               />
             </Field>

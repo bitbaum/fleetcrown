@@ -5,19 +5,14 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
-
-type CreateCommitmentBody = {
-  description: string;
-  dueDate?: string;
-  financialImpact?: string;
-};
+import type { CreateCommitmentInput } from "@/db/queries/today";
 
 export function AddCommitmentButton() {
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [financialImpact, setFinancialImpact] = useState("");
-  const { create, saving, error, setError } = useCreateMutation<CreateCommitmentBody>({
+  const { create, saving, error, setError } = useCreateMutation<CreateCommitmentInput>({
     request: (body) => postJson("/api/commitments", body),
     errorLabel: "commitment",
   });

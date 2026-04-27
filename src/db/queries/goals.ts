@@ -17,6 +17,7 @@ export const CreateGoalBody = z.object({
   targetDate: z.string().optional(),
   parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
 });
+export type CreateGoalInput = z.infer<typeof CreateGoalBody>;
 
 const GOAL_STATUSES = Object.values(GOAL_STATUS) as [GoalStatus, ...GoalStatus[]];
 

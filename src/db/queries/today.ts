@@ -25,6 +25,8 @@ export const PatchCommitmentBody = z.object({
   financialImpact: z.string().nullable().optional(),
 });
 
+export type CreateCommitmentInput = z.infer<typeof CreateCommitmentBody>;
+
 export async function fulfillCommitment(id: string) {
   await db
     .update(commitments)

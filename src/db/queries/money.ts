@@ -25,6 +25,8 @@ export const CreateSubscriptionBody = z.object({
   notes: z.string().trim().optional(),
 });
 
+export type CreateSubscriptionInput = z.infer<typeof CreateSubscriptionBody>;
+
 export const PatchSubscriptionBody = z
   .object({
     name: z.string().trim().min(1, "name cannot be empty").optional(),
