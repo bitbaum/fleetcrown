@@ -119,7 +119,7 @@ export function EventsGrid({
             {withoutDeadline.length > 0 && (
               <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-white/[0.05]" : ""}>
                 {withDeadline.length > 0 && (
-                  <div className="text-[10px] uppercase tracking-wider text-white/20 mb-2">No deadline</div>
+                  <div className="text-[10px] uppercase tracking-wider text-white/30 mb-2">No deadline</div>
                 )}
                 {withoutDeadline.map((event) => (
                   <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />

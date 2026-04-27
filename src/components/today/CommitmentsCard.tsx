@@ -18,7 +18,7 @@ export async function CommitmentsCard() {
         <div className="flex flex-col items-center gap-1.5 py-4 text-center">
           <CheckCircle className="h-6 w-6 text-white/15" />
           <div className="text-sm text-white/30">No active commitments</div>
-          <div className="text-xs text-white/20">Use the button below to track things you&apos;ve promised</div>
+          <div className="text-xs text-white/30">Use the button below to track things you&apos;ve promised</div>
         </div>
       ) : (
         <div className="space-y-3">

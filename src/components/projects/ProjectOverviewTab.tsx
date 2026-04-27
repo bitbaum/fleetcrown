@@ -198,14 +198,14 @@ export function OverviewTab({
                   )}
                 </div>
               ))}
-              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-white/20 hover:text-white/40 transition-colors mt-1">
+              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-white/30 hover:text-white/55 transition-colors mt-1">
                 Collapse
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowEmpty(true)}
-              className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/45 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Add {missingSuggested.map((s) => s.label.toLowerCase()).join(", ")}
@@ -226,7 +226,7 @@ export function OverviewTab({
       ) : (
         <button
           onClick={() => setAddingKey("__custom__")}
-          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>
@@ -265,7 +265,7 @@ export function OverviewTab({
             </div>
           ))}
           {activityList.length === 0 && !loggingActivity && (
-            <p className="text-xs text-white/20">No activity recorded yet.</p>
+            <p className="text-xs text-white/30">No activity recorded yet.</p>
           )}
         </div>
 
@@ -310,7 +310,7 @@ export function OverviewTab({
         ) : (
           <button
             onClick={() => setLoggingActivity(true)}
-            className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-2"
+            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors mt-2"
           >
             <Plus className="h-3.5 w-3.5" /> Log activity
           </button>
