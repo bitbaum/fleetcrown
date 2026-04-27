@@ -82,7 +82,7 @@ export function LogConversationButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/25 hover:text-white/60 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-white/55 hover:text-white/85 bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] rounded-full px-3 py-1.5 transition-colors"
       >
         <MessageCircle className="h-3.5 w-3.5" />
         Log a conversation
