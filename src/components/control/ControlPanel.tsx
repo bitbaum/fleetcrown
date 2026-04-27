@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { RefreshCw, GitBranch, Circle, Send, ChevronDown, ChevronUp, Zap, CheckCircle2 } from "lucide-react";
+import {
+  RefreshCw, GitBranch, Circle, Send, ChevronDown, ChevronUp,
+  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ControlData, ProjectState, PromptMeta } from "@/app/api/control/route";
 
@@ -9,6 +12,7 @@ const HEALTH_COLOR: Record<string, string> = {
   good: "text-emerald-400",
   degraded: "text-amber-400",
   critical: "text-red-400",
+  excellent: "text-emerald-300",
 };
 
 const PROMPT_STYLE: Record<string, string> = {
@@ -17,8 +21,9 @@ const PROMPT_STYLE: Record<string, string> = {
   more:    "bg-white/5 hover:bg-white/10 text-white/70",
 };
 
-const READY_WINDOW_S  = 600; // 10 min
-const CLOSED_WINDOW_S = 3600; // 1 hour — celebration stays visible
+const READY_WINDOW_S  = 600;  // 10 min
+const CLOSED_WINDOW_S = 3600; // 1 hour
+const CLOSING_WINDOW_S = 1800; // 30 min
 const AUTO_INJECT_S   = 12;
 
 function timeAgo(ms: number): string {
@@ -28,12 +33,41 @@ function timeAgo(ms: number): string {
   return `${Math.round(diff / 60)}h ago`;
 }
 
+function secondsAgo(ts: number): string {
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 60) return `${diff}s`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  return `${Math.floor(diff / 3600)}h`;
+}
+
 function SessionBadge({ health }: { health: string }) {
   const color = HEALTH_COLOR[health] ?? "text-white/40";
   return <span className={cn("text-xs font-semibold uppercase", color)}>{health}</span>;
 }
 
-/** Green celebration shown after close_session — no auto-countdown, shows results */
+function MaturityBar({ maturity }: { maturity: string }) {
+  const m = maturity.match(/^(\d+)/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="flex gap-0.5">
+        {Array.from({ length: 10 }, (_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              i < n ? "bg-indigo-400" : "bg-white/10"
+            )}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-white/30">{maturity.replace(/^\d+\/10\s*-?\s*/, "")}</span>
+    </div>
+  );
+}
+
+/** Green celebration shown after close_session actually finishes — no auto-countdown */
 function ClosedBanner({
   session,
   git,
@@ -50,6 +84,9 @@ function ClosedBanner({
       <div className="flex items-center gap-2">
         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
         <span className="text-sm font-semibold text-emerald-300">Session closed</span>
+        {git?.todayCount ? (
+          <span className="text-xs text-white/30 ml-auto">+{git.todayCount} commits today</span>
+        ) : null}
       </div>
 
       {session && (
@@ -66,14 +103,9 @@ function ClosedBanner({
               <p className="text-sm text-white/60 leading-relaxed">{session.next}</p>
             </div>
           )}
-          <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-            {session.tests && (
-              <span className="text-xs text-white/40">{session.tests}</span>
-            )}
-            {git?.todayCount ? (
-              <span className="text-xs text-white/40">+{git.todayCount} commits today</span>
-            ) : null}
-          </div>
+          {session.tests && (
+            <p className="text-xs text-white/30">{session.tests}</p>
+          )}
         </div>
       )}
 
@@ -90,6 +122,42 @@ function ClosedBanner({
         >
           Clear
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** Shown while close_session prompt is still running */
+function ClosingBanner({ startedAt }: { startedAt: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="border-t border-amber-500/20 bg-amber-500/[0.03] px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
+        <span className="text-xs font-medium text-amber-300">Closing session…</span>
+        <span className="text-xs text-white/30 ml-auto">{secondsAgo(startedAt)}s running</span>
+      </div>
+    </div>
+  );
+}
+
+/** Shown while any prompt is running */
+function RunningBanner({ label, startedAt }: { label: string; startedAt: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="border-t border-indigo-500/20 bg-indigo-500/[0.03] px-4 py-2">
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-3 w-3 text-indigo-400 animate-spin shrink-0" />
+        <span className="text-xs text-indigo-300 truncate">{label}</span>
+        <span className="text-xs text-white/30 ml-auto shrink-0">{secondsAgo(startedAt)}s</span>
       </div>
     </div>
   );
@@ -148,6 +216,79 @@ function ReadyBanner({
   );
 }
 
+/** Expandable project profile panel */
+function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"]> }) {
+  const [open, setOpen] = useState(false);
+
+  const keyAttrLabels: Record<string, string> = {
+    status: "Status", maturity: "Maturity", stack: "Stack", mission: "Mission",
+    customers: "Customers", architecture: "Architecture", url: "URL",
+    description: "Description", owner: "Owner", repo: "Repo",
+  };
+
+  const displayAttrs = Object.entries(profile.attrs)
+    .filter(([k]) => k in keyAttrLabels && profile.attrs[k])
+    .slice(0, 8);
+
+  if (!profile.description && !profile.status && !profile.mission && displayAttrs.length === 0) return null;
+
+  return (
+    <div className="border-t border-white/5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-2 text-xs text-white/30 hover:text-white/50 transition-colors"
+      >
+        <span className="flex items-center gap-1">
+          <Info className="h-3 w-3" />
+          Profile
+        </span>
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-3">
+          {profile.description && (
+            <p className="text-xs text-white/50 leading-relaxed">{profile.description}</p>
+          )}
+          {profile.mission && (
+            <div>
+              <p className="text-xs text-white/25 uppercase tracking-wide mb-0.5">Mission</p>
+              <p className="text-xs text-white/60 leading-relaxed italic">{profile.mission}</p>
+            </div>
+          )}
+          {profile.maturity && (
+            <div>
+              <p className="text-xs text-white/25 uppercase tracking-wide mb-1">Maturity</p>
+              <MaturityBar maturity={profile.maturity} />
+            </div>
+          )}
+          {displayAttrs
+            .filter(([k]) => !["description", "mission", "maturity"].includes(k))
+            .map(([k, v]) => (
+              <div key={k}>
+                <p className="text-xs text-white/25 uppercase tracking-wide mb-0.5">
+                  {keyAttrLabels[k] ?? k}
+                </p>
+                {k === "url" ? (
+                  <a
+                    href={v.startsWith("http") ? v : `https://${v}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    {v} <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                ) : (
+                  <p className="text-xs text-white/50 leading-relaxed">{v}</p>
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProjectCard({
   project,
   prompts,
@@ -167,12 +308,24 @@ function ProjectCard({
     !dismissed &&
     project.closedAt !== null &&
     nowS - project.closedAt < CLOSED_WINDOW_S;
+  const isClosing =
+    !dismissed &&
+    !isClosed &&
+    project.closingAt !== null &&
+    nowS - project.closingAt < CLOSING_WINDOW_S;
   const isReady =
     !dismissed &&
     !isClosed &&
+    !isClosing &&
     !project.claudeRunning &&
     project.readyAt !== null &&
     nowS - project.readyAt < READY_WINDOW_S;
+
+  // Show running banner if Claude is active and we know the prompt (but not during closing)
+  const showRunning =
+    !isClosing &&
+    project.currentPrompt !== null &&
+    project.claudeRunning;
 
   const send = async (promptKey?: string, customPrompt?: string) => {
     setSending(promptKey ?? "custom");
@@ -189,7 +342,7 @@ function ProjectCard({
   const actionPrompts  = prompts.filter((p) => p.style === "action");
   const morePrompts    = prompts.filter((p) => p.style === "more");
 
-  const { git, session } = project;
+  const { git, session, profile } = project;
 
   return (
     <div
@@ -197,8 +350,12 @@ function ProjectCard({
         "rounded-lg border overflow-hidden",
         isClosed
           ? "border-emerald-500/30 bg-emerald-500/[0.02]"
+          : isClosing
+          ? "border-amber-500/25 bg-amber-500/[0.02]"
           : isReady
           ? "border-emerald-500/40 bg-emerald-500/[0.03]"
+          : project.claudeRunning
+          ? "border-indigo-500/25 bg-indigo-500/[0.02]"
           : "border-white/10 bg-white/[0.03]"
       )}
     >
@@ -209,31 +366,49 @@ function ProjectCard({
             className={cn(
               "h-2.5 w-2.5 shrink-0 fill-current",
               project.claudeRunning
-                ? "text-emerald-400 animate-pulse"
-                : isClosed || isReady
+                ? "text-indigo-400 animate-pulse"
+                : isClosed
+                ? "text-emerald-400"
+                : isReady
                 ? "text-emerald-400"
                 : "text-white/20"
             )}
           />
           <span className="font-semibold text-white truncate">{project.tab}</span>
           {session?.health && <SessionBadge health={session.health} />}
+          {profile?.status && !session?.health && (
+            <span className="text-xs text-white/30 truncate">{profile.status}</span>
+          )}
         </div>
-        {git && (
-          <div className="flex items-center gap-1.5 text-xs text-white/40 shrink-0">
-            <GitBranch className="h-3 w-3" />
-            <span>{git.branch}</span>
-            {git.dirty && <span className="text-amber-400">✎</span>}
-            {git.todayCount > 0 && <span className="text-white/30">+{git.todayCount}</span>}
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {git && (
+            <div className="flex items-center gap-1 text-xs text-white/40">
+              <GitBranch className="h-3 w-3" />
+              <span>{git.branch}</span>
+              {git.dirty && <span className="text-amber-400">✎</span>}
+              {git.todayCount > 0 && <span className="text-emerald-400/70">+{git.todayCount}</span>}
+            </div>
+          )}
+          {profile?.url && (
+            <a
+              href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/20 hover:text-white/50 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Session summary (only when NOT showing closed banner — closed banner shows it) */}
+      {/* Session summary (skip when closed banner shows it) */}
       {!isClosed && session && (session.done || session.next) && (
         <div className="px-4 pb-3 space-y-1 border-t border-white/5 pt-3">
           {session.done && (
             <p className="text-xs text-white/50 line-clamp-2">
-              <span className="text-white/30">done: </span>{session.done}
+              <span className="text-white/25">done: </span>{session.done}
             </p>
           )}
           {session.next && (
@@ -242,12 +417,12 @@ function ProjectCard({
             </p>
           )}
           {git?.lastMsg && (
-            <p className="text-xs text-white/30 truncate">{git.lastWhen} · {git.lastMsg}</p>
+            <p className="text-xs text-white/25 truncate">{git.lastWhen} · {git.lastMsg}</p>
           )}
         </div>
       )}
 
-      {/* Celebration banner — close_session was used */}
+      {/* Banners — only one shows at a time */}
       {isClosed && (
         <ClosedBanner
           session={session}
@@ -256,8 +431,7 @@ function ProjectCard({
           onDismiss={() => setDismissed(true)}
         />
       )}
-
-      {/* Countdown banner — normal Claude exit */}
+      {isClosing && <ClosingBanner startedAt={project.closingAt!} />}
       {isReady && (
         <ReadyBanner
           prompts={prompts}
@@ -265,6 +439,15 @@ function ProjectCard({
           onDismiss={() => setDismissed(true)}
         />
       )}
+      {showRunning && (
+        <RunningBanner
+          label={project.currentPrompt!.label}
+          startedAt={project.currentPrompt!.startedAt}
+        />
+      )}
+
+      {/* Profile — collapsible */}
+      {profile && <ProfilePanel profile={profile} />}
 
       {/* Always-visible prompt buttons */}
       <div className="px-4 pb-3 pt-2 space-y-2 border-t border-white/5">
@@ -356,7 +539,6 @@ export function ControlPanel() {
 
   useEffect(() => {
     const poll = async () => {
-      // Skip if tab is hidden or a request is already in flight — prevents server backlog
       if (document.hidden || inFlight.current) return;
       inFlight.current = true;
       await refresh();
@@ -365,7 +547,6 @@ export function ControlPanel() {
 
     poll();
 
-    // Refresh immediately when tab becomes visible again
     const onVisibilityChange = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -390,21 +571,31 @@ export function ControlPanel() {
   };
 
   const nowS = Math.floor(Date.now() / 1000);
+  const running    = data?.projects.filter((p) => p.claudeRunning).length ?? 0;
   const waitingCount = data?.projects.filter(
     (p) => !p.claudeRunning && p.readyAt !== null && nowS - p.readyAt < READY_WINDOW_S
       && !(p.closedAt !== null && nowS - p.closedAt < CLOSED_WINDOW_S)
+      && !(p.closingAt !== null && nowS - p.closingAt < CLOSING_WINDOW_S)
   ).length ?? 0;
-  const running = data?.projects.filter((p) => p.claudeRunning).length ?? 0;
+  const todayCommits = data?.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0) ?? 0;
   const total   = data?.projects.length ?? 0;
 
   return (
     <div className="space-y-4">
+      {/* Status bar */}
       <div className="flex items-center justify-between text-xs text-white/40">
         <span>
-          {total > 0
-            ? `${running} active${waitingCount > 0 ? ` · ${waitingCount} waiting` : ""} · ${total} projects`
-            : "Loading…"}
-          {lastUpdated && ` · updated ${timeAgo(lastUpdated)}`}
+          {total > 0 ? (
+            <>
+              {running > 0 && <span className="text-indigo-400">{running} running</span>}
+              {running > 0 && (waitingCount > 0 || todayCommits > 0) && " · "}
+              {waitingCount > 0 && <span className="text-emerald-400">{waitingCount} waiting</span>}
+              {waitingCount > 0 && todayCommits > 0 && " · "}
+              {todayCommits > 0 && <span>+{todayCommits} commits today</span>}
+              {running === 0 && waitingCount === 0 && todayCommits === 0 && `${total} projects`}
+            </>
+          ) : "Loading…"}
+          {lastUpdated && ` · ${timeAgo(lastUpdated)}`}
         </span>
         <button
           onClick={() => refresh(true)}
@@ -426,10 +617,19 @@ export function ControlPanel() {
                 const nowS2 = Math.floor(Date.now() / 1000);
                 const aReady = !a.claudeRunning && a.readyAt !== null && nowS2 - a.readyAt < READY_WINDOW_S;
                 const bReady = !b.claudeRunning && b.readyAt !== null && nowS2 - b.readyAt < READY_WINDOW_S;
+                const aClosed = a.closedAt !== null && nowS2 - a.closedAt < CLOSED_WINDOW_S;
+                const bClosed = b.closedAt !== null && nowS2 - b.closedAt < CLOSED_WINDOW_S;
+                if (aClosed && !bClosed) return -1;
+                if (!aClosed && bClosed) return 1;
                 if (aReady && !bReady) return -1;
                 if (!aReady && bReady) return 1;
                 if (a.claudeRunning && !b.claudeRunning) return -1;
                 if (!a.claudeRunning && b.claudeRunning) return 1;
+                // Active projects (with today's commits) before idle ones
+                const aActive = (a.git?.todayCount ?? 0) > 0;
+                const bActive = (b.git?.todayCount ?? 0) > 0;
+                if (aActive && !bActive) return -1;
+                if (!aActive && bActive) return 1;
                 return 0;
               })
               .map((project) => (

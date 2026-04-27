@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
 import path from "path";
+import { getProjects } from "@/db/queries/projects";
 
 const execAsync = promisify(exec);
 
@@ -13,15 +14,35 @@ const META_FILE = path.join(HOME, ".config", "claude-prompts-meta.json");
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type ProjectProfile = {
+  description: string;
+  status: string;
+  maturity: string;
+  stack: string;
+  url: string;
+  mission: string;
+  attrs: Record<string, string>;
+};
+
+export type CurrentPrompt = {
+  key: string;
+  label: string;
+  startedAt: number;
+};
+
 export type ProjectState = {
   tab: string;
   dir: string;
   session: SessionState | null;
   git: GitState | null;
   claudeRunning: boolean;
+  profile: ProjectProfile | null;
+  currentPrompt: CurrentPrompt | null;
   /** Unix seconds — set when Claude just finished, cleared by /api/inject */
   readyAt: number | null;
-  /** Unix seconds — set when close_session was injected; shows celebration UI instead of countdown */
+  /** Unix seconds — close_session prompt is currently running (not yet finished) */
+  closingAt: number | null;
+  /** Unix seconds — close_session prompt finished; shows celebration UI */
   closedAt: number | null;
 };
 
@@ -162,6 +183,16 @@ function readTmpTs(filename: string): number | null {
   return null;
 }
 
+function readCurrentPrompt(tab: string): CurrentPrompt | null {
+  try {
+    const file = path.join("/tmp", `claude-current-prompt-${tab}`);
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf-8"));
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 function readPromptMeta(): PromptMeta[] {
   try {
     return JSON.parse(fs.readFileSync(META_FILE, "utf-8"));
@@ -170,20 +201,57 @@ function readPromptMeta(): PromptMeta[] {
   }
 }
 
+// ── Profile matching ──────────────────────────────────────────────────────────
+
+// Match a tab name to a DB project entity using fuzzy name comparison.
+// Handles: "AOZ" → "aoz-housing", "Ivy" → "ivy-portal", "OrangeCat" → "orangecat"
+function matchProfile(
+  tab: string,
+  dir: string,
+  dbProjects: Awaited<ReturnType<typeof getProjects>>
+): ProjectProfile | null {
+  const tabLower = tab.toLowerCase().replace(/[-_]/g, "");
+  const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
+
+  const match = dbProjects.find((p) => {
+    const nameLower = p.name.toLowerCase().replace(/[-_]/g, "");
+    return (
+      nameLower === tabLower ||
+      nameLower === dirBaseLower ||
+      nameLower.includes(tabLower) ||
+      tabLower.includes(nameLower) ||
+      nameLower.includes(dirBaseLower) ||
+      dirBaseLower.includes(nameLower)
+    );
+  });
+
+  if (!match) return null;
+  const a = match.attrs as Record<string, string>;
+  return {
+    description: match.description ?? a.description ?? "",
+    status: a.status ?? "",
+    maturity: a.maturity ?? "",
+    stack: a.stack ?? a.stack_layer ?? "",
+    url: a.url ?? "",
+    mission: a.mission ?? "",
+    attrs: a,
+  };
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
   const projects = parseProjects();
   const prompts = readPromptMeta();
-
   const dirs = projects.map((p) => p.dir);
 
-  // Single shell script for all git queries + single pgrep — only 2 forks total
-  const [gitMap, claudePidsRaw] = await Promise.all([
+  // Run all IO in parallel: git queries + claude pids + DB project profiles
+  const [gitMap, claudePidsRaw, dbProjects] = await Promise.all([
     fetchAllGitStates(dirs),
     execAsync("pgrep -f 'claude' 2>/dev/null || true", { timeout: 2000 })
       .then((r) => r.stdout.trim().split("\n").filter(Boolean))
       .catch(() => [] as string[]),
+    getProjects().catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
   ]);
 
   // Resolve claude PID → cwd once, then match against project dirs
@@ -197,7 +265,10 @@ export async function GET() {
     session: parseSession(tab),
     git: gitMap.get(dir) ?? null,
     claudeRunning: claudeCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+    profile: matchProfile(tab, dir, dbProjects),
+    currentPrompt: readCurrentPrompt(tab),
     readyAt: readTmpTs(path.join("/tmp", `claude-ready-${tab}`)),
+    closingAt: readTmpTs(path.join("/tmp", `claude-closing-${tab}`)),
     closedAt: readTmpTs(path.join("/tmp", `claude-closed-${tab}`)),
   }));
 

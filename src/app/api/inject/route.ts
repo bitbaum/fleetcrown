@@ -5,6 +5,7 @@ import path from "path";
 
 const HOME = process.env.HOME ?? "/home/g";
 const PROMPTS_FILE = path.join(HOME, ".config", "claude-prompts.json");
+const META_FILE = path.join(HOME, ".config", "claude-prompts-meta.json");
 const SESSIONS_DIR = path.join(HOME, ".claude", "sessions");
 const PROJECTS_CONF = path.join(HOME, ".config", "claude-projects.conf");
 
@@ -28,6 +29,15 @@ function readPrompts(): Record<string, string> {
   }
 }
 
+type PromptMeta = { key: string; label: string; icon: string };
+function readPromptMeta(): PromptMeta[] {
+  try {
+    return JSON.parse(fs.readFileSync(META_FILE, "utf-8"));
+  } catch {
+    return [];
+  }
+}
+
 function readSession(tab: string): string | null {
   const filePath = path.join(SESSIONS_DIR, `${tab}.md`);
   try {
@@ -47,14 +57,12 @@ function buildPrompt(base: string, tab: string): string {
 }
 
 function injectIntoTab(tab: string, prompt: string): void {
-  // Escape single quotes for shell safety
   const escaped = prompt.replace(/'/g, `'"'"'`);
   execSync(`zellij action go-to-tab-name '${tab}'`);
-  // Brief pause so zellij can focus the tab
   execSync("sleep 0.3");
   execSync(`zellij action write-chars '${escaped}'`);
   execSync("sleep 0.1");
-  execSync("zellij action write 13"); // Enter key (byte 13 = CR)
+  execSync("zellij action write 13");
 }
 
 export async function POST(req: NextRequest) {
@@ -71,7 +79,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "tab is required" }, { status: 400 });
   }
 
-  // Validate tab exists in claude-projects.conf
   const projects = readProjects();
   const canonical = projects.get(tab.toLowerCase());
   if (!canonical) {
@@ -79,12 +86,14 @@ export async function POST(req: NextRequest) {
   }
 
   let prompt: string;
+  let promptLabel = "Custom";
 
   if (customPrompt) {
     if (typeof customPrompt !== "string" || customPrompt.length > 4000) {
       return NextResponse.json({ error: "customPrompt too long" }, { status: 400 });
     }
     prompt = customPrompt;
+    promptLabel = customPrompt.slice(0, 40);
   } else if (promptKey) {
     const prompts = readPrompts();
     const base = prompts[promptKey];
@@ -92,20 +101,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown prompt key: ${promptKey}` }, { status: 400 });
     }
     prompt = buildPrompt(base, canonical);
+    const meta = readPromptMeta().find((m) => m.key === promptKey);
+    promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
   } else {
     return NextResponse.json({ error: "promptKey or customPrompt required" }, { status: 400 });
   }
 
   try {
     injectIntoTab(canonical, prompt);
-    // Always clear the ready signal
+
+    const nowS = Math.floor(Date.now() / 1000);
+
+    // Track which prompt is currently running (stop.sh clears this when Claude exits)
+    fs.writeFileSync(
+      path.join("/tmp", `claude-current-prompt-${canonical}`),
+      JSON.stringify({ key: promptKey ?? "custom", label: promptLabel, startedAt: nowS })
+    );
+
+    // Clear the "ready" signal — Claude is now busy
     try { fs.unlinkSync(path.join("/tmp", `claude-ready-${canonical}`)); } catch { /* already gone */ }
+
     if (promptKey === "close_session") {
-      // Write sentinel (suppresses popup on next Claude exit) and closed file (shows celebration UI)
-      // Infrastructure handles this — not relying on the LLM to write these files
+      // Suppress the next stop-hook popup — infrastructure-side, reliable
       fs.writeFileSync(path.join("/tmp", `claude-session-closed-${canonical}`), "");
-      fs.writeFileSync(path.join("/tmp", `claude-closed-${canonical}`), String(Math.floor(Date.now() / 1000)));
+      // Signal "closing in progress" — NOT "closed" yet (Claude is still running the close prompt).
+      // stop.sh will write claude-closed-<tab> when Claude actually finishes.
+      fs.writeFileSync(path.join("/tmp", `claude-closing-${canonical}`), String(nowS));
+      // Clear any stale closed file from a previous session
+      try { fs.unlinkSync(path.join("/tmp", `claude-closed-${canonical}`)); } catch { /* ok */ }
     }
+
     return NextResponse.json({ ok: true, tab: canonical });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
