@@ -11,7 +11,7 @@ import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, AUTO_INJECT_S,
   HEALTH_COLOR, PROMPT_STYLE,
 } from "@/lib/constants/control";
-import type { ControlData, ProjectState, PromptMeta } from "@/app/api/control/route";
+import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 
