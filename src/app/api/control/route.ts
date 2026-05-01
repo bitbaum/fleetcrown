@@ -4,7 +4,7 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
-import { getLatestRunsByProjectPaths } from "@/db/queries/orchestration-runs";
+import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
 import {
@@ -334,7 +334,10 @@ export async function GET() {
   // Detect any known agent running in a project dir — not just the configured default
   const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
   const agentCwds = getAgentCwds(allMatchers);
-  const latestRuns = await getLatestRunsByProjectPaths(dirs);
+  const [latestRuns] = await Promise.all([
+    getLatestRunsByProjectPaths(dirs),
+    cleanupStaleOrchestrationRuns().catch(() => {}),
+  ]);
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => {
     const latestRun = latestRuns.get(dir);

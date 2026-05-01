@@ -1,7 +1,9 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orchestrationRuns, type NewOrchestrationRun } from "@/db/schema/orchestration-runs";
 import { DEFAULT_USER_ID } from "@/lib/constants";
+
+const STALE_RUN_MINUTES = 60;
 
 export async function createOrchestrationRun(run: NewOrchestrationRun) {
   const [created] = await db.insert(orchestrationRuns).values(run).returning();
@@ -24,6 +26,23 @@ export async function updateOrchestrationRun(
     .returning();
 
   return updated;
+}
+
+export async function cleanupStaleOrchestrationRuns() {
+  await db
+    .update(orchestrationRuns)
+    .set({
+      state: "error",
+      finishedAt: new Date(),
+      payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', '"Timed out — run exceeded maximum duration and was cleaned up"')`,
+    })
+    .where(
+      and(
+        eq(orchestrationRuns.userId, DEFAULT_USER_ID),
+        eq(orchestrationRuns.state, "running"),
+        lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
+      ),
+    );
 }
 
 export async function getLatestRunsByProjectPaths(projectPaths: string[]) {
