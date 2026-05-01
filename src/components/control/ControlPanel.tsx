@@ -334,9 +334,9 @@ export function ControlPanel() {
               {activeDefinition && (
                 <div className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm text-text-secondary">
                   <span className="text-text-primary">{activeDefinition.label}</span>
-                  {activeDefinition.capabilities.autonomousPromptLoop
-                    ? " supports the full autonomous prompt loop in Cockpit."
-                    : " currently supports tab switching and manual prompt injection, but not Claude-style autonomous prompt orchestration yet."}
+                  {activeDefinition.capabilities.sessionLifecycleSignals
+                    ? " supports the full loop — lifecycle hooks, ready signals, and autonomous continuation."
+                    : " dispatches tasks via prompt injection. No stop/ready lifecycle signals — banners trigger from orchestration run completions only."}
                 </div>
               )}
 
