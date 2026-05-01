@@ -429,7 +429,7 @@ export function ControlPanel() {
                 project={project}
                 prompts={data!.prompts}
                 zellijTabs={data!.zellijTabs}
-                orchestration={data!.orchestration}
+
                 currentAdapter={data?.agentConfig.agent ?? "claude"}
                 onInject={inject}
                 onRunWithBrain={async (projectState, intent) => {

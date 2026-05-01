@@ -312,7 +312,6 @@ export function ProjectCard({
   project,
   prompts,
   zellijTabs,
-  orchestration,
   currentAdapter,
   onInject,
   onRunWithBrain,
@@ -320,7 +319,6 @@ export function ProjectCard({
   project: ProjectState;
   prompts: PromptMeta[];
   zellijTabs: string[];
-  orchestration: ControlData["orchestration"];
   currentAdapter: string;
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
@@ -332,21 +330,19 @@ export function ProjectCard({
   const [dismissed, setDismissed] = useState(false);
 
   const nowS = Math.floor(Date.now() / 1000);
-  const supportsAutonomousLoop = orchestration.autonomousPromptLoop;
+  // readyAt/closedAt/closingAt are written by lifecycle hooks (stop.sh etc.)
+  // regardless of which agent is currently configured — don't gate on agent capability.
   const isClosed =
-    supportsAutonomousLoop &&
     !dismissed &&
     !project.agentRunning &&
     project.closedAt !== null &&
     nowS - project.closedAt < CLOSED_WINDOW_S;
   const isClosing =
-    supportsAutonomousLoop &&
     !dismissed &&
     !isClosed &&
     project.closingAt !== null &&
     nowS - project.closingAt < CLOSING_WINDOW_S;
   const isReady =
-    supportsAutonomousLoop &&
     !dismissed &&
     !isClosed &&
     !isClosing &&
@@ -559,12 +555,6 @@ export function ProjectCard({
           startedAt={project.currentPrompt!.startedAt}
         />
       )}
-      {!supportsAutonomousLoop && (
-        <div className="border-t border-border-subtle bg-surface-base px-5 py-3 text-sm text-text-secondary">
-          This backend can take prompts in the current tab, but Cockpit does not yet have autonomous stop/ready lifecycle control for it.
-        </div>
-      )}
-
       {project.latestOrchestrationRun && <LatestOrchestrationPanel run={project.latestOrchestrationRun} />}
 
       {/* Profile — collapsible */}
