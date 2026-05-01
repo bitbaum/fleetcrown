@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   GitBranch, Circle, Send, ChevronDown, ChevronUp,
-  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight, Terminal,
+  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight, Terminal, Pause, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
@@ -650,9 +650,11 @@ export function ProjectCard({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setAutoContinueEnabled((v) => !v)}
-            className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+            title={autoContinueEnabled ? "Pause automatic continue for this tab" : "Resume automatic continue for this tab"}
           >
-            {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+            {autoContinueEnabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {autoContinueEnabled ? "Pause" : "Play"}
           </button>
 
           {/* Primary: Next best — prominent, shows current brain */}
