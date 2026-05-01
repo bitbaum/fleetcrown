@@ -337,6 +337,26 @@ export function ProjectCard({
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
+  const autoContinueKey = `control:auto-continue:${project.tab.toLowerCase()}`;
+
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(autoContinueKey);
+      if (stored === "off") setAutoContinueEnabled(false);
+      if (stored === "on") setAutoContinueEnabled(true);
+    } catch {
+      // ignore storage failures
+    }
+  }, [autoContinueKey]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(autoContinueKey, autoContinueEnabled ? "on" : "off");
+    } catch {
+      // ignore storage failures
+    }
+  }, [autoContinueEnabled, autoContinueKey]);
 
   useEffect(() => {
     let clearAt = 0 as unknown as ReturnType<typeof setTimeout>;
