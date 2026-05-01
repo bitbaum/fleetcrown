@@ -4,9 +4,9 @@ import { AskIvyButton } from "./AskIvyButton";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="app-shell-frame flex min-h-screen bg-background text-foreground">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+      <main className="app-main">
         {children}
       </main>
       <MobileNav />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { isChannelAttrKey } from "@/config/channels";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_TIGHT, ICON_BUTTON_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "./PersonDetailHelpers";
 import { formatKey } from "./person-detail-types";
@@ -73,10 +73,10 @@ export function DetailAttrs({
   return (
     <Section title="Details">
       {detailAttrs.map(([key, value]) => (
-        <div key={key} className="group flex justify-between gap-2 text-sm">
-          <span className="text-white/50 shrink-0">{formatKey(key)}</span>
+        <div key={key} className="group flex justify-between gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+          <span className="shrink-0 text-text-secondary">{formatKey(key)}</span>
           {editingKey === key ? (
-            <div className="flex items-center gap-1 flex-1 justify-end">
+            <div className="flex flex-1 items-center justify-end gap-1">
               <input
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
@@ -85,33 +85,33 @@ export function DetailAttrs({
                   if (e.key === "Escape") setEditingKey(null);
                 }}
                 autoFocus
-                className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 rounded px-2 py-0.5 text-xs text-white/80 focus:outline-none focus:border-white/25 text-right"
+                className="min-w-0 flex-1 rounded-lg border border-border-default bg-surface-overlay px-2 py-1 text-right text-xs text-text-primary outline-none transition-colors focus:border-accent-primary"
               />
               <button
                 onClick={() => saveEdit(key)}
                 disabled={saving}
-                className="p-1 rounded bg-emerald-600/70 hover:bg-emerald-600 disabled:opacity-30 text-white shrink-0"
+                className="shrink-0 rounded-lg bg-accent-primary p-1 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
               >
                 {saving ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
               </button>
-              <button onClick={() => setEditingKey(null)} className="p-1 text-white/25 hover:text-white/60 shrink-0">
+              <button onClick={() => setEditingKey(null)} className={`shrink-0 ${ICON_BUTTON_CLASS}`}>
                 <X className="h-2.5 w-2.5" />
               </button>
               <button
                 onClick={() => deleteAttr(key)}
                 disabled={deletingKey === key}
-                className="p-1 text-white/15 hover:text-red-400 transition-colors shrink-0"
+                className={`shrink-0 ${ICON_BUTTON_CLASS} hover:text-red-400`}
                 title="Delete attribute"
               >
                 {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1 min-w-0">
-              <span className="text-right truncate">{value}</span>
+            <div className="flex min-w-0 items-center gap-1">
+              <span className="truncate text-right text-text-primary">{value}</span>
               <button
                 onClick={() => { setEditValue(value); setEditingKey(key); }}
-                className="sm:opacity-0 sm:group-hover:opacity-100 p-0.5 text-white/20 hover:text-white/60 transition-all shrink-0"
+                className={`shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ${ICON_BUTTON_CLASS}`}
               >
                 <Pencil className="h-2.5 w-2.5" />
               </button>
@@ -123,7 +123,7 @@ export function DetailAttrs({
         <EmptyState>No details yet</EmptyState>
       )}
       {addingNew ? (
-        <div className="flex gap-1.5 items-center pt-0.5">
+        <div className="flex items-center gap-1.5 pt-0.5">
           <input
             value={newKey}
             onChange={(e) => setNewKey(e.target.value)}
@@ -144,18 +144,18 @@ export function DetailAttrs({
           <button
             onClick={saveNew}
             disabled={!newKey.trim() || !newValue.trim() || saving}
-            className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white shrink-0"
+            className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           </button>
-          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className="p-1 text-white/25 hover:text-white/60">
+          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className={ICON_BUTTON_CLASS}>
             <X className="h-3 w-3" />
           </button>
         </div>
       ) : (
         <button
           onClick={() => setAddingNew(true)}
-          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-0.5"
+          className="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-accent-text"
         >
           <Plus className="h-3 w-3" /> Add detail
         </button>

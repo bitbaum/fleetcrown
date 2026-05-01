@@ -63,29 +63,40 @@ export function RunModal({
   return (
     <>
       <Modal onClose={onClose} size="2xl" padded={false} disableClose={running} className="flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 p-5 border-b border-white/10 shrink-0">
-          <div>
-            <div className="text-sm font-semibold">{template.name}</div>
-            <div className="text-xs text-white/40 mt-0.5">{template.description}</div>
+        <div className="shrink-0 border-b border-border-subtle p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xl font-semibold text-text-primary">{template.name}</div>
+              <div className="mt-1 text-base text-text-secondary">{template.description}</div>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={running}
+              className="rounded-2xl border border-border-subtle bg-surface-overlay p-2 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-30"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button onClick={onClose} disabled={running} className="p-1 text-white/40 hover:text-white/70 rounded disabled:opacity-30">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
-          {/* Project selector */}
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
+          <div>
+            <div className="ui-kicker mb-2">Resolved Prompt</div>
+            <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary">
+              {resolvedMessage}
+            </pre>
+          </div>
+
           {template.scope === "project" && (
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10px] uppercase tracking-wider text-white/30">Project</label>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="ui-kicker text-text-tertiary">Project</label>
                 {projectId && projectId !== "__global__" && (
                   <button
                     onClick={() => setShowProjectDetail(true)}
-                    className="text-[10px] text-emerald-400/70 hover:text-emerald-400 transition-colors flex items-center gap-1"
+                    className="flex items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover"
                   >
-                    <FolderOpen className="h-3 w-3" /> View project →
+                    <FolderOpen className="h-4 w-4" /> View Project
                   </button>
                 )}
               </div>
@@ -106,39 +117,33 @@ export function RunModal({
             </div>
           )}
 
-          {/* Prompt preview */}
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5">Prompt</div>
-            <pre className="text-[11px] text-white/50 whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded-lg p-3 border border-white/[0.06] max-h-40 overflow-y-auto">
-              {resolvedMessage}
-            </pre>
-          </div>
-
-          {/* Result */}
           {(running || result || error) && (
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between">
                 <span>Ivy&apos;s Response</span>
                 {result && (
-                  <button onClick={handleCopy} className="flex items-center gap-1 text-white/30 hover:text-white/60 transition-colors">
-                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1 text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     {copied ? "Copied" : "Copy"}
                   </button>
                 )}
               </div>
               {running && (
-                <div className="flex items-center gap-2 text-xs text-white/40 p-3 bg-white/[0.03] rounded-lg border border-white/[0.06]">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+                <div className="flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-overlay p-4 text-base text-text-secondary">
+                  <Loader2 className="h-4 w-4 animate-spin text-accent-primary" />
                   Ivy is working… (this may take up to 60s)
                 </div>
               )}
               {error && (
-                <div className="text-xs text-red-300/80 p-3 bg-red-500/[0.06] rounded-lg border border-red-500/20">
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/8 p-4 text-base text-red-300/85">
                   {error}
                 </div>
               )}
               {result && (
-                <pre className="text-xs text-white/70 whitespace-pre-wrap leading-relaxed p-3 bg-white/[0.04] rounded-lg border border-white/[0.06]">
+                <pre className="whitespace-pre-wrap rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4 text-sm leading-relaxed text-text-secondary">
                   {result}
                 </pre>
               )}
@@ -146,8 +151,7 @@ export function RunModal({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-white/10 shrink-0">
+        <div className="shrink-0 border-t border-border-subtle p-6">
           <button
             onClick={handleRun}
             disabled={!canRun || running}

@@ -36,30 +36,28 @@ function ProjectCard({
   return (
     <div
       onClick={onOpen}
-      className={`relative flex flex-col gap-3 rounded-xl border p-4 cursor-pointer transition-all hover:border-white/15 hover:bg-white/[0.04] ${
-        hasIssues ? "border-yellow-500/20 bg-yellow-500/[0.02]" : "border-white/[0.07] bg-white/[0.02]"
+      className={`group relative flex cursor-pointer flex-col gap-3 rounded-[1.5rem] border p-4 transition-all hover:bg-surface-raised ${
+        hasIssues ? "border-yellow-500/20 bg-yellow-500/[0.04]" : "border-border-subtle bg-surface-base"
       }`}
     >
-      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold truncate">{project.name}</div>
+          <div className="truncate text-base font-semibold text-text-primary">{project.name}</div>
           {description && (
-            <div className="text-xs text-white/40 mt-0.5 line-clamp-2 leading-relaxed">
+            <div className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
               {description}
             </div>
           )}
         </div>
 
-        {/* External links */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           {prodUrl && (
             <a
               href={prodUrl}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1 rounded text-white/25 hover:text-white/60 transition-colors"
+              className="rounded-lg p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
               title="Open production site"
             >
               <Globe className="h-3.5 w-3.5" />
@@ -71,7 +69,7 @@ function ProjectCard({
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1 rounded text-white/25 hover:text-white/60 transition-colors"
+              className="rounded-lg p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
               title="Open repo"
             >
               <GitBranch className="h-3.5 w-3.5" />
@@ -80,7 +78,6 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* Status + Maturity */}
       {(status || maturity) && (
         <div className="flex flex-col gap-1.5">
           {status && <StatusBadge value={status} />}
@@ -88,7 +85,6 @@ function ProjectCard({
         </div>
       )}
 
-      {/* Health signals */}
       {signals.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {signals.map((s) => (
@@ -97,23 +93,21 @@ function ProjectCard({
         </div>
       )}
 
-      {/* Footer: attr preview for projects without status/maturity */}
       {!status && !maturity && !hasIssues && (
         <div className="flex flex-wrap gap-1.5">
           {Object.entries(attrs)
             .filter(([k]) => !RESERVED.includes(k))
             .slice(0, 2)
             .map(([key, value]) => (
-              <span key={key} className="px-2 py-0.5 rounded-full text-[10px] bg-white/[0.04] text-white/35 border border-white/[0.07]">
+              <span key={key} className="rounded-full border border-border-default bg-surface-overlay px-2 py-0.5 text-[10px] text-text-tertiary">
                 {String(value).slice(0, 30)}
               </span>
             ))}
         </div>
       )}
 
-      {/* "Click to explore" hint — bottom right */}
-      <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Zap className="h-3 w-3 text-white/20" />
+      <div className="absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
+        <Zap className="h-3 w-3 text-text-muted" />
       </div>
     </div>
   );
@@ -133,7 +127,6 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
     );
   }, [projects, query]);
 
-  // Compute health summary across all projects (not filtered)
   const withIssues = projects.filter((p) => getHealthSignals(p.attrs).length > 0);
   const securityRisks = projects.filter((p) =>
     p.attrs["security_vulnerability"],
@@ -141,22 +134,20 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
 
   return (
     <>
-      {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
         <input
           type="text"
           placeholder="Search projects..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-white/20 placeholder:text-white/30"
+          className="w-full rounded-2xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary outline-none transition-colors focus:border-accent-primary placeholder:text-text-muted"
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-border-subtle bg-surface-base px-2 py-0.5 text-xs font-medium text-text-secondary">
           {filtered.length}
         </span>
       </div>
 
-      {/* Health summary bar */}
       {withIssues.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-1 text-xs">
           {securityRisks > 0 && (
@@ -169,13 +160,13 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
             <AlertTriangle className="h-3.5 w-3.5" />
             {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need attention
           </span>
-          <span className="text-white/20 ml-auto">
+          <span className="ml-auto text-text-tertiary">
             {projects.length - withIssues.length}/{projects.length} healthy
           </span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {filtered.map((project) => (
           <ProjectCard
             key={project.id}
@@ -184,7 +175,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           />
         ))}
         {filtered.length === 0 && (
-          <p className="col-span-2 text-sm text-white/30 py-4 text-center">No projects match &ldquo;{query}&rdquo;</p>
+          <p className="col-span-2 py-4 text-center text-sm text-text-tertiary">No projects match &ldquo;{query}&rdquo;</p>
         )}
       </div>
 

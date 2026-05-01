@@ -17,7 +17,7 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
   success: { icon: CheckCircle, className: "text-green-400" },
   failure: { icon: XCircle, className: "text-red-400" },
   running: { icon: Loader2, className: "text-yellow-400 animate-spin" },
-  cancelled: { icon: Clock, className: "text-white/30" },
+  cancelled: { icon: Clock, className: "text-text-tertiary" },
 };
 
 export function GitHubStatus() {
@@ -28,9 +28,9 @@ export function GitHubStatus() {
     <Card>
       <CardHeader icon={GitBranch} title="CI / GitHub" />
       {loading ? (
-        <div className="text-sm text-white/30 animate-pulse">Checking repos...</div>
+        <div className="animate-pulse text-sm text-text-tertiary">Checking repos...</div>
       ) : error || (data?.error && repos.length === 0) ? (
-        <div className="text-sm text-white/30">{error ?? data?.error}</div>
+        <div className="text-sm text-text-tertiary">{error ?? data?.error}</div>
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>
       ) : (
@@ -42,14 +42,14 @@ export function GitHubStatus() {
               <div key={repo.repo} className="flex items-center justify-between py-1">
                 <div className="flex items-center gap-2">
                   <Icon className={`h-3.5 w-3.5 ${status.className}`} />
-                  <span className="text-sm md:text-base font-medium">{repo.repo}</span>
+                  <span className="text-sm font-medium text-text-primary md:text-base">{repo.repo}</span>
                 </div>
-                <div className="flex items-center gap-3 text-xs md:text-sm text-white/40">
+                <div className="flex items-center gap-3 text-xs text-text-secondary md:text-sm">
                   {(repo.open_prs ?? 0) > 0 && (
                     <span>{repo.open_prs} PR{repo.open_prs !== 1 ? "s" : ""}</span>
                   )}
                   {(repo.dependabot_prs ?? 0) > 0 && (
-                    <span className="text-amber-400/60">{repo.dependabot_prs} deps</span>
+                    <span className="text-amber-400/80">{repo.dependabot_prs} deps</span>
                   )}
                   {repo.ci_name && <span>{repo.ci_name}</span>}
                 </div>

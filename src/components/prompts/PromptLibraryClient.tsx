@@ -42,15 +42,14 @@ export function PromptLibraryClient({
 
   return (
     <div className="space-y-6">
-      {/* Search + scope filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search prompts…"
-            className="w-full pl-9 pr-4 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/25 transition-colors"
+            className="ui-input pl-12"
           />
         </div>
         <div className="flex gap-1.5 shrink-0">
@@ -58,13 +57,13 @@ export function PromptLibraryClient({
             <button
               key={scope}
               onClick={() => setActiveScope(scope)}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
                 activeScope === scope
-                  ? "bg-white/10 border-white/20 text-white/80"
-                  : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/60"
+                  ? "border-accent-primary/30 bg-accent-muted text-text-primary"
+                  : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
               }`}
             >
-              {scope === "all" ? "All" : scope === "global" ? "🌐 Global" : "📁 Project"}
+              {scope === "all" ? "All" : scope === "global" ? "Global" : "Project"}
             </button>
           ))}
         </div>
@@ -73,12 +72,14 @@ export function PromptLibraryClient({
       <CategoryBar active={activeCategory} templates={templates} onSelect={setActiveCategory} />
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-white/30">
-          <Search className="h-8 w-8" />
-          <div className="text-sm">No prompts match your filters</div>
+        <div className="ui-panel-raised flex flex-col items-center gap-3 py-12 text-center text-text-secondary">
+          <Search className="h-8 w-8 text-text-muted" />
+          <div className="text-lg font-medium text-text-primary">No prompts match your filters</div>
+          <div className="max-w-xl text-base text-text-secondary">
+            Try a broader search or clear one of the active filters.
+          </div>
         </div>
       ) : isFiltered ? (
-        /* Filtered: flat list grouped by category */
         <div className="space-y-6">
           {categoriesWithTemplates.map((cat) => {
             const group = filtered.filter((t) => t.category === cat);
@@ -86,10 +87,12 @@ export function PromptLibraryClient({
             return (
               <section key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
+                  <span className={`rounded-xl border px-3 py-1 text-sm font-medium ${meta.color}`}>
                     {meta.label}
                   </span>
-                  <span className="text-xs text-white/20">{group.length} prompt{group.length !== 1 ? "s" : ""}</span>
+                  <span className="text-sm text-text-tertiary">
+                    {group.length} prompt{group.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {group.map((t) => (
@@ -106,8 +109,8 @@ export function PromptLibraryClient({
           {featured.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
-                <Star className="h-3.5 w-3.5 text-yellow-400/70" />
-                <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Quick Access</span>
+                <Star className="h-4 w-4 text-yellow-400/80" />
+                <span className="ui-kicker text-text-secondary">Quick Access</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {featured.map((t) => (
@@ -123,14 +126,14 @@ export function PromptLibraryClient({
             return (
               <section key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium ${meta.color}`}>
+                  <span className={`rounded-xl border px-3 py-1 text-sm font-medium ${meta.color}`}>
                     {meta.label}
                   </span>
                   <button
                     onClick={() => setActiveCategory(cat)}
-                    className="text-[10px] text-white/20 hover:text-white/50 transition-colors ml-auto"
+                    className="ml-auto text-sm font-medium text-text-tertiary transition-colors hover:text-text-primary"
                   >
-                    filter →
+                    Filter
                   </button>
                 </div>
                 <div className="space-y-2">

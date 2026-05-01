@@ -6,7 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT, SECONDARY_BUTTON_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 
@@ -17,7 +17,6 @@ export function PersonCard({
 }: {
   person: PersonWithAttributes;
   onClick: () => void;
-  /** Called immediately after a successful interaction log so the grid can update local state */
   onLogged?: (personId: string, at: Date) => void;
 }) {
   const channels = Object.keys(person.attrs).filter(isChannelAttrKey);
@@ -43,7 +42,6 @@ export function PersonCard({
       });
       setDone(true);
       setSummary("");
-      // Update grid state immediately so the card reflects the new timestamp without a full refresh
       onLogged?.(person.id, occurredAt);
       setTimeout(() => {
         setDone(false);
@@ -67,23 +65,22 @@ export function PersonCard({
   }
 
   return (
-    <div className="group w-full rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
-      {/* Main clickable area */}
-      <button onClick={onClick} className="w-full text-left p-3 md:p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2.5 min-w-0">
+    <div className="group w-full rounded-[1.5rem] border border-border-subtle bg-surface-base transition-colors hover:bg-surface-raised">
+      <button onClick={onClick} className="w-full p-4 text-left md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <span
-              className={`h-2.5 w-2.5 rounded-full shrink-0 mt-1.5 ${HEALTH_DOT_COLOR[person.health]}`}
+              className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${HEALTH_DOT_COLOR[person.health]}`}
               title={`${person.health}${person.lastInteraction ? ` — last ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })}` : ""}`}
             />
             <div className="min-w-0">
-              <div className="text-sm md:text-base font-medium truncate" title={person.name}>{person.name}</div>
+              <div className="truncate text-lg font-medium text-text-primary md:text-xl" title={person.name}>{person.name}</div>
               {(profession || location) && (
-                <div className="text-xs md:text-sm text-white/40 truncate mt-0.5" title={[profession, location].filter(Boolean).join(" · ")}>
+                <div className="mt-1 truncate text-base text-text-secondary" title={[profession, location].filter(Boolean).join(" · ")}>
                   {[profession, location].filter(Boolean).join(" · ")}
                 </div>
               )}
-              <div className="text-xs text-white/30 mt-0.5 flex items-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-text-tertiary">
                 {person.lastInteraction && (
                   <span>
                     {formatDistanceToNow(person.lastInteraction, { addSuffix: true })}
@@ -91,7 +88,7 @@ export function PersonCard({
                   </span>
                 )}
                 {person.relationCount > 0 && (
-                  <span className="flex items-center gap-0.5 text-purple-400/60">
+                  <span className="flex items-center gap-1 text-accent-text">
                     <Link2 className="h-3 w-3" />
                     {person.relationCount}
                   </span>
@@ -99,14 +96,14 @@ export function PersonCard({
               </div>
             </div>
           </div>
-          <div className="flex gap-1.5 shrink-0">
+          <div className="flex shrink-0 gap-2 pt-1">
             {channels.map((ch) => {
               const config = CHANNEL_CONFIG[ch];
               if (!config) return null;
               const Icon = config.icon;
               return (
                 <span key={ch} title={config.label}>
-                  <Icon className={`h-4 w-4 md:h-5 md:w-5 ${config.color}`} />
+                  <Icon className={`h-4 w-4 ${config.color} md:h-5 md:w-5`} />
                 </span>
               );
             })}
@@ -114,12 +111,11 @@ export function PersonCard({
         </div>
       </button>
 
-      {/* Quick-log button — always visible on mobile (no hover), revealed on hover for desktop */}
       {!logOpen && (
-        <div className="px-3 pb-2 md:px-4 flex justify-end">
+        <div className="flex justify-end px-4 pb-4">
           <button
             onClick={openLog}
-            className="opacity-100 sm:opacity-50 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 px-2 py-1 rounded text-xs text-white/40 hover:text-emerald-400 hover:bg-white/[0.04]"
+            className={`opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ${SECONDARY_BUTTON_CLASS}`}
             title="Log interaction"
           >
             <Plus className="h-3 w-3" /> Log
@@ -127,20 +123,18 @@ export function PersonCard({
         </div>
       )}
 
-      {/* Inline log form */}
       {logOpen && (
         <div
-          className="px-3 pb-3 md:px-4 md:pb-4 border-t border-white/[0.05] mt-0 pt-2.5 space-y-2"
+          className="mt-0 space-y-3 border-t border-border-subtle px-4 pb-4 pt-3"
           onClick={(e) => e.stopPropagation()}
         >
           {done ? (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+            <div className="flex items-center gap-1.5 text-sm text-emerald-400">
               <Check className="h-3.5 w-3.5" /> Logged
             </div>
           ) : (
             <>
-              <div className="flex gap-2 items-center flex-wrap">
-                {/* Channel selector */}
+              <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
@@ -150,16 +144,15 @@ export function PersonCard({
                     <option key={ch} value={ch}>{ch}</option>
                   ))}
                 </select>
-                {/* Direction toggle */}
-                <div className="flex rounded overflow-hidden border border-white/10 text-xs">
+                <div className="flex overflow-hidden rounded-xl border border-border-default bg-surface-overlay text-xs">
                   {([INTERACTION_DIRECTION.OUTBOUND, INTERACTION_DIRECTION.INBOUND] as const).map((d) => (
                     <button
                       key={d}
                       onClick={(e) => { e.stopPropagation(); setDirection(d); }}
-                      className={`px-2.5 py-1 transition-colors ${
+                      className={`px-3 py-1.5 transition-colors ${
                         direction === d
-                          ? "bg-white/15 text-white/80"
-                          : "text-white/30 hover:text-white/50"
+                          ? "bg-accent-muted text-accent-text"
+                          : "text-text-tertiary hover:text-text-primary"
                       }`}
                     >
                       {d === INTERACTION_DIRECTION.OUTBOUND ? "out" : "in"}
@@ -182,14 +175,14 @@ export function PersonCard({
                 <button
                   onClick={submitLog}
                   disabled={saving}
-                  className="flex items-center gap-1 px-3 py-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+                  className="flex items-center gap-1 rounded-xl bg-accent-primary px-3 py-2 text-xs font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30"
                 >
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                   Log
                 </button>
                 <button
                   onClick={cancelLog}
-                  className="text-xs text-white/30 hover:text-white/60 transition-colors"
+                  className="text-xs text-text-tertiary transition-colors hover:text-text-secondary"
                 >
                   Cancel
                 </button>

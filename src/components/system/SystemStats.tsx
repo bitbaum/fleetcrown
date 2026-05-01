@@ -25,10 +25,10 @@ function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) 
   const color = pct > 85 ? "bg-red-400" : pct > 65 ? "bg-yellow-400" : "bg-emerald-400";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-white/40 w-8 text-right">{pct}%</span>
+      <span className="w-10 text-right text-sm text-text-tertiary">{pct}%</span>
     </div>
   );
 }
@@ -37,10 +37,10 @@ export function SystemStats() {
   const { data, loading } = useFetch<SystemData>("/api/system");
 
   if (loading) {
-    return <div className="text-white/30 animate-pulse text-sm">Loading system status...</div>;
+    return <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>;
   }
   if (!data) {
-    return <div className="text-white/30 text-sm">Could not fetch system data</div>;
+    return <div className="text-base text-text-secondary">Could not fetch system data</div>;
   }
 
   const { mem, swap, disk, uptime, gatewayStatus } = data;
@@ -51,13 +51,13 @@ export function SystemStats() {
         <CardHeader icon={Radio} title="OpenClaw Gateway" />
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${gatewayStatus === "ok" ? "bg-green-400" : "bg-red-400"}`} />
-          <span className="text-sm">{gatewayStatus === "ok" ? "Connected" : "Offline"}</span>
+          <span className="text-base text-text-primary">{gatewayStatus === "ok" ? "Connected" : "Offline"}</span>
         </div>
       </Card>
 
       <Card>
         <CardHeader icon={Clock} title="Uptime" />
-        <p className="text-sm text-white/70">{uptime ?? "n/a"}</p>
+        <p className="text-base text-text-secondary">{uptime ?? "n/a"}</p>
       </Card>
 
       <Card>
@@ -65,7 +65,7 @@ export function SystemStats() {
         {mem ? (
           <div className="space-y-3">
             <div>
-              <div className="flex justify-between text-xs text-white/40 mb-1.5">
+              <div className="mb-2 flex justify-between text-sm text-text-tertiary">
                 <span>RAM</span>
                 <span>{mibToGib(mem.usedMiB)} / {mibToGib(mem.totalMiB)} GiB</span>
               </div>
@@ -73,7 +73,7 @@ export function SystemStats() {
             </div>
             {swap && swap.totalMiB > 0 && (
               <div>
-                <div className="flex justify-between text-xs text-white/40 mb-1.5">
+                <div className="mb-2 flex justify-between text-sm text-text-tertiary">
                   <span>Swap</span>
                   <span>{mibToGib(swap.usedMiB)} / {mibToGib(swap.totalMiB)} GiB</span>
                 </div>
@@ -82,7 +82,7 @@ export function SystemStats() {
             )}
           </div>
         ) : (
-          <p className="text-sm text-white/30">n/a</p>
+          <p className="text-base text-text-secondary">n/a</p>
         )}
       </Card>
 
@@ -90,12 +90,12 @@ export function SystemStats() {
         <CardHeader icon={HardDrive} title="Disk" />
         {disk ? (
           <div className="space-y-2">
-            <div className="flex justify-between text-xs text-white/40 mb-1.5">
+            <div className="mb-2 flex justify-between text-sm text-text-tertiary">
               <span>/</span>
               <span>{disk.used} / {disk.size} ({disk.avail} free)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
                 <div
                   className={`h-full rounded-full ${
                     parseInt(disk.pct) > 85 ? "bg-red-400" : parseInt(disk.pct) > 65 ? "bg-yellow-400" : "bg-emerald-400"
@@ -103,11 +103,11 @@ export function SystemStats() {
                   style={{ width: disk.pct }}
                 />
               </div>
-              <span className="text-xs text-white/40 w-8 text-right">{disk.pct}</span>
+              <span className="w-10 text-right text-sm text-text-tertiary">{disk.pct}</span>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-white/30">n/a</p>
+          <p className="text-base text-text-secondary">n/a</p>
         )}
       </Card>
     </div>

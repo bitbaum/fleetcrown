@@ -55,12 +55,12 @@ function Pill({
   href?: string;
 }) {
   const colors = variant === "red"
-    ? "bg-red-400/10 text-red-400 border-red-400/20"
+    ? "border-red-400/20 bg-red-400/10 text-red-400"
     : variant === "amber"
-      ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+      ? "border-amber-400/20 bg-amber-400/10 text-amber-400"
       : variant === "green"
-        ? "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
-        : "bg-white/5 text-white/60 border-white/10";
+        ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+        : "border-border-default bg-surface-base text-text-secondary";
 
   const inner = (
     <>
@@ -71,14 +71,14 @@ function Pill({
 
   if (href) {
     return (
-      <Link href={href} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
+      <Link href={href} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
         {inner}
       </Link>
     );
   }
 
   return (
-    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${colors}`}>
+    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${colors}`}>
       {inner}
     </div>
   );

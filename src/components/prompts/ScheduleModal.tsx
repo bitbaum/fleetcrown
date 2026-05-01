@@ -50,53 +50,53 @@ export function ScheduleModal({
   return (
     <Modal onClose={onClose} size="lg">
       <div className="flex items-center justify-between">
-        <div className="text-sm font-semibold">Schedule Job</div>
-        <button onClick={onClose} className="p-1 text-white/40 hover:text-white/70 rounded">
+        <div className="text-xl font-semibold text-text-primary">Schedule Job</div>
+        <button
+          onClick={onClose}
+          className="rounded-2xl border border-border-subtle bg-surface-overlay p-2 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
+        >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-        <div className="text-xs text-white/50 bg-white/[0.03] rounded-lg p-3 border border-white/[0.06]">
-          <div className="font-medium text-white/70 mb-1">{template.name}</div>
-          <div className="text-white/35">{template.description}</div>
-        </div>
+      <div className="rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4">
+        <div className="mb-1 text-base font-medium text-text-primary">{template.name}</div>
+        <div className="text-base text-text-secondary">{template.description}</div>
+      </div>
 
-        {template.scope === "project" && (
-          <div>
-            <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-              Project
-            </label>
-            <select
-              value={projectId}
-              onChange={(e) => {
-                const p = projects.find((p) => p.id === e.target.value);
-                setProjectId(e.target.value);
-                setProjectName(p?.name ?? "");
-              }}
-              className={FIELD_INPUT_CLASS}
-            >
-              <option value="">— Select project —</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
+      {template.scope === "project" && (
         <div>
-          <label className="text-[10px] uppercase tracking-wider text-white/30 mb-1.5 block">
-            Schedule (cron)
-          </label>
-          <input
-            value={schedule}
-            onChange={(e) => setSchedule(e.target.value)}
-            className={`${FIELD_INPUT_CLASS} font-mono`}
-            placeholder="0 9 * * 1"
-          />
-          <div className="text-[10px] text-white/25 mt-1">
-            Examples: <code>0 9 * * 1</code> Mon 9am · <code>0 9 * * 1-5</code> Weekdays 9am · <code>0 18 * * 5</code> Fri 6pm
-          </div>
+          <label className="ui-kicker mb-2 block text-text-tertiary">Project</label>
+          <select
+            value={projectId}
+            onChange={(e) => {
+              const p = projects.find((p) => p.id === e.target.value);
+              setProjectId(e.target.value);
+              setProjectName(p?.name ?? "");
+            }}
+            className={FIELD_INPUT_CLASS}
+          >
+            <option value="">— Select project —</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
         </div>
+      )}
+
+      <div>
+        <label className="ui-kicker mb-2 block text-text-tertiary">Schedule (cron)</label>
+        <input
+          value={schedule}
+          onChange={(e) => setSchedule(e.target.value)}
+          className={`${FIELD_INPUT_CLASS} font-mono`}
+          placeholder="0 9 * * 1"
+        />
+        <div className="mt-2 text-sm text-text-tertiary">
+          Examples: <code>0 9 * * 1</code> Mon 9am · <code>0 9 * * 1-5</code> Weekdays 9am ·{" "}
+          <code>0 18 * * 5</code> Fri 6pm
+        </div>
+      </div>
 
       <button
         onClick={handleCreate}

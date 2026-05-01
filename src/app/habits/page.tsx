@@ -26,9 +26,9 @@ export default async function HabitsPage() {
 
       {habits.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-8 text-white/30">
+          <div className="flex flex-col items-center gap-4 py-10 text-text-secondary">
             <Repeat2 className="h-10 w-10" />
-            <div className="text-sm">No habits tracked yet</div>
+            <div className="text-lg">No habits tracked yet</div>
             <AddHabitButton emptyState />
           </div>
         </Card>
@@ -42,17 +42,17 @@ export default async function HabitsPage() {
                 <div className="flex items-start justify-between gap-4 mb-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm md:text-base font-medium">{h.title}</span>
+                      <span className="text-lg font-medium text-text-primary">{h.title}</span>
                       {!h.active && (
-                        <span className="text-xs text-white/25 border border-white/10 rounded px-1.5 py-0.5">
+                        <span className="rounded-full border border-border-subtle px-2 py-0.5 text-sm text-text-tertiary">
                           inactive
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-xs text-white/35">{h.frequency}</span>
+                      <span className="text-sm text-text-secondary">{h.frequency}</span>
                       {h.streak >= 2 && (
-                        <span className="flex items-center gap-0.5 text-xs text-amber-400/70">
+                        <span className="flex items-center gap-1 text-sm text-amber-300">
                           <Flame className="h-3 w-3" />
                           {h.streak}-day streak
                         </span>
@@ -60,8 +60,8 @@ export default async function HabitsPage() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-medium">{pct}%</div>
-                    <div className="text-xs text-white/30">{h.completionsInWindow}/{HABIT_HISTORY_DAYS}d</div>
+                    <div className="text-lg font-medium text-text-primary">{pct}%</div>
+                    <div className="text-sm text-text-tertiary">{h.completionsInWindow}/{HABIT_HISTORY_DAYS}d</div>
                   </div>
                 </div>
                 <HabitHeatmap

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_TIGHT, ICON_BUTTON_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
@@ -55,14 +55,14 @@ export function ChannelsSection({
   return (
     <Section title="Channels">
       {channels.map(([key, value]) => (
-        <div key={key} className="group flex items-center gap-2 text-sm">
+        <div key={key} className="group flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
           <ChannelIcon channel={key} />
-          <span className="text-white/70 shrink-0">{stripChannelPrefix(key)}</span>
-          <span className="text-white/40 font-mono text-xs truncate flex-1">{formatChannelValue(value)}</span>
+          <span className="shrink-0 text-text-secondary">{stripChannelPrefix(key)}</span>
+          <span className="flex-1 truncate font-mono text-xs text-text-tertiary">{formatChannelValue(value)}</span>
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
-            className="sm:opacity-0 sm:group-hover:opacity-100 p-0.5 text-white/20 hover:text-red-400 transition-all shrink-0"
+            className={`shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ${ICON_BUTTON_CLASS}`}
           >
             {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <X className="h-2.5 w-2.5" />}
           </button>
@@ -72,7 +72,7 @@ export function ChannelsSection({
         <EmptyState>No channels yet</EmptyState>
       )}
       {adding ? (
-        <div className="flex gap-1.5 items-center pt-0.5">
+        <div className="flex items-center gap-1.5 pt-0.5">
           <select
             value={channelType}
             onChange={(e) => setChannelType(e.target.value)}
@@ -94,18 +94,18 @@ export function ChannelsSection({
           <button
             onClick={saveChannel}
             disabled={!channelValue.trim() || saving}
-            className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white shrink-0"
+            className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           </button>
-          <button onClick={() => { setAdding(false); setChannelValue(""); }} className="p-1 text-white/25 hover:text-white/60">
+          <button onClick={() => { setAdding(false); setChannelValue(""); }} className={ICON_BUTTON_CLASS}>
             <X className="h-3 w-3" />
           </button>
         </div>
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-emerald-400 transition-colors mt-0.5"
+          className="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-accent-text"
         >
           <Plus className="h-3 w-3" /> Add channel
         </button>

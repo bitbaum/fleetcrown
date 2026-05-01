@@ -3,19 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/config/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex md:w-56 md:flex-col md:border-r md:border-border bg-sidebar">
-      <div className="flex h-14 items-center px-4 border-b border-border">
-        <span className="text-lg font-semibold tracking-tight">
-          <span className="mr-1.5">🌿</span>Cockpit
-        </span>
+    <aside className="hidden md:flex md:w-72 md:flex-col border-r border-border-subtle bg-sidebar/80 backdrop-blur-xl">
+      <div className="flex h-24 items-center justify-between px-6 border-b border-border-subtle">
+        <div>
+          <p className="ui-kicker">Life OS</p>
+          <span className="mt-1 block text-3xl font-medium text-text-primary">Cockpit</span>
+        </div>
+        <ThemeToggle />
       </div>
-      <nav className="flex-1 py-3 px-2 space-y-0.5">
+      <nav className="flex-1 space-y-1.5 px-3 py-5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -24,17 +27,24 @@ export function Sidebar() {
               key={item.id}
               href={item.href}
               className={cn(
-                "flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm md:text-base font-medium transition-colors",
+                "ui-nav-item",
                 isActive
-                  ? "bg-white/10 text-white"
-                  : "text-white/50 hover:text-white/80 hover:bg-white/5",
+                  ? "ui-nav-item-active"
+                  : "",
                 !item.active && "opacity-40"
               )}
             >
-              <Icon className="h-4 w-4 md:h-5 md:w-5 shrink-0" />
-              <span>{item.label}</span>
+              <Icon className="h-5 w-5 shrink-0" />
+              <div className="min-w-0">
+                <span className="block">{item.label}</span>
+                <span className="mt-0.5 block text-xs text-text-muted">
+                  {item.id === "today" ? "Command overview" :
+                   item.id === "control" ? "Brain switching" :
+                   item.id === "system" ? "Runtime health" : "Tracked view"}
+                </span>
+              </div>
               {!item.active && (
-                <span className="ml-auto text-xs uppercase tracking-wider opacity-60">soon</span>
+                <span className="ml-auto text-[10px] uppercase tracking-wider text-text-muted">soon</span>
               )}
             </Link>
           );

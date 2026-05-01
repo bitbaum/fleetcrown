@@ -10,18 +10,20 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-white/50 gap-4 p-8">
-      <AlertCircle className="h-12 w-12 text-red-400/60" />
-      <div className="text-lg font-semibold">Something went wrong</div>
-      <div className="text-sm text-white/30 max-w-md text-center">
+    <div className="flex min-h-[60vh] items-center justify-center p-8">
+      <div className="ui-panel-raised flex max-w-2xl flex-col items-center gap-5 px-8 py-10 text-center">
+      <AlertCircle className="h-14 w-14 text-red-400/80" />
+      <div className="text-2xl font-medium text-text-primary">Something went wrong</div>
+      <div className="max-w-xl text-lg text-text-secondary">
         {error.message || "An unexpected error occurred."}
       </div>
       <button
         onClick={reset}
-        className="mt-2 px-4 py-2 text-sm rounded-md border border-white/10 hover:bg-white/5 transition-colors"
+        className="rounded-2xl border border-border-default bg-surface-overlay px-5 py-3 text-base text-text-primary transition-colors hover:bg-surface-raised"
       >
         Try again
       </button>
+      </div>
     </div>
   );
 }

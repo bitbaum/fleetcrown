@@ -19,57 +19,59 @@ export function PromptRow({
 
   return (
     <>
-      <div className="group flex flex-col gap-0 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-white/[0.10] hover:bg-white/[0.04] transition-colors">
-        <div className="flex items-center gap-3 px-4 py-3">
+      <div className="ui-panel-raised ui-panel-interactive group flex flex-col gap-0">
+        <div className="flex items-start gap-4 px-5 py-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-white/80 truncate">{template.name}</span>
+              <span className="truncate text-lg font-semibold text-text-primary">{template.name}</span>
               {template.scope === "global" ? (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-white/25 border border-white/[0.07] flex items-center gap-0.5 shrink-0">
-                  <Globe className="h-2 w-2" /> global
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
+                  <Globe className="h-3 w-3" /> global
                 </span>
               ) : (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-white/25 border border-white/[0.07] flex items-center gap-0.5 shrink-0">
-                  <FolderOpen className="h-2 w-2" /> project
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
+                  <FolderOpen className="h-3 w-3" /> project
                 </span>
               )}
               {template.suggestedSchedule && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-white/20 border border-white/[0.06] flex items-center gap-0.5 shrink-0">
-                  <Clock className="h-2 w-2" /> schedulable
+                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
+                  <Clock className="h-3 w-3" /> schedulable
                 </span>
               )}
             </div>
-            <div className="text-xs text-white/35 mt-0.5 leading-relaxed truncate">{template.description}</div>
+            <div className="mt-1.5 text-base leading-relaxed text-text-secondary">
+              {template.description}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => setExpanded(!expanded)}
-              className="p-1.5 rounded text-white/20 hover:text-white/50 transition-colors"
+              className="rounded-2xl border border-border-subtle bg-surface-overlay p-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
               title="Preview prompt"
             >
-              {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {template.suggestedSchedule && (
               <button
                 onClick={openSchedule}
-                className="p-1.5 rounded text-white/20 hover:text-white/50 transition-colors"
+                className="rounded-2xl border border-border-subtle bg-surface-overlay p-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
                 title="Schedule as cron job"
               >
-                <Clock className="h-3.5 w-3.5" />
+                <Clock className="h-4 w-4" />
               </button>
             )}
             <button
               onClick={openRun}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+              className="ui-button-primary flex items-center gap-2 px-4 py-3 text-sm font-semibold"
             >
-              <Zap className="h-3 w-3" /> Run
+              <Zap className="h-4 w-4" /> Run
             </button>
           </div>
         </div>
 
         {expanded && (
-          <div className="px-4 pb-3 border-t border-white/[0.05] pt-3">
-            <pre className="text-[11px] text-white/40 whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded-lg p-2.5 border border-white/[0.05] max-h-36 overflow-y-auto">
+          <div className="border-t border-border-subtle px-5 pb-4 pt-4">
+            <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-2xl border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary">
               {template.template}
             </pre>
           </div>

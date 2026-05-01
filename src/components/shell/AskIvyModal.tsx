@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { PROMPT_TEMPLATES, CATEGORY_META } from "@/config/prompt-library";
+import { PROMPT_TEMPLATES, GLOBAL_PROMPTS, CATEGORY_META } from "@/config/prompt-library";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 
@@ -143,38 +143,42 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
   // All featured prompts + ability to expand to all global ones
   const displayedPrompts = showAllPrompts
-    ? PROMPT_TEMPLATES.filter((t) => t.scope === "global")
+    ? GLOBAL_PROMPTS
     : QUICK_PROMPTS;
 
   return (
     <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
+        <div className="shrink-0 border-b border-border-subtle px-5 py-4">
+          <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-lg">🌿</span>
-            <span className="text-sm font-semibold">Ask Ivy</span>
-            <span className="text-xs text-white/30">your life OS copilot</span>
+            <div>
+              <p className="ui-kicker">Copilot</p>
+              <div className="text-base font-medium text-text-primary">Ask Ivy</div>
+            </div>
           </div>
-          <button onClick={onClose} disabled={loading} className="p-1.5 rounded-md hover:bg-white/10 text-white/40 hover:text-white/70 disabled:opacity-30 transition-colors">
+          <button onClick={onClose} disabled={loading} className="rounded-xl p-2 text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-30">
             <X className="h-4 w-4" />
           </button>
+        </div>
         </div>
 
         {/* Quick prompts */}
         {messages.length === 0 && (
-          <div className="px-4 pt-3 pb-3 border-b border-white/[0.06] shrink-0">
+          <div className="shrink-0 border-b border-border-subtle px-5 py-4">
             <div className="flex items-center justify-between mb-2.5">
-              <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+              <span className="ui-kicker">
                 Prompts
               </span>
               <button
                 onClick={() => setShowAllPrompts(!showAllPrompts)}
-                className="flex items-center gap-1 text-[10px] text-white/25 hover:text-white/55 transition-colors"
+                className="flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-text-muted transition-colors hover:text-text-secondary"
               >
                 {showAllPrompts ? (
                   <><ChevronUp className="h-3 w-3" /> show less</>
                 ) : (
-                  <><ChevronDown className="h-3 w-3" /> all global ({PROMPT_TEMPLATES.filter(t => t.scope === "global").length})</>
+                  <><ChevronDown className="h-3 w-3" /> all global ({GLOBAL_PROMPTS.length})</>
                 )}
               </button>
             </div>
@@ -193,18 +197,18 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                       }
                     }}
                     disabled={loading}
-                    className="group flex flex-col gap-1 rounded-lg border border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/[0.12] px-3 py-2.5 text-left transition-all disabled:opacity-30"
+                    className="group flex flex-col gap-1 rounded-2xl border border-border-subtle bg-surface-base px-3.5 py-3 text-left transition-all hover:bg-surface-raised hover:border-border-default disabled:opacity-30"
                   >
                     <div className="flex items-center justify-between gap-1.5">
-                      <span className="text-xs font-medium text-white/70 group-hover:text-white/90 transition-colors leading-tight">
+                      <span className="text-xs font-medium text-text-primary transition-colors leading-tight">
                         {t.name}
                       </span>
                       {t.scope === "global"
-                        ? <Globe className="h-3 w-3 text-white/20 shrink-0" />
-                        : <FolderOpen className="h-3 w-3 text-white/20 shrink-0" />
+                        ? <Globe className="h-3 w-3 text-text-muted shrink-0" />
+                        : <FolderOpen className="h-3 w-3 text-text-muted shrink-0" />
                       }
                     </div>
-                    <p className="text-[10px] text-white/35 leading-snug line-clamp-2">
+                    <p className="text-[10px] text-text-secondary leading-snug line-clamp-2">
                       {t.description}
                     </p>
                     <span className={`self-start mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
@@ -218,12 +222,12 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
         )}
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
           {messages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center h-full py-6 text-center">
               <span className="text-4xl mb-3">🌿</span>
-              <div className="text-sm text-white/50">Ask me anything — calendar, people, goals, money, projects.</div>
-              <div className="text-xs text-white/25 mt-2">I have full access to your knowledge graph and tools.</div>
+              <div className="text-sm text-text-secondary">Ask me anything about calendar, people, goals, money, or projects.</div>
+              <div className="mt-2 text-xs text-text-muted">I have full access to your knowledge graph and tools.</div>
             </div>
           )}
 
@@ -231,14 +235,14 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 msg.role === "user"
-                  ? "bg-emerald-600/80 text-white rounded-br-sm"
+                  ? "bg-accent-primary text-text-inverted rounded-br-sm"
                   : msg.error
                   ? "bg-red-500/10 border border-red-500/20 text-red-300 rounded-bl-sm"
-                  : "bg-white/[0.06] text-white/80 rounded-bl-sm"
+                  : "bg-surface-raised text-text-primary rounded-bl-sm border border-border-subtle"
               }`}>
                 <div className="whitespace-pre-wrap">{msg.text}</div>
                 {msg.role === "ivy" && !msg.error && msg.durationMs && (
-                  <div className="text-[10px] text-white/20 mt-1.5">
+                  <div className="mt-1.5 text-[10px] text-text-muted">
                     {(msg.durationMs / 1000).toFixed(1)}s{msg.model ? ` · ${msg.model}` : ""}
                   </div>
                 )}
@@ -248,16 +252,16 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-white/[0.06] rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm border border-border-subtle bg-surface-raised px-4 py-3">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
                 <div>
-                  <span className="text-xs text-white/50">
+                  <span className="text-xs text-text-secondary">
                     {elapsed < 5 ? "Ivy is thinking…" :
                      elapsed < 15 ? "Searching your knowledge graph…" :
                      elapsed < 25 ? "Composing a response…" :
                      "Almost there…"}
                   </span>
-                  <span className="text-[10px] text-white/20 ml-2">{elapsed}s</span>
+                  <span className="ml-2 text-[10px] text-text-muted">{elapsed}s</span>
                 </div>
               </div>
             </div>
@@ -266,9 +270,9 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Input */}
-        <div className="px-4 pb-4 pt-2 shrink-0">
-          <div className={`flex items-end gap-1 rounded-xl bg-white/[0.04] border transition-colors ${
-            listening ? "border-emerald-500/50 shadow-[0_0_0_2px_rgba(16,185,129,0.08)]" : "border-white/10 focus-within:border-white/20"
+        <div className="shrink-0 border-t border-border-subtle px-5 pb-5 pt-4">
+          <div className={`flex items-end gap-1 rounded-[1.5rem] border bg-surface-overlay transition-colors ${
+            listening ? "border-accent-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent-primary)_16%,transparent)]" : "border-border-default"
           }`}>
             <textarea
               ref={inputRef}
@@ -278,7 +282,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               placeholder={listening ? "Listening…" : "Ask Ivy anything…"}
               rows={1}
               disabled={loading}
-              className="flex-1 bg-transparent px-3 py-2.5 text-sm text-white/90 placeholder:text-white/25 focus:outline-none resize-none max-h-32 disabled:opacity-50"
+              className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none max-h-32 disabled:opacity-50"
               style={{ fieldSizing: "content" } as React.CSSProperties}
             />
             {supported && (
@@ -286,10 +290,10 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                 onClick={toggleMic}
                 disabled={loading}
                 title={listening ? "Stop recording" : "Voice input"}
-                className={`p-2.5 m-1 rounded-lg transition-colors shrink-0 ${
+                className={`m-1 rounded-2xl p-2.5 transition-colors shrink-0 ${
                   listening
                     ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 animate-pulse"
-                    : "text-white/30 hover:text-white/70 hover:bg-white/[0.06]"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-raised"
                 }`}
               >
                 {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -298,12 +302,12 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
             <button
               onClick={() => send()}
               disabled={!input.trim() || loading}
-              className="p-2.5 m-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
+              className="m-1 rounded-2xl bg-accent-primary p-2.5 text-text-inverted transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30 shrink-0"
             >
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <div className="text-[10px] text-white/20 mt-1.5 text-center">
+          <div className="mt-2 text-center text-[10px] text-text-muted">
             Enter to send · Shift+Enter for new line · Esc to close
             {supported && <span> · 🎤 mic available</span>}
           </div>

@@ -14,7 +14,7 @@ import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { getJson, patchJson, deleteJson } from "@/lib/api/fetch";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS_COMPACT, ICON_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
 
 export function PersonDetail({
   personId,
@@ -92,150 +92,147 @@ export function PersonDetail({
 
   return (
     <Drawer onClose={onClose} size="md" surface="background" className="overflow-y-auto">
-        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-white/10 bg-background">
-          <div className="flex items-center gap-2 min-w-0">
-            {nameEdit.editing ? (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <input
-                    value={nameEdit.draft}
-                    onChange={(e) => { nameEdit.setDraft(e.target.value); setNameError(null); }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitName();
-                      if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
-                    }}
-                    autoFocus
-                    className={`text-lg font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${nameError ? "border-red-400/60 focus:border-red-400" : "border-white/20 focus:border-white/35"}`}
-                  />
-                  {nameSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
-                </div>
-                {nameError && <p className="text-xs text-red-400">{nameError}</p>}
-              </div>
-            ) : (
-              <h2
-                className="text-lg font-semibold truncate cursor-text hover:text-white/80 transition-colors"
-                onClick={() => data && nameEdit.start(name)}
-                title="Click to rename"
-              >
-                {name || (data?.name ?? "Loading...")}
-              </h2>
-            )}
-            {data && (() => {
-              const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
-              const health = deriveRelationshipHealth(lastDate);
-              return (
-                <div
-                  className="flex items-center gap-1.5 shrink-0"
-                  title={lastDate ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}` : "No interactions recorded"}
-                >
-                  <div className={`h-2 w-2 rounded-full ${HEALTH_DOT_COLOR[health]}`} />
-                  <span className="text-xs text-white/30">{HEALTH_LABEL[health]}</span>
-                </div>
-              );
-            })()}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {data && (
-              <DeleteButton
-                onDelete={async () => {
-                  await deleteJson(`/api/people/${personId}`);
-                  onClose();
-                  router.refresh();
-                }}
-                label="Delete?"
-                triggerTitle="Delete person"
-              />
-            )}
-            <button onClick={onClose} className="p-1 rounded hover:bg-white/10">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-4 text-white/30 animate-pulse">Loading...</div>
-        ) : !data ? (
-          <div className="p-4 text-white/30">Person not found</div>
-        ) : (
-          <div className="p-4 space-y-6">
-            {/* Description — click to edit */}
-            {descEdit.editing ? (
-              <div className="space-y-1.5">
-                <textarea
-                  value={descEdit.draft}
-                  onChange={(e) => { descEdit.setDraft(e.target.value); setDescError(null); }}
+      <div className="sticky top-0 flex items-center justify-between border-b border-border-subtle bg-background/95 p-5 backdrop-blur">
+        <div className="flex min-w-0 items-center gap-2">
+          {nameEdit.editing ? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={nameEdit.draft}
+                  onChange={(e) => { nameEdit.setDraft(e.target.value); setNameError(null); }}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") { descEdit.cancel(); setDescError(null); }
-                    if (e.key === "Enter" && e.metaKey) commitDescription();
+                    if (e.key === "Enter") commitName();
+                    if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
                   }}
                   autoFocus
-                  rows={3}
-                  placeholder="Add a note about this person…"
-                  className="w-full bg-white/[0.04] border border-white/15 rounded-lg px-3 py-2 text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/30 resize-none transition-colors"
+                  className={`w-56 rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors ${nameError ? "border-red-400/60 focus:border-red-400" : "border-border-default focus:border-accent-primary"}`}
                 />
-                {descError && <p className="text-xs text-red-400">{descError}</p>}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={commitDescription}
-                    disabled={descSaving}
-                    className={INLINE_SAVE_CLASS}
-                  >
-                    {descSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
-                  </button>
-                  <button
-                    onClick={() => { descEdit.cancel(); setDescError(null); }}
-                    className="text-xs text-white/30 hover:text-white/60 px-1"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                {nameSaving && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-text-tertiary" />}
               </div>
-            ) : (
-              <button
-                onClick={() => descEdit.start(description ?? "")}
-                className="w-full text-left text-sm text-white/40 hover:text-white/60 transition-colors"
-                title="Click to edit notes"
+              {nameError && <p className="text-xs text-red-400">{nameError}</p>}
+            </div>
+          ) : (
+            <h2
+              className="cursor-text truncate text-2xl font-semibold text-text-primary transition-colors hover:text-accent-text"
+              onClick={() => data && nameEdit.start(name)}
+              title="Click to rename"
+            >
+              {name || (data?.name ?? "Loading...")}
+            </h2>
+          )}
+          {data && (() => {
+            const lastDate = interactions[0] ? new Date(interactions[0].occurredAt) : null;
+            const health = deriveRelationshipHealth(lastDate);
+            return (
+              <div
+                className="flex shrink-0 items-center gap-1.5"
+                title={lastDate ? `Last contact ${formatDistanceToNow(lastDate, { addSuffix: true })}` : "No interactions recorded"}
               >
-                {description ?? <span className="italic text-white/20">Add a note…</span>}
-              </button>
-            )}
+                <div className={`h-2 w-2 rounded-full ${HEALTH_DOT_COLOR[health]}`} />
+                <span className="text-xs text-text-tertiary">{HEALTH_LABEL[health]}</span>
+              </div>
+            );
+          })()}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {data && (
+            <DeleteButton
+              onDelete={async () => {
+                await deleteJson(`/api/people/${personId}`);
+                onClose();
+                router.refresh();
+              }}
+              label="Delete?"
+              triggerTitle="Delete person"
+            />
+          )}
+          <button onClick={onClose} className={ICON_BUTTON_CLASS}>
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
-            <ChannelsSection personId={data.id} attrs={attrs} onUpdate={setAttrs} />
-            <DetailAttrs personId={data.id} attrs={attrs} onUpdate={setAttrs} />
+      {loading ? (
+        <div className="animate-pulse p-5 text-text-tertiary">Loading...</div>
+      ) : !data ? (
+        <div className="p-5 text-text-tertiary">Person not found</div>
+      ) : (
+        <div className="space-y-7 p-5">
+          {descEdit.editing ? (
+            <div className="space-y-1.5">
+              <textarea
+                value={descEdit.draft}
+                onChange={(e) => { descEdit.setDraft(e.target.value); setDescError(null); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { descEdit.cancel(); setDescError(null); }
+                  if (e.key === "Enter" && e.metaKey) commitDescription();
+                }}
+                autoFocus
+                rows={3}
+                placeholder="Add a note about this person…"
+                className={`min-h-28 w-full resize-none ${FIELD_INPUT_CLASS_COMPACT} leading-relaxed`}
+              />
+              {descError && <p className="text-xs text-red-400">{descError}</p>}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={commitDescription}
+                  disabled={descSaving}
+                  className={INLINE_SAVE_CLASS}
+                >
+                  {descSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                </button>
+                <button
+                  onClick={() => { descEdit.cancel(); setDescError(null); }}
+                  className="px-1 text-xs text-text-tertiary hover:text-text-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => descEdit.start(description ?? "")}
+              className="w-full rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-left text-base text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+              title="Click to edit notes"
+            >
+              {description ?? <span className="italic text-text-muted">Add a note…</span>}
+            </button>
+          )}
 
-            {/* Aliases */}
-            {data.attrs["aliases"] && (
-              <Section title="Aliases">
-                <div className="flex flex-wrap gap-1.5">
-                  {parseAliases(data.attrs["aliases"]).map((alias) => (
-                    <span
-                      key={alias}
-                      className="px-2 py-0.5 text-xs bg-white/10 rounded-full text-white/60"
-                    >
-                      {alias}
-                    </span>
-                  ))}
-                </div>
-              </Section>
-            )}
+          <ChannelsSection personId={data.id} attrs={attrs} onUpdate={setAttrs} />
+          <DetailAttrs personId={data.id} attrs={attrs} onUpdate={setAttrs} />
 
-            <InteractionsSection personId={data.id} interactions={interactions} onAdd={(ix) => setInteractions((prev) => [ix, ...prev])} />
-
-            {/* Relations */}
-            {data.relations.length > 0 && (
-              <Section title="Connections">
-                {data.relations.map((rel, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <Link2 className="h-3.5 w-3.5 text-white/30" />
-                    <span className="text-white/50">{rel.type}</span>
-                    <span>{rel.targetName}</span>
-                    <span className="text-xs text-white/30">({rel.targetType})</span>
-                  </div>
+          {data.attrs["aliases"] && (
+            <Section title="Aliases">
+              <div className="flex flex-wrap gap-1.5">
+                {parseAliases(data.attrs["aliases"]).map((alias) => (
+                  <span
+                    key={alias}
+                    className="rounded-full border border-border-default bg-surface-base px-2.5 py-1 text-xs text-text-secondary"
+                  >
+                    {alias}
+                  </span>
                 ))}
-              </Section>
-            )}
-          </div>
-        )}
+              </div>
+            </Section>
+          )}
+
+          <InteractionsSection personId={data.id} interactions={interactions} onAdd={(ix) => setInteractions((prev) => [ix, ...prev])} />
+
+          {data.relations.length > 0 && (
+            <Section title="Connections">
+              {data.relations.map((rel, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+                  <Link2 className="h-3.5 w-3.5 text-text-tertiary" />
+                  <span className="text-text-secondary">{rel.type}</span>
+                  <span className="text-text-primary">{rel.targetName}</span>
+                  <span className="text-xs text-text-tertiary">({rel.targetType})</span>
+                </div>
+              ))}
+            </Section>
+          )}
+        </div>
+      )}
     </Drawer>
   );
 }

@@ -53,12 +53,12 @@ export function Modal({
   return (
     <div className={cn("fixed inset-0 z-50 flex justify-center p-4", containerPos)}>
       <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/48 backdrop-blur-md"
         onClick={disableClose ? undefined : onClose}
       />
       <div
         className={cn(
-          "relative w-full bg-surface-modal border border-white/10 rounded-2xl shadow-2xl",
+          "relative w-full ui-panel-raised rounded-[2rem]",
           SIZE_CLASSES[size],
           padded && "p-5 space-y-4",
           panelMargin,
@@ -82,7 +82,7 @@ export function Drawer({
 }: {
   onClose: () => void;
   size?: "md" | "lg" | "xl";
-  /** "drawer" (#0c0e14), "modal" (#0f1117), or "background" (page bg). */
+  /** "drawer", "modal", or "background" (page bg). */
   surface?: "drawer" | "modal" | "background";
   disableClose?: boolean;
   className?: string;
@@ -98,12 +98,12 @@ export function Drawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-black/42 backdrop-blur-sm"
         onClick={disableClose ? undefined : onClose}
       />
       <div
         className={cn(
-          "relative w-full border-l border-white/10 flex flex-col shadow-2xl",
+          "relative flex w-full flex-col border-l border-border-subtle shadow-[var(--shadow-panel-strong)]",
           SIZE_CLASSES[size],
           surfaceClass,
           className,

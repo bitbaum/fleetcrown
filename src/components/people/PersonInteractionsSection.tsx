@@ -53,22 +53,22 @@ export function InteractionsSection({
         <EmptyState>No interactions recorded</EmptyState>
       )}
       {list.map((ix, i) => (
-        <div key={i} className="flex items-center justify-between text-sm">
+        <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
           <div className="flex items-center gap-2">
             <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-blue-400/60" : "text-emerald-400/60"}`}>
               {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
             </span>
-            <span className="text-white/50">{ix.channel}</span>
-            {ix.summary && <span className="text-xs text-white/30 truncate max-w-[140px]">{ix.summary}</span>}
+            <span className="text-text-secondary">{ix.channel}</span>
+            {ix.summary && <span className="max-w-[180px] truncate text-xs text-text-tertiary">{ix.summary}</span>}
           </div>
-          <span className="text-xs text-white/30 shrink-0">
+          <span className="shrink-0 text-xs text-text-tertiary">
             {new Date(ix.occurredAt).toLocaleDateString("de-CH")}
           </span>
         </div>
       ))}
 
       {logging ? (
-        <div className="mt-2 space-y-2 pt-2 border-t border-white/[0.06]">
+        <div className="mt-2 space-y-2 border-t border-border-subtle pt-3">
           <div className="flex gap-2">
             <select
               value={channel}
@@ -108,7 +108,7 @@ export function InteractionsSection({
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
             </button>
-            <button onClick={() => setLogging(false)} className="text-xs text-white/30 hover:text-white/60 px-1">
+            <button onClick={() => setLogging(false)} className="px-1 text-xs text-text-tertiary hover:text-text-secondary">
               Cancel
             </button>
           </div>

@@ -19,9 +19,9 @@ const TYPE_COLOR: Record<EntityType, string> = {
 };
 
 function TypeBadge({ type }: { type: EntityType }) {
-  const cls = TYPE_COLOR[type] ?? "bg-white/5 text-white/30 border-white/10";
+  const cls = TYPE_COLOR[type] ?? "bg-surface-overlay text-text-tertiary border-border-subtle";
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${cls}`}>
+    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
       {type}
     </span>
   );
@@ -67,12 +67,12 @@ export default async function MemoryPage() {
                 <div key={e.id} className="flex items-start gap-2.5">
                   <TypeBadge type={e.type} />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm truncate">{e.name}</div>
+                    <div className="text-base truncate text-text-primary">{e.name}</div>
                     {e.description && (
-                      <div className="text-xs text-white/30 truncate mt-0.5">{e.description}</div>
+                      <div className="mt-1 truncate text-sm text-text-secondary">{e.description}</div>
                     )}
                   </div>
-                  <span className="text-[10px] text-white/25 shrink-0 pt-0.5">
+                  <span className="shrink-0 pt-0.5 text-xs text-text-tertiary">
                     {compactRelativeDate(e.createdAt)}
                   </span>
                 </div>
@@ -95,14 +95,14 @@ export default async function MemoryPage() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm truncate">{ix.entityName}</span>
-                      <span className="text-[10px] text-white/25">{ix.channel}</span>
+                      <span className="text-base truncate text-text-primary">{ix.entityName}</span>
+                      <span className="text-xs text-text-tertiary">{ix.channel}</span>
                     </div>
                     {ix.summary && (
-                      <div className="text-xs text-white/30 truncate mt-0.5">{ix.summary}</div>
+                      <div className="mt-1 truncate text-sm text-text-secondary">{ix.summary}</div>
                     )}
                   </div>
-                  <span className="text-[10px] text-white/25 shrink-0 pt-0.5">
+                  <span className="shrink-0 pt-0.5 text-xs text-text-tertiary">
                     {compactRelativeDate(ix.occurredAt)}
                   </span>
                 </div>
@@ -125,11 +125,11 @@ export default async function MemoryPage() {
                     <TypeBadge type={row.type} />
                     <span className="font-medium">{row.type}</span>
                   </div>
-                  <span className="text-white/40">{Number(row.count).toLocaleString()}</span>
+                  <span className="text-text-secondary">{Number(row.count).toLocaleString()}</span>
                 </div>
-                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-2 rounded-full overflow-hidden bg-surface-overlay">
                   <div
-                    className="h-full bg-white/20 rounded-full"
+                    className="h-full rounded-full bg-accent-primary"
                     style={{ width: `${Math.max(pct, 1)}%` }}
                   />
                 </div>

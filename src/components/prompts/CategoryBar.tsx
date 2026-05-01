@@ -22,10 +22,10 @@ export function CategoryBar({
     <div className="flex gap-2 flex-wrap">
       <button
         onClick={() => onSelect("all")}
-        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+        className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
           active === "all"
-            ? "bg-white/10 border-white/20 text-white"
-            : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/70 hover:border-white/15"
+            ? "border-accent-primary/30 bg-accent-muted text-text-primary"
+            : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
         }`}
       >
         All ({templates.length})
@@ -37,10 +37,10 @@ export function CategoryBar({
           <button
             key={cat}
             onClick={() => onSelect(isActive ? "all" : cat)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
               isActive
                 ? meta.color
-                : "bg-transparent border-white/[0.07] text-white/40 hover:text-white/70 hover:border-white/15"
+                : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
             }`}
           >
             {meta.label} ({counts.get(cat)})

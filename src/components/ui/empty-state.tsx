@@ -6,5 +6,5 @@
  *   <EmptyState>No habits tracked yet</EmptyState>
  */
 export function EmptyState({ children }: { children: React.ReactNode }) {
-  return <div className="text-sm text-white/30">{children}</div>;
+  return <div className="text-sm text-text-tertiary">{children}</div>;
 }

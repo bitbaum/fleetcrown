@@ -14,9 +14,9 @@ import {
 import { format, isPast } from "date-fns";
 
 const STATUS_STYLE: Record<SubStatus, string> = {
-  [SUB_STATUS.ACTIVE]:     "text-green-400 bg-green-400/10",
-  [SUB_STATUS.UNVERIFIED]: "text-amber-400 bg-amber-400/10",
-  [SUB_STATUS.CANCELLED]:  "text-white/30 bg-white/5",
+  [SUB_STATUS.ACTIVE]:     "text-emerald-300 bg-emerald-500/12",
+  [SUB_STATUS.UNVERIFIED]: "text-amber-300 bg-amber-500/12",
+  [SUB_STATUS.CANCELLED]:  "text-text-tertiary bg-surface-overlay",
 };
 
 export default async function MoneyPage() {
@@ -57,7 +57,7 @@ export default async function MoneyPage() {
           icon={CreditCard}
           title="All Subscriptions"
           right={
-            <span className="text-xs text-white/20">
+            <span className="text-sm text-text-tertiary">
               Verified against email receipts Apr 2026
             </span>
           }
@@ -82,29 +82,29 @@ export default async function MoneyPage() {
                         href={verifyUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-white/20 hover:text-white/50 transition-colors"
+                        className="text-text-muted transition-colors hover:text-text-primary"
                         title={`Verify at ${new URL(verifyUrl).hostname}`}
                       >
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
                   </div>
-                  <div className="text-xs md:text-sm text-white/40">
+                  <div className="text-sm text-text-secondary">
                     {sub.vendor}
                     {sub.paymentMethod ? ` · ${sub.paymentMethod}` : ""}
                     {sub.frequency !== FREQUENCY.MONTHLY ? ` · ${sub.frequency}` : ""}
                   </div>
                   {sub.notes && (
-                    <div className="text-xs text-white/25 mt-0.5 max-w-md">{sub.notes}</div>
+                    <div className="mt-1 max-w-md text-sm text-text-tertiary">{sub.notes}</div>
                   )}
                   <SubscriptionActions subId={sub.id} subName={sub.name} status={sub.status} nextDue={sub.nextDue ? sub.nextDue.toISOString() : null} frequency={sub.frequency} amount={sub.amount} currency={sub.currency} notes={sub.notes} paymentMethod={sub.paymentMethod} vendor={sub.vendor} />
                 </div>
                 <div className="text-right shrink-0">
-                  <div className={`text-sm font-mono ${isCancelled ? "line-through" : ""}`}>
-                    {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-white/30">— {sub.currency}</span>}
+                  <div className={`text-base font-mono ${isCancelled ? "line-through" : ""}`}>
+                    {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-text-tertiary">— {sub.currency}</span>}
                   </div>
                   {sub.nextDue && !isCancelled && (
-                    <div className={`text-xs ${isOverdue ? "text-red-400" : "text-white/40"}`}>
+                    <div className={`text-sm ${isOverdue ? "text-red-400" : "text-text-secondary"}`}>
                       {isOverdue ? "Overdue" : "Due"} {format(new Date(sub.nextDue), "d MMM")}
                     </div>
                   )}
@@ -113,7 +113,7 @@ export default async function MoneyPage() {
             );
           })}
         </div>
-        <div className="mt-4 pt-3 border-t border-white/5 flex items-start gap-2 text-xs text-white/20">
+        <div className="mt-5 flex items-start gap-2 border-t border-border-subtle pt-4 text-sm text-text-tertiary">
           <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
           <span>
             Click the arrow icon to verify at the source. Unverified = no billing email found. Ask Ivy to re-scan if something looks wrong.
@@ -127,8 +127,8 @@ export default async function MoneyPage() {
           <div className="space-y-2">
             {commitments.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-1">
-                <div className="text-sm">{c.description}</div>
-                <div className="text-sm font-mono text-amber-400/70">{c.financialImpact}</div>
+                <div className="text-base text-text-primary">{c.description}</div>
+                <div className="text-base font-mono text-amber-300">{c.financialImpact}</div>
               </div>
             ))}
           </div>
