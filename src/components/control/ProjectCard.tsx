@@ -158,22 +158,24 @@ function ReadyBanner({
   onDismiss,
   paused = false,
   title = "Agent finished",
+  autoContinueEnabled = true,
 }: {
   prompts: PromptMeta[];
   onSend: (key: string) => void;
   onDismiss: () => void;
   paused?: boolean;
   title?: string;
+  autoContinueEnabled?: boolean;
 }) {
   const [seconds, setSeconds] = useState(AUTO_INJECT_S);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
   useEffect(() => {
-    if (paused) return; // freeze while user is composing a custom prompt
+    if (paused || !autoContinueEnabled) return; // freeze while composing or when auto-continue is disabled
     if (seconds <= 0) { onSend(primaryKey); return; }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [seconds, paused, onSend, primaryKey]);
+  }, [seconds, paused, autoContinueEnabled, onSend, primaryKey]);
 
   return (
     <div className="border-t border-emerald-500/30 bg-emerald-500/6 px-5 py-4">
@@ -183,7 +185,7 @@ function ReadyBanner({
           <span className="text-sm font-medium text-emerald-300">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-text-secondary tabular-nums">{paused ? "Paused" : `${seconds}s`}</span>
+          <span className="text-sm text-text-secondary tabular-nums">{!autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`}</span>
           <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
@@ -331,8 +333,30 @@ export function ProjectCard({
   const [showMore, setShowMore] = useState(false);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
+  const [typingActive, setTypingActive] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
+
+  useEffect(() => {
+    let clearAt = 0 as unknown as ReturnType<typeof setTimeout>;
+    const markTyping = () => {
+      setTypingActive(true);
+      if (clearAt) clearTimeout(clearAt);
+      clearAt = setTimeout(() => setTypingActive(false), 8000);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      markTyping();
+    };
+
+    window.addEventListener("keydown", onKeyDown, { passive: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (clearAt) clearTimeout(clearAt);
+    };
+  }, []);
 
   const nowS = Math.floor(Date.now() / 1000);
   // readyAt/closedAt/closingAt are written by lifecycle hooks (stop.sh etc.)
@@ -571,8 +595,9 @@ export function ProjectCard({
           prompts={prompts}
           onSend={(key) => send(key)}
           onDismiss={() => setDismissed(true)}
-          paused={customFocused || custom.trim().length > 0}
+          paused={!autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0}
           title="Agent finished"
+          autoContinueEnabled={autoContinueEnabled}
         />
       )}
       {isOrchReady && (
@@ -584,8 +609,9 @@ export function ProjectCard({
             void sendIntent(intent);
           }}
           onDismiss={() => setDismissed(true)}
-          paused={customFocused || custom.trim().length > 0}
+          paused={!autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0}
           title="Task finished"
+          autoContinueEnabled={autoContinueEnabled}
         />
       )}
       {showRunning && (
@@ -602,6 +628,13 @@ export function ProjectCard({
       {/* Intent buttons — brain-agnostic */}
       <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setAutoContinueEnabled((v) => !v)}
+            className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          >
+            {autoContinueEnabled ? "Auto-continue: ON" : "Auto-continue: OFF"}
+          </button>
+
           {/* Primary: Next best — prominent, shows current brain */}
           {PRIMARY_INTENTS.map(({ id, label }) => (
             <button
