@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const SESSIONS_DIR = path.join(process.env.HOME ?? "/home/g", ".claude", "sessions");
 
 export type SessionData = {
   found: false;
@@ -16,6 +15,7 @@ export type SessionData = {
   raw: string;
 };
 
+const SESSIONS_DIR = `${process.env.HOME ?? "/home/g"}/.claude/sessions`;
 const FIELDS = ["done", "next", "tests", "todos", "health"] as const;
 type Field = typeof FIELDS[number];
 

@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } = dataOrResp;
 
+  if (!TELEGRAM_CHAT_ID) {
+    return NextResponse.json(
+      { error: "TELEGRAM_CHAT_ID is not configured" },
+      { status: 500 },
+    );
+  }
+
   try {
     const data = readCronFile();
     const newJob: CronJob = {

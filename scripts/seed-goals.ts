@@ -65,15 +65,15 @@ async function main() {
     ],
   }).returning();
 
-  const [health] = await db.insert(schema.goals).values({
+  await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     title: "Health & longevity",
     description: "Optimize body and mind. Swiss Longevity Hub connection. Psychedelics for growth. Exercise, sleep, nutrition.",
     status: "active",
     progress: 30,
-  }).returning();
+  });
 
-  const [relationships] = await db.insert(schema.goals).values({
+  await db.insert(schema.goals).values({
     userId: DEFAULT_USER_ID,
     title: "Relationships & community",
     description: "Maintain deep connections. Anja. Close friends. Zurich network. Don't let relationships decay through neglect.",
@@ -85,7 +85,7 @@ async function main() {
       { title: "Interaction tracking (last contact per person)", done: false },
       { title: "Relationship health alerts", done: false },
     ],
-  }).returning();
+  });
 
   // ═══════════════════════════════════════════════
   // SUB-GOALS (linked to top-level)

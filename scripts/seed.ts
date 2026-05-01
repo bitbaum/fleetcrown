@@ -277,13 +277,20 @@ async function main() {
   const [subCount] = await db.execute(sql`SELECT COUNT(*) as count FROM subscriptions`);
   const [eventCount] = await db.execute(sql`SELECT COUNT(*) as count FROM events`);
 
+  const extractCount = (row: unknown): string => {
+    if (row && typeof row === "object" && "count" in row) {
+      return String((row as { count: unknown }).count);
+    }
+    return "0";
+  };
+
   console.log("\n--- Seed Summary ---");
-  console.log(`Entities:      ${(entityCount as any).count} (${contactsNew} new from contacts, ${contactsEnriched} enriched)`);
-  console.log(`Attributes:    ${(attrCount as any).count}`);
-  console.log(`Relations:     ${(relCount as any).count}`);
-  console.log(`Commitments:   ${(commitCount as any).count}`);
-  console.log(`Subscriptions: ${(subCount as any).count}`);
-  console.log(`Events:        ${(eventCount as any).count}`);
+  console.log(`Entities:      ${extractCount(entityCount)} (${contactsNew} new from contacts, ${contactsEnriched} enriched)`);
+  console.log(`Attributes:    ${extractCount(attrCount)}`);
+  console.log(`Relations:     ${extractCount(relCount)}`);
+  console.log(`Commitments:   ${extractCount(commitCount)}`);
+  console.log(`Subscriptions: ${extractCount(subCount)}`);
+  console.log(`Events:        ${extractCount(eventCount)}`);
 
   await client.end();
   console.log("\nDone.");
