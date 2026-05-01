@@ -652,7 +652,7 @@ export function ProjectCard({
             onClick={() => setAutoContinueEnabled((v) => !v)}
             className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
           >
-            {autoContinueEnabled ? "Auto-continue: ON" : "Auto-continue: OFF"}
+            {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
           </button>
 
           {/* Primary: Next best — prominent, shows current brain */}
