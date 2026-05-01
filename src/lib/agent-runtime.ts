@@ -67,6 +67,19 @@ export function restartOpenProjectTabs(commandForDir: (dir: string) => string): 
   });
 }
 
+export function launchAgentInTab(tab: string, dir: string, agent: "claude" | "codex", model?: string): void {
+  const escapedDir = `'${dir.replace(/'/g, `'\\''`)}'`;
+  let command: string;
+  if (agent === "claude") {
+    command = `cd ${escapedDir} && claude`;
+  } else {
+    const m = model ?? "gpt-5.4";
+    const escapedModel = `'${m.replace(/'/g, `'\\''`)}'`;
+    command = `cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+  }
+  restartTab(tab, command);
+}
+
 let cwdCache: { key: string; cwds: string[]; builtAt: number } | null = null;
 
 export function getAgentCwds(agent: Agent): string[] {

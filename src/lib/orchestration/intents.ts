@@ -71,6 +71,13 @@ export const ORCHESTRATION_INTENTS: Record<OrchestrationTaskIntentId, Orchestrat
     requiresVerification: false,
     requiresSessionHandoff: true,
   },
+  custom: {
+    id: "custom",
+    name: "Custom",
+    objective: "Execute the provided custom instructions as the full task definition.",
+    requiresVerification: true,
+    requiresSessionHandoff: true,
+  },
 };
 
 export function getOrchestrationIntent(intentId: OrchestrationTaskIntentId): OrchestrationTaskIntent {

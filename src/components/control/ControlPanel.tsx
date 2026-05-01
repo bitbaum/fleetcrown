@@ -5,7 +5,7 @@ import { Bot, RefreshCw, Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
-import type { ControlData } from "@/app/api/control/route";
+import type { ControlData, ProjectState } from "@/app/api/control/route";
 type Agent = "codex" | "claude";
 import { ProjectCard } from "./ProjectCard";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -102,6 +102,31 @@ export function ControlPanel() {
         projectPath: project.dir,
         adapter: data?.agentConfig.agent ?? "claude",
         intent,
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    await refresh(true);
+  };
+
+  const runCustomPrompt = async (project: ProjectState, prompt: string, agent: string) => {
+    if (!project.agentRunning) {
+      await fetch("/api/agent/launch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tab: project.tab, dir: project.dir, agent }),
+      });
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    const res = await fetch("/api/orchestration/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectKey: project.tab,
+        projectPath: project.dir,
+        adapter: agent,
+        intent: "custom",
+        customInstructions: prompt,
       }),
     });
     const body = await res.json().catch(() => ({}));
@@ -437,6 +462,13 @@ export function ControlPanel() {
                     await runWithBrain(projectState, intent);
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "Failed to run task");
+                  }
+                }}
+                onRunCustomPrompt={async (projectState, prompt, agent) => {
+                  try {
+                    await runCustomPrompt(projectState, prompt, agent);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "Failed to run prompt");
                   }
                 }}
               />

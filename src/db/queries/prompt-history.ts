@@ -1,0 +1,103 @@
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { db } from "@/db";
+import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
+import { DEFAULT_USER_ID } from "@/lib/constants";
+
+export async function insertPromptHistory(row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
+  await db.insert(promptHistory).values({ ...row, userId: DEFAULT_USER_ID });
+}
+
+export type RecentCustomPrompt = {
+  customPrompt: string;
+  count: number;
+  lastUsedAt: string;
+};
+
+export type IntentFrequency = {
+  intent: string;
+  adapter: string;
+  count: number;
+};
+
+// Per-project: deduplicated custom prompts sorted by recency and frequency
+export async function getRecentCustomPromptsByProjectKey(
+  projectKey: string,
+  limit = 8,
+): Promise<RecentCustomPrompt[]> {
+  const rows = await db
+    .select({
+      customPrompt: promptHistory.customPrompt,
+      count: sql<number>`count(*)::int`,
+      lastUsedAt: sql<string>`max(dispatched_at)::text`,
+    })
+    .from(promptHistory)
+    .where(
+      and(
+        eq(promptHistory.userId, DEFAULT_USER_ID),
+        eq(promptHistory.projectKey, projectKey),
+        eq(promptHistory.intent, "custom"),
+        sql`custom_prompt is not null`,
+      ),
+    )
+    .groupBy(promptHistory.customPrompt)
+    .orderBy(desc(sql`max(dispatched_at)`))
+    .limit(limit);
+
+  return rows
+    .filter((r): r is typeof r & { customPrompt: string } => r.customPrompt !== null)
+    .map((r) => ({ customPrompt: r.customPrompt, count: r.count, lastUsedAt: r.lastUsedAt }));
+}
+
+// Batch version for the control panel — one query for all projects
+export async function getRecentCustomPromptsByProjectKeys(
+  projectKeys: string[],
+): Promise<Map<string, RecentCustomPrompt[]>> {
+  if (projectKeys.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      projectKey: promptHistory.projectKey,
+      customPrompt: promptHistory.customPrompt,
+      count: sql<number>`count(*)::int`,
+      lastUsedAt: sql<string>`max(dispatched_at)::text`,
+    })
+    .from(promptHistory)
+    .where(
+      and(
+        eq(promptHistory.userId, DEFAULT_USER_ID),
+        inArray(promptHistory.projectKey, projectKeys),
+        eq(promptHistory.intent, "custom"),
+        sql`custom_prompt is not null`,
+      ),
+    )
+    .groupBy(promptHistory.projectKey, promptHistory.customPrompt)
+    .orderBy(desc(sql`max(dispatched_at)`));
+
+  const result = new Map<string, RecentCustomPrompt[]>();
+  for (const row of rows) {
+    if (!row.customPrompt) continue;
+    const entry = result.get(row.projectKey) ?? [];
+    if (entry.length < 8) {
+      entry.push({ customPrompt: row.customPrompt, count: row.count, lastUsedAt: row.lastUsedAt });
+    }
+    result.set(row.projectKey, entry);
+  }
+  return result;
+}
+
+// Top intents across all projects — for analytics/self-learning
+export async function getTopIntentFrequencies(limit = 20): Promise<IntentFrequency[]> {
+  const rows = await db
+    .select({
+      intent: promptHistory.intent,
+      adapter: promptHistory.adapter,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(promptHistory)
+    .where(eq(promptHistory.userId, DEFAULT_USER_ID))
+    .groupBy(promptHistory.intent, promptHistory.adapter)
+    .orderBy(desc(sql`count(*)`))
+    .limit(limit);
+
+  return rows.map((r) => ({ intent: r.intent, adapter: r.adapter, count: r.count }));
+}

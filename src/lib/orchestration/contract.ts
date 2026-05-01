@@ -50,7 +50,8 @@ export type OrchestrationTaskIntentId =
   | "deploy_check"
   | "commit_push"
   | "close_session"
-  | "continue";
+  | "continue"
+  | "custom";
 
 export type OrchestrationTaskIntent = {
   id: OrchestrationTaskIntentId;

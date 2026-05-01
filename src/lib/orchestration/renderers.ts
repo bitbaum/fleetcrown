@@ -87,6 +87,8 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
         `Continue the current work in ${request.projectPath}.`,
         "Resolve the pending question using the available context and keep going without bouncing the same blocker back to the user.",
       ].join("\n");
+    case "custom":
+      return request.customInstructions?.trim() ?? "";
   }
 }
 
@@ -99,7 +101,8 @@ export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter:
     renderSharedExecutionRules(),
   ];
 
-  if (request.customInstructions?.trim()) {
+  // For "custom" intent the body IS customInstructions — don't append it again
+  if (request.intent !== "custom" && request.customInstructions?.trim()) {
     sections.push(`Additional instructions:\n${request.customInstructions.trim()}`);
   }
 

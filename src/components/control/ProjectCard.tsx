@@ -14,6 +14,7 @@ import {
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { ProjectProfile } from "./ProjectProfile";
 
 const PRIMARY_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
   { id: "next_best", label: "Next best" },
@@ -315,6 +316,7 @@ export function ProjectCard({
   currentAdapter,
   onInject,
   onRunWithBrain,
+  onRunCustomPrompt,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -322,7 +324,10 @@ export function ProjectCard({
   currentAdapter: string;
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
+  onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
 }) {
+  const [activeTab, setActiveTab] = useState<"status" | "profile">("status");
+  const [localAgent, setLocalAgent] = useState<"claude" | "codex" | "openclaw" | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
@@ -437,6 +442,40 @@ export function ProjectCard({
           : "border-white/10 bg-white/[0.03]"
       )}
     >
+      {/* Tab bar */}
+      <div className="flex border-b border-border-subtle">
+        <button
+          onClick={() => setActiveTab("status")}
+          className={cn(
+            "px-5 py-2.5 text-sm font-medium transition-colors",
+            activeTab === "status" ? "border-b-2 border-accent-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
+          )}
+        >
+          Status
+        </button>
+        <button
+          onClick={() => setActiveTab("profile")}
+          className={cn(
+            "px-5 py-2.5 text-sm font-medium transition-colors",
+            activeTab === "profile" ? "border-b-2 border-accent-primary text-text-primary" : "text-text-secondary hover:text-text-primary"
+          )}
+        >
+          Profile
+        </button>
+      </div>
+
+      {activeTab === "profile" && (
+        <ProjectProfile
+          project={project}
+          globalAdapter={currentAdapter}
+          localAgent={localAgent}
+          onSetAgent={setLocalAgent}
+          onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
+        />
+      )}
+
+      {activeTab === "status" && (
+      <>
       {/* Header */}
       <div className="flex flex-col gap-3 p-5 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
@@ -632,7 +671,26 @@ export function ProjectCard({
             <Send className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Recent custom prompt chips — click to reuse */}
+        {project.recentCustomPrompts.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {project.recentCustomPrompts.map((r, i) => (
+              <button
+                key={i}
+                onClick={() => setCustom(r.customPrompt)}
+                title={r.customPrompt}
+                className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
+              >
+                {r.count > 1 && <span className="mr-1.5 text-text-muted">×{r.count}</span>}
+                {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+      </>
+      )}
     </div>
   );
 }

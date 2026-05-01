@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
 import {
@@ -70,6 +71,7 @@ export type ProjectState = {
   readyAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
+  recentCustomPrompts: RecentCustomPrompt[];
   latestOrchestrationRun: {
     adapter: string;
     intent: string;
@@ -334,8 +336,10 @@ export async function GET() {
   // Detect any known agent running in a project dir — not just the configured default
   const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
   const agentCwds = getAgentCwds(allMatchers);
-  const [latestRuns] = await Promise.all([
+  const projectKeys = projects.map((p) => p.tab);
+  const [latestRuns, recentPromptsMap] = await Promise.all([
     getLatestRunsByProjectPaths(dirs),
+    getRecentCustomPromptsByProjectKeys(projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     cleanupStaleOrchestrationRuns().catch(() => {}),
   ]);
 
@@ -352,6 +356,7 @@ export async function GET() {
     readyAt: readTmpTs(stateFile.ready(tab)),
     closingAt: readTmpTs(stateFile.closing(tab)),
     closedAt: readTmpTs(stateFile.closed(tab)),
+    recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
       intent: latestRun.intent,
