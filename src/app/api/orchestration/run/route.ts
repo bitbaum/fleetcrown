@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execSync } from "child_process";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { injectIntoTab } from "@/lib/zellij";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import type { AdapterId, OrchestrationTaskIntentId, OrchestrationTaskRequest } from "@/lib/orchestration";
 import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } from "@/lib/orchestration";
@@ -27,15 +27,6 @@ const RunOrchestrationBody = z.object({
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
 });
-
-function injectIntoTab(tab: string, prompt: string): void {
-  const escaped = prompt.replace(/'/g, `'"'"'`);
-  execSync(`zellij action go-to-tab-name '${tab}'`);
-  execSync("sleep 0.3");
-  execSync(`zellij action write-chars '${escaped}'`);
-  execSync("sleep 0.1");
-  execSync("zellij action write 13");
-}
 
 function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest) {
   const workerPath = path.join(process.cwd(), "scripts", "run-openclaw-orchestration.ts");

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { execSync } from "child_process";
 import fs from "fs";
 import {
   stateFile,
@@ -8,15 +7,7 @@ import {
   readPromptMeta,
   buildPromptWithSession,
 } from "@/lib/claude-config";
-
-function injectIntoTab(tab: string, prompt: string): void {
-  const escaped = prompt.replace(/'/g, `'"'"'`);
-  execSync(`zellij action go-to-tab-name '${tab}'`);
-  execSync("sleep 0.3");
-  execSync(`zellij action write-chars '${escaped}'`);
-  execSync("sleep 0.1");
-  execSync("zellij action write 13");
-}
+import { injectIntoTab } from "@/lib/zellij";
 
 export async function POST(req: NextRequest) {
   let body: { tab?: string; promptKey?: string; customPrompt?: string };
