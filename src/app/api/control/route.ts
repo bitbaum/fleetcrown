@@ -325,14 +325,15 @@ export async function GET() {
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry: AgentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
-  const activeEntry = agentRegistry.agents.find((entry) => entry.id === agentConfig.agent);
   const projects = parseProjectsConf();
   const prompts = readPromptMeta();
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
   const { gitMap, dbProjects, zellijTabs } = await getSlowData(dirs);
-  const agentCwds = getAgentCwds(activeEntry?.processMatchers ?? []);
+  // Detect any known agent running in a project dir — not just the configured default
+  const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
+  const agentCwds = getAgentCwds(allMatchers);
   const latestRuns = await getLatestRunsByProjectPaths(dirs);
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => {
@@ -369,9 +370,9 @@ export async function GET() {
     agentRegistry,
     agentConfig,
     orchestration: {
-      manualPromptInjection: activeEntry?.capabilities.manualPromptInjection ?? false,
-      autonomousPromptLoop: activeEntry?.capabilities.autonomousPromptLoop ?? false,
-      sessionLifecycleSignals: activeEntry?.capabilities.sessionLifecycleSignals ?? false,
+      manualPromptInjection: true,
+      autonomousPromptLoop: true,
+      sessionLifecycleSignals: true,
     },
     projects: states,
     prompts,
