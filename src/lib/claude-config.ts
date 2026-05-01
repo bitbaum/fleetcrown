@@ -110,11 +110,31 @@ export function readPrompts(): Record<string, string> {
  */
 export function buildPromptWithSession(base: string, tab: string): string {
   const sessionFile = path.join(SESSIONS_DIR, `${tab}.md`);
+  const sessionUpdateBlock = [
+    `When done, update ${sessionFile} with exactly these lines:`,
+    "done: <one sentence what you completed>",
+    "next: <one sentence what remains>",
+    "tests: <N pass · N fail, or 'no suite'>",
+    "todos: <count> TODOs",
+    "health: <good | needs attention | critical>",
+  ].join("\n");
+
   try {
     if (fs.existsSync(sessionFile)) {
       const session = fs.readFileSync(sessionFile, "utf-8");
-      return `${base}\n\nSession state from last run:\n${session}\n\nUpdate ${sessionFile} when done: what you completed and what remains.`;
+      return `${base}
+
+Session state from last run:
+${session}
+
+${sessionUpdateBlock}`;
     }
-  } catch { /* fall through */ }
-  return `${base}\n\nBefore stopping, create ${sessionFile} with these lines: "done: <what you completed>", "next: <what remains>", "tests: <status>", "todos: <count>", "health: <good|needs attention|critical>".`;
+  } catch {
+    /* fall through */
+  }
+
+  return `${base}
+
+Before stopping, create ${sessionFile}.
+${sessionUpdateBlock}`;
 }
