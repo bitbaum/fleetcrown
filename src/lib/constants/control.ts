@@ -13,7 +13,7 @@ export const HEALTH_COLOR: Record<string, string> = {
 };
 
 export const PROMPT_STYLE: Record<string, string> = {
-  primary: "bg-indigo-600 hover:bg-indigo-500 text-white",
-  action:  "bg-white/10 hover:bg-white/15 text-white/90",
-  more:    "bg-white/5 hover:bg-white/10 text-white/70",
+  primary: "rounded-2xl bg-accent-primary px-4 py-2.5 text-sm font-medium text-text-inverted hover:bg-accent-hover",
+  action:  "rounded-2xl border border-border-default bg-surface-overlay px-4 py-2.5 text-sm font-medium text-text-primary hover:bg-surface-raised",
+  more:    "rounded-2xl border border-border-subtle bg-surface-base px-4 py-2.5 text-sm font-medium text-text-secondary hover:bg-surface-raised hover:text-text-primary",
 };

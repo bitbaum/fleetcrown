@@ -9,6 +9,7 @@ import {
   Calendar,
   Repeat2,
   Terminal,
+  BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -33,4 +34,5 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "prompts",  label: "Prompts",  href: "/prompts",  icon: Zap,          active: true,  mobile: false },
   { id: "system",   label: "System",   href: "/system",   icon: Server,       active: true,  mobile: false },
   { id: "control",  label: "Control",  href: "/control",  icon: Terminal,     active: true,  mobile: false },
+  { id: "thoughts", label: "Thoughts", href: "/thoughts", icon: BookOpen,     active: true,  mobile: false },
 ];

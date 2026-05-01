@@ -20,10 +20,10 @@ import fs from "fs";
 import path from "path";
 
 export const CLAUDE_HOME = process.env.HOME ?? "/home/g";
-export const PROJECTS_CONF = path.join(CLAUDE_HOME, ".config", "claude-projects.conf");
-export const PROMPTS_FILE  = path.join(CLAUDE_HOME, ".config", "claude-prompts.json");
-export const META_FILE     = path.join(CLAUDE_HOME, ".config", "claude-prompts-meta.json");
-export const SESSIONS_DIR  = path.join(CLAUDE_HOME, ".claude", "sessions");
+export const PROJECTS_CONF = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-projects.conf");
+export const PROMPTS_FILE  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts.json");
+export const META_FILE     = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts-meta.json");
+export const SESSIONS_DIR  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".claude", "sessions");
 
 // ── State file helpers ────────────────────────────────────────────────────────
 // Single place where the /tmp/<name>-<tab> file names are defined for TypeScript.
@@ -31,12 +31,12 @@ export const SESSIONS_DIR  = path.join(CLAUDE_HOME, ".claude", "sessions");
 // rename any of these, update stop.sh and notification.sh to match.
 
 export const stateFile = {
-  ready:    (tab: string) => path.join("/tmp", `claude-ready-${tab}`),
-  closing:  (tab: string) => path.join("/tmp", `claude-closing-${tab}`),
-  closed:   (tab: string) => path.join("/tmp", `claude-closed-${tab}`),
-  sentinel: (tab: string) => path.join("/tmp", `claude-session-closed-${tab}`),
-  prompt:   (tab: string) => path.join("/tmp", `claude-current-prompt-${tab}`),
-  lock:     (tab: string) => path.join("/tmp", `claude-stop-active-${tab}`),
+  ready:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
+  closing:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closing-${tab}`),
+  closed:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
+  sentinel: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-session-closed-${tab}`),
+  prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-current-prompt-${tab}`),
+  lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-stop-active-${tab}`),
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -116,5 +116,5 @@ export function buildPromptWithSession(base: string, tab: string): string {
       return `${base}\n\nSession state from last run:\n${session}\n\nUpdate ${sessionFile} when done: what you completed and what remains.`;
     }
   } catch { /* fall through */ }
-  return `${base}\n\nBefore stopping, create ${sessionFile} with these lines: "done: <what you completed>", "next: <what remains>", "tests: <status>", "todos: <count>", "health: <good|degraded|critical>".`;
+  return `${base}\n\nBefore stopping, create ${sessionFile} with these lines: "done: <what you completed>", "next: <what remains>", "tests: <status>", "todos: <count>", "health: <good|needs attention|critical>".`;
 }

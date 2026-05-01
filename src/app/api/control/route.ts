@@ -4,6 +4,9 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
+import { getLatestRunsByProjectPaths } from "@/db/queries/orchestration-runs";
+import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
+import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
 import {
   SESSIONS_DIR,
   stateFile,
@@ -16,6 +19,27 @@ import {
 export type { PromptMeta };
 
 const execAsync = promisify(exec);
+
+function getAgentCwds(processMatchers: string[]): string[] {
+  const cwds: string[] = [];
+
+  try {
+    for (const entry of fs.readdirSync("/proc")) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
+        if (!processMatchers.some((matcher) => cmdline.includes(matcher))) continue;
+        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
+      } catch {
+        // Ignore processes that disappeared mid-scan.
+      }
+    }
+  } catch {
+    // Ignore systems where /proc is unavailable.
+  }
+
+  return cwds;
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,12 +64,32 @@ export type ProjectState = {
   dir: string;
   session: SessionState | null;
   git: GitState | null;
-  claudeRunning: boolean;
+  agentRunning: boolean;
   profile: ProjectProfile | null;
   currentPrompt: CurrentPrompt | null;
   readyAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
+  latestOrchestrationRun: {
+    adapter: string;
+    intent: string;
+    state: string;
+    startedAt: string;
+    finishedAt: string | null;
+    summary: {
+      done: string;
+      next: string;
+      tests: string;
+      todos: string;
+      health: string;
+    } | null;
+    payload: {
+      resultText?: string;
+      error?: string;
+      durationMs?: number;
+      model?: string;
+    } | null;
+  } | null;
 };
 
 export type SessionState = {
@@ -67,7 +111,21 @@ export type GitState = {
   recentCommits: string[];
 };
 
+type AgentConfig = {
+  agent: SwitchableAgent;
+  model: string;
+};
+
+type AgentRegistry = AgentCatalog;
+
 export type ControlData = {
+  agentRegistry: AgentRegistry;
+  agentConfig: AgentConfig;
+  orchestration: {
+    manualPromptInjection: boolean;
+    autonomousPromptLoop: boolean;
+    sessionLifecycleSignals: boolean;
+  };
   projects: ProjectState[];
   prompts: PromptMeta[];
   zellijTabs: string[];
@@ -261,54 +319,62 @@ function matchProfile(
   };
 }
 
-// ── Claude process detection (no fork — reads /proc directly) ─────────────────
-
-// Cache CWDs for 3s — avoids scanning /proc on every 10s poll
-let cwdCache: { cwds: string[]; builtAt: number } | null = null;
-
-function getClaudeCwds(): string[] {
-  const now = Date.now();
-  if (cwdCache && now - cwdCache.builtAt < 3000) return cwdCache.cwds;
-
-  const cwds: string[] = [];
-  try {
-    for (const entry of fs.readdirSync("/proc")) {
-      if (!/^\d+$/.test(entry)) continue;
-      try {
-        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
-        if (!cmdline.includes("claude")) continue;
-        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
-      } catch { /* process may have died */ }
-    }
-  } catch { /* /proc not available */ }
-
-  cwdCache = { cwds, builtAt: now };
-  return cwds;
-}
-
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
+  const preferences = readAgentPreferences();
+  const agentConfig = resolveAgentConfig(preferences);
+  const agentRegistry: AgentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
+  const activeEntry = agentRegistry.agents.find((entry) => entry.id === agentConfig.agent);
   const projects = parseProjectsConf();
   const prompts = readPromptMeta();
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
   const { gitMap, dbProjects, zellijTabs } = await getSlowData(dirs);
-  const claudeCwds = getClaudeCwds();
+  const agentCwds = getAgentCwds(activeEntry?.processMatchers ?? []);
+  const latestRuns = await getLatestRunsByProjectPaths(dirs);
 
-  const states: ProjectState[] = projects.map(({ tab, dir }) => ({
+  const states: ProjectState[] = projects.map(({ tab, dir }) => {
+    const latestRun = latestRuns.get(dir);
+    return ({
     tab,
     dir,
     session: parseSession(tab),
     git: gitMap.get(dir) ?? null,
-    claudeRunning: claudeCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+    agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
     profile: matchProfile(tab, dir, dbProjects),
     currentPrompt: readCurrentPrompt(tab),
     readyAt: readTmpTs(stateFile.ready(tab)),
     closingAt: readTmpTs(stateFile.closing(tab)),
     closedAt: readTmpTs(stateFile.closed(tab)),
-  }));
+    latestOrchestrationRun: latestRun ? {
+      adapter: latestRun.adapter,
+      intent: latestRun.intent,
+      state: latestRun.state,
+      startedAt: latestRun.startedAt?.toISOString?.() ?? String(latestRun.startedAt),
+      finishedAt: latestRun.finishedAt ? (latestRun.finishedAt.toISOString?.() ?? String(latestRun.finishedAt)) : null,
+      summary: latestRun.summary ?? null,
+      payload: latestRun.payload ? {
+        resultText: latestRun.payload.resultText,
+        error: latestRun.payload.error,
+        durationMs: latestRun.payload.durationMs,
+        model: latestRun.payload.model,
+      } : null,
+    } : null,
+  });
+  });
 
-  return NextResponse.json({ projects: states, prompts, zellijTabs } satisfies ControlData);
+  return NextResponse.json({
+    agentRegistry,
+    agentConfig,
+    orchestration: {
+      manualPromptInjection: activeEntry?.capabilities.manualPromptInjection ?? false,
+      autonomousPromptLoop: activeEntry?.capabilities.autonomousPromptLoop ?? false,
+      sessionLifecycleSignals: activeEntry?.capabilities.sessionLifecycleSignals ?? false,
+    },
+    projects: states,
+    prompts,
+    zellijTabs,
+  } satisfies ControlData);
 }

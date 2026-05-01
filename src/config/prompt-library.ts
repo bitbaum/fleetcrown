@@ -474,3 +474,5 @@ Be specific. No more than 150 words.`,
     tags: ["planning", "daily"],
   },
 ];
+
+export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global");

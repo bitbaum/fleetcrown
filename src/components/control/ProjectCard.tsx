@@ -11,11 +11,29 @@ import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, AUTO_INJECT_S,
   HEALTH_COLOR, PROMPT_STYLE,
 } from "@/lib/constants/control";
-import type { ProjectState, PromptMeta } from "@/app/api/control/route";
+import type { ControlData, ProjectState, PromptMeta } from "@/app/api/control/route";
+import { mapClaudePromptToIntent } from "@/lib/orchestration";
+import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+
+const PRIMARY_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
+  { id: "next_best", label: "Next best" },
+];
+const ACTION_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
+  { id: "test_and_fix", label: "Test & fix" },
+  { id: "quality", label: "Quality" },
+  { id: "commit_push", label: "Commit" },
+];
+const MORE_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
+  { id: "full_audit", label: "Full audit" },
+  { id: "product", label: "Product review" },
+  { id: "ux_review", label: "UX review" },
+  { id: "deploy_check", label: "Deploy check" },
+  { id: "close_session", label: "Close session" },
+];
 
 function SessionBadge({ health }: { health: string }) {
   const color = HEALTH_COLOR[health] ?? "text-white/40";
-  return <span className={cn("text-xs font-semibold uppercase", color)}>{health}</span>;
+  return <span className={cn("rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em]", color)}>{health}</span>;
 }
 
 function MaturityBar({ maturity }: { maturity: string }) {
@@ -35,7 +53,7 @@ function MaturityBar({ maturity }: { maturity: string }) {
           />
         ))}
       </div>
-      <span className="text-xs text-white/30">{maturity.replace(/^\d+\/10\s*-?\s*/, "")}</span>
+      <span className="text-sm text-text-secondary">{maturity.replace(/^\d+\/10\s*-?\s*/, "")}</span>
     </div>
   );
 }
@@ -52,12 +70,12 @@ function ClosedBanner({
   onDismiss: () => void;
 }) {
   return (
-    <div className="border-t border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-4 space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="space-y-4 border-t border-emerald-500/20 bg-emerald-500/[0.05] px-5 py-5">
+      <div className="flex flex-wrap items-center gap-2">
         <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-        <span className="text-sm font-semibold text-emerald-300">Session closed</span>
+        <span className="text-base font-medium text-emerald-300">Session closed</span>
         {git?.todayCount ? (
-          <span className="text-xs text-white/30 ml-auto">+{git.todayCount} commits today</span>
+          <span className="ml-auto text-sm text-text-secondary">+{git.todayCount} commits today</span>
         ) : null}
       </div>
 
@@ -65,18 +83,18 @@ function ClosedBanner({
         <div className="space-y-2">
           {session.done && (
             <div className="space-y-0.5">
-              <p className="text-xs text-white/30 uppercase tracking-wide">Shipped</p>
-              <p className="text-sm text-white/80 leading-relaxed">{session.done}</p>
+              <p className="ui-kicker">Shipped</p>
+              <p className="text-base text-text-primary leading-relaxed">{session.done}</p>
             </div>
           )}
           {session.next && (
             <div className="space-y-0.5">
-              <p className="text-xs text-white/30 uppercase tracking-wide">Up next (when ready)</p>
-              <p className="text-sm text-white/60 leading-relaxed">{session.next}</p>
+              <p className="ui-kicker">Up next</p>
+              <p className="text-base text-text-secondary leading-relaxed">{session.next}</p>
             </div>
           )}
           {session.tests && (
-            <p className="text-xs text-white/30">{session.tests}</p>
+            <p className="text-sm text-text-tertiary">{session.tests}</p>
           )}
         </div>
       )}
@@ -84,13 +102,13 @@ function ClosedBanner({
       <div className="flex gap-2 pt-1">
         <button
           onClick={onContinue}
-          className="flex-1 px-3 py-2 rounded-md text-sm font-medium bg-white/8 hover:bg-white/12 text-white/70 hover:text-white/90 transition-colors"
+          className="flex-1 rounded-2xl bg-surface-overlay px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised"
         >
           Continue →
         </button>
         <button
           onClick={onDismiss}
-          className="px-3 py-2 rounded-md text-sm text-white/30 hover:text-white/60 transition-colors"
+          className="rounded-2xl px-4 py-3 text-sm text-text-secondary transition-colors hover:text-text-primary"
         >
           Clear
         </button>
@@ -106,11 +124,11 @@ function ClosingBanner({ startedAt }: { startedAt: number }) {
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="border-t border-amber-500/20 bg-amber-500/[0.03] px-4 py-3">
-      <div className="flex items-center gap-2">
+    <div className="border-t border-amber-500/20 bg-amber-500/[0.04] px-5 py-4">
+      <div className="flex flex-wrap items-center gap-2">
         <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
-        <span className="text-xs font-medium text-amber-300">Closing session…</span>
-        <span className="text-xs text-white/30 ml-auto">{secondsAgo(startedAt)}s running</span>
+        <span className="text-sm font-medium text-amber-300">Closing session…</span>
+        <span className="ml-auto text-sm text-text-secondary">{secondsAgo(startedAt)}s running</span>
       </div>
     </div>
   );
@@ -123,11 +141,11 @@ function RunningBanner({ label, startedAt }: { label: string; startedAt: number 
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="border-t border-indigo-500/20 bg-indigo-500/[0.03] px-4 py-2">
-      <div className="flex items-center gap-2">
+    <div className="border-t border-indigo-500/20 bg-indigo-500/[0.04] px-5 py-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Loader2 className="h-3 w-3 text-indigo-400 animate-spin shrink-0" />
-        <span className="text-xs text-indigo-300 truncate">{label}</span>
-        <span className="text-xs text-white/30 ml-auto shrink-0">{secondsAgo(startedAt)}s</span>
+        <span className="truncate text-sm text-indigo-200">{label}</span>
+        <span className="ml-auto shrink-0 text-sm text-text-secondary">{secondsAgo(startedAt)}s</span>
       </div>
     </div>
   );
@@ -138,11 +156,13 @@ function ReadyBanner({
   onSend,
   onDismiss,
   paused = false,
+  title = "Agent finished",
 }: {
   prompts: PromptMeta[];
   onSend: (key: string) => void;
   onDismiss: () => void;
   paused?: boolean;
+  title?: string;
 }) {
   const [seconds, setSeconds] = useState(AUTO_INJECT_S);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
@@ -155,35 +175,63 @@ function ReadyBanner({
   }, [seconds, paused, onSend, primaryKey]);
 
   return (
-    <div className="border-t border-emerald-500/30 bg-emerald-500/5 px-4 py-3">
-      <div className="flex items-center justify-between gap-2 mb-2">
+    <div className="border-t border-emerald-500/30 bg-emerald-500/6 px-5 py-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-xs font-semibold text-emerald-400">Claude finished</span>
+          <span className="text-sm font-medium text-emerald-300">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/40 tabular-nums">{paused ? "⏸" : `${seconds}s`}</span>
-          <button onClick={onDismiss} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+          <span className="text-sm text-text-secondary tabular-nums">{paused ? "Paused" : `${seconds}s`}</span>
+          <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p) => (
           <button
             key={p.key}
             onClick={() => onSend(p.key)}
-            className={cn(
-              "px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors",
-              p.style === "primary"
-                ? "bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
-                : "bg-white/10 hover:bg-white/15 text-white/80"
-            )}
+            className={cn(PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action)}
           >
             {p.icon} {p.label}
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["latestOrchestrationRun"]> }) {
+  return (
+    <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="ui-kicker">latest orchestration</span>
+        <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-200">
+          {run.adapter} · {run.intent}
+        </span>
+        <span className="rounded-full border border-border-subtle bg-surface-base px-2.5 py-1 text-xs text-text-secondary">
+          {run.state}
+        </span>
+      </div>
+      {run.summary?.done && (
+        <p className="text-base text-text-secondary"><span className="mr-2 ui-kicker">done</span>{run.summary.done}</p>
+      )}
+      {run.summary?.next && (
+        <p className="text-lg text-text-primary leading-snug"><span className="mr-2 ui-kicker">next</span>{run.summary.next}</p>
+      )}
+      {(run.summary?.tests || run.summary?.todos || run.summary?.health) && (
+        <p className="text-sm text-text-tertiary">
+          {[run.summary?.tests, run.summary?.todos, run.summary?.health].filter(Boolean).join(" · ")}
+        </p>
+      )}
+      {!run.summary && run.payload?.resultText && (
+        <p className="line-clamp-4 text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
+      )}
+      {run.payload?.error && (
+        <p className="text-sm text-red-400">{run.payload.error}</p>
+      )}
     </div>
   );
 }
@@ -204,32 +252,32 @@ function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"
   if (!profile.description && !profile.status && !profile.mission && displayAttrs.length === 0) return null;
 
   return (
-    <div className="border-t border-white/5">
+    <div className="border-t border-border-subtle">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2 text-xs text-white/30 hover:text-white/50 transition-colors"
+        className="flex w-full items-center justify-between px-5 py-3 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
         <span className="flex items-center gap-1">
-          <Info className="h-3 w-3" />
+          <Info className="h-4 w-4" />
           Profile
         </span>
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
 
       {open && (
-        <div className="px-4 pb-4 space-y-3">
+        <div className="space-y-4 px-5 pb-5">
           {profile.description && (
-            <p className="text-xs text-white/50 leading-relaxed">{profile.description}</p>
+            <p className="text-sm text-text-secondary leading-relaxed">{profile.description}</p>
           )}
           {profile.mission && (
             <div>
-              <p className="text-xs text-white/25 uppercase tracking-wide mb-0.5">Mission</p>
-              <p className="text-xs text-white/60 leading-relaxed italic">{profile.mission}</p>
+              <p className="ui-kicker mb-1">Mission</p>
+              <p className="text-sm text-text-secondary leading-relaxed italic">{profile.mission}</p>
             </div>
           )}
           {profile.maturity && (
             <div>
-              <p className="text-xs text-white/25 uppercase tracking-wide mb-1">Maturity</p>
+              <p className="ui-kicker mb-1.5">Maturity</p>
               <MaturityBar maturity={profile.maturity} />
             </div>
           )}
@@ -237,7 +285,7 @@ function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"
             .filter(([k]) => !["description", "mission", "maturity"].includes(k))
             .map(([k, v]) => (
               <div key={k}>
-                <p className="text-xs text-white/25 uppercase tracking-wide mb-0.5">
+                <p className="ui-kicker mb-1">
                   {keyAttrLabels[k] ?? k}
                 </p>
                 {k === "url" ? (
@@ -245,12 +293,12 @@ function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"
                     href={v.startsWith("http") ? v : `https://${v}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                    className="flex items-center gap-1 text-sm text-accent-text hover:text-text-primary"
                   >
-                    {v} <ExternalLink className="h-2.5 w-2.5" />
+                    {v} <ExternalLink className="h-3 w-3" />
                   </a>
                 ) : (
-                  <p className="text-xs text-white/50 leading-relaxed">{v}</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">{v}</p>
                 )}
               </div>
             ))}
@@ -264,12 +312,18 @@ export function ProjectCard({
   project,
   prompts,
   zellijTabs,
+  orchestration,
+  currentAdapter,
   onInject,
+  onRunWithBrain,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
   zellijTabs: string[];
+  orchestration: ControlData["orchestration"];
+  currentAdapter: string;
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
+  onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [custom, setCustom] = useState("");
@@ -278,34 +332,86 @@ export function ProjectCard({
   const [dismissed, setDismissed] = useState(false);
 
   const nowS = Math.floor(Date.now() / 1000);
+  const supportsAutonomousLoop = orchestration.autonomousPromptLoop;
   const isClosed =
+    supportsAutonomousLoop &&
     !dismissed &&
-    !project.claudeRunning &&
+    !project.agentRunning &&
     project.closedAt !== null &&
     nowS - project.closedAt < CLOSED_WINDOW_S;
   const isClosing =
+    supportsAutonomousLoop &&
     !dismissed &&
     !isClosed &&
     project.closingAt !== null &&
     nowS - project.closingAt < CLOSING_WINDOW_S;
   const isReady =
+    supportsAutonomousLoop &&
     !dismissed &&
     !isClosed &&
     !isClosing &&
-    !project.claudeRunning &&
+    !project.agentRunning &&
     project.readyAt !== null &&
     nowS - project.readyAt < READY_WINDOW_S;
+
+  const latestOrchRun = project.latestOrchestrationRun;
+  const latestOrchFinishedAtS = latestOrchRun?.finishedAt
+    ? Math.floor(new Date(latestOrchRun.finishedAt).getTime() / 1000)
+    : null;
+  const isOrchReady =
+    !dismissed &&
+    !isReady &&
+    !isClosed &&
+    !isClosing &&
+    !project.agentRunning &&
+    latestOrchRun?.state === "done" &&
+    latestOrchFinishedAtS !== null &&
+    nowS - latestOrchFinishedAtS < READY_WINDOW_S;
 
   const showRunning =
     !isClosing &&
     project.currentPrompt !== null &&
-    project.claudeRunning;
+    project.agentRunning;
 
+  // Custom prompt inject
+  const sendCustom = async () => {
+    if (!custom.trim()) return;
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, custom.trim());
+      setCustom("");
+    } finally {
+      setSending(null);
+    }
+  };
+
+  // Intent dispatch via brain
+  const sendIntent = async (intent: OrchestrationTaskIntentId) => {
+    setSending(intent);
+    setDismissed(true);
+    try {
+      await onRunWithBrain(project, intent);
+    } finally {
+      setSending(null);
+    }
+  };
+
+  // Legacy send for ReadyBanner / ClosedBanner prompt keys — maps to intent where possible
   const send = async (promptKey?: string, customPrompt?: string) => {
     setSending(promptKey ?? "custom");
     setDismissed(true);
     try {
-      await onInject(project.tab, promptKey, customPrompt || undefined);
+      if (customPrompt) {
+        await onInject(project.tab, undefined, customPrompt);
+      } else if (promptKey) {
+        const intent = mapClaudePromptToIntent(promptKey);
+        if (intent) {
+          await onRunWithBrain(project, intent);
+        } else {
+          await onInject(project.tab, promptKey);
+        }
+      }
       if (!promptKey) setCustom("");
     } finally {
       setSending(null);
@@ -313,8 +419,6 @@ export function ProjectCard({
   };
 
   const primaryPrompts = prompts.filter((p) => p.style === "primary");
-  const actionPrompts  = prompts.filter((p) => p.style === "action");
-  const morePrompts    = prompts.filter((p) => p.style === "more");
 
   const tabOpen = zellijTabs.some(
     (t) => t.toLowerCase() === project.tab.toLowerCase()
@@ -325,45 +429,49 @@ export function ProjectCard({
   return (
     <div
       className={cn(
-        "rounded-lg border overflow-hidden",
+        "ui-panel-raised overflow-hidden",
         isClosed
           ? "border-emerald-500/30 bg-emerald-500/[0.02]"
           : isClosing
           ? "border-amber-500/25 bg-amber-500/[0.02]"
-          : isReady
+          : isReady || isOrchReady
           ? "border-emerald-500/40 bg-emerald-500/[0.03]"
-          : project.claudeRunning
+          : project.agentRunning
           ? "border-indigo-500/25 bg-indigo-500/[0.02]"
           : "border-white/10 bg-white/[0.03]"
       )}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2 p-4 pb-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-col gap-3 p-5 pb-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 space-y-2">
           <Circle
             className={cn(
-              "h-2.5 w-2.5 shrink-0 fill-current",
-              project.claudeRunning
+              "h-3 w-3 shrink-0 fill-current",
+              project.agentRunning
                 ? "text-indigo-400 animate-pulse"
                 : isClosed
                 ? "text-emerald-400"
-                : isReady
+                : isReady || isOrchReady
                 ? "text-emerald-400"
                 : "text-white/20"
             )}
           />
-          <span className="font-semibold text-white truncate">{project.tab}</span>
-          {tabOpen && <Terminal className="h-3 w-3 text-white/25 shrink-0" />}
-          {session?.health && <SessionBadge health={session.health} />}
-          {profile?.status && !session?.health && (
-            <span className="text-xs text-white/30 truncate">{profile.status}</span>
-          )}
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="break-words text-lg sm:text-xl md:text-2xl font-medium text-text-primary">{project.tab}</span>
+            {tabOpen && <Terminal className="h-4 w-4 text-text-muted shrink-0" />}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {session?.health && <SessionBadge health={session.health} />}
+            {profile?.status && !session?.health && (
+              <span className="text-sm text-text-secondary">{profile.status}</span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-3 lg:shrink-0 lg:self-start">
           {git && (
-            <div className="flex items-center gap-1 text-xs text-white/40">
-              <GitBranch className="h-3 w-3" />
-              <span>{git.branch}</span>
+            <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+              <GitBranch className="h-4 w-4" />
+              <span className="max-w-[20rem] truncate" title={git.branch}>{git.branch}</span>
               {git.dirty && <span className="text-amber-400">✎</span>}
               {git.todayCount > 0 && <span className="text-emerald-400/70">+{git.todayCount}</span>}
             </div>
@@ -373,10 +481,10 @@ export function ProjectCard({
               href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/20 hover:text-white/50 transition-colors"
+              className="text-text-muted transition-colors hover:text-text-primary"
               onClick={(e) => e.stopPropagation()}
             >
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="h-4 w-4" />
             </a>
           )}
         </div>
@@ -384,26 +492,26 @@ export function ProjectCard({
 
       {/* Session summary + recent commits (skip when closed banner shows it) */}
       {!isClosed && (session || git) && (
-        <div className="px-4 pb-3 space-y-1.5 border-t border-white/5 pt-3">
+        <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
           {session?.done && (
-            <p className="text-xs text-white/50 line-clamp-2">
-              <span className="text-white/25">done: </span>{session.done}
+            <p className="line-clamp-3 text-base text-text-secondary">
+              <span className="mr-2 ui-kicker">done</span>{session.done}
             </p>
           )}
           {session?.next && (
-            <p className="text-xs text-white/70 line-clamp-2">
-              <span className="text-white/40">next: </span>{session.next}
+            <p className="line-clamp-3 text-lg sm:text-xl text-text-primary leading-snug">
+              <span className="mr-2 ui-kicker">next</span>{session.next}
             </p>
           )}
           {git?.recentCommits && git.recentCommits.length > 0 && (
-            <div className="pt-0.5 space-y-0.5">
+            <div className="space-y-1.5 pt-1">
               {git.recentCommits.slice(0, 4).map((c, i) => {
                 const spaceIdx = c.indexOf(" ");
                 const hash = c.slice(0, spaceIdx);
                 const desc = c.slice(spaceIdx + 1);
                 return (
-                  <p key={i} className="text-xs text-white/25 truncate font-mono">
-                    <span className="text-white/15 mr-1">{hash}</span>
+                  <p key={i} className="truncate font-mono text-sm text-text-tertiary/90">
+                    <span className="mr-1 text-text-muted">{hash}</span>
                     {desc}
                   </p>
                 );
@@ -429,6 +537,20 @@ export function ProjectCard({
           onSend={(key) => send(key)}
           onDismiss={() => setDismissed(true)}
           paused={customFocused || custom.trim().length > 0}
+          title="Agent finished"
+        />
+      )}
+      {isOrchReady && (
+        <ReadyBanner
+          prompts={prompts}
+          onSend={(key) => {
+            const intent = mapClaudePromptToIntent(key);
+            if (!intent) return;
+            void sendIntent(intent);
+          }}
+          onDismiss={() => setDismissed(true)}
+          paused={customFocused || custom.trim().length > 0}
+          title="Task finished"
         />
       )}
       {showRunning && (
@@ -437,71 +559,87 @@ export function ProjectCard({
           startedAt={project.currentPrompt!.startedAt}
         />
       )}
+      {!supportsAutonomousLoop && (
+        <div className="border-t border-border-subtle bg-surface-base px-5 py-3 text-sm text-text-secondary">
+          This backend can take prompts in the current tab, but Cockpit does not yet have autonomous stop/ready lifecycle control for it.
+        </div>
+      )}
+
+      {project.latestOrchestrationRun && <LatestOrchestrationPanel run={project.latestOrchestrationRun} />}
 
       {/* Profile — collapsible */}
       {profile && <ProfilePanel profile={profile} />}
 
-      {/* Always-visible prompt buttons */}
-      <div className="px-4 pb-3 pt-2 space-y-2 border-t border-white/5">
-        <div className="flex flex-wrap gap-1.5">
-          {[...primaryPrompts, ...actionPrompts].map((p) => (
+      {/* Intent buttons — brain-agnostic */}
+      <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
+        <div className="flex flex-wrap gap-2">
+          {/* Primary: Next best — prominent, shows current brain */}
+          {PRIMARY_INTENTS.map(({ id, label }) => (
             <button
-              key={p.key}
-              onClick={() => send(p.key)}
+              key={id}
+              onClick={() => sendIntent(id)}
               disabled={sending !== null}
-              className={cn(
-                "px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50",
-                PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action
-              )}
+              className="flex flex-col items-start rounded-2xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
-              {sending === p.key ? "…" : `${p.icon} ${p.label}`}
+              <span>{label}</span>
+              <span className="text-xs opacity-60">via {currentAdapter}</span>
             </button>
           ))}
-          {morePrompts.length > 0 && (
+
+          {/* Action intents */}
+          {ACTION_INTENTS.map(({ id, label }) => (
             <button
-              onClick={() => setShowMore((v) => !v)}
-              className="px-2.5 py-1.5 rounded-md text-xs font-medium bg-white/5 hover:bg-white/10 text-white/50 transition-colors flex items-center gap-1"
+              key={id}
+              onClick={() => sendIntent(id)}
+              disabled={sending !== null}
+              className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50"
             >
-              More {showMore ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {sending === id ? "…" : label}
             </button>
-          )}
+          ))}
+
+          {/* More toggle */}
+          <button
+            onClick={() => setShowMore((v) => !v)}
+            className="flex items-center gap-1 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          >
+            {showMore ? "Less" : "More"} {showMore ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
         </div>
 
         {showMore && (
-          <div className="flex flex-wrap gap-1.5">
-            {morePrompts.map((p) => (
+          <div className="flex flex-wrap gap-2">
+            {MORE_INTENTS.map(({ id, label }) => (
               <button
-                key={p.key}
-                onClick={() => send(p.key)}
+                key={id}
+                onClick={() => sendIntent(id)}
                 disabled={sending !== null}
-                className={cn(
-                  "px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-50",
-                  PROMPT_STYLE.more
-                )}
+                className="rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50"
               >
-                {sending === p.key ? "…" : `${p.icon} ${p.label}`}
+                {sending === id ? "…" : label}
               </button>
             ))}
           </div>
         )}
 
-        <div className="flex gap-2 pt-1">
+        {/* Custom prompt */}
+        <div className="flex flex-col gap-2 sm:flex-row">
           <input
             type="text"
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && custom.trim() && send(undefined, custom.trim())}
+            onKeyDown={(e) => e.key === "Enter" && custom.trim() && sendCustom()}
             onFocus={() => setCustomFocused(true)}
             onBlur={() => setCustomFocused(false)}
             placeholder="Custom prompt…"
-            className="flex-1 bg-white/5 border border-white/10 rounded-md px-3 py-2 text-xs text-white placeholder-white/25 focus:outline-none focus:border-white/25 min-w-0"
+            className="ui-input min-w-0 flex-1"
           />
           <button
-            onClick={() => custom.trim() && send(undefined, custom.trim())}
+            onClick={sendCustom}
             disabled={!custom.trim() || sending !== null}
-            className="px-3 py-2 rounded-md bg-white/10 hover:bg-white/15 text-white/70 disabled:opacity-40 transition-colors"
+            className="rounded-2xl bg-accent-primary px-4 py-3.5 text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40 sm:px-5"
           >
-            <Send className="h-3.5 w-3.5" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
       </div>
