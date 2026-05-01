@@ -167,10 +167,10 @@ async function buildSlowData(dirs: string[]): Promise<SlowCache> {
 
 async function getSlowData(dirs: string[]): Promise<SlowCache> {
   const now = Date.now();
-  const dirsKey = dirs.join(",");
+  const dirsKey = [...dirs].sort().join(",");
 
   // Cache hit — return immediately, maybe kick off background refresh
-  if (slowCache && slowCache.dirs.join(",") === dirsKey) {
+  if (slowCache && [...slowCache.dirs].sort().join(",") === dirsKey) {
     if (now - slowCache.builtAt < CACHE_TTL_MS) return slowCache;
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
