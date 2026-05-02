@@ -4,7 +4,7 @@
 
 ## What This Is
 
-Cockpit is George's private life OS powered by Ivy. A unified view of people, money, goals, projects, habits, events, system health — everything that matters, in one place. Dark theme, mobile-first, built for one person but designed to be replicated for others.
+Cockpit is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
 
 ## Stack
 
@@ -41,21 +41,44 @@ src/
 
 ## Key Conventions
 
+### Styling — Three layers, each with a strict purpose
+
+```
+globals.css @layer components   → SSOT for all recurring visual patterns (ui-* classes)
+Tailwind utilities              → layout, spacing, sizing only — never colors
+shadcn/ui                       → complex interactive JS components only (Dialog, Dropdown, etc.)
+```
+
+**Hard rules — violation = rewrite:**
+- **Never** hardcode colors inline (`text-gray-400`, `bg-indigo-500`, `#fff`) — always use semantic tokens
+- **Never** re-implement a pattern that has a `ui-*` class — use it
+- **Never** reach for shadcn primitives (Card, Button, Input) — use `ui-panel`, `ui-btn-primary`, `ui-input`
+- **`ui-*` classes are the SSOT** for buttons, panels, inputs, kickers, stat cards, nav items
+- **Tailwind** for layout only: `flex`, `grid`, `gap-*`, `px-*`, `py-*`, `w-*`, `h-*`, `min-h-*`, `max-w-*`
+
+**Design tokens (all in `globals.css`):**
+- Surfaces: `bg-surface-page` → `bg-surface-base` → `bg-surface-raised` → `bg-surface-overlay`
+- Text: `text-text-primary` → `text-text-secondary` → `text-text-tertiary` → `text-text-muted`
+- Borders: `border-border-subtle` → `border-border-default` → `border-border-strong`
+- Accent: `bg-accent-primary`, `text-accent-text`, `bg-accent-muted`
+
+**Component classes (use these, don't reinvent):**
+- Panels: `.ui-panel`, `.ui-panel-raised`
+- Buttons: `.ui-btn-primary` (white bg), `.ui-btn-secondary` (outline), `.ui-btn-ghost`
+- Input: `.ui-input`
+- Labels: `.ui-kicker`
+- Stats: `.ui-stat-grid`, `.ui-stat-card`, `.ui-stat-label`, `.ui-stat-value`
+- Layout: `.app-page` (page wrapper), `.ui-page-title`, `.ui-page-subtitle`
+
 ### SSOT Rules
-- **User ID**: `DEFAULT_USER_ID` from `lib/constants.ts` — never hardcode the UUID
-- **User name**: `DEFAULT_USER_NAME` from `lib/constants.ts`
-- **Colors**: Use shadcn theme tokens (`bg-background`, `bg-sidebar`, `border-border`) and the project surface tokens (`bg-surface-modal`, `bg-surface-drawer`) — never hardcode hex
-- **Card styling**: Always use `<Card>` from `components/ui/card.tsx` — never inline card classes
-- **Modals/Drawers**: Use `<Modal>` / `<Drawer>` from `components/ui/modal.tsx` — never re-roll the `fixed inset-0 z-50 + backdrop + Esc handler` boilerplate
-- **Form inputs**: Use `<Field>` + `FIELD_INPUT_CLASS` (modal forms) or `FIELD_INPUT_CLASS_COMPACT` (inline-edit) from `components/ui/form.tsx`
-- **Page layout**: Use `<PageLayout>` for page headers — never repeat the h1/subtitle pattern
-- **Channel config**: `config/channels.ts` is SSOT for channel icons/colors
+- **User ID**: `getCurrentUserId()` from `lib/session.ts` in API routes; `DEFAULT_USER_ID` is fallback only
+- **Username normalization**: `normalizeUsername()` from `lib/username.ts` — used in forms, API, DB queries
+- **Page layout**: `.app-page` class on root div — never repeat padding pattern
 - **Navigation**: `config/navigation.ts` is SSOT for sidebar items
-- **Habit window**: `HABIT_HISTORY_DAYS` from `lib/constants.ts` — single source for the heatmap span and the queries' default window
-- **Attribute fetching**: Use `fetchAttributesByEntityIds` from `db/queries/utils.ts` — never duplicate the batch-fetch-group pattern
-- **Inline-edit lifecycle**: `useInlineEdit` from `hooks/use-inline-edit.ts` owns editing/draft/saving for click-to-edit toggles
-- **Create flow**: `useCreateMutation` from `hooks/use-create-mutation.ts` owns POST → decode `{ok,error}` → router.refresh
-- **Date helpers**: `lib/dates.ts` exports `toLocalDateStr` (YYYY-MM-DD in local time) and `deadlineLabel` (Overdue/Due X phrasing)
+- **Modals/Drawers**: Use `<Modal>` / `<Drawer>` from `components/ui/modal.tsx` — never re-roll the `fixed inset-0 z-50 + backdrop + Esc handler` boilerplate
+- **Date helpers**: `lib/dates.ts` exports `toLocalDateStr` (YYYY-MM-DD in local time) and `deadlineLabel`
+- **Inline-edit lifecycle**: `useInlineEdit` from `hooks/use-inline-edit.ts`
+- **Create flow**: `useCreateMutation` from `hooks/use-create-mutation.ts`
 
 ### Data Flow
 - **Server Components** for DB data (commitments, entities, subscriptions) — query directly

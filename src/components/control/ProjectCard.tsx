@@ -654,7 +654,10 @@ export function ProjectCard({
             title={autoContinueEnabled ? "Pause automatic continue for this tab" : "Resume automatic continue for this tab"}
           >
             {autoContinueEnabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            {autoContinueEnabled ? "Pause" : "Play"}
+            <span className="inline-flex items-center gap-1">
+              <Pause className="h-3 w-3 opacity-70" />
+              {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+            </span>
           </button>
 
           {/* Primary: Next best — prominent, shows current brain */}

@@ -22,7 +22,6 @@ import path from "path";
 export const CLAUDE_HOME = process.env.HOME ?? "/home/g";
 export const PROJECTS_CONF = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-projects.conf");
 export const PROMPTS_FILE  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts.json");
-export const META_FILE     = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts-meta.json");
 export const SESSIONS_DIR  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".claude", "sessions");
 
 // ── State file helpers ────────────────────────────────────────────────────────
@@ -43,12 +42,14 @@ export const stateFile = {
 
 export type PromptMeta = {
   key: string;
-  slot: number;
+  slot: number | null;
   icon: string;
   label: string;
   style: string;
   category: string;
 };
+
+export type PromptConfig = PromptMeta & { prompt: string };
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 
@@ -87,20 +88,25 @@ export function readProjectsMap(): Map<string, string> {
   return map;
 }
 
-export function readPromptMeta(): PromptMeta[] {
+/**
+ * Read the unified claude-prompts.json (array format — SSOT for prompt text + metadata).
+ */
+export function readPromptConfig(): PromptConfig[] {
   try {
-    return JSON.parse(fs.readFileSync(META_FILE, "utf-8")) as PromptMeta[];
+    return JSON.parse(fs.readFileSync(PROMPTS_FILE, "utf-8")) as PromptConfig[];
   } catch {
     return [];
   }
 }
 
+/** Backward-compat: derive metadata array from unified config. */
+export function readPromptMeta(): PromptMeta[] {
+  return readPromptConfig();
+}
+
+/** Backward-compat: derive key→prompt dict from unified config. */
 export function readPrompts(): Record<string, string> {
-  try {
-    return JSON.parse(fs.readFileSync(PROMPTS_FILE, "utf-8")) as Record<string, string>;
-  } catch {
-    return {};
-  }
+  return Object.fromEntries(readPromptConfig().map((p) => [p.key, p.prompt]));
 }
 
 /**

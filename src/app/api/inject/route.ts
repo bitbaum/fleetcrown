@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { exec } from "child_process";
+import { promisify } from "util";
 import fs from "fs";
 import {
   stateFile,
@@ -8,6 +10,9 @@ import {
   buildPromptWithSession,
 } from "@/lib/claude-config";
 import { injectIntoTab } from "@/lib/zellij";
+import { upsertProjectState } from "@/db/queries/project-states";
+
+const execAsync = promisify(exec);
 
 export async function POST(req: NextRequest) {
   let body: { tab?: string; promptKey?: string; customPrompt?: string };
@@ -27,6 +32,21 @@ export async function POST(req: NextRequest) {
   const canonical = projects.get(tab.toLowerCase());
   if (!canonical) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
+  }
+
+  // Validate the tab actually exists in the running Zellij session before touching any state.
+  // If Zellij is not running or query fails, degrade gracefully and continue.
+  try {
+    const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
+    const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
+    if (activeTabs.length > 0 && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
+      return NextResponse.json(
+        { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
+        { status: 422 },
+      );
+    }
+  } catch {
+    // Zellij unavailable — proceed anyway so non-Zellij use cases aren't blocked.
   }
 
   let prompt: string;
@@ -62,6 +82,15 @@ export async function POST(req: NextRequest) {
       label: promptLabel,
       startedAt: nowS,
     }));
+
+    // Persist to DB so Cockpit survives a reboot (fire-and-forget)
+    upsertProjectState({
+      projectKey: canonical,
+      tabName: canonical,
+      currentPromptKey: promptKey ?? "custom",
+      currentPromptLabel: promptLabel,
+      currentPromptStartedAt: new Date(nowS * 1000),
+    }).catch(() => {});
 
     // Any injection means we're continuing — clear stale close state from prior sessions
     try { fs.unlinkSync(stateFile.ready(canonical)); } catch { /* gone */ }

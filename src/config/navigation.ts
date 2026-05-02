@@ -10,6 +10,7 @@ import {
   Repeat2,
   Terminal,
   BookOpen,
+  Settings,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -35,4 +36,5 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "system",   label: "System",   href: "/system",   icon: Server,       active: true,  mobile: false },
   { id: "control",  label: "Control",  href: "/control",  icon: Terminal,     active: true,  mobile: false },
   { id: "thoughts", label: "Thoughts", href: "/thoughts", icon: BookOpen,     active: true,  mobile: false },
+  { id: "settings", label: "Settings", href: "/settings", icon: Settings,     active: true,  mobile: false },
 ];

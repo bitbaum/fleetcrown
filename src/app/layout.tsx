@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
-import { AppShell } from "@/components/shell/AppShell";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
 import "./globals.css";
 
@@ -22,7 +21,7 @@ const spaceGroteskDisplay = Space_Grotesk({
 
 export const metadata: Metadata = {
   title: "Cockpit",
-  description: "Your life, at a glance.",
+  description: "Your AI fleet. One dashboard.",
 };
 
 export default function RootLayout({
@@ -37,9 +36,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full" suppressHydrationWarning>
-        <ThemeProvider>
-          <AppShell>{children}</AppShell>
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

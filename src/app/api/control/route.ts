@@ -5,7 +5,10 @@ import fs from "fs";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
-import { getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
+import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
+import { getAllProjectStates, upsertProjectState } from "@/db/queries/project-states";
+import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
+import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
 import {
@@ -15,9 +18,10 @@ import {
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/claude-config";
+import { getCurrentUserId } from "@/lib/session";
 
 // Re-export so the ControlPanel can import PromptMeta from this route file (its existing import path).
-export type { PromptMeta };
+export type { PromptMeta, ActivityItem };
 
 const execAsync = promisify(exec);
 
@@ -131,6 +135,7 @@ export type ControlData = {
   projects: ProjectState[];
   prompts: PromptMeta[];
   zellijTabs: string[];
+  recentActivity: ActivityItem[];
 };
 
 // ── Slow-data cache (git + DB) ────────────────────────────────────────────────
@@ -324,11 +329,19 @@ function matchProfile(
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
+  const userId = await getCurrentUserId();
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry: AgentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
-  const projects = parseProjectsConf();
   const prompts = readPromptMeta();
+
+  // DB projects for this user; fall back to conf file for backward compat
+  const dbUserProjects = await getUserProjects(userId).catch(() => []);
+  const projects = dbUserProjects.length > 0
+    ? dbUserProjects
+        .filter((p) => p.dirPath)
+        .map((p) => ({ tab: p.name, dir: p.dirPath! }))
+    : parseProjectsConf();
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
@@ -337,25 +350,85 @@ export async function GET() {
   const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
   const agentCwds = getAgentCwds(allMatchers);
   const projectKeys = projects.map((p) => p.tab);
-  const [latestRuns, recentPromptsMap] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr] = await Promise.all([
     getLatestRunsByProjectPaths(dirs),
     getRecentCustomPromptsByProjectKeys(projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
+    getRecentActivity(24, 30).catch((): ActivityItem[] => []),
+    getAllProjectStates().catch((): DbProjectState[] => []),
     cleanupStaleOrchestrationRuns().catch(() => {}),
   ]);
+  const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
+  // 24-hour window: DB ready/closing/closed timestamps older than this are not surfaced
+  const READY_WINDOW_S = 86400;
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => {
     const latestRun = latestRuns.get(dir);
+    const dbState = dbStateMap.get(tab.toLowerCase());
+    const session = parseSession(tab);
+
+    // Persist session to DB if it's newer than what DB has (fire-and-forget)
+    if (session && dbState) {
+      const sessionMtimeMs = session.mtime;
+      const dbSessionMs = dbState.sessionUpdatedAt?.getTime() ?? 0;
+      if (sessionMtimeMs > dbSessionMs) {
+        upsertProjectState({
+          projectKey: tab,
+          tabName: tab,
+          sessionDone:   session.done,
+          sessionNext:   session.next,
+          sessionTests:  session.tests,
+          sessionTodos:  session.todos,
+          sessionHealth: session.health,
+          sessionUpdatedAt: new Date(sessionMtimeMs),
+        }).catch(() => {});
+      }
+    } else if (session && !dbState) {
+      // First time we're seeing this project's session — bootstrap the DB row
+      upsertProjectState({
+        projectKey: tab,
+        tabName: tab,
+        sessionDone:   session.done,
+        sessionNext:   session.next,
+        sessionTests:  session.tests,
+        sessionTodos:  session.todos,
+        sessionHealth: session.health,
+        sessionUpdatedAt: new Date(session.mtime),
+      }).catch(() => {});
+    }
+
+    const nowS = Math.floor(Date.now() / 1000);
+    const tmpReady   = readTmpTs(stateFile.ready(tab));
+    const tmpClosing = readTmpTs(stateFile.closing(tab));
+    const tmpClosed  = readTmpTs(stateFile.closed(tab));
+
+    // Fall back to DB value when /tmp is empty, but only within the 24-hour window
+    const dbReady   = dbState?.readyAt   ? Math.floor(dbState.readyAt.getTime()   / 1000) : null;
+    const dbClosing = dbState?.closingAt ? Math.floor(dbState.closingAt.getTime() / 1000) : null;
+    const dbClosed  = dbState?.closedAt  ? Math.floor(dbState.closedAt.getTime()  / 1000) : null;
+
+    const resolveTs = (tmp: number | null, db: number | null) =>
+      tmp ?? (db !== null && (nowS - db) < READY_WINDOW_S ? db : null);
+
+    const tmpPrompt = readCurrentPrompt(tab);
+    const currentPrompt: CurrentPrompt | null = tmpPrompt ?? (dbState?.currentPromptKey ? {
+      key:       dbState.currentPromptKey,
+      label:     dbState.currentPromptLabel ?? dbState.currentPromptKey,
+      startedAt: dbState.currentPromptStartedAt
+        ? Math.floor(dbState.currentPromptStartedAt.getTime() / 1000)
+        : 0,
+    } : null);
+
     return ({
     tab,
     dir,
-    session: parseSession(tab),
+    session,
     git: gitMap.get(dir) ?? null,
     agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
     profile: matchProfile(tab, dir, dbProjects),
-    currentPrompt: readCurrentPrompt(tab),
-    readyAt: readTmpTs(stateFile.ready(tab)),
-    closingAt: readTmpTs(stateFile.closing(tab)),
-    closedAt: readTmpTs(stateFile.closed(tab)),
+    currentPrompt,
+    readyAt:   resolveTs(tmpReady,   dbReady),
+    closingAt: resolveTs(tmpClosing, dbClosing),
+    closedAt:  resolveTs(tmpClosed,  dbClosed),
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
@@ -385,5 +458,6 @@ export async function GET() {
     projects: states,
     prompts,
     zellijTabs,
+    recentActivity: recentActivity ?? [],
   } satisfies ControlData);
 }

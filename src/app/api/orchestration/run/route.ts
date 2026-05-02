@@ -6,7 +6,7 @@ import { injectIntoTab } from "@/lib/zellij";
 import { DEFAULT_USER_ID } from "@/lib/constants";
 import type { AdapterId, OrchestrationTaskIntentId, OrchestrationTaskRequest } from "@/lib/orchestration";
 import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } from "@/lib/orchestration";
-import { createOrchestrationRun } from "@/db/queries/orchestration-runs";
+import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 
 const RunOrchestrationBody = z.object({
@@ -30,7 +30,7 @@ const RunOrchestrationBody = z.object({
   customInstructions: z.string().trim().max(4000).optional(),
 });
 
-function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest) {
+async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest) {
   const workerPath = path.join(process.cwd(), "scripts", "run-openclaw-orchestration.ts");
   const payload = Buffer.from(JSON.stringify({ runId, request }), "utf8").toString("base64url");
   const command = `cd ${JSON.stringify(process.cwd())} && set -a && source .env.local >/dev/null 2>&1 && npx tsx ${JSON.stringify(workerPath)} ${JSON.stringify(payload)}`;
@@ -40,7 +40,12 @@ function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest
     stdio: "ignore",
     env: process.env,
   });
-  child.unref();
+
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Worker spawn timeout")), 2000);
+    child.on("spawn", () => { clearTimeout(timer); child.unref(); resolve(); });
+    child.on("error", (err) => { clearTimeout(timer); reject(err); });
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -95,7 +100,20 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  scheduleOpenClawWorker(run.id, request);
+  try {
+    await scheduleOpenClawWorker(run.id, request);
+  } catch (err) {
+    await updateOrchestrationRun(run.id, {
+      state: "error",
+      finishedAt: new Date(),
+      payload: {
+        projectKey: request.projectKey,
+        projectPath: request.projectPath,
+        error: `Failed to start worker: ${err instanceof Error ? err.message : String(err)}`,
+      },
+    });
+    return NextResponse.json({ error: "Worker failed to start" }, { status: 500 });
+  }
 
   return NextResponse.json({
     ok: true,
