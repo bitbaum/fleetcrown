@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { commitments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { PatchCommitmentBody } from "@/db/queries/today";
 
@@ -10,6 +10,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -25,7 +26,7 @@ export async function PATCH(
   const [updated] = await db
     .update(commitments)
     .set(patch)
-    .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)))
+    .where(and(eq(commitments.id, id), eq(commitments.userId, userId)))
     .returning();
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -36,13 +37,14 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
   await db
     .delete(commitments)
-    .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)));
+    .where(and(eq(commitments.id, id), eq(commitments.userId, userId)));
 
   return NextResponse.json({ ok: true });
 }

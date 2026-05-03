@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { db } from "@/db";
 import { commitments } from "@/db/schema";
-import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { COMMITMENT_STATUS } from "@/lib/constants/statuses";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { CreateCommitmentBody } from "@/db/queries/today";
 
 export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
   const dataOrResp = await readJsonBody(req, CreateCommitmentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { description, dueDate, financialImpact } = dataOrResp;
@@ -14,7 +16,7 @@ export async function POST(req: NextRequest) {
   const [created] = await db
     .insert(commitments)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       description,
       dueDate: dueDate ? new Date(dueDate) : null,
       financialImpact: financialImpact || null,

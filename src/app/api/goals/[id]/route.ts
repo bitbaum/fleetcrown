@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { goals } from "@/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { PatchGoalBody } from "@/db/queries/goals";
@@ -11,6 +11,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -34,7 +35,7 @@ export async function PATCH(
   const [updated] = await db
     .update(goals)
     .set(patch)
-    .where(and(eq(goals.id, id), eq(goals.userId, DEFAULT_USER_ID)))
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
     .returning();
 
   if (!updated) {
@@ -48,6 +49,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -56,14 +58,14 @@ export async function DELETE(
   const [goal] = await db
     .select({ id: goals.id })
     .from(goals)
-    .where(and(eq(goals.id, id), eq(goals.userId, DEFAULT_USER_ID)));
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)));
   if (!goal) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Collect entire subtree to delete (no DB cascade on parentGoalId)
   const allGoals = await db
     .select({ id: goals.id, parentGoalId: goals.parentGoalId })
     .from(goals)
-    .where(eq(goals.userId, DEFAULT_USER_ID));
+    .where(eq(goals.userId, userId));
 
   function collectSubtree(rootId: string): string[] {
     const ids = [rootId];

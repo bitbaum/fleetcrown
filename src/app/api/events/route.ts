@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { db } from "@/db";
 import { events } from "@/db/schema";
-import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 import { getEvents, CreateEventBody } from "@/db/queries/events";
 import { readJsonBody } from "@/lib/api/route-helpers";
@@ -12,6 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
   const dataOrResp = await readJsonBody(req, CreateEventBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { name, type, description, url, deadline, category } = dataOrResp;
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
   const [created] = await db
     .insert(events)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       name,
       type: type.toLowerCase(),
       description: description || null,

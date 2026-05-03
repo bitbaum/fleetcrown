@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env.local
+.env*.local
+node_modules
+.next
+README.md
+docs/
+scripts/seed.ts
+*.log

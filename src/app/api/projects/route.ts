@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
-import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 import { CreateProjectBody } from "@/db/queries/projects";
 
 export async function POST(req: NextRequest) {
+  const userId = await getCurrentUserId();
   const dataOrResp = await readJsonBody(req, CreateProjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { name, description } = dataOrResp;
@@ -15,7 +17,7 @@ export async function POST(req: NextRequest) {
     const [created] = await db
       .insert(entities)
       .values({
-        userId: DEFAULT_USER_ID,
+        userId,
         name,
         type: ENTITY_TYPE.PROJECT,
         description: description || null,

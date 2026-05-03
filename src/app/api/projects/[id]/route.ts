@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals } from "@/db/schema";
 import { eq, and, desc, inArray } from "drizzle-orm";
@@ -35,6 +35,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -50,7 +51,7 @@ export async function PATCH(
     const [updated] = await db
       .update(entities)
       .set(patch)
-      .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+      .where(and(eq(entities.id, id), eq(entities.userId, userId)))
       .returning({ id: entities.id });
 
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -67,13 +68,14 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
   const [deleted] = await db
     .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
     .returning({ id: entities.id });
 
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -84,6 +86,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -91,7 +94,7 @@ export async function GET(
   const [project] = await db
     .select()
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)));
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)));
 
   if (!project) return NextResponse.json(null, { status: 404 });
 
@@ -101,11 +104,11 @@ export async function GET(
     db
       .select()
       .from(entityRelations)
-      .where(and(eq(entityRelations.fromEntityId, id), eq(entityRelations.userId, DEFAULT_USER_ID))),
+      .where(and(eq(entityRelations.fromEntityId, id), eq(entityRelations.userId, userId))),
     db
       .select()
       .from(interactions)
-      .where(and(eq(interactions.entityId, id), eq(interactions.userId, DEFAULT_USER_ID)))
+      .where(and(eq(interactions.entityId, id), eq(interactions.userId, userId)))
       .orderBy(desc(interactions.occurredAt))
       .limit(5),
     db
@@ -119,7 +122,7 @@ export async function GET(
         milestones: goals.milestones,
       })
       .from(goals)
-      .where(and(eq(goals.entityId, id), eq(goals.userId, DEFAULT_USER_ID)))
+      .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
       .orderBy(desc(goals.progress)),
   ]);
 
@@ -132,7 +135,7 @@ export async function GET(
     relatedEntities = await db
       .select({ id: entities.id, name: entities.name, type: entities.type })
       .from(entities)
-      .where(and(eq(entities.userId, DEFAULT_USER_ID), inArray(entities.id, relatedIds)));
+      .where(and(eq(entities.userId, userId), inArray(entities.id, relatedIds)));
   }
 
   const relationsWithNames = relations.map((r) => ({

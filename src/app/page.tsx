@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { count } from "drizzle-orm";
 
 export default async function LandingPage() {
+  const [{ value }] = await db.select({ value: count() }).from(users);
+  if (value === 0) redirect("/setup");
+
   const session = await auth();
   if (session?.user) redirect("/today");
 

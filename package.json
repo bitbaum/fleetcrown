@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "migrate": "drizzle-kit push",
     "lint": "eslint",
     "smoke": "bash scripts/smoke.sh",
     "prepare": "husky"

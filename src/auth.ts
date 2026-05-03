@@ -6,6 +6,7 @@ import type { AdapterAccountType } from "next-auth/adapters";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
+import { verifyPassword } from "@/lib/password";
 
 declare module "next-auth" {
   interface Session {
@@ -39,14 +40,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const localPassword = process.env.LOCAL_AUTH_PASSWORD;
-        if (!localPassword || credentials.password !== localPassword) return null;
+        const supplied = credentials.password as string | undefined;
+        if (!supplied) return null;
+
         const [user] = await db
           .select()
           .from(users)
           .where(eq(users.isDefault, true))
           .limit(1);
         if (!user) return null;
+
+        // Env var takes priority (quick local dev). Falls back to DB hash (packaged installs).
+        const envPassword = process.env.LOCAL_AUTH_PASSWORD;
+        const ok = envPassword
+          ? supplied === envPassword
+          : user.passwordHash
+            ? await verifyPassword(supplied, user.passwordHash)
+            : false;
+
+        if (!ok) return null;
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
       },
     }),

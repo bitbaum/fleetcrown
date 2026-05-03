@@ -4,13 +4,14 @@ import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { DEFAULT_USER_ID } from "@/lib/constants";
+import { getCurrentUserId } from "@/lib/session";
 import { PatchPersonBody } from "@/db/queries/people";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
@@ -26,7 +27,7 @@ export async function PATCH(
     const [updated] = await db
       .update(entities)
       .set(patch)
-      .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+      .where(and(eq(entities.id, id), eq(entities.userId, userId)))
       .returning({ id: entities.id });
 
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -43,13 +44,14 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
   const [deleted] = await db
     .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)))
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
     .returning({ id: entities.id });
 
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
