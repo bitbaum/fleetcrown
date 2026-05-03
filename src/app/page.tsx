@@ -2,82 +2,87 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-const FEATURES = [
-  {
-    icon: "▶",
-    title: "One-click launch",
-    body: "Start an AI agent on any project. It picks up where it left off.",
-  },
-  {
-    icon: "◉",
-    title: "Live activity feed",
-    body: "See exactly what every agent is doing, across all projects, in real time.",
-  },
-  {
-    icon: "⟳",
-    title: "Learn by watching",
-    body: "Non-technical? Watch the AI work and gradually take the wheel yourself.",
-  },
-];
-
 export default async function LandingPage() {
   const session = await auth();
   if (session?.user) redirect("/today");
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-page text-text-primary">
-      <nav className="flex items-center justify-between px-6 py-5 sm:px-10">
-        <span className="font-semibold text-text-primary">✦ Cockpit</span>
-        <Link href="/sign-in" className="ui-btn-secondary py-1.5 text-xs">
+    <div className="relative min-h-screen overflow-hidden bg-[#080808] text-white selection:bg-white/20">
+
+      {/* Subtle grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)," +
+            "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+          backgroundSize: "72px 72px",
+        }}
+      />
+
+      {/* Center radial glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[40%] h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%)" }}
+      />
+
+      {/* Nav */}
+      <nav className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-12">
+        <span className="text-sm font-semibold tracking-tight text-white/90">✦ Cockpit</span>
+        <Link
+          href="/sign-in"
+          className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-medium text-white/60 transition-colors hover:border-white/35 hover:text-white/90"
+        >
           Sign in
         </Link>
       </nav>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
-        <div className="max-w-2xl space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3 py-1 text-xs text-text-tertiary">
-            Open source · Self-hostable · Pay only for model tokens
-          </div>
+      {/* Hero */}
+      <main className="relative z-10 flex min-h-[calc(100vh-68px)] flex-col items-center justify-center px-6 pb-24 text-center">
 
-          <h1 className="ui-page-title leading-tight">
-            Your AI fleet,<br />one dashboard.
-          </h1>
-
-          <p className="mx-auto max-w-md text-base text-text-secondary leading-relaxed">
-            Add your projects. Launch AI agents. Watch them build.
-            Stop, review, redirect — or let them run. You stay in command
-            without writing a single line of code.
-          </p>
-
-          <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link href="/sign-in" className="ui-btn-primary px-6 py-3">
-              Get started free →
-            </Link>
-            <a
-              href="https://github.com/g-but/cockpit"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ui-btn-secondary px-6 py-3"
-            >
-              View source
-            </a>
-          </div>
+        {/* Status pill */}
+        <div className="mb-10 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 text-[11px] font-medium text-white/40">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400/80" />
+          Private · Self-hosted · Open source
         </div>
 
-        <div className="mt-20 grid max-w-3xl gap-3 sm:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="ui-panel p-6 text-left">
-              <div className="mb-3 text-xl text-text-secondary">{f.icon}</div>
-              <div className="mb-1 text-sm font-medium text-text-primary">{f.title}</div>
-              <div className="text-sm text-text-tertiary leading-relaxed">{f.body}</div>
-            </div>
-          ))}
+        {/* Headline */}
+        <h1 className="max-w-3xl text-5xl font-bold leading-[1.06] tracking-[-0.03em] sm:text-6xl lg:text-[80px]">
+          Command your<br />
+          <span className="text-white/35">AI fleet.</span>
+        </h1>
+
+        {/* Subheadline */}
+        <p className="mt-7 max-w-[380px] text-base leading-relaxed text-white/45">
+          Add projects. Launch agents. Watch them build.
+          Stay in command without writing a single line of code.
+        </p>
+
+        {/* CTA */}
+        <div className="mt-10 flex items-center gap-3">
+          <Link
+            href="/sign-in"
+            className="rounded-full bg-white px-7 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-85 active:opacity-70"
+          >
+            Get started →
+          </Link>
+          <a
+            href="https://github.com/g-but/cockpit"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-full border border-white/15 px-7 py-2.5 text-sm font-medium text-white/55 transition-colors hover:border-white/30 hover:text-white/80"
+          >
+            View source
+          </a>
         </div>
+
+        {/* Proof line */}
+        <p className="mt-16 text-[11px] text-white/25">
+          Built on Claude · Runs on your machine · No data leaves your home
+        </p>
       </main>
-
-      <footer className="border-t border-border-subtle px-6 py-6 text-center text-xs text-text-muted sm:px-10">
-        Built with Claude · Open source · No lock-in
-      </footer>
     </div>
   );
 }
