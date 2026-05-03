@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
 import { DEFAULT_USER_ID } from "@/lib/constants";
@@ -83,6 +83,47 @@ export async function getRecentCustomPromptsByProjectKeys(
     result.set(row.projectKey, entry);
   }
   return result;
+}
+
+// Last N dispatches across all projects — for the live activity feed
+export type ActivityItem = {
+  id: string;
+  projectKey: string;
+  adapter: string;
+  intent: string;
+  customPrompt: string | null;
+  dispatchedAt: string;
+};
+
+export async function getRecentActivity(hours = 24, limit = 30): Promise<ActivityItem[]> {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  const rows = await db
+    .select({
+      id: promptHistory.id,
+      projectKey: promptHistory.projectKey,
+      adapter: promptHistory.adapter,
+      intent: promptHistory.intent,
+      customPrompt: promptHistory.customPrompt,
+      dispatchedAt: promptHistory.dispatchedAt,
+    })
+    .from(promptHistory)
+    .where(
+      and(
+        eq(promptHistory.userId, DEFAULT_USER_ID),
+        gte(promptHistory.dispatchedAt, since),
+      ),
+    )
+    .orderBy(desc(promptHistory.dispatchedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    projectKey: r.projectKey,
+    adapter: r.adapter,
+    intent: r.intent,
+    customPrompt: r.customPrompt ?? null,
+    dispatchedAt: r.dispatchedAt.toISOString(),
+  }));
 }
 
 // Top intents across all projects — for analytics/self-learning

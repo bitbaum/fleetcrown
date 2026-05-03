@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/app/api/control/route";
+import type { FastProjectState } from "@/lib/control-fast-state";
 type Agent = "codex" | "claude";
 import { ProjectCard } from "./ProjectCard";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -22,6 +23,7 @@ export function ControlPanel() {
   const [lastTabResults, setLastTabResults] = useState<Array<{ status: string; tab?: string; reason?: string; error?: string }>>([]);
   const [lastTabResultsAt, setLastTabResultsAt] = useState<number | null>(null);
   const [brainOpen, setBrainOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -59,6 +61,7 @@ export function ControlPanel() {
     }
   }, [agentDirty]);
 
+  // Full data poll — every 30s for slow data (git, DB, profiles)
   useEffect(() => {
     const poll = async () => {
       if (document.hidden || inFlight.current) return;
@@ -72,12 +75,61 @@ export function ControlPanel() {
     const onVisibilityChange = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    const id = setInterval(poll, 10_000);
+    const id = setInterval(poll, 30_000);
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [refresh]);
+
+  // SSE fast-state subscription — merges agent/session/prompt state in ~2s
+  const mergeProjectPatches = useCallback((patches: FastProjectState[]) => {
+    setData((prev) => {
+      if (!prev) return prev;
+      const updated = prev.projects.map((p) => {
+        const patch = patches.find((pp) => pp.tab === p.tab);
+        if (!patch) return p;
+        return {
+          ...p,
+          agentRunning: patch.agentRunning,
+          session: patch.session,
+          currentPrompt: patch.currentPrompt,
+          readyAt: patch.readyAt,
+          closingAt: patch.closingAt,
+          closedAt: patch.closedAt,
+        };
+      });
+      return { ...prev, projects: updated };
+    });
+    setLastUpdated(Date.now());
+  }, []);
+
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      es = new EventSource("/api/control/stream");
+      es.addEventListener("projects-update", (e: MessageEvent) => {
+        try {
+          const payload = JSON.parse(e.data) as { projects: FastProjectState[] };
+          mergeProjectPatches(payload.projects);
+        } catch { /* ignore malformed events */ }
+      });
+      es.onerror = () => {
+        es?.close();
+        // Reconnect after 5s on error (don't hammer the server)
+        reconnectTimer = setTimeout(connect, 5_000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      es?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, [mergeProjectPatches]);
 
   const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
     const res = await fetch("/api/inject", {
@@ -223,12 +275,39 @@ export function ControlPanel() {
           </div>
         </div>
 
+        {/* Activity log — cross-project dispatch history */}
+        {data?.recentActivity && data.recentActivity.length > 0 && (
+          <div>
+            <button
+              onClick={() => setActivityOpen((v) => !v)}
+              className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
+            >
+              Activity log <span className="ml-1 text-text-muted">({data.recentActivity.length})</span>
+              {activityOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
+            </button>
+            {activityOpen && (
+              <div className="mt-2 space-y-1.5">
+                {data.recentActivity.slice(0, 20).map((item) => (
+                  <div key={item.id} className="flex items-baseline gap-2 text-sm">
+                    <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
+                    <span className="text-text-muted">·</span>
+                    <span className="truncate text-text-secondary">
+                      {item.customPrompt ? item.customPrompt.slice(0, 60) : item.intent}
+                    </span>
+                    <span className="ml-auto shrink-0 text-text-muted">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Brain — collapsed pill + expandable form */}
         <div className="space-y-4">
           {/* Collapsed pill */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-indigo-400" />
+              <Bot className="h-4 w-4 text-accent-text" />
               <span className="text-text-primary font-medium">{activeDefinition?.label ?? selectedAgent}</span>
               <span className="text-text-muted">·</span>
               <span className="text-text-secondary text-sm">{savedConfig?.model ?? model}</span>
@@ -402,7 +481,7 @@ export function ControlPanel() {
             <>
               {running > 0 && <span className="text-accent-text">{running} {selectedAgent} sessions running</span>}
               {running > 0 && (waitingCount > 0 || todayCommits > 0) && " · "}
-              {waitingCount > 0 && <span className="text-emerald-400">{waitingCount} waiting</span>}
+              {waitingCount > 0 && <span className="text-status-positive">{waitingCount} waiting</span>}
               {waitingCount > 0 && todayCommits > 0 && " · "}
               {todayCommits > 0 && <span>+{todayCommits} commits today</span>}
               {running === 0 && waitingCount === 0 && todayCommits === 0 && `${total} projects`}
@@ -420,7 +499,7 @@ export function ControlPanel() {
         </button>
       </div>
 
-      {error && <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">{error}</p>}
+      {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
 
       {/* Zellij open tabs strip */}
       {data && data.zellijTabs.length > 0 && (

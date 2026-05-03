@@ -22,6 +22,7 @@ export const habitCompletions = pgTable("habit_completions", {
   /** The calendar date this completion applies to (UTC date, no time) */
   completedDate: date("completed_date").notNull(),
 }, (table) => [
+  index("idx_habit_completions_user_id").on(table.userId),
   index("idx_habit_completions_habit_id").on(table.habitId),
   unique("uq_habit_completion_per_day").on(table.habitId, table.completedDate),
 ]);

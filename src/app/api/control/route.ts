@@ -12,39 +12,23 @@ import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
 import {
-  SESSIONS_DIR,
   stateFile,
   parseProjectsConf,
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/claude-config";
+import {
+  parseSession,
+  readTmpTs,
+  readCurrentPrompt,
+  getAgentCwds,
+} from "@/lib/control-fast-state";
 import { getCurrentUserId } from "@/lib/session";
 
 // Re-export so the ControlPanel can import PromptMeta from this route file (its existing import path).
 export type { PromptMeta, ActivityItem };
 
 const execAsync = promisify(exec);
-
-function getAgentCwds(processMatchers: string[]): string[] {
-  const cwds: string[] = [];
-
-  try {
-    for (const entry of fs.readdirSync("/proc")) {
-      if (!/^\d+$/.test(entry)) continue;
-      try {
-        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
-        if (!processMatchers.some((matcher) => cmdline.includes(matcher))) continue;
-        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
-      } catch {
-        // Ignore processes that disappeared mid-scan.
-      }
-    }
-  } catch {
-    // Ignore systems where /proc is unavailable.
-  }
-
-  return cwds;
-}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -200,32 +184,6 @@ async function getSlowData(dirs: string[]): Promise<SlowCache> {
   return slowCache;
 }
 
-// ── Parsers ───────────────────────────────────────────────────────────────────
-
-function parseSession(tab: string): SessionState | null {
-  const file = path.join(SESSIONS_DIR, `${tab}.md`);
-  if (!fs.existsSync(file)) return null;
-  try {
-    const raw = fs.readFileSync(file, "utf-8");
-    const fields: Record<string, string> = {};
-    for (const line of raw.split("\n")) {
-      const m = line.match(/^(done|next|tests|todos|health):\s*(.*)/);
-      if (m) fields[m[1]] = m[2].trim();
-    }
-    const mtime = fs.statSync(file).mtimeMs;
-    return {
-      done: fields.done ?? "",
-      next: fields.next ?? "",
-      tests: fields.tests ?? "",
-      todos: fields.todos ?? "",
-      health: fields.health ?? "",
-      mtime,
-    };
-  } catch {
-    return null;
-  }
-}
-
 // Single bash invocation — one fork() total. Background jobs run all repos in parallel.
 // Fields (tab-separated): dir | branch | lastWhen|lastMsg | dirtyCount | todayCount | recentCommits
 // recentCommits: last 5 commits joined by ~ ("HASH DATE: MSG~HASH DATE: MSG")
@@ -274,24 +232,6 @@ wait
     // git queries failed — projects show null git state
   }
   return result;
-}
-
-function readTmpTs(filename: string): number | null {
-  try {
-    if (fs.existsSync(filename)) {
-      const ts = parseInt(fs.readFileSync(filename, "utf-8").trim(), 10);
-      return isNaN(ts) ? null : ts;
-    }
-  } catch { /* ignore */ }
-  return null;
-}
-
-function readCurrentPrompt(tab: string): CurrentPrompt | null {
-  try {
-    const file = stateFile.prompt(tab);
-    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8")) as CurrentPrompt;
-  } catch { /* ignore */ }
-  return null;
 }
 
 // ── Profile matching ──────────────────────────────────────────────────────────
@@ -373,6 +313,7 @@ export async function GET() {
       if (sessionMtimeMs > dbSessionMs) {
         upsertProjectState({
           projectKey: tab,
+          userId,
           tabName: tab,
           sessionDone:   session.done,
           sessionNext:   session.next,
@@ -386,6 +327,7 @@ export async function GET() {
       // First time we're seeing this project's session — bootstrap the DB row
       upsertProjectState({
         projectKey: tab,
+        userId,
         tabName: tab,
         sessionDone:   session.done,
         sessionNext:   session.next,

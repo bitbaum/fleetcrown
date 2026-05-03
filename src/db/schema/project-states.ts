@@ -1,7 +1,9 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, index } from "drizzle-orm/pg-core";
+import { users } from "./users";
 
 export const projectStates = pgTable("project_states", {
   projectKey:             text("project_key").primaryKey(),
+  userId:                 uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   tabName:                text("tab_name").notNull(),
   readyAt:                timestamp("ready_at",   { withTimezone: true }),
   closingAt:              timestamp("closing_at", { withTimezone: true }),
@@ -16,7 +18,9 @@ export const projectStates = pgTable("project_states", {
   currentPromptLabel:     text("current_prompt_label"),
   currentPromptStartedAt: timestamp("current_prompt_started_at", { withTimezone: true }),
   updatedAt:              timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_project_states_user_id").on(table.userId),
+]);
 
 export type ProjectState    = typeof projectStates.$inferSelect;
 export type NewProjectState = typeof projectStates.$inferInsert;

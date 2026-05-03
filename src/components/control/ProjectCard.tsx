@@ -14,23 +14,8 @@ import {
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
 import { ProjectProfile } from "./ProjectProfile";
-
-const PRIMARY_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
-  { id: "next_best", label: "Next best" },
-];
-const ACTION_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
-  { id: "test_and_fix", label: "Test & fix" },
-  { id: "quality", label: "Quality" },
-  { id: "commit_push", label: "Commit" },
-];
-const MORE_INTENTS: Array<{ id: OrchestrationTaskIntentId; label: string }> = [
-  { id: "full_audit", label: "Full audit" },
-  { id: "product", label: "Product review" },
-  { id: "ux_review", label: "UX review" },
-  { id: "deploy_check", label: "Deploy check" },
-  { id: "close_session", label: "Close session" },
-];
 
 function SessionBadge({ health }: { health: string }) {
   const color = HEALTH_COLOR[health] ?? "text-white/40";
@@ -49,7 +34,7 @@ function MaturityBar({ maturity }: { maturity: string }) {
             key={i}
             className={cn(
               "w-1.5 h-1.5 rounded-full",
-              i < n ? "bg-indigo-400" : "bg-white/10"
+              i < n ? "bg-accent-text" : "bg-white/10"
             )}
           />
         ))}
@@ -71,10 +56,10 @@ function ClosedBanner({
   onDismiss: () => void;
 }) {
   return (
-    <div className="space-y-4 border-t border-emerald-500/20 bg-emerald-500/[0.05] px-5 py-5">
+    <div className="space-y-4 border-t border-status-positive/20 bg-status-positive/[0.05] px-5 py-5">
       <div className="flex flex-wrap items-center gap-2">
-        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-        <span className="text-base font-medium text-emerald-300">Session closed</span>
+        <CheckCircle2 className="h-4 w-4 text-status-positive shrink-0" />
+        <span className="text-base font-medium text-status-positive">Session closed</span>
         {git?.todayCount ? (
           <span className="ml-auto text-sm text-text-secondary">+{git.todayCount} commits today</span>
         ) : null}
@@ -125,28 +110,38 @@ function ClosingBanner({ startedAt }: { startedAt: number }) {
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="border-t border-amber-500/20 bg-amber-500/[0.04] px-5 py-4">
+    <div className="border-t border-status-warning/20 bg-status-warning/[0.04] px-5 py-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Loader2 className="h-3.5 w-3.5 text-amber-400 animate-spin" />
-        <span className="text-sm font-medium text-amber-300">Closing session…</span>
-        <span className="ml-auto text-sm text-text-secondary">{secondsAgo(startedAt)}s running</span>
+        <Loader2 className="h-3.5 w-3.5 text-status-warning animate-spin" />
+        <span className="text-sm font-medium text-status-warning">Closing session…</span>
+        <span className="ml-auto text-sm text-text-secondary">{secondsAgo(startedAt)} running</span>
       </div>
     </div>
   );
 }
 
 function RunningBanner({ label, startedAt }: { label: string; startedAt: number }) {
-  const [, tick] = useState(0);
+  const [elapsed, setElapsed] = useState(() => Math.floor(Date.now() / 1000) - startedAt);
   useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 1000);
+    const id = setInterval(() => setElapsed(Math.floor(Date.now() / 1000) - startedAt), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [startedAt]);
+
+  const elapsedStr = elapsed >= 3600
+    ? `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`
+    : elapsed >= 60
+    ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
+    : `${elapsed}s`;
+
+  // Warn after 15 min — may indicate Claude is stuck or waiting for input
+  const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-secondary";
+
   return (
-    <div className="border-t border-indigo-500/20 bg-indigo-500/[0.04] px-5 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Loader2 className="h-3 w-3 text-indigo-400 animate-spin shrink-0" />
-        <span className="truncate text-sm text-indigo-200">{label}</span>
-        <span className="ml-auto shrink-0 text-sm text-text-secondary">{secondsAgo(startedAt)}s</span>
+    <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-3.5 w-3.5 text-accent-text animate-spin shrink-0" />
+        <span className="truncate text-sm font-medium text-accent-text">{label}</span>
+        <span className={cn("ml-auto shrink-0 text-sm tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>
     </div>
   );
@@ -178,11 +173,11 @@ function ReadyBanner({
   }, [seconds, paused, autoContinueEnabled, onSend, primaryKey]);
 
   return (
-    <div className="border-t border-emerald-500/30 bg-emerald-500/6 px-5 py-4">
+    <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Zap className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-sm font-medium text-emerald-300">{title}</span>
+          <Zap className="h-3.5 w-3.5 text-status-positive" />
+          <span className="text-sm font-medium text-status-positive">{title}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-text-secondary tabular-nums">{!autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`}</span>
@@ -211,7 +206,7 @@ function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["late
     <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
       <div className="flex flex-wrap items-center gap-2">
         <span className="ui-kicker">latest orchestration</span>
-        <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-xs text-cyan-200">
+        <span className="ui-tag ui-tag-neutral">
           {run.adapter} · {run.intent}
         </span>
         <span className="rounded-full border border-border-subtle bg-surface-base px-2.5 py-1 text-xs text-text-secondary">
@@ -233,7 +228,7 @@ function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["late
         <p className="line-clamp-4 text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
       )}
       {run.payload?.error && (
-        <p className="text-sm text-red-400">{run.payload.error}</p>
+        <p className="text-sm text-status-negative">{run.payload.error}</p>
       )}
     </div>
   );
@@ -476,13 +471,13 @@ export function ProjectCard({
       className={cn(
         "ui-panel-raised overflow-hidden",
         isClosed
-          ? "border-emerald-500/30 bg-emerald-500/[0.02]"
+          ? "border-status-positive/30 bg-status-positive/[0.02]"
           : isClosing
-          ? "border-amber-500/25 bg-amber-500/[0.02]"
+          ? "border-status-warning/25 bg-status-warning/[0.02]"
           : isReady || isOrchReady
-          ? "border-emerald-500/40 bg-emerald-500/[0.03]"
+          ? "border-status-positive/40 bg-status-positive/[0.03]"
           : project.agentRunning
-          ? "border-indigo-500/25 bg-indigo-500/[0.02]"
+          ? "border-accent-primary/25 bg-accent-primary/[0.02]"
           : "border-white/10 bg-white/[0.03]"
       )}
     >
@@ -527,11 +522,11 @@ export function ProjectCard({
             className={cn(
               "h-3 w-3 shrink-0 fill-current",
               project.agentRunning
-                ? "text-indigo-400 animate-pulse"
+                ? "text-accent-text animate-pulse"
                 : isClosed
-                ? "text-emerald-400"
+                ? "text-status-positive"
                 : isReady || isOrchReady
-                ? "text-emerald-400"
+                ? "text-status-positive"
                 : "text-white/20"
             )}
           />
@@ -551,8 +546,8 @@ export function ProjectCard({
             <div className="flex items-center gap-1.5 text-sm text-text-secondary">
               <GitBranch className="h-4 w-4" />
               <span className="max-w-[20rem] truncate" title={git.branch}>{git.branch}</span>
-              {git.dirty && <span className="text-amber-400">✎</span>}
-              {git.todayCount > 0 && <span className="text-emerald-400/70">+{git.todayCount}</span>}
+              {git.dirty && <span className="text-status-warning">✎</span>}
+              {git.todayCount > 0 && <span className="text-status-positive/70">+{git.todayCount}</span>}
             </div>
           )}
           {profile?.url && (
@@ -580,6 +575,11 @@ export function ProjectCard({
           {session?.next && (
             <p className="line-clamp-3 text-lg sm:text-xl text-text-primary leading-snug">
               <span className="mr-2 ui-kicker">next</span>{session.next}
+            </p>
+          )}
+          {(session?.tests || session?.todos) && (
+            <p className="text-sm text-text-tertiary">
+              {[session.tests, session.todos].filter(Boolean).join(" · ")}
             </p>
           )}
           {git?.recentCommits && git.recentCommits.length > 0 && (
@@ -654,10 +654,7 @@ export function ProjectCard({
             title={autoContinueEnabled ? "Pause automatic continue for this tab" : "Resume automatic continue for this tab"}
           >
             {autoContinueEnabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            <span className="inline-flex items-center gap-1">
-              <Pause className="h-3 w-3 opacity-70" />
-              {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-            </span>
+            {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
           </button>
 
           {/* Primary: Next best — prominent, shows current brain */}

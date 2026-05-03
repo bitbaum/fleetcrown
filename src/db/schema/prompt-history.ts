@@ -12,6 +12,7 @@ export const promptHistory = pgTable("prompt_history", {
   customPrompt: text("custom_prompt"),
   dispatchedAt: timestamp("dispatched_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
+  index("idx_prompt_history_user_id").on(table.userId),
   index("idx_prompt_history_project_key").on(table.projectKey),
   index("idx_prompt_history_dispatched_at").on(table.dispatchedAt),
 ]);

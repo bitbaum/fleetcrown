@@ -25,6 +25,7 @@ export const goals = pgTable("goals", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("idx_goals_user_id").on(table.userId),
+  index("idx_goals_user_status").on(table.userId, table.status),
   index("idx_goals_status").on(table.status),
   index("idx_goals_parent").on(table.parentGoalId),
   index("idx_goals_entity_id").on(table.entityId),
