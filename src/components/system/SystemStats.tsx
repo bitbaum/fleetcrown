@@ -22,7 +22,7 @@ function mibToGib(mib: number) {
 
 function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) {
   const pct = totalMiB > 0 ? Math.round((usedMiB / totalMiB) * 100) : 0;
-  const color = pct > 85 ? "bg-red-400" : pct > 65 ? "bg-yellow-400" : "bg-emerald-400";
+  const color = pct > 85 ? "bg-status-negative" : pct > 65 ? "bg-status-warning" : "bg-status-positive";
   return (
     <div className="flex items-center gap-2">
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
@@ -50,7 +50,7 @@ export function SystemStats() {
       <Card>
         <CardHeader icon={Radio} title="OpenClaw Gateway" />
         <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${gatewayStatus === "ok" ? "bg-green-400" : "bg-red-400"}`} />
+          <span className={`h-2 w-2 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`} />
           <span className="text-base text-text-primary">{gatewayStatus === "ok" ? "Connected" : "Offline"}</span>
         </div>
       </Card>
@@ -98,7 +98,7 @@ export function SystemStats() {
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
                 <div
                   className={`h-full rounded-full ${
-                    parseInt(disk.pct) > 85 ? "bg-red-400" : parseInt(disk.pct) > 65 ? "bg-yellow-400" : "bg-emerald-400"
+                    parseInt(disk.pct) > 85 ? "bg-status-negative" : parseInt(disk.pct) > 65 ? "bg-status-warning" : "bg-status-positive"
                   }`}
                   style={{ width: disk.pct }}
                 />

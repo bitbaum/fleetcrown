@@ -14,7 +14,7 @@ export function DeleteGoalButton({ goalId }: { goalId: string }) {
       }}
       label="Delete?"
       triggerTitle="Delete goal"
-      triggerClassName="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/20 hover:text-red-400 transition-all shrink-0"
+      triggerClassName="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/20 hover:text-status-negative transition-all shrink-0"
     />
   );
 }

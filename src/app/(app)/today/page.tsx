@@ -15,7 +15,7 @@ import { HabitsCard } from "@/components/today/HabitsCard";
 
 export default function TodayPage() {
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="app-page max-w-4xl space-y-6">
       <div>
         <Greeting />
         <Suspense fallback={null}>

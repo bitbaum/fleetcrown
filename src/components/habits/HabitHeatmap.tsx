@@ -55,7 +55,7 @@ export function HabitHeatmap({
               !due
                 ? "bg-white/[0.03]"
                 : completed
-                  ? "bg-emerald-500/80"
+                  ? "bg-status-positive/50"
                   : "bg-white/[0.08]",
             ].join(" ")}
           />

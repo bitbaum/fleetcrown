@@ -24,11 +24,11 @@ type IssueConfig = {
 
 const ISSUE_DISPLAY: IssueConfig[] = [
   { key: "security_vulnerability", icon: ShieldAlert, label: "Security Risk",
-    border: "border-red-500/25",    bg: "bg-red-500/[0.05]",    text: "text-red-400",    body: "text-red-300/70" },
+    border: "border-status-negative/25",    bg: "bg-status-negative-subtle",    text: "text-status-negative",    body: "text-status-negative/70" },
   { key: "broken_features",        icon: AlertTriangle, label: "Broken Features",
-    border: "border-yellow-500/25", bg: "bg-yellow-500/[0.04]", text: "text-yellow-400", body: "text-yellow-300/70" },
+    border: "border-status-warning/25", bg: "bg-status-warning-subtle", text: "text-status-warning", body: "text-status-warning/70" },
   { key: "deployment_issue",       icon: AlertTriangle, label: "Deployment Issue",
-    border: "border-orange-500/25", bg: "bg-orange-500/[0.04]", text: "text-orange-400", body: "text-orange-300/70" },
+    border: "border-status-warning/25", bg: "bg-status-warning-subtle", text: "text-status-warning", body: "text-status-warning/70" },
 ];
 
 // ─── ClaudeSession ────────────────────────────────────────────────────────────
@@ -45,10 +45,10 @@ function ClaudeSession({ projectName }: { projectName: string }) {
   if (!session || !session.found) return null;
 
   const healthColor = session.health.startsWith("green") || session.health.startsWith("good")
-    ? "text-emerald-400"
+    ? "text-status-positive"
     : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
-    ? "text-red-400"
-    : "text-amber-400";
+    ? "text-status-negative"
+    : "text-status-warning";
 
   return (
     <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
@@ -69,8 +69,8 @@ function ClaudeSession({ projectName }: { projectName: string }) {
       )}
       {session.todos && session.todos !== "0 TODOs" && session.todos !== "0" && (
         <div>
-          <div className="text-[10px] text-amber-400/60 uppercase tracking-wider mb-0.5">Todos</div>
-          <p className="text-xs text-amber-400/70 leading-relaxed line-clamp-2">{session.todos}</p>
+          <div className="text-[10px] text-status-warning/60 uppercase tracking-wider mb-0.5">Todos</div>
+          <p className="text-xs text-status-warning/70 leading-relaxed line-clamp-2">{session.todos}</p>
         </div>
       )}
       <div className="flex items-center gap-4 pt-0.5">
@@ -227,7 +227,7 @@ export function OverviewTab({
       ) : (
         <button
           onClick={() => setAddingKey("__custom__")}
-          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>
@@ -311,7 +311,7 @@ export function OverviewTab({
         ) : (
           <button
             onClick={() => setLoggingActivity(true)}
-            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors mt-2"
+            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-2"
           >
             <Plus className="h-3.5 w-3.5" /> Log activity
           </button>

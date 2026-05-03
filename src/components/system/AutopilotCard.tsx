@@ -12,10 +12,10 @@ function StatusDot({ status, errors }: { status?: string; errors?: number }) {
   if (!status || status === "never")
     return <span className="h-2 w-2 rounded-full bg-white/20 shrink-0" title="Never run" />;
   if (status === "ok" || status === "completed")
-    return <span className="h-2 w-2 rounded-full bg-emerald-400 shrink-0" title="OK" />;
+    return <span className="ui-dot ui-dot-positive shrink-0" title="OK" />;
   if (errors && errors > 0)
-    return <span className="h-2 w-2 rounded-full bg-red-400 shrink-0" title={`${errors} errors`} />;
-  return <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" title="Unknown" />;
+    return <span className="ui-dot ui-dot-negative shrink-0" title={`${errors} errors`} />;
+  return <span className="ui-dot ui-dot-warning shrink-0" title="Unknown" />;
 }
 
 function humanSchedule(expr: string): string {
@@ -66,7 +66,7 @@ function JobRow({
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-white/30">{humanSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
-            <span className="flex items-center gap-1 text-[10px] text-red-400/70 truncate">
+            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate">
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
               {job.state.lastError}
             </span>
@@ -83,7 +83,7 @@ function JobRow({
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
         className={`relative shrink-0 h-4 w-7 rounded-full transition-colors ${
-          job.enabled ? "bg-emerald-600" : "bg-white/10"
+          job.enabled ? "bg-status-positive" : "bg-white/10"
         }`}
         title={job.enabled ? "Disable" : "Enable"}
       >
@@ -151,13 +151,13 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
           right={
             <div className="flex items-center gap-2 text-xs">
               {okCount > 0 && (
-                <span className="flex items-center gap-1 text-emerald-400">
+                <span className="flex items-center gap-1 text-status-positive">
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {okCount}
                 </span>
               )}
               {errCount > 0 && (
-                <span className="flex items-center gap-1 text-red-400">
+                <span className="flex items-center gap-1 text-status-negative">
                   <XCircle className="h-3.5 w-3.5" />
                   {errCount} err
                 </span>

@@ -129,7 +129,7 @@ export function PersonCard({
           onClick={(e) => e.stopPropagation()}
         >
           {done ? (
-            <div className="flex items-center gap-1.5 text-sm text-emerald-400">
+            <div className="flex items-center gap-1.5 text-sm text-status-positive">
               <Check className="h-3.5 w-3.5" /> Logged
             </div>
           ) : (

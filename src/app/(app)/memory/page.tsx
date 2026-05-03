@@ -8,14 +8,15 @@ import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/const
 
 // Record<EntityType,…> makes TS fail the build if a new ENTITY_TYPE
 // member is added without a colour here — no silent fallback.
+// All entity types use the same monochrome accent badge — this app is intentionally achromatic.
 const TYPE_COLOR: Record<EntityType, string> = {
-  [ENTITY_TYPE.PERSON]:  "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  [ENTITY_TYPE.PROJECT]: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  [ENTITY_TYPE.GOAL]:    "bg-violet-500/10 text-violet-400 border-violet-500/20",
-  [ENTITY_TYPE.COMPANY]: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  [ENTITY_TYPE.TOOL]:    "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-  [ENTITY_TYPE.CONCEPT]: "bg-pink-500/10 text-pink-400 border-pink-500/20",
-  [ENTITY_TYPE.EVENT]:   "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  [ENTITY_TYPE.PERSON]:  "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.PROJECT]: "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.GOAL]:    "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.COMPANY]: "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.TOOL]:    "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.CONCEPT]: "bg-accent-muted text-accent-text border-accent-primary/20",
+  [ENTITY_TYPE.EVENT]:   "bg-accent-muted text-accent-text border-accent-primary/20",
 };
 
 function TypeBadge({ type }: { type: EntityType }) {
@@ -90,7 +91,7 @@ export default async function MemoryPage() {
             <div className="space-y-2">
               {activity.map((ix) => (
                 <div key={ix.id} className="flex items-start gap-2.5">
-                  <span className={`text-xs mt-0.5 shrink-0 ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-blue-400/60" : "text-emerald-400/60"}`}>
+                  <span className={`text-xs mt-0.5 shrink-0 ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-muted" : "text-status-positive/60"}`}>
                     {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
                   </span>
                   <div className="flex-1 min-w-0">

@@ -3,29 +3,23 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab } from "@/lib/zellij";
-import { DEFAULT_USER_ID } from "@/lib/constants";
-import type { AdapterId, OrchestrationTaskIntentId, OrchestrationTaskRequest } from "@/lib/orchestration";
+import {
+  ORCHESTRATION_ADAPTER_IDS,
+  ORCHESTRATION_TASK_INTENT_IDS,
+  type AdapterId,
+  type OrchestrationTaskIntentId,
+  type OrchestrationTaskRequest,
+} from "@/lib/orchestration";
 import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } from "@/lib/orchestration";
 import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
+import { getCurrentUserId } from "@/lib/session";
 
 const RunOrchestrationBody = z.object({
   projectKey: z.string().trim().min(1).max(120),
   projectPath: z.string().trim().min(1).max(500),
-  adapter: z.enum(["claude", "codex", "openclaw", "gemini"]).default("openclaw"),
-  intent: z.enum([
-    "next_best",
-    "test_and_fix",
-    "quality",
-    "full_audit",
-    "product",
-    "ux_review",
-    "deploy_check",
-    "commit_push",
-    "close_session",
-    "continue",
-    "custom",
-  ]),
+  adapter: z.enum(ORCHESTRATION_ADAPTER_IDS).default("openclaw"),
+  intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
 });
@@ -86,8 +80,9 @@ export async function POST(req: NextRequest) {
     }, { status: 501 });
   }
 
+  const userId = await getCurrentUserId();
   const run = await createOrchestrationRun({
-    userId: DEFAULT_USER_ID,
+    userId,
     adapter: request.adapter,
     intent: request.intent,
     state: "running",

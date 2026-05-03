@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-
+import { ORCHESTRATION_TASK_SUMMARY_FIELDS, type OrchestrationTaskSummaryField } from "@/lib/orchestration";
 
 export type SessionData = {
   found: false;
@@ -16,8 +16,8 @@ export type SessionData = {
 };
 
 const SESSIONS_DIR = `${process.env.HOME ?? "/home/g"}/.claude/sessions`;
-const FIELDS = ["done", "next", "tests", "todos", "health"] as const;
-type Field = typeof FIELDS[number];
+const FIELDS = ORCHESTRATION_TASK_SUMMARY_FIELDS;
+type Field = OrchestrationTaskSummaryField;
 
 /** Parse a session .md file into its key fields. */
 function parseSession(raw: string): Omit<SessionData & { found: true }, "found" | "raw"> {
@@ -33,7 +33,7 @@ function parseSession(raw: string): Omit<SessionData & { found: true }, "found" 
   };
 
   for (const line of raw.split("\n")) {
-    const match = line.match(/^(done|next|tests|todos|health):\s*(.*)/);
+    const match = line.match(new RegExp(`^(${FIELDS.join("|")}):\\s*(.*)`))
     if (match) {
       flush();
       current = match[1] as Field;

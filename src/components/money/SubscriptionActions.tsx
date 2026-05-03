@@ -110,7 +110,7 @@ export function SubscriptionActions({
         <DeleteButton
           onDelete={onDeleteRecord}
           label="Delete record?"
-          triggerClassName="flex items-center gap-1 text-xs text-white/20 hover:text-red-400 transition-colors"
+          triggerClassName="flex items-center gap-1 text-xs text-white/20 hover:text-status-negative transition-colors"
         />
       </div>
     );
@@ -123,13 +123,13 @@ export function SubscriptionActions({
         <button
           onClick={onMarkPaid}
           disabled={markingPaid}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-emerald-400/20 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5 transition-colors disabled:opacity-50"
         >
           {markingPaid ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <CheckCheck className="h-2.5 w-2.5" />}
           Mark paid
         </button>
       )}
-      {paid && <span className="text-xs text-emerald-400/50">Next due updated</span>}
+      {paid && <span className="text-xs text-status-positive/50">Next due updated</span>}
 
       {/* Inline edit for amount/currency/notes */}
       {!isCancelled && (
@@ -149,7 +149,7 @@ export function SubscriptionActions({
           href={meta.cancelUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-red-400/20 text-red-400/70 hover:text-red-400 hover:bg-red-400/5 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-negative/20 text-status-negative/70 hover:text-status-negative hover:bg-status-negative/5 transition-colors"
         >
           <ExternalLink className="h-2.5 w-2.5" />
           Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
@@ -161,7 +161,7 @@ export function SubscriptionActions({
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-white/40">Mark cancelled?</span>
           <button onClick={onCancel} disabled={cancelling}
-            className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50">
+            className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50">
             Yes
           </button>
           <button onClick={() => setConfirmCancel(false)}
@@ -182,7 +182,7 @@ export function SubscriptionActions({
         onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
-        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-red-400 hover:bg-red-400/5 transition-colors"
+        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-status-negative hover:bg-status-negative/5 transition-colors"
       />
 
       {editing && (
@@ -264,7 +264,7 @@ export function SubscriptionActions({
       {meta && !meta.essential && meta.alternatives.length > 0 && (
         <button
           onClick={() => setShowAlternatives(!showAlternatives)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-emerald-400/20 text-emerald-400/60 hover:text-emerald-400 hover:bg-emerald-400/5 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5 transition-colors"
         >
           <Lightbulb className="h-2.5 w-2.5" />
           Free alternatives
@@ -273,8 +273,8 @@ export function SubscriptionActions({
       )}
 
       {showAlternatives && meta && (
-        <div className="w-full mt-1 p-2 rounded bg-emerald-400/5 border border-emerald-400/10">
-          <div className="text-xs text-emerald-400/60 font-medium mb-1">Alternatives:</div>
+        <div className="w-full mt-1 p-2 rounded bg-status-positive/5 border border-status-positive/10">
+          <div className="text-xs text-status-positive/60 font-medium mb-1">Alternatives:</div>
           {meta.alternatives.map((alt, i) => (
             <div key={i} className="text-xs text-white/40">• {alt}</div>
           ))}

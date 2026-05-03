@@ -110,7 +110,7 @@ export function DateInput({
       <div className="flex items-center gap-1">
         <button
           onClick={() => ie.start(toDateStr(initial))}
-          className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-red-400" : "text-white/40"}`}
+          className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-status-negative" : "text-white/40"}`}
           title="Click to change deadline"
         >
           {deadlineText}
@@ -169,7 +169,7 @@ export function AddMilestoneInline({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors mt-1"
+        className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-1"
       >
         <Plus className="h-3 w-3" /> Add milestone
       </button>
@@ -192,7 +192,7 @@ export function AddMilestoneInline({
       <button
         onClick={save}
         disabled={!value.trim() || saving}
-        className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white transition-colors shrink-0"
+        className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 transition-colors shrink-0"
       >
         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
       </button>
@@ -247,7 +247,7 @@ export function MilestoneRow({
         {toggling ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-white/30" />
         ) : milestone.done ? (
-          <CheckCircle className="h-3.5 w-3.5 text-green-400/70 hover:text-green-400 transition-colors" />
+          <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (
           <div className="h-3.5 w-3.5 rounded-full border border-white/25 hover:border-white/60 transition-colors" />
         )}

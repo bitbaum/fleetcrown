@@ -14,9 +14,9 @@ type RepoStatus = {
 };
 
 const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string }> = {
-  success: { icon: CheckCircle, className: "text-green-400" },
-  failure: { icon: XCircle, className: "text-red-400" },
-  running: { icon: Loader2, className: "text-yellow-400 animate-spin" },
+  success: { icon: CheckCircle, className: "text-status-positive" },
+  failure: { icon: XCircle, className: "text-status-negative" },
+  running: { icon: Loader2, className: "text-status-warning animate-spin" },
   cancelled: { icon: Clock, className: "text-text-tertiary" },
 };
 
@@ -49,7 +49,7 @@ export function GitHubStatus() {
                     <span>{repo.open_prs} PR{repo.open_prs !== 1 ? "s" : ""}</span>
                   )}
                   {(repo.dependabot_prs ?? 0) > 0 && (
-                    <span className="text-amber-400/80">{repo.dependabot_prs} deps</span>
+                    <span className="text-status-warning/80">{repo.dependabot_prs} deps</span>
                   )}
                   {repo.ci_name && <span>{repo.ci_name}</span>}
                 </div>

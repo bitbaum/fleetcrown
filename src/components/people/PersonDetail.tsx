@@ -105,11 +105,11 @@ export function PersonDetail({
                     if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
                   }}
                   autoFocus
-                  className={`w-56 rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors ${nameError ? "border-red-400/60 focus:border-red-400" : "border-border-default focus:border-accent-primary"}`}
+                  className={`w-56 rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors ${nameError ? "border-status-negative/60 focus:border-status-negative" : "border-border-default focus:border-accent-primary"}`}
                 />
                 {nameSaving && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-text-tertiary" />}
               </div>
-              {nameError && <p className="text-xs text-red-400">{nameError}</p>}
+              {nameError && <p className="text-xs text-status-negative">{nameError}</p>}
             </div>
           ) : (
             <h2
@@ -172,7 +172,7 @@ export function PersonDetail({
                 placeholder="Add a note about this person…"
                 className={`min-h-28 w-full resize-none ${FIELD_INPUT_CLASS_COMPACT} leading-relaxed`}
               />
-              {descError && <p className="text-xs text-red-400">{descError}</p>}
+              {descError && <p className="text-xs text-status-negative">{descError}</p>}
               <div className="flex items-center gap-2">
                 <button
                   onClick={commitDescription}

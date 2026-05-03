@@ -52,7 +52,7 @@ export default async function HabitsPage() {
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-sm text-text-secondary">{h.frequency}</span>
                       {h.streak >= 2 && (
-                        <span className="flex items-center gap-1 text-sm text-amber-300">
+                        <span className="flex items-center gap-1 text-sm text-status-warning">
                           <Flame className="h-3 w-3" />
                           {h.streak}-day streak
                         </span>

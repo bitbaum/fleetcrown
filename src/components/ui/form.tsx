@@ -14,7 +14,7 @@ export const SECONDARY_BUTTON_CLASS =
   "inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40";
 
 export const DANGER_BUTTON_CLASS =
-  "inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/14 disabled:opacity-40";
+  "ui-btn-danger inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-40";
 
 export const ICON_BUTTON_CLASS =
   "inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40";
@@ -38,7 +38,7 @@ export function Field({
     <div>
       <label className="text-[11px] uppercase tracking-wider text-text-tertiary font-medium mb-1.5 block">
         {label}
-        {required && <span className="text-red-500 dark:text-red-400"> *</span>}
+        {required && <span className="text-status-negative"> *</span>}
       </label>
       {children}
     </div>

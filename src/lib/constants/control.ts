@@ -6,10 +6,10 @@ export const CLOSING_WINDOW_S = 1800;  // 30 min
 export const AUTO_INJECT_S    = 12;    // countdown before auto-inject on ready
 
 export const HEALTH_COLOR: Record<string, string> = {
-  good:      "text-emerald-400",
-  degraded:  "text-amber-400",
-  critical:  "text-red-400",
-  excellent: "text-emerald-300",
+  good:      "text-status-positive",
+  degraded:  "text-status-warning",
+  critical:  "text-status-negative",
+  excellent: "text-status-positive",
 };
 
 export const PROMPT_STYLE: Record<string, string> = {

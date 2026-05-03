@@ -68,7 +68,7 @@ export async function ActionQueueCard() {
           icon={Inbox}
           title="Action Queue"
           right={
-            <span className="text-xs text-amber-400 font-medium">
+            <span className="text-xs text-status-warning font-medium">
               {pending.length} pending
             </span>
           }

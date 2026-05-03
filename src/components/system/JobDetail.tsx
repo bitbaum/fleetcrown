@@ -82,7 +82,7 @@ export function JobDetail({
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-white/10 bg-surface-modal">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-emerald-400 shrink-0" />
+              <Bot className="h-4 w-4 text-status-positive shrink-0" />
               <h2 className="text-base font-semibold truncate">{job.name}</h2>
             </div>
             <div className="text-xs text-white/40 mt-0.5">
@@ -106,7 +106,7 @@ export function JobDetail({
               disabled={toggling}
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
                 job.enabled
-                  ? "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"
+                  ? "bg-status-positive-subtle text-status-positive hover:bg-status-positive/18"
                   : "bg-white/5 text-white/40 hover:bg-white/10"
               }`}
             >
@@ -136,12 +136,12 @@ export function JobDetail({
               {!status || status === "never" ? (
                 <div className="text-xs text-white/30">Never run</div>
               ) : hasError ? (
-                <div className="flex items-center gap-1 text-xs text-red-400">
+                <div className="flex items-center gap-1 text-xs text-status-negative">
                   <AlertTriangle className="h-3 w-3" />
                   {job.state?.consecutiveErrors} err
                 </div>
               ) : (
-                <div className="flex items-center gap-1 text-xs text-emerald-400">
+                <div className="flex items-center gap-1 text-xs text-status-positive">
                   <CheckCircle2 className="h-3 w-3" />
                   OK
                 </div>
@@ -161,14 +161,14 @@ export function JobDetail({
 
           {/* Error detail */}
           {hasError && job.state?.lastError && (
-            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
-              <div className="flex items-center gap-2 text-red-400 text-xs font-medium mb-1">
+            <div className="ui-box-error rounded-md p-3">
+              <div className="flex items-center gap-2 text-xs font-medium mb-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Last Error
               </div>
-              <div className="text-xs text-red-300/80">{job.state.lastError}</div>
+              <div className="text-xs opacity-80">{job.state.lastError}</div>
               {job.state.lastErrorReason && (
-                <div className="text-xs text-red-400/50 mt-1">
+                <div className="text-xs opacity-50 mt-1">
                   Reason: {job.state.lastErrorReason}
                 </div>
               )}
@@ -197,12 +197,12 @@ export function JobDetail({
 
           {/* Run output */}
           {runOutput && (
-            <div className={`rounded-md border p-3 ${runOutput.ok ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20"}`}>
-              <div className={`flex items-center gap-2 text-xs font-medium mb-1.5 ${runOutput.ok ? "text-emerald-400" : "text-red-400"}`}>
+            <div className={`rounded-md border p-3 ${runOutput.ok ? "ui-box-success" : "ui-box-error"}`}>
+              <div className="flex items-center gap-2 text-xs font-medium mb-1.5">
                 {runOutput.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
                 {runOutput.ok ? "Job triggered" : "Run failed"}
               </div>
-              <pre className={`text-xs whitespace-pre-wrap font-mono ${runOutput.ok ? "text-emerald-300/70" : "text-red-300/70"}`}>
+              <pre className="text-xs whitespace-pre-wrap font-mono opacity-70">
                 {runOutput.text}
               </pre>
             </div>
@@ -216,14 +216,14 @@ export function JobDetail({
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-colors"
+                  className="ui-btn-confirm flex items-center gap-1.5 px-2.5 py-1 rounded text-xs disabled:opacity-50 transition-colors"
                 >
                   <Send className="h-3 w-3" />
                   {saving ? "Saving..." : saved ? "Saved!" : "Save"}
                 </button>
               )}
               {saved && !isDirty && (
-                <span className="flex items-center gap-1 text-xs text-emerald-400">
+                <span className="flex items-center gap-1 text-xs text-status-positive">
                   <CheckCircle2 className="h-3 w-3" />
                   Saved
                 </span>

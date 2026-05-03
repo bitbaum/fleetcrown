@@ -64,7 +64,7 @@ export function WeatherCard() {
       <CardHeader icon={Sun} title="Zurich" />
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <WeatherIcon condition={w.condition} className="h-8 w-8 text-amber-400/80" />
+          <WeatherIcon condition={w.condition} className="h-8 w-8 text-status-warning/80" />
           <div className="text-2xl font-semibold">{w.temp}°</div>
         </div>
         <div className="text-xs text-white/40 space-y-0.5">

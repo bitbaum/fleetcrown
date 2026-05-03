@@ -48,11 +48,11 @@ export function NameEditor({
               if (e.key === "Escape") { ie.cancel(); setSaveError(null); }
             }}
             autoFocus
-            className={`text-base font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-red-400/60 focus:border-red-400" : "border-white/20 focus:border-white/35"}`}
+            className={`text-base font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-white/20 focus:border-white/35"}`}
           />
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
         </div>
-        {saveError && <p className="text-xs text-red-400">{saveError}</p>}
+        {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
       </div>
     );
   }
@@ -191,13 +191,13 @@ export function MaturityEditor({
           max={10}
           value={ie.draft}
           onChange={(e) => ie.setDraft(Number(e.target.value))}
-          className="w-24 accent-emerald-500"
+          className="w-24 accent-[var(--status-positive)]"
         />
         <span className="text-[10px] text-white/50 w-8">{ie.draft}/10</span>
         <button
           onClick={() => ie.commit(() => onSave(`${ie.draft}/10`))}
           disabled={ie.saving}
-          className="px-2 py-0.5 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-40 text-white text-[10px] transition-colors"
+          className="px-2 py-0.5 rounded ui-btn-confirm disabled:opacity-40 text-[10px] transition-colors"
         >
           {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
         </button>

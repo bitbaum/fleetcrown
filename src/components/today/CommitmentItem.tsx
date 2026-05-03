@@ -84,12 +84,12 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
             />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-status-negative">{error}</p>}
           <div className="flex gap-1.5">
             <button
               onClick={save}
               disabled={saving || !desc.trim()}
-              className="flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600/70 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+              className="ui-btn-confirm flex items-center gap-1 px-2.5 py-1 rounded disabled:opacity-30 text-xs font-medium transition-colors"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Save
@@ -106,20 +106,20 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
   return (
     <div className="group flex gap-3 items-start">
       {isOverdue ? (
-        <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+        <AlertCircle className="h-4 w-4 text-status-negative shrink-0 mt-0.5" />
       ) : (
         <div className="h-4 w-4 rounded-full border border-white/20 shrink-0 mt-0.5" />
       )}
       <div className="min-w-0 flex-1">
         <div className="text-sm md:text-base line-clamp-2">{description}</div>
         {dueDate && (
-          <div className={`text-xs md:text-sm ${isOverdue ? "text-red-400" : "text-white/40"}`}>
+          <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-white/40"}`}>
             {isOverdue ? "Overdue" : "Due"}{" "}
             {formatDistanceToNow(new Date(dueDate), { addSuffix: true })}
           </div>
         )}
         {financialImpact && (
-          <div className="text-xs md:text-sm text-amber-400/70">{financialImpact}</div>
+          <div className="text-xs md:text-sm text-status-warning/70">{financialImpact}</div>
         )}
       </div>
       <div className="flex gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">

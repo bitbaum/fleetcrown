@@ -151,12 +151,12 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       {withIssues.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-1 text-xs">
           {securityRisks > 0 && (
-            <span className="flex items-center gap-1.5 text-red-400">
+            <span className="flex items-center gap-1.5 text-status-negative">
               <ShieldAlert className="h-3.5 w-3.5" />
               {securityRisks} security risk{securityRisks > 1 ? "s" : ""}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-yellow-400/80">
+          <span className="flex items-center gap-1.5 text-status-warning/80">
             <AlertTriangle className="h-3.5 w-3.5" />
             {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need attention
           </span>

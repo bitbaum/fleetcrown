@@ -237,7 +237,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                 msg.role === "user"
                   ? "bg-accent-primary text-text-inverted rounded-br-sm"
                   : msg.error
-                  ? "bg-red-500/10 border border-red-500/20 text-red-300 rounded-bl-sm"
+                  ? "ui-box-error rounded-bl-sm"
                   : "bg-surface-raised text-text-primary rounded-bl-sm border border-border-subtle"
               }`}>
                 <div className="whitespace-pre-wrap">{msg.text}</div>
@@ -253,7 +253,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
           {loading && (
             <div className="flex justify-start">
               <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm border border-border-subtle bg-surface-raised px-4 py-3">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-400 shrink-0" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-status-positive shrink-0" />
                 <div>
                   <span className="text-xs text-text-secondary">
                     {elapsed < 5 ? "Ivy is thinking…" :
@@ -292,7 +292,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                 title={listening ? "Stop recording" : "Voice input"}
                 className={`m-1 rounded-2xl p-2.5 transition-colors shrink-0 ${
                   listening
-                    ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 animate-pulse"
+                    ? "bg-status-negative/20 text-status-negative hover:bg-status-negative/30 animate-pulse"
                     : "text-text-muted hover:text-text-primary hover:bg-surface-raised"
                 }`}
               >

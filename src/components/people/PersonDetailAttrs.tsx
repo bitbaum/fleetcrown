@@ -100,7 +100,7 @@ export function DetailAttrs({
               <button
                 onClick={() => deleteAttr(key)}
                 disabled={deletingKey === key}
-                className={`shrink-0 ${ICON_BUTTON_CLASS} hover:text-red-400`}
+                className={`shrink-0 ${ICON_BUTTON_CLASS} hover:text-status-negative`}
                 title="Delete attribute"
               >
                 {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}

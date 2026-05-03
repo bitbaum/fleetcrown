@@ -11,7 +11,7 @@ export function DeleteButton({
   onDelete,
   label = "Delete?",
   triggerTitle = "Delete",
-  triggerClassName = "p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/5 transition-colors",
+  triggerClassName = "p-1.5 rounded text-white/20 hover:text-status-negative hover:bg-white/5 transition-colors",
 }: {
   onDelete: () => Promise<void>;
   label?: string;
@@ -38,7 +38,7 @@ export function DeleteButton({
         <button
           onClick={handleConfirm}
           disabled={deleting}
-          className="text-xs text-red-400 hover:text-red-300 transition-colors px-1 disabled:opacity-50"
+          className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
         >
           {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
         </button>

@@ -120,7 +120,7 @@ export function ProjectDetailHeader({
               }}
               label="Delete?"
               triggerTitle="Delete project"
-              triggerClassName="ml-1 p-1.5 rounded text-white/20 hover:text-red-400 hover:bg-white/5 transition-colors"
+              triggerClassName="ml-1 p-1.5 rounded ui-btn-danger hover:bg-white/5 transition-colors"
             />
           )}
           <button
@@ -137,7 +137,7 @@ export function ProjectDetailHeader({
           <StatusEditor value={effectiveStatus} onSave={saveStatus} />
           <MaturityEditor value={effectiveMaturity} onSave={saveMaturity} />
           {hasIssues && (
-            <span className="flex items-center gap-1 text-[10px] text-red-400/70 ml-auto">
+            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 ml-auto">
               <AlertTriangle className="h-3 w-3" /> Issues detected
             </span>
           )}

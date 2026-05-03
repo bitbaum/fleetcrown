@@ -103,12 +103,12 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
         placeholder="Description (optional)"
         className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
       />
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-status-negative">{error}</p>}
       <div className="flex items-center gap-2 pt-0.5">
         <button
           onClick={submit}
           disabled={saving || !name.trim() || !type.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+          className="ui-btn-confirm flex items-center gap-1.5 px-3 py-1.5 rounded disabled:opacity-30 text-xs font-medium transition-colors"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           Add

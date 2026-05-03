@@ -100,7 +100,7 @@ export function LogConversationButton() {
       </div>
 
       {done ? (
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400 py-1">
+        <div className="flex items-center gap-1.5 text-xs text-status-positive py-1">
           <Check className="h-3.5 w-3.5" />
           Logged with {selected?.name}
         </div>

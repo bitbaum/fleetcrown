@@ -55,11 +55,11 @@ function Pill({
   href?: string;
 }) {
   const colors = variant === "red"
-    ? "border-red-400/20 bg-red-400/10 text-red-400"
+    ? "border-status-negative/20 bg-status-negative-subtle text-status-negative"
     : variant === "amber"
-      ? "border-amber-400/20 bg-amber-400/10 text-amber-400"
+      ? "border-status-warning/20 bg-status-warning-subtle text-status-warning"
       : variant === "green"
-        ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+        ? "border-status-positive/20 bg-status-positive-subtle text-status-positive"
         : "border-border-default bg-surface-base text-text-secondary";
 
   const inner = (

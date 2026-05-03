@@ -59,7 +59,7 @@ export function AddAttrInline({
       <button
         onClick={save}
         disabled={!key.trim() || !value.trim() || saving}
-        className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white shrink-0 transition-colors"
+        className="ui-btn-confirm p-1.5 rounded disabled:opacity-30 shrink-0 transition-colors"
       >
         {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
       </button>
@@ -134,7 +134,7 @@ export function AttrRow({
         <button
           onClick={deleteAttr}
           disabled={deleting}
-          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/15 hover:text-red-400 hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-white/15 hover:text-status-negative hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
           title="Delete attribute"
         >
           {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}

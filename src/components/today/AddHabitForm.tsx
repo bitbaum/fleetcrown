@@ -62,7 +62,7 @@ export function AddHabitForm({
         <button
           onClick={submit}
           disabled={!title.trim() || saving}
-          className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white transition-colors shrink-0"
+          className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 transition-colors shrink-0"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
         </button>
@@ -78,8 +78,8 @@ export function AddHabitForm({
       onClick={() => setOpen(true)}
       className={
         emptyState
-          ? "flex items-center gap-1.5 text-xs text-white/25 hover:text-emerald-400 transition-colors"
-          : "flex items-center gap-1.5 text-xs text-white/35 hover:text-emerald-400 transition-colors mt-1"
+          ? "flex items-center gap-1.5 text-xs text-white/25 hover:text-status-positive transition-colors"
+          : "flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-1"
       }
     >
       <Plus className="h-3.5 w-3.5" />

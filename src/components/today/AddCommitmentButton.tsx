@@ -41,7 +41,7 @@ export function AddCommitmentButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/40 hover:text-emerald-400 transition-colors mt-2"
+        className="flex items-center gap-1.5 text-xs text-white/40 hover:text-status-positive transition-colors mt-2"
       >
         <Plus className="h-3.5 w-3.5" /> Add commitment
       </button>
@@ -73,12 +73,12 @@ export function AddCommitmentButton() {
           className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-status-negative">{error}</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={submit}
           disabled={saving || !description.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           Add

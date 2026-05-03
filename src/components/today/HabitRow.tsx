@@ -71,7 +71,7 @@ export function HabitRow({
         <button
           onClick={commitEdit}
           disabled={!ie.draft.title.trim() || ie.saving}
-          className="p-1 rounded bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white transition-colors shrink-0"
+          className="ui-btn-confirm p-1 rounded disabled:opacity-30 transition-colors shrink-0"
         >
           {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
         </button>
@@ -93,11 +93,11 @@ export function HabitRow({
         {toggling ? (
           <Loader2 className="h-4 w-4 animate-spin text-white/30" />
         ) : habit.doneToday ? (
-          <div className="h-4 w-4 rounded-full bg-emerald-500/80 flex items-center justify-center">
+          <div className="h-4 w-4 rounded-full bg-status-positive/50 flex items-center justify-center">
             <Check className="h-2.5 w-2.5 text-white" />
           </div>
         ) : (
-          <div className="h-4 w-4 rounded-full border border-white/25 hover:border-emerald-400/60 transition-colors" />
+          <div className="h-4 w-4 rounded-full border border-white/25 hover:border-status-positive/60 transition-colors" />
         )}
       </button>
 
@@ -112,7 +112,7 @@ export function HabitRow({
 
       <div className="flex items-center gap-1 shrink-0">
         {habit.streak >= 2 && (
-          <span className="flex items-center gap-0.5 text-xs text-amber-400/60" title={`${habit.streak}-day streak`}>
+          <span className="flex items-center gap-0.5 text-xs text-status-warning/60" title={`${habit.streak}-day streak`}>
             <Flame className="h-3 w-3" />
             {habit.streak}
           </span>
@@ -126,7 +126,7 @@ export function HabitRow({
         </button>
         <button
           onClick={() => onRemove(habit.id)}
-          className="p-1.5 rounded text-white/10 hover:text-red-400/60 hover:bg-red-400/5 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-white/10 hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors opacity-0 group-hover:opacity-100"
           title="Remove habit"
         >
           <X className="h-3 w-3" />

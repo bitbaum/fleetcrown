@@ -83,9 +83,9 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             {togglingStatus ? (
               <Loader2 className="h-5 w-5 animate-spin text-white/30" />
             ) : isCompleted ? (
-              <CheckCircle className="h-5 w-5 text-green-400 hover:text-green-300 transition-colors" />
+              <CheckCircle className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
             ) : depth === 0 ? (
-              <Target className="h-5 w-5 text-emerald-400 hover:text-green-400 transition-colors" />
+              <Target className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
             ) : (
               <div className="h-4 w-4 rounded border border-white/25 hover:border-white/60 transition-colors mt-0.5" />
             )}
@@ -140,7 +140,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 />
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={savingDesc}
-                    className="p-1.5 rounded bg-emerald-600/80 hover:bg-emerald-500 disabled:opacity-30 text-white">
+                    className="p-1.5 rounded ui-btn-confirm disabled:opacity-30">
                     {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
@@ -164,8 +164,8 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             )}
             {goal.entityName && (
               <div className="flex items-center gap-1 mt-1">
-                <FolderKanban className="h-3 w-3 text-emerald-400/50" />
-                <span className="text-xs text-emerald-400/60">{goal.entityName}</span>
+                <FolderKanban className="h-3 w-3 text-status-positive/50" />
+                <span className="text-xs text-status-positive/60">{goal.entityName}</span>
               </div>
             )}
 
@@ -186,7 +186,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 </div>
                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500/60 rounded-full transition-all"
+                    className="h-full bg-status-positive/60 rounded-full transition-all"
                     style={{ width: `${Math.max(progress, 1)}%` }}
                   />
                 </div>
@@ -232,7 +232,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
 
       {/* Children */}
       {goal.children.length > 0 && (
-        <div className="mt-2 ml-6 pl-5 border-l-2 border-emerald-500/20 space-y-2">
+        <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
           {goal.children.map((child) => (
             <GoalCard key={child.id} goal={child} depth={depth + 1} />
           ))}

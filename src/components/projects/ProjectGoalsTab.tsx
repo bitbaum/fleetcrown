@@ -54,14 +54,14 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
           <div key={goal.id} className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 group">
             <div className="flex items-start gap-2.5">
               {isCompleted
-                ? <CheckCircle className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                : <Target className="h-4 w-4 text-emerald-500/50 shrink-0 mt-0.5" />}
+                ? <CheckCircle className="h-4 w-4 text-status-positive shrink-0 mt-0.5" />
+                : <Target className="h-4 w-4 text-status-positive/50 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <div className="text-sm font-medium text-white/85">{goal.title}</div>
                   <button
                     onClick={() => handleUnlink(goal.id)}
-                    className="sm:opacity-0 sm:group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all ml-auto shrink-0"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 text-white/20 hover:text-status-negative transition-all ml-auto shrink-0"
                     title="Unlink from project"
                   >
                     <X className="h-3 w-3" />
@@ -78,7 +78,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                     </div>
                     <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${progress >= 80 ? "bg-emerald-500" : progress >= 50 ? "bg-yellow-500" : "bg-blue-500"}`}
+                        className={`h-full rounded-full transition-all ${progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-accent-primary"}`}
                         style={{ width: `${Math.max(progress, 1)}%` }}
                       />
                     </div>
@@ -89,7 +89,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                     {milestones.map((m, i) => (
                       <div key={i} className="flex items-center gap-1.5 text-[11px]">
                         {m.done
-                          ? <CheckCircle className="h-3 w-3 text-emerald-500/60 shrink-0" />
+                          ? <CheckCircle className="h-3 w-3 text-status-positive/60 shrink-0" />
                           : <div className="h-3 w-3 rounded-full border border-white/20 shrink-0" />}
                         <span className={m.done ? "text-white/25 line-through" : "text-white/55"}>{m.title}</span>
                       </div>
@@ -120,7 +120,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
           <button
             onClick={handleLink}
             disabled={!selectedId || saving}
-            className="px-2.5 py-1.5 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 disabled:opacity-30 text-white text-xs font-medium transition-colors"
+            className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors"
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
           </button>

@@ -31,7 +31,7 @@ export function ActionButtons({
 
   if (done) {
     return (
-      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-emerald-400" : "text-white/30"}`}>
+      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-white/30"}`}>
         {done === ACTION_STATUS.APPROVED ? "✓" : "✗"}
       </span>
     );
@@ -43,7 +43,7 @@ export function ActionButtons({
         <button
           onClick={onApprove}
           disabled={busy}
-          className="p-1 rounded hover:bg-emerald-600/20 text-emerald-400/60 hover:text-emerald-400 transition-colors disabled:opacity-50"
+          className="p-1 rounded hover:bg-status-positive/20 text-status-positive/60 hover:text-status-positive transition-colors disabled:opacity-50"
           title="Done — mark as completed"
         >
           <Check className="h-4 w-4" />
@@ -65,7 +65,7 @@ export function ActionButtons({
       <button
         onClick={onApprove}
         disabled={busy}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md ui-btn-confirm transition-colors disabled:opacity-50"
       >
         <Check className="h-3 w-3" />
         Done

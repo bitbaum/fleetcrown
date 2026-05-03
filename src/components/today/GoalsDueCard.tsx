@@ -17,7 +17,7 @@ export async function GoalsDueCard() {
           icon={Target}
           title="Goals Due Soon"
           right={
-            <span className="text-xs text-amber-400 font-medium">
+            <span className="text-xs text-status-warning font-medium">
               {items.length} within {GOALS_DUE_SOON_DAYS} days
             </span>
           }
@@ -36,7 +36,7 @@ export async function GoalsDueCard() {
                   <div className="w-10 h-1 bg-white/[0.08] rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
-                        progress >= 80 ? "bg-emerald-500" : progress >= 50 ? "bg-amber-500" : "bg-white/25"
+                        progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-white/25"
                       }`}
                       style={{ width: `${Math.max(progress, 2)}%` }}
                     />
@@ -46,7 +46,7 @@ export async function GoalsDueCard() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" title={goal.title}>{goal.title}</div>
                   {date && (
-                    <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-red-400" : "text-amber-400/80"}`}>
+                    <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-status-negative" : "text-status-warning/80"}`}>
                       <Clock className="h-3 w-3 shrink-0" />
                       {deadlineText}
                     </div>

@@ -6,9 +6,9 @@ import Link from "next/link";
 import { ALERT_SEVERITY } from "@/lib/constants/statuses";
 
 const SEVERITY_CONFIG = {
-  urgent: { icon: AlertCircle, color: "text-red-400", bg: "bg-red-400/10", border: "border-red-400/20" },
-  warning: { icon: AlertTriangle, color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/20" },
-  info: { icon: Info, color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/20" },
+  urgent: { icon: AlertCircle, color: "text-status-negative", bg: "bg-status-negative-subtle", border: "border-status-negative/20" },
+  warning: { icon: AlertTriangle, color: "text-status-warning", bg: "bg-status-warning-subtle", border: "border-status-warning/20" },
+  info: { icon: Info, color: "text-accent-text", bg: "bg-accent-muted", border: "border-accent-primary/20" },
 } as const;
 
 export async function AlertsCard() {
@@ -26,7 +26,7 @@ export async function AlertsCard() {
           title="Alerts"
           right={
             urgentCount > 0 ? (
-              <span className="text-xs md:text-sm text-red-400 font-medium">{urgentCount} urgent</span>
+              <span className="text-xs md:text-sm text-status-negative font-medium">{urgentCount} urgent</span>
             ) : (
               <span className="text-xs md:text-sm text-white/30">{items.length} active</span>
             )

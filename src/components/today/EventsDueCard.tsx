@@ -21,9 +21,9 @@ export async function EventsDueCard() {
           title="Upcoming Deadlines"
           right={
             overdueCount > 0 ? (
-              <span className="text-xs text-red-400 font-medium">{overdueCount} overdue</span>
+              <span className="text-xs text-status-negative font-medium">{overdueCount} overdue</span>
             ) : (
-              <span className="text-xs text-amber-400 font-medium">
+              <span className="text-xs text-status-warning font-medium">
                 {items.length} within {EVENTS_DUE_SOON_DAYS} days
               </span>
             )
@@ -37,11 +37,11 @@ export async function EventsDueCard() {
             return (
               <div key={event.id} className="flex items-start gap-3">
                 <div className="shrink-0 flex flex-col items-center gap-1 w-14 pt-0.5">
-                  <span className={`text-[11px] font-mono font-medium ${overdue ? "text-red-400" : "text-white/40"}`}>
+                  <span className={`text-[11px] font-mono font-medium ${overdue ? "text-status-negative" : "text-white/40"}`}>
                     {format(deadline, "d MMM")}
                   </span>
                   {event.category && (
-                    <span className="text-[11px] uppercase tracking-wide text-emerald-400/60 font-medium">
+                    <span className="text-[11px] uppercase tracking-wide text-status-positive/60 font-medium">
                       {event.category}
                     </span>
                   )}
@@ -62,7 +62,7 @@ export async function EventsDueCard() {
                       </a>
                     )}
                   </div>
-                  <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-red-400" : "text-amber-400/70"}`}>
+                  <div className={`flex items-center gap-1 text-xs mt-0.5 ${overdue ? "text-status-negative" : "text-status-warning/70"}`}>
                     <Clock className="h-3 w-3 shrink-0" />
                     {deadlineText}
                   </div>

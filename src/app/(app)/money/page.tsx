@@ -14,8 +14,8 @@ import {
 import { format, isPast } from "date-fns";
 
 const STATUS_STYLE: Record<SubStatus, string> = {
-  [SUB_STATUS.ACTIVE]:     "text-emerald-300 bg-emerald-500/12",
-  [SUB_STATUS.UNVERIFIED]: "text-amber-300 bg-amber-500/12",
+  [SUB_STATUS.ACTIVE]:     "text-status-positive bg-status-positive-subtle",
+  [SUB_STATUS.UNVERIFIED]: "text-status-warning bg-status-warning-subtle",
   [SUB_STATUS.CANCELLED]:  "text-text-tertiary bg-surface-overlay",
 };
 
@@ -104,7 +104,7 @@ export default async function MoneyPage() {
                     {sub.amount != null ? `${sub.amount} ${sub.currency}` : <span className="text-text-tertiary">— {sub.currency}</span>}
                   </div>
                   {sub.nextDue && !isCancelled && (
-                    <div className={`text-sm ${isOverdue ? "text-red-400" : "text-text-secondary"}`}>
+                    <div className={`text-sm ${isOverdue ? "text-status-negative" : "text-text-secondary"}`}>
                       {isOverdue ? "Overdue" : "Due"} {format(new Date(sub.nextDue), "d MMM")}
                     </div>
                   )}
@@ -128,7 +128,7 @@ export default async function MoneyPage() {
             {commitments.map((c) => (
               <div key={c.id} className="flex items-center justify-between py-1">
                 <div className="text-base text-text-primary">{c.description}</div>
-                <div className="text-base font-mono text-amber-300">{c.financialImpact}</div>
+                <div className="text-base font-mono text-status-warning">{c.financialImpact}</div>
               </div>
             ))}
           </div>

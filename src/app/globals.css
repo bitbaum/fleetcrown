@@ -58,6 +58,14 @@
   --color-accent-hover:    var(--accent-hover);
   --color-accent-muted:    var(--accent-muted);
   --color-accent-text:     var(--accent-text);
+  /* Status tokens — the only chromatic colors in the system */
+  --color-status-positive:        var(--status-positive);
+  --color-status-positive-subtle: var(--status-positive-subtle);
+  --color-status-warning:         var(--status-warning);
+  --color-status-warning-subtle:  var(--status-warning-subtle);
+  --color-status-negative:        var(--status-negative);
+  --color-status-negative-subtle: var(--status-negative-subtle);
+  --color-status-neutral:         var(--status-neutral);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -133,6 +141,14 @@
   --accent-hover:      oklch(0.20 0 0);
   --accent-muted:      oklch(0.10 0 0 / 8%);
   --accent-text:       oklch(0.10 0 0);
+  /* Status — light */
+  --status-positive:        oklch(0.44 0.16 145);
+  --status-positive-subtle: oklch(0.44 0.16 145 / 8%);
+  --status-warning:         oklch(0.46 0.14 68);
+  --status-warning-subtle:  oklch(0.46 0.14 68 / 8%);
+  --status-negative:        oklch(0.50 0.18 25);
+  --status-negative-subtle: oklch(0.50 0.18 25 / 8%);
+  --status-neutral:         oklch(0.58 0 0);
 }
 
 /* ─── Dark mode ───────────────────────────────────────────────────────────── */
@@ -188,6 +204,14 @@
   --accent-hover:      oklch(1 0 0);
   --accent-muted:      oklch(1 0 0 / 8%);
   --accent-text:       oklch(0.75 0 0);
+  /* Status — dark */
+  --status-positive:        oklch(0.72 0.14 145);
+  --status-positive-subtle: oklch(0.72 0.14 145 / 12%);
+  --status-warning:         oklch(0.78 0.12 68);
+  --status-warning-subtle:  oklch(0.78 0.12 68 / 12%);
+  --status-negative:        oklch(0.68 0.16 25);
+  --status-negative-subtle: oklch(0.68 0.16 25 / 12%);
+  --status-neutral:         oklch(0.42 0 0);
   --shadow-panel: 0 1px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 6%);
   --shadow-panel-strong: 0 2px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 8%);
 }
@@ -290,6 +314,79 @@
 
   /* Misc */
   .ui-hairline { @apply border-border-subtle; }
+
+  /* Status dots — used inline with text for agent/project state */
+  .ui-dot          { @apply inline-block h-1.5 w-1.5 rounded-full shrink-0; }
+  .ui-dot-positive { background-color: var(--status-positive); }
+  .ui-dot-warning  { background-color: var(--status-warning); }
+  .ui-dot-negative { background-color: var(--status-negative); }
+  .ui-dot-neutral  { background-color: var(--status-neutral); }
+
+  /* Status tags — small pill labels */
+  .ui-tag {
+    @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;
+  }
+  .ui-tag-positive {
+    color: var(--status-positive);
+    background-color: var(--status-positive-subtle);
+    border-color: var(--status-positive);
+    border-opacity: 0.2;
+  }
+  .ui-tag-warning {
+    color: var(--status-warning);
+    background-color: var(--status-warning-subtle);
+    border-color: var(--status-warning);
+    border-opacity: 0.2;
+  }
+  .ui-tag-negative {
+    color: var(--status-negative);
+    background-color: var(--status-negative-subtle);
+    border-color: var(--status-negative);
+    border-opacity: 0.2;
+  }
+  .ui-tag-neutral {
+    @apply text-text-muted border-border-subtle bg-surface-overlay;
+  }
+
+  /* Error / notice boxes */
+  .ui-box-error {
+    @apply rounded-lg px-3 py-2.5 text-sm;
+    color: var(--status-negative);
+    background-color: var(--status-negative-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-negative) 20%, transparent);
+  }
+  .ui-box-warning {
+    @apply rounded-lg px-3 py-2.5 text-sm;
+    color: var(--status-warning);
+    background-color: var(--status-warning-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-warning) 20%, transparent);
+  }
+  .ui-box-success {
+    @apply rounded-lg px-3 py-2.5 text-sm;
+    color: var(--status-positive);
+    background-color: var(--status-positive-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-positive) 20%, transparent);
+  }
+
+  /* Confirm/destructive action buttons */
+  .ui-btn-confirm {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    color: var(--status-positive);
+    background-color: var(--status-positive-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
+  }
+  .ui-btn-confirm:hover {
+    background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
+  }
+  .ui-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    color: var(--status-negative);
+    background-color: var(--status-negative-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-negative) 25%, transparent);
+  }
+  .ui-btn-danger:hover {
+    background-color: color-mix(in oklch, var(--status-negative) 18%, transparent);
+  }
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import type { OrchestrationTaskRequest } from "@/lib/orchestration";
+import {
+  ORCHESTRATION_ADAPTER_IDS,
+  ORCHESTRATION_TASK_INTENT_IDS,
+  type OrchestrationTaskRequest,
+} from "@/lib/orchestration";
 import { executeOpenClawRun } from "@/lib/orchestration/run-openclaw-execution";
 
 const ExecuteOrchestrationBody = z.object({
@@ -8,19 +12,8 @@ const ExecuteOrchestrationBody = z.object({
   request: z.object({
     projectKey: z.string(),
     projectPath: z.string(),
-    adapter: z.enum(["claude", "codex", "openclaw", "gemini"]),
-    intent: z.enum([
-      "next_best",
-      "test_and_fix",
-      "quality",
-      "full_audit",
-      "product",
-      "ux_review",
-      "deploy_check",
-      "commit_push",
-      "close_session",
-      "continue",
-    ]),
+    adapter: z.enum(ORCHESTRATION_ADAPTER_IDS),
+    intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
     model: z.string().optional(),
     customInstructions: z.string().optional(),
   }),

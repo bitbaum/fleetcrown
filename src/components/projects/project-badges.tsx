@@ -15,7 +15,7 @@ export function MaturityBar({ value }: { value: string }) {
             key={i}
             className={`h-1 w-2 rounded-sm ${
               i < score
-                ? score >= 8 ? "bg-emerald-500" : score >= 5 ? "bg-yellow-500" : "bg-red-500"
+                ? score >= 8 ? "bg-status-positive" : score >= 5 ? "bg-status-warning" : "bg-status-negative"
                 : "bg-white/10"
             }`}
           />
@@ -31,10 +31,10 @@ export function StatusBadge({ value }: { value: string }) {
   const isProduction = v.includes("production") || v.includes("active");
   const isEarly = v.includes("early") || v.includes("planning") || v.includes("blueprint") || v.includes("pre-launch");
   const cls = isProduction
-    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
+    ? "bg-status-positive-subtle text-status-positive border-status-positive/25"
     : isEarly
-    ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/25"
-    : "bg-blue-500/15 text-blue-400 border-blue-500/25";
+    ? "bg-status-warning-subtle text-status-warning border-status-warning/25"
+    : "bg-accent-muted text-accent-text border-accent-primary/25";
   return (
     <span className={`px-1.5 py-0.5 rounded border text-[10px] font-medium truncate max-w-[180px] ${cls}`}>
       {value}
@@ -61,9 +61,9 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
 
 export function HealthBadge({ signal }: { signal: HealthSignal }) {
   const styles: Record<HealthSignal["kind"], string> = {
-    security:   "bg-red-500/15 text-red-400 border-red-500/25",
-    broken:     "bg-yellow-500/15 text-yellow-400 border-yellow-500/25",
-    deployment: "bg-orange-500/15 text-orange-400 border-orange-500/25",
+    security:   "bg-status-negative-subtle text-status-negative border-status-negative/25",
+    broken:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
+    deployment: "bg-status-warning-subtle text-status-warning border-status-warning/25",
   };
   const icons: Record<HealthSignal["kind"], string> = {
     security:   "🔒",

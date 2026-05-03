@@ -36,22 +36,25 @@ export const ORCHESTRATION_CAPABILITIES = [
 
 export type OrchestrationCapability = (typeof ORCHESTRATION_CAPABILITIES)[number];
 
-export type AdapterId = "claude" | "codex" | "openclaw" | "gemini";
+export const ORCHESTRATION_ADAPTER_IDS = ["claude", "codex", "openclaw", "gemini"] as const;
+export type AdapterId = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
 export type AdapterCapabilities = Record<OrchestrationCapability, boolean>;
 
-export type OrchestrationTaskIntentId =
-  | "next_best"
-  | "test_and_fix"
-  | "quality"
-  | "full_audit"
-  | "product"
-  | "ux_review"
-  | "deploy_check"
-  | "commit_push"
-  | "close_session"
-  | "continue"
-  | "custom";
+export const ORCHESTRATION_TASK_INTENT_IDS = [
+  "next_best",
+  "test_and_fix",
+  "quality",
+  "full_audit",
+  "product",
+  "ux_review",
+  "deploy_check",
+  "commit_push",
+  "close_session",
+  "continue",
+  "custom",
+] as const;
+export type OrchestrationTaskIntentId = (typeof ORCHESTRATION_TASK_INTENT_IDS)[number];
 
 export type OrchestrationTaskIntent = {
   id: OrchestrationTaskIntentId;
@@ -70,13 +73,10 @@ export type OrchestrationTaskRequest = {
   customInstructions?: string;
 };
 
-export type OrchestrationTaskSummary = {
-  done: string;
-  next: string;
-  tests: string;
-  todos: string;
-  health: string;
-};
+export const ORCHESTRATION_TASK_SUMMARY_FIELDS = ["done", "next", "tests", "todos", "health"] as const;
+export type OrchestrationTaskSummaryField = (typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number];
+
+export type OrchestrationTaskSummary = Record<OrchestrationTaskSummaryField, string>;
 
 export type OrchestrationTaskStatus = {
   state: OrchestrationState;
