@@ -9,7 +9,19 @@ import type { ControlData, ProjectState } from "@/app/api/control/route";
 import type { FastProjectState } from "@/lib/control-fast-state";
 type Agent = "codex" | "claude";
 import { ProjectCard } from "./ProjectCard";
+import { ProjectTile } from "./ProjectTile";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+
+const ACTIVE_WINDOW_S = 300; // 5 min — project shows as full card if recently active
+
+function isActiveProject(p: ProjectState, nowS: number): boolean {
+  if (p.agentRunning) return true;
+  if (p.readyAt !== null && nowS - p.readyAt < ACTIVE_WINDOW_S) return true;
+  if (p.closingAt !== null && nowS - p.closingAt < ACTIVE_WINDOW_S) return true;
+  if (p.closedAt !== null && nowS - p.closedAt < ACTIVE_WINDOW_S) return true;
+  if (p.currentPrompt !== null) return true;
+  return false;
+}
 
 export function ControlPanel() {
   const [data, setData] = useState<ControlData | null>(null);
@@ -24,6 +36,8 @@ export function ControlPanel() {
   const [lastTabResultsAt, setLastTabResultsAt] = useState<number | null>(null);
   const [brainOpen, setBrainOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [idleOpen, setIdleOpen] = useState(true);
+  const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -525,35 +539,60 @@ export function ControlPanel() {
       )}
 
       {sorted ? (
-        sorted.length > 0 ? (
-          <div className="space-y-3">
-            {sorted.map((project) => (
-              <ProjectCard
-                key={project.tab}
-                project={project}
-                prompts={data!.prompts}
-                zellijTabs={data!.zellijTabs}
+        sorted.length > 0 ? (() => {
+          const nowS2 = Math.floor(Date.now() / 1000);
+          const activeProjects = sorted.filter((p) => isActiveProject(p, nowS2) || expandedTabs.has(p.tab));
+          const idleProjects = sorted.filter((p) => !isActiveProject(p, nowS2) && !expandedTabs.has(p.tab));
 
-                currentAdapter={data?.agentConfig.agent ?? "claude"}
-                onInject={inject}
-                onRunWithBrain={async (projectState, intent) => {
-                  try {
-                    await runWithBrain(projectState, intent);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : "Failed to run task");
-                  }
-                }}
-                onRunCustomPrompt={async (projectState, prompt, agent) => {
-                  try {
-                    await runCustomPrompt(projectState, prompt, agent);
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : "Failed to run prompt");
-                  }
-                }}
-              />
-            ))}
-          </div>
-        ) : (
+          const cardProps = (project: ProjectState) => ({
+            project,
+            prompts: data!.prompts,
+            zellijTabs: data!.zellijTabs,
+            currentAdapter: data?.agentConfig.agent ?? "claude",
+            onInject: inject,
+            onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
+              try { await runWithBrain(projectState, intent); }
+              catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
+            },
+            onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
+              try { await runCustomPrompt(projectState, prompt, ag); }
+              catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
+            },
+          });
+
+          return (
+            <div className="space-y-3">
+              {/* Active projects — full cards */}
+              {activeProjects.map((project) => (
+                <ProjectCard key={project.tab} {...cardProps(project)} />
+              ))}
+
+              {/* Idle projects — compact tile grid */}
+              {idleProjects.length > 0 && (
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setIdleOpen((v) => !v)}
+                    className="flex items-center gap-1 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
+                  >
+                    <span>Idle ({idleProjects.length})</span>
+                    {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
+                  {idleOpen && (
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {idleProjects.map((project) => (
+                        <ProjectTile
+                          key={project.tab}
+                          project={project}
+                          onExpand={() => setExpandedTabs((s) => new Set([...s, project.tab]))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })() : (
           <p className="py-8 text-center text-sm text-text-tertiary">
             No projects configured for the control panel
           </p>
