@@ -223,8 +223,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 15px;
-    /* Flat — no gradient. Contrast comes from surface layers. */
+    font-size: 16px;
   }
   html {
     @apply font-sans;
@@ -233,7 +232,7 @@
     letter-spacing: var(--tracking-display);
     line-height: 1.08;
     font-family: var(--font-heading);
-    font-weight: 600;
+    font-weight: 700;
   }
   p, li {
     line-height: 1.65;
@@ -253,13 +252,13 @@
 
   /* Typography */
   .ui-kicker {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     @apply font-semibold uppercase text-text-muted;
     letter-spacing: var(--tracking-label);
   }
   .ui-page-header   { @apply flex items-start justify-between gap-4; }
-  .ui-page-title    { @apply text-3xl sm:text-4xl font-semibold text-text-primary; }
-  .ui-page-subtitle { @apply mt-2 max-w-2xl text-base text-text-secondary; }
+  .ui-page-title    { @apply text-4xl sm:text-5xl font-bold text-text-primary; }
+  .ui-page-subtitle { @apply mt-3 max-w-2xl text-lg text-text-secondary; }
 
   /* Panels */
   .ui-panel {

@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
+import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import type { AdapterAccountType } from "next-auth/adapters";
 import { eq, and } from "drizzle-orm";
@@ -16,6 +17,7 @@ declare module "next-auth" {
   }
 }
 
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -23,10 +25,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
+  // JWT strategy required for Credentials provider to work alongside DB adapter
+  session: { strategy: "jwt" },
   providers: [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      clientId: process.env.GITHUB_CLIENT_ID ?? "",
+      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+    }),
+    Credentials({
+      id: "local",
+      name: "Local access",
+      credentials: {
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const localPassword = process.env.LOCAL_AUTH_PASSWORD;
+        if (!localPassword || credentials.password !== localPassword) return null;
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.isDefault, true))
+          .limit(1);
+        if (!user) return null;
+        return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
+      },
     }),
   ],
   pages: {
@@ -34,14 +56,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      // On first-ever GitHub sign-in, absorb the new OAuth identity into the
-      // existing default user (is_default=true) so all pre-auth data stays accessible.
-      // If this GitHub account is already linked, the normal flow handles it.
       if (account?.provider === "github" && account.providerAccountId) {
         const [existing] = await db
           .select({ userId: accounts.userId })
           .from(accounts)
-          .where(and(eq(accounts.provider, account.provider), eq(accounts.providerAccountId, account.providerAccountId)))
+          .where(and(
+            eq(accounts.provider, account.provider),
+            eq(accounts.providerAccountId, account.providerAccountId),
+          ))
           .limit(1);
 
         if (!existing) {
@@ -59,7 +81,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               updatedAt: new Date(),
             }).where(eq(users.id, defaultUser.id));
 
-            // Pre-insert account row so the adapter finds the default user via getUserByAccount.
             await db.insert(accounts).values({
               userId: defaultUser.id,
               type: account.type as AdapterAccountType,
@@ -78,15 +99,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    session({ session, user }) {
-      const u = user as typeof user & { username?: string | null; onboardedAt?: Date | null };
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+        const [dbUser] = await db
+          .select({ username: users.username, onboardedAt: users.onboardedAt })
+          .from(users)
+          .where(eq(users.id, user.id))
+          .limit(1);
+        if (dbUser) {
+          token.username = dbUser.username ?? null;
+          token.onboardedAt = dbUser.onboardedAt ?? null;
+        }
+      }
+      return token;
+    },
+    session({ session, token }) {
       return {
         ...session,
         user: {
           ...session.user,
-          id: u.id,
-          username: u.username ?? null,
-          onboardedAt: u.onboardedAt ?? null,
+          id: (token.id as string) ?? "",
+          username: (token.username as string | null) ?? null,
+          onboardedAt: (token.onboardedAt as Date | null) ?? null,
         },
       };
     },

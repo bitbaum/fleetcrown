@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { signIn } from "@/auth";
+import { signIn } from "next-auth/react";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 function GithubIcon() {
   return (
@@ -9,55 +13,208 @@ function GithubIcon() {
   );
 }
 
-export const dynamic = "force-dynamic";
+function SignInForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
+  const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/today";
 
-function safeRedirectTarget(callbackUrl: string | undefined): string {
-  if (!callbackUrl) return "/today";
-  if (!callbackUrl.startsWith("/")) return "/today";
-  if (callbackUrl.startsWith("//")) return "/today";
-  return callbackUrl;
-}
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
 
-export default function SignInPage({
-  searchParams,
-}: {
-  searchParams: { callbackUrl?: string };
-}) {
+  async function handleLocal(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const res = await signIn("local", { password, redirect: false });
+    setLoading(false);
+    if (res?.ok) {
+      router.push(safeCallback);
+    } else {
+      setError("Wrong password.");
+    }
+  }
+
+  async function handleGithub() {
+    setGithubLoading(true);
+    await signIn("github", { callbackUrl: safeCallback });
+  }
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-surface-page px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="space-y-2 text-center">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border-subtle bg-surface-raised text-xl">
-            ✦
-          </div>
-          <h1 className="text-2xl font-semibold text-text-primary">Cockpit</h1>
-          <p className="text-sm text-text-secondary">Your AI fleet. One dashboard.</p>
-        </div>
+    <div
+      className="relative min-h-screen overflow-hidden text-white"
+      style={{ background: "#050505" }}
+    >
+      {/* Background glows — same as landing */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div
+          className="absolute left-1/2 top-0 -translate-x-1/2"
+          style={{
+            width: "700px",
+            height: "500px",
+            background: "radial-gradient(ellipse at center top, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)," +
+              "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+            backgroundSize: "80px 80px",
+            maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
+          }}
+        />
+      </div>
 
-        <div className="ui-panel p-6 space-y-4">
-          <form
-            action={async () => {
-              "use server";
-              await signIn("github", { redirectTo: safeRedirectTarget(searchParams.callbackUrl) });
+      {/* Nav */}
+      <nav className="relative z-10 px-8 py-6 sm:px-14">
+        <Link
+          href="/"
+          className="text-base font-bold tracking-tight"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          ✦ Cockpit
+        </Link>
+      </nav>
+
+      {/* Card */}
+      <main className="relative z-10 flex min-h-[calc(100vh-76px)] items-center justify-center px-4 pb-16">
+        <div className="w-full max-w-[400px]">
+
+          {/* Header */}
+          <div className="mb-10 text-center">
+            <h1
+              className="font-bold"
+              style={{
+                fontSize: "clamp(36px, 5vw, 48px)",
+                lineHeight: 1.0,
+                letterSpacing: "-0.04em",
+                fontFamily: "var(--font-space-display)",
+              }}
+            >
+              Welcome back
+            </h1>
+            <p
+              className="mt-3 text-base"
+              style={{ color: "rgba(255,255,255,0.38)" }}
+            >
+              Sign in to your Cockpit.
+            </p>
+          </div>
+
+          {/* Card */}
+          <div
+            className="rounded-2xl p-8 space-y-6"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              backdropFilter: "blur(12px)",
             }}
           >
-            <button type="submit" className="ui-btn-primary w-full py-3 gap-2.5">
-              <GithubIcon />
-              Continue with GitHub
-            </button>
-          </form>
+            {/* Password form */}
+            <form onSubmit={handleLocal} className="space-y-3">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  Local password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter password…"
+                  autoComplete="current-password"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                    transition: "border-color 0.15s",
+                  }}
+                  onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)"; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
+                />
+              </div>
 
-          <p className="text-center text-xs text-text-muted">
-            Open source · No vendor lock-in · Pay only for model usage
+              {error && (
+                <p className="text-sm" style={{ color: "oklch(0.68 0.16 25)" }}>
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !password}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
+                style={{ background: "#ffffff" }}
+              >
+                {loading ? "Signing in…" : "Sign in →"}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
+                or continue with
+              </span>
+              <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
+            </div>
+
+            {/* GitHub */}
+            <button
+              type="button"
+              onClick={handleGithub}
+              disabled={githubLoading}
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-40"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                color: "rgba(255,255,255,0.65)",
+              }}
+              onFocus={undefined}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)";
+                e.currentTarget.style.color = "rgba(255,255,255,0.90)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+                e.currentTarget.style.color = "rgba(255,255,255,0.65)";
+              }}
+            >
+              <GithubIcon />
+              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
+            </button>
+          </div>
+
+          <p
+            className="mt-6 text-center text-sm"
+            style={{ color: "rgba(255,255,255,0.18)" }}
+          >
+            <Link
+              href="/"
+              className="transition-colors hover:text-white/50"
+            >
+              ← Back to home
+            </Link>
           </p>
         </div>
-
-        <p className="text-center text-xs text-text-tertiary">
-          <Link href="/" className="hover:text-text-secondary transition-colors">
-            ← Back to home
-          </Link>
-        </p>
-      </div>
+      </main>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense>
+      <SignInForm />
+    </Suspense>
   );
 }
