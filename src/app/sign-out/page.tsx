@@ -17,12 +17,8 @@ export default function SignOutPage() {
       <div className="mb-10 text-center">
         <AuthIconBadge>✦</AuthIconBadge>
         <h1
-          className="font-bold"
-          style={{
-            fontSize: "clamp(32px, 5vw, 44px)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.04em",
-          }}
+          className="font-bold leading-[1.05] tracking-[-0.04em]"
+          style={{ fontSize: "clamp(32px, 5vw, 44px)" }}
         >
           Sign out?
         </h1>

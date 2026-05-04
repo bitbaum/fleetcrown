@@ -48,13 +48,8 @@ function SignInForm() {
     <AuthShell showHomeLink>
       <div className="mb-10 text-center">
         <h1
-          className="font-bold"
-          style={{
-            fontSize: "clamp(36px, 5vw, 48px)",
-            lineHeight: 1.0,
-            letterSpacing: "-0.04em",
-            fontFamily: "var(--font-space-display)",
-          }}
+          className="font-bold leading-none tracking-[-0.04em]"
+          style={{ fontSize: "clamp(36px, 5vw, 48px)" }}
         >
           Welcome back
         </h1>

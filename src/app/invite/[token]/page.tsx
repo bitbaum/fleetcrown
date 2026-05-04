@@ -74,12 +74,8 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       <div className="mb-10 text-center">
         <AuthIconBadge>✦</AuthIconBadge>
         <h1
-          className="font-bold"
-          style={{
-            fontSize: "clamp(28px, 5vw, 40px)",
-            lineHeight: 1.05,
-            letterSpacing: "-0.04em",
-          }}
+          className="font-bold leading-[1.05] tracking-[-0.04em]"
+          style={{ fontSize: "clamp(28px, 5vw, 40px)" }}
         >
           {heading}
         </h1>

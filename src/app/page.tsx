@@ -13,7 +13,7 @@ export default async function LandingPage() {
   if (session?.user) redirect("/today");
 
   return (
-    <div className="relative min-h-screen overflow-hidden text-white" style={{ background: "#050505" }}>
+    <div className="relative min-h-screen overflow-hidden text-white bg-[#050505]">
 
       {/* Background: layered glows */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -51,20 +51,12 @@ export default async function LandingPage() {
 
       {/* Nav */}
       <nav className="relative z-10 flex items-center justify-between px-8 py-6 sm:px-14">
-        <span
-          className="text-base font-bold tracking-tight"
-          style={{ letterSpacing: "-0.02em" }}
-        >
+        <span className="text-base font-bold tracking-[-0.02em]">
           ✦ Cockpit
         </span>
         <Link
           href="/sign-in"
-          className="rounded-full px-5 py-2 text-sm font-medium transition-all"
-          style={{
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(255,255,255,0.55)",
-          }}
-          onMouseEnter={undefined}
+          className="rounded-full px-5 py-2 text-sm font-medium transition-all border border-white/[0.12] text-white/55 hover:border-white/[0.22] hover:text-white/80"
         >
           Sign in
         </Link>
@@ -74,18 +66,8 @@ export default async function LandingPage() {
       <main className="relative z-10 flex min-h-[calc(100vh-76px)] flex-col items-center justify-center px-6 pb-28 text-center">
 
         {/* Pill */}
-        <div
-          className="mb-12 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium"
-          style={{
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.45)",
-            letterSpacing: "0.02em",
-          }}
-        >
-          <span
-            className="h-1.5 w-1.5 rounded-full bg-status-positive"
-          />
+        <div className="mb-12 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium bg-white/[0.05] border border-white/[0.10] text-white/45 tracking-[0.02em]">
+          <span className="h-1.5 w-1.5 rounded-full bg-status-positive" />
           Private · Self-hosted · Open source
         </div>
 
@@ -101,14 +83,11 @@ export default async function LandingPage() {
         >
           Command your
           <br />
-          <span style={{ color: "rgba(255,255,255,0.28)" }}>AI fleet.</span>
+          <span className="text-white/28">AI fleet.</span>
         </h1>
 
         {/* Subline */}
-        <p
-          className="mt-8 max-w-md text-lg leading-relaxed"
-          style={{ color: "rgba(255,255,255,0.40)", fontSize: "1.125rem" }}
-        >
+        <p className="mt-8 max-w-md text-lg leading-relaxed text-white/40">
           Add projects. Launch agents. Watch them build.
           <br className="hidden sm:block" />
           Stay in command — no code required.
@@ -118,8 +97,7 @@ export default async function LandingPage() {
         <div className="mt-10 flex items-center gap-3">
           <Link
             href="/sign-in"
-            className="rounded-full px-8 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-85"
-            style={{ background: "#ffffff" }}
+            className="rounded-full px-8 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-85 bg-white"
           >
             Get started →
           </Link>
@@ -127,20 +105,14 @@ export default async function LandingPage() {
             href="https://github.com/g-but/cockpit"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full px-8 py-3 text-sm font-medium transition-all"
-            style={{
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "rgba(255,255,255,0.50)",
-            }}
+            className="rounded-full px-8 py-3 text-sm font-medium transition-all border border-white/[0.12] text-white/50 hover:border-white/[0.22] hover:text-white/80"
           >
             View source
           </a>
         </div>
 
         {/* Features row */}
-        <div
-          className="mt-24 grid w-full max-w-3xl gap-4 sm:grid-cols-3"
-        >
+        <div className="mt-24 grid w-full max-w-3xl gap-4 sm:grid-cols-3">
           {[
             { icon: "⊞", title: "Fleet view", body: "All your AI agents on one screen. See what's running, what's ready, what needs attention." },
             { icon: "⚡", title: "Auto-continue", body: "Agents stop, you get a popup. One keypress to resume, redirect, or close the session." },
@@ -148,39 +120,17 @@ export default async function LandingPage() {
           ].map(({ icon, title, body }) => (
             <div
               key={title}
-              className="rounded-2xl p-6 text-left"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.07)",
-              }}
+              className="rounded-2xl p-6 text-left bg-white/[0.03] border border-white/[0.07]"
             >
-              <div
-                className="mb-3 text-xl"
-                style={{ color: "rgba(255,255,255,0.60)" }}
-              >
-                {icon}
-              </div>
-              <div
-                className="mb-1.5 text-sm font-semibold"
-                style={{ color: "rgba(255,255,255,0.80)" }}
-              >
-                {title}
-              </div>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.35)" }}
-              >
-                {body}
-              </p>
+              <div className="mb-3 text-xl text-white/60">{icon}</div>
+              <div className="mb-1.5 text-sm font-semibold text-white/80">{title}</div>
+              <p className="text-sm leading-relaxed text-white/35">{body}</p>
             </div>
           ))}
         </div>
 
         {/* Footer line */}
-        <p
-          className="mt-16 text-xs"
-          style={{ color: "rgba(255,255,255,0.18)", letterSpacing: "0.04em" }}
-        >
+        <p className="mt-16 text-xs text-white/[0.18] tracking-[0.04em]">
           BUILT ON CLAUDE · RUNS ON YOUR MACHINE · NO DATA LEAVES YOUR HOME
         </p>
       </main>
