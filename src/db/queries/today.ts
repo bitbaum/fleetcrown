@@ -169,7 +169,7 @@ export async function getTodaySummary(userId: string) {
         SELECT e.id
         FROM entities e
         JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${userId}
-        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND (e.external_id IS NULL OR e.external_id != ${DEFAULT_USER_EXTERNAL_ID})
         GROUP BY e.id
         HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})
       ) sub

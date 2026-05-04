@@ -81,7 +81,7 @@ export async function searchPeople(
         SELECT e.id
         FROM entities e
         LEFT JOIN interactions i ON i.entity_id = e.id
-        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND (e.external_id IS NULL OR e.external_id != ${DEFAULT_USER_EXTERNAL_ID})
         ${nameFilter}
         GROUP BY e.id
         ${having}
@@ -104,7 +104,7 @@ export async function searchPeople(
               WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
       FROM entities e
       LEFT JOIN interactions i ON i.entity_id = e.id
-      WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+      WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND (e.external_id IS NULL OR e.external_id != ${DEFAULT_USER_EXTERNAL_ID})
       ${nameFilter}
       GROUP BY e.id
       ${having}
