@@ -324,6 +324,10 @@
   .ui-btn-chip {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
   }
+  /* Inline-edit cancel/close — rounded (no radius), text-only hover */
+  .ui-btn-inline-cancel {
+    @apply shrink-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
+  }
   /* Icon-only square button */
   .ui-btn-icon {
     @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
@@ -386,6 +390,8 @@
   }
 
   /* Stats */
+  /* Horizontal label+value row (e.g. "RAM — 4/16 GiB") above a progress bar */
+  .ui-label-row  { @apply mb-2 flex justify-between text-sm text-text-tertiary; }
   .ui-stat-grid  { @apply grid gap-2 sm:grid-cols-3; }
   .ui-stat-card  { @apply rounded-xl border border-border-subtle bg-surface-base px-4 py-3; }
   .ui-stat-label { @apply text-xs text-text-tertiary; }

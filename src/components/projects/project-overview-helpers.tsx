@@ -54,7 +54,7 @@ export function AddAttrInline({
         className="flex-1 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
       />
       {onCancel && (
-        <button onClick={onCancel} className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
+        <button onClick={onCancel} className="ui-btn-inline-cancel">
           <X className="h-3 w-3" />
         </button>
       )}

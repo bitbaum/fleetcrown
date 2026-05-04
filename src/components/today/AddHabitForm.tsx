@@ -65,7 +65,7 @@ export function AddHabitForm({
         >
           {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
         </button>
-        <button onClick={close} className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
+        <button onClick={close} className="ui-btn-inline-cancel">
           <X className="h-3 w-3" />
         </button>
       </div>

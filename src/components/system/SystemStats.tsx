@@ -65,7 +65,7 @@ export function SystemStats() {
         {mem ? (
           <div className="space-y-3">
             <div>
-              <div className="mb-2 flex justify-between text-sm text-text-tertiary">
+              <div className="ui-label-row">
                 <span>RAM</span>
                 <span>{mibToGib(mem.usedMiB)} / {mibToGib(mem.totalMiB)} GiB</span>
               </div>
@@ -73,7 +73,7 @@ export function SystemStats() {
             </div>
             {swap && swap.totalMiB > 0 && (
               <div>
-                <div className="mb-2 flex justify-between text-sm text-text-tertiary">
+                <div className="ui-label-row">
                   <span>Swap</span>
                   <span>{mibToGib(swap.usedMiB)} / {mibToGib(swap.totalMiB)} GiB</span>
                 </div>
@@ -90,7 +90,7 @@ export function SystemStats() {
         <CardHeader icon={HardDrive} title="Disk" />
         {disk ? (
           <div className="space-y-2">
-            <div className="mb-2 flex justify-between text-sm text-text-tertiary">
+            <div className="ui-label-row">
               <span>/</span>
               <span>{disk.used} / {disk.size} ({disk.avail} free)</span>
             </div>

@@ -197,7 +197,7 @@ export function AddMilestoneInline({
       </button>
       <button
         onClick={() => { setOpen(false); setValue(""); }}
-        className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
+        className="ui-btn-inline-cancel"
       >
         <X className="h-3 w-3" />
       </button>
