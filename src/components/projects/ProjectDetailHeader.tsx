@@ -82,7 +82,7 @@ export function ProjectDetailHeader({
           <div className="flex items-center gap-2 flex-wrap">
             <NameEditor value={displayName} editable={!!data && !loading} onSave={saveName} />
             {owner && (
-              <span className="ui-micro-badge border-border-subtle text-text-muted shrink-0">{owner}</span>
+              <span className="ui-micro-badge border-border-subtle text-text-tertiary shrink-0">{owner}</span>
             )}
           </div>
           <DescriptionEditor value={description} onSave={saveDescription} />

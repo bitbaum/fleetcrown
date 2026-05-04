@@ -104,7 +104,7 @@ export function OverviewTab({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-text-muted italic">No details recorded yet.</p>
+        <p className="text-xs text-text-secondary italic">No details recorded yet.</p>
       )}
 
       {missingSuggested.length > 0 && (
@@ -194,7 +194,7 @@ export function OverviewTab({
         <div className="space-y-3">
           {activityList.map((i, idx) => (
             <div key={idx} className="text-xs">
-              <div className="text-text-muted mb-0.5">
+              <div className="text-text-tertiary mb-0.5">
                 {i.channel} · {new Date(i.occurredAt).toLocaleDateString()}
               </div>
               {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}

@@ -178,19 +178,19 @@ export function JobDetail({
           {/* Config */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="ui-data-cell">
-              <span className="text-text-muted">Model</span>
+              <span className="text-text-tertiary">Model</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.model}</span>
             </div>
             <div className="ui-data-cell">
-              <span className="text-text-muted">Thinking</span>
+              <span className="text-text-tertiary">Thinking</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.thinking}</span>
             </div>
             <div className="ui-data-cell">
-              <span className="text-text-muted">Timeout</span>
+              <span className="text-text-tertiary">Timeout</span>
               <span className="ml-2 text-text-secondary">{job.payload.timeoutSeconds}s</span>
             </div>
             <div className="ui-data-cell">
-              <span className="text-text-muted">Delivery</span>
+              <span className="text-text-tertiary">Delivery</span>
               <span className="ml-2 text-text-secondary capitalize">{job.delivery.channel}</span>
             </div>
           </div>

@@ -26,7 +26,7 @@ export function ActivityLogPanel({
         onClick={onToggle}
         className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
-        Activity log <span className="ml-1 text-text-muted">({activities.length})</span>
+        Activity log <span className="ml-1 text-text-tertiary">({activities.length})</span>
         {open ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
       </button>
       {open && (
@@ -38,7 +38,7 @@ export function ActivityLogPanel({
               <span className="truncate text-text-secondary">
                 {item.customPrompt ? item.customPrompt.slice(0, 60) : item.intent}
               </span>
-              <span className="ml-auto shrink-0 text-text-muted">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
+              <span className="ml-auto shrink-0 text-text-tertiary">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
             </div>
           ))}
         </div>

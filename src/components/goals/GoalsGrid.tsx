@@ -64,16 +64,16 @@ export function GoalsGrid({
         </div>
       ) : q && activeGoals.length > 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-2 py-6 text-text-muted">
-            <Target className="h-8 w-8" />
-            <div className="text-sm">No active goals match &ldquo;{q}&rdquo;</div>
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Target className="h-8 w-8 text-text-tertiary" />
+            <div className="text-sm text-text-secondary">No active goals match &ldquo;{q}&rdquo;</div>
           </div>
         </Card>
       ) : activeGoals.length === 0 && completedGoals.length > 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-2 py-6 text-text-muted">
-            <Target className="h-8 w-8" />
-            <div className="text-sm">All goals completed</div>
+          <div className="flex flex-col items-center gap-2 py-6">
+            <Target className="h-8 w-8 text-text-tertiary" />
+            <div className="text-sm text-text-secondary">All goals completed</div>
           </div>
         </Card>
       ) : null}

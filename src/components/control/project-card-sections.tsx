@@ -95,7 +95,7 @@ export function ProjectCardHeader({
                 >
                   {syncing ? "Pulling…" : "git pull"}
                 </button>
-                {syncResult && <span className="text-xs text-text-muted">{syncResult}</span>}
+                {syncResult && <span className="text-xs text-text-secondary">{syncResult}</span>}
               </div>
             )}
           </div>
