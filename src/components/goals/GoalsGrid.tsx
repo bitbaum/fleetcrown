@@ -50,7 +50,7 @@ export function GoalsGrid({
           onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-lg border border-border-subtle bg-surface-base pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-border-strong placeholder:text-text-muted"
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
+        <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
           {q ? `${matchCount} / ${totalActive}` : totalActive}
         </span>
       </div>
