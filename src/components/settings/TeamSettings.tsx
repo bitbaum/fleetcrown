@@ -86,12 +86,8 @@ export function TeamSettings({ invitations: initial }: Props) {
                   )}
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
-                    used
-                      ? "bg-surface-overlay text-text-muted"
-                      : expired
-                      ? "bg-status-negative/10 text-status-negative"
-                      : "bg-status-positive/10 text-status-positive"
+                  className={`ui-tag shrink-0 ${
+                    used ? "ui-tag-neutral" : expired ? "ui-tag-negative" : "ui-tag-positive"
                   }`}
                 >
                   {used ? "used" : expired ? "expired" : "active"}
