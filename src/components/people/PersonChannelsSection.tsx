@@ -104,7 +104,7 @@ export function ChannelsSection({
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="mt-0.5 flex items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-accent-text"
+          className="ui-btn-add mt-0.5"
         >
           <Plus className="h-3 w-3" /> Add channel
         </button>

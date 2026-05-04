@@ -23,7 +23,7 @@ const TYPE_COLOR: Record<EntityType, string> = {
 function TypeBadge({ type }: { type: EntityType }) {
   const cls = TYPE_COLOR[type] ?? "bg-surface-overlay text-text-tertiary border-border-subtle";
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>
+    <span className={`ui-tag ${cls}`}>
       {type}
     </span>
   );
