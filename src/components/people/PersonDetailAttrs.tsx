@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { isChannelAttrKey } from "@/config/channels";
-import { ICON_BUTTON_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "./PersonDetailHelpers";
 import { formatKey } from "./person-detail-types";
@@ -94,13 +93,13 @@ export function DetailAttrs({
               >
                 {saving ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
               </button>
-              <button onClick={() => setEditingKey(null)} className={`shrink-0 ${ICON_BUTTON_CLASS}`}>
+              <button onClick={() => setEditingKey(null)} className="shrink-0 ui-btn-icon">
                 <X className="h-2.5 w-2.5" />
               </button>
               <button
                 onClick={() => deleteAttr(key)}
                 disabled={deletingKey === key}
-                className={`shrink-0 ${ICON_BUTTON_CLASS} hover:text-status-negative`}
+                className="shrink-0 ui-btn-icon hover:text-status-negative"
                 title="Delete attribute"
               >
                 {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}
@@ -111,7 +110,7 @@ export function DetailAttrs({
               <span className="truncate text-right text-text-primary">{value}</span>
               <button
                 onClick={() => { setEditValue(value); setEditingKey(key); }}
-                className={`shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ${ICON_BUTTON_CLASS}`}
+                className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ui-btn-icon"
               >
                 <Pencil className="h-2.5 w-2.5" />
               </button>
@@ -148,7 +147,7 @@ export function DetailAttrs({
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           </button>
-          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className={ICON_BUTTON_CLASS}>
+          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className="ui-btn-icon">
             <X className="h-3 w-3" />
           </button>
         </div>

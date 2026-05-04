@@ -5,7 +5,6 @@ import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
 import { patchGoal, listGoals, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
-import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 
 type PanelMode = "idle" | "link" | "create";
 
@@ -209,10 +208,10 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
 
       {mode === "idle" && (
         <div className="flex gap-3">
-          <button onClick={openCreate} className={ADD_BUTTON_CLASS}>
+          <button onClick={openCreate} className="ui-btn-add">
             <Plus className="h-3.5 w-3.5" /> New goal
           </button>
-          <button onClick={openLink} className={ADD_BUTTON_CLASS}>
+          <button onClick={openLink} className="ui-btn-add">
             <Plus className="h-3.5 w-3.5" /> Link existing
           </button>
         </div>

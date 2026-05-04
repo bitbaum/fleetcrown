@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
-import { ICON_BUTTON_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
@@ -62,7 +61,7 @@ export function ChannelsSection({
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
-            className={`shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ${ICON_BUTTON_CLASS}`}
+            className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ui-btn-icon"
           >
             {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <X className="h-2.5 w-2.5" />}
           </button>
@@ -98,7 +97,7 @@ export function ChannelsSection({
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
           </button>
-          <button onClick={() => { setAdding(false); setChannelValue(""); }} className={ICON_BUTTON_CLASS}>
+          <button onClick={() => { setAdding(false); setChannelValue(""); }} className="ui-btn-icon">
             <X className="h-3 w-3" />
           </button>
         </div>

@@ -13,7 +13,6 @@ import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { getJson, patchJson, deleteJson } from "@/lib/api/fetch";
-import { ICON_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
 
 export function PersonDetail({
   personId,
@@ -148,7 +147,7 @@ export function PersonDetail({
               triggerTitle="Delete person"
             />
           )}
-          <button onClick={onClose} className={ICON_BUTTON_CLASS}>
+          <button onClick={onClose} className="ui-btn-icon">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -179,7 +178,7 @@ export function PersonDetail({
                 <button
                   onClick={commitDescription}
                   disabled={descSaving}
-                  className={INLINE_SAVE_CLASS}
+                  className="ui-btn-save"
                 >
                   {descSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                 </button>

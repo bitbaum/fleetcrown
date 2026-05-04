@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
-import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
@@ -162,7 +161,7 @@ export function PromptsTab({
 
       <a
         href="/prompts"
-        className={ADD_BUTTON_CLASS}
+        className="ui-btn-add"
       >
         <Zap className="h-3.5 w-3.5" /> Browse Prompt Library →
       </a>

@@ -6,7 +6,6 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { SECONDARY_BUTTON_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 
@@ -137,7 +136,7 @@ export function PersonCard({
           <button
             onClick={submitQuick}
             disabled={quickSaving || quickDone}
-            className={`opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ${SECONDARY_BUTTON_CLASS} disabled:opacity-40`}
+            className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip disabled:opacity-40"
             title={`Log outbound via ${quickChannel}`}
           >
             {quickDone ? (
@@ -150,7 +149,7 @@ export function PersonCard({
           </button>
           <button
             onClick={openLog}
-            className={`opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ${SECONDARY_BUTTON_CLASS}`}
+            className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip"
             title="Log with details"
           >
             <Plus className="h-3 w-3" /> Details

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { APP_LOCALE } from "@/lib/constants";
-import { ADD_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
@@ -105,7 +104,7 @@ export function InteractionsSection({
             <button
               onClick={handleLog}
               disabled={saving}
-              className={INLINE_SAVE_CLASS}
+              className="ui-btn-save"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
             </button>
@@ -117,7 +116,7 @@ export function InteractionsSection({
       ) : (
         <button
           onClick={() => setLogging(true)}
-          className={`${ADD_BUTTON_CLASS} mt-1`}
+          className="ui-btn-add mt-1"
         >
           <Plus className="h-3.5 w-3.5" /> Log interaction
         </button>

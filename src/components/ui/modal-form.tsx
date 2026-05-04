@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
 
 interface Props {
   /** Trigger button label shown next to Plus icon. Default: "Add". */
@@ -94,7 +93,7 @@ export function ModalForm({
             <button
               type="submit"
               disabled={saving || !canSubmit}
-              className={PRIMARY_BUTTON_CLASS}
+              className="ui-btn-submit"
             >
               {saving ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> {savingLabel}</>

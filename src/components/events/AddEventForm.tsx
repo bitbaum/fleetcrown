@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
-import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
@@ -45,7 +44,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
     return (
       <button
         onClick={() => setOpen(true)}
-        className={`${ADD_BUTTON_CLASS} pt-1`}
+        className="ui-btn-add pt-1"
       >
         <Plus className="h-3.5 w-3.5" /> Add event
       </button>

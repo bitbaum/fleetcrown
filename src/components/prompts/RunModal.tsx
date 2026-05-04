@@ -6,7 +6,7 @@ import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
-import { FIELD_INPUT_CLASS, PRIMARY_BUTTON_CLASS } from "@/components/ui/form";
+import { FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 
 export function RunModal({
@@ -155,7 +155,7 @@ export function RunModal({
           <button
             onClick={handleRun}
             disabled={!canRun || running}
-            className={PRIMARY_BUTTON_CLASS}
+            className="ui-btn-submit"
           >
             {running ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Running…</>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 
@@ -99,7 +98,7 @@ export function DescriptionEditor({
           <button
             onClick={commit}
             disabled={ie.saving}
-            className={INLINE_SAVE_CLASS}
+            className="ui-btn-save"
           >
             {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
           </button>

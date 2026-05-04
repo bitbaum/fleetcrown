@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { toLocalDateStr } from "@/lib/dates";
 import { INTERACTION_DIRECTION, SORT_MODE } from "@/lib/constants/statuses";
 
@@ -136,7 +135,7 @@ export function LogConversationButton() {
             <button
               onClick={save}
               disabled={saving}
-              className={INLINE_SAVE_CLASS}
+              className="ui-btn-save"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Save

@@ -8,7 +8,6 @@ import {
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
 import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helpers";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
@@ -235,7 +234,7 @@ export function OverviewTab({
               <button
                 onClick={handleLogActivity}
                 disabled={actSaving}
-                className={INLINE_SAVE_CLASS}
+                className="ui-btn-save"
               >
                 {actSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
               </button>

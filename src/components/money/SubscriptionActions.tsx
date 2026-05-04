@@ -7,7 +7,6 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import { advanceDueDate } from "@/lib/dates";
 
@@ -250,7 +249,7 @@ export function SubscriptionActions({
             <button
               onClick={onSaveEdit}
               disabled={saving}
-              className={INLINE_SAVE_CLASS}
+              className="ui-btn-save"
             >
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Save
