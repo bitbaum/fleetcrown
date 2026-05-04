@@ -95,7 +95,7 @@ export default function OnboardingPage() {
                   className="flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
                 />
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && <p className="text-sm text-status-negative">{error}</p>}
               <button
                 onClick={saveUsername}
                 disabled={saving || !username.trim()}
@@ -137,7 +137,7 @@ export default function OnboardingPage() {
                 placeholder="GitHub URL — optional"
                 className="ui-input"
               />
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && <p className="text-sm text-status-negative">{error}</p>}
 
               <div className="flex gap-2">
                 <button

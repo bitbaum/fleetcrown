@@ -70,7 +70,7 @@ export function ProfileSettings({ user }: Props) {
         </div>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-status-negative">{error}</p>}
       {saved && <p className="text-sm text-text-secondary">Saved.</p>}
 
       <button

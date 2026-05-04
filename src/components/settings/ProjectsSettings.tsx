@@ -83,7 +83,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
             placeholder="GitHub URL — optional"
             className="ui-input"
           />
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-status-negative">{error}</p>}
           <div className="flex gap-2">
             <button onClick={() => setAdding(false)} className="ui-btn-ghost">
               Cancel
@@ -120,7 +120,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
               </div>
               <button
                 onClick={() => remove(p.id)}
-                className="ui-btn-ghost shrink-0 p-1.5 hover:text-destructive"
+                className="ui-btn-ghost shrink-0 p-1.5 hover:text-status-negative"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
