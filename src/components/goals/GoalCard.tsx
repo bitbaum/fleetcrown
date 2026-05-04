@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Target, CheckCircle, Loader2, X, Check, FolderKanban } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Target, CheckCircle, Loader2, X, Check, FolderKanban, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
-import { patchGoal } from "@/lib/api/goals";
+import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
 import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
+  const router = useRouter();
   const [status, setStatus] = useState(goal.status ?? GOAL_STATUS.ACTIVE);
   const [progress, setProgress] = useState(goal.progress ?? 0);
   const [milestones, setMilestones] = useState<Milestone[]>(goal.milestones ?? []);
@@ -24,6 +26,22 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState(goal.description ?? "");
   const [savingDesc, setSavingDesc] = useState(false);
+  const [addingChild, setAddingChild] = useState(false);
+  const [childTitle, setChildTitle] = useState("");
+  const [savingChild, setSavingChild] = useState(false);
+
+  const handleAddChild = async () => {
+    const title = childTitle.trim();
+    if (!title) return;
+    setSavingChild(true);
+    try {
+      const res = await createGoal({ title, parentGoalId: goal.id });
+      const data = await res.json() as { ok?: boolean };
+      if (data.ok) { setChildTitle(""); setAddingChild(false); router.refresh(); }
+    } finally {
+      setSavingChild(false);
+    }
+  };
 
   const commitTitle = async () => {
     const trimmed = titleValue.trim();
@@ -230,13 +248,41 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
         </div>
       </Card>
 
-      {/* Children */}
-      {goal.children.length > 0 && (
+      {/* Children + inline add-sub-goal */}
+      {(goal.children.length > 0 || (!isCompleted && addingChild)) && (
         <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
           {goal.children.map((child) => (
             <GoalCard key={child.id} goal={child} depth={depth + 1} />
           ))}
+          {addingChild && (
+            <div className="flex items-center gap-1.5">
+              <input
+                value={childTitle}
+                onChange={(e) => setChildTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); if (e.key === "Escape") { setAddingChild(false); setChildTitle(""); } }}
+                placeholder="Sub-goal title…"
+                autoFocus
+                className={`flex-1 text-sm ${FIELD_INPUT_CLASS_TIGHT}`}
+              />
+              <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
+                className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">
+                {savingChild ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              </button>
+              <button onClick={() => { setAddingChild(false); setChildTitle(""); }}
+                className="p-1.5 rounded text-text-muted hover:text-text-secondary shrink-0">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          )}
         </div>
+      )}
+      {!isCompleted && !addingChild && (
+        <button
+          onClick={() => setAddingChild(true)}
+          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-muted hover:text-status-positive transition-colors"
+        >
+          <Plus className="h-3 w-3" /> Add sub-goal
+        </button>
       )}
     </div>
   );
