@@ -6,7 +6,6 @@ import {
   Terminal, Pause, Play, Eraser, ExternalLink, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { secondsAgo } from "@/lib/dates";
 import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S,
 } from "@/lib/constants/control";
@@ -16,7 +15,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
 import { ProjectProfile } from "./ProjectProfile";
 import {
-  SessionBadge, MaturityBar, ClosedBanner, ClosingBanner,
+  SessionBadge, ClosedBanner, ClosingBanner,
   RunningBanner, ReadyBanner, LatestOrchestrationPanel, ProfilePanel,
 } from "./project-card-helpers";
 
