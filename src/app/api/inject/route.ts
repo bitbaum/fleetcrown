@@ -5,7 +5,7 @@ import fs from "fs";
 import {
   stateFile,
   readProjectsMap,
-  parseProjectsConf,
+  resolveEffectiveTab,
   readPrompts,
   readPromptMeta,
   buildPromptWithSession,
@@ -28,36 +28,24 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt } = dataOrResp;
 
-  const allProjects = parseProjectsConf();
   const projectsMap = readProjectsMap();
   const canonical = projectsMap.get(tab.toLowerCase());
   if (!canonical) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
 
-  // Resolve the effective tab name to inject into. When the canonical name isn't
-  // an active Zellij tab (e.g. "Cockpit" tab is named "Cockpit Claude" this session),
-  // fall back to any other conf entry that maps to the same directory.
+  // Resolve the live Zellij tab name (canonical may be an alias of the running tab).
   let effectiveTab = canonical;
   try {
     const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
     const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
     if (activeTabs.length > 0) {
-      const isAlive = (name: string) => activeTabs.some((t) => t.toLowerCase() === name.toLowerCase());
-      if (!isAlive(canonical)) {
-        // Find all conf entries for the same directory, pick one that has a live tab
-        const canonicalDir = allProjects.find((p: { tab: string; dir: string }) => p.tab.toLowerCase() === canonical.toLowerCase())?.dir;
-        const alias = canonicalDir
-          ? allProjects.find((p: { tab: string; dir: string }) => p.dir === canonicalDir && isAlive(p.tab))
-          : undefined;
-        if (alias) {
-          effectiveTab = alias.tab;
-        } else {
-          return NextResponse.json(
-            { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-            { status: 422 },
-          );
-        }
+      effectiveTab = resolveEffectiveTab(canonical, activeTabs);
+      if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
+        return NextResponse.json(
+          { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
+          { status: 422 },
+        );
       }
     }
   } catch {

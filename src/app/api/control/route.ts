@@ -13,6 +13,7 @@ import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } 
 import {
   stateFile,
   parseProjectsConf,
+  resolveEffectiveTab,
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/claude-config";
@@ -342,10 +343,14 @@ export async function GET() {
       }).catch(() => {});
     }
 
+    // Use the live Zellij tab name for /tmp sentinel reads so aliases ("Cockpit Claude"
+    // for canonical "Cockpit") correctly surface ready/closing/prompt state.
+    const liveTab = resolveEffectiveTab(tab, zellijTabs);
+
     const nowS = Math.floor(Date.now() / 1000);
-    const tmpReady   = readTmpTs(stateFile.ready(tab));
-    const tmpClosing = readTmpTs(stateFile.closing(tab));
-    const tmpClosed  = readTmpTs(stateFile.closed(tab));
+    const tmpReady   = readTmpTs(stateFile.ready(liveTab));
+    const tmpClosing = readTmpTs(stateFile.closing(liveTab));
+    const tmpClosed  = readTmpTs(stateFile.closed(liveTab));
 
     // Fall back to DB value when /tmp is empty, but only within the 24-hour window
     const dbReady   = dbState?.readyAt   ? Math.floor(dbState.readyAt.getTime()   / 1000) : null;
@@ -355,7 +360,7 @@ export async function GET() {
     const resolveTs = (tmp: number | null, db: number | null) =>
       tmp ?? (db !== null && (nowS - db) < READY_WINDOW_S ? db : null);
 
-    const tmpPrompt = readCurrentPrompt(tab);
+    const tmpPrompt = readCurrentPrompt(liveTab);
     const currentPrompt: CurrentPrompt | null = tmpPrompt ?? (dbState?.currentPromptKey ? {
       key:       dbState.currentPromptKey,
       label:     dbState.currentPromptLabel ?? dbState.currentPromptKey,

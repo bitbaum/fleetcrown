@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "node:child_process";
+import { spawn, exec } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
+
+const execAsync = promisify(exec);
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab } from "@/lib/zellij";
+import { resolveEffectiveTab } from "@/lib/claude-config";
 import {
   ORCHESTRATION_ADAPTER_IDS,
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -65,7 +69,14 @@ export async function POST(req: NextRequest) {
   if (request.adapter === "claude" || request.adapter === "codex") {
     try {
       const prompt = renderTaskForAdapter(request);
-      injectIntoTab(request.projectKey, prompt);
+      // Resolve alias: "Cockpit" may be running as "Cockpit Claude" in this session.
+      let effectiveKey = request.projectKey;
+      try {
+        const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
+        const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
+        effectiveKey = resolveEffectiveTab(request.projectKey, activeTabs);
+      } catch { /* Zellij unavailable — use projectKey as-is */ }
+      injectIntoTab(effectiveKey, prompt);
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

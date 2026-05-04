@@ -89,6 +89,24 @@ export function readProjectsMap(): Map<string, string> {
 }
 
 /**
+ * Given a canonical tab name and the currently active Zellij tab names,
+ * return the live tab name to use for /tmp sentinel file operations and injection.
+ *
+ * When the canonical name (e.g. "Cockpit") is not alive but a conf alias
+ * that maps to the same directory (e.g. "Cockpit Claude") is, return that alias.
+ * Falls back to canonical when Zellij is unavailable or no alias matches.
+ */
+export function resolveEffectiveTab(canonical: string, activeTabs: string[]): string {
+  if (!activeTabs.length) return canonical;
+  const isAlive = (name: string) => activeTabs.some((t) => t.toLowerCase() === name.toLowerCase());
+  if (isAlive(canonical)) return canonical;
+  const all = parseProjectsConf();
+  const canonicalDir = all.find((p) => p.tab.toLowerCase() === canonical.toLowerCase())?.dir;
+  if (!canonicalDir) return canonical;
+  return all.find((p) => p.dir === canonicalDir && isAlive(p.tab))?.tab ?? canonical;
+}
+
+/**
  * Read the unified claude-prompts.json (array format — SSOT for prompt text + metadata).
  */
 export function readPromptConfig(): PromptConfig[] {
