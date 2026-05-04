@@ -104,7 +104,7 @@ export function DescriptionEditor({
           </button>
           <button
             onClick={ie.cancel}
-            className="text-xs text-text-muted hover:text-text-secondary px-1"
+            className="ui-btn-text-cancel"
           >
             Cancel
           </button>

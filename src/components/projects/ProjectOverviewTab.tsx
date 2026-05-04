@@ -238,7 +238,7 @@ export function OverviewTab({
               >
                 {actSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
               </button>
-              <button onClick={() => setLoggingActivity(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">
+              <button onClick={() => setLoggingActivity(false)} className="ui-btn-text-cancel">
                 Cancel
               </button>
             </div>

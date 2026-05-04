@@ -164,7 +164,7 @@ export function SubscriptionActions({
             Yes
           </button>
           <button onClick={() => setConfirmCancel(false)}
-            className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1">
+            className="ui-btn-text-cancel">
             No
           </button>
         </div>
@@ -254,7 +254,7 @@ export function SubscriptionActions({
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={() => setEditing(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">Cancel</button>
+            <button onClick={() => setEditing(false)} className="ui-btn-text-cancel">Cancel</button>
           </div>
         </div>
       )}

@@ -328,6 +328,10 @@
   .ui-btn-inline-cancel {
     @apply shrink-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
   }
+  /* Small inline text cancel link (no bg, no border, px-1 spacing) */
+  .ui-btn-text-cancel {
+    @apply px-1 text-xs text-text-muted transition-colors hover:text-text-secondary;
+  }
   /* Icon-only square button */
   .ui-btn-icon {
     @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;

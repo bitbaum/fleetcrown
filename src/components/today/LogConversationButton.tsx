@@ -140,7 +140,7 @@ export function LogConversationButton() {
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={reset} className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1">
+            <button onClick={reset} className="ui-btn-text-cancel">
               Cancel
             </button>
           </div>

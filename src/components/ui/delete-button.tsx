@@ -44,7 +44,7 @@ export function DeleteButton({
         </button>
         <button
           onClick={() => setConfirming(false)}
-          className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1"
+          className="ui-btn-text-cancel"
         >
           No
         </button>
