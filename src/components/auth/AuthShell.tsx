@@ -59,18 +59,21 @@ export function AuthSubmitButton({
   disabled,
   label,
   loadingLabel,
+  onClick,
 }: {
   loading?: boolean;
   disabled?: boolean;
   label: string;
   loadingLabel?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
-      type="submit"
+      type={onClick ? "button" : "submit"}
+      onClick={onClick}
       disabled={loading || disabled}
       className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
-      style={{ background: "#ffffff", marginTop: "8px" }}
+      style={{ background: "#ffffff" }}
     >
       {loading && loadingLabel ? loadingLabel : label}
     </button>

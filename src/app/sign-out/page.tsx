@@ -2,7 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { useState } from "react";
-import { AuthShell, AuthCard, AuthIconBadge } from "@/components/auth/AuthShell";
+import { AuthShell, AuthCard, AuthIconBadge, AuthSubmitButton } from "@/components/auth/AuthShell";
 
 export default function SignOutPage() {
   const [loading, setLoading] = useState(false);
@@ -33,24 +33,15 @@ export default function SignOutPage() {
 
       <AuthCard>
         <div className="space-y-3">
-          <button
+          <AuthSubmitButton
             onClick={handleSignOut}
-            disabled={loading}
-            className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
-            style={{ background: "#ffffff", marginTop: "0px" }}
-          >
-            {loading ? "Signing out…" : "Sign out →"}
-          </button>
+            loading={loading}
+            label="Sign out →"
+            loadingLabel="Signing out…"
+          />
           <button
             onClick={() => history.back()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-colors"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              color: "rgba(255,255,255,0.50)",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.80)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.50)"; }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium bg-white/[0.04] border border-white/[0.09] text-white/50 hover:text-white/80 transition-colors"
           >
             Cancel
           </button>
