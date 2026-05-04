@@ -1,4 +1,5 @@
-import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { ACTION_STATUS, type ActionStatus, type ActionType } from "@/lib/constants/statuses";
 
@@ -68,6 +69,11 @@ export const actions = pgTable("actions", {
   index("idx_actions_status").on(table.status),
   index("idx_actions_type").on(table.type),
   index("idx_actions_created_at").on(table.createdAt),
+  // Prevent Ivy from queuing a second draft for the same action title.
+  // Once approved/rejected/executed the title is free to reappear.
+  uniqueIndex("idx_actions_unique_draft_title")
+    .on(table.userId, table.title)
+    .where(sql`status = 'draft'`),
 ]);
 
 export type Action = typeof actions.$inferSelect;
