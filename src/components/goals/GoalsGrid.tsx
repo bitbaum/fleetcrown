@@ -42,15 +42,15 @@ export function GoalsGrid({
     <>
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
         <input
           type="text"
           placeholder="Search goals…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-white/30"
+          className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-text-muted"
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
           {q ? `${matchCount} / ${totalActive}` : totalActive}
         </span>
       </div>
@@ -64,14 +64,14 @@ export function GoalsGrid({
         </div>
       ) : q && activeGoals.length > 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-2 py-6 text-white/25">
+          <div className="flex flex-col items-center gap-2 py-6 text-text-muted">
             <Target className="h-8 w-8" />
             <div className="text-sm">No active goals match &ldquo;{q}&rdquo;</div>
           </div>
         </Card>
       ) : activeGoals.length === 0 && completedGoals.length > 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-2 py-6 text-white/30">
+          <div className="flex flex-col items-center gap-2 py-6 text-text-muted">
             <Target className="h-8 w-8" />
             <div className="text-sm">All goals completed</div>
           </div>

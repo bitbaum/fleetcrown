@@ -14,13 +14,13 @@ export async function CommitmentsCard() {
       <CardHeader
         icon={CheckCircle}
         title="Commitments"
-        right={<span className="text-xs md:text-sm text-white/30">{items.length} active</span>}
+        right={<span className="text-xs md:text-sm text-text-muted">{items.length} active</span>}
       />
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-1.5 py-4 text-center">
-          <CheckCircle className="h-6 w-6 text-white/15" />
-          <div className="text-sm text-white/30">No active commitments</div>
-          <div className="text-xs text-white/30">Use the button below to track things you&apos;ve promised</div>
+          <CheckCircle className="h-6 w-6 text-text-muted" />
+          <div className="text-sm text-text-muted">No active commitments</div>
+          <div className="text-xs text-text-muted">Use the button below to track things you&apos;ve promised</div>
         </div>
       ) : (
         <div className="space-y-3">

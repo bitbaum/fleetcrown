@@ -6,7 +6,7 @@
 export function MaturityBar({ value }: { value: string }) {
   const match = value.match(/^(\d+)\/10/);
   const score = match ? parseInt(match[1]) : null;
-  if (score === null) return <span className="text-white/50 text-xs">{value}</span>;
+  if (score === null) return <span className="text-text-secondary text-xs">{value}</span>;
   return (
     <div className="flex items-center gap-1.5">
       <div className="flex gap-0.5">
@@ -21,7 +21,7 @@ export function MaturityBar({ value }: { value: string }) {
           />
         ))}
       </div>
-      <span className="text-[10px] text-white/30">{score}/10</span>
+      <span className="text-[10px] text-text-muted">{score}/10</span>
     </div>
   );
 }

@@ -11,7 +11,7 @@ export function DeleteButton({
   onDelete,
   label = "Delete?",
   triggerTitle = "Delete",
-  triggerClassName = "p-1.5 rounded text-white/20 hover:text-status-negative hover:bg-white/5 transition-colors",
+  triggerClassName = "p-1.5 rounded text-text-muted hover:text-status-negative hover:bg-white/5 transition-colors",
 }: {
   onDelete: () => Promise<void>;
   label?: string;
@@ -34,7 +34,7 @@ export function DeleteButton({
   if (confirming) {
     return (
       <div className="flex items-center gap-1 shrink-0">
-        {label && <span className="text-xs text-white/40">{label}</span>}
+        {label && <span className="text-xs text-text-tertiary">{label}</span>}
         <button
           onClick={handleConfirm}
           disabled={deleting}
@@ -44,7 +44,7 @@ export function DeleteButton({
         </button>
         <button
           onClick={() => setConfirming(false)}
-          className="text-xs text-white/30 hover:text-white/60 transition-colors px-1"
+          className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1"
         >
           No
         </button>

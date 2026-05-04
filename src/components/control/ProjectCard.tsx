@@ -244,7 +244,7 @@ export function ProjectCard({
                 ? "text-status-positive"
                 : isReady || isOrchReady
                 ? "text-status-positive"
-                : "text-white/20"
+                : "text-text-muted"
             )}
           />
           <div className="flex min-w-0 items-center gap-2">

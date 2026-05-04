@@ -28,7 +28,7 @@ export function ProgressInput({
   };
 
   if (ie.saving) {
-    return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
+    return <Loader2 className="h-3 w-3 animate-spin text-text-muted" />;
   }
 
   if (ie.editing) {
@@ -45,7 +45,7 @@ export function ProgressInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="w-12 bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-xs text-white/80 text-right focus:outline-none"
+        className="w-12 bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-xs text-text-primary text-right focus:outline-none"
       />
     );
   }
@@ -53,7 +53,7 @@ export function ProgressInput({
   return (
     <button
       onClick={() => ie.start(String(initial))}
-      className="text-xs text-white/40 hover:text-white/70 transition-colors tabular-nums"
+      className="text-xs text-text-tertiary hover:text-text-secondary transition-colors tabular-nums"
       title="Click to edit progress"
     >
       {initial}%
@@ -86,7 +86,7 @@ export function DateInput({
     });
   };
 
-  if (ie.saving) return <Loader2 className="h-3 w-3 animate-spin text-white/30" />;
+  if (ie.saving) return <Loader2 className="h-3 w-3 animate-spin text-text-muted" />;
 
   if (ie.editing) {
     return (
@@ -100,7 +100,7 @@ export function DateInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="text-xs bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-white/70 focus:outline-none focus:border-white/35"
+        className="text-xs bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-text-secondary focus:outline-none focus:border-white/35"
       />
     );
   }
@@ -110,14 +110,14 @@ export function DateInput({
       <div className="flex items-center gap-1">
         <button
           onClick={() => ie.start(toDateStr(initial))}
-          className={`text-xs transition-colors hover:text-white/70 ${overdue ? "text-status-negative" : "text-white/40"}`}
+          className={`text-xs transition-colors hover:text-text-secondary ${overdue ? "text-status-negative" : "text-text-tertiary"}`}
           title="Click to change deadline"
         >
           {deadlineText}
         </button>
         <button
           onClick={() => commit("")}
-          className="text-white/20 hover:text-white/50 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+          className="text-text-muted hover:text-text-secondary transition-colors sm:opacity-0 sm:group-hover:opacity-100"
           title="Clear deadline"
         >
           <X className="h-2.5 w-2.5" />
@@ -129,7 +129,7 @@ export function DateInput({
   return (
     <button
       onClick={() => ie.start("")}
-      className="text-xs text-white/20 hover:text-white/50 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+      className="text-xs text-text-muted hover:text-text-secondary transition-colors sm:opacity-0 sm:group-hover:opacity-100"
       title="Set deadline"
     >
       Set deadline
@@ -169,7 +169,7 @@ export function AddMilestoneInline({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-1"
+        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-1"
       >
         <Plus className="h-3 w-3" /> Add milestone
       </button>
@@ -198,7 +198,7 @@ export function AddMilestoneInline({
       </button>
       <button
         onClick={() => { setOpen(false); setValue(""); }}
-        className="p-1.5 rounded text-white/25 hover:text-white/60 transition-colors shrink-0"
+        className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0"
       >
         <X className="h-3 w-3" />
       </button>
@@ -245,14 +245,14 @@ export function MilestoneRow({
         className="shrink-0 flex items-center justify-center disabled:opacity-50"
       >
         {toggling ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-white/30" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-muted" />
         ) : milestone.done ? (
           <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (
           <div className="h-3.5 w-3.5 rounded-full border border-white/25 hover:border-white/60 transition-colors" />
         )}
       </button>
-      <span className={milestone.done ? "text-white/35 line-through" : "text-white/60"}>
+      <span className={milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}>
         {milestone.title}
       </span>
     </div>

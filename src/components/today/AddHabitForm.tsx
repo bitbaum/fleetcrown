@@ -66,7 +66,7 @@ export function AddHabitForm({
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
         </button>
-        <button onClick={close} className="p-1.5 rounded text-white/25 hover:text-white/60 transition-colors shrink-0">
+        <button onClick={close} className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
           <X className="h-3 w-3" />
         </button>
       </div>
@@ -78,8 +78,8 @@ export function AddHabitForm({
       onClick={() => setOpen(true)}
       className={
         emptyState
-          ? "flex items-center gap-1.5 text-xs text-white/25 hover:text-status-positive transition-colors"
-          : "flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-1"
+          ? "flex items-center gap-1.5 text-xs text-text-muted hover:text-status-positive transition-colors"
+          : "flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-1"
       }
     >
       <Plus className="h-3.5 w-3.5" />

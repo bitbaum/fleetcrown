@@ -82,7 +82,7 @@ export function ProjectDetailHeader({
           <div className="flex items-center gap-2 flex-wrap">
             <NameEditor value={displayName} editable={!!data && !loading} onSave={saveName} />
             {owner && (
-              <span className="text-[10px] text-white/25 border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
+              <span className="text-[10px] text-text-muted border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
             )}
           </div>
           <DescriptionEditor value={description} onSave={saveDescription} />
@@ -94,7 +94,7 @@ export function ProjectDetailHeader({
               href={prodUrl}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors"
+              className="p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
               title="Live site"
             >
               <Globe className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function ProjectDetailHeader({
               href={repo}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors"
+              className="p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
               title="Repository"
             >
               <GitBranch className="h-4 w-4" />
@@ -125,7 +125,7 @@ export function ProjectDetailHeader({
           )}
           <button
             onClick={onClose}
-            className="ml-1 p-1.5 rounded hover:bg-white/10 text-white/35 hover:text-white/70 transition-colors"
+            className="ml-1 p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
           >
             <X className="h-4 w-4" />
           </button>

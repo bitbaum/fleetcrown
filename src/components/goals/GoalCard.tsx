@@ -81,7 +81,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             title={isCompleted ? "Mark active" : "Mark completed"}
           >
             {togglingStatus ? (
-              <Loader2 className="h-5 w-5 animate-spin text-white/30" />
+              <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
             ) : isCompleted ? (
               <CheckCircle className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
             ) : depth === 0 ? (
@@ -95,7 +95,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             <div className="flex items-center gap-2">
               {editingTitle ? (
                 savingTitle ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-white/30" />
+                  <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
                 ) : (
                   <input
                     value={titleValue}
@@ -108,7 +108,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 )
               ) : (
                 <div
-                  className={`cursor-text hover:text-white transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-white/80"}`}
+                  className={`cursor-text hover:text-text-primary transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
                   onClick={() => !isCompleted && setEditingTitle(true)}
                   title={isCompleted ? undefined : "Click to edit title"}
                 >
@@ -116,7 +116,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 </div>
               )}
               {status && status !== GOAL_STATUS.ACTIVE && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/40">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-text-tertiary">
                   {status}
                 </span>
               )}
@@ -144,7 +144,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
-                    className="p-1.5 text-white/25 hover:text-white/60">
+                    className="p-1.5 text-text-muted hover:text-text-secondary">
                     <X className="h-2.5 w-2.5" />
                   </button>
                 </div>
@@ -154,7 +154,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 onClick={() => !isCompleted && (setDescValue(description ?? ""), setEditingDesc(true))}
                 className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
                   isCompleted ? "cursor-default" :
-                  description ? "text-white/40 hover:text-white/60" : "text-white/15 hover:text-white/30 italic"
+                  description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
                 }`}
                 disabled={isCompleted}
                 title={isCompleted ? undefined : "Click to edit description"}
@@ -174,7 +174,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
                   {hasMilestones ? (
-                    <span className="text-xs text-white/40">{progress}%</span>
+                    <span className="text-xs text-text-tertiary">{progress}%</span>
                   ) : (
                     <ProgressInput goalId={goal.id} initial={progress} onUpdate={setProgress} />
                   )}
@@ -210,7 +210,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   />
                 ))}
                 {milestoneTotal > 0 && (
-                  <div className="text-xs text-white/30 mt-1">
+                  <div className="text-xs text-text-muted mt-1">
                     {milestoneDone}/{milestoneTotal} milestones
                   </div>
                 )}

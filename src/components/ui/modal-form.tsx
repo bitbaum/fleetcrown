@@ -78,7 +78,7 @@ export function ModalForm({
           >
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">{title}</div>
-              <button type="button" onClick={close} className="p-1 text-white/40 hover:text-white/70 rounded">
+              <button type="button" onClick={close} className="p-1 text-text-tertiary hover:text-text-secondary rounded">
                 <X className="h-4 w-4" />
               </button>
             </div>

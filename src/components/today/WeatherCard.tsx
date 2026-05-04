@@ -43,7 +43,7 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <div className="text-sm text-white/30 animate-pulse">Loading...</div>
+        <div className="text-sm text-text-muted animate-pulse">Loading...</div>
       </Card>
     );
   }
@@ -52,7 +52,7 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <div className="text-sm text-white/30">Unavailable</div>
+        <div className="text-sm text-text-muted">Unavailable</div>
       </Card>
     );
   }
@@ -67,7 +67,7 @@ export function WeatherCard() {
           <WeatherIcon condition={w.condition} className="h-8 w-8 text-status-warning/80" />
           <div className="text-2xl font-semibold">{w.temp}°</div>
         </div>
-        <div className="text-xs text-white/40 space-y-0.5">
+        <div className="text-xs text-text-tertiary space-y-0.5">
           <div>{w.condition}</div>
           <div>Wind {w.wind} km/h · Humidity {w.humidity}%</div>
           {w.range && <div>Today {w.range}° · {w.forecastCondition}</div>}

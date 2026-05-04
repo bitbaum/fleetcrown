@@ -50,7 +50,7 @@ export function NameEditor({
             autoFocus
             className={`text-base font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-white/20 focus:border-white/35"}`}
           />
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40 shrink-0" />}
+          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary shrink-0" />}
         </div>
         {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
       </div>
@@ -59,7 +59,7 @@ export function NameEditor({
 
   return (
     <h2
-      className={`text-base font-semibold truncate ${editable ? "cursor-text hover:text-white/80 transition-colors" : ""}`}
+      className={`text-base font-semibold truncate ${editable ? "cursor-text hover:text-text-primary transition-colors" : ""}`}
       onClick={editable ? () => ie.start(value) : undefined}
       title={editable ? "Click to rename" : undefined}
     >
@@ -93,7 +93,7 @@ export function DescriptionEditor({
           autoFocus
           rows={2}
           placeholder="Add a description…"
-          className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1.5 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/30 resize-none transition-colors"
+          className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/30 resize-none transition-colors"
         />
         <div className="flex items-center gap-2">
           <button
@@ -105,7 +105,7 @@ export function DescriptionEditor({
           </button>
           <button
             onClick={ie.cancel}
-            className="text-xs text-white/30 hover:text-white/60 px-1"
+            className="text-xs text-text-muted hover:text-text-secondary px-1"
           >
             Cancel
           </button>
@@ -117,10 +117,10 @@ export function DescriptionEditor({
   return (
     <button
       onClick={() => ie.start(value ?? "")}
-      className="w-full text-left text-xs text-white/40 hover:text-white/60 mt-0.5 leading-relaxed transition-colors"
+      className="w-full text-left text-xs text-text-tertiary hover:text-text-secondary mt-0.5 leading-relaxed transition-colors"
       title="Click to edit description"
     >
-      {value ?? <span className="italic text-white/20">Add a description…</span>}
+      {value ?? <span className="italic text-text-muted">Add a description…</span>}
     </button>
   );
 }
@@ -151,9 +151,9 @@ export function StatusEditor({
           onBlur={commit}
           autoFocus
           placeholder="e.g. Production"
-          className="bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-xs text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/35 w-36"
+          className="bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/35 w-36"
         />
-        {ie.saving && <Loader2 className="h-3 w-3 animate-spin text-white/30 shrink-0" />}
+        {ie.saving && <Loader2 className="h-3 w-3 animate-spin text-text-muted shrink-0" />}
       </div>
     );
   }
@@ -162,7 +162,7 @@ export function StatusEditor({
     <button onClick={() => ie.start(value ?? "")} title="Click to edit status" className="flex items-center">
       {value
         ? <StatusBadge value={value} />
-        : <span className="text-[10px] text-white/20 hover:text-white/50 transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ status</span>}
+        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ status</span>}
     </button>
   );
 }
@@ -193,7 +193,7 @@ export function MaturityEditor({
           onChange={(e) => ie.setDraft(Number(e.target.value))}
           className="w-24 accent-[var(--status-positive)]"
         />
-        <span className="text-[10px] text-white/50 w-8">{ie.draft}/10</span>
+        <span className="text-[10px] text-text-secondary w-8">{ie.draft}/10</span>
         <button
           onClick={() => ie.commit(() => onSave(`${ie.draft}/10`))}
           disabled={ie.saving}
@@ -201,7 +201,7 @@ export function MaturityEditor({
         >
           {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
         </button>
-        <button onClick={ie.cancel} className="text-[10px] text-white/30 hover:text-white/60">✕</button>
+        <button onClick={ie.cancel} className="text-[10px] text-text-muted hover:text-text-secondary">✕</button>
       </div>
     );
   }
@@ -210,7 +210,7 @@ export function MaturityEditor({
     <button onClick={start} title="Click to edit maturity" className="flex items-center">
       {value
         ? <MaturityBar value={value} />
-        : <span className="text-[10px] text-white/20 hover:text-white/50 transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ maturity</span>}
+        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ maturity</span>}
     </button>
   );
 }

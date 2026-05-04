@@ -30,7 +30,7 @@ export async function AlertsCard() {
             urgentCount > 0 ? (
               <span className="text-xs md:text-sm text-status-negative font-medium">{urgentCount} urgent</span>
             ) : (
-              <span className="text-xs md:text-sm text-white/30">{items.length} active</span>
+              <span className="text-xs md:text-sm text-text-muted">{items.length} active</span>
             )
           }
         />
@@ -47,7 +47,7 @@ export async function AlertsCard() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm md:text-base font-medium">{alert.title}</div>
                   {alert.description && (
-                    <div className="text-xs md:text-sm text-white/50 mt-0.5">{alert.description}</div>
+                    <div className="text-xs md:text-sm text-text-secondary mt-0.5">{alert.description}</div>
                   )}
                   {alert.actionUrl && (
                     <Link

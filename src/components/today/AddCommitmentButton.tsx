@@ -41,7 +41,7 @@ export function AddCommitmentButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-white/40 hover:text-status-positive transition-colors mt-2"
+        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-2"
       >
         <Plus className="h-3.5 w-3.5" /> Add commitment
       </button>
@@ -85,7 +85,7 @@ export function AddCommitmentButton() {
         </button>
         <button
           onClick={() => { setOpen(false); reset(); }}
-          className="text-xs text-white/30 hover:text-white/60 flex items-center gap-1"
+          className="text-xs text-text-muted hover:text-text-secondary flex items-center gap-1"
         >
           <X className="h-3 w-3" /> Cancel
         </button>

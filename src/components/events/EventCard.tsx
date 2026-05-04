@@ -105,7 +105,7 @@ export function EventCard({
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={cancelEdit}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-white/40 hover:text-white/70 hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-text-tertiary hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
           >
             <X className="h-3 w-3" /> Cancel
           </button>
@@ -126,7 +126,7 @@ export function EventCard({
     <div className={`group flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-0 ${dimmed ? "opacity-50" : ""}`}>
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-white/50 uppercase tracking-wide font-medium">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-text-secondary uppercase tracking-wide font-medium">
             {event.type}
           </span>
           {event.category && (
@@ -135,21 +135,21 @@ export function EventCard({
             </span>
           )}
           {deadline && (
-            <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-white/35"}`}>
+            <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
               {deadlineText}
-              <span className="text-white/20 ml-1">· {format(deadline, "d MMM yyyy")}</span>
+              <span className="text-text-muted ml-1">· {format(deadline, "d MMM yyyy")}</span>
             </span>
           )}
         </div>
 
         <div className="flex items-start gap-1.5">
-          <span className="text-sm text-white/85 leading-snug">{event.name}</span>
+          <span className="text-sm text-text-primary leading-snug">{event.name}</span>
           {event.url && (
             <a
               href={event.url}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 text-white/20 hover:text-white/60 transition-colors mt-0.5"
+              className="shrink-0 text-text-muted hover:text-text-secondary transition-colors mt-0.5"
               title={event.url}
             >
               <ExternalLink className="h-3 w-3" />
@@ -158,7 +158,7 @@ export function EventCard({
         </div>
 
         {event.description && (
-          <p className="text-xs text-white/35 leading-relaxed line-clamp-2">{event.description}</p>
+          <p className="text-xs text-text-tertiary leading-relaxed line-clamp-2">{event.description}</p>
         )}
       </div>
 
@@ -167,7 +167,7 @@ export function EventCard({
           <button
             onClick={openEdit}
             title="Edit event"
-            className="p-1.5 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+            className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
@@ -177,7 +177,7 @@ export function EventCard({
             onClick={handleArchive}
             disabled={archiving}
             title="Archive event"
-            className="p-1.5 rounded text-white/20 hover:text-status-warning hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+            className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-white/[0.06] transition-colors disabled:opacity-40"
           >
             {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
           </button>

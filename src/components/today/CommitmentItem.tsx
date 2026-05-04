@@ -67,7 +67,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
             onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
-            className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1 text-sm text-white/85 placeholder:text-white/20 focus:outline-none focus:border-white/30"
+            className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/30"
           />
           <div className="flex gap-1.5">
             <input
@@ -94,7 +94,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={cancel} className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60">
+            <button onClick={cancel} className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary">
               <X className="h-3 w-3" /> Cancel
             </button>
           </div>
@@ -113,7 +113,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
       <div className="min-w-0 flex-1">
         <div className="text-sm md:text-base line-clamp-2">{description}</div>
         {dueDate && (
-          <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-white/40"}`}>
+          <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-text-tertiary"}`}>
             {isOverdue ? "Overdue" : "Due"}{" "}
             {formatDistanceToNow(new Date(dueDate), { addSuffix: true })}
           </div>
@@ -126,7 +126,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <button
           onClick={() => setEditing(true)}
           title="Edit commitment"
-          className="p-1.5 rounded text-white/20 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>

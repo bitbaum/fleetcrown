@@ -16,7 +16,7 @@ export function CompletedGoals({ goals }: { goals: Goal[] }) {
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium text-white/30 uppercase tracking-wider mb-3 hover:text-white/50 transition-colors"
+        className="flex items-center gap-1.5 text-xs font-medium text-text-muted uppercase tracking-wider mb-3 hover:text-text-secondary transition-colors"
       >
         {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         Completed · {goals.length}

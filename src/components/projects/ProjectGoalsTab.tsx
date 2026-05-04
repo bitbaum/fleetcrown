@@ -58,21 +58,21 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                 : <Target className="h-4 w-4 text-status-positive/50 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <div className="text-sm font-medium text-white/85">{goal.title}</div>
+                  <div className="text-sm font-medium text-text-primary">{goal.title}</div>
                   <button
                     onClick={() => handleUnlink(goal.id)}
-                    className="sm:opacity-0 sm:group-hover:opacity-100 text-white/20 hover:text-status-negative transition-all ml-auto shrink-0"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 text-text-muted hover:text-status-negative transition-all ml-auto shrink-0"
                     title="Unlink from project"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
                 {goal.description && (
-                  <p className="text-[11px] text-white/40 mt-0.5">{goal.description}</p>
+                  <p className="text-[11px] text-text-tertiary mt-0.5">{goal.description}</p>
                 )}
                 {!isCompleted && (
                   <div className="mt-2">
-                    <div className="flex items-center justify-between text-[10px] text-white/30 mb-1">
+                    <div className="flex items-center justify-between text-[10px] text-text-muted mb-1">
                       <span>{progress}%</span>
                       {milestones.length > 0 && <span>{done}/{milestones.length} milestones</span>}
                     </div>
@@ -91,7 +91,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                         {m.done
                           ? <CheckCircle className="h-3 w-3 text-status-positive/60 shrink-0" />
                           : <div className="h-3 w-3 rounded-full border border-white/20 shrink-0" />}
-                        <span className={m.done ? "text-white/25 line-through" : "text-white/55"}>{m.title}</span>
+                        <span className={m.done ? "text-text-muted line-through" : "text-text-secondary"}>{m.title}</span>
                       </div>
                     ))}
                   </div>
@@ -103,7 +103,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       })}
 
       {linked.length === 0 && !linking && (
-        <p className="text-xs text-white/25 pt-1">No goals linked to this project.</p>
+        <p className="text-xs text-text-muted pt-1">No goals linked to this project.</p>
       )}
 
       {linking ? (
@@ -112,7 +112,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
             autoFocus
-            className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white/80 focus:outline-none focus:border-white/25"
+            className="flex-1 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-white/25"
           >
             <option value="">— Select a goal —</option>
             {allGoals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
@@ -124,7 +124,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
           </button>
-          <button onClick={() => setLinking(false)} className="px-2 py-1.5 text-xs text-white/30 hover:text-white/60">
+          <button onClick={() => setLinking(false)} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">
             Cancel
           </button>
         </div>

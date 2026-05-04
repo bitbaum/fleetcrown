@@ -83,7 +83,7 @@ export async function ActionQueueCard() {
               className="border border-white/10 rounded-md p-3 bg-white/[0.02]"
             >
               <div className="flex items-start gap-3">
-                <Users className="h-4 w-4 text-white/40 shrink-0 mt-1" />
+                <Users className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm md:text-base font-medium">
                     Check in with {group.actions.length} people
@@ -96,7 +96,7 @@ export async function ActionQueueCard() {
                           <div className="min-w-0">
                             <span className="text-sm md:text-base">{a.title}</span>
                             {body && (
-                              <div className="text-xs text-white/50 line-clamp-2 mt-0.5">{body}</div>
+                              <div className="text-xs text-text-secondary line-clamp-2 mt-0.5">{body}</div>
                             )}
                           </div>
                           <ActionButtons actionId={a.id} compact />
@@ -104,7 +104,7 @@ export async function ActionQueueCard() {
                       );
                     })}
                   </div>
-                  <div className="text-xs md:text-sm text-white/30 mt-2 italic">
+                  <div className="text-xs md:text-sm text-text-muted mt-2 italic">
                     Ivy: {group.reasoning}
                   </div>
                 </div>
@@ -123,12 +123,12 @@ export async function ActionQueueCard() {
                 className="border border-white/10 rounded-md p-3 bg-white/[0.02]"
               >
                 <div className="flex items-start gap-3">
-                  <Icon className="h-4 w-4 text-white/40 shrink-0 mt-1" />
+                  <Icon className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm md:text-base font-medium">{action.title}</div>
 
                     {payload?.to != null && (
-                      <div className="text-xs md:text-sm text-white/40 mt-0.5">
+                      <div className="text-xs md:text-sm text-text-tertiary mt-0.5">
                         {"To: "}{String(payload.to)}
                         {payload.channel != null ? ` via ${String(payload.channel)}` : ""}
                       </div>
@@ -137,18 +137,18 @@ export async function ActionQueueCard() {
                     {(payload?.body != null || payload?.subject != null) && (
                       <div className="mt-2 p-2 rounded bg-white/[0.03] border border-white/5">
                         {payload?.subject != null && (
-                          <div className="text-xs font-medium text-white/60 mb-1">
+                          <div className="text-xs font-medium text-text-secondary mb-1">
                             {"Subject: "}{String(payload.subject)}
                           </div>
                         )}
-                        <pre className="text-xs text-white/50 whitespace-pre-wrap">
+                        <pre className="text-xs text-text-secondary whitespace-pre-wrap">
                           {String(payload?.body ?? "")}
                         </pre>
                       </div>
                     )}
 
                     {action.reasoning && (
-                      <div className="text-xs md:text-sm text-white/30 mt-2 italic">
+                      <div className="text-xs md:text-sm text-text-muted mt-2 italic">
                         Ivy: {action.reasoning}
                       </div>
                     )}

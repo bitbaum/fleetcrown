@@ -10,7 +10,7 @@ import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/contr
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 
 export function SessionBadge({ health }: { health: string }) {
-  const color = HEALTH_COLOR[health] ?? "text-white/40";
+  const color = HEALTH_COLOR[health] ?? "text-text-tertiary";
   return <span className={cn("rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em]", color)}>{health}</span>;
 }
 

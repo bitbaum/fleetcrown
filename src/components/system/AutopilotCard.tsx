@@ -56,15 +56,15 @@ function JobRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-white/30" : ""}`}>
+          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-text-muted" : ""}`}>
             {job.name}
           </span>
           {!job.enabled && (
-            <span className="text-[10px] uppercase tracking-wider text-white/20 shrink-0">off</span>
+            <span className="text-[10px] uppercase tracking-wider text-text-muted shrink-0">off</span>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-white/30">{humanSchedule(job.schedule.expr)}</span>
+          <span className="text-xs text-text-muted">{humanSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
             <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate">
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
@@ -72,7 +72,7 @@ function JobRow({
             </span>
           )}
           {!hasError && nextRun && (
-            <span className="flex items-center gap-1 text-[10px] text-white/20 shrink-0">
+            <span className="flex items-center gap-1 text-[10px] text-text-muted shrink-0">
               <Clock className="h-2.5 w-2.5" />
               {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
             </span>
@@ -171,8 +171,8 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
           {Array.from(projectGroups.entries()).map(([pid, group]) => (
             <div key={pid}>
               <div className="flex items-center gap-1.5 px-2 mb-1">
-                <Folder className="h-3 w-3 text-white/25" />
-                <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+                <Folder className="h-3 w-3 text-text-muted" />
+                <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">
                   {group.name}
                 </span>
               </div>
@@ -194,7 +194,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
             <div>
               {projectGroups.size > 0 && (
                 <div className="flex items-center gap-1.5 px-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-white/20 font-medium">
+                  <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">
                     Global
                   </span>
                 </div>

@@ -106,11 +106,11 @@ export function SubscriptionActions({
   if (cancelled) {
     return (
       <div className="mt-2 flex items-center gap-2">
-        <span className="text-xs text-white/30">Marked cancelled</span>
+        <span className="text-xs text-text-muted">Marked cancelled</span>
         <DeleteButton
           onDelete={onDeleteRecord}
           label="Delete record?"
-          triggerClassName="flex items-center gap-1 text-xs text-white/20 hover:text-status-negative transition-colors"
+          triggerClassName="flex items-center gap-1 text-xs text-text-muted hover:text-status-negative transition-colors"
         />
       </div>
     );
@@ -135,7 +135,7 @@ export function SubscriptionActions({
       {!isCancelled && (
         <button
           onClick={() => setEditing((v) => !v)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/25 hover:text-white/60 hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-secondary hover:bg-white/5 transition-colors"
           title="Edit amount, currency, notes"
         >
           <Pencil className="h-2.5 w-2.5" />
@@ -159,19 +159,19 @@ export function SubscriptionActions({
       {/* Mark as cancelled — inline confirm */}
       {!isCancelled && (confirmCancel ? (
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-white/40">Mark cancelled?</span>
+          <span className="text-xs text-text-tertiary">Mark cancelled?</span>
           <button onClick={onCancel} disabled={cancelling}
             className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50">
             Yes
           </button>
           <button onClick={() => setConfirmCancel(false)}
-            className="text-xs text-white/30 hover:text-white/60 transition-colors px-1">
+            className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1">
             No
           </button>
         </div>
       ) : (
         <button onClick={() => setConfirmCancel(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors">
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-secondary hover:bg-white/5 transition-colors">
           <X className="h-2.5 w-2.5" />
           Mark cancelled
         </button>
@@ -182,7 +182,7 @@ export function SubscriptionActions({
         onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
-        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-white/20 hover:text-status-negative hover:bg-status-negative/5 transition-colors"
+        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-status-negative hover:bg-status-negative/5 transition-colors"
       />
 
       {editing && (
@@ -225,7 +225,7 @@ export function SubscriptionActions({
             </select>
           </div>
           <div className="flex gap-2 items-center">
-            <label className="text-[11px] text-white/30 shrink-0">Next due</label>
+            <label className="text-[11px] text-text-muted shrink-0">Next due</label>
             <input
               type="date"
               value={editNextDue}
@@ -255,7 +255,7 @@ export function SubscriptionActions({
               {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={() => setEditing(false)} className="text-xs text-white/30 hover:text-white/60 px-1">Cancel</button>
+            <button onClick={() => setEditing(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">Cancel</button>
           </div>
         </div>
       )}
@@ -276,7 +276,7 @@ export function SubscriptionActions({
         <div className="w-full mt-1 p-2 rounded bg-status-positive/5 border border-status-positive/10">
           <div className="text-xs text-status-positive/60 font-medium mb-1">Alternatives:</div>
           {meta.alternatives.map((alt, i) => (
-            <div key={i} className="text-xs text-white/40">• {alt}</div>
+            <div key={i} className="text-xs text-text-tertiary">• {alt}</div>
           ))}
         </div>
       )}

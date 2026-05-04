@@ -31,13 +31,13 @@ export function ProjectDetailTabBar({
             className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium transition-colors border-b-2 ${
               isActive
                 ? "border-status-positive text-white"
-                : "border-transparent text-white/40 hover:text-white/70 hover:border-white/20"
+                : "border-transparent text-text-tertiary hover:text-text-secondary hover:border-white/20"
             }`}
           >
             {label}
             {badge !== undefined && badge > 0 && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                isActive ? "bg-status-positive-subtle text-status-positive" : "bg-white/10 text-white/30"
+                isActive ? "bg-status-positive-subtle text-status-positive" : "bg-white/10 text-text-muted"
               }`}>
                 {badge}
               </span>

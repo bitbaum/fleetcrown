@@ -32,7 +32,7 @@ export function DeleteCommitmentButton({ commitmentId }: { commitmentId: string 
         </button>
         <button
           onClick={() => setConfirm(false)}
-          className="text-xs text-white/25 hover:text-white/60 transition-colors px-1"
+          className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1"
         >
           No
         </button>
@@ -43,7 +43,7 @@ export function DeleteCommitmentButton({ commitmentId }: { commitmentId: string 
   return (
     <button
       onClick={() => setConfirm(true)}
-      className="p-1 rounded text-white/10 hover:text-status-negative/70 transition-colors shrink-0"
+      className="p-1 rounded text-text-muted hover:text-status-negative/70 transition-colors shrink-0"
       title="Remove commitment"
     >
       <X className="h-3.5 w-3.5" />

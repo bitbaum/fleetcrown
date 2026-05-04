@@ -85,7 +85,7 @@ export function JobDetail({
               <Bot className="h-4 w-4 text-status-positive shrink-0" />
               <h2 className="text-base font-semibold truncate">{job.name}</h2>
             </div>
-            <div className="text-xs text-white/40 mt-0.5">
+            <div className="text-xs text-text-tertiary mt-0.5">
               {humanSchedule(job.schedule.expr, job.schedule.tz)}
             </div>
           </div>
@@ -94,7 +94,7 @@ export function JobDetail({
             <button
               onClick={handleRunNow}
               disabled={running}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-white/5 text-text-secondary hover:bg-white/10 hover:text-text-primary disabled:opacity-40 transition-colors"
               title="Run now (debug)"
             >
               <Play className="h-3 w-3" />
@@ -107,7 +107,7 @@ export function JobDetail({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
                 job.enabled
                   ? "bg-status-positive-subtle text-status-positive hover:bg-status-positive/18"
-                  : "bg-white/5 text-white/40 hover:bg-white/10"
+                  : "bg-white/5 text-text-tertiary hover:bg-white/10"
               }`}
             >
               {job.enabled ? "Enabled" : "Disabled"}
@@ -122,19 +122,19 @@ export function JobDetail({
           {/* Status row */}
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">Last Run</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Last Run</div>
               {lastRun ? (
-                <div className="text-xs text-white/70">
+                <div className="text-xs text-text-secondary">
                   {formatDistanceToNow(new Date(lastRun), { addSuffix: true })}
                 </div>
               ) : (
-                <div className="text-xs text-white/30">Never</div>
+                <div className="text-xs text-text-muted">Never</div>
               )}
             </div>
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">Status</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Status</div>
               {!status || status === "never" ? (
-                <div className="text-xs text-white/30">Never run</div>
+                <div className="text-xs text-text-muted">Never run</div>
               ) : hasError ? (
                 <div className="flex items-center gap-1 text-xs text-status-negative">
                   <AlertTriangle className="h-3 w-3" />
@@ -148,13 +148,13 @@ export function JobDetail({
               )}
             </div>
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <div className="text-[10px] uppercase tracking-wider text-white/30 mb-1">Next Run</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Next Run</div>
               {nextRun ? (
-                <div className="text-xs text-white/70">
+                <div className="text-xs text-text-secondary">
                   {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
                 </div>
               ) : (
-                <div className="text-xs text-white/30">—</div>
+                <div className="text-xs text-text-muted">—</div>
               )}
             </div>
           </div>
@@ -178,20 +178,20 @@ export function JobDetail({
           {/* Config */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <span className="text-white/30">Model</span>
-              <span className="ml-2 text-white/60 font-mono">{job.payload.model}</span>
+              <span className="text-text-muted">Model</span>
+              <span className="ml-2 text-text-secondary font-mono">{job.payload.model}</span>
             </div>
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <span className="text-white/30">Thinking</span>
-              <span className="ml-2 text-white/60 font-mono">{job.payload.thinking}</span>
+              <span className="text-text-muted">Thinking</span>
+              <span className="ml-2 text-text-secondary font-mono">{job.payload.thinking}</span>
             </div>
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <span className="text-white/30">Timeout</span>
-              <span className="ml-2 text-white/60">{job.payload.timeoutSeconds}s</span>
+              <span className="text-text-muted">Timeout</span>
+              <span className="ml-2 text-text-secondary">{job.payload.timeoutSeconds}s</span>
             </div>
             <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
-              <span className="text-white/30">Delivery</span>
-              <span className="ml-2 text-white/60 capitalize">{job.delivery.channel}</span>
+              <span className="text-text-muted">Delivery</span>
+              <span className="ml-2 text-text-secondary capitalize">{job.delivery.channel}</span>
             </div>
           </div>
 
@@ -211,7 +211,7 @@ export function JobDetail({
           {/* Prompt editor */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Prompt</span>
+              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">Prompt</span>
               {isDirty && (
                 <button
                   onClick={handleSave}
@@ -233,7 +233,7 @@ export function JobDetail({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={14}
-              className="w-full rounded-md bg-white/[0.03] border border-white/10 p-3 text-xs font-mono text-white/70 focus:outline-none focus:border-white/20 resize-y leading-relaxed"
+              className="w-full rounded-md bg-white/[0.03] border border-white/10 p-3 text-xs font-mono text-text-secondary focus:outline-none focus:border-white/20 resize-y leading-relaxed"
               spellCheck={false}
             />
           </div>

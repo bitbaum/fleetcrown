@@ -57,12 +57,12 @@ export function HabitRow({
             if (e.key === "Escape") ie.cancel();
           }}
           autoFocus
-          className="flex-1 bg-white/[0.04] border border-white/15 rounded px-2 py-0.5 text-sm text-white/85 focus:outline-none focus:border-white/30"
+          className="flex-1 bg-white/[0.04] border border-white/15 rounded px-2 py-0.5 text-sm text-text-primary focus:outline-none focus:border-white/30"
         />
         <select
           value={ie.draft.frequency}
           onChange={(e) => ie.setDraft({ ...ie.draft, frequency: e.target.value as HabitFrequency })}
-          className="bg-white/[0.04] border border-white/10 rounded px-1.5 py-0.5 text-xs text-white/70 focus:outline-none focus:border-white/25"
+          className="bg-white/[0.04] border border-white/10 rounded px-1.5 py-0.5 text-xs text-text-secondary focus:outline-none focus:border-white/25"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
             <option key={f} value={f}>{f}</option>
@@ -75,7 +75,7 @@ export function HabitRow({
         >
           {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
         </button>
-        <button onClick={ie.cancel} className="p-1 rounded text-white/25 hover:text-white/60 transition-colors shrink-0">
+        <button onClick={ie.cancel} className="p-1 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
           <X className="h-3 w-3" />
         </button>
       </div>
@@ -91,7 +91,7 @@ export function HabitRow({
         title={habit.doneToday ? "Mark undone" : "Mark done"}
       >
         {toggling ? (
-          <Loader2 className="h-4 w-4 animate-spin text-white/30" />
+          <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
         ) : habit.doneToday ? (
           <div className="h-4 w-4 rounded-full bg-status-positive/50 flex items-center justify-center">
             <Check className="h-2.5 w-2.5 text-white" />
@@ -102,11 +102,11 @@ export function HabitRow({
       </button>
 
       <div className="flex-1 min-w-0">
-        <span className={`text-sm md:text-base ${habit.doneToday ? "text-white/35 line-through" : ""}`}>
+        <span className={`text-sm md:text-base ${habit.doneToday ? "text-text-tertiary line-through" : ""}`}>
           {habit.title}
         </span>
         {habit.frequency !== HABIT_FREQUENCY.DAILY && (
-          <span className="ml-1.5 text-xs text-white/25">{habit.frequency}</span>
+          <span className="ml-1.5 text-xs text-text-muted">{habit.frequency}</span>
         )}
       </div>
 
@@ -119,14 +119,14 @@ export function HabitRow({
         )}
         <button
           onClick={startEdit}
-          className="p-1.5 rounded text-white/10 hover:text-white/50 hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
           title="Edit habit"
         >
           <Pencil className="h-3 w-3" />
         </button>
         <button
           onClick={() => onRemove(habit.id)}
-          className="p-1.5 rounded text-white/10 hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-text-muted hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors opacity-0 group-hover:opacity-100"
           title="Remove habit"
         >
           <X className="h-3 w-3" />

@@ -60,7 +60,7 @@ export function ProjectDetail({
       {/* Subtle refresh indicator — visible while refetching with stale data on screen. */}
       {refetching && data && (
         <div className="absolute top-3 right-3 z-10 pointer-events-none">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
         </div>
       )}
 
@@ -70,7 +70,7 @@ export function ProjectDetail({
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-white/30" />
           </div>
         ) : !data ? (
-          <p className="text-sm text-white/30">Project not found</p>
+          <p className="text-sm text-text-muted">Project not found</p>
         ) : tab === "overview" ? (
           <OverviewTab data={data} projectId={projectId} onReload={reload} />
         ) : tab === "prompts" ? (

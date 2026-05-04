@@ -57,15 +57,15 @@ export function EventsGrid({
       {/* Search */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-white/30"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-text-muted"
           />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/30">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
             {q || typeFilter ? `${filtered.length} / ${items.length}` : items.length}
           </span>
         </div>
@@ -80,8 +80,8 @@ export function EventsGrid({
               onClick={() => setTypeFilter(typeFilter === t ? null : t)}
               className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
                 typeFilter === t
-                  ? "border-white/30 bg-white/10 text-white/70"
-                  : "border-white/10 bg-transparent text-white/30 hover:text-white/50 hover:border-white/20"
+                  ? "border-white/30 bg-white/10 text-text-secondary"
+                  : "border-white/10 bg-transparent text-text-muted hover:text-text-secondary hover:border-white/20"
               }`}
             >
               {t}
@@ -90,7 +90,7 @@ export function EventsGrid({
           {typeFilter && (
             <button
               onClick={() => setTypeFilter(null)}
-              className="px-2.5 py-1 rounded-full text-xs border border-white/10 text-white/25 hover:text-white/50 transition-colors"
+              className="px-2.5 py-1 rounded-full text-xs border border-white/10 text-text-muted hover:text-text-secondary transition-colors"
             >
               Clear
             </button>
@@ -101,7 +101,7 @@ export function EventsGrid({
       {/* Active events */}
       <Card>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-white/25">
+          <div className="flex flex-col items-center gap-2 py-8 text-text-muted">
             <Calendar className="h-8 w-8" />
             <div className="text-sm">
               {q || typeFilter ? "No events match your filter" : "No events recorded yet"}
@@ -119,7 +119,7 @@ export function EventsGrid({
             {withoutDeadline.length > 0 && (
               <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-white/[0.05]" : ""}>
                 {withDeadline.length > 0 && (
-                  <div className="text-[10px] uppercase tracking-wider text-white/30 mb-2">No deadline</div>
+                  <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">No deadline</div>
                 )}
                 {withoutDeadline.map((event) => (
                   <EventCard key={event.id} event={event} onDelete={handleDelete} onArchive={handleArchive} onEdit={handleEdit} />
@@ -137,7 +137,7 @@ export function EventsGrid({
         <div>
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-white/25 hover:text-white/50 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
           >
             {showArchived ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             <Archive className="h-3 w-3" />

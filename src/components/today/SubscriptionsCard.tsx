@@ -12,18 +12,18 @@ export async function SubscriptionsCard() {
     <Card>
       <CardHeader icon={CreditCard} title="Upcoming Bills" />
       {items.length === 0 ? (
-        <div className="text-sm md:text-base text-white/30">No bills due soon</div>
+        <div className="text-sm md:text-base text-text-muted">No bills due soon</div>
       ) : (
         <div className="space-y-2.5">
           {items.map((item) => (
             <div key={item.id} className="flex items-center justify-between">
               <div>
                 <div className="text-sm md:text-base">{item.name}</div>
-                <div className="text-xs md:text-sm text-white/40">
+                <div className="text-xs md:text-sm text-text-tertiary">
                   {item.vendor}{item.nextDue ? ` · ${format(new Date(item.nextDue), "d MMM")}` : ""}
                 </div>
               </div>
-              <div className="text-sm md:text-base font-mono text-white/70">
+              <div className="text-sm md:text-base font-mono text-text-secondary">
                 {item.amount} {item.currency}
               </div>
             </div>

@@ -52,19 +52,19 @@ function ClaudeSession({ projectName }: { projectName: string }) {
 
   return (
     <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 font-medium">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted font-medium">
         <Terminal className="h-3 w-3" /> Claude Session
       </div>
       {session.done && (
         <div>
-          <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Done</div>
-          <p className="text-xs text-white/55 leading-relaxed line-clamp-3">{session.done}</p>
+          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Done</div>
+          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.done}</p>
         </div>
       )}
       {session.next && (
         <div>
-          <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">Next</div>
-          <p className="text-xs text-white/70 leading-relaxed line-clamp-3">{session.next}</p>
+          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Next</div>
+          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
         </div>
       )}
       {session.todos && session.todos !== "0 TODOs" && session.todos !== "0" && (
@@ -75,7 +75,7 @@ function ClaudeSession({ projectName }: { projectName: string }) {
       )}
       <div className="flex items-center gap-4 pt-0.5">
         {session.tests && (
-          <div className="text-[10px] text-white/35">{session.tests}</div>
+          <div className="text-[10px] text-text-tertiary">{session.tests}</div>
         )}
         {session.health && (
           <div className={`text-[10px] font-medium ${healthColor}`}>{session.health.split("—")[0].trim()}</div>
@@ -165,7 +165,7 @@ export function OverviewTab({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-white/25 italic">No details recorded yet.</p>
+        <p className="text-xs text-text-muted italic">No details recorded yet.</p>
       )}
 
       {/* Missing suggested fields — collapsed by default */}
@@ -173,12 +173,12 @@ export function OverviewTab({
         <div>
           {showEmpty ? (
             <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-white/20 mb-2">Add missing context</div>
+              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Add missing context</div>
               {missingSuggested.map(({ key, label, placeholder }) => (
                 <div key={key}>
                   {addingKey === key ? (
                     <div className="py-1">
-                      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
+                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">{label}</div>
                       <AddAttrInline
                         projectId={projectId}
                         presetKey={key}
@@ -190,23 +190,23 @@ export function OverviewTab({
                   ) : (
                     <button
                       onClick={() => setAddingKey(key)}
-                      className="flex items-center gap-1.5 w-full text-left py-1.5 text-xs text-white/25 hover:text-white/50 transition-colors"
+                      className="flex items-center gap-1.5 w-full text-left py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
                     >
                       <Plus className="h-3 w-3 shrink-0" />
-                      <span className="font-medium text-white/35">{label}</span>
-                      <span className="text-white/20 italic ml-1">— {placeholder}</span>
+                      <span className="font-medium text-text-tertiary">{label}</span>
+                      <span className="text-text-muted italic ml-1">— {placeholder}</span>
                     </button>
                   )}
                 </div>
               ))}
-              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-white/30 hover:text-white/55 transition-colors mt-1">
+              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-text-muted hover:text-text-secondary transition-colors mt-1">
                 Collapse
               </button>
             </div>
           ) : (
             <button
               onClick={() => setShowEmpty(true)}
-              className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/60 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
             >
               <Plus className="h-3.5 w-3.5" />
               Add {missingSuggested.map((s) => s.label.toLowerCase()).join(", ")}
@@ -227,7 +227,7 @@ export function OverviewTab({
       ) : (
         <button
           onClick={() => setAddingKey("__custom__")}
-          className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors"
+          className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors"
         >
           <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>
@@ -236,14 +236,14 @@ export function OverviewTab({
       {/* People relations */}
       {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
         <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
             <Users className="h-3 w-3" /> People
           </div>
           <div className="flex flex-wrap gap-1.5">
             {data.relations
               .filter((r) => r.targetType === ENTITY_TYPE.PERSON)
               .map((r, i) => (
-                <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-white/55">
+                <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-text-secondary">
                   {r.targetName}
                 </span>
               ))}
@@ -253,20 +253,20 @@ export function OverviewTab({
 
       {/* Recent activity */}
       <div>
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/25 mb-2 font-medium">
+        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
           <MessageSquare className="h-3 w-3" /> Recent Activity
         </div>
         <div className="space-y-3">
           {activityList.map((i, idx) => (
             <div key={idx} className="text-xs">
-              <div className="text-white/25 mb-0.5">
+              <div className="text-text-muted mb-0.5">
                 {i.channel} · {new Date(i.occurredAt).toLocaleDateString()}
               </div>
-              {i.summary && <p className="text-white/50 leading-relaxed">{i.summary}</p>}
+              {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}
             </div>
           ))}
           {activityList.length === 0 && !loggingActivity && (
-            <p className="text-xs text-white/30">No activity recorded yet.</p>
+            <p className="text-xs text-text-muted">No activity recorded yet.</p>
           )}
         </div>
 
@@ -303,7 +303,7 @@ export function OverviewTab({
               >
                 {actSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
               </button>
-              <button onClick={() => setLoggingActivity(false)} className="text-xs text-white/30 hover:text-white/60 px-1">
+              <button onClick={() => setLoggingActivity(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">
                 Cancel
               </button>
             </div>
@@ -311,7 +311,7 @@ export function OverviewTab({
         ) : (
           <button
             onClick={() => setLoggingActivity(true)}
-            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-status-positive transition-colors mt-2"
+            className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-2"
           >
             <Plus className="h-3.5 w-3.5" /> Log activity
           </button>

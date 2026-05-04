@@ -55,8 +55,8 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
   return (
     <div className="mt-2 p-3 rounded-lg border border-white/10 bg-white/[0.02] space-y-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] uppercase tracking-wider text-white/30">New Event</span>
-        <button onClick={() => { setOpen(false); reset(); }} className="text-white/25 hover:text-white/60">
+        <span className="text-[10px] uppercase tracking-wider text-text-muted">New Event</span>
+        <button onClick={() => { setOpen(false); reset(); }} className="text-text-muted hover:text-text-secondary">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -113,7 +113,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           Add
         </button>
-        <button onClick={() => { setOpen(false); reset(); }} className="text-xs text-white/30 hover:text-white/60">
+        <button onClick={() => { setOpen(false); reset(); }} className="text-xs text-text-muted hover:text-text-secondary">
           Cancel
         </button>
       </div>

@@ -31,7 +31,7 @@ export function ActionButtons({
 
   if (done) {
     return (
-      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-white/30"}`}>
+      <span className={`text-xs ${done === ACTION_STATUS.APPROVED ? "text-status-positive" : "text-text-muted"}`}>
         {done === ACTION_STATUS.APPROVED ? "✓" : "✗"}
       </span>
     );
@@ -51,7 +51,7 @@ export function ActionButtons({
         <button
           onClick={onReject}
           disabled={busy}
-          className="p-1.5 rounded hover:bg-white/5 text-white/30 hover:text-white/60 transition-colors disabled:opacity-50"
+          className="p-1.5 rounded hover:bg-white/5 text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
           title="Skip — dismiss this action"
         >
           <X className="h-4 w-4" />
@@ -73,7 +73,7 @@ export function ActionButtons({
       <button
         onClick={onReject}
         disabled={busy}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 hover:bg-white/5 text-white/60 transition-colors disabled:opacity-50"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-white/10 hover:bg-white/5 text-text-secondary transition-colors disabled:opacity-50"
       >
         <X className="h-3 w-3" />
         Skip
