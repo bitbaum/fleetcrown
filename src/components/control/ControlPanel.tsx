@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bot, RefreshCw, Terminal, ChevronUp, ChevronDown, Plus, X, Loader2 } from "lucide-react";
+import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { timeAgo } from "@/lib/dates";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/app/api/control/route";
 import type { FastProjectState } from "@/lib/control-fast-state";
@@ -11,6 +10,12 @@ type Agent = "codex" | "claude";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import {
+  ActivityLogPanel,
+  BrainConfigPanel,
+  FleetStatusBar,
+  NewProjectModal,
+} from "./control-panel-helpers";
 
 const ACTIVE_WINDOW_S = 300; // 5 min — project shows as full card if recently active
 
@@ -51,7 +56,6 @@ export function ControlPanel() {
   const defaultAgent = data?.agentRegistry.defaultAgent ?? switchableRegistry[0]?.id ?? "codex";
   const selectedAgent = (agent || data?.agentConfig.agent || defaultAgent) as Agent;
   const selectedDefinition = switchableRegistry.find((entry) => entry.id === selectedAgent) ?? null;
-  const modelSuggestions = selectedDefinition?.modelSuggestions ?? [];
   const activeDefinition = switchableRegistry.find((entry) => entry.id === data?.agentConfig.agent) ?? null;
   const model = draftModels[selectedAgent] ?? data?.agentConfig.model ?? selectedDefinition?.defaultModel ?? "";
   const savedConfig = data?.agentConfig ?? null;
@@ -68,9 +72,7 @@ export function ControlPanel() {
       setData(payload);
       if (!agentDirty) {
         setAgent(payload.agentConfig.agent);
-        setDraftModels({
-          [payload.agentConfig.agent]: payload.agentConfig.model,
-        });
+        setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
       }
       setLastUpdated(Date.now());
       setError(null);
@@ -138,7 +140,6 @@ export function ControlPanel() {
       });
       es.onerror = () => {
         es?.close();
-        // Reconnect after 5s on error (don't hammer the server)
         reconnectTimer = setTimeout(connect, 5_000);
       };
     };
@@ -178,7 +179,6 @@ export function ControlPanel() {
     setCreatingProject(true);
     setCreateError("");
     try {
-      // Register project
       const res = await fetch("/api/user-projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,10 +192,7 @@ export function ControlPanel() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to create project");
       }
-      // Launch if dir provided
-      if (newDir.trim()) {
-        await launchProject(newName.trim(), newDir.trim());
-      }
+      if (newDir.trim()) await launchProject(newName.trim(), newDir.trim());
       setNewProjectOpen(false);
       setNewName("");
       setNewDir("");
@@ -225,12 +222,12 @@ export function ControlPanel() {
     await refresh(true);
   };
 
-  const runCustomPrompt = async (project: ProjectState, prompt: string, agent: string) => {
+  const runCustomPrompt = async (project: ProjectState, prompt: string, ag: string) => {
     if (!project.agentRunning) {
       await fetch("/api/agent/launch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tab: project.tab, dir: project.dir, agent }),
+        body: JSON.stringify({ tab: project.tab, dir: project.dir, agent: ag }),
       });
       await new Promise((r) => setTimeout(r, 3000));
     }
@@ -240,7 +237,7 @@ export function ControlPanel() {
       body: JSON.stringify({
         projectKey: project.tab,
         projectPath: project.dir,
-        adapter: agent,
+        adapter: ag,
         intent: "custom",
         customInstructions: prompt,
       }),
@@ -259,16 +256,11 @@ export function ControlPanel() {
         body: JSON.stringify({ agent: selectedAgent, model, applyToOpenTabs }),
       });
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(body.error ?? `HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       setAgentDirty(false);
       setLastTabResults(Array.isArray(body.tabResults) ? body.tabResults : []);
       setLastTabResultsAt(Array.isArray(body.tabResults) ? Date.now() : null);
-      setDraftModels((current) => ({
-        ...current,
-        [selectedAgent]: model,
-      }));
+      setDraftModels((current) => ({ ...current, [selectedAgent]: model }));
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update brain");
@@ -323,7 +315,6 @@ export function ControlPanel() {
   return (
     <div className="space-y-5">
       <div className="ui-panel-raised space-y-5 p-5 md:p-7">
-        {/* Stats — always visible */}
         <div className="ui-stat-grid">
           <div className="ui-stat-card">
             <div className="ui-stat-label">Active sessions</div>
@@ -339,307 +330,83 @@ export function ControlPanel() {
           </div>
         </div>
 
-        {/* Activity log — cross-project dispatch history */}
-        {data?.recentActivity && data.recentActivity.length > 0 && (
-          <div>
-            <button
-              onClick={() => setActivityOpen((v) => !v)}
-              className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
-            >
-              Activity log <span className="ml-1 text-text-muted">({data.recentActivity.length})</span>
-              {activityOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
-            </button>
-            {activityOpen && (
-              <div className="mt-2 space-y-1.5">
-                {data.recentActivity.slice(0, 20).map((item) => (
-                  <div key={item.id} className="flex items-baseline gap-2 text-sm">
-                    <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
-                    <span className="text-text-muted">·</span>
-                    <span className="truncate text-text-secondary">
-                      {item.customPrompt ? item.customPrompt.slice(0, 60) : item.intent}
-                    </span>
-                    <span className="ml-auto shrink-0 text-text-muted">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {data?.recentActivity && (
+          <ActivityLogPanel
+            activities={data.recentActivity}
+            open={activityOpen}
+            onToggle={() => setActivityOpen((v) => !v)}
+          />
         )}
 
-        {/* Brain — collapsed pill + expandable form */}
-        <div className="space-y-4">
-          {/* Collapsed pill */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-accent-text" />
-              <span className="text-text-primary font-medium">{activeDefinition?.label ?? selectedAgent}</span>
-              <span className="text-text-muted">·</span>
-              <span className="text-text-secondary text-sm">{savedConfig?.model ?? model}</span>
-            </div>
-            <button
-              onClick={() => setBrainOpen((v) => !v)}
-              className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Change {brainOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </button>
-          </div>
-
-          {/* Expanded form */}
-          {brainOpen && (
-            <div className="space-y-4">
-              <div>
-                <div className="ui-kicker mb-2">Backend</div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {switchableRegistry.map((entry) => {
-                    const active = selectedAgent === entry.id;
-                    return (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => {
-                          const next = entry.id as Agent;
-                          setAgentDirty(true);
-                          setAgent(next);
-                          setDraftModels((current) => ({
-                            ...current,
-                            [next]: current[next] ?? entry.defaultModel ?? "",
-                          }));
-                        }}
-                        className={cn(
-                          "rounded-2xl border px-4 py-3 text-left transition",
-                          active
-                            ? "border-accent-primary bg-accent-muted"
-                            : "border-border-subtle bg-surface-base hover:bg-surface-raised",
-                        )}
-                      >
-                        <div className="font-medium text-text-primary">{entry.label}</div>
-                        <div className="text-sm text-text-muted">Default: {entry.defaultModel}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="ui-kicker">Model</span>
-                <input
-                  list={`model-options-${selectedAgent}`}
-                  value={model}
-                  onChange={(e) => {
-                    setAgentDirty(true);
-                    setDraftModels((current) => ({
-                      ...current,
-                      [selectedAgent]: e.target.value,
-                    }));
-                  }}
-                  className="ui-input"
-                  placeholder={selectedDefinition?.defaultModel ?? "Model name"}
-                />
-                <datalist id={`model-options-${selectedAgent}`}>
-                  {modelSuggestions.map((option) => (
-                    <option key={option} value={option} />
-                  ))}
-                </datalist>
-                <div className="flex flex-wrap gap-2">
-                  {modelSuggestions.map((option) => (
-                    <button
-                      key={option}
-                      type="button"
-                      onClick={() => {
-                        setAgentDirty(true);
-                        setDraftModels((current) => ({ ...current, [selectedAgent]: option }));
-                      }}
-                      className={cn(
-                        "rounded-full border px-3 py-1 text-sm",
-                        model === option
-                          ? "border-accent-primary bg-accent-muted text-text-primary"
-                          : "border-border-subtle bg-surface-base text-text-secondary hover:bg-surface-raised",
-                      )}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  onClick={() => saveAgent(false)}
-                  disabled={savingAgent || !model.trim() || !hasPendingChange}
-                  className="rounded-2xl border border-border-default bg-surface-overlay px-4 py-3 text-base text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
-                >
-                  Save as default
-                </button>
-
-                <button
-                  onClick={() => saveAgent(true)}
-                  disabled={savingAgent || !model.trim() || !hasPendingChange}
-                  className="rounded-2xl bg-accent-primary px-4 py-3 text-base text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40"
-                >
-                  {savingAgent ? "Switching…" : "Apply + restart open tabs"}
-                </button>
-              </div>
-
-              <p className="max-w-3xl text-base text-text-secondary">
-                Save Default only affects future launches. Switch Open Tabs restarts the currently open project tabs in Zellij with the selected backend and model.
-              </p>
-
-              {lastTabResults.length > 0 && (
-                <div className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm text-text-secondary">
-                  <div className="mb-1 text-text-primary">Last tab switch result{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}</div>
-                  <ul className="space-y-1">
-                    {lastTabResults.slice(0, 8).map((result, idx) => (
-                      <li key={`${result.tab ?? "global"}-${idx}`}>
-                        {result.status.toUpperCase()} {result.tab ? `· ${result.tab}` : ""}
-                        {result.reason ? ` — ${result.reason}` : ""}
-                        {result.error ? ` — ${result.error}` : ""}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {activeDefinition && (
-                <div className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm text-text-secondary">
-                  <span className="text-text-primary">{activeDefinition.label}</span>
-                  {activeDefinition.capabilities.sessionLifecycleSignals
-                    ? " supports the full loop — lifecycle hooks, ready signals, and autonomous continuation."
-                    : " dispatches tasks via prompt injection. No stop/ready lifecycle signals — banners trigger from orchestration run completions only."}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-                <span className="rounded-full border border-border-subtle bg-surface-overlay px-3 py-1.5">
-                  Selected: <span className="text-text-primary">{selectedDefinition?.label ?? selectedAgent}</span> {model ? `· ${model}` : ""}
-                </span>
-                {savedConfig && (
-                  <span className="rounded-full border border-border-subtle bg-surface-base px-3 py-1.5">
-                    Saved default: <span className="text-text-primary">{savedConfig.agent}</span> · {savedConfig.model}
-                  </span>
-                )}
-                {selectedDefinition?.defaultModel && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAgentDirty(true);
-                      setDraftModels((current) => ({
-                        ...current,
-                        [selectedAgent]: selectedDefinition.defaultModel,
-                      }));
-                    }}
-                    className="rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
-                  >
-                    Use detected default: {selectedDefinition.defaultModel}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        <BrainConfigPanel
+          brainOpen={brainOpen}
+          onToggle={() => setBrainOpen((v) => !v)}
+          selectedAgent={selectedAgent}
+          switchableRegistry={switchableRegistry}
+          model={model}
+          savedConfig={savedConfig}
+          hasPendingChange={hasPendingChange}
+          savingAgent={savingAgent}
+          activeDefinition={activeDefinition}
+          selectedDefinition={selectedDefinition}
+          lastTabResults={lastTabResults}
+          lastTabResultsAt={lastTabResultsAt}
+          onAgentSelect={(agentId, defaultModel) => {
+            const next = agentId as Agent;
+            setAgentDirty(true);
+            setAgent(next);
+            setDraftModels((current) => ({
+              ...current,
+              [next]: current[next] ?? defaultModel ?? "",
+            }));
+          }}
+          onModelChange={(value) => {
+            setAgentDirty(true);
+            setDraftModels((current) => ({ ...current, [selectedAgent]: value }));
+          }}
+          onSave={saveAgent}
+        />
       </div>
 
-      {/* Status bar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-text-tertiary">
-        <span>
-          {total > 0 ? (
-            <>
-              {running > 0 && <span className="text-accent-text">{running} {selectedAgent} sessions running</span>}
-              {running > 0 && (waitingCount > 0 || todayCommits > 0) && " · "}
-              {waitingCount > 0 && <span className="text-status-positive">{waitingCount} waiting</span>}
-              {waitingCount > 0 && todayCommits > 0 && " · "}
-              {todayCommits > 0 && <span>+{todayCommits} commits today</span>}
-              {running === 0 && waitingCount === 0 && todayCommits === 0 && `${total} projects`}
-            </>
-          ) : "Loading…"}
-          {lastUpdated && ` · ${timeAgo(lastUpdated)}`}
-        </span>
-        <div className="flex items-center gap-3 self-start">
-          <button
-            onClick={() => setNewProjectOpen(true)}
-            className="flex items-center gap-1 transition-colors hover:text-text-primary"
-          >
-            <Plus className="h-4 w-4" />
-            New project
-          </button>
-          <button
-            onClick={() => refresh(true)}
-            disabled={refreshing}
-            className="flex items-center gap-1 transition-colors hover:text-text-primary"
-          >
-            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-            Refresh
-          </button>
-        </div>
-      </div>
+      <FleetStatusBar
+        running={running}
+        waitingCount={waitingCount}
+        todayCommits={todayCommits}
+        total={total}
+        lastUpdated={lastUpdated}
+        selectedAgent={selectedAgent}
+        refreshing={refreshing}
+        onNewProject={() => setNewProjectOpen(true)}
+        onRefresh={() => refresh(true)}
+      />
 
-      {/* New project modal */}
       {newProjectOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setNewProjectOpen(false)}>
-          <div
-            className="ui-panel w-full max-w-md space-y-4 p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-text-primary">New project</h3>
-              <button onClick={() => setNewProjectOpen(false)} className="text-text-muted hover:text-text-primary">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <input
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && createAndLaunch()}
-                placeholder="Project name (= zellij tab)"
-                className="ui-input w-full"
-              />
-              <input
-                value={newDir}
-                onChange={(e) => setNewDir(e.target.value)}
-                placeholder="Local path — e.g. /home/g/dev/homeharmony"
-                className="ui-input w-full"
-              />
-              <input
-                value={newGitUrl}
-                onChange={(e) => setNewGitUrl(e.target.value)}
-                placeholder="Git URL — optional"
-                className="ui-input w-full"
-              />
-            </div>
-            {createError && <p className="text-sm text-status-negative">{createError}</p>}
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={createAndLaunch}
-                disabled={creatingProject || !newName.trim()}
-                className="ui-btn-primary flex-1 gap-1.5"
-              >
-                {creatingProject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                {newDir.trim() ? "Create & launch" : "Create"}
-              </button>
-              <button onClick={() => setNewProjectOpen(false)} className="ui-btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <NewProjectModal
+          name={newName}
+          dir={newDir}
+          gitUrl={newGitUrl}
+          error={createError}
+          creating={creatingProject}
+          onNameChange={setNewName}
+          onDirChange={setNewDir}
+          onGitUrlChange={setNewGitUrl}
+          onCreate={createAndLaunch}
+          onClose={() => setNewProjectOpen(false)}
+        />
       )}
 
       {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
 
-      {/* Zellij open tabs strip */}
       {data && data.zellijTabs.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           <Terminal className="h-4 w-4 text-text-muted shrink-0" />
           {data.zellijTabs.map((t) => {
-            const hasProject = data.projects.some(
-              (p) => p.tab.toLowerCase() === t.toLowerCase()
-            );
+            const hasProject = data.projects.some((p) => p.tab.toLowerCase() === t.toLowerCase());
             return (
               <span
                 key={t}
                 className={cn(
-                "rounded-full px-2 py-1 font-mono text-[11px]",
+                  "rounded-full px-2 py-1 font-mono text-[11px]",
                   hasProject ? "bg-surface-raised text-text-secondary" : "bg-surface-overlay text-text-muted"
                 )}
               >
@@ -674,12 +441,10 @@ export function ControlPanel() {
 
           return (
             <div className="space-y-3">
-              {/* Active projects — full cards */}
               {activeProjects.map((project) => (
                 <ProjectCard key={project.tab} {...cardProps(project)} />
               ))}
 
-              {/* Idle projects — compact tile grid */}
               {idleProjects.length > 0 && (
                 <div className="space-y-2">
                   <button
