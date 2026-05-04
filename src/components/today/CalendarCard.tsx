@@ -4,6 +4,7 @@ import { Calendar } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useFetch } from "@/hooks/use-fetch";
+import { APP_LOCALE } from "@/lib/constants";
 
 type CalendarEvent = {
   summary?: string;
@@ -52,7 +53,7 @@ function formatTime(time: string | undefined): string {
   try {
     const d = new Date(time);
     if (isNaN(d.getTime())) return time.slice(0, 5);
-    return d.toLocaleTimeString("de-CH", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString(APP_LOCALE, { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "";
   }

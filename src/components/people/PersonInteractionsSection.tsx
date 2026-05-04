@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
+import { APP_LOCALE } from "@/lib/constants";
 import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
@@ -62,7 +63,7 @@ export function InteractionsSection({
             {ix.summary && <span className="max-w-[180px] truncate text-xs text-text-tertiary">{ix.summary}</span>}
           </div>
           <span className="shrink-0 text-xs text-text-tertiary">
-            {new Date(ix.occurredAt).toLocaleDateString("de-CH")}
+            {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
           </span>
         </div>
       ))}

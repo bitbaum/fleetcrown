@@ -25,6 +25,9 @@ export const HABIT_HISTORY_DAYS = 30;
 /** Default timezone for schedule-related operations (cron jobs, calendar). */
 export const DEFAULT_TIMEZONE = process.env.COCKPIT_DEFAULT_TIMEZONE ?? "Europe/Zurich";
 
+/** Locale used for date/time formatting throughout the app. */
+export const APP_LOCALE = process.env.COCKPIT_LOCALE ?? "de-CH";
+
 /** Lookahead windows for the /today summary cards. */
 export const GOALS_DUE_SOON_DAYS = 14;
 export const EVENTS_DUE_SOON_DAYS = 30;

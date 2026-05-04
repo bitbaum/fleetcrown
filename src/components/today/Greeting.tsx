@@ -1,5 +1,7 @@
 "use client";
 
+import { APP_LOCALE } from "@/lib/constants";
+
 export function Greeting({ name }: { name: string }) {
   const now = new Date();
   const hour = now.getHours();
@@ -15,7 +17,7 @@ export function Greeting({ name }: { name: string }) {
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-4xl">{greeting}</h1>
       <p className="mt-1 text-base text-text-secondary">
-        {now.toLocaleDateString("en-CH", {
+        {now.toLocaleDateString(APP_LOCALE, {
           weekday: "long",
           year: "numeric",
           month: "long",
