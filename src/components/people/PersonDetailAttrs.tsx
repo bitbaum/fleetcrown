@@ -72,7 +72,7 @@ export function DetailAttrs({
   return (
     <Section title="Details">
       {detailAttrs.map(([key, value]) => (
-        <div key={key} className="group flex justify-between gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+        <div key={key} className="group flex justify-between gap-3 ui-list-row">
           <span className="shrink-0 text-text-secondary">{formatKey(key)}</span>
           {editingKey === key ? (
             <div className="flex flex-1 items-center justify-end gap-1">
@@ -89,7 +89,7 @@ export function DetailAttrs({
               <button
                 onClick={() => saveEdit(key)}
                 disabled={saving}
-                className="shrink-0 rounded-lg bg-accent-primary p-1 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
+                className="ui-btn-icon-accent p-1"
               >
                 {saving ? <Loader2 className="ui-spinner-2xs" /> : <Save className="h-2.5 w-2.5" />}
               </button>
@@ -143,7 +143,7 @@ export function DetailAttrs({
           <button
             onClick={saveNew}
             disabled={!newKey.trim() || !newValue.trim() || saving}
-            className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
+            className="ui-btn-icon-accent p-1.5"
           >
             {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
           </button>

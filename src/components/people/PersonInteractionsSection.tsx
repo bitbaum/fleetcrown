@@ -53,7 +53,7 @@ export function InteractionsSection({
         <EmptyState>No interactions recorded</EmptyState>
       )}
       {list.map((ix, i) => (
-        <div key={i} className="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+        <div key={i} className="flex items-center justify-between gap-3 ui-list-row">
           <div className="flex items-center gap-2">
             <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-muted" : "text-status-positive/60"}`}>
               {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}

@@ -276,6 +276,8 @@
     @apply rounded-xl border border-border-subtle bg-surface-base;
     box-shadow: var(--shadow-panel);
   }
+  /* Compact list item row — no shadow, tighter padding */
+  .ui-list-row { @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm; }
   .ui-panel-raised {
     @apply rounded-xl border border-border-subtle bg-surface-raised;
     box-shadow: var(--shadow-panel);
@@ -325,6 +327,10 @@
   /* Icon-only square button */
   .ui-btn-icon {
     @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
+  }
+  /* Accent icon button — caller adds padding (p-1 or p-1.5) */
+  .ui-btn-icon-accent {
+    @apply shrink-0 rounded-lg bg-accent-primary text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30;
   }
   /* Inline-edit save button */
   .ui-btn-save {

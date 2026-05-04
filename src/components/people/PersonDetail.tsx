@@ -230,7 +230,7 @@ export function PersonDetail({
           {data.relations.length > 0 && (
             <Section title="Connections">
               {data.relations.map((rel, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+                <div key={i} className="flex items-center gap-2 ui-list-row">
                   <Link2 className="h-3.5 w-3.5 text-text-tertiary" />
                   <span className="text-text-secondary">{rel.type}</span>
                   <span className="text-text-primary">{rel.targetName}</span>

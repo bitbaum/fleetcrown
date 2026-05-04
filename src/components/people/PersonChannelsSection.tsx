@@ -54,7 +54,7 @@ export function ChannelsSection({
   return (
     <Section title="Channels">
       {channels.map(([key, value]) => (
-        <div key={key} className="group flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm">
+        <div key={key} className="group flex items-center gap-3 ui-list-row">
           <ChannelIcon channel={key} />
           <span className="shrink-0 text-text-secondary">{stripChannelPrefix(key)}</span>
           <span className="flex-1 truncate font-mono text-xs text-text-tertiary">{formatChannelValue(value)}</span>
@@ -93,7 +93,7 @@ export function ChannelsSection({
           <button
             onClick={saveChannel}
             disabled={!channelValue.trim() || saving}
-            className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
+            className="ui-btn-icon-accent p-1.5"
           >
             {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
           </button>
