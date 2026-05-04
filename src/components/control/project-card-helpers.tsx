@@ -200,9 +200,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
         <span className="ui-tag ui-tag-neutral">
           {run.adapter} · {run.intent}
         </span>
-        <span className="rounded-full border border-border-subtle bg-surface-base px-2.5 py-1 text-xs text-text-secondary">
-          {run.state}
-        </span>
+        <span className="ui-badge">{run.state}</span>
       </div>
       {run.summary?.done && (
         <p className="text-base text-text-secondary"><span className="mr-2 ui-kicker">done</span>{run.summary.done}</p>

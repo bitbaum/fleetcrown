@@ -432,6 +432,11 @@
   .ui-dot-negative { background-color: var(--status-negative); }
   .ui-dot-neutral  { background-color: var(--status-neutral); }
 
+  /* Micro badge — shape only; caller adds color/bg/border-color classes */
+  .ui-micro-badge {
+    @apply inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium;
+  }
+
   /* Status tags — small pill labels */
   .ui-tag {
     @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium;

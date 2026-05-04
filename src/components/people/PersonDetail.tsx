@@ -207,10 +207,7 @@ export function PersonDetail({
             <Section title="Aliases">
               <div className="flex flex-wrap gap-1.5">
                 {parseAliases(data.attrs["aliases"]).map((alias) => (
-                  <span
-                    key={alias}
-                    className="rounded-full border border-border-default bg-surface-base px-2.5 py-1 text-xs text-text-secondary"
-                  >
+                  <span key={alias} className="ui-badge">
                     {alias}
                   </span>
                 ))}

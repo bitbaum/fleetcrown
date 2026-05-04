@@ -36,7 +36,7 @@ export function StatusBadge({ value }: { value: string }) {
     ? "bg-status-warning-subtle text-status-warning border-status-warning/25"
     : "bg-accent-muted text-accent-text border-accent-primary/25";
   return (
-    <span className={`px-1.5 py-0.5 rounded border text-[10px] font-medium truncate max-w-[180px] ${cls}`}>
+    <span className={`ui-micro-badge truncate max-w-[180px] ${cls}`}>
       {value}
     </span>
   );
@@ -71,7 +71,7 @@ export function HealthBadge({ signal }: { signal: HealthSignal }) {
     deployment: "🔸",
   };
   return (
-    <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-medium ${styles[signal.kind]}`}>
+    <span className={`ui-micro-badge gap-1 ${styles[signal.kind]}`}>
       <span>{icons[signal.kind]}</span>
       {signal.label}
     </span>

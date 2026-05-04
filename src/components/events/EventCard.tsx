@@ -125,11 +125,11 @@ export function EventCard({
     <div className={`group flex items-start gap-3 py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-border-subtle text-text-secondary uppercase tracking-wide font-medium">
+          <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-wide">
             {event.type}
           </span>
           {event.category && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-status-positive-subtle border border-status-positive/20 text-status-positive/70 uppercase tracking-wide font-medium">
+            <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-wide">
               {event.category}
             </span>
           )}
