@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
-  Pause, Play, Eraser, Loader2, Send, ChevronDown, ChevronUp,
+  Pause, Play, Eraser, Loader2, Send, ChevronDown, ChevronUp, Mic, MicOff,
 } from "lucide-react";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
@@ -258,6 +259,11 @@ export function IntentButtonPanel({
   const [showMore, setShowMore] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
 
+  const appendTranscript = useCallback((text: string) => {
+    onCustomChange((custom ? custom + " " : "") + text);
+  }, [custom, onCustomChange]);
+  const { listening, supported, toggle: toggleMic } = useSpeechRecognition(appendTranscript);
+
   return (
     <div className="space-y-3 ui-card-section">
       <div className="flex flex-wrap gap-2">
@@ -341,21 +347,37 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          value={custom}
-          onChange={(e) => onCustomChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
-          onFocus={() => onCustomFocusChange(true)}
-          onBlur={() => onCustomFocusChange(false)}
-          placeholder="Custom prompt…"
-          className="ui-input min-w-0 flex-1"
-        />
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <input
+            type="text"
+            value={custom}
+            onChange={(e) => onCustomChange(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
+            onFocus={() => onCustomFocusChange(true)}
+            onBlur={() => onCustomFocusChange(false)}
+            placeholder={listening ? "Listening…" : "Custom prompt…"}
+            className={`ui-input w-full ${supported ? "pr-10" : ""} ${listening ? "border-status-negative/40" : ""}`}
+          />
+          {supported && (
+            <button
+              type="button"
+              onClick={toggleMic}
+              title={listening ? "Stop recording" : "Voice input"}
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors ${
+                listening
+                  ? "text-status-negative animate-pulse hover:bg-status-negative/10"
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised"
+              }`}
+            >
+              {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+            </button>
+          )}
+        </div>
         <button
           onClick={onSendCustom}
           disabled={!custom.trim() || sending !== null}
-          className="ui-btn-lg py-3.5 sm:px-5"
+          className="ui-btn-lg shrink-0 py-3.5 sm:px-5"
         >
           <Send className="h-4 w-4" />
         </button>

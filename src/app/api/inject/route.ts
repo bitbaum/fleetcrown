@@ -5,6 +5,7 @@ import fs from "fs";
 import {
   stateFile,
   readProjectsMap,
+  parseProjectsConf,
   readPrompts,
   readPromptMeta,
   buildPromptWithSession,
@@ -27,22 +28,37 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt } = dataOrResp;
 
-  const projects = readProjectsMap();
-  const canonical = projects.get(tab.toLowerCase());
+  const allProjects = parseProjectsConf();
+  const projectsMap = readProjectsMap();
+  const canonical = projectsMap.get(tab.toLowerCase());
   if (!canonical) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
 
-  // Validate the tab actually exists in the running Zellij session before touching any state.
-  // If Zellij is not running or query fails, degrade gracefully and continue.
+  // Resolve the effective tab name to inject into. When the canonical name isn't
+  // an active Zellij tab (e.g. "Cockpit" tab is named "Cockpit Claude" this session),
+  // fall back to any other conf entry that maps to the same directory.
+  let effectiveTab = canonical;
   try {
     const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
     const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
-    if (activeTabs.length > 0 && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
-      return NextResponse.json(
-        { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-        { status: 422 },
-      );
+    if (activeTabs.length > 0) {
+      const isAlive = (name: string) => activeTabs.some((t) => t.toLowerCase() === name.toLowerCase());
+      if (!isAlive(canonical)) {
+        // Find all conf entries for the same directory, pick one that has a live tab
+        const canonicalDir = allProjects.find((p: { tab: string; dir: string }) => p.tab.toLowerCase() === canonical.toLowerCase())?.dir;
+        const alias = canonicalDir
+          ? allProjects.find((p: { tab: string; dir: string }) => p.dir === canonicalDir && isAlive(p.tab))
+          : undefined;
+        if (alias) {
+          effectiveTab = alias.tab;
+        } else {
+          return NextResponse.json(
+            { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
+            { status: 422 },
+          );
+        }
+      }
     }
   } catch {
     // Zellij unavailable — proceed anyway so non-Zellij use cases aren't blocked.
@@ -60,7 +76,7 @@ export async function POST(req: NextRequest) {
     if (!base) {
       return NextResponse.json({ error: `Unknown prompt key: ${promptKey}` }, { status: 400 });
     }
-    prompt = buildPromptWithSession(base, canonical);
+    prompt = buildPromptWithSession(base, effectiveTab);
     const meta = readPromptMeta().find((m) => m.key === promptKey);
     promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
   } else {
@@ -70,12 +86,12 @@ export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
 
   try {
-    injectIntoTab(canonical, prompt);
+    injectIntoTab(effectiveTab, prompt);
 
     const nowS = Math.floor(Date.now() / 1000);
 
-    // Track which prompt is currently running (stop.sh clears this when Claude exits)
-    fs.writeFileSync(stateFile.prompt(canonical), JSON.stringify({
+    // Track which prompt is currently running (stop.sh clears this using the live tab name)
+    fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
       key: promptKey ?? "custom",
       label: promptLabel,
       startedAt: nowS,
@@ -85,28 +101,28 @@ export async function POST(req: NextRequest) {
     upsertProjectState({
       projectKey: canonical,
       userId,
-      tabName: canonical,
+      tabName: effectiveTab,
       currentPromptKey: promptKey ?? "custom",
       currentPromptLabel: promptLabel,
       currentPromptStartedAt: new Date(nowS * 1000),
     }).catch(() => {});
 
     // Any injection means we're continuing — clear stale close state from prior sessions
-    try { fs.unlinkSync(stateFile.ready(canonical)); } catch { /* gone */ }
-    try { fs.unlinkSync(stateFile.closed(canonical)); } catch { /* gone */ }
+    try { fs.unlinkSync(stateFile.ready(effectiveTab)); } catch { /* gone */ }
+    try { fs.unlinkSync(stateFile.closed(effectiveTab)); } catch { /* gone */ }
 
     if (promptKey === "close_session") {
       // Suppress the next stop-hook popup — infrastructure-side, reliable
-      fs.writeFileSync(stateFile.sentinel(canonical), "");
+      fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
       // Signal "closing in progress" — NOT "closed" yet (Claude is still running the close prompt).
       // stop.sh will write claude-closed-<tab> when Claude actually finishes.
-      fs.writeFileSync(stateFile.closing(canonical), String(nowS));
+      fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
     } else {
       // Non-close injection: also clear any stale closing state
-      try { fs.unlinkSync(stateFile.closing(canonical)); } catch { /* gone */ }
+      try { fs.unlinkSync(stateFile.closing(effectiveTab)); } catch { /* gone */ }
     }
 
-    return NextResponse.json({ ok: true, tab: canonical });
+    return NextResponse.json({ ok: true, tab: effectiveTab });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json({ error: `Injection failed: ${msg}` }, { status: 500 });
