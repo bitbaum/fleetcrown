@@ -1,9 +1,11 @@
 import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2 } from "lucide-react";
 import Link from "next/link";
 import { getTodaySummary } from "@/db/queries/today";
+import { getCurrentUserId } from "@/lib/session";
 
 export async function SummaryBar() {
-  const s = await getTodaySummary();
+  const userId = await getCurrentUserId();
+  const s = await getTodaySummary(userId);
 
   return (
     <div className="flex flex-wrap gap-3">

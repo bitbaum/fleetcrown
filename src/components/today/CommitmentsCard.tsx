@@ -1,11 +1,13 @@
 import { CheckCircle } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
+import { getCurrentUserId } from "@/lib/session";
 import { CommitmentItem } from "./CommitmentItem";
 import { AddCommitmentButton } from "./AddCommitmentButton";
 
 export async function CommitmentsCard() {
-  const items = await getActiveCommitments();
+  const userId = await getCurrentUserId();
+  const items = await getActiveCommitments(userId);
 
   return (
     <Card>

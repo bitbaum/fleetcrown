@@ -2,12 +2,14 @@ import { Target } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
+import { getCurrentUserId } from "@/lib/session";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 
 export default async function GoalsPage() {
-  const [goalTree, stats] = await Promise.all([getGoals(), getGoalStats()]);
+  const userId = await getCurrentUserId();
+  const [goalTree, stats] = await Promise.all([getGoals(userId), getGoalStats(userId)]);
 
   const activeGoals = goalTree.filter((g) => g.status !== GOAL_STATUS.COMPLETED);
   const completedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.COMPLETED);

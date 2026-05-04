@@ -2,6 +2,10 @@
 
 @~/.claude/CLAUDE.md
 
+## Mission
+
+Cockpit is a personal life OS and AI agent fleet for builders running multiple projects simultaneously. One interface to track goals, people, habits, money, and events; one neutral orchestration layer to dispatch and monitor AI agents across projects — so the builder stays in judgment mode while agents handle execution.
+
 ## What This Is
 
 Cockpit is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
@@ -22,6 +26,7 @@ src/
 ├── components/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav, AskIvyModal
+│   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
 │   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail
 │   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
@@ -30,6 +35,7 @@ src/
 │   ├── habits/    → HabitHeatmap (per-row daily check-off lives in today/)
 │   ├── events/    → EventCard, AddEventForm, EventsGrid
 │   ├── prompts/   → PromptRow, FeaturedCard, CategoryBar, RunModal, ScheduleModal
+│   ├── settings/  → TeamSettings (invite flow)
 │   └── system/    → AutopilotCard, JobDetail, SystemStats
 ├── config/        → SSOT for navigation, channels, prompt-library, subscriptions
 ├── db/
@@ -116,6 +122,7 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 
 | View | Route | Status |
 |------|-------|--------|
+| Control | /control | Fleet command center: dispatch intents to AI agents, real-time SSE status, per-project cards, git sync guard |
 | Today | /today | Calendar, weather, commitments, bills, daily habit check-off, log conversation |
 | People | /people | 1,286 contacts, search, detail panel, inline name/notes edit |
 | Money | /money | Subscriptions, monthly burn |
@@ -126,3 +133,5 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | Prompts | /prompts | Prompt library, run-now via Ivy, schedule as cron job |
 | System | /system | Gateway, memory, disk, uptime, autopilot jobs |
 | Memory | /memory | Knowledge graph stats and recent activity |
+| Thoughts | /thoughts | Published essays on architecture and execution systems |
+| Settings | /settings | Profile + team invite management |

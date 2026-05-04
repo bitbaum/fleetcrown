@@ -1,5 +1,4 @@
 import {
-  DEFAULT_USER_ID,
   DEFAULT_USER_EXTERNAL_ID,
   GOALS_DUE_SOON_DAYS,
   EVENTS_DUE_SOON_DAYS,
@@ -27,27 +26,27 @@ export const PatchCommitmentBody = z.object({
 
 export type CreateCommitmentInput = z.infer<typeof CreateCommitmentBody>;
 
-export async function fulfillCommitment(id: string) {
+export async function fulfillCommitment(id: string, userId: string) {
   await db
     .update(commitments)
     .set({ status: COMMITMENT_STATUS.FULFILLED, updatedAt: new Date() })
-    .where(and(eq(commitments.id, id), eq(commitments.userId, DEFAULT_USER_ID)));
+    .where(and(eq(commitments.id, id), eq(commitments.userId, userId)));
 }
 
-export async function getActiveCommitments() {
+export async function getActiveCommitments(userId: string) {
   return db
     .select()
     .from(commitments)
     .where(
       and(
-        eq(commitments.userId, DEFAULT_USER_ID),
+        eq(commitments.userId, userId),
         eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
       ),
     )
     .orderBy(commitments.dueDate);
 }
 
-export async function getGoalsDueSoon(days = GOALS_DUE_SOON_DAYS) {
+export async function getGoalsDueSoon(userId: string, days = GOALS_DUE_SOON_DAYS) {
   const soon = new Date();
   soon.setDate(soon.getDate() + days);
 
@@ -60,7 +59,7 @@ export async function getGoalsDueSoon(days = GOALS_DUE_SOON_DAYS) {
     })
     .from(goals)
     .where(and(
-      eq(goals.userId, DEFAULT_USER_ID),
+      eq(goals.userId, userId),
       eq(goals.status, GOAL_STATUS.ACTIVE),
       isNotNull(goals.targetDate),
       lte(goals.targetDate, soon),
@@ -68,7 +67,7 @@ export async function getGoalsDueSoon(days = GOALS_DUE_SOON_DAYS) {
     .orderBy(goals.targetDate);
 }
 
-export async function getUpcomingSubscriptions(days = SUBSCRIPTIONS_UPCOMING_DAYS) {
+export async function getUpcomingSubscriptions(userId: string, days = SUBSCRIPTIONS_UPCOMING_DAYS) {
   const future = new Date();
   future.setDate(future.getDate() + days);
 
@@ -77,7 +76,7 @@ export async function getUpcomingSubscriptions(days = SUBSCRIPTIONS_UPCOMING_DAY
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.userId, DEFAULT_USER_ID),
+        eq(subscriptions.userId, userId),
         eq(subscriptions.status, SUB_STATUS.ACTIVE),
         lte(subscriptions.nextDue, future),
       ),
@@ -85,7 +84,7 @@ export async function getUpcomingSubscriptions(days = SUBSCRIPTIONS_UPCOMING_DAY
     .orderBy(subscriptions.nextDue);
 }
 
-export async function getTodaySummary() {
+export async function getTodaySummary(userId: string) {
   const goalsSoon = new Date();
   goalsSoon.setDate(goalsSoon.getDate() + GOALS_DUE_SOON_DAYS);
 
@@ -109,48 +108,45 @@ export async function getTodaySummary() {
         avgProgress: sql<number>`coalesce(avg(${goals.progress}), 0)`,
       })
       .from(goals)
-      .where(and(eq(goals.userId, DEFAULT_USER_ID), eq(goals.status, GOAL_STATUS.ACTIVE))),
+      .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE))),
     db
       .select({ total: sql<number>`count(*)` })
       .from(alerts)
-      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false))),
+      .where(and(eq(alerts.userId, userId), eq(alerts.dismissed, false))),
     db
       .select({ count: sql<number>`count(*)` })
       .from(alerts)
-      .where(and(eq(alerts.userId, DEFAULT_USER_ID), eq(alerts.dismissed, false), eq(alerts.severity, ALERT_SEVERITY.URGENT))),
+      .where(and(eq(alerts.userId, userId), eq(alerts.dismissed, false), eq(alerts.severity, ALERT_SEVERITY.URGENT))),
     db
       .select({ drafts: sql<number>`count(*)` })
       .from(actions)
-      .where(and(eq(actions.userId, DEFAULT_USER_ID), eq(actions.status, ACTION_STATUS.DRAFT))),
+      .where(and(eq(actions.userId, userId), eq(actions.status, ACTION_STATUS.DRAFT))),
     db
       .select({ count: sql<number>`count(*)` })
       .from(commitments)
       .where(and(
-        eq(commitments.userId, DEFAULT_USER_ID),
+        eq(commitments.userId, userId),
         eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
         lte(commitments.dueDate, new Date()),
       )),
-    // Goals with a target date within the goals-due-soon window
     db
       .select({ count: sql<number>`count(*)` })
       .from(goals)
       .where(and(
-        eq(goals.userId, DEFAULT_USER_ID),
+        eq(goals.userId, userId),
         eq(goals.status, GOAL_STATUS.ACTIVE),
         isNotNull(goals.targetDate),
         lte(goals.targetDate, goalsSoon),
       )),
-    // Events with a deadline within the events-due-soon window
     db
       .select({ count: sql<number>`count(*)` })
       .from(events)
       .where(and(
-        eq(events.userId, DEFAULT_USER_ID),
+        eq(events.userId, userId),
         eq(events.status, EVENT_STATUS.ACTIVE),
         isNotNull(events.deadline),
         lte(events.deadline, eventsSoon),
       )),
-    // Habits due today and how many are done — frequency logic in SQL
     db.execute<{ total: string; done: string }>(sql`
       SELECT
         count(*)::text AS total,
@@ -159,8 +155,8 @@ export async function getTodaySummary() {
       LEFT JOIN habit_completions hc
         ON hc.habit_id = h.id
         AND hc.completed_date = current_date
-        AND hc.user_id = ${DEFAULT_USER_ID}
-      WHERE h.user_id = ${DEFAULT_USER_ID}
+        AND hc.user_id = ${userId}
+      WHERE h.user_id = ${userId}
         AND h.active = true
         AND (
           h.frequency = 'daily'
@@ -168,13 +164,12 @@ export async function getTodaySummary() {
           OR (h.frequency = 'weekly'   AND EXTRACT(DOW FROM now()) = 1)
         )
     `),
-    // People with no interaction in the last HEALTH_ACTIVE_DAYS days (fading + stale + unknown)
     db.execute<{ count: string }>(sql`
       SELECT count(*)::text as count FROM (
         SELECT e.id
         FROM entities e
-        LEFT JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${DEFAULT_USER_ID}
-        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+        LEFT JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${userId}
+        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
         GROUP BY e.id
         HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})
             OR max(i.occurred_at) IS NULL

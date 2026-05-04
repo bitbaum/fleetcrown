@@ -5,6 +5,7 @@ import { dismissAlert } from "@/db/queries/alerts";
 import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
+import { getCurrentUserId } from "@/lib/session";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
@@ -43,7 +44,8 @@ export async function handleDismissAlert(id: string) {
 }
 
 export async function handleFulfillCommitment(id: string) {
-  await fulfillCommitment(id);
+  const userId = await getCurrentUserId();
+  await fulfillCommitment(id, userId);
   revalidatePath("/today");
 }
 

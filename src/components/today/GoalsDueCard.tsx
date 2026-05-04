@@ -1,12 +1,14 @@
 import { Target, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getGoalsDueSoon } from "@/db/queries/today";
+import { getCurrentUserId } from "@/lib/session";
 import { deadlineLabel } from "@/lib/dates";
 import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 
 export async function GoalsDueCard() {
-  const items = await getGoalsDueSoon();
+  const userId = await getCurrentUserId();
+  const items = await getGoalsDueSoon(userId);
 
   if (items.length === 0) return null;
 

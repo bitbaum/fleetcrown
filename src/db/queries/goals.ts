@@ -1,4 +1,3 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities, type Milestone } from "@/db/schema";
@@ -47,7 +46,7 @@ export type GoalWithChildren = {
   children: GoalWithChildren[];
 };
 
-export async function getGoals(): Promise<GoalWithChildren[]> {
+export async function getGoals(userId: string): Promise<GoalWithChildren[]> {
   const allGoals = await db
     .select({
       id: goals.id,
@@ -64,7 +63,7 @@ export async function getGoals(): Promise<GoalWithChildren[]> {
     })
     .from(goals)
     .leftJoin(entities, eq(goals.entityId, entities.id))
-    .where(eq(goals.userId, DEFAULT_USER_ID))
+    .where(eq(goals.userId, userId))
     .orderBy(goals.createdAt);
 
   const childrenMap = new Map<string | null, typeof allGoals>();
@@ -96,7 +95,7 @@ export async function getGoals(): Promise<GoalWithChildren[]> {
   return buildTree(null);
 }
 
-export async function getGoalStats() {
+export async function getGoalStats(userId: string) {
   const [result] = await db
     .select({
       total: sql<number>`count(*)`,
@@ -105,7 +104,7 @@ export async function getGoalStats() {
       avgProgress: sql<number>`coalesce(avg(${goals.progress}) filter (where ${goals.status} = ${GOAL_STATUS.ACTIVE}), 0)`,
     })
     .from(goals)
-    .where(eq(goals.userId, DEFAULT_USER_ID));
+    .where(eq(goals.userId, userId));
 
   return {
     total: Number(result.total),
