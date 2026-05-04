@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
-import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
+import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow } from "@/lib/constants/control";
 import type { ProjectState } from "@/app/api/control/route";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
@@ -20,12 +20,13 @@ import {
 const ACTIVE_WINDOW_S = 300;
 
 function isActiveProject(p: ProjectState, nowS: number): boolean {
-  if (p.agentRunning) return true;
-  if (p.readyAt !== null && nowS - p.readyAt < ACTIVE_WINDOW_S) return true;
-  if (p.closingAt !== null && nowS - p.closingAt < ACTIVE_WINDOW_S) return true;
-  if (p.closedAt !== null && nowS - p.closedAt < ACTIVE_WINDOW_S) return true;
-  if (p.currentPrompt !== null) return true;
-  return false;
+  return (
+    p.agentRunning ||
+    withinWindow(p.readyAt, nowS, ACTIVE_WINDOW_S) ||
+    withinWindow(p.closingAt, nowS, ACTIVE_WINDOW_S) ||
+    withinWindow(p.closedAt, nowS, ACTIVE_WINDOW_S) ||
+    p.currentPrompt !== null
+  );
 }
 
 export function ControlPanel() {
@@ -81,21 +82,20 @@ export function ControlPanel() {
   const waitingCount = data?.projects.filter(
     (p) =>
       !p.agentRunning &&
-      p.readyAt !== null &&
-      nowS - p.readyAt < READY_WINDOW_S &&
-      !(p.closedAt !== null && nowS - p.closedAt < CLOSED_WINDOW_S) &&
-      !(p.closingAt !== null && nowS - p.closingAt < CLOSING_WINDOW_S)
+      withinWindow(p.readyAt, nowS, READY_WINDOW_S) &&
+      !withinWindow(p.closedAt, nowS, CLOSED_WINDOW_S) &&
+      !withinWindow(p.closingAt, nowS, CLOSING_WINDOW_S)
   ).length ?? 0;
   const todayCommits = data?.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0) ?? 0;
   const total = data?.projects.length ?? 0;
 
   const sorted = data
     ? [...data.projects].sort((a, b) => {
-        const nowS2 = Math.floor(Date.now() / 1000);
-        const aReady  = !a.agentRunning && a.readyAt !== null && nowS2 - a.readyAt < READY_WINDOW_S;
-        const bReady  = !b.agentRunning && b.readyAt !== null && nowS2 - b.readyAt < READY_WINDOW_S;
-        const aClosed = a.closedAt !== null && nowS2 - a.closedAt < CLOSED_WINDOW_S;
-        const bClosed = b.closedAt !== null && nowS2 - b.closedAt < CLOSED_WINDOW_S;
+        const n = Math.floor(Date.now() / 1000);
+        const aReady  = !a.agentRunning && withinWindow(a.readyAt, n, READY_WINDOW_S);
+        const bReady  = !b.agentRunning && withinWindow(b.readyAt, n, READY_WINDOW_S);
+        const aClosed = withinWindow(a.closedAt, n, CLOSED_WINDOW_S);
+        const bClosed = withinWindow(b.closedAt, n, CLOSED_WINDOW_S);
         if (aClosed && !bClosed) return -1;
         if (!aClosed && bClosed) return 1;
         if (aReady && !bReady) return -1;

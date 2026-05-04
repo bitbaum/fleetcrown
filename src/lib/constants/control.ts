@@ -5,6 +5,11 @@ export const CLOSED_WINDOW_S  = 3600;  // 1 hour
 export const CLOSING_WINDOW_S = 1800;  // 30 min
 export const AUTO_INJECT_S    = 12;    // countdown before auto-inject on ready
 
+/** Returns true when a unix-seconds timestamp is non-null and falls within the given window. */
+export function withinWindow(ts: number | null, nowS: number, windowS: number): boolean {
+  return ts !== null && nowS - ts < windowS;
+}
+
 export const HEALTH_COLOR: Record<string, string> = {
   good:      "text-status-positive",
   degraded:  "text-status-warning",

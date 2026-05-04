@@ -268,7 +268,7 @@ export function IntentButtonPanel({
               ? "Pause automatic continue for this tab"
               : "Resume automatic continue for this tab"
           }
-          className="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          className="ui-btn-lg-outline inline-flex items-center gap-2"
         >
           {autoContinueEnabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
           {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
@@ -279,7 +279,7 @@ export function IntentButtonPanel({
             key={id}
             onClick={() => onSendIntent(id)}
             disabled={sending !== null}
-            className="flex flex-col items-start rounded-2xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50"
+            className="ui-btn-lg flex flex-col items-start"
           >
             <span>{label}</span>
             <span className="text-xs opacity-60">via {currentAdapter}</span>
@@ -291,7 +291,7 @@ export function IntentButtonPanel({
             key={id}
             onClick={() => onSendIntent(id)}
             disabled={sending !== null}
-            className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50"
+            className="ui-btn-lg-outline"
           >
             {sending === id ? "…" : label}
           </button>
@@ -299,7 +299,7 @@ export function IntentButtonPanel({
 
         <button
           onClick={() => setShowMore((v) => !v)}
-          className="flex items-center gap-1 rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          className="ui-btn-lg-outline flex items-center gap-1"
         >
           {showMore ? "Less" : "More"}
           {showMore ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -355,7 +355,7 @@ export function IntentButtonPanel({
         <button
           onClick={onSendCustom}
           disabled={!custom.trim() || sending !== null}
-          className="rounded-2xl bg-accent-primary px-4 py-3.5 text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40 sm:px-5"
+          className="ui-btn-lg py-3.5 sm:px-5"
         >
           <Send className="h-4 w-4" />
         </button>

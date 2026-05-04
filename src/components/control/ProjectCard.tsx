@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
-  READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S,
+  READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow,
 } from "@/lib/constants/control";
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
@@ -74,37 +74,18 @@ export function ProjectCard({
   }, []);
 
   const nowS = Math.floor(Date.now() / 1000);
-  const isClosed =
-    !dismissed &&
-    !project.agentRunning &&
-    project.closedAt !== null &&
-    nowS - project.closedAt < CLOSED_WINDOW_S;
-  const isClosing =
-    !dismissed &&
-    !isClosed &&
-    project.closingAt !== null &&
-    nowS - project.closingAt < CLOSING_WINDOW_S;
-  const isReady =
-    !dismissed &&
-    !isClosed &&
-    !isClosing &&
-    !project.agentRunning &&
-    project.readyAt !== null &&
-    nowS - project.readyAt < READY_WINDOW_S;
+  const isClosed   = !dismissed && !project.agentRunning && withinWindow(project.closedAt, nowS, CLOSED_WINDOW_S);
+  const isClosing  = !dismissed && !isClosed && withinWindow(project.closingAt, nowS, CLOSING_WINDOW_S);
+  const isReady    = !dismissed && !isClosed && !isClosing && !project.agentRunning && withinWindow(project.readyAt, nowS, READY_WINDOW_S);
 
   const latestOrchRun = project.latestOrchestrationRun;
   const latestOrchFinishedAtS = latestOrchRun?.finishedAt
     ? Math.floor(new Date(latestOrchRun.finishedAt).getTime() / 1000)
     : null;
   const isOrchReady =
-    !dismissed &&
-    !isReady &&
-    !isClosed &&
-    !isClosing &&
-    !project.agentRunning &&
+    !dismissed && !isReady && !isClosed && !isClosing && !project.agentRunning &&
     latestOrchRun?.state === "done" &&
-    latestOrchFinishedAtS !== null &&
-    nowS - latestOrchFinishedAtS < READY_WINDOW_S;
+    withinWindow(latestOrchFinishedAtS, nowS, READY_WINDOW_S);
 
   const showRunning = !isClosing && project.currentPrompt !== null && project.agentRunning;
 
