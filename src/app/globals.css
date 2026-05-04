@@ -255,9 +255,9 @@
 
   /* Loading spinners — applied to Loader2 icon className */
   .ui-spinner      { @apply h-4 w-4 animate-spin; }
-  .ui-spinner-sm   { @apply h-3\.5 w-3\.5 animate-spin; }
+  .ui-spinner-sm   { @apply h-3.5 w-3.5 animate-spin; }
   .ui-spinner-xs   { @apply h-3 w-3 animate-spin; }
-  .ui-spinner-2xs  { @apply h-2\.5 w-2\.5 animate-spin; }
+  .ui-spinner-2xs  { @apply h-2.5 w-2.5 animate-spin; }
 
   /* Typography */
   .ui-kicker {

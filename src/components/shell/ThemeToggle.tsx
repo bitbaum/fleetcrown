@@ -1,11 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  // resolvedTheme is undefined during SSR; default to dark (app is always-dark)
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard next-themes SSR hydration guard
+  useEffect(() => setMounted(true), []);
+
+  // Render stable placeholder until mounted to avoid SSR/client mismatch
+  if (!mounted) {
+    return (
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border-subtle bg-surface-base/80" />
+    );
+  }
+
   const isDark = resolvedTheme !== "light";
 
   return (

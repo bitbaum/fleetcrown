@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
 import { postJson, patchJson } from "@/lib/api/fetch";
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { update } = useSession();
   const [step, setStep] = useState<"username" | "project">("username");
   const [username, setUsername] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -26,6 +28,7 @@ export default function OnboardingPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to save username");
       }
+      await update(); // refresh JWT so proxy sees the new username
       setStep("project");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -46,6 +49,7 @@ export default function OnboardingPage() {
         });
       }
       await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
+      await update(); // refresh JWT so proxy sees onboardedAt before redirect
       router.push("/today");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");

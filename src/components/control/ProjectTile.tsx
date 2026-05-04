@@ -27,9 +27,12 @@ export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Pro
   };
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onExpand}
-      className="ui-panel flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised"
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onExpand()}
+      className="ui-panel flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised"
     >
       {/* Status dot / spinner */}
       <div className="mt-0.5 shrink-0">
@@ -78,6 +81,6 @@ export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Pro
           </span>
         )}
       </div>
-    </button>
+    </div>
   );
 }

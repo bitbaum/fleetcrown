@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
 import "./globals.css";
 
@@ -36,7 +37,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full" suppressHydrationWarning>
-        <ThemeProvider>{children}</ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

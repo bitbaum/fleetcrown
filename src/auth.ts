@@ -114,13 +114,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user }) {
-      if (user?.id) {
-        token.id = user.id;
+    async jwt({ token, user, trigger }) {
+      const userId = user?.id ?? (token.id as string | undefined);
+      if (userId && (user?.id || trigger === "update")) {
+        token.id = userId;
         const [dbUser] = await db
           .select({ username: users.username, onboardedAt: users.onboardedAt })
           .from(users)
-          .where(eq(users.id, user.id))
+          .where(eq(users.id, userId))
           .limit(1);
         if (dbUser) {
           token.username = dbUser.username ?? null;
