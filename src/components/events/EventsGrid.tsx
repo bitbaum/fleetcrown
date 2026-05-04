@@ -129,7 +129,7 @@ export function EventsGrid({
           </div>
         )}
 
-        <AddEventForm onCreated={handleCreated} />
+        <AddEventForm onCreated={handleCreated} existingTypes={types} />
       </Card>
 
       {/* Archived events — collapsible */}

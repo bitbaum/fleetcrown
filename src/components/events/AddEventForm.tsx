@@ -6,7 +6,7 @@ import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/for
 import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
-export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => void }) {
+export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (event: EventRow) => void; existingTypes?: string[] }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("");
@@ -61,6 +61,11 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
         </button>
       </div>
 
+      {existingTypes.length > 0 && (
+        <datalist id="event-type-list">
+          {existingTypes.map((t) => <option key={t} value={t} />)}
+        </datalist>
+      )}
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -73,6 +78,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
           value={type}
           onChange={(e) => setType(e.target.value)}
           placeholder="Type * (e.g. workshop)"
+          list={existingTypes.length > 0 ? "event-type-list" : undefined}
           className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
         />
         <input
