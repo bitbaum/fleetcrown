@@ -7,7 +7,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import { advanceDueDate } from "@/lib/dates";
 
@@ -191,13 +191,13 @@ export function SubscriptionActions({
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             placeholder="Name"
-            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-full ui-input-tight"
           />
           <input
             value={editVendor}
             onChange={(e) => setEditVendor(e.target.value)}
             placeholder="Vendor (optional)"
-            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-full ui-input-tight"
           />
           <div className="flex gap-2">
             <input
@@ -207,19 +207,19 @@ export function SubscriptionActions({
               value={editAmount}
               onChange={(e) => setEditAmount(e.target.value)}
               placeholder="Amount"
-              className={`w-24 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="w-24 ui-input-tight"
             />
             <select
               value={editCurrency}
               onChange={(e) => setEditCurrency(e.target.value)}
-              className={FIELD_INPUT_CLASS_TIGHT}
+              className="ui-input-tight"
             >
               {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={editFrequency}
               onChange={(e) => setEditFrequency(e.target.value)}
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             >
               {VALID_FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
@@ -230,21 +230,21 @@ export function SubscriptionActions({
               type="date"
               value={editNextDue}
               onChange={(e) => setEditNextDue(e.target.value)}
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             />
           </div>
           <input
             value={editPaymentMethod}
             onChange={(e) => setEditPaymentMethod(e.target.value)}
             placeholder="Payment method (e.g. Visa ····1234)"
-            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-full ui-input-tight"
           />
           <input
             value={editNotes}
             onChange={(e) => setEditNotes(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") onSaveEdit(); if (e.key === "Escape") setEditing(false); }}
             placeholder="Notes (optional)"
-            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-full ui-input-tight"
           />
           <div className="flex items-center gap-2">
             <button

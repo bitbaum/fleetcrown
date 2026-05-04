@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Pencil, X, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
-import { DeleteCommitmentButton } from "./DeleteCommitmentButton";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
-import { patchJson } from "@/lib/api/fetch";
+import { DeleteButton } from "@/components/ui/delete-button";
+import { patchJson, deleteJson } from "@/lib/api/fetch";
 
 type CommitmentItemProps = {
   id: string;
@@ -74,14 +73,14 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className={FIELD_INPUT_CLASS_TIGHT}
+              className="ui-input-tight"
             />
             <input
               value={impact}
               onChange={(e) => setImpact(e.target.value)}
               placeholder="Financial impact"
               onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") cancel(); }}
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             />
           </div>
           {error && <p className="text-xs text-status-negative">{error}</p>}
@@ -131,7 +130,11 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
           <Pencil className="h-3.5 w-3.5" />
         </button>
         <FulfillCommitmentButton commitmentId={id} />
-        <DeleteCommitmentButton commitmentId={id} />
+        <DeleteButton
+          onDelete={async () => { await deleteJson(`/api/commitments/${id}`); router.refresh(); }}
+          triggerTitle="Remove commitment"
+          triggerClassName="p-1 rounded text-text-muted hover:text-status-negative/70 transition-colors shrink-0"
+        />
       </div>
     </div>
   );

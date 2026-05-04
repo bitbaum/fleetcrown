@@ -1,12 +1,6 @@
 export const FIELD_INPUT_CLASS =
   "ui-input";
 
-export const FIELD_INPUT_CLASS_COMPACT =
-  "rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent-primary";
-
-export const FIELD_INPUT_CLASS_TIGHT =
-  "rounded-lg border border-border-default bg-surface-overlay px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent-primary";
-
 export const PRIMARY_BUTTON_CLASS =
   "flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40";
 

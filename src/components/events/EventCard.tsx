@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
-import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import type { EventRow } from "@/db/queries/events";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 
@@ -80,27 +79,27 @@ export function EventCard({
           onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") cancelEdit(); }}
           placeholder="Event name"
           autoFocus
-          className={`${FIELD_INPUT_CLASS_COMPACT} w-full`}
+          className="ui-input-compact w-full"
         />
         <div className="flex gap-2">
           <input
             type="date"
             value={draftDeadline}
             onChange={(e) => setDraftDeadline(e.target.value)}
-            className={`${FIELD_INPUT_CLASS_COMPACT} flex-1`}
+            className="ui-input-compact flex-1"
           />
           <input
             value={draftUrl}
             onChange={(e) => setDraftUrl(e.target.value)}
             placeholder="URL (optional)"
-            className={`${FIELD_INPUT_CLASS_COMPACT} flex-1`}
+            className="ui-input-compact flex-1"
           />
         </div>
         <input
           value={draftDescription}
           onChange={(e) => setDraftDescription(e.target.value)}
           placeholder="Description (optional)"
-          className={`${FIELD_INPUT_CLASS_COMPACT} w-full`}
+          className="ui-input-compact w-full"
         />
         <div className="flex items-center justify-end gap-1.5">
           <button

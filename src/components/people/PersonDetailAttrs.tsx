@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 import { isChannelAttrKey } from "@/config/channels";
-import { FIELD_INPUT_CLASS_TIGHT, ICON_BUTTON_CLASS } from "@/components/ui/form";
+import { ICON_BUTTON_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "./PersonDetailHelpers";
 import { formatKey } from "./person-detail-types";
@@ -128,7 +128,7 @@ export function DetailAttrs({
             value={newKey}
             onChange={(e) => setNewKey(e.target.value)}
             placeholder="key"
-            className={`w-20 ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-20 ui-input-tight"
           />
           <input
             value={newValue}
@@ -139,7 +139,7 @@ export function DetailAttrs({
               if (e.key === "Escape") { setAddingNew(false); setNewKey(""); setNewValue(""); }
             }}
             autoFocus
-            className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="flex-1 ui-input-tight"
           />
           <button
             onClick={saveNew}

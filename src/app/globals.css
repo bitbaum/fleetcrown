@@ -291,6 +291,14 @@
     @apply border-border-strong;
     box-shadow: 0 0 0 2px oklch(1 0 0 / 6%);
   }
+  .ui-input-compact {
+    @apply rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors;
+  }
+  .ui-input-compact:focus { @apply border-accent-primary; }
+  .ui-input-tight {
+    @apply rounded-lg border border-border-default bg-surface-overlay px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none transition-colors;
+  }
+  .ui-input-tight:focus { @apply border-accent-primary; }
 
   /* Buttons */
   .ui-btn-primary {

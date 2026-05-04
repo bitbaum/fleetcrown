@@ -10,7 +10,6 @@ import { DeleteGoalButton } from "./DeleteGoalButton";
 import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const router = useRouter();
@@ -154,7 +153,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   autoFocus
                   rows={2}
                   placeholder="Add a description…"
-                  className={`flex-1 resize-none ${FIELD_INPUT_CLASS_TIGHT}`}
+                  className="flex-1 resize-none ui-input-tight"
                 />
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={savingDesc}
@@ -262,7 +261,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); if (e.key === "Escape") { setAddingChild(false); setChildTitle(""); } }}
                 placeholder="Sub-goal title…"
                 autoFocus
-                className={`flex-1 text-sm ${FIELD_INPUT_CLASS_TIGHT}`}
+                className="flex-1 text-sm ui-input-tight"
               />
               <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
                 className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">

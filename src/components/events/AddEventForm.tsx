@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
-import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 
@@ -71,7 +71,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
         onChange={(e) => setName(e.target.value)}
         placeholder="Event name *"
         autoFocus
-        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
+        className="w-full ui-input-compact"
       />
       <div className="flex gap-2">
         <input
@@ -79,13 +79,13 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
           onChange={(e) => setType(e.target.value)}
           placeholder="Type * (e.g. workshop)"
           list={existingTypes.length > 0 ? "event-type-list" : undefined}
-          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
+          className="flex-1 ui-input-compact"
         />
         <input
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           placeholder="Category"
-          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
+          className="flex-1 ui-input-compact"
         />
       </div>
       <div className="flex gap-2">
@@ -93,13 +93,13 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="URL (optional)"
-          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
+          className="flex-1 ui-input-compact"
         />
         <input
           type="date"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
-          className={FIELD_INPUT_CLASS_COMPACT}
+          className="ui-input-compact"
         />
       </div>
       <input
@@ -107,7 +107,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
         onChange={(e) => setDescription(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
         placeholder="Description (optional)"
-        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
+        className="w-full ui-input-compact"
       />
       {error && <p className="text-xs text-status-negative">{error}</p>}
       <div className="flex items-center gap-2 pt-0.5">

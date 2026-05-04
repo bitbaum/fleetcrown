@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
 import { APP_LOCALE } from "@/lib/constants";
-import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
@@ -74,14 +74,14 @@ export function InteractionsSection({
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             >
               {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <select
               value={direction}
               onChange={(e) => setDirection(e.target.value as InteractionDirection)}
-              className={FIELD_INPUT_CLASS_TIGHT}
+              className="ui-input-tight"
             >
               <option value={INTERACTION_DIRECTION.OUTBOUND}>→ out</option>
               <option value={INTERACTION_DIRECTION.INBOUND}>← in</option>
@@ -93,14 +93,14 @@ export function InteractionsSection({
             placeholder="Brief note (optional)"
             onKeyDown={(e) => { if (e.key === "Enter") handleLog(); if (e.key === "Escape") setLogging(false); }}
             autoFocus
-            className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+            className="w-full ui-input-tight"
           />
           <div className="flex items-center gap-2">
             <input
               type="date"
               value={occurredAt}
               onChange={(e) => setOccurredAt(e.target.value)}
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             />
             <button
               onClick={handleLog}

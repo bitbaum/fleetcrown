@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Check, Loader2, Plus, X } from "lucide-react";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
-import { FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
 
 export function AddHabitForm({
   onCreated,
@@ -48,12 +47,12 @@ export function AddHabitForm({
           }}
           placeholder="Habit name…"
           autoFocus
-          className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+          className="flex-1 ui-input-tight"
         />
         <select
           value={frequency}
           onChange={(e) => setFrequency(e.target.value as HabitFrequency)}
-          className={FIELD_INPUT_CLASS_TIGHT}
+          className="ui-input-tight"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
             <option key={f} value={f}>{f}</option>

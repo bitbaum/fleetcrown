@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
-import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
@@ -105,9 +105,9 @@ function NewJobForm({
         <button onClick={() => setOpen(false)} className="text-text-muted hover:text-text-secondary"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input placeholder="Job name" value={name} onChange={(e) => setName(e.target.value)}
-        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`} />
+        className="w-full ui-input-compact" />
       <input placeholder="Cron (e.g. 0 9 * * 1 = Mon 9am)" value={schedule} onChange={(e) => setSchedule(e.target.value)}
-        className={`w-full font-mono ${FIELD_INPUT_CLASS_COMPACT}`} />
+        className="w-full font-mono ui-input-compact" />
       <textarea placeholder="Prompt / instructions for Ivy…" value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
         className="w-full bg-surface-raised border border-border-subtle rounded px-2.5 py-2 text-xs text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-border-strong" />
       <button onClick={create} disabled={!name.trim() || !schedule.trim() || !message.trim() || saving}

@@ -5,7 +5,7 @@ import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
 import { patchGoal, listGoals, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
-import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS } from "@/components/ui/form";
 
 type PanelMode = "idle" | "link" | "create";
 
@@ -181,13 +181,13 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
               onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") cancel(); }}
               placeholder="Goal title…"
               autoFocus
-              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="flex-1 ui-input-tight"
             />
             <input
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className={FIELD_INPUT_CLASS_TIGHT}
+              className="ui-input-tight"
             />
           </div>
           {error && <p className="text-xs text-status-negative">{error}</p>}

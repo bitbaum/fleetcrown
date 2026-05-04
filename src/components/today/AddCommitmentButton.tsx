@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
-import { FIELD_INPUT_CLASS_COMPACT } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import type { CreateCommitmentInput } from "@/db/queries/today";
@@ -56,21 +55,21 @@ export function AddCommitmentButton() {
         placeholder="What did you commit to? *"
         autoFocus
         onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); reset(); } }}
-        className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
+        className="w-full ui-input-compact"
       />
       <div className="flex gap-2">
         <input
           type="date"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
-          className={FIELD_INPUT_CLASS_COMPACT}
+          className="ui-input-compact"
         />
         <input
           value={financialImpact}
           onChange={(e) => setFinancialImpact(e.target.value)}
           placeholder="Financial impact (optional)"
           onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") { setOpen(false); reset(); } }}
-          className={`flex-1 ${FIELD_INPUT_CLASS_COMPACT}`}
+          className="flex-1 ui-input-compact"
         />
       </div>
       {error && <p className="text-xs text-status-negative">{error}</p>}

@@ -13,7 +13,7 @@ import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { getJson, patchJson, deleteJson } from "@/lib/api/fetch";
-import { FIELD_INPUT_CLASS_COMPACT, ICON_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { ICON_BUTTON_CLASS, INLINE_SAVE_CLASS } from "@/components/ui/form";
 
 export function PersonDetail({
   personId,
@@ -172,7 +172,7 @@ export function PersonDetail({
                 autoFocus
                 rows={3}
                 placeholder="Add a note about this person…"
-                className={`min-h-28 w-full resize-none ${FIELD_INPUT_CLASS_COMPACT} leading-relaxed`}
+                className="min-h-28 w-full resize-none ui-input-compact leading-relaxed"
               />
               {descError && <p className="text-xs text-status-negative">{descError}</p>}
               <div className="flex items-center gap-2">

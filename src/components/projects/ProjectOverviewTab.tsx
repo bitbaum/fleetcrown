@@ -8,7 +8,7 @@ import {
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
 import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helpers";
-import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
+import { INLINE_SAVE_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
@@ -212,7 +212,7 @@ export function OverviewTab({
               <select
                 value={actChannel}
                 onChange={(e) => setActChannel(e.target.value)}
-                className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+                className="flex-1 ui-input-tight"
               >
                 {PROJECT_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -220,7 +220,7 @@ export function OverviewTab({
                 type="date"
                 value={actDate}
                 onChange={(e) => setActDate(e.target.value)}
-                className={FIELD_INPUT_CLASS_TIGHT}
+                className="ui-input-tight"
               />
             </div>
             <input
@@ -229,7 +229,7 @@ export function OverviewTab({
               placeholder="What happened? (optional)"
               onKeyDown={(e) => { if (e.key === "Enter") handleLogActivity(); if (e.key === "Escape") setLoggingActivity(false); }}
               autoFocus
-              className={`w-full ${FIELD_INPUT_CLASS_TIGHT}`}
+              className="w-full ui-input-tight"
             />
             <div className="flex gap-2">
               <button

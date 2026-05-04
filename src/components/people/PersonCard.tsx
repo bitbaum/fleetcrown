@@ -6,7 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { FIELD_INPUT_CLASS_COMPACT, FIELD_INPUT_CLASS_TIGHT, SECONDARY_BUTTON_CLASS } from "@/components/ui/form";
+import { SECONDARY_BUTTON_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 
@@ -173,7 +173,7 @@ export function PersonCard({
                 <select
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
-                  className={FIELD_INPUT_CLASS_TIGHT}
+                  className="ui-input-tight"
                 >
                   {CHANNEL_NAMES.map((ch) => (
                     <option key={ch} value={ch}>{ch}</option>
@@ -204,7 +204,7 @@ export function PersonCard({
                 }}
                 placeholder="Optional note..."
                 autoFocus
-                className={`w-full ${FIELD_INPUT_CLASS_COMPACT}`}
+                className="w-full ui-input-compact"
               />
               <div className="flex items-center gap-2">
                 <button
