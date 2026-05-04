@@ -82,7 +82,7 @@ export function TeamSettings({ invitations: initial }: Props) {
                     {inviteUrl(inv.token).replace(/^https?:\/\//, "")}
                   </p>
                   {inv.email && (
-                    <p className="text-xs text-text-muted mt-0.5">for {inv.email}</p>
+                    <p className="text-xs text-text-tertiary mt-0.5">for {inv.email}</p>
                   )}
                 </div>
                 <span

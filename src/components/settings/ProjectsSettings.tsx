@@ -109,10 +109,10 @@ export function ProjectsSettings({ projects: initial }: Props) {
               <div className="min-w-0">
                 <div className="text-sm font-medium text-text-primary truncate">{p.name}</div>
                 {p.dirPath && (
-                  <div className="text-xs text-text-muted truncate font-mono">{p.dirPath}</div>
+                  <div className="text-xs text-text-tertiary truncate font-mono">{p.dirPath}</div>
                 )}
                 {p.gitUrl && (
-                  <div className="text-xs text-text-muted truncate">{p.gitUrl}</div>
+                  <div className="text-xs text-text-tertiary truncate">{p.gitUrl}</div>
                 )}
               </div>
               <button

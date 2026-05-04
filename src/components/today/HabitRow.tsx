@@ -106,7 +106,7 @@ export function HabitRow({
           {habit.title}
         </span>
         {habit.frequency !== HABIT_FREQUENCY.DAILY && (
-          <span className="ml-1.5 text-xs text-text-muted">{habit.frequency}</span>
+          <span className="ml-1.5 text-xs text-text-tertiary">{habit.frequency}</span>
         )}
       </div>
 

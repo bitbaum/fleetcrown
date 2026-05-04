@@ -56,7 +56,7 @@ export default async function PublicProfilePage({
           </div>
         </div>
 
-        <p className="mt-10 text-sm text-text-muted">
+        <p className="mt-10 text-sm text-text-secondary">
           This profile is public but no projects have been shared yet.
         </p>
       </main>

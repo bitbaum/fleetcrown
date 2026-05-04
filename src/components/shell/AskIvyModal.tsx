@@ -136,7 +136,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
             <div className="flex flex-col items-center justify-center h-full py-6 text-center">
               <span className="text-4xl mb-3">🌿</span>
               <div className="text-sm text-text-secondary">Ask me anything about calendar, people, goals, money, or projects.</div>
-              <div className="mt-2 text-xs text-text-muted">I have full access to your knowledge graph and tools.</div>
+              <div className="mt-2 text-xs text-text-tertiary">I have full access to your knowledge graph and tools.</div>
             </div>
           )}
 
