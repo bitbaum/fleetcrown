@@ -26,9 +26,11 @@ export function InteractionsSection({
   const [summary, setSummary] = useState("");
   const [occurredAt, setOccurredAt] = useState(toLocalDateStr(new Date()));
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleLog = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await postJson(`/api/people/${personId}/interactions`, {
         channel,
@@ -36,12 +38,16 @@ export function InteractionsSection({
         summary: summary || undefined,
         occurredAt,
       });
-      const data = await res.json();
+      const data = await res.json() as { ok?: boolean; error?: string };
       if (data.ok) {
         onAdd({ channel, direction, summary: summary || null, occurredAt });
         setLogging(false);
         setSummary("");
+      } else {
+        setSaveError(data.error ?? "Failed to save");
       }
+    } catch {
+      setSaveError("Network error — try again");
     } finally {
       setSaving(false);
     }
@@ -94,6 +100,7 @@ export function InteractionsSection({
             autoFocus
             className="w-full ui-input-tight"
           />
+          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
           <div className="flex items-center gap-2">
             <input
               type="date"

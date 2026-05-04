@@ -21,6 +21,7 @@ export function ChannelsSection({
   const [channelType, setChannelType] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
   const [channelValue, setChannelValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const channels = Object.entries(attrs).filter(([k]) => isChannelAttrKey(k));
@@ -28,12 +29,19 @@ export function ChannelsSection({
   const saveChannel = async () => {
     if (!channelValue.trim() || saving) return;
     setSaving(true);
+    setSaveError(null);
     const key = withChannelPrefix(channelType);
     try {
-      await setAttr(`/api/people/${personId}`, key, channelValue.trim());
+      const res = await setAttr(`/api/people/${personId}`, key, channelValue.trim());
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
       onUpdate({ ...attrs, [key]: channelValue.trim() });
       setChannelValue("");
       setAdding(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -71,35 +79,38 @@ export function ChannelsSection({
         <EmptyState>No channels yet</EmptyState>
       )}
       {adding ? (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <select
-            value={channelType}
-            onChange={(e) => setChannelType(e.target.value)}
-            className="ui-input-tight shrink-0"
-          >
-            {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <input
-            value={channelValue}
-            onChange={(e) => setChannelValue(e.target.value)}
-            placeholder="handle or number"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveChannel();
-              if (e.key === "Escape") { setAdding(false); setChannelValue(""); }
-            }}
-            autoFocus
-            className="flex-1 min-w-0 ui-input-tight"
-          />
-          <button
-            onClick={saveChannel}
-            disabled={!channelValue.trim() || saving}
-            className="ui-btn-icon-accent p-1.5"
-          >
-            {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
-          </button>
-          <button onClick={() => { setAdding(false); setChannelValue(""); }} className="ui-btn-icon">
-            <X className="h-3 w-3" />
-          </button>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5">
+            <select
+              value={channelType}
+              onChange={(e) => setChannelType(e.target.value)}
+              className="ui-input-tight shrink-0"
+            >
+              {CHANNEL_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <input
+              value={channelValue}
+              onChange={(e) => { setChannelValue(e.target.value); setSaveError(null); }}
+              placeholder="handle or number"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveChannel();
+                if (e.key === "Escape") { setAdding(false); setChannelValue(""); setSaveError(null); }
+              }}
+              autoFocus
+              className="flex-1 min-w-0 ui-input-tight"
+            />
+            <button
+              onClick={saveChannel}
+              disabled={!channelValue.trim() || saving}
+              className="ui-btn-icon-accent p-1.5"
+            >
+              {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
+            </button>
+            <button onClick={() => { setAdding(false); setChannelValue(""); setSaveError(null); }} className="ui-btn-icon">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
         </div>
       ) : (
         <button

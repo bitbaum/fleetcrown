@@ -21,6 +21,7 @@ export function LogConversationButton() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -29,6 +30,7 @@ export function LogConversationButton() {
     setSelected(null);
     setNote("");
     setDone(false);
+    setSaveError(null);
     setOpen(false);
   };
 
@@ -62,15 +64,22 @@ export function LogConversationButton() {
   const save = async () => {
     if (!selected) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      await postJson(`/api/people/${selected.id}/interactions`, {
+      const res = await postJson(`/api/people/${selected.id}/interactions`, {
         channel,
         direction: INTERACTION_DIRECTION.OUTBOUND,
         summary: note || undefined,
         occurredAt: toLocalDateStr(new Date()),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
       setDone(true);
       setTimeout(() => { reset(); router.refresh(); }, 1200);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -131,6 +140,7 @@ export function LogConversationButton() {
               className="flex-1 ui-input-tight"
             />
           </div>
+          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
           <div className="flex gap-2">
             <button
               onClick={save}
