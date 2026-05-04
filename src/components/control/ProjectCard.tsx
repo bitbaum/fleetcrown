@@ -136,7 +136,6 @@ export function ProjectCard({
   };
 
   const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? project.tab).toLowerCase());
-  const { profile } = project;
   const paused = !autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0;
 
   return (
