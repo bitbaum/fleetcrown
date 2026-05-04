@@ -99,7 +99,18 @@ export default async function MoneyPage() {
                   {sub.notes && (
                     <div className="mt-1 max-w-md text-sm text-text-tertiary">{sub.notes}</div>
                   )}
-                  <SubscriptionActions subId={sub.id} subName={sub.name} status={sub.status} nextDue={sub.nextDue ? sub.nextDue.toISOString() : null} frequency={sub.frequency} amount={sub.amount} currency={sub.currency} notes={sub.notes} paymentMethod={sub.paymentMethod} vendor={sub.vendor} />
+                  <SubscriptionActions
+                    subId={sub.id}
+                    subName={sub.name}
+                    status={sub.status}
+                    nextDue={sub.nextDue ? sub.nextDue.toISOString() : null}
+                    frequency={sub.frequency}
+                    amount={sub.amount}
+                    currency={sub.currency}
+                    notes={sub.notes}
+                    paymentMethod={sub.paymentMethod}
+                    vendor={sub.vendor}
+                  />
                 </div>
                 <div className="text-right shrink-0">
                   <div className={`text-base font-mono ${isCancelled ? "line-through" : ""}`}>

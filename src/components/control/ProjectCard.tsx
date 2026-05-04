@@ -56,7 +56,7 @@ export function ProjectCard({
   }, [autoContinueEnabled, autoContinueKey]);
 
   useEffect(() => {
-    let clearAt = 0 as unknown as ReturnType<typeof setTimeout>;
+    let clearAt: ReturnType<typeof setTimeout> | undefined;
     const markTyping = () => {
       setTypingActive(true);
       if (clearAt) clearTimeout(clearAt);
