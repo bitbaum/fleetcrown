@@ -1,18 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, Terminal } from "lucide-react";
+import { useState } from "react";
+import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
-import { AddAttrInline, AttrRow } from "./project-overview-helpers";
+import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helpers";
 import { FIELD_INPUT_CLASS_TIGHT, INLINE_SAVE_CLASS } from "@/components/ui/form";
-import { getJson, postJson } from "@/lib/api/fetch";
+import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
-import type { SessionData } from "@/app/api/sessions/route";
 import type { LucideProps } from "lucide-react";
 
 type IssueConfig = {
@@ -30,62 +29,6 @@ const ISSUE_DISPLAY: IssueConfig[] = [
   { key: "deployment_issue",       icon: AlertTriangle, label: "Deployment Issue",
     border: "border-status-warning/25", bg: "bg-status-warning-subtle", text: "text-status-warning", body: "text-status-warning/70" },
 ];
-
-// ─── ClaudeSession ────────────────────────────────────────────────────────────
-
-function ClaudeSession({ projectName }: { projectName: string }) {
-  const [session, setSession] = useState<SessionData | null>(null);
-
-  useEffect(() => {
-    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(projectName)}`)
-      .then((d) => setSession(d))
-      .catch(() => {});
-  }, [projectName]);
-
-  if (!session || !session.found) return null;
-
-  const healthColor = session.health.startsWith("green") || session.health.startsWith("good")
-    ? "text-status-positive"
-    : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
-    ? "text-status-negative"
-    : "text-status-warning";
-
-  return (
-    <div className="rounded-lg border border-border-subtle bg-surface-base p-3 space-y-2">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted font-medium">
-        <Terminal className="h-3 w-3" /> Claude Session
-      </div>
-      {session.done && (
-        <div>
-          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Done</div>
-          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.done}</p>
-        </div>
-      )}
-      {session.next && (
-        <div>
-          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Next</div>
-          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
-        </div>
-      )}
-      {session.todos && session.todos !== "0 TODOs" && session.todos !== "0" && (
-        <div>
-          <div className="text-[10px] text-status-warning/60 uppercase tracking-wider mb-0.5">Todos</div>
-          <p className="text-xs text-status-warning/70 leading-relaxed line-clamp-2">{session.todos}</p>
-        </div>
-      )}
-      <div className="flex items-center gap-4 pt-0.5">
-        {session.tests && (
-          <div className="text-[10px] text-text-tertiary">{session.tests}</div>
-        )}
-        {session.health && (
-          <div className={`text-[10px] font-medium ${healthColor}`}>{session.health.split("—")[0].trim()}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── OverviewTab ──────────────────────────────────────────────────────────────
 
 export function OverviewTab({
   data,
@@ -132,10 +75,8 @@ export function OverviewTab({
 
   return (
     <div className="space-y-5">
-      {/* Claude session state — shown when a ~/.claude/sessions/<name>.md exists */}
       <ClaudeSession projectName={data.name} />
 
-      {/* Issues — most critical, shown first */}
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
           {ISSUE_DISPLAY.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, label, border, bg, text, body }) => (
@@ -149,7 +90,6 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* All present attributes */}
       {displayAttrs.length > 0 ? (
         <div>
           {displayAttrs.map(([key, value]) => (
@@ -168,7 +108,6 @@ export function OverviewTab({
         <p className="text-xs text-text-muted italic">No details recorded yet.</p>
       )}
 
-      {/* Missing suggested fields — collapsed by default */}
       {missingSuggested.length > 0 && (
         <div>
           {showEmpty ? (
@@ -215,7 +154,6 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* Custom attribute */}
       {addingKey === "__custom__" ? (
         <div className="pt-1">
           <AddAttrInline
@@ -233,7 +171,6 @@ export function OverviewTab({
         </button>
       )}
 
-      {/* People relations */}
       {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
         <div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
@@ -251,7 +188,6 @@ export function OverviewTab({
         </div>
       )}
 
-      {/* Recent activity */}
       <div>
         <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
           <MessageSquare className="h-3 w-3" /> Recent Activity

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Pencil, Save, Trash2, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Pencil, Save, Trash2, Terminal, X } from "lucide-react";
+import { getJson } from "@/lib/api/fetch";
+import type { SessionData } from "@/app/api/sessions/route";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
 
 export function AddAttrInline({
@@ -139,6 +141,58 @@ export function AttrRow({
         >
           {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
         </button>
+      </div>
+    </div>
+  );
+}
+
+export function ClaudeSession({ projectName }: { projectName: string }) {
+  const [session, setSession] = useState<SessionData | null>(null);
+
+  useEffect(() => {
+    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(projectName)}`)
+      .then((d) => setSession(d))
+      .catch(() => {});
+  }, [projectName]);
+
+  if (!session || !session.found) return null;
+
+  const healthColor = session.health.startsWith("green") || session.health.startsWith("good")
+    ? "text-status-positive"
+    : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
+    ? "text-status-negative"
+    : "text-status-warning";
+
+  return (
+    <div className="rounded-lg border border-border-subtle bg-surface-base p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted font-medium">
+        <Terminal className="h-3 w-3" /> Claude Session
+      </div>
+      {session.done && (
+        <div>
+          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Done</div>
+          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.done}</p>
+        </div>
+      )}
+      {session.next && (
+        <div>
+          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Next</div>
+          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
+        </div>
+      )}
+      {session.todos && session.todos !== "0 TODOs" && session.todos !== "0" && (
+        <div>
+          <div className="text-[10px] text-status-warning/60 uppercase tracking-wider mb-0.5">Todos</div>
+          <p className="text-xs text-status-warning/70 leading-relaxed line-clamp-2">{session.todos}</p>
+        </div>
+      )}
+      <div className="flex items-center gap-4 pt-0.5">
+        {session.tests && (
+          <div className="text-[10px] text-text-tertiary">{session.tests}</div>
+        )}
+        {session.health && (
+          <div className={`text-[10px] font-medium ${healthColor}`}>{session.health.split("—")[0].trim()}</div>
+        )}
       </div>
     </div>
   );

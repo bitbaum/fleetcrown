@@ -2,99 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { PROMPT_TEMPLATES, GLOBAL_PROMPTS, CATEGORY_META } from "@/config/prompt-library";
+import { CATEGORY_META } from "@/config/prompt-library";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
-
-type Message = {
-  role: "user" | "ivy";
-  text: string;
-  durationMs?: number;
-  model?: string;
-  error?: boolean;
-};
-
-// Featured prompts shown in the quick-access grid
-const QUICK_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "global").concat(
-  PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4)
-);
-
-// ─── Mic hook ─────────────────────────────────────────────────────────────────
-
-// Web Speech API isn't in lib.dom.d.ts (the spec is non-standard and
-// vendor-prefixed). Declare just the surface we touch — keeps callers
-// strongly typed and lets us drop the no-explicit-any escape hatches.
-type SpeechResultEvent = { results: ArrayLike<ArrayLike<{ transcript: string }>> };
-interface SpeechRecognitionInstance {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: (e: SpeechResultEvent) => void;
-  onend: () => void;
-  onerror: () => void;
-  start(): void;
-  stop(): void;
-}
-type SpeechRecognitionCtor = new () => SpeechRecognitionInstance;
-
-function getSpeechRecognitionCtor(): SpeechRecognitionCtor | undefined {
-  if (typeof window === "undefined") return undefined;
-  const w = window as Window & {
-    SpeechRecognition?: SpeechRecognitionCtor;
-    webkitSpeechRecognition?: SpeechRecognitionCtor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
-}
-
-function useSpeechRecognition(onResult: (text: string) => void) {
-  const [listening, setListening] = useState(false);
-  const [supported, setSupported] = useState(false);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
-
-  useEffect(() => {
-    const SR = getSpeechRecognitionCtor();
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = "en-US";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (e) => {
-      const transcript: string = e.results[0]?.[0]?.transcript ?? "";
-      if (transcript) onResult(transcript);
-    };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognitionRef.current = recognition;
-    queueMicrotask(() => setSupported(true));
-  }, [onResult]);
-
-  const toggle = useCallback(() => {
-    const r = recognitionRef.current;
-    if (!r) return;
-    if (listening) {
-      r.stop();
-      setListening(false);
-    } else {
-      r.start();
-      setListening(true);
-    }
-  }, [listening]);
-
-  return { listening, supported, toggle };
-}
-
-// ─── Modal ────────────────────────────────────────────────────────────────────
-
-function useElapsedTimer(active: boolean) {
-  const [elapsed, setElapsed] = useState(0);
-  useEffect(() => {
-    queueMicrotask(() => setElapsed(0));
-    if (!active) return;
-    const id = setInterval(() => setElapsed((s) => s + 1), 1000);
-    return () => clearInterval(id);
-  }, [active]);
-  return elapsed;
-}
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { type Message, QUICK_PROMPTS, GLOBAL_PROMPTS, useElapsedTimer } from "./ask-ivy-helpers";
 
 export function AskIvyModal({ onClose }: { onClose: () => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -141,10 +53,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
   };
 
-  // All featured prompts + ability to expand to all global ones
-  const displayedPrompts = showAllPrompts
-    ? GLOBAL_PROMPTS
-    : QUICK_PROMPTS;
+  const displayedPrompts = showAllPrompts ? GLOBAL_PROMPTS : QUICK_PROMPTS;
 
   return (
     <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
