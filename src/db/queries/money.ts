@@ -1,4 +1,3 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -41,24 +40,24 @@ export const PatchSubscriptionBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-export async function getActiveSubscriptions() {
+export async function getActiveSubscriptions(userId: string) {
   return db
     .select()
     .from(subscriptions)
     .where(
       and(
-        eq(subscriptions.userId, DEFAULT_USER_ID),
+        eq(subscriptions.userId, userId),
         eq(subscriptions.status, SUB_STATUS.ACTIVE),
       ),
     )
     .orderBy(sql`${subscriptions.amount} DESC NULLS LAST`);
 }
 
-export async function getAllSubscriptions() {
+export async function getAllSubscriptions(userId: string) {
   return db
     .select()
     .from(subscriptions)
-    .where(eq(subscriptions.userId, DEFAULT_USER_ID))
+    .where(eq(subscriptions.userId, userId))
     .orderBy(sql`
       CASE ${subscriptions.status}
         WHEN ${SUB_STATUS.ACTIVE} THEN 1
@@ -70,13 +69,13 @@ export async function getAllSubscriptions() {
     `);
 }
 
-export async function getFinancialCommitments() {
+export async function getFinancialCommitments(userId: string) {
   return db
     .select()
     .from(commitments)
     .where(
       and(
-        eq(commitments.userId, DEFAULT_USER_ID),
+        eq(commitments.userId, userId),
         eq(commitments.status, COMMITMENT_STATUS.ACTIVE),
         sql`${commitments.financialImpact} IS NOT NULL AND ${commitments.financialImpact} != ''`,
       ),
@@ -92,11 +91,11 @@ export type MonthlyBurn = {
   count: number;
 };
 
-export async function cancelSubscription(id: string) {
+export async function cancelSubscription(id: string, userId: string) {
   await db
     .update(subscriptions)
     .set({ status: SUB_STATUS.CANCELLED, updatedAt: new Date() })
-    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, DEFAULT_USER_ID)));
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)));
 }
 
 export function calculateMonthlyBurn(

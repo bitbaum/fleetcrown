@@ -2,6 +2,7 @@ import { Brain, Database, Link2, Clock, Zap } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
+import { getCurrentUserId } from "@/lib/session";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
@@ -29,10 +30,11 @@ function TypeBadge({ type }: { type: EntityType }) {
 }
 
 export default async function MemoryPage() {
+  const userId = await getCurrentUserId();
   const [stats, recent, activity] = await Promise.all([
-    getEntityStats(),
-    getRecentEntities(12),
-    getRecentInteractions(10),
+    getEntityStats(userId),
+    getRecentEntities(userId, 12),
+    getRecentInteractions(userId, 10),
   ]);
 
   return (

@@ -46,12 +46,13 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
+  const userId = await getCurrentUserId();
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);
   const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
 
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
-  insertPromptHistory({
+  insertPromptHistory(userId, {
     projectKey: request.projectKey,
     projectPath: request.projectPath,
     adapter: request.adapter as AdapterId,
@@ -80,7 +81,6 @@ export async function POST(req: NextRequest) {
     }, { status: 501 });
   }
 
-  const userId = await getCurrentUserId();
   const run = await createOrchestrationRun({
     userId,
     adapter: request.adapter,

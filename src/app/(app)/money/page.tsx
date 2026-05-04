@@ -11,6 +11,7 @@ import {
   getFinancialCommitments,
   calculateMonthlyBurn,
 } from "@/db/queries/money";
+import { getCurrentUserId } from "@/lib/session";
 import { format, isPast } from "date-fns";
 
 const STATUS_STYLE: Record<SubStatus, string> = {
@@ -20,10 +21,11 @@ const STATUS_STYLE: Record<SubStatus, string> = {
 };
 
 export default async function MoneyPage() {
+  const userId = await getCurrentUserId();
   const [activeSubs, allSubs, commitments] = await Promise.all([
-    getActiveSubscriptions(),
-    getAllSubscriptions(),
-    getFinancialCommitments(),
+    getActiveSubscriptions(userId),
+    getAllSubscriptions(userId),
+    getFinancialCommitments(userId),
   ]);
   const burn = calculateMonthlyBurn(activeSubs);
 

@@ -65,7 +65,8 @@ export async function GET(
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
-  const person = await getPersonDetail(idOrResp);
+  const userId = await getCurrentUserId();
+  const person = await getPersonDetail(userId, idOrResp);
   if (!person) return NextResponse.json(null, { status: 404 });
 
   return NextResponse.json(person);

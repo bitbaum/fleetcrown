@@ -9,7 +9,6 @@ import { getCurrentUserId } from "@/lib/session";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
-// Action types that imply a real-world interaction with a person occurred
 const INTERACTION_ACTION_TYPES = new Set<ActionType>([
   ACTION_TYPE.SEND_MESSAGE,
   ACTION_TYPE.SEND_EMAIL,
@@ -17,12 +16,11 @@ const INTERACTION_ACTION_TYPES = new Set<ActionType>([
 ]);
 
 export async function handleApprove(id: string) {
-  const [action] = await approveAction(id);
-  // If this action is linked to a person and represents a communication,
-  // log an interaction so the contact health score updates immediately.
+  const userId = await getCurrentUserId();
+  const [action] = await approveAction(id, userId);
   if (action?.entityId && INTERACTION_ACTION_TYPES.has(action.type)) {
     const channel = action.payload?.channel ?? "other";
-    await createInteraction({
+    await createInteraction(userId, {
       entityId: action.entityId,
       channel,
       direction: INTERACTION_DIRECTION.OUTBOUND,
@@ -34,12 +32,14 @@ export async function handleApprove(id: string) {
 }
 
 export async function handleReject(id: string) {
-  await rejectAction(id);
+  const userId = await getCurrentUserId();
+  await rejectAction(id, userId);
   revalidatePath("/today");
 }
 
 export async function handleDismissAlert(id: string) {
-  await dismissAlert(id);
+  const userId = await getCurrentUserId();
+  await dismissAlert(id, userId);
   revalidatePath("/today");
 }
 
@@ -50,6 +50,7 @@ export async function handleFulfillCommitment(id: string) {
 }
 
 export async function handleCancelSubscription(id: string) {
-  await cancelSubscription(id);
+  const userId = await getCurrentUserId();
+  await cancelSubscription(id, userId);
   revalidatePath("/money");
 }

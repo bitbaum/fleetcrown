@@ -1,4 +1,4 @@
-import { DEFAULT_USER_ID, DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
+import { DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
 import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
@@ -56,6 +56,7 @@ function buildHealthHaving(health: RelationshipHealth[]): SQL {
 }
 
 export async function searchPeople(
+  userId: string,
   query: string,
   limit = 50,
   offset = 0,
@@ -80,7 +81,7 @@ export async function searchPeople(
         SELECT e.id
         FROM entities e
         LEFT JOIN interactions i ON i.entity_id = e.id
-        WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+        WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
         ${nameFilter}
         GROUP BY e.id
         ${having}
@@ -103,7 +104,7 @@ export async function searchPeople(
               WHERE r.from_entity_id = e.id OR r.to_entity_id = e.id)::text as relation_count
       FROM entities e
       LEFT JOIN interactions i ON i.entity_id = e.id
-      WHERE e.user_id = ${DEFAULT_USER_ID} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
+      WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND e.external_id != ${DEFAULT_USER_EXTERNAL_ID}
       ${nameFilter}
       GROUP BY e.id
       ${having}
@@ -135,11 +136,11 @@ export async function searchPeople(
   };
 }
 
-export async function getPersonDetail(id: string) {
+export async function getPersonDetail(userId: string, id: string) {
   const [person] = await db
     .select()
     .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, DEFAULT_USER_ID)));
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)));
 
   if (!person) return null;
 
@@ -183,23 +184,26 @@ export async function getPersonDetail(id: string) {
   };
 }
 
-export async function createInteraction({
-  entityId,
-  channel,
-  direction,
-  summary,
-  occurredAt,
-}: {
-  entityId: string;
-  channel: string;
-  direction: InteractionDirection;
-  summary?: string | null;
-  occurredAt?: Date;
-}) {
+export async function createInteraction(
+  userId: string,
+  {
+    entityId,
+    channel,
+    direction,
+    summary,
+    occurredAt,
+  }: {
+    entityId: string;
+    channel: string;
+    direction: InteractionDirection;
+    summary?: string | null;
+    occurredAt?: Date;
+  },
+) {
   const [created] = await db
     .insert(interactions)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       entityId,
       channel,
       direction,

@@ -148,16 +148,16 @@ async function getZellijTabs(): Promise<string[]> {
   }
 }
 
-async function buildSlowData(dirs: string[]): Promise<SlowCache> {
+async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   const [gitMap, dbProjects, zellijTabs] = await Promise.all([
     fetchAllGitStates(dirs),
-    getProjects().catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
+    getProjects(userId).catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
     getZellijTabs(),
   ]);
   return { gitMap, dbProjects, zellijTabs, dirs, builtAt: Date.now() };
 }
 
-async function getSlowData(dirs: string[]): Promise<SlowCache> {
+async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   const now = Date.now();
   const dirsKey = [...dirs].sort().join(",");
 
@@ -167,7 +167,7 @@ async function getSlowData(dirs: string[]): Promise<SlowCache> {
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
       cacheRefreshing = true;
-      buildSlowData(dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch(() => { cacheRefreshing = false; });
+      buildSlowData(userId, dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch(() => { cacheRefreshing = false; });
     }
     return slowCache;
   }
@@ -175,12 +175,12 @@ async function getSlowData(dirs: string[]): Promise<SlowCache> {
   // Cold cache or dirs changed — must wait for fresh data
   if (!cacheRefreshing) {
     cacheRefreshing = true;
-    slowCache = await buildSlowData(dirs);
+    slowCache = await buildSlowData(userId, dirs);
     cacheRefreshing = false;
   } else if (slowCache) {
     return slowCache; // another request is already building; return whatever we have
   } else {
-    slowCache = await buildSlowData(dirs); // blocking: no stale fallback
+    slowCache = await buildSlowData(userId, dirs); // blocking: no stale fallback
   }
   return slowCache;
 }
@@ -289,17 +289,17 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, dbProjects, zellijTabs } = await getSlowData(dirs);
+  const { gitMap, dbProjects, zellijTabs } = await getSlowData(userId, dirs);
   // Detect any known agent running in a project dir — not just the configured default
   const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
   const agentCwds = getAgentCwds(allMatchers);
   const projectKeys = projects.map((p) => p.tab);
   const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr] = await Promise.all([
-    getLatestRunsByProjectPaths(dirs),
-    getRecentCustomPromptsByProjectKeys(projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
-    getRecentActivity(24, 30).catch((): ActivityItem[] => []),
+    getLatestRunsByProjectPaths(userId, dirs),
+    getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
+    getRecentActivity(userId, 24, 30).catch((): ActivityItem[] => []),
     getAllProjectStates().catch((): DbProjectState[] => []),
-    cleanupStaleOrchestrationRuns().catch(() => {}),
+    cleanupStaleOrchestrationRuns(userId).catch(() => {}),
   ]);
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
   // 24-hour window: DB ready/closing/closed timestamps older than this are not surfaced

@@ -2,12 +2,14 @@ import { Repeat2, Flame } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
+import { getCurrentUserId } from "@/lib/session";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 export default async function HabitsPage() {
-  const habits = await getAllHabitsWithHistory(HABIT_HISTORY_DAYS);
+  const userId = await getCurrentUserId();
+  const habits = await getAllHabitsWithHistory(userId, HABIT_HISTORY_DAYS);
   const active = habits.filter((h) => h.active);
   const totalCompletions = habits.reduce((s, h) => s + h.completionsInWindow, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);

@@ -3,6 +3,7 @@ import { searchPeople, SORT_MODE } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
 import { NewPersonButton } from "@/components/people/NewPersonButton";
 import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/utils";
+import { getCurrentUserId } from "@/lib/session";
 
 export default async function PeoplePage({
   searchParams,
@@ -20,7 +21,8 @@ export default async function PeoplePage({
         )
     : [];
 
-  const { people, total } = await searchPeople("", 50, 0, SORT_MODE.RECENT, initialHealthFilter);
+  const userId = await getCurrentUserId();
+  const { people, total } = await searchPeople(userId, "", 50, 0, SORT_MODE.RECENT, initialHealthFilter);
 
   return (
     <PageLayout

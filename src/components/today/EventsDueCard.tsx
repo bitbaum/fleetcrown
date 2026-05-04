@@ -1,13 +1,15 @@
 import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEventsDueSoon } from "@/db/queries/events";
+import { getCurrentUserId } from "@/lib/session";
 import { isPast, format } from "date-fns";
 import { deadlineLabel } from "@/lib/dates";
 import { EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 
 export async function EventsDueCard() {
-  const items = await getEventsDueSoon();
+  const userId = await getCurrentUserId();
+  const items = await getEventsDueSoon(userId);
 
   if (items.length === 0) return null;
 

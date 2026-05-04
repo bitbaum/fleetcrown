@@ -51,6 +51,7 @@ export async function GET(request: Request) {
     .map((h) => h.trim())
     .filter((h): h is RelationshipHealth => (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h));
 
-  const result = await searchPeople(q, limit, offset, sort, health);
+  const userId = await getCurrentUserId();
+  const result = await searchPeople(userId, q, limit, offset, sort, health);
   return NextResponse.json(result);
 }

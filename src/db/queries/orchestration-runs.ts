@@ -1,7 +1,6 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { orchestrationRuns, type NewOrchestrationRun } from "@/db/schema/orchestration-runs";
-import { DEFAULT_USER_ID } from "@/lib/constants";
 
 const STALE_RUN_MINUTES = 60;
 
@@ -10,25 +9,27 @@ export async function createOrchestrationRun(run: NewOrchestrationRun) {
   return created;
 }
 
+// userId is optional: API callers should pass it for isolation;
+// background worker callers can omit it since runId is already unique.
 export async function updateOrchestrationRun(
   id: string,
   patch: Partial<NewOrchestrationRun>,
+  userId?: string,
 ) {
+  const condition = userId
+    ? and(eq(orchestrationRuns.id, id), eq(orchestrationRuns.userId, userId))
+    : eq(orchestrationRuns.id, id);
+
   const [updated] = await db
     .update(orchestrationRuns)
     .set(patch)
-    .where(
-      and(
-        eq(orchestrationRuns.id, id),
-        eq(orchestrationRuns.userId, DEFAULT_USER_ID),
-      ),
-    )
+    .where(condition)
     .returning();
 
   return updated;
 }
 
-export async function cleanupStaleOrchestrationRuns() {
+export async function cleanupStaleOrchestrationRuns(userId: string) {
   await db
     .update(orchestrationRuns)
     .set({
@@ -38,14 +39,14 @@ export async function cleanupStaleOrchestrationRuns() {
     })
     .where(
       and(
-        eq(orchestrationRuns.userId, DEFAULT_USER_ID),
+        eq(orchestrationRuns.userId, userId),
         eq(orchestrationRuns.state, "running"),
         lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
       ),
     );
 }
 
-export async function getLatestRunsByProjectPaths(projectPaths: string[]) {
+export async function getLatestRunsByProjectPaths(userId: string, projectPaths: string[]) {
   if (projectPaths.length === 0) return new Map<string, typeof orchestrationRuns.$inferSelect>();
 
   const rows = await db
@@ -53,7 +54,7 @@ export async function getLatestRunsByProjectPaths(projectPaths: string[]) {
     .from(orchestrationRuns)
     .where(
       and(
-        eq(orchestrationRuns.userId, DEFAULT_USER_ID),
+        eq(orchestrationRuns.userId, userId),
         inArray(orchestrationRuns.projectPath, projectPaths),
       ),
     )

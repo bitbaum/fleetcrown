@@ -1,10 +1,12 @@
 import { Repeat2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getTodayHabits } from "@/db/queries/habits";
+import { getCurrentUserId } from "@/lib/session";
 import { HabitsList } from "./HabitsList";
 
 export async function HabitsCard() {
-  const habits = await getTodayHabits();
+  const userId = await getCurrentUserId();
+  const habits = await getTodayHabits(userId);
 
   return (
     <Card>

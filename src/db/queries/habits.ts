@@ -1,4 +1,4 @@
-import { DEFAULT_USER_ID, HABIT_HISTORY_DAYS } from "@/lib/constants";
+import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
@@ -25,12 +25,11 @@ export const PatchHabitBody = z
 
 const todayDate = () => toLocalDateStr(new Date());
 
-/** Whether a habit should appear today given its frequency */
 function isDueToday(frequency: HabitFrequency): boolean {
-  const dow = new Date().getDay(); // 0=Sun, 6=Sat
+  const dow = new Date().getDay();
   if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
-  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1; // Mondays
-  return true; // daily
+  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1;
+  return true;
 }
 
 export type HabitWithStatus = {
@@ -39,17 +38,16 @@ export type HabitWithStatus = {
   frequency: HabitFrequency;
   sortOrder: number;
   doneToday: boolean;
-  /** 7-day streak count */
   streak: number;
 };
 
-export async function getTodayHabits(): Promise<HabitWithStatus[]> {
+export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]> {
   const today = todayDate();
 
   const activeHabits = await db
     .select()
     .from(habits)
-    .where(and(eq(habits.userId, DEFAULT_USER_ID), eq(habits.active, true)))
+    .where(and(eq(habits.userId, userId), eq(habits.active, true)))
     .orderBy(habits.sortOrder, habits.createdAt);
 
   if (activeHabits.length === 0) return [];
@@ -59,7 +57,6 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
 
   const habitIds = dueHabits.map((h) => h.id);
 
-  // Completions for today and the last 6 days (for streak calculation)
   const since = new Date();
   since.setDate(since.getDate() - 6);
   const sinceStr = toLocalDateStr(since);
@@ -69,7 +66,7 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
     .from(habitCompletions)
     .where(
       and(
-        eq(habitCompletions.userId, DEFAULT_USER_ID),
+        eq(habitCompletions.userId, userId),
         inArray(habitCompletions.habitId, habitIds),
         sql`${habitCompletions.completedDate} >= ${sinceStr}`,
       ),
@@ -84,7 +81,6 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
   return dueHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
     const doneToday = dates.has(today);
-    // Simple streak: consecutive days done (including today)
     let streak = 0;
     for (let i = 0; i < 7; i++) {
       const d = new Date();
@@ -96,19 +92,19 @@ export async function getTodayHabits(): Promise<HabitWithStatus[]> {
   });
 }
 
-export async function toggleHabitCompletion(habitId: string, done: boolean): Promise<void> {
+export async function toggleHabitCompletion(habitId: string, done: boolean, userId: string): Promise<void> {
   const today = todayDate();
   if (done) {
     await db
       .insert(habitCompletions)
-      .values({ userId: DEFAULT_USER_ID, habitId, completedDate: today })
+      .values({ userId, habitId, completedDate: today })
       .onConflictDoNothing();
   } else {
     await db
       .delete(habitCompletions)
       .where(
         and(
-          eq(habitCompletions.userId, DEFAULT_USER_ID),
+          eq(habitCompletions.userId, userId),
           eq(habitCompletions.habitId, habitId),
           eq(habitCompletions.completedDate, today),
         ),
@@ -116,16 +112,16 @@ export async function toggleHabitCompletion(habitId: string, done: boolean): Pro
   }
 }
 
-export async function createHabit(title: string, frequency: HabitFrequency): Promise<{ id: string; title: string }> {
+export async function createHabit(title: string, frequency: HabitFrequency, userId: string): Promise<{ id: string; title: string }> {
   const [maxOrder] = await db
     .select({ max: sql<number>`coalesce(max(${habits.sortOrder}), -1)` })
     .from(habits)
-    .where(eq(habits.userId, DEFAULT_USER_ID));
+    .where(eq(habits.userId, userId));
 
   const [habit] = await db
     .insert(habits)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       title: title.trim(),
       frequency,
       sortOrder: (maxOrder?.max ?? -1) + 1,
@@ -134,10 +130,10 @@ export async function createHabit(title: string, frequency: HabitFrequency): Pro
   return habit;
 }
 
-export async function deleteHabit(id: string): Promise<void> {
+export async function deleteHabit(id: string, userId: string): Promise<void> {
   await db
     .delete(habits)
-    .where(and(eq(habits.id, id), eq(habits.userId, DEFAULT_USER_ID)));
+    .where(and(eq(habits.id, id), eq(habits.userId, userId)));
 }
 
 export type HabitWithHistory = {
@@ -147,20 +143,16 @@ export type HabitWithHistory = {
   sortOrder: number;
   active: boolean;
   createdAt: Date;
-  /** Set of YYYY-MM-DD strings with completions in the window */
   completedDates: Set<string>;
-  /** Total completions in the window */
   completionsInWindow: number;
-  /** Current consecutive streak (days) */
   streak: number;
 };
 
-/** Get all habits with their last `days` days of completion data */
-export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promise<HabitWithHistory[]> {
+export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTORY_DAYS): Promise<HabitWithHistory[]> {
   const allHabits = await db
     .select()
     .from(habits)
-    .where(eq(habits.userId, DEFAULT_USER_ID))
+    .where(eq(habits.userId, userId))
     .orderBy(habits.active, habits.sortOrder, habits.createdAt);
 
   if (allHabits.length === 0) return [];
@@ -174,7 +166,7 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
     .from(habitCompletions)
     .where(
       and(
-        eq(habitCompletions.userId, DEFAULT_USER_ID),
+        eq(habitCompletions.userId, userId),
         inArray(habitCompletions.habitId, allHabits.map((h) => h.id)),
         sql`${habitCompletions.completedDate} >= ${sinceStr}`,
       ),
@@ -188,7 +180,6 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
 
   return allHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
-    // Streak: consecutive days ending today (or yesterday if not yet done today)
     let streak = 0;
     for (let i = 0; i < days; i++) {
       const d = new Date();
@@ -213,6 +204,7 @@ export async function getAllHabitsWithHistory(days = HABIT_HISTORY_DAYS): Promis
 export async function updateHabit(
   id: string,
   fields: { title?: string; frequency?: HabitFrequency },
+  userId: string,
 ): Promise<void> {
   const set: Partial<typeof habits.$inferInsert> = {};
   if (fields.title)     set.title     = fields.title.trim();
@@ -221,5 +213,5 @@ export async function updateHabit(
   await db
     .update(habits)
     .set(set)
-    .where(and(eq(habits.id, id), eq(habits.userId, DEFAULT_USER_ID)));
+    .where(and(eq(habits.id, id), eq(habits.userId, userId)));
 }

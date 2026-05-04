@@ -1,10 +1,9 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
-import { DEFAULT_USER_ID } from "@/lib/constants";
 
-export async function insertPromptHistory(row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
-  await db.insert(promptHistory).values({ ...row, userId: DEFAULT_USER_ID });
+export async function insertPromptHistory(userId: string, row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
+  await db.insert(promptHistory).values({ ...row, userId });
 }
 
 export type RecentCustomPrompt = {
@@ -21,6 +20,7 @@ export type IntentFrequency = {
 
 // Per-project: deduplicated custom prompts sorted by recency and frequency
 export async function getRecentCustomPromptsByProjectKey(
+  userId: string,
   projectKey: string,
   limit = 8,
 ): Promise<RecentCustomPrompt[]> {
@@ -33,7 +33,7 @@ export async function getRecentCustomPromptsByProjectKey(
     .from(promptHistory)
     .where(
       and(
-        eq(promptHistory.userId, DEFAULT_USER_ID),
+        eq(promptHistory.userId, userId),
         eq(promptHistory.projectKey, projectKey),
         eq(promptHistory.intent, "custom"),
         sql`custom_prompt is not null`,
@@ -50,6 +50,7 @@ export async function getRecentCustomPromptsByProjectKey(
 
 // Batch version for the control panel — one query for all projects
 export async function getRecentCustomPromptsByProjectKeys(
+  userId: string,
   projectKeys: string[],
 ): Promise<Map<string, RecentCustomPrompt[]>> {
   if (projectKeys.length === 0) return new Map();
@@ -64,7 +65,7 @@ export async function getRecentCustomPromptsByProjectKeys(
     .from(promptHistory)
     .where(
       and(
-        eq(promptHistory.userId, DEFAULT_USER_ID),
+        eq(promptHistory.userId, userId),
         inArray(promptHistory.projectKey, projectKeys),
         eq(promptHistory.intent, "custom"),
         sql`custom_prompt is not null`,
@@ -95,7 +96,7 @@ export type ActivityItem = {
   dispatchedAt: string;
 };
 
-export async function getRecentActivity(hours = 24, limit = 30): Promise<ActivityItem[]> {
+export async function getRecentActivity(userId: string, hours = 24, limit = 30): Promise<ActivityItem[]> {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
   const rows = await db
     .select({
@@ -109,7 +110,7 @@ export async function getRecentActivity(hours = 24, limit = 30): Promise<Activit
     .from(promptHistory)
     .where(
       and(
-        eq(promptHistory.userId, DEFAULT_USER_ID),
+        eq(promptHistory.userId, userId),
         gte(promptHistory.dispatchedAt, since),
       ),
     )
@@ -127,7 +128,7 @@ export async function getRecentActivity(hours = 24, limit = 30): Promise<Activit
 }
 
 // Top intents across all projects — for analytics/self-learning
-export async function getTopIntentFrequencies(limit = 20): Promise<IntentFrequency[]> {
+export async function getTopIntentFrequencies(userId: string, limit = 20): Promise<IntentFrequency[]> {
   const rows = await db
     .select({
       intent: promptHistory.intent,
@@ -135,7 +136,7 @@ export async function getTopIntentFrequencies(limit = 20): Promise<IntentFrequen
       count: sql<number>`count(*)::int`,
     })
     .from(promptHistory)
-    .where(eq(promptHistory.userId, DEFAULT_USER_ID))
+    .where(eq(promptHistory.userId, userId))
     .groupBy(promptHistory.intent, promptHistory.adapter)
     .orderBy(desc(sql`count(*)`))
     .limit(limit);

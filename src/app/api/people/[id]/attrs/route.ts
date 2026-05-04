@@ -6,18 +6,20 @@ import {
   SetAttrBody,
   DeleteAttrBody,
 } from "@/db/queries/utils";
+import { getCurrentUserId } from "@/lib/session";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
   const dataOrResp = await readJsonBody(req, SetAttrBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const ok = await upsertEntityAttribute(idOrResp, dataOrResp.key, dataOrResp.value);
+  const ok = await upsertEntityAttribute(userId, idOrResp, dataOrResp.key, dataOrResp.value);
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
@@ -26,12 +28,13 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
   const dataOrResp = await readJsonBody(req, DeleteAttrBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  await deleteEntityAttribute(idOrResp, dataOrResp.key);
+  await deleteEntityAttribute(userId, idOrResp, dataOrResp.key);
   return NextResponse.json({ ok: true });
 }

@@ -5,9 +5,11 @@ import { getProjects } from "@/db/queries/projects";
 import { GitHubStatus } from "@/components/projects/GitHubStatus";
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
+import { getCurrentUserId } from "@/lib/session";
 
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const userId = await getCurrentUserId();
+  const projects = await getProjects(userId);
 
   return (
     <PageLayout title="Projects" subtitle={`${projects.length} projects tracked`} right={<NewProjectButton />}>

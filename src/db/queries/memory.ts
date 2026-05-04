@@ -1,20 +1,19 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { db } from "@/db";
 import { entities, entityRelations, interactions } from "@/db/schema";
 import { desc, eq, sql } from "drizzle-orm";
 
-export async function getEntityStats() {
+export async function getEntityStats(userId: string) {
   const [typeRows, [relCount]] = await Promise.all([
     db
       .select({ type: entities.type, count: sql<number>`count(*)` })
       .from(entities)
-      .where(eq(entities.userId, DEFAULT_USER_ID))
+      .where(eq(entities.userId, userId))
       .groupBy(entities.type)
       .orderBy(sql`count(*) DESC`),
     db
       .select({ count: sql<number>`count(*)` })
       .from(entityRelations)
-      .where(eq(entityRelations.userId, DEFAULT_USER_ID)),
+      .where(eq(entityRelations.userId, userId)),
   ]);
 
   return {
@@ -24,7 +23,7 @@ export async function getEntityStats() {
   };
 }
 
-export async function getRecentEntities(limit = 10) {
+export async function getRecentEntities(userId: string, limit = 10) {
   return db
     .select({
       id: entities.id,
@@ -34,12 +33,12 @@ export async function getRecentEntities(limit = 10) {
       createdAt: entities.createdAt,
     })
     .from(entities)
-    .where(eq(entities.userId, DEFAULT_USER_ID))
+    .where(eq(entities.userId, userId))
     .orderBy(desc(entities.createdAt))
     .limit(limit);
 }
 
-export async function getRecentInteractions(limit = 10) {
+export async function getRecentInteractions(userId: string, limit = 10) {
   return db
     .select({
       id: interactions.id,
@@ -53,7 +52,7 @@ export async function getRecentInteractions(limit = 10) {
     })
     .from(interactions)
     .innerJoin(entities, eq(interactions.entityId, entities.id))
-    .where(eq(interactions.userId, DEFAULT_USER_ID))
+    .where(eq(interactions.userId, userId))
     .orderBy(desc(interactions.occurredAt))
     .limit(limit);
 }

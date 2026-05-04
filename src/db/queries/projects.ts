@@ -1,4 +1,3 @@
-import { DEFAULT_USER_ID } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities } from "@/db/schema";
@@ -20,13 +19,13 @@ export const PatchProjectBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-export async function getProjects() {
+export async function getProjects(userId: string) {
   const projects = await db
     .select()
     .from(entities)
     .where(
       and(
-        eq(entities.userId, DEFAULT_USER_ID),
+        eq(entities.userId, userId),
         eq(entities.type, ENTITY_TYPE.PROJECT),
       ),
     )

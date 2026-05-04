@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleHabitCompletion, deleteHabit, updateHabit, PatchHabitBody } from "@/db/queries/habits";
+import { getCurrentUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 
 export async function PATCH(
@@ -13,13 +14,14 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchHabitBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  // Toggle completion takes precedence: it's a separate operation from edit.
+  const userId = await getCurrentUserId();
+
   if (dataOrResp.done !== undefined) {
-    await toggleHabitCompletion(id, dataOrResp.done);
+    await toggleHabitCompletion(id, dataOrResp.done, userId);
     return NextResponse.json({ ok: true });
   }
 
-  await updateHabit(id, { title: dataOrResp.title, frequency: dataOrResp.frequency });
+  await updateHabit(id, { title: dataOrResp.title, frequency: dataOrResp.frequency }, userId);
   return NextResponse.json({ ok: true });
 }
 
@@ -30,6 +32,7 @@ export async function DELETE(
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
-  await deleteHabit(idOrResp);
+  const userId = await getCurrentUserId();
+  await deleteHabit(idOrResp, userId);
   return NextResponse.json({ ok: true });
 }

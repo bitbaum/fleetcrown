@@ -8,7 +8,8 @@ import { getEvents, CreateEventBody } from "@/db/queries/events";
 import { readJsonBody } from "@/lib/api/route-helpers";
 
 export async function GET() {
-  const items = await getEvents();
+  const userId = await getCurrentUserId();
+  const items = await getEvents(userId);
   return NextResponse.json({ events: items });
 }
 

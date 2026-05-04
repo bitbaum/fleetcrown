@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { attributes, entities, interactions, type Interaction } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
-import { DEFAULT_USER_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { z } from "zod";
 
@@ -50,6 +50,7 @@ export async function fetchAttributesByEntityIds(
 /** Verifies the entity belongs to the user before upserting an attribute.
  *  Returns false if the entity wasn't found (caller should 404). */
 export async function upsertEntityAttribute(
+  userId: string,
   entityId: string,
   key: string,
   value: string,
@@ -57,13 +58,13 @@ export async function upsertEntityAttribute(
   const [owner] = await db
     .select({ id: entities.id })
     .from(entities)
-    .where(and(eq(entities.id, entityId), eq(entities.userId, DEFAULT_USER_ID)));
+    .where(and(eq(entities.id, entityId), eq(entities.userId, userId)));
   if (!owner) return false;
 
   await db
     .insert(attributes)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       entityId,
       key: key.toLowerCase().replace(/\s+/g, "_"),
       value,
@@ -77,14 +78,14 @@ export async function upsertEntityAttribute(
 }
 
 /** Deletes the (entity, key) attribute for the current user. */
-export async function deleteEntityAttribute(entityId: string, key: string): Promise<void> {
+export async function deleteEntityAttribute(userId: string, entityId: string, key: string): Promise<void> {
   await db
     .delete(attributes)
     .where(
       and(
         eq(attributes.entityId, entityId),
         eq(attributes.key, key),
-        eq(attributes.userId, DEFAULT_USER_ID),
+        eq(attributes.userId, userId),
       ),
     );
 }
@@ -92,19 +93,20 @@ export async function deleteEntityAttribute(entityId: string, key: string): Prom
 /** Verifies the entity belongs to the user before recording an interaction.
  *  Returns the created row, or null if the entity wasn't found (caller should 404). */
 export async function createEntityInteraction(
+  userId: string,
   entityId: string,
   body: { channel: string; direction: InteractionDirection; summary?: string; occurredAt?: string },
 ): Promise<Interaction | null> {
   const [owner] = await db
     .select({ id: entities.id })
     .from(entities)
-    .where(and(eq(entities.id, entityId), eq(entities.userId, DEFAULT_USER_ID)));
+    .where(and(eq(entities.id, entityId), eq(entities.userId, userId)));
   if (!owner) return null;
 
   const [created] = await db
     .insert(interactions)
     .values({
-      userId: DEFAULT_USER_ID,
+      userId,
       entityId,
       channel: body.channel,
       direction: body.direction,
