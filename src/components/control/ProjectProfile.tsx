@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLink, ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { Fragment, useState } from "react";
+import { ExternalLink, ChevronDown, ChevronRight, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DIMENSIONS, interpolateDimensionPrompt } from "@/config/dimension-prompts";
 import type { ProjectState } from "@/app/api/control/route";
@@ -14,61 +14,113 @@ const AGENTS = [
 
 type AgentId = (typeof AGENTS)[number]["id"];
 
-function MaturityBar({ maturity }: { maturity: string }) {
+function MaturityDots({ maturity }: { maturity: string }) {
   const m = maturity.match(/^(\d+)/);
   if (!m) return <span className="text-sm text-text-secondary">{maturity}</span>;
   const n = parseInt(m[1], 10);
+  const label = maturity.replace(/^\d+\/10\s*[-–]?\s*/, "").trim();
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-0.5">
+    <div className="flex items-center gap-3">
+      <div className="flex gap-[3px]">
         {Array.from({ length: 10 }, (_, i) => (
-          <div key={i} className={cn("h-1.5 w-1.5 rounded-full", i < n ? "bg-accent-text" : "bg-surface-overlay")} />
+          <div
+            key={i}
+            className={cn(
+              "h-[3px] w-3 rounded-full transition-colors",
+              i < n ? "bg-accent-text" : "bg-surface-overlay"
+            )}
+          />
         ))}
       </div>
-      <span className="text-xs text-text-tertiary">{maturity.replace(/^\d+\/10\s*[-–]?\s*/, "")}</span>
+      <span className="text-xs tabular-nums text-text-tertiary">{n}/10{label ? ` — ${label}` : ""}</span>
+    </div>
+  );
+}
+
+function StatusChip({ value }: { value: string }) {
+  const v = value.toLowerCase();
+  const active = v.includes("active") || v.includes("live") || v.includes("production");
+  const warn = v.includes("pause") || v.includes("hold") || v.includes("slow");
+  const cls = active
+    ? "ui-tag ui-tag-positive"
+    : warn
+      ? "ui-tag ui-tag-warning"
+      : "ui-tag ui-tag-neutral";
+  return <span className={cls}>{value}</span>;
+}
+
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[6rem_1fr] gap-x-4 items-baseline py-2.5 border-b border-border-subtle/50 last:border-0">
+      <span className="ui-kicker shrink-0">{label}</span>
+      <span className="text-sm leading-relaxed text-text-secondary">{children}</span>
     </div>
   );
 }
 
 function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]> }) {
-  const rows = [
-    { key: "Mission", value: profile.mission },
-    { key: "Stack", value: profile.stack },
-    { key: "Status", value: profile.status },
-    ...Object.entries(profile.attrs)
-      .filter(([k]) => !["mission", "stack", "status", "maturity", "url", "description"].includes(k) && profile.attrs[k])
-      .map(([k, v]) => ({ key: k.replace(/_/g, " "), value: v })),
-  ].filter((r) => r.value);
+  const extraAttrs = Object.entries(profile.attrs).filter(
+    ([k, v]) => v && !["mission", "stack", "status", "maturity", "url", "description"].includes(k)
+  );
 
   return (
-    <div className="space-y-3 px-5 pb-4 pt-3">
+    <div className="px-5 pb-5 pt-4 space-y-5">
+      {/* Description */}
       {profile.description && (
-        <p className="text-sm leading-relaxed text-text-secondary">{profile.description}</p>
+        <p className="text-[0.9375rem] leading-[1.65] text-text-secondary">{profile.description}</p>
       )}
+
+      {/* Mission callout */}
+      {profile.mission && (
+        <div className="border-l-2 border-accent-primary/40 pl-4">
+          <p className="ui-kicker mb-1.5">Mission</p>
+          <p className="text-sm leading-relaxed text-text-primary">{profile.mission}</p>
+        </div>
+      )}
+
+      {/* Core stats row */}
+      {(profile.status || profile.maturity) && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          {profile.status && (
+            <div className="flex items-center gap-2">
+              <span className="ui-kicker">Status</span>
+              <StatusChip value={profile.status} />
+            </div>
+          )}
+          {profile.maturity && (
+            <div className="flex items-center gap-2">
+              <span className="ui-kicker">Maturity</span>
+              <MaturityDots maturity={profile.maturity} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* URL */}
       {profile.url && (
         <a
           href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm text-accent-text hover:text-text-primary"
+          className="inline-flex items-center gap-2 text-sm text-accent-text hover:text-text-primary transition-colors"
         >
-          {profile.url} <ExternalLink className="h-3 w-3" />
+          <Globe className="h-3.5 w-3.5 shrink-0" />
+          {profile.url.replace(/^https?:\/\//, "")}
+          <ExternalLink className="h-3 w-3 opacity-60" />
         </a>
       )}
-      {profile.maturity && (
-        <div>
-          <p className="ui-kicker mb-1">Maturity</p>
-          <MaturityBar maturity={profile.maturity} />
+
+      {/* Stack + extra attrs */}
+      {(profile.stack || extraAttrs.length > 0) && (
+        <div className="rounded-xl border border-border-subtle bg-surface-base overflow-hidden">
+          {profile.stack && (
+            <MetaRow label="Stack">{profile.stack}</MetaRow>
+          )}
+          {extraAttrs.map(([k, v]) => (
+            <MetaRow key={k} label={k.replace(/_/g, " ")}>{v}</MetaRow>
+          ))}
         </div>
       )}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-        {rows.map(({ key, value }) => (
-          <>
-            <dt key={`k-${key}`} className="ui-kicker self-start pt-0.5 capitalize">{key}</dt>
-            <dd key={`v-${key}`} className="text-sm leading-relaxed text-text-secondary">{value}</dd>
-          </>
-        ))}
-      </dl>
     </div>
   );
 }
@@ -100,17 +152,17 @@ function DimensionSection({
     <div className="border-t border-border-subtle">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-3 text-left text-sm text-text-secondary transition-colors hover:text-text-primary"
+        className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-surface-raised/40"
       >
-        <span className="flex items-center gap-2">
-          <span>{dimension.icon}</span>
-          <span className="font-medium">{dimension.label}</span>
+        <span className="flex items-center gap-2.5">
+          <span className="text-base leading-none">{dimension.icon}</span>
+          <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary">{dimension.label}</span>
         </span>
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
       </button>
 
       {open && (
-        <div className="flex flex-wrap gap-2 px-5 pb-4">
+        <div className="flex flex-wrap gap-2 px-5 pb-4 pt-1">
           {dimension.prompts.map((p) => {
             const rendered = interpolateDimensionPrompt(p.prompt, ctx);
             const uses = usageCounts.get(rendered) ?? 0;
@@ -119,12 +171,10 @@ function DimensionSection({
                 key={p.label}
                 onClick={() => onRun(rendered)}
                 disabled={isSending}
-                className="group relative min-h-[44px] rounded-2xl border border-border-subtle bg-surface-base px-4 py-2.5 text-sm text-text-secondary transition-colors hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-50"
+                className="min-h-[36px] rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
               >
                 {p.label}
-                {uses > 0 && (
-                  <span className="ml-2 text-xs text-text-muted">×{uses}</span>
-                )}
+                {uses > 0 && <span className="ml-2 text-[10px] text-text-muted">×{uses}</span>}
               </button>
             );
           })}
@@ -150,7 +200,6 @@ export function ProjectProfile({
   const [sending, setSending] = useState(false);
   const activeAgent = localAgent ?? (globalAdapter as AgentId);
 
-  // Build usage count map from logged history — prompt text → run count
   const usageCounts = new Map<string, number>();
   for (const r of project.recentCustomPrompts) {
     usageCounts.set(r.customPrompt, r.count);
@@ -168,23 +217,23 @@ export function ProjectProfile({
   return (
     <div>
       {/* Agent selector */}
-      <div className="flex items-center gap-2 border-t border-border-subtle px-5 py-3">
+      <div className="flex items-center gap-3 border-t border-border-subtle px-5 py-3">
         <span className="ui-kicker shrink-0">Agent</span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5">
           {AGENTS.map((a) => (
             <button
               key={a.id}
               onClick={() => onSetAgent(localAgent === a.id ? null : a.id)}
               className={cn(
-                "min-h-[36px] rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                 activeAgent === a.id
-                  ? "border-accent-primary/60 bg-accent-primary/10 text-accent-text"
-                  : "border-border-subtle bg-surface-base text-text-secondary hover:text-text-primary"
+                  ? "border-accent-primary/50 bg-accent-primary/10 text-accent-text"
+                  : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default"
               )}
             >
               {a.label}
               {a.id === globalAdapter && localAgent === null && (
-                <span className="ml-1 text-text-muted">(default)</span>
+                <span className="ml-1.5 opacity-40">✓</span>
               )}
             </button>
           ))}
@@ -196,7 +245,9 @@ export function ProjectProfile({
       {project.profile ? (
         <MetaSection profile={project.profile} />
       ) : (
-        <p className="px-5 py-3 text-sm text-text-muted">No profile data — add this project to the DB to unlock full awareness.</p>
+        <div className="px-5 py-6 text-center">
+          <p className="text-sm text-text-muted">No profile — add metadata in the Projects view to enable full awareness.</p>
+        </div>
       )}
 
       {/* Dimension prompt sections */}
