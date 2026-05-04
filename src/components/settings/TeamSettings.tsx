@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Copy, Check, Plus, Loader2 } from "lucide-react";
+import { postJson } from "@/lib/api/fetch";
 import type { Invitation } from "@/db/schema";
 
 type Props = { invitations: Invitation[] };
@@ -17,11 +18,7 @@ export function TeamSettings({ invitations: initial }: Props) {
     setCreating(true);
     setError("");
     try {
-      const res = await fetch("/api/invitations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() || undefined }),
-      });
+      const res = await postJson("/api/invitations", { email: email.trim() || undefined });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create invitation");
       setInvites((prev) => [...prev, data]);

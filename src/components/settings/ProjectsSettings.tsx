@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Trash2, Plus } from "lucide-react";
+import { postJson, deleteJson } from "@/lib/api/fetch";
 import type { UserProject } from "@/db/schema";
 
 type Props = { projects: UserProject[] };
@@ -20,14 +21,10 @@ export function ProjectsSettings({ projects: initial }: Props) {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/user-projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          dirPath: dirPath.trim() || undefined,
-          gitUrl: gitUrl.trim() || undefined,
-        }),
+      const res = await postJson("/api/user-projects", {
+        name: name.trim(),
+        dirPath: dirPath.trim() || undefined,
+        gitUrl: gitUrl.trim() || undefined,
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "Failed to add project");
@@ -45,7 +42,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
 
   const remove = async (id: string) => {
     try {
-      await fetch(`/api/user-projects/${id}`, { method: "DELETE" });
+      await deleteJson(`/api/user-projects/${id}`);
       setProjects((p) => p.filter((x) => x.id !== id));
     } catch {
       // network error — leave list unchanged

@@ -3,6 +3,7 @@
 import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
+import { Modal } from "@/components/ui/modal";
 import type { ControlData } from "@/app/api/control/route";
 
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
@@ -309,54 +310,49 @@ export function NewProjectModal({
   onClose: () => void;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
-      onClick={onClose}
-    >
-      <div className="ui-panel w-full max-w-md space-y-4 p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium text-text-primary">New project</h3>
-          <button onClick={onClose} className="text-text-muted hover:text-text-primary">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="space-y-3">
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => onNameChange(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onCreate()}
-            placeholder="Project name (= zellij tab)"
-            className="ui-input w-full"
-          />
-          <input
-            value={dir}
-            onChange={(e) => onDirChange(e.target.value)}
-            placeholder="Local path — e.g. /home/g/dev/homeharmony"
-            className="ui-input w-full"
-          />
-          <input
-            value={gitUrl}
-            onChange={(e) => onGitUrlChange(e.target.value)}
-            placeholder="Git URL — optional"
-            className="ui-input w-full"
-          />
-        </div>
-        {error && <p className="text-sm text-status-negative">{error}</p>}
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onCreate}
-            disabled={creating || !name.trim()}
-            className="ui-btn-primary flex-1 gap-1.5"
-          >
-            {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            {dir.trim() ? "Create & launch" : "Create"}
-          </button>
-          <button onClick={onClose} className="ui-btn-secondary">
-            Cancel
-          </button>
-        </div>
+    <Modal onClose={onClose} size="md">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium text-text-primary">New project</h3>
+        <button onClick={onClose} className="text-text-muted hover:text-text-primary">
+          <X className="h-4 w-4" />
+        </button>
       </div>
-    </div>
+      <div className="space-y-3">
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => onNameChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onCreate()}
+          placeholder="Project name (= zellij tab)"
+          className="ui-input w-full"
+        />
+        <input
+          value={dir}
+          onChange={(e) => onDirChange(e.target.value)}
+          placeholder="Local path — e.g. /home/g/dev/homeharmony"
+          className="ui-input w-full"
+        />
+        <input
+          value={gitUrl}
+          onChange={(e) => onGitUrlChange(e.target.value)}
+          placeholder="Git URL — optional"
+          className="ui-input w-full"
+        />
+      </div>
+      {error && <p className="text-sm text-status-negative">{error}</p>}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onCreate}
+          disabled={creating || !name.trim()}
+          className="ui-btn-primary flex-1 gap-1.5"
+        >
+          {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          {dir.trim() ? "Create & launch" : "Create"}
+        </button>
+        <button onClick={onClose} className="ui-btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </Modal>
   );
 }

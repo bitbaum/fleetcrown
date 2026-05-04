@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { patchJson } from "@/lib/api/fetch";
 import { normalizeUsername } from "@/lib/username";
 
 type Props = {
@@ -23,11 +24,7 @@ export function ProfileSettings({ user }: Props) {
     setError("");
     setSaved(false);
     try {
-      const res = await fetch("/api/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, username: normalizeUsername(username) }),
-      });
+      const res = await patchJson("/api/me", { name, username: normalizeUsername(username) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? "Failed to save");
       setSaved(true);

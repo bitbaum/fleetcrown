@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { postJson } from "@/lib/api/fetch";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
 import type { ProjectState } from "@/app/api/control/route";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -53,14 +54,10 @@ export function ControlPanel() {
     setCreatingProject(true);
     setCreateError("");
     try {
-      const res = await fetch("/api/user-projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newName.trim(),
-          dirPath: newDir.trim() || undefined,
-          gitUrl: newGitUrl.trim() || undefined,
-        }),
+      const res = await postJson("/api/user-projects", {
+        name: newName.trim(),
+        dirPath: newDir.trim() || undefined,
+        gitUrl: newGitUrl.trim() || undefined,
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

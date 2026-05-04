@@ -6,6 +6,7 @@ import {
   Pause, Play, Eraser, Loader2, Send, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
@@ -77,11 +78,7 @@ export function ProjectCardHeader({
                     setSyncing(true);
                     setSyncResult(null);
                     try {
-                      const res = await fetch("/api/project/sync", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ dir: project.dir }),
-                      });
+                      const res = await postJson("/api/project/sync", { dir: project.dir });
                       const data = await res.json();
                       setSyncResult(res.ok ? "Synced ✓" : (data.error ?? "Failed"));
                     } finally {
@@ -326,11 +323,7 @@ export function IntentButtonPanel({
               onClick={async () => {
                 setClearingContext(true);
                 try {
-                  await fetch("/api/project/clear-context", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tab: project.tab }),
-                  });
+                  await postJson("/api/project/clear-context", { tab: project.tab });
                 } finally {
                   setClearingContext(false);
                 }
