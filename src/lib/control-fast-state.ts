@@ -42,7 +42,11 @@ export function readTmpTs(filename: string): number | null {
 export function readCurrentPrompt(tab: string): CurrentPrompt | null {
   try {
     const file = stateFile.prompt(tab);
-    if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8")) as CurrentPrompt;
+    if (!fs.existsSync(file)) return null;
+    const obj = JSON.parse(fs.readFileSync(file, "utf-8"));
+    if (typeof obj?.key === "string" && typeof obj?.label === "string" && typeof obj?.startedAt === "number") {
+      return obj as CurrentPrompt;
+    }
   } catch { /* ignore */ }
   return null;
 }

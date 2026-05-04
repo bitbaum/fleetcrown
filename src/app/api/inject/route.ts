@@ -11,6 +11,7 @@ import {
 } from "@/lib/claude-config";
 import { injectIntoTab } from "@/lib/zellij";
 import { upsertProjectState } from "@/db/queries/project-states";
+import { getCurrentUserId } from "@/lib/session";
 
 const execAsync = promisify(exec);
 
@@ -71,6 +72,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "promptKey or customPrompt required" }, { status: 400 });
   }
 
+  const userId = await getCurrentUserId();
+
   try {
     injectIntoTab(canonical, prompt);
 
@@ -86,6 +89,7 @@ export async function POST(req: NextRequest) {
     // Persist to DB so Cockpit survives a reboot (fire-and-forget)
     upsertProjectState({
       projectKey: canonical,
+      userId,
       tabName: canonical,
       currentPromptKey: promptKey ?? "custom",
       currentPromptLabel: promptLabel,
