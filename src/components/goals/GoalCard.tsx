@@ -217,7 +217,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   />
                 ))}
                 {milestoneTotal > 0 && (
-                  <div className="text-xs text-text-muted mt-1">
+                  <div className="text-xs text-text-tertiary mt-1">
                     {milestoneDone}/{milestoneTotal} milestones
                   </div>
                 )}

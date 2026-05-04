@@ -201,7 +201,7 @@ export function OverviewTab({
             </div>
           ))}
           {activityList.length === 0 && !loggingActivity && (
-            <p className="text-xs text-text-muted">No activity recorded yet.</p>
+            <p className="text-xs text-text-secondary">No activity recorded yet.</p>
           )}
         </div>
 

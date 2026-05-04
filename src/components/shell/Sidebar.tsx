@@ -39,7 +39,7 @@ export function Sidebar() {
               <Icon className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
                 <span className="block">{item.label}</span>
-                <span className="mt-0.5 block text-xs text-text-muted">{item.description}</span>
+                <span className="mt-0.5 block text-xs text-text-tertiary">{item.description}</span>
               </div>
               {!item.active && (
                 <span className="ml-auto ui-micro-label">soon</span>

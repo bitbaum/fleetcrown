@@ -117,7 +117,7 @@ export function BrainConfigPanel({
                   )}
                 >
                   <div className="font-medium text-text-primary">{entry.label}</div>
-                  <div className="text-sm text-text-muted">Default: {entry.defaultModel}</div>
+                  <div className="text-sm text-text-tertiary">Default: {entry.defaultModel}</div>
                 </button>
               ))}
             </div>

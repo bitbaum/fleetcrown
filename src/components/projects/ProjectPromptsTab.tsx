@@ -144,7 +144,7 @@ export function PromptsTab({
       </div>
 
       {jobs.length === 0 ? (
-        <p className="text-xs text-text-muted">No autopilot jobs linked to this project yet.</p>
+        <p className="text-xs text-text-secondary">No autopilot jobs linked to this project yet.</p>
       ) : (
         <div className="space-y-2">
           {jobs.map((job) => (

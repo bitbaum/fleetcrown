@@ -144,7 +144,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       })}
 
       {linked.length === 0 && mode === "idle" && (
-        <p className="text-xs text-text-muted pt-1">No goals linked to this project.</p>
+        <p className="text-xs text-text-secondary pt-1">No goals linked to this project.</p>
       )}
 
       {mode === "link" && (

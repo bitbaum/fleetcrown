@@ -15,7 +15,7 @@ export async function HabitsCard() {
         title="Habits"
         right={
           habits.length > 0
-            ? <span className="text-xs text-text-muted">{habits.filter((h) => h.doneToday).length}/{habits.length} today</span>
+            ? <span className="text-xs text-text-tertiary">{habits.filter((h) => h.doneToday).length}/{habits.length} today</span>
             : null
         }
       />
