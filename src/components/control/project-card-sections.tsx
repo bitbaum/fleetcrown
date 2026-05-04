@@ -361,18 +361,19 @@ export function IntentButtonPanel({
             onFocus={() => onCustomFocusChange(true)}
             onBlur={() => onCustomFocusChange(false)}
             placeholder={listening ? "Listening…" : "Custom prompt…"}
-            className={`ui-input w-full ${supported ? "pr-10" : ""} ${listening ? "border-status-negative/40" : ""}`}
+            className={cn("ui-input w-full", supported && "pr-10", listening && "border-status-negative/40")}
           />
           {supported && (
             <button
               type="button"
               onClick={toggleMic}
               title={listening ? "Stop recording" : "Voice input"}
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors ${
+              className={cn(
+                "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
                 listening
                   ? "text-status-negative animate-pulse hover:bg-status-negative/10"
-                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised"
-              }`}
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
+              )}
             >
               {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
             </button>
@@ -389,9 +390,9 @@ export function IntentButtonPanel({
 
       {project.recentCustomPrompts.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {project.recentCustomPrompts.map((r, i) => (
+          {project.recentCustomPrompts.map((r) => (
             <button
-              key={i}
+              key={r.customPrompt}
               onClick={() => onCustomChange(r.customPrompt)}
               title={r.customPrompt}
               className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"

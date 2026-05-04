@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS, type OrchestrationTaskSummaryField } from "@/lib/orchestration";
+import { SESSIONS_DIR } from "@/lib/claude-config";
 
 export type SessionData = {
   found: false;
@@ -14,8 +15,6 @@ export type SessionData = {
   health: string;
   raw: string;
 };
-
-const SESSIONS_DIR = `${process.env.HOME ?? "/home/g"}/.claude/sessions`;
 const FIELDS = ORCHESTRATION_TASK_SUMMARY_FIELDS;
 type Field = OrchestrationTaskSummaryField;
 

@@ -309,7 +309,11 @@ export async function GET() {
   const states: ProjectState[] = projects.map(({ tab, dir }) => {
     const latestRun = latestRuns.get(dir);
     const dbState = dbStateMap.get(tab.toLowerCase());
-    const session = parseSession(tab);
+
+    // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
+    // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
+    const liveTab = resolveEffectiveTab(tab, zellijTabs);
+    const session = parseSession(liveTab);
 
     // Persist session to DB if it's newer than what DB has (fire-and-forget)
     if (session && dbState) {
@@ -319,7 +323,7 @@ export async function GET() {
         upsertProjectState({
           projectKey: tab,
           userId,
-          tabName: tab,
+          tabName: liveTab,
           sessionDone:   session.done,
           sessionNext:   session.next,
           sessionTests:  session.tests,
@@ -333,7 +337,7 @@ export async function GET() {
       upsertProjectState({
         projectKey: tab,
         userId,
-        tabName: tab,
+        tabName: liveTab,
         sessionDone:   session.done,
         sessionNext:   session.next,
         sessionTests:  session.tests,
@@ -342,10 +346,6 @@ export async function GET() {
         sessionUpdatedAt: new Date(session.mtime),
       }).catch(() => {});
     }
-
-    // Use the live Zellij tab name for /tmp sentinel reads so aliases ("Cockpit Claude"
-    // for canonical "Cockpit") correctly surface ready/closing/prompt state.
-    const liveTab = resolveEffectiveTab(tab, zellijTabs);
 
     const nowS = Math.floor(Date.now() / 1000);
     const tmpReady   = readTmpTs(stateFile.ready(liveTab));
