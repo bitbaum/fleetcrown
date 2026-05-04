@@ -183,7 +183,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
                   />
                 </Field>
 
-                {error && <p className="text-sm" style={{ color: "oklch(0.68 0.16 25)" }}>{error}</p>}
+                {error && <p className="text-sm text-status-negative">{error}</p>}
 
                 <button
                   type="submit"

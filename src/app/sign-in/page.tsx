@@ -144,7 +144,7 @@ function SignInForm() {
               </div>
 
               {error && (
-                <p className="text-sm" style={{ color: "oklch(0.68 0.16 25)" }}>
+                <p className="text-sm text-status-negative">
                   {error}
                 </p>
               )}
