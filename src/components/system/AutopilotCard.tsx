@@ -64,7 +64,7 @@ function JobRow({
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-text-muted">{humanSchedule(job.schedule.expr)}</span>
+          <span className="text-xs text-text-tertiary">{humanSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
             <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate">
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />

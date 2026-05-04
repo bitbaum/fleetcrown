@@ -128,13 +128,13 @@ export function JobDetail({
                   {formatDistanceToNow(new Date(lastRun), { addSuffix: true })}
                 </div>
               ) : (
-                <div className="text-xs text-text-muted">Never</div>
+                <div className="text-xs text-text-tertiary">Never</div>
               )}
             </div>
             <div className="ui-data-cell">
               <div className="ui-micro-label mb-1">Status</div>
               {!status || status === "never" ? (
-                <div className="text-xs text-text-muted">Never run</div>
+                <div className="text-xs text-text-tertiary">Never run</div>
               ) : hasError ? (
                 <div className="flex items-center gap-1 text-xs text-status-negative">
                   <AlertTriangle className="h-3 w-3" />
