@@ -45,7 +45,7 @@ export function ProgressInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="w-12 bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-xs text-text-primary text-right focus:outline-none"
+        className="w-12 bg-surface-raised border border-border-strong rounded px-1.5 py-0.5 text-xs text-text-primary text-right focus:outline-none"
       />
     );
   }
@@ -100,7 +100,7 @@ export function DateInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="text-xs bg-white/[0.06] border border-white/20 rounded px-1.5 py-0.5 text-text-secondary focus:outline-none focus:border-white/35"
+        className="text-xs bg-surface-raised border border-border-strong rounded px-1.5 py-0.5 text-text-secondary focus:outline-none focus:border-border-strong"
       />
     );
   }
@@ -249,7 +249,7 @@ export function MilestoneRow({
         ) : milestone.done ? (
           <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (
-          <div className="h-3.5 w-3.5 rounded-full border border-white/25 hover:border-white/60 transition-colors" />
+          <div className="h-3.5 w-3.5 rounded-full border border-border-strong hover:border-white/60 transition-colors" />
         )}
       </button>
       <span className={milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}>

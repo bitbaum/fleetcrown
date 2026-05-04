@@ -40,7 +40,7 @@ export function AddAttrInline({
           placeholder="key"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          className="w-24 bg-white/[0.04] border border-white/10 rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-white/25"
+          className="w-24 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
         />
       )}
       <input
@@ -49,7 +49,7 @@ export function AddAttrInline({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
         autoFocus
-        className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-white/25"
+        className="flex-1 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
       />
       {onCancel && (
         <button onClick={onCancel} className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
@@ -113,7 +113,7 @@ export function AttrRow({
 
   const isUrl = value.startsWith("http");
   return (
-    <div className="group flex items-start gap-3 py-2 border-b border-white/[0.04] last:border-0">
+    <div className="group flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">
       <span className="text-[10px] text-text-muted uppercase tracking-wider w-24 shrink-0 pt-0.5 leading-relaxed">{label}</span>
       <div className="flex-1 min-w-0 flex items-start gap-1.5">
         {isUrl ? (
@@ -126,7 +126,7 @@ export function AttrRow({
         )}
         <button
           onClick={() => setEditing(true)}
-          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-all shrink-0 mt-0.5"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
           title="Edit"
         >
           <Pencil className="h-3 w-3" />
@@ -134,7 +134,7 @@ export function AttrRow({
         <button
           onClick={deleteAttr}
           disabled={deleting}
-          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-text-muted hover:text-status-negative hover:bg-white/[0.06] transition-all shrink-0 mt-0.5 disabled:opacity-30"
+          className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
           title="Delete attribute"
         >
           {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}

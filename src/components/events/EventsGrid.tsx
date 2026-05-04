@@ -63,7 +63,7 @@ export function EventsGrid({
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-white/20 placeholder:text-text-muted"
+            className="w-full rounded-lg border border-border-subtle bg-surface-base pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-border-strong placeholder:text-text-muted"
           />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
             {q || typeFilter ? `${filtered.length} / ${items.length}` : items.length}
@@ -80,8 +80,8 @@ export function EventsGrid({
               onClick={() => setTypeFilter(typeFilter === t ? null : t)}
               className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
                 typeFilter === t
-                  ? "border-white/30 bg-white/10 text-text-secondary"
-                  : "border-white/10 bg-transparent text-text-muted hover:text-text-secondary hover:border-white/20"
+                  ? "border-border-strong bg-surface-overlay text-text-secondary"
+                  : "border-border-subtle bg-transparent text-text-muted hover:text-text-secondary hover:border-border-strong"
               }`}
             >
               {t}
@@ -90,7 +90,7 @@ export function EventsGrid({
           {typeFilter && (
             <button
               onClick={() => setTypeFilter(null)}
-              className="px-2.5 py-1 rounded-full text-xs border border-white/10 text-text-muted hover:text-text-secondary transition-colors"
+              className="px-2.5 py-1 rounded-full text-xs border border-border-subtle text-text-muted hover:text-text-secondary transition-colors"
             >
               Clear
             </button>
@@ -117,7 +117,7 @@ export function EventsGrid({
               </div>
             )}
             {withoutDeadline.length > 0 && (
-              <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-white/[0.05]" : ""}>
+              <div className={withDeadline.length > 0 ? "mt-2 pt-2 border-t border-border-subtle" : ""}>
                 {withDeadline.length > 0 && (
                   <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">No deadline</div>
                 )}

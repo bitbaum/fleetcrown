@@ -50,7 +50,7 @@ function JobRow({
   return (
     <div
       onClick={onSelect}
-      className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-white/[0.04] transition-colors cursor-pointer"
+      className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-surface-raised transition-colors cursor-pointer"
     >
       <StatusDot status={status} errors={errors} />
 
@@ -83,7 +83,7 @@ function JobRow({
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
         className={`relative shrink-0 h-4 w-7 rounded-full transition-colors ${
-          job.enabled ? "bg-status-positive" : "bg-white/10"
+          job.enabled ? "bg-status-positive" : "bg-surface-overlay"
         }`}
         title={job.enabled ? "Disable" : "Enable"}
       >
@@ -176,7 +176,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
                   {group.name}
                 </span>
               </div>
-              <div className="space-y-0.5 pl-2 border-l border-white/[0.06]">
+              <div className="space-y-0.5 pl-2 border-l border-border-subtle">
                 {group.jobs.map((job) => (
                   <JobRow
                     key={job.id}

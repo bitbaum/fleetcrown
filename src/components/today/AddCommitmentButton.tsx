@@ -49,7 +49,7 @@ export function AddCommitmentButton() {
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/[0.05] space-y-2">
+    <div className="mt-3 pt-3 border-t border-border-subtle space-y-2">
       <input
         value={description}
         onChange={(e) => setDescription(e.target.value)}

@@ -16,7 +16,7 @@ export function DismissAlertButton({ alertId }: { alertId: string }) {
     <button
       onClick={onClick}
       disabled={busy}
-      className="p-1 rounded hover:bg-white/10 text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
+      className="p-1 rounded hover:bg-surface-overlay text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
       title="Dismiss"
     >
       <X className="h-3.5 w-3.5" />

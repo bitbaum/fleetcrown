@@ -67,7 +67,7 @@ export function ProjectDetail({
       <div className="flex-1 overflow-y-auto p-5">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/10 border-t-white/30" />
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-white/30" />
           </div>
         ) : !data ? (
           <p className="text-sm text-text-muted">Project not found</p>

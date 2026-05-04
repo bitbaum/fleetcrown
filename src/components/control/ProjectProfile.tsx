@@ -22,7 +22,7 @@ function MaturityBar({ maturity }: { maturity: string }) {
     <div className="flex items-center gap-2">
       <div className="flex gap-0.5">
         {Array.from({ length: 10 }, (_, i) => (
-          <div key={i} className={cn("h-1.5 w-1.5 rounded-full", i < n ? "bg-accent-text" : "bg-white/10")} />
+          <div key={i} className={cn("h-1.5 w-1.5 rounded-full", i < n ? "bg-accent-text" : "bg-surface-overlay")} />
         ))}
       </div>
       <span className="text-xs text-text-tertiary">{maturity.replace(/^\d+\/10\s*[-–]?\s*/, "")}</span>

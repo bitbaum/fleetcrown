@@ -80,7 +80,7 @@ export async function ActionQueueCard() {
           {groups.map((group, gi) => (
             <div
               key={`group-${gi}`}
-              className="border border-white/10 rounded-md p-3 bg-white/[0.02]"
+              className="border border-border-subtle rounded-md p-3 bg-surface-base"
             >
               <div className="flex items-start gap-3">
                 <Users className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
@@ -92,7 +92,7 @@ export async function ActionQueueCard() {
                     {group.actions.map((a) => {
                       const body = a.payload?.body ? String(a.payload.body) : null;
                       return (
-                        <div key={a.id} className="flex items-center justify-between gap-2 p-2 rounded bg-white/[0.02]">
+                        <div key={a.id} className="flex items-center justify-between gap-2 p-2 rounded bg-surface-base">
                           <div className="min-w-0">
                             <span className="text-sm md:text-base">{a.title}</span>
                             {body && (
@@ -120,7 +120,7 @@ export async function ActionQueueCard() {
             return (
               <div
                 key={action.id}
-                className="border border-white/10 rounded-md p-3 bg-white/[0.02]"
+                className="border border-border-subtle rounded-md p-3 bg-surface-base"
               >
                 <div className="flex items-start gap-3">
                   <Icon className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
@@ -135,7 +135,7 @@ export async function ActionQueueCard() {
                     )}
 
                     {(payload?.body != null || payload?.subject != null) && (
-                      <div className="mt-2 p-2 rounded bg-white/[0.03] border border-white/5">
+                      <div className="mt-2 p-2 rounded bg-surface-base border border-border-subtle">
                         {payload?.subject != null && (
                           <div className="text-xs font-medium text-text-secondary mb-1">
                             {"Subject: "}{String(payload.subject)}

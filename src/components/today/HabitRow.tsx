@@ -57,12 +57,12 @@ export function HabitRow({
             if (e.key === "Escape") ie.cancel();
           }}
           autoFocus
-          className="flex-1 bg-white/[0.04] border border-white/15 rounded px-2 py-0.5 text-sm text-text-primary focus:outline-none focus:border-white/30"
+          className="flex-1 bg-surface-raised border border-border-default rounded px-2 py-0.5 text-sm text-text-primary focus:outline-none focus:border-border-strong"
         />
         <select
           value={ie.draft.frequency}
           onChange={(e) => ie.setDraft({ ...ie.draft, frequency: e.target.value as HabitFrequency })}
-          className="bg-white/[0.04] border border-white/10 rounded px-1.5 py-0.5 text-xs text-text-secondary focus:outline-none focus:border-white/25"
+          className="bg-surface-raised border border-border-subtle rounded px-1.5 py-0.5 text-xs text-text-secondary focus:outline-none focus:border-border-strong"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
             <option key={f} value={f}>{f}</option>
@@ -97,7 +97,7 @@ export function HabitRow({
             <Check className="h-2.5 w-2.5 text-white" />
           </div>
         ) : (
-          <div className="h-4 w-4 rounded-full border border-white/25 hover:border-status-positive/60 transition-colors" />
+          <div className="h-4 w-4 rounded-full border border-border-strong hover:border-status-positive/60 transition-colors" />
         )}
       </button>
 
@@ -119,7 +119,7 @@ export function HabitRow({
         )}
         <button
           onClick={startEdit}
-          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors opacity-0 group-hover:opacity-100"
           title="Edit habit"
         >
           <Pencil className="h-3 w-3" />

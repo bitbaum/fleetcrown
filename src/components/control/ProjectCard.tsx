@@ -195,7 +195,7 @@ export function ProjectCard({
           ? "border-status-positive/40 bg-status-positive/[0.03]"
           : project.agentRunning
           ? "border-accent-primary/25 bg-accent-primary/[0.02]"
-          : "border-white/10 bg-white/[0.03]"
+          : "border-border-subtle bg-surface-base"
       )}
     >
       {/* Tab bar */}

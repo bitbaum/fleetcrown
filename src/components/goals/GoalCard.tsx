@@ -87,7 +87,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             ) : depth === 0 ? (
               <Target className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
             ) : (
-              <div className="h-4 w-4 rounded border border-white/25 hover:border-white/60 transition-colors mt-0.5" />
+              <div className="h-4 w-4 rounded border border-border-strong hover:border-white/60 transition-colors mt-0.5" />
             )}
           </button>
 
@@ -103,7 +103,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     onBlur={commitTitle}
                     onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditingTitle(false); setTitleValue(goal.title); } }}
                     autoFocus
-                    className={`bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 focus:outline-none focus:border-white/35 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
+                    className={`bg-surface-raised border border-border-strong rounded px-2 py-0.5 focus:outline-none focus:border-border-strong ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
                   />
                 )
               ) : (
@@ -116,7 +116,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 </div>
               )}
               {status && status !== GOAL_STATUS.ACTIVE && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-text-tertiary">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
                   {status}
                 </span>
               )}
@@ -184,7 +184,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     onUpdate={setTargetDate}
                   />
                 </div>
-                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
                   <div
                     className="h-full bg-status-positive/60 rounded-full transition-all"
                     style={{ width: `${Math.max(progress, 1)}%` }}

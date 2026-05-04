@@ -76,13 +76,13 @@ export function ProjectDetailHeader({
   };
 
   return (
-    <div className="shrink-0 bg-surface-drawer border-b border-white/10">
+    <div className="shrink-0 bg-surface-drawer border-b border-border-subtle">
       <div className="flex items-start gap-3 px-5 pt-4 pb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <NameEditor value={displayName} editable={!!data && !loading} onSave={saveName} />
             {owner && (
-              <span className="text-[10px] text-text-muted border border-white/10 rounded px-1.5 py-0.5 shrink-0">{owner}</span>
+              <span className="text-[10px] text-text-muted border border-border-subtle rounded px-1.5 py-0.5 shrink-0">{owner}</span>
             )}
           </div>
           <DescriptionEditor value={description} onSave={saveDescription} />
@@ -94,7 +94,7 @@ export function ProjectDetailHeader({
               href={prodUrl}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
+              className="p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
               title="Live site"
             >
               <Globe className="h-4 w-4" />
@@ -105,7 +105,7 @@ export function ProjectDetailHeader({
               href={repo}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
+              className="p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
               title="Repository"
             >
               <GitBranch className="h-4 w-4" />
@@ -120,12 +120,12 @@ export function ProjectDetailHeader({
               }}
               label="Delete?"
               triggerTitle="Delete project"
-              triggerClassName="ml-1 p-1.5 rounded ui-btn-danger hover:bg-white/5 transition-colors"
+              triggerClassName="ml-1 p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
             />
           )}
           <button
             onClick={onClose}
-            className="ml-1 p-1.5 rounded hover:bg-white/10 text-text-tertiary hover:text-text-secondary transition-colors"
+            className="ml-1 p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
           >
             <X className="h-4 w-4" />
           </button>

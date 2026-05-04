@@ -135,7 +135,7 @@ export function SubscriptionActions({
       {!isCancelled && (
         <button
           onClick={() => setEditing((v) => !v)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-secondary hover:bg-white/5 transition-colors"
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors"
           title="Edit amount, currency, notes"
         >
           <Pencil className="h-2.5 w-2.5" />
@@ -171,7 +171,7 @@ export function SubscriptionActions({
         </div>
       ) : (
         <button onClick={() => setConfirmCancel(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-text-secondary hover:bg-white/5 transition-colors">
+          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors">
           <X className="h-2.5 w-2.5" />
           Mark cancelled
         </button>
@@ -182,11 +182,11 @@ export function SubscriptionActions({
         onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
-        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-white/10 text-text-muted hover:text-status-negative hover:bg-status-negative/5 transition-colors"
+        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-status-negative hover:bg-status-negative/5 transition-colors"
       />
 
       {editing && (
-        <div className="w-full mt-1 p-2.5 rounded bg-white/[0.03] border border-white/10 space-y-2">
+        <div className="w-full mt-1 p-2.5 rounded bg-surface-base border border-border-subtle space-y-2">
           <input
             value={editName}
             onChange={(e) => setEditName(e.target.value)}

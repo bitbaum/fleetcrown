@@ -53,10 +53,10 @@ export function HabitHeatmap({
               "h-3.5 w-3.5 rounded-sm flex-shrink-0",
               isToday ? "ring-1 ring-white/30" : "",
               !due
-                ? "bg-white/[0.03]"
+                ? "bg-surface-base"
                 : completed
                   ? "bg-status-positive/50"
-                  : "bg-white/[0.08]",
+                  : "bg-surface-overlay",
             ].join(" ")}
           />
         );

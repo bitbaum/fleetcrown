@@ -79,7 +79,7 @@ export function JobDetail({
   return (
     <Drawer onClose={onClose} size="lg" surface="modal" className="overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-white/10 bg-surface-modal">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-3 p-4 border-b border-border-subtle bg-surface-modal">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-status-positive shrink-0" />
@@ -94,7 +94,7 @@ export function JobDetail({
             <button
               onClick={handleRunNow}
               disabled={running}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-white/5 text-text-secondary hover:bg-white/10 hover:text-text-primary disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-surface-raised text-text-secondary hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40 transition-colors"
               title="Run now (debug)"
             >
               <Play className="h-3 w-3" />
@@ -107,12 +107,12 @@ export function JobDetail({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
                 job.enabled
                   ? "bg-status-positive-subtle text-status-positive hover:bg-status-positive/18"
-                  : "bg-white/5 text-text-tertiary hover:bg-white/10"
+                  : "bg-surface-raised text-text-tertiary hover:bg-surface-overlay"
               }`}
             >
               {job.enabled ? "Enabled" : "Disabled"}
             </button>
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-white/10 transition-colors">
+            <button onClick={onClose} className="p-1.5 rounded hover:bg-surface-overlay transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -121,7 +121,7 @@ export function JobDetail({
         <div className="flex-1 p-4 space-y-5">
           {/* Status row */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Last Run</div>
               {lastRun ? (
                 <div className="text-xs text-text-secondary">
@@ -131,7 +131,7 @@ export function JobDetail({
                 <div className="text-xs text-text-muted">Never</div>
               )}
             </div>
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Status</div>
               {!status || status === "never" ? (
                 <div className="text-xs text-text-muted">Never run</div>
@@ -147,7 +147,7 @@ export function JobDetail({
                 </div>
               )}
             </div>
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Next Run</div>
               {nextRun ? (
                 <div className="text-xs text-text-secondary">
@@ -177,19 +177,19 @@ export function JobDetail({
 
           {/* Config */}
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <span className="text-text-muted">Model</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.model}</span>
             </div>
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <span className="text-text-muted">Thinking</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.thinking}</span>
             </div>
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <span className="text-text-muted">Timeout</span>
               <span className="ml-2 text-text-secondary">{job.payload.timeoutSeconds}s</span>
             </div>
-            <div className="rounded-md bg-white/[0.03] border border-white/5 p-2.5">
+            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
               <span className="text-text-muted">Delivery</span>
               <span className="ml-2 text-text-secondary capitalize">{job.delivery.channel}</span>
             </div>
@@ -233,7 +233,7 @@ export function JobDetail({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={14}
-              className="w-full rounded-md bg-white/[0.03] border border-white/10 p-3 text-xs font-mono text-text-secondary focus:outline-none focus:border-white/20 resize-y leading-relaxed"
+              className="w-full rounded-md bg-surface-base border border-border-subtle p-3 text-xs font-mono text-text-secondary focus:outline-none focus:border-border-strong resize-y leading-relaxed"
               spellCheck={false}
             />
           </div>

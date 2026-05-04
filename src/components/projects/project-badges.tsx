@@ -16,7 +16,7 @@ export function MaturityBar({ value }: { value: string }) {
             className={`h-1 w-2 rounded-sm ${
               i < score
                 ? score >= 8 ? "bg-status-positive" : score >= 5 ? "bg-status-warning" : "bg-status-negative"
-                : "bg-white/10"
+                : "bg-surface-overlay"
             }`}
           />
         ))}

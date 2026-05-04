@@ -26,7 +26,7 @@ export function MaturityBar({ maturity }: { maturity: string }) {
             key={i}
             className={cn(
               "w-1.5 h-1.5 rounded-full",
-              i < n ? "bg-accent-text" : "bg-white/10"
+              i < n ? "bg-accent-text" : "bg-surface-overlay"
             )}
           />
         ))}

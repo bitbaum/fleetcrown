@@ -67,7 +67,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
             onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
-            className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/30"
+            className="w-full bg-surface-raised border border-border-default rounded px-2 py-1 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
           />
           <div className="flex gap-1.5">
             <input
@@ -108,7 +108,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
       {isOverdue ? (
         <AlertCircle className="h-4 w-4 text-status-negative shrink-0 mt-0.5" />
       ) : (
-        <div className="h-4 w-4 rounded-full border border-white/20 shrink-0 mt-0.5" />
+        <div className="h-4 w-4 rounded-full border border-border-strong shrink-0 mt-0.5" />
       )}
       <div className="min-w-0 flex-1">
         <div className="text-sm md:text-base line-clamp-2">{description}</div>
@@ -126,7 +126,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <button
           onClick={() => setEditing(true)}
           title="Edit commitment"
-          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
+          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>

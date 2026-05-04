@@ -48,7 +48,7 @@ export function NameEditor({
               if (e.key === "Escape") { ie.cancel(); setSaveError(null); }
             }}
             autoFocus
-            className={`text-base font-semibold bg-white/[0.06] border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-white/20 focus:border-white/35"}`}
+            className={`text-base font-semibold bg-surface-raised border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-border-strong focus:border-border-strong"}`}
           />
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary shrink-0" />}
         </div>
@@ -93,7 +93,7 @@ export function DescriptionEditor({
           autoFocus
           rows={2}
           placeholder="Add a description…"
-          className="w-full bg-white/[0.04] border border-white/15 rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/30 resize-none transition-colors"
+          className="w-full bg-surface-raised border border-border-default rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong resize-none transition-colors"
         />
         <div className="flex items-center gap-2">
           <button
@@ -151,7 +151,7 @@ export function StatusEditor({
           onBlur={commit}
           autoFocus
           placeholder="e.g. Production"
-          className="bg-white/[0.06] border border-white/20 rounded px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/35 w-36"
+          className="bg-surface-raised border border-border-strong rounded px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong w-36"
         />
         {ie.saving && <Loader2 className="h-3 w-3 animate-spin text-text-muted shrink-0" />}
       </div>
@@ -162,7 +162,7 @@ export function StatusEditor({
     <button onClick={() => ie.start(value ?? "")} title="Click to edit status" className="flex items-center">
       {value
         ? <StatusBadge value={value} />
-        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ status</span>}
+        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ status</span>}
     </button>
   );
 }
@@ -210,7 +210,7 @@ export function MaturityEditor({
     <button onClick={start} title="Click to edit maturity" className="flex items-center">
       {value
         ? <MaturityBar value={value} />
-        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-white/15 rounded px-1.5 py-0.5">+ maturity</span>}
+        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ maturity</span>}
     </button>
   );
 }

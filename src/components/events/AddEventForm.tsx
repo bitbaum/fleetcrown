@@ -53,7 +53,7 @@ export function AddEventForm({ onCreated }: { onCreated: (event: EventRow) => vo
   }
 
   return (
-    <div className="mt-2 p-3 rounded-lg border border-white/10 bg-white/[0.02] space-y-2">
+    <div className="mt-2 p-3 rounded-lg border border-border-subtle bg-surface-base space-y-2">
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] uppercase tracking-wider text-text-muted">New Event</span>
         <button onClick={() => { setOpen(false); reset(); }} className="text-text-muted hover:text-text-secondary">

@@ -51,7 +51,7 @@ function ClaudeSession({ projectName }: { projectName: string }) {
     : "text-status-warning";
 
   return (
-    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 space-y-2">
+    <div className="rounded-lg border border-border-subtle bg-surface-base p-3 space-y-2">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted font-medium">
         <Terminal className="h-3 w-3" /> Claude Session
       </div>
@@ -243,7 +243,7 @@ export function OverviewTab({
             {data.relations
               .filter((r) => r.targetType === ENTITY_TYPE.PERSON)
               .map((r, i) => (
-                <span key={i} className="px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs text-text-secondary">
+                <span key={i} className="px-2.5 py-1 rounded-full bg-surface-raised border border-border-subtle text-xs text-text-secondary">
                   {r.targetName}
                 </span>
               ))}
@@ -271,7 +271,7 @@ export function OverviewTab({
         </div>
 
         {loggingActivity ? (
-          <div className="mt-3 space-y-2 pt-2 border-t border-white/[0.06]">
+          <div className="mt-3 space-y-2 pt-2 border-t border-border-subtle">
             <div className="flex gap-2">
               <select
                 value={actChannel}

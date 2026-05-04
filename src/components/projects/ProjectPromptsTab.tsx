@@ -13,9 +13,9 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
   const hasError = (job.consecutiveErrors ?? 0) > 0;
 
   return (
-    <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+    <div className="rounded-lg border border-border-subtle bg-surface-base overflow-hidden">
       <div
-        className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-white/[0.03] transition-colors"
+        className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer hover:bg-surface-base transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasError ? "bg-status-negative" : job.enabled ? "bg-status-positive" : "bg-white/20"}`} />
@@ -36,7 +36,7 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
         </div>
       </div>
       {expanded && (
-        <div className="px-3 pb-3 border-t border-white/[0.06]">
+        <div className="px-3 pb-3 border-t border-border-subtle">
           <div className="text-[10px] text-text-muted uppercase tracking-wider mt-2.5 mb-1.5">Prompt</div>
           <pre className="text-[11px] text-text-secondary whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded p-2.5 max-h-48 overflow-y-auto">
             {job.message}
@@ -109,7 +109,7 @@ function NewJobForm({
       <input placeholder="Cron (e.g. 0 9 * * 1 = Mon 9am)" value={schedule} onChange={(e) => setSchedule(e.target.value)}
         className={`w-full font-mono ${FIELD_INPUT_CLASS_COMPACT}`} />
       <textarea placeholder="Prompt / instructions for Ivy…" value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
-        className="w-full bg-white/[0.04] border border-white/10 rounded px-2.5 py-2 text-xs text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-white/25" />
+        className="w-full bg-surface-raised border border-border-subtle rounded px-2.5 py-2 text-xs text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-border-strong" />
       <button onClick={create} disabled={!name.trim() || !schedule.trim() || !message.trim() || saving}
         className="w-full py-1.5 rounded ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}

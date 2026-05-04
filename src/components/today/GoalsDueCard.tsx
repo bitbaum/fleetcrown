@@ -35,7 +35,7 @@ export async function GoalsDueCard() {
                 {/* Progress ring (simple bar) */}
                 <div className="shrink-0 flex flex-col items-center gap-1 w-10">
                   <span className="text-xs font-mono text-text-secondary">{progress}%</span>
-                  <div className="w-10 h-1 bg-white/[0.08] rounded-full overflow-hidden">
+                  <div className="w-10 h-1 bg-surface-overlay rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
                         progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-white/25"
@@ -58,7 +58,7 @@ export async function GoalsDueCard() {
             );
           })}
         </div>
-        <div className="mt-3 pt-2 border-t border-white/[0.05]">
+        <div className="mt-3 pt-2 border-t border-border-subtle">
           <Link href="/goals" className="text-xs text-text-tertiary hover:text-text-secondary transition-colors">
             Open Goals →
           </Link>

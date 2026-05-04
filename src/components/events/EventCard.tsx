@@ -73,7 +73,7 @@ export function EventCard({
 
   if (editing) {
     return (
-      <div className="py-3 border-b border-white/[0.05] last:border-0 space-y-2">
+      <div className="py-3 border-b border-border-subtle last:border-0 space-y-2">
         <input
           value={draftName}
           onChange={(e) => setDraftName(e.target.value)}
@@ -105,7 +105,7 @@ export function EventCard({
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={cancelEdit}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-text-tertiary hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-text-tertiary hover:text-text-secondary hover:bg-surface-raised transition-colors"
           >
             <X className="h-3 w-3" /> Cancel
           </button>
@@ -123,10 +123,10 @@ export function EventCard({
   }
 
   return (
-    <div className={`group flex items-start gap-3 py-3 border-b border-white/[0.05] last:border-0 ${dimmed ? "opacity-50" : ""}`}>
+    <div className={`group flex items-start gap-3 py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
       <div className="flex-1 min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] border border-white/10 text-text-secondary uppercase tracking-wide font-medium">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-surface-raised border border-border-subtle text-text-secondary uppercase tracking-wide font-medium">
             {event.type}
           </span>
           {event.category && (
@@ -167,7 +167,7 @@ export function EventCard({
           <button
             onClick={openEdit}
             title="Edit event"
-            className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-white/[0.06] transition-colors"
+            className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
@@ -177,7 +177,7 @@ export function EventCard({
             onClick={handleArchive}
             disabled={archiving}
             title="Archive event"
-            className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+            className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
           >
             {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
           </button>
@@ -189,7 +189,7 @@ export function EventCard({
           }}
           label=""
           triggerTitle="Delete event"
-          triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-white/[0.06] transition-colors"
+          triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
         />
       </div>
     </div>

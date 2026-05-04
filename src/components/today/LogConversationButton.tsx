@@ -82,7 +82,7 @@ export function LogConversationButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.08] rounded-full px-3 py-1.5 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-primary bg-surface-raised hover:bg-surface-overlay border border-border-subtle rounded-full px-3 py-1.5 transition-colors"
       >
         <MessageCircle className="h-3.5 w-3.5" />
         Log a conversation
@@ -91,7 +91,7 @@ export function LogConversationButton() {
   }
 
   return (
-    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 space-y-2">
+    <div className="bg-surface-base border border-border-subtle rounded-lg p-3 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-text-secondary">Log a conversation</span>
         <button onClick={reset} className="text-text-muted hover:text-text-secondary transition-colors">
@@ -158,7 +158,7 @@ export function LogConversationButton() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") reset(); }}
               placeholder="Search person…"
-              className="w-full pl-6 bg-white/[0.04] border border-white/10 rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-white/25"
+              className="w-full pl-6 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
             />
             {searching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-text-muted" />}
           </div>
@@ -168,7 +168,7 @@ export function LogConversationButton() {
                 <button
                   key={p.id}
                   onClick={() => { setSelected(p); setQuery(""); setResults([]); }}
-                  className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary hover:bg-white/[0.04] rounded transition-colors"
+                  className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-raised rounded transition-colors"
                 >
                   {p.name}
                 </button>
