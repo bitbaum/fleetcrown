@@ -15,6 +15,11 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Invitation registration pages — publicly accessible
+  if (pathname.startsWith("/invite/")) {
+    return NextResponse.next();
+  }
+
   // Public pages — always accessible
   if (PUBLIC.has(pathname)) {
     return NextResponse.next();

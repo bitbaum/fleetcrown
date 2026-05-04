@@ -96,6 +96,8 @@ export type GitState = {
   lastWhen: string;
   dirty: boolean;
   todayCount: number;
+  /** Commits the remote is ahead of local HEAD (0 = in sync, requires fetch) */
+  behindRemote: number;
   /** Last 5 commits formatted as "HASH DATE: MESSAGE" */
   recentCommits: string[];
 };
@@ -184,7 +186,8 @@ async function getSlowData(dirs: string[]): Promise<SlowCache> {
 }
 
 // Single bash invocation — one fork() total. Background jobs run all repos in parallel.
-// Fields (tab-separated): dir | branch | lastWhen|lastMsg | dirtyCount | todayCount | recentCommits
+// Fields (tab-separated): dir | branch | lastWhen|lastMsg | dirtyCount | todayCount | behindRemote | recentCommits
+// behindRemote: how many commits the upstream has that local doesn't (uses stored FETCH_HEAD, no network)
 // recentCommits: last 5 commits joined by ~ ("HASH DATE: MSG~HASH DATE: MSG")
 async function fetchAllGitStates(dirs: string[]): Promise<Map<string, GitState>> {
   if (dirs.length === 0) return new Map();
@@ -194,13 +197,14 @@ async function fetchAllGitStates(dirs: string[]): Promise<Map<string, GitState>>
 _git_row() {
   local d="$1"
   [ -d "$d/.git" ] || return
-  local b l di t h
+  local b l di t beh h
   b=$(git -C "$d" branch --show-current 2>/dev/null)
   l=$(git -C "$d" log -1 '--format=%ar|%s' 2>/dev/null)
   di=$(git -C "$d" status --porcelain 2>/dev/null | wc -l)
   t=$(git -C "$d" log --since=midnight --format=%H 2>/dev/null | wc -l)
+  beh=$(git -C "$d" rev-list HEAD..@{u} --count 2>/dev/null || echo 0)
   h=$(git -C "$d" log -5 '--format=%h %ar: %s' 2>/dev/null | tr '~' '-' | paste -sd '~' -)
-  printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$d" "$b" "$l" "$di" "$t" "$h"
+  printf '%s\\t%s\\t%s\\t%s\\t%s\\t%s\\t%s\\n' "$d" "$b" "$l" "$di" "$t" "$beh" "$h"
 }
 for _d in ${dirArgs}; do _git_row "$_d" & done
 wait
@@ -214,7 +218,7 @@ wait
     });
     for (const line of stdout.split("\n")) {
       if (!line.trim()) continue;
-      const [dir, branch, logStr, dirtyStr, todayStr, historyStr] = line.split("\t");
+      const [dir, branch, logStr, dirtyStr, todayStr, behindStr, historyStr] = line.split("\t");
       if (!dir || !branch) continue;
       const [when = "", msg = ""] = (logStr ?? "").split("|");
       const recentCommits = (historyStr ?? "").split("~").map((s) => s.trim()).filter(Boolean);
@@ -224,6 +228,7 @@ wait
         lastWhen: when.trim(),
         dirty: parseInt(dirtyStr ?? "0", 10) > 0,
         todayCount: parseInt(todayStr ?? "0", 10),
+        behindRemote: parseInt(behindStr ?? "0", 10),
         recentCommits,
       });
     }

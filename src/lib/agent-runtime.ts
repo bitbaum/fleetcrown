@@ -33,6 +33,14 @@ export function getOpenZellijTabs(): string[] {
   }
 }
 
+function ensureTabExists(tab: string): void {
+  const open = getOpenZellijTabs();
+  if (!open.some((t) => t.toLowerCase() === tab.toLowerCase())) {
+    execSync(`zellij action new-tab --name '${escapeTabValue(tab)}'`);
+    execSync("sleep 0.5");
+  }
+}
+
 export function restartTab(tab: string, command: string): void {
   execSync(`zellij action go-to-tab-name '${escapeTabValue(tab)}'`);
   execSync("sleep 0.2");
@@ -68,6 +76,7 @@ export function restartOpenProjectTabs(commandForDir: (dir: string) => string): 
 }
 
 export function launchAgentInTab(tab: string, dir: string, agent: "claude" | "codex", model?: string): void {
+  ensureTabExists(tab);
   const escapedDir = `'${dir.replace(/'/g, `'\\''`)}'`;
   let command: string;
   if (agent === "claude") {

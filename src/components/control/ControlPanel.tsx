@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Bot, RefreshCw, Terminal, ChevronUp, ChevronDown } from "lucide-react";
+import { Bot, RefreshCw, Terminal, ChevronUp, ChevronDown, Plus, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
@@ -38,6 +38,12 @@ export function ControlPanel() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newDir, setNewDir] = useState("");
+  const [newGitUrl, setNewGitUrl] = useState("");
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [createError, setCreateError] = useState("");
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -156,6 +162,50 @@ export function ControlPanel() {
       throw new Error(body.error ?? `HTTP ${res.status}`);
     }
     setTimeout(refresh, 500);
+  };
+
+  const launchProject = async (tab: string, dir: string) => {
+    await fetch("/api/agent/launch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab, dir, agent: selectedAgent }),
+    });
+    setTimeout(() => refresh(true), 1500);
+  };
+
+  const createAndLaunch = async () => {
+    if (!newName.trim()) return;
+    setCreatingProject(true);
+    setCreateError("");
+    try {
+      // Register project
+      const res = await fetch("/api/user-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newName.trim(),
+          dirPath: newDir.trim() || undefined,
+          gitUrl: newGitUrl.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to create project");
+      }
+      // Launch if dir provided
+      if (newDir.trim()) {
+        await launchProject(newName.trim(), newDir.trim());
+      }
+      setNewProjectOpen(false);
+      setNewName("");
+      setNewDir("");
+      setNewGitUrl("");
+      await refresh(true);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setCreatingProject(false);
+    }
   };
 
   const runWithBrain = async (project: ControlData["projects"][number], intent: OrchestrationTaskIntentId) => {
@@ -503,15 +553,77 @@ export function ControlPanel() {
           ) : "Loading…"}
           {lastUpdated && ` · ${timeAgo(lastUpdated)}`}
         </span>
-        <button
-          onClick={() => refresh(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1 self-start transition-colors hover:text-text-primary"
-        >
-          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3 self-start">
+          <button
+            onClick={() => setNewProjectOpen(true)}
+            className="flex items-center gap-1 transition-colors hover:text-text-primary"
+          >
+            <Plus className="h-4 w-4" />
+            New project
+          </button>
+          <button
+            onClick={() => refresh(true)}
+            disabled={refreshing}
+            className="flex items-center gap-1 transition-colors hover:text-text-primary"
+          >
+            <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* New project modal */}
+      {newProjectOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setNewProjectOpen(false)}>
+          <div
+            className="ui-panel w-full max-w-md space-y-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-text-primary">New project</h3>
+              <button onClick={() => setNewProjectOpen(false)} className="text-text-muted hover:text-text-primary">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createAndLaunch()}
+                placeholder="Project name (= zellij tab)"
+                className="ui-input w-full"
+              />
+              <input
+                value={newDir}
+                onChange={(e) => setNewDir(e.target.value)}
+                placeholder="Local path — e.g. /home/g/dev/homeharmony"
+                className="ui-input w-full"
+              />
+              <input
+                value={newGitUrl}
+                onChange={(e) => setNewGitUrl(e.target.value)}
+                placeholder="Git URL — optional"
+                className="ui-input w-full"
+              />
+            </div>
+            {createError && <p className="text-sm text-status-negative">{createError}</p>}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={createAndLaunch}
+                disabled={creatingProject || !newName.trim()}
+                className="ui-btn-primary flex-1 gap-1.5"
+              >
+                {creatingProject ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                {newDir.trim() ? "Create & launch" : "Create"}
+              </button>
+              <button onClick={() => setNewProjectOpen(false)} className="ui-btn-secondary">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
 
@@ -583,7 +695,9 @@ export function ControlPanel() {
                         <ProjectTile
                           key={project.tab}
                           project={project}
+                          currentAdapter={selectedAgent}
                           onExpand={() => setExpandedTabs((s) => new Set([...s, project.tab]))}
+                          onLaunch={() => launchProject(project.tab, project.dir)}
                         />
                       ))}
                     </div>

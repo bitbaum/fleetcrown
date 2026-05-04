@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   GitBranch, Circle, Send, ChevronDown, ChevronUp,
-  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight, Terminal, Pause, Play,
+  Zap, CheckCircle2, Loader2, ExternalLink, Info, ChevronRight, Terminal, Pause, Play, Eraser,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
@@ -333,6 +333,9 @@ export function ProjectCard({
   const [dismissed, setDismissed] = useState(false);
   const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
   const autoContinueKey = `control:auto-continue:${project.tab.toLowerCase()}`;
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [clearingContext, setClearingContext] = useState(false);
 
 
   useEffect(() => {
@@ -543,11 +546,44 @@ export function ProjectCard({
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-3 lg:shrink-0 lg:self-start">
           {git && (
-            <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-              <GitBranch className="h-4 w-4" />
-              <span className="max-w-[20rem] truncate" title={git.branch}>{git.branch}</span>
-              {git.dirty && <span className="text-status-warning">✎</span>}
-              {git.todayCount > 0 && <span className="text-status-positive/70">+{git.todayCount}</span>}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                <GitBranch className="h-4 w-4" />
+                <span className="max-w-[20rem] truncate" title={git.branch}>{git.branch}</span>
+                {git.dirty && <span className="text-status-warning">✎</span>}
+                {git.todayCount > 0 && <span className="text-status-positive/70">+{git.todayCount}</span>}
+              </div>
+              {git.behindRemote > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-xs text-status-warning">
+                    ↓ {git.behindRemote} behind
+                  </span>
+                  <button
+                    onClick={async () => {
+                      setSyncing(true);
+                      setSyncResult(null);
+                      try {
+                        const res = await fetch("/api/project/sync", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ dir: project.dir }),
+                        });
+                        const data = await res.json();
+                        setSyncResult(res.ok ? "Synced ✓" : data.error ?? "Failed");
+                      } finally {
+                        setSyncing(false);
+                      }
+                    }}
+                    disabled={syncing}
+                    className="text-xs text-status-warning transition-colors hover:text-text-primary disabled:opacity-50"
+                  >
+                    {syncing ? "Pulling…" : "git pull"}
+                  </button>
+                  {syncResult && (
+                    <span className="text-xs text-text-muted">{syncResult}</span>
+                  )}
+                </div>
+              )}
             </div>
           )}
           {profile?.url && (
@@ -703,6 +739,28 @@ export function ProjectCard({
                 {sending === id ? "…" : label}
               </button>
             ))}
+            {currentAdapter === "claude" && (
+              <button
+                onClick={async () => {
+                  setClearingContext(true);
+                  try {
+                    await fetch("/api/project/clear-context", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ tab: project.tab }),
+                    });
+                  } finally {
+                    setClearingContext(false);
+                  }
+                }}
+                disabled={clearingContext}
+                title="Send /clear to reset Claude's context window"
+                className="flex items-center gap-1.5 rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-status-warning disabled:opacity-50"
+              >
+                {clearingContext ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eraser className="h-3.5 w-3.5" />}
+                Clear context
+              </button>
+            )}
           </div>
         )}
 
