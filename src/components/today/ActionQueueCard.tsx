@@ -1,11 +1,12 @@
-import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users } from "lucide-react";
+import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users, Check, X } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { getPendingActions } from "@/db/queries/actions";
+import { getPendingActions, getRecentActions } from "@/db/queries/actions";
 import { getCurrentUserId } from "@/lib/session";
 import { type ActionPayload } from "@/db/schema/actions";
-import { ACTION_TYPE, type ActionType } from "@/lib/constants/statuses";
+import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
+import { compactRelativeDate } from "@/lib/dates";
 
 const TYPE_ICONS: Record<ActionType, typeof Send> = {
   [ACTION_TYPE.SEND_MESSAGE]:      MessageCircle,
@@ -57,9 +58,40 @@ function groupSimilarActions(
 
 export async function ActionQueueCard() {
   const userId = await getCurrentUserId();
-  const pending = await getPendingActions(userId);
+  const [pending, recent] = await Promise.all([
+    getPendingActions(userId),
+    getRecentActions(userId, 5),
+  ]);
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 && recent.length === 0) return null;
+
+  if (pending.length === 0) {
+    return (
+      <div className="md:col-span-2">
+        <Card>
+          <CardHeader icon={Inbox} title="Action Queue" />
+          <div className="space-y-1.5">
+            {recent.map((action) => {
+              const done = action.status === ACTION_STATUS.APPROVED || action.status === ACTION_STATUS.EXECUTED;
+              return (
+                <div key={action.id} className="flex items-center gap-3 px-1 py-1 rounded">
+                  {done
+                    ? <Check className="h-3.5 w-3.5 text-status-positive shrink-0" />
+                    : <X className="h-3.5 w-3.5 text-text-muted shrink-0" />}
+                  <span className="flex-1 truncate text-sm text-text-secondary">{action.title}</span>
+                  {action.reviewedAt && (
+                    <span className="text-xs text-text-muted shrink-0">
+                      {compactRelativeDate(action.reviewedAt)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const { groups, standalone } = groupSimilarActions(pending);
 
