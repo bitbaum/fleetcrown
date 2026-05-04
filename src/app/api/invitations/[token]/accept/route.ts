@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { acceptInvitation } from "@/db/queries/invitations";
 import { hashPassword } from "@/lib/password";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+
+const AcceptBody = z.object({
+  name:     z.string().trim().min(2, "Name must be at least 2 characters."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  const body = await req.json().catch(() => null);
-  const name: string = body?.name?.trim() ?? "";
-  const password: string = body?.password ?? "";
-
-  if (name.length < 2) return NextResponse.json({ error: "Name must be at least 2 characters." }, { status: 400 });
-  if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+  const dataOrResp = await readJsonBody(req, AcceptBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { name, password } = dataOrResp;
 
   const passwordHash = await hashPassword(password);
   const result = await acceptInvitation(token, name, passwordHash);

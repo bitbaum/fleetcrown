@@ -2,19 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { auth } from "@/auth";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const execAsync = promisify(exec);
+
+const SyncBody = z.object({
+  dir: z.string().min(1).max(500),
+});
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
-  const dir: string = body?.dir ?? "";
-
-  if (!dir || typeof dir !== "string" || dir.length > 500) {
-    return NextResponse.json({ error: "dir is required" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, SyncBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { dir } = dataOrResp;
 
   // Basic path safety — no shell metacharacters
   if (/[;&|`$<>\\]/.test(dir)) {

@@ -12,22 +12,20 @@ import {
 import { injectIntoTab } from "@/lib/zellij";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { getCurrentUserId } from "@/lib/session";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const execAsync = promisify(exec);
 
+const InjectBody = z.object({
+  tab:          z.string().min(1).max(80),
+  promptKey:    z.string().optional(),
+  customPrompt: z.string().max(4000).optional(),
+}).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
+
 export async function POST(req: NextRequest) {
-  let body: { tab?: string; promptKey?: string; customPrompt?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const { tab, promptKey, customPrompt } = body;
-
-  if (!tab || typeof tab !== "string" || tab.length > 80) {
-    return NextResponse.json({ error: "tab is required" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, InjectBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { tab, promptKey, customPrompt } = dataOrResp;
 
   const projects = readProjectsMap();
   const canonical = projects.get(tab.toLowerCase());
@@ -54,9 +52,6 @@ export async function POST(req: NextRequest) {
   let promptLabel = "Custom";
 
   if (customPrompt) {
-    if (typeof customPrompt !== "string" || customPrompt.length > 4000) {
-      return NextResponse.json({ error: "customPrompt too long" }, { status: 400 });
-    }
     prompt = customPrompt;
     promptLabel = customPrompt.slice(0, 40);
   } else if (promptKey) {

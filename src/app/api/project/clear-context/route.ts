@@ -3,17 +3,19 @@ import fs from "fs";
 import { stateFile, readProjectsMap } from "@/lib/claude-config";
 import { injectIntoTab } from "@/lib/zellij";
 import { auth } from "@/auth";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+
+const ClearBody = z.object({
+  tab: z.string().min(1).max(80),
+});
 
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
-  const { tab } = body;
-
-  if (!tab || typeof tab !== "string" || tab.length > 80) {
-    return NextResponse.json({ error: "tab is required" }, { status: 400 });
-  }
+  const dataOrResp = await readJsonBody(req, ClearBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { tab } = dataOrResp;
 
   const projects = readProjectsMap();
   const canonical = projects.get(tab.toLowerCase());
