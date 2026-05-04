@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, GitBranch, Play } from "lucide-react";
+import { Loader2, GitBranch, Play, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HEALTH_COLOR } from "@/lib/constants/control";
 import type { ProjectState } from "@/app/api/control/route";
@@ -9,12 +9,14 @@ import type { ProjectState } from "@/app/api/control/route";
 type Props = {
   project: ProjectState;
   currentAdapter: string;
+  zellijTabs: string[];
   onExpand: () => void;
   onLaunch: () => Promise<void>;
 };
 
-export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Props) {
+export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch }: Props) {
   const { tab, git, session, agentRunning, dir } = project;
+  const tabOpen = zellijTabs.some((t) => t.toLowerCase() === tab.toLowerCase());
   const healthColor = session?.health ? (HEALTH_COLOR[session.health] ?? "text-text-muted") : null;
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;
@@ -58,6 +60,11 @@ export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Pro
       {/* Branch + health + launch */}
       <div className="flex shrink-0 flex-col items-end gap-1">
         <div className="flex items-center gap-2">
+          {tabOpen && (
+            <span title="Terminal open" className="flex items-center gap-1 text-[11px] text-accent-text">
+              <Terminal className="h-3 w-3" />
+            </span>
+          )}
           {git?.branch && (
             <span className="flex items-center gap-1 text-[11px] text-text-muted">
               <GitBranch className="h-3 w-3" />

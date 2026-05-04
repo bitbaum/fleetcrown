@@ -50,7 +50,11 @@ export function ProjectCardHeader({
           <span className="break-words text-lg sm:text-xl md:text-2xl font-medium text-text-primary">
             {project.tab}
           </span>
-          {tabOpen && <Terminal className="h-4 w-4 text-text-muted shrink-0" />}
+          {tabOpen && (
+            <span title="Terminal open">
+              <Terminal className="h-4 w-4 text-accent-text shrink-0" />
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {session?.health && <SessionBadge health={session.health} />}

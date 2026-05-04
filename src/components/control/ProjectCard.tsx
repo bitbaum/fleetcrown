@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChevronsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow,
@@ -22,6 +23,7 @@ export function ProjectCard({
   onInject,
   onRunWithBrain,
   onRunCustomPrompt,
+  onCollapse,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -30,6 +32,7 @@ export function ProjectCard({
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
+  onCollapse?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"status" | "profile">("status");
   const [localAgent, setLocalAgent] = useState<"claude" | "codex" | "openclaw" | null>(null);
@@ -151,7 +154,7 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
-      <div className="flex border-b border-border-subtle">
+      <div className="flex items-stretch border-b border-border-subtle">
         <button
           onClick={() => setActiveTab("status")}
           className={cn(
@@ -174,6 +177,16 @@ export function ProjectCard({
         >
           Profile
         </button>
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            title="Collapse to tile"
+            className="ml-auto flex items-center gap-1.5 px-3.5 py-2 text-xs text-text-muted transition-colors hover:text-text-secondary"
+          >
+            <ChevronsDown className="h-3.5 w-3.5" />
+            Collapse
+          </button>
+        )}
       </div>
 
       {activeTab === "profile" && (

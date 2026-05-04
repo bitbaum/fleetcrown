@@ -226,10 +226,17 @@ export function ControlPanel() {
             },
           });
 
+          const collapseTab = (tab: string) =>
+            setExpandedTabs((s) => { const n = new Set(s); n.delete(tab); return n; });
+
           return (
             <div className="space-y-3">
               {activeProjects.map((project) => (
-                <ProjectCard key={project.tab} {...cardProps(project)} />
+                <ProjectCard
+                  key={project.tab}
+                  {...cardProps(project)}
+                  onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
+                />
               ))}
 
               {idleProjects.length > 0 && (
@@ -248,6 +255,7 @@ export function ControlPanel() {
                           key={project.tab}
                           project={project}
                           currentAdapter={selectedAgent}
+                          zellijTabs={data!.zellijTabs}
                           onExpand={() => setExpandedTabs((s) => new Set([...s, project.tab]))}
                           onLaunch={() => launchProject(project.tab, project.dir)}
                         />
