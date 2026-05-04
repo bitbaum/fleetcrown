@@ -26,10 +26,10 @@ export function deriveRelationshipHealth(lastInteraction: Date | null): Relation
 
 /** Tailwind dot color per health state — single source of truth */
 export const HEALTH_DOT_COLOR: Record<RelationshipHealth, string> = {
-  active:  "bg-green-400",
-  fading:  "bg-yellow-400",
-  stale:   "bg-red-400",
-  unknown: "bg-white/20",
+  active:  "bg-status-positive",
+  fading:  "bg-status-warning",
+  stale:   "bg-status-negative",
+  unknown: "bg-status-neutral",
 };
 
 /** Display labels for health values — used in filter chips and badges */

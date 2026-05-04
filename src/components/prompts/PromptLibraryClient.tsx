@@ -109,7 +109,7 @@ export function PromptLibraryClient({
           {featured.length > 0 && (
             <section>
               <div className="flex items-center gap-2 mb-3">
-                <Star className="h-4 w-4 text-yellow-400/80" />
+                <Star className="h-4 w-4 text-status-warning/80" />
                 <span className="ui-kicker text-text-secondary">Quick Access</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

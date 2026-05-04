@@ -249,7 +249,7 @@ export function MilestoneRow({
         ) : milestone.done ? (
           <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (
-          <div className="h-3.5 w-3.5 rounded-full border border-border-strong hover:border-white/60 transition-colors" />
+          <div className="h-3.5 w-3.5 rounded-full border border-border-strong hover:border-border-interactive transition-colors" />
         )}
       </button>
       <span className={milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}>

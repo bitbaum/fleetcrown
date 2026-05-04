@@ -37,7 +37,7 @@ function ProjectCard({
     <div
       onClick={onOpen}
       className={`group relative flex cursor-pointer flex-col gap-3 rounded-[1.5rem] border p-4 transition-all hover:bg-surface-raised ${
-        hasIssues ? "border-yellow-500/20 bg-yellow-500/[0.04]" : "border-border-subtle bg-surface-base"
+        hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"
       }`}
     >
       <div className="flex items-start justify-between gap-2">

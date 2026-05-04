@@ -87,7 +87,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             ) : depth === 0 ? (
               <Target className="h-5 w-5 text-status-positive hover:text-status-positive/80 transition-colors" />
             ) : (
-              <div className="h-4 w-4 rounded border border-border-strong hover:border-white/60 transition-colors mt-0.5" />
+              <div className="h-4 w-4 rounded border border-border-strong hover:border-border-interactive transition-colors mt-0.5" />
             )}
           </button>
 
