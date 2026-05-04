@@ -72,7 +72,7 @@ export function RunModal({
             <button
               onClick={onClose}
               disabled={running}
-              className="rounded-2xl border border-border-subtle bg-surface-overlay p-2 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-30"
+              className="ui-btn-overlay p-2 disabled:opacity-30"
             >
               <X className="h-4 w-4" />
             </button>

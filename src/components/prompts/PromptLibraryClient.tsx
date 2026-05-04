@@ -57,11 +57,7 @@ export function PromptLibraryClient({
             <button
               key={scope}
               onClick={() => setActiveScope(scope)}
-              className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
-                activeScope === scope
-                  ? "border-accent-primary/30 bg-accent-muted text-text-primary"
-                  : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
-              }`}
+              className={activeScope === scope ? "ui-chip-filter-active" : "ui-chip-filter"}
             >
               {scope === "all" ? "All" : scope === "global" ? "Global" : "Project"}
             </button>
@@ -87,7 +83,7 @@ export function PromptLibraryClient({
             return (
               <section key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`rounded-xl border px-3 py-1 text-sm font-medium ${meta.color}`}>
+                  <span className={`ui-chip ${meta.color}`}>
                     {meta.label}
                   </span>
                   <span className="text-sm text-text-tertiary">
@@ -126,7 +122,7 @@ export function PromptLibraryClient({
             return (
               <section key={cat}>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`rounded-xl border px-3 py-1 text-sm font-medium ${meta.color}`}>
+                  <span className={`ui-chip ${meta.color}`}>
                     {meta.label}
                   </span>
                   <button

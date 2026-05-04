@@ -53,7 +53,7 @@ export function ScheduleModal({
         <div className="text-xl font-semibold text-text-primary">Schedule Job</div>
         <button
           onClick={onClose}
-          className="rounded-2xl border border-border-subtle bg-surface-overlay p-2 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
+          className="ui-btn-overlay p-2"
         >
           <X className="h-4 w-4" />
         </button>

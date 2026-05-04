@@ -25,18 +25,12 @@ export function PromptRow({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="truncate text-lg font-semibold text-text-primary">{template.name}</span>
               {template.scope === "global" ? (
-                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
-                  <Globe className="h-3 w-3" /> global
-                </span>
+                <span className="ui-badge"><Globe className="h-3 w-3" /> global</span>
               ) : (
-                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
-                  <FolderOpen className="h-3 w-3" /> project
-                </span>
+                <span className="ui-badge"><FolderOpen className="h-3 w-3" /> project</span>
               )}
               {template.suggestedSchedule && (
-                <span className="flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary">
-                  <Clock className="h-3 w-3" /> schedulable
-                </span>
+                <span className="ui-badge"><Clock className="h-3 w-3" /> schedulable</span>
               )}
             </div>
             <div className="mt-1.5 text-base leading-relaxed text-text-secondary">
@@ -46,7 +40,7 @@ export function PromptRow({
           <div className="flex shrink-0 items-center gap-2">
             <button
               onClick={() => setExpanded(!expanded)}
-              className="rounded-2xl border border-border-subtle bg-surface-overlay p-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
+              className="ui-btn-overlay p-3"
               title="Preview prompt"
             >
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -54,7 +48,7 @@ export function PromptRow({
             {template.suggestedSchedule && (
               <button
                 onClick={openSchedule}
-                className="rounded-2xl border border-border-subtle bg-surface-overlay p-3 text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary"
+                className="ui-btn-overlay p-3"
                 title="Schedule as cron job"
               >
                 <Clock className="h-4 w-4" />
@@ -62,7 +56,7 @@ export function PromptRow({
             )}
             <button
               onClick={openRun}
-              className="ui-button-primary flex items-center gap-2 px-4 py-3 text-sm font-semibold"
+              className="ui-btn-lg flex items-center gap-2"
             >
               <Zap className="h-4 w-4" /> Run
             </button>

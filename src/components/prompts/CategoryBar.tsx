@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { CATEGORY_META, type PromptCategory, type PromptTemplate } from "@/config/prompt-library";
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
@@ -22,11 +23,7 @@ export function CategoryBar({
     <div className="flex gap-2 flex-wrap">
       <button
         onClick={() => onSelect("all")}
-        className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
-          active === "all"
-            ? "border-accent-primary/30 bg-accent-muted text-text-primary"
-            : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
-        }`}
+        className={active === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}
       >
         All ({templates.length})
       </button>
@@ -37,11 +34,10 @@ export function CategoryBar({
           <button
             key={cat}
             onClick={() => onSelect(isActive ? "all" : cat)}
-            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition-colors ${
-              isActive
-                ? meta.color
-                : "border-border-subtle bg-surface-overlay text-text-secondary hover:border-border-default hover:text-text-primary"
-            }`}
+            className={isActive
+              ? cn("rounded-2xl border px-4 py-3 text-sm font-medium transition-colors", meta.color)
+              : "ui-chip-filter"
+            }
           >
             {meta.label} ({counts.get(cat)})
           </button>

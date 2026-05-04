@@ -340,6 +340,26 @@
   .ui-btn-lg-outline {
     @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
+  /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
+  .ui-btn-overlay {
+    @apply rounded-2xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+
+  /* Filter/tab toggle pill */
+  .ui-chip-filter {
+    @apply rounded-2xl border border-border-subtle bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-chip-filter-active {
+    @apply rounded-2xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
+  }
+  /* Inline category/scope chip — shape only; caller adds color classes */
+  .ui-chip {
+    @apply inline-flex items-center rounded-xl border px-3 py-1 text-sm font-medium;
+  }
+  /* Small meta badge pill (scope, schedule indicator, etc.) */
+  .ui-badge {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary;
+  }
 
   /* Stats */
   .ui-stat-grid  { @apply grid gap-2 sm:grid-cols-3; }
