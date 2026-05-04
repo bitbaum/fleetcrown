@@ -253,6 +253,12 @@
     @apply mx-auto px-5 py-6 md:px-8 md:py-8;
   }
 
+  /* Loading spinners — applied to Loader2 icon className */
+  .ui-spinner      { @apply h-4 w-4 animate-spin; }
+  .ui-spinner-sm   { @apply h-3\.5 w-3\.5 animate-spin; }
+  .ui-spinner-xs   { @apply h-3 w-3 animate-spin; }
+  .ui-spinner-2xs  { @apply h-2\.5 w-2\.5 animate-spin; }
+
   /* Typography */
   .ui-kicker {
     font-size: 0.75rem;
@@ -366,6 +372,7 @@
   .ui-stat-card  { @apply rounded-xl border border-border-subtle bg-surface-base px-4 py-3; }
   .ui-stat-label { @apply text-xs text-text-tertiary; }
   .ui-stat-value { @apply mt-0.5 text-2xl font-semibold text-text-primary; }
+  .ui-data-cell  { @apply rounded-md border border-border-subtle bg-surface-base p-2.5; }
 
   /* FAB */
   .ui-fab {

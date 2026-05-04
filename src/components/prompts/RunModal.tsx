@@ -133,7 +133,7 @@ export function RunModal({
               </div>
               {running && (
                 <div className="flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-overlay p-4 text-base text-text-secondary">
-                  <Loader2 className="h-4 w-4 animate-spin text-accent-primary" />
+                  <Loader2 className="ui-spinner text-accent-primary" />
                   Ivy is working… (this may take up to 60s)
                 </div>
               )}
@@ -158,7 +158,7 @@ export function RunModal({
             className="ui-btn-submit"
           >
             {running ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Running…</>
+              <><Loader2 className="ui-spinner" /> Running…</>
             ) : (
               <><Zap className="h-4 w-4" /> Run with Ivy</>
             )}

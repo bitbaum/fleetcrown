@@ -73,7 +73,7 @@ export function HabitRow({
           disabled={!ie.draft.title.trim() || ie.saving}
           className="ui-btn-confirm p-1 rounded disabled:opacity-30 transition-colors shrink-0"
         >
-          {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          {ie.saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
         </button>
         <button onClick={ie.cancel} className="p-1 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
           <X className="h-3 w-3" />
@@ -91,7 +91,7 @@ export function HabitRow({
         title={habit.doneToday ? "Mark undone" : "Mark done"}
       >
         {toggling ? (
-          <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+          <Loader2 className="ui-spinner text-text-muted" />
         ) : habit.doneToday ? (
           <div className="h-4 w-4 rounded-full bg-status-positive/50 flex items-center justify-center">
             <Check className="h-2.5 w-2.5 text-text-inverted" />

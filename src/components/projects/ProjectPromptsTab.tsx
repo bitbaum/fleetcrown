@@ -111,7 +111,7 @@ function NewJobForm({
         className="w-full bg-surface-raised border border-border-subtle rounded px-2.5 py-2 text-xs text-text-primary placeholder:text-text-muted resize-none focus:outline-none focus:border-border-strong" />
       <button onClick={create} disabled={!name.trim() || !schedule.trim() || !message.trim() || saving}
         className="w-full py-1.5 rounded ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors flex items-center justify-center gap-1.5">
-        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+        {saving ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
         Create Job
       </button>
     </div>

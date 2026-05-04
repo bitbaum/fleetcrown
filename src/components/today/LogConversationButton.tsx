@@ -137,7 +137,7 @@ export function LogConversationButton() {
               disabled={saving}
               className="ui-btn-save"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+              {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save
             </button>
             <button onClick={reset} className="text-xs text-text-muted hover:text-text-secondary transition-colors px-1">
@@ -158,7 +158,7 @@ export function LogConversationButton() {
               placeholder="Search person…"
               className="w-full pl-6 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
             />
-            {searching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 animate-spin text-text-muted" />}
+            {searching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 ui-spinner-xs text-text-muted" />}
           </div>
           {results.length > 0 && (
             <div className="space-y-0.5">

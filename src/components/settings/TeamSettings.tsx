@@ -60,7 +60,7 @@ export function TeamSettings({ invitations: initial }: Props) {
           disabled={creating}
           className="ui-btn-secondary gap-1.5 whitespace-nowrap"
         >
-          {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          {creating ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
           Create link
         </button>
       </div>

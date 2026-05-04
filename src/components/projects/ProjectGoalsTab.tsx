@@ -163,7 +163,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
             disabled={!selectedId || saving}
             className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors"
           >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
+            {saving ? <Loader2 className="ui-spinner-xs" /> : "Link"}
           </button>
           <button onClick={cancel} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">
             Cancel
@@ -196,7 +196,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
               disabled={!newTitle.trim() || saving}
               className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors flex items-center gap-1"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
               Create
             </button>
             <button onClick={cancel} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">

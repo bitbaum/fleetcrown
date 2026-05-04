@@ -113,7 +113,7 @@ export function EventCard({
             disabled={saving || !draftName.trim()}
             className="flex items-center gap-1 px-2.5 py-1 rounded text-xs ui-btn-confirm transition-colors disabled:opacity-40"
           >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+            {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
             Save
           </button>
         </div>
@@ -178,7 +178,7 @@ export function EventCard({
             title="Archive event"
             className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
           >
-            {archiving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Archive className="h-3.5 w-3.5" />}
+            {archiving ? <Loader2 className="ui-spinner-sm" /> : <Archive className="h-3.5 w-3.5" />}
           </button>
         )}
         <DeleteButton

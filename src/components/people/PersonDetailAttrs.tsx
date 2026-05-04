@@ -91,7 +91,7 @@ export function DetailAttrs({
                 disabled={saving}
                 className="shrink-0 rounded-lg bg-accent-primary p-1 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
               >
-                {saving ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Save className="h-2.5 w-2.5" />}
+                {saving ? <Loader2 className="ui-spinner-2xs" /> : <Save className="h-2.5 w-2.5" />}
               </button>
               <button onClick={() => setEditingKey(null)} className="shrink-0 ui-btn-icon">
                 <X className="h-2.5 w-2.5" />
@@ -102,7 +102,7 @@ export function DetailAttrs({
                 className="shrink-0 ui-btn-icon hover:text-status-negative"
                 title="Delete attribute"
               >
-                {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Trash2 className="h-2.5 w-2.5" />}
+                {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <Trash2 className="h-2.5 w-2.5" />}
               </button>
             </div>
           ) : (
@@ -145,7 +145,7 @@ export function DetailAttrs({
             disabled={!newKey.trim() || !newValue.trim() || saving}
             className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
           >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
           </button>
           <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className="ui-btn-icon">
             <X className="h-3 w-3" />

@@ -106,7 +106,7 @@ export function InteractionsSection({
               disabled={saving}
               className="ui-btn-save"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+              {saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
             </button>
             <button onClick={() => setLogging(false)} className="px-1 text-xs text-text-tertiary hover:text-text-secondary">
               Cancel

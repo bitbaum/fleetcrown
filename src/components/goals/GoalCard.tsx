@@ -112,7 +112,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             <div className="flex items-center gap-2">
               {editingTitle ? (
                 savingTitle ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+                  <Loader2 className="ui-spinner text-text-muted" />
                 ) : (
                   <input
                     value={titleValue}
@@ -158,7 +158,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={savingDesc}
                     className="p-1.5 rounded ui-btn-confirm disabled:opacity-30">
-                    {savingDesc ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Check className="h-2.5 w-2.5" />}
+                    {savingDesc ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
                     className="p-1.5 text-text-muted hover:text-text-secondary">
@@ -265,7 +265,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               />
               <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
                 className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">
-                {savingChild ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               </button>
               <button onClick={() => { setAddingChild(false); setChildTitle(""); }}
                 className="p-1.5 rounded text-text-muted hover:text-text-secondary shrink-0">

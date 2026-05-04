@@ -108,7 +108,7 @@ export function PersonDetail({
                   autoFocus
                   className={`w-56 rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors ${nameError ? "border-status-negative/60 focus:border-status-negative" : "border-border-default focus:border-accent-primary"}`}
                 />
-                {nameSaving && <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-text-tertiary" />}
+                {nameSaving && <Loader2 className="ui-spinner-sm shrink-0 text-text-tertiary" />}
               </div>
               {nameError && <p className="text-xs text-status-negative">{nameError}</p>}
             </div>
@@ -180,7 +180,7 @@ export function PersonDetail({
                   disabled={descSaving}
                   className="ui-btn-save"
                 >
-                  {descSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                  {descSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
                 </button>
                 <button
                   onClick={() => { descEdit.cancel(); setDescError(null); }}

@@ -90,7 +90,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
               disabled={saving || !name.trim()}
               className="ui-btn-primary"
             >
-              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {saving && <Loader2 className="ui-spinner-sm" />}
               Add project
             </button>
           </div>

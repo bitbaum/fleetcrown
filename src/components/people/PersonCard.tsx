@@ -142,7 +142,7 @@ export function PersonCard({
             {quickDone ? (
               <><Check className="h-3 w-3 text-status-positive" /> Logged</>
             ) : quickSaving ? (
-              <><Loader2 className="h-3 w-3 animate-spin" /> …</>
+              <><Loader2 className="ui-spinner-xs" /> …</>
             ) : (
               <>→ Reached out</>
             )}
@@ -211,7 +211,7 @@ export function PersonCard({
                   disabled={saving}
                   className="flex items-center gap-1 rounded-xl bg-accent-primary px-3 py-2 text-xs font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30"
                 >
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
                   Log
                 </button>
                 <button

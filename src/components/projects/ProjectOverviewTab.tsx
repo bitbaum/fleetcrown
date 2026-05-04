@@ -236,7 +236,7 @@ export function OverviewTab({
                 disabled={actSaving}
                 className="ui-btn-save"
               >
-                {actSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                {actSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
               </button>
               <button onClick={() => setLoggingActivity(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">
                 Cancel

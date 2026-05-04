@@ -189,7 +189,7 @@ export function ProjectProfile({
             </button>
           ))}
         </div>
-        {sending && <Loader2 className="ml-auto h-3.5 w-3.5 animate-spin text-text-muted" />}
+        {sending && <Loader2 className="ml-auto ui-spinner-sm text-text-muted" />}
       </div>
 
       {/* Project metadata */}

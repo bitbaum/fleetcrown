@@ -75,7 +75,7 @@ export function ProfileSettings({ user }: Props) {
         disabled={saving || !dirty}
         className="ui-btn-primary"
       >
-        {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+        {saving && <Loader2 className="ui-spinner" />}
         Save changes
       </button>
     </section>

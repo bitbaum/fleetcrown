@@ -63,7 +63,7 @@ export function ChannelsSection({
             disabled={deletingKey === key}
             className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ui-btn-icon"
           >
-            {deletingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <X className="h-2.5 w-2.5" />}
+            {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <X className="h-2.5 w-2.5" />}
           </button>
         </div>
       ))}
@@ -95,7 +95,7 @@ export function ChannelsSection({
             disabled={!channelValue.trim() || saving}
             className="shrink-0 rounded-lg bg-accent-primary p-1.5 text-text-inverted disabled:opacity-30 hover:bg-accent-hover"
           >
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+            {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
           </button>
           <button onClick={() => { setAdding(false); setChannelValue(""); }} className="ui-btn-icon">
             <X className="h-3 w-3" />

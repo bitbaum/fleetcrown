@@ -34,7 +34,7 @@ export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Pro
       {/* Status dot / spinner */}
       <div className="mt-0.5 shrink-0">
         {agentRunning ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-text" />
+          <Loader2 className="ui-spinner-sm text-accent-text" />
         ) : (
           <span className={cn(
             "block h-2 w-2 rounded-full border",
@@ -68,7 +68,7 @@ export function ProjectTile({ project, currentAdapter, onExpand, onLaunch }: Pro
               title={`Launch ${currentAdapter} in ${tab}`}
               className="rounded-full p-1 text-text-muted transition-colors hover:bg-surface-overlay hover:text-accent-text"
             >
-              {launching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+              {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
             </button>
           )}
         </div>

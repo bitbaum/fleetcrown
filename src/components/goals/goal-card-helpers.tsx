@@ -27,7 +27,7 @@ export function ProgressInput({
   };
 
   if (ie.saving) {
-    return <Loader2 className="h-3 w-3 animate-spin text-text-muted" />;
+    return <Loader2 className="ui-spinner-xs text-text-muted" />;
   }
 
   if (ie.editing) {
@@ -85,7 +85,7 @@ export function DateInput({
     });
   };
 
-  if (ie.saving) return <Loader2 className="h-3 w-3 animate-spin text-text-muted" />;
+  if (ie.saving) return <Loader2 className="ui-spinner-xs text-text-muted" />;
 
   if (ie.editing) {
     return (
@@ -193,7 +193,7 @@ export function AddMilestoneInline({
         disabled={!value.trim() || saving}
         className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 transition-colors shrink-0"
       >
-        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+        {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
       </button>
       <button
         onClick={() => { setOpen(false); setValue(""); }}
@@ -244,7 +244,7 @@ export function MilestoneRow({
         className="shrink-0 flex items-center justify-center disabled:opacity-50"
       >
         {toggling ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-muted" />
+          <Loader2 className="ui-spinner-sm text-text-muted" />
         ) : milestone.done ? (
           <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (

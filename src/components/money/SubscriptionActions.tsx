@@ -124,7 +124,7 @@ export function SubscriptionActions({
           disabled={markingPaid}
           className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5 transition-colors disabled:opacity-50"
         >
-          {markingPaid ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <CheckCheck className="h-2.5 w-2.5" />}
+          {markingPaid ? <Loader2 className="ui-spinner-2xs" /> : <CheckCheck className="h-2.5 w-2.5" />}
           Mark paid
         </button>
       )}
@@ -251,7 +251,7 @@ export function SubscriptionActions({
               disabled={saving}
               className="ui-btn-save"
             >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
               Save
             </button>
             <button onClick={() => setEditing(false)} className="text-xs text-text-muted hover:text-text-secondary px-1">Cancel</button>

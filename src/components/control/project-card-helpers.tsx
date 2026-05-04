@@ -104,7 +104,7 @@ export function ClosingBanner({ startedAt }: { startedAt: number }) {
   return (
     <div className="border-t border-status-warning/20 bg-status-warning/[0.04] px-5 py-4">
       <div className="flex flex-wrap items-center gap-2">
-        <Loader2 className="h-3.5 w-3.5 text-status-warning animate-spin" />
+        <Loader2 className="ui-spinner-sm text-status-warning" />
         <span className="text-sm font-medium text-status-warning">Closing session…</span>
         <span className="ml-auto text-sm text-text-secondary">{secondsAgo(startedAt)} running</span>
       </div>
@@ -130,7 +130,7 @@ export function RunningBanner({ label, startedAt }: { label: string; startedAt: 
   return (
     <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
       <div className="flex items-center gap-2">
-        <Loader2 className="h-3.5 w-3.5 text-accent-text animate-spin shrink-0" />
+        <Loader2 className="ui-spinner-sm text-accent-text shrink-0" />
         <span className="truncate text-sm font-medium text-accent-text">{label}</span>
         <span className={cn("ml-auto shrink-0 text-sm tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>

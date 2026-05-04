@@ -346,7 +346,7 @@ export function NewProjectModal({
           disabled={creating || !name.trim()}
           className="ui-btn-primary flex-1 gap-1.5"
         >
-          {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          {creating ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
           {dir.trim() ? "Create & launch" : "Create"}
         </button>
         <button onClick={onClose} className="ui-btn-secondary">

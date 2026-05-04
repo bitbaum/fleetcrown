@@ -20,7 +20,7 @@ export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string
       title="Mark fulfilled"
     >
       {busy
-        ? <Loader2 className="h-4 w-4 animate-spin" />
+        ? <Loader2 className="ui-spinner" />
         : <CheckCircle className="h-4 w-4" />}
     </button>
   );

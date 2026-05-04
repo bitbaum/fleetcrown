@@ -63,7 +63,7 @@ export function AddHabitForm({
           disabled={!title.trim() || saving}
           className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 transition-colors shrink-0"
         >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+          {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
         </button>
         <button onClick={close} className="p-1.5 rounded text-text-muted hover:text-text-secondary transition-colors shrink-0">
           <X className="h-3 w-3" />

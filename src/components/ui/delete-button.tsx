@@ -40,7 +40,7 @@ export function DeleteButton({
           disabled={deleting}
           className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
         >
-          {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Yes"}
+          {deleting ? <Loader2 className="ui-spinner-xs" /> : "Yes"}
         </button>
         <button
           onClick={() => setConfirming(false)}

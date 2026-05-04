@@ -162,7 +162,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
           {loading && (
             <div className="flex justify-start">
               <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm border border-border-subtle bg-surface-raised px-4 py-3">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-status-positive shrink-0" />
+                <Loader2 className="ui-spinner-sm text-status-positive shrink-0" />
                 <div>
                   <span className="text-xs text-text-secondary">
                     {elapsed < 5 ? "Ivy is thinking…" :

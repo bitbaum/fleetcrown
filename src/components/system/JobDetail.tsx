@@ -121,7 +121,7 @@ export function JobDetail({
         <div className="flex-1 p-4 space-y-5">
           {/* Status row */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Last Run</div>
               {lastRun ? (
                 <div className="text-xs text-text-secondary">
@@ -131,7 +131,7 @@ export function JobDetail({
                 <div className="text-xs text-text-muted">Never</div>
               )}
             </div>
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Status</div>
               {!status || status === "never" ? (
                 <div className="text-xs text-text-muted">Never run</div>
@@ -147,7 +147,7 @@ export function JobDetail({
                 </div>
               )}
             </div>
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Next Run</div>
               {nextRun ? (
                 <div className="text-xs text-text-secondary">
@@ -177,19 +177,19 @@ export function JobDetail({
 
           {/* Config */}
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <span className="text-text-muted">Model</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.model}</span>
             </div>
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <span className="text-text-muted">Thinking</span>
               <span className="ml-2 text-text-secondary font-mono">{job.payload.thinking}</span>
             </div>
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <span className="text-text-muted">Timeout</span>
               <span className="ml-2 text-text-secondary">{job.payload.timeoutSeconds}s</span>
             </div>
-            <div className="rounded-md bg-surface-base border border-border-subtle p-2.5">
+            <div className="ui-data-cell">
               <span className="text-text-muted">Delivery</span>
               <span className="ml-2 text-text-secondary capitalize">{job.delivery.channel}</span>
             </div>

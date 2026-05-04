@@ -333,7 +333,7 @@ export function IntentButtonPanel({
               className="flex items-center gap-1.5 rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-status-warning disabled:opacity-50"
             >
               {clearingContext
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ? <Loader2 className="ui-spinner-sm" />
                 : <Eraser className="h-3.5 w-3.5" />}
               Clear context
             </button>

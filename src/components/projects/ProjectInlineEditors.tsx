@@ -49,7 +49,7 @@ export function NameEditor({
             autoFocus
             className={`text-base font-semibold bg-surface-raised border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-border-strong focus:border-border-strong"}`}
           />
-          {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary shrink-0" />}
+          {saving && <Loader2 className="ui-spinner-sm text-text-tertiary shrink-0" />}
         </div>
         {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
       </div>
@@ -100,7 +100,7 @@ export function DescriptionEditor({
             disabled={ie.saving}
             className="ui-btn-save"
           >
-            {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+            {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
           </button>
           <button
             onClick={ie.cancel}
@@ -152,7 +152,7 @@ export function StatusEditor({
           placeholder="e.g. Production"
           className="bg-surface-raised border border-border-strong rounded px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong w-36"
         />
-        {ie.saving && <Loader2 className="h-3 w-3 animate-spin text-text-muted shrink-0" />}
+        {ie.saving && <Loader2 className="ui-spinner-xs text-text-muted shrink-0" />}
       </div>
     );
   }
@@ -198,7 +198,7 @@ export function MaturityEditor({
           disabled={ie.saving}
           className="px-2 py-0.5 rounded ui-btn-confirm disabled:opacity-40 text-[10px] transition-colors"
         >
-          {ie.saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+          {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
         </button>
         <button onClick={ie.cancel} className="text-[10px] text-text-muted hover:text-text-secondary">✕</button>
       </div>

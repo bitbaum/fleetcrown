@@ -63,7 +63,7 @@ export function AddAttrInline({
         disabled={!key.trim() || !value.trim() || saving}
         className="ui-btn-confirm p-1.5 rounded disabled:opacity-30 shrink-0 transition-colors"
       >
-        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+        {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
       </button>
     </div>
   );
@@ -139,7 +139,7 @@ export function AttrRow({
           className="sm:opacity-0 sm:group-hover:opacity-100 p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
           title="Delete attribute"
         >
-          {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+          {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
         </button>
       </div>
     </div>

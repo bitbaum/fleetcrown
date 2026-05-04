@@ -60,7 +60,7 @@ export function ProjectDetail({
       {/* Subtle refresh indicator — visible while refetching with stale data on screen. */}
       {refetching && data && (
         <div className="absolute top-3 right-3 z-10 pointer-events-none">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-tertiary" />
+          <Loader2 className="ui-spinner-sm text-text-tertiary" />
         </div>
       )}
 

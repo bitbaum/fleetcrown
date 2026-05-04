@@ -106,7 +106,7 @@ export function ScheduleModal({
         {done ? (
           <><Check className="h-4 w-4" /> Scheduled!</>
         ) : saving ? (
-          <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
+          <><Loader2 className="ui-spinner" /> Creating…</>
         ) : (
           <><Clock className="h-4 w-4" /> Create Scheduled Job</>
         )}

@@ -90,7 +90,7 @@ export default function OnboardingPage() {
                 disabled={saving || !username.trim()}
                 className="ui-btn-primary w-full py-3"
               >
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {saving && <Loader2 className="ui-spinner" />}
                 Continue →
               </button>
             </div>
@@ -141,7 +141,7 @@ export default function OnboardingPage() {
                   disabled={saving || !projectName.trim()}
                   className="ui-btn-primary flex-1 py-3"
                 >
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {saving && <Loader2 className="ui-spinner" />}
                   Let&apos;s go →
                 </button>
               </div>
