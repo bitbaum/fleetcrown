@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { postJson } from "@/lib/api/fetch";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -27,11 +28,7 @@ export default function SetupPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, password }),
-      });
+      const res = await postJson("/api/setup", { name, password });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Setup failed.");

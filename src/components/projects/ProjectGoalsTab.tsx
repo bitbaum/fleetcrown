@@ -22,8 +22,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
   const openLink = async () => {
     setMode("link");
     setSelectedId("");
-    const res = await listGoals();
-    const data = await res.json();
+    const data = await listGoals();
     const linkedIds = new Set(linked.map((g) => g.id));
     setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
   };

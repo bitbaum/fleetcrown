@@ -1,4 +1,4 @@
-import { postJson, patchJson, deleteJson } from "./fetch";
+import { getJson, postJson, patchJson, deleteJson } from "./fetch";
 import type { CreateGoalInput } from "@/db/queries/goals";
 
 /** PATCH /api/goals/:id — update any goal fields */
@@ -20,5 +20,5 @@ export function createGoal(body: CreateGoalInput) {
 
 /** GET /api/goals — list all goals */
 export function listGoals() {
-  return fetch("/api/goals");
+  return getJson<{ goals: { id: string; title: string; entityId: string | null }[] }>("/api/goals");
 }

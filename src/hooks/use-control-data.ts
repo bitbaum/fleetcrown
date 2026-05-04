@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { ControlData, ProjectState } from "@/app/api/control/route";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { getJson, postJson } from "@/lib/api/fetch";
 
 type Agent = "codex" | "claude";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
@@ -63,9 +64,7 @@ export function useControlData(): ControlDataHook {
   const refresh = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
     try {
-      const res = await fetch("/api/control");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const payload = await res.json() as ControlData;
+      const payload = await getJson<ControlData>("/api/control");
       setData(payload);
       if (!agentDirty) {
         setAgent(payload.agentConfig.agent);
@@ -155,11 +154,7 @@ export function useControlData(): ControlDataHook {
   }, [lastTabResultsAt]);
 
   const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
-    const res = await fetch("/api/inject", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab, promptKey, customPrompt }),
-    });
+    const res = await postJson("/api/inject", { tab, promptKey, customPrompt });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -168,25 +163,17 @@ export function useControlData(): ControlDataHook {
   };
 
   const launchProject = async (tab: string, dir: string) => {
-    await fetch("/api/agent/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab, dir, agent: selectedAgent }),
-    });
+    await postJson("/api/agent/launch", { tab, dir, agent: selectedAgent });
     setTimeout(() => refresh(true), 1500);
   };
 
   const runWithBrain = async (project: ProjectState, intent: OrchestrationTaskIntentId) => {
     setError(null);
-    const res = await fetch("/api/orchestration/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectKey: project.tab,
-        projectPath: project.dir,
-        adapter: data?.agentConfig.agent ?? "claude",
-        intent,
-      }),
+    const res = await postJson("/api/orchestration/run", {
+      projectKey: project.tab,
+      projectPath: project.dir,
+      adapter: data?.agentConfig.agent ?? "claude",
+      intent,
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -195,23 +182,15 @@ export function useControlData(): ControlDataHook {
 
   const runCustomPrompt = async (project: ProjectState, prompt: string, ag: string) => {
     if (!project.agentRunning) {
-      await fetch("/api/agent/launch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tab: project.tab, dir: project.dir, agent: ag }),
-      });
+      await postJson("/api/agent/launch", { tab: project.tab, dir: project.dir, agent: ag });
       await new Promise((r) => setTimeout(r, 3000));
     }
-    const res = await fetch("/api/orchestration/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectKey: project.tab,
-        projectPath: project.dir,
-        adapter: ag,
-        intent: "custom",
-        customInstructions: prompt,
-      }),
+    const res = await postJson("/api/orchestration/run", {
+      projectKey: project.tab,
+      projectPath: project.dir,
+      adapter: ag,
+      intent: "custom",
+      customInstructions: prompt,
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -221,11 +200,7 @@ export function useControlData(): ControlDataHook {
   const saveAgent = async (applyToOpenTabs: boolean) => {
     setSavingAgent(true);
     try {
-      const res = await fetch("/api/control/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent: selectedAgent, model, applyToOpenTabs }),
-      });
+      const res = await postJson("/api/control/agent", { agent: selectedAgent, model, applyToOpenTabs });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
       setAgentDirty(false);

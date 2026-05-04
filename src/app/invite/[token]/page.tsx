@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { getJson, postJson } from "@/lib/api/fetch";
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -18,8 +19,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/invitations/${token}`)
-      .then((r) => r.json())
+    getJson<{ valid: boolean; used: boolean; email?: string }>(`/api/invitations/${token}`)
       .then((data) => {
         if (data.valid && !data.used) {
           setStatus("valid");
@@ -39,11 +39,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/invitations/${token}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, password }),
-      });
+      const res = await postJson(`/api/invitations/${token}/accept`, { name, password });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
 

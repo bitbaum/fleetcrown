@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
+import { postJson, patchJson } from "@/lib/api/fetch";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -20,11 +21,7 @@ export default function OnboardingPage() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: normalizeUsername(username) }),
-      });
+      const res = await patchJson("/api/me", { username: normalizeUsername(username) });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to save username");
@@ -42,21 +39,13 @@ export default function OnboardingPage() {
     setError("");
     try {
       if (!skip && projectName.trim()) {
-        await fetch("/api/user-projects", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: projectName.trim(),
-            dirPath: dirPath.trim() || undefined,
-            gitUrl: gitUrl.trim() || undefined,
-          }),
+        await postJson("/api/user-projects", {
+          name: projectName.trim(),
+          dirPath: dirPath.trim() || undefined,
+          gitUrl: gitUrl.trim() || undefined,
         });
       }
-      await fetch("/api/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ onboardedAt: new Date().toISOString() }),
-      });
+      await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
       router.push("/today");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
