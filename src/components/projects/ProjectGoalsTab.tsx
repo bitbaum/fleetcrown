@@ -2,25 +2,42 @@
 
 import { useState } from "react";
 import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
-import { patchGoal, listGoals } from "@/lib/api/goals";
+import { patchGoal, listGoals, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
-import { ADD_BUTTON_CLASS } from "@/components/ui/form";
+import { ADD_BUTTON_CLASS, FIELD_INPUT_CLASS_TIGHT } from "@/components/ui/form";
+
+type PanelMode = "idle" | "link" | "create";
 
 export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; projectId: string }) {
   const [linked, setLinked] = useState<LinkedGoal[]>(initialGoals);
-  const [linking, setLinking] = useState(false);
+  const [mode, setMode] = useState<PanelMode>("idle");
   const [allGoals, setAllGoals] = useState<Array<{ id: string; title: string; entityId: string | null }>>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newDate, setNewDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const openLink = async () => {
-    setLinking(true);
+    setMode("link");
     setSelectedId("");
     const res = await listGoals();
     const data = await res.json();
     const linkedIds = new Set(linked.map((g) => g.id));
     setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
+  };
+
+  const openCreate = () => {
+    setMode("create");
+    setNewTitle("");
+    setNewDate("");
+    setError(null);
+  };
+
+  const cancel = () => {
+    setMode("idle");
+    setError(null);
   };
 
   const handleLink = async () => {
@@ -32,7 +49,33 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       if (chosen) {
         setLinked((prev) => [...prev, { id: chosen.id, title: chosen.title, description: null, status: GOAL_STATUS.ACTIVE, progress: 0, targetDate: null, milestones: null }]);
       }
-      setLinking(false);
+      setMode("idle");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    const title = newTitle.trim();
+    if (!title) { setError("Title is required"); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await createGoal({ title, targetDate: newDate || undefined, entityId: projectId });
+      const data = await res.json() as { ok?: boolean; goal?: { id: string; title: string; targetDate?: string | null }; error?: string };
+      if (!data.ok) { setError(data.error ?? "Failed to create goal"); return; }
+      if (data.goal) {
+        setLinked((prev) => [...prev, {
+          id: data.goal!.id,
+          title: data.goal!.title,
+          description: null,
+          status: GOAL_STATUS.ACTIVE,
+          progress: 0,
+          targetDate: data.goal!.targetDate ?? null,
+          milestones: null,
+        }]);
+      }
+      setMode("idle");
     } finally {
       setSaving(false);
     }
@@ -102,11 +145,11 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
         );
       })}
 
-      {linked.length === 0 && !linking && (
+      {linked.length === 0 && mode === "idle" && (
         <p className="text-xs text-text-muted pt-1">No goals linked to this project.</p>
       )}
 
-      {linking ? (
+      {mode === "link" && (
         <div className="flex items-center gap-2">
           <select
             value={selectedId}
@@ -124,17 +167,56 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
           >
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Link"}
           </button>
-          <button onClick={() => setLinking(false)} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">
+          <button onClick={cancel} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">
             Cancel
           </button>
         </div>
-      ) : (
-        <button
-          onClick={openLink}
-          className={ADD_BUTTON_CLASS}
-        >
-          <Plus className="h-3.5 w-3.5" /> Link existing goal
-        </button>
+      )}
+
+      {mode === "create" && (
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <input
+              value={newTitle}
+              onChange={(e) => { setNewTitle(e.target.value); setError(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") cancel(); }}
+              placeholder="Goal title…"
+              autoFocus
+              className={`flex-1 ${FIELD_INPUT_CLASS_TIGHT}`}
+            />
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              className={FIELD_INPUT_CLASS_TIGHT}
+            />
+          </div>
+          {error && <p className="text-xs text-status-negative">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCreate}
+              disabled={!newTitle.trim() || saving}
+              className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors flex items-center gap-1"
+            >
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+              Create
+            </button>
+            <button onClick={cancel} className="px-2 py-1.5 text-xs text-text-muted hover:text-text-secondary">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "idle" && (
+        <div className="flex gap-3">
+          <button onClick={openCreate} className={ADD_BUTTON_CLASS}>
+            <Plus className="h-3.5 w-3.5" /> New goal
+          </button>
+          <button onClick={openLink} className={ADD_BUTTON_CLASS}>
+            <Plus className="h-3.5 w-3.5" /> Link existing
+          </button>
+        </div>
       )}
     </div>
   );

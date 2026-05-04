@@ -15,6 +15,7 @@ export const CreateGoalBody = z.object({
   description: z.string().trim().optional(),
   targetDate: z.string().optional(),
   parentGoalId: z.string().uuid("Invalid parentGoalId").optional(),
+  entityId: z.string().uuid("Invalid entityId").optional(),
 });
 export type CreateGoalInput = z.infer<typeof CreateGoalBody>;
 

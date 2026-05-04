@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
   const dataOrResp = await readJsonBody(req, CreateGoalBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { title, description, targetDate, parentGoalId } = dataOrResp;
+  const { title, description, targetDate, parentGoalId, entityId } = dataOrResp;
 
   const [created] = await db
     .insert(goals)
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       description: description || null,
       targetDate: targetDate ? new Date(targetDate) : null,
       parentGoalId: parentGoalId || null,
+      entityId: entityId || null,
       status: GOAL_STATUS.ACTIVE,
       progress: 0,
     })
