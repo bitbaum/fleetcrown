@@ -84,8 +84,7 @@ export default async function LandingPage() {
           }}
         >
           <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ background: "oklch(0.72 0.14 145)" }}
+            className="h-1.5 w-1.5 rounded-full bg-status-positive"
           />
           Private · Self-hosted · Open source
         </div>

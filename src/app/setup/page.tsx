@@ -160,7 +160,7 @@ export default function SetupPage() {
               </Field>
 
               {error && (
-                <p className="text-sm" style={{ color: "oklch(0.68 0.16 25)" }}>{error}</p>
+                <p className="text-sm text-status-negative">{error}</p>
               )}
 
               <button
