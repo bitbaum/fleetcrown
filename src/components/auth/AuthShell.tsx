@@ -9,7 +9,7 @@ export function AuthField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <label className="block text-sm font-medium text-white/55">
         {label}
       </label>
       {children}
@@ -21,34 +21,15 @@ export function AuthInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none ${props.className ?? ""}`}
-      style={{
-        background: "rgba(255,255,255,0.06)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        ...props.style,
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)";
-        props.onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
-        props.onBlur?.(e);
-      }}
+      className={`w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none bg-white/[0.06] border border-white/[0.10] focus:border-white/30 transition-colors ${props.className ?? ""}`}
+      style={props.style}
     />
   );
 }
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="rounded-2xl p-8 space-y-5"
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.09)",
-        backdropFilter: "blur(12px)",
-      }}
-    >
+    <div className="rounded-2xl p-8 space-y-5 bg-white/[0.04] border border-white/[0.09] backdrop-blur-[12px]">
       {children}
     </div>
   );
@@ -72,8 +53,7 @@ export function AuthSubmitButton({
       type={onClick ? "button" : "submit"}
       onClick={onClick}
       disabled={loading || disabled}
-      className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
-      style={{ background: "#ffffff" }}
+      className="w-full rounded-xl py-3 text-sm font-semibold text-black bg-white transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
     >
       {loading && loadingLabel ? loadingLabel : label}
     </button>
@@ -88,10 +68,7 @@ export function AuthShell({
   showHomeLink?: boolean;
 }) {
   return (
-    <div
-      className="relative min-h-screen overflow-hidden text-white"
-      style={{ background: "#050505" }}
-    >
+    <div className="relative min-h-screen overflow-hidden text-white bg-[#050505]">
       {/* Background: layered glows + grid */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
@@ -119,15 +96,11 @@ export function AuthShell({
       {/* Nav */}
       <nav className="relative z-10 px-8 py-6 sm:px-14">
         {showHomeLink ? (
-          <Link
-            href="/"
-            className="text-base font-bold tracking-tight"
-            style={{ letterSpacing: "-0.02em" }}
-          >
+          <Link href="/" className="text-base font-bold tracking-[-.02em]">
             ✦ Cockpit
           </Link>
         ) : (
-          <span className="text-base font-bold" style={{ letterSpacing: "-0.02em" }}>
+          <span className="text-base font-bold tracking-[-.02em]">
             ✦ Cockpit
           </span>
         )}
@@ -142,10 +115,7 @@ export function AuthShell({
 
 export function AuthIconBadge({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-xl"
-      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-    >
+    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-xl bg-white/[0.06] border border-white/[0.10]">
       {children}
     </div>
   );
@@ -154,11 +124,9 @@ export function AuthIconBadge({ children }: { children: React.ReactNode }) {
 export function AuthDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
-      <span className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
-        {label}
-      </span>
-      <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
+      <div className="h-px flex-1 bg-white/[0.07]" />
+      <span className="text-xs text-white/[0.22]">{label}</span>
+      <div className="h-px flex-1 bg-white/[0.07]" />
     </div>
   );
 }
@@ -171,7 +139,7 @@ export function AuthFooterLink({
   children: React.ReactNode;
 }) {
   return (
-    <p className="mt-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.18)" }}>
+    <p className="mt-6 text-center text-sm text-white/[0.18]">
       <Link href={href} className="transition-colors hover:text-white/50">
         {children}
       </Link>

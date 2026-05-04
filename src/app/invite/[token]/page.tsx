@@ -115,8 +115,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
                   type="email"
                   value={prefillEmail}
                   disabled
-                  className="opacity-50 cursor-not-allowed"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  className="opacity-50 cursor-not-allowed text-white/60"
                 />
               </AuthField>
             )}
