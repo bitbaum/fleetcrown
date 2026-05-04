@@ -6,6 +6,18 @@ import { getCurrentUserId } from "@/lib/session";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
+import { type HabitFrequency, HABIT_FREQUENCY } from "@/lib/constants/statuses";
+
+function scheduledDays(frequency: HabitFrequency, days: number): number {
+  let count = 0;
+  for (let i = 0; i < days; i++) {
+    const dow = new Date(Date.now() - i * 86_400_000).getDay();
+    if (frequency === HABIT_FREQUENCY.DAILY) count++;
+    else if (frequency === HABIT_FREQUENCY.WEEKDAYS && dow >= 1 && dow <= 5) count++;
+    else if (frequency === HABIT_FREQUENCY.WEEKLY && dow === 1) count++;
+  }
+  return Math.max(1, count);
+}
 
 export default async function HabitsPage() {
   const userId = await getCurrentUserId();
@@ -37,7 +49,8 @@ export default async function HabitsPage() {
       ) : (
         <div className="space-y-3">
           {habits.map((h) => {
-            const pct = Math.round((h.completionsInWindow / HABIT_HISTORY_DAYS) * 100);
+            const scheduled = scheduledDays(h.frequency, HABIT_HISTORY_DAYS);
+            const pct = Math.round((h.completionsInWindow / scheduled) * 100);
 
             return (
               <Card key={h.id} className={h.active ? "" : "opacity-50"}>
@@ -61,7 +74,7 @@ export default async function HabitsPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-lg font-medium text-text-primary">{pct}%</div>
-                    <div className="text-sm text-text-tertiary">{h.completionsInWindow}/{HABIT_HISTORY_DAYS}d</div>
+                    <div className="text-sm text-text-tertiary">{h.completionsInWindow}/{scheduled}d</div>
                   </div>
                 </div>
                 <HabitHeatmap
