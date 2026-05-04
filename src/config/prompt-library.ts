@@ -32,16 +32,16 @@ export type PromptTemplate = {
 };
 
 export const CATEGORY_META: Record<PromptCategory, { label: string; color: string }> = {
-  engineering:  { label: "Engineering",  color: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
-  frontend:     { label: "Frontend",     color: "bg-purple-500/15 text-purple-400 border-purple-500/20" },
-  backend:      { label: "Backend",      color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/20" },
-  database:     { label: "Database",     color: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20" },
-  devops:       { label: "DevOps",       color: "bg-orange-500/15 text-orange-400 border-orange-500/20" },
-  design:       { label: "Design",       color: "bg-pink-500/15 text-pink-400 border-pink-500/20" },
-  business:     { label: "Business",     color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/20" },
-  marketing:    { label: "Marketing",    color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20" },
-  research:     { label: "Research",     color: "bg-teal-500/15 text-teal-400 border-teal-500/20" },
-  personal:     { label: "Personal",     color: "bg-rose-500/15 text-rose-400 border-rose-500/20" },
+  engineering:  { label: "Engineering",  color: "ui-cat-engineering" },
+  frontend:     { label: "Frontend",     color: "ui-cat-frontend" },
+  backend:      { label: "Backend",      color: "ui-cat-backend" },
+  database:     { label: "Database",     color: "ui-cat-database" },
+  devops:       { label: "DevOps",       color: "ui-cat-devops" },
+  design:       { label: "Design",       color: "ui-cat-design" },
+  business:     { label: "Business",     color: "ui-cat-business" },
+  marketing:    { label: "Marketing",    color: "ui-cat-marketing" },
+  research:     { label: "Research",     color: "ui-cat-research" },
+  personal:     { label: "Personal",     color: "ui-cat-personal" },
 };
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
