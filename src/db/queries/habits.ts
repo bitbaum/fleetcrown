@@ -58,7 +58,7 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
   const habitIds = dueHabits.map((h) => h.id);
 
   const since = new Date();
-  since.setDate(since.getDate() - 6);
+  since.setDate(since.getDate() - (HABIT_HISTORY_DAYS - 1));
   const sinceStr = toLocalDateStr(since);
 
   const completions = await db
@@ -82,7 +82,7 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
     const dates = byHabit.get(h.id) ?? new Set<string>();
     const doneToday = dates.has(today);
     let streak = 0;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < HABIT_HISTORY_DAYS; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       if (dates.has(toLocalDateStr(d))) streak++;
