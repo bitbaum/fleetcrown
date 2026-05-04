@@ -119,7 +119,7 @@ export function HabitRow({
         )}
         <button
           onClick={startEdit}
-          className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors opacity-0 group-hover:opacity-100"
+          className="ui-btn-row-action opacity-0 group-hover:opacity-100"
           title="Edit habit"
         >
           <Pencil className="h-3 w-3" />

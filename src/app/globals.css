@@ -336,6 +336,10 @@
   .ui-btn-icon {
     @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
   }
+  /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
+  .ui-btn-row-action {
+    @apply p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
+  }
   /* Accent icon button — caller adds padding (p-1 or p-1.5) */
   .ui-btn-icon-accent {
     @apply shrink-0 rounded-lg bg-accent-primary text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30;

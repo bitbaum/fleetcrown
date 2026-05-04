@@ -268,7 +268,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               </button>
               <button onClick={() => { setAddingChild(false); setChildTitle(""); }}
-                className="p-1.5 rounded text-text-muted hover:text-text-secondary shrink-0">
+                className="ui-btn-row-action shrink-0">
                 <X className="h-3 w-3" />
               </button>
             </div>

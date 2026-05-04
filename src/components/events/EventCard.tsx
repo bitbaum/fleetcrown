@@ -166,7 +166,7 @@ export function EventCard({
           <button
             onClick={openEdit}
             title="Edit event"
-            className="p-1.5 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors"
+            className="ui-btn-row-action"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
