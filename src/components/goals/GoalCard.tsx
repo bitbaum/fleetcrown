@@ -268,7 +268,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
       {!isCompleted && !addingChild && (
         <button
           onClick={() => setAddingChild(true)}
-          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-muted hover:text-status-positive transition-colors"
+          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-secondary hover:text-status-positive transition-colors"
         >
           <Plus className="h-3 w-3" /> Add sub-goal
         </button>

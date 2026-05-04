@@ -262,7 +262,7 @@
   /* Typography */
   .ui-kicker {
     font-size: 0.75rem;
-    @apply font-semibold uppercase text-text-muted;
+    @apply font-semibold uppercase text-text-tertiary;
     letter-spacing: var(--tracking-label);
   }
   /* Micro-kicker for compact data cells — 10px caps */

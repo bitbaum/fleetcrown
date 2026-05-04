@@ -43,7 +43,7 @@ export function ActionButtons({
         <button
           onClick={onApprove}
           disabled={busy}
-          className="p-1 rounded hover:bg-status-positive/20 text-status-positive/60 hover:text-status-positive transition-colors disabled:opacity-50"
+          className="p-2 rounded hover:bg-status-positive/20 text-status-positive/60 hover:text-status-positive transition-colors disabled:opacity-50"
           title="Done — mark as completed"
         >
           <Check className="h-4 w-4" />
@@ -51,7 +51,7 @@ export function ActionButtons({
         <button
           onClick={onReject}
           disabled={busy}
-          className="p-1.5 rounded hover:bg-surface-raised text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
+          className="p-2 rounded hover:bg-surface-raised text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
           title="Skip — dismiss this action"
         >
           <X className="h-4 w-4" />
