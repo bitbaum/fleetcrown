@@ -100,7 +100,7 @@ export function AttrRow({
   if (editing) {
     return (
       <div className="py-1">
-        <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">{label}</div>
+        <div className="ui-micro-label mb-1">{label}</div>
         <AddAttrInline
           projectId={projectId}
           presetKey={attrKey}
@@ -116,7 +116,7 @@ export function AttrRow({
   const isUrl = value.startsWith("http");
   return (
     <div className="group flex items-start gap-3 py-2 border-b border-border-subtle last:border-0">
-      <span className="text-[10px] text-text-muted uppercase tracking-wider w-24 shrink-0 pt-0.5 leading-relaxed">{label}</span>
+      <span className="ui-micro-label w-24 shrink-0 pt-0.5 leading-relaxed">{label}</span>
       <div className="flex-1 min-w-0 flex items-start gap-1.5">
         {isUrl ? (
           <a href={value} target="_blank" rel="noreferrer"
@@ -170,13 +170,13 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
       </div>
       {session.done && (
         <div>
-          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Done</div>
+          <div className="ui-micro-label mb-0.5">Done</div>
           <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.done}</p>
         </div>
       )}
       {session.next && (
         <div>
-          <div className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Next</div>
+          <div className="ui-micro-label mb-0.5">Next</div>
           <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
         </div>
       )}

@@ -93,7 +93,7 @@ export function PersonDetail({
 
   return (
     <Drawer onClose={onClose} size="md" surface="background" className="overflow-y-auto">
-      <div className="sticky top-0 flex items-center justify-between border-b border-border-subtle bg-background/95 p-5 backdrop-blur">
+      <div className="sticky top-0 flex items-center justify-between border-b border-border-subtle bg-surface-page/95 p-5 backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
           {nameEdit.editing ? (
             <div className="flex flex-col gap-1">

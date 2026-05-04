@@ -94,7 +94,7 @@ export function Drawer({
       ? "bg-surface-drawer"
       : surface === "modal"
         ? "bg-surface-modal"
-        : "bg-background";
+        : "bg-surface-page";
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div

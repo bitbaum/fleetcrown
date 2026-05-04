@@ -27,10 +27,10 @@ export default async function PublicProfilePage({
   if (!user) notFound();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-text-primary">
+    <div className="flex min-h-screen flex-col bg-surface-page text-text-primary">
       <nav className="flex items-center justify-between px-6 py-5 sm:px-10">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="text-indigo-400">✦</span> Cockpit
+          <span className="text-accent-primary">✦</span> Cockpit
         </Link>
       </nav>
 
@@ -46,7 +46,7 @@ export default async function PublicProfilePage({
               className="h-16 w-16 rounded-full"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-indigo-500/20 text-2xl text-indigo-400">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-muted text-2xl text-accent-primary">
               {(user.name ?? username)[0]?.toUpperCase()}
             </div>
           )}

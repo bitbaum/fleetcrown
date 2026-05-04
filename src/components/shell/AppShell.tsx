@@ -4,7 +4,7 @@ import { AskIvyButton } from "./AskIvyButton";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app-shell-frame flex min-h-screen bg-background text-foreground">
+    <div className="app-shell-frame flex min-h-screen bg-surface-page text-text-primary">
       <Sidebar />
       <main className="app-main">
         {children}

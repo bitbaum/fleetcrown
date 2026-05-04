@@ -116,7 +116,7 @@ export function OverviewTab({
                 <div key={key}>
                   {addingKey === key ? (
                     <div className="py-1">
-                      <div className="text-[10px] text-text-muted uppercase tracking-wider mb-1">{label}</div>
+                      <div className="ui-micro-label mb-1">{label}</div>
                       <AddAttrInline
                         projectId={projectId}
                         presetKey={key}
