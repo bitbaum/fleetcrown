@@ -348,6 +348,16 @@
   .ui-btn-lg-outline {
     @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
+  /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
+  .ui-btn-ready-primary {
+    @apply rounded-2xl bg-accent-primary px-4 py-2.5 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
+  }
+  .ui-btn-ready-action {
+    @apply rounded-2xl border border-border-default bg-surface-overlay px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+  }
+  .ui-btn-ready-more {
+    @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {
     @apply rounded-2xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
