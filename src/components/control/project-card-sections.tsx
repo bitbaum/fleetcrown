@@ -313,7 +313,7 @@ export function IntentButtonPanel({
               key={id}
               onClick={() => onSendIntent(id)}
               disabled={sending !== null}
-              className="rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50"
+              className="ui-btn-ready-more"
             >
               {sending === id ? "…" : label}
             </button>
@@ -330,7 +330,7 @@ export function IntentButtonPanel({
               }}
               disabled={clearingContext}
               title="Send /clear to reset Claude's context window"
-              className="flex items-center gap-1.5 rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-status-warning disabled:opacity-50"
+              className="ui-btn-ready-more flex items-center gap-1.5 hover:text-status-warning"
             >
               {clearingContext
                 ? <Loader2 className="ui-spinner-sm" />

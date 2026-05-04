@@ -370,7 +370,7 @@
     @apply rounded-2xl border border-border-default bg-surface-overlay px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
   }
   .ui-btn-ready-more {
-    @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
+    @apply rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {
