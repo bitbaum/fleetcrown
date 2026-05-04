@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { VALID_CURRENCIES as CURRENCIES, VALID_FREQUENCIES as FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
-import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
@@ -57,7 +57,7 @@ export function NewSubscriptionButton() {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. GitHub Copilot"
           autoFocus
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
 
@@ -66,7 +66,7 @@ export function NewSubscriptionButton() {
           value={vendor}
           onChange={(e) => setVendor(e.target.value)}
           placeholder="e.g. GitHub Inc."
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
 
@@ -79,14 +79,14 @@ export function NewSubscriptionButton() {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           />
         </Field>
         <Field label="Currency">
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value as typeof CURRENCIES[number])}
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           >
             {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
@@ -98,7 +98,7 @@ export function NewSubscriptionButton() {
           <select
             value={frequency}
             onChange={(e) => setFrequency(e.target.value as typeof FREQUENCIES[number])}
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           >
             {FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
@@ -108,7 +108,7 @@ export function NewSubscriptionButton() {
             type="date"
             value={nextDue}
             onChange={(e) => setNextDue(e.target.value)}
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           />
         </Field>
       </div>
@@ -118,7 +118,7 @@ export function NewSubscriptionButton() {
           value={paymentMethod}
           onChange={(e) => setPaymentMethod(e.target.value)}
           placeholder="e.g. Visa ····1234"
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
 
@@ -127,7 +127,7 @@ export function NewSubscriptionButton() {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Optional notes"
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
     </ModalForm>

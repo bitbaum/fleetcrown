@@ -6,7 +6,6 @@ import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
-import { FIELD_INPUT_CLASS } from "@/components/ui/form";
 import { postJson } from "@/lib/api/fetch";
 
 export function RunModal({
@@ -107,7 +106,7 @@ export function RunModal({
                   setProjectId(e.target.value);
                   setProjectName(p?.name ?? "");
                 }}
-                className={FIELD_INPUT_CLASS}
+                className="ui-input"
               >
                 <option value="">— Select project —</option>
                 {projects.map((p) => (

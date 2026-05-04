@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import { createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
-import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 
@@ -60,7 +60,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
           onChange={(e) => setTitle(e.target.value)}
           placeholder="What are you working toward?"
           autoFocus
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
 
@@ -70,7 +70,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional context or motivation"
           rows={2}
-          className={`${FIELD_INPUT_CLASS} resize-none`}
+          className={`ui-input resize-none`}
         />
       </Field>
 
@@ -80,7 +80,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
             type="date"
             value={targetDate}
             onChange={(e) => setTargetDate(e.target.value)}
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           />
         </Field>
 
@@ -89,7 +89,7 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
             <select
               value={parentGoalId}
               onChange={(e) => setParentGoalId(e.target.value)}
-              className={FIELD_INPUT_CLASS}
+              className="ui-input"
             >
               <option value="">— None —</option>
               {flatGoals.map((g) => (

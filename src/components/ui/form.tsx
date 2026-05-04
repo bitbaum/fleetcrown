@@ -1,6 +1,3 @@
-export const FIELD_INPUT_CLASS =
-  "ui-input";
-
 export function Field({
   label,
   required = false,

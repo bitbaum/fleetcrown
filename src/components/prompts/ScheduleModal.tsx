@@ -6,7 +6,6 @@ import { createCronJob } from "@/lib/api/crons";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
-import { FIELD_INPUT_CLASS } from "@/components/ui/form";
 
 export function ScheduleModal({
   template,
@@ -74,7 +73,7 @@ export function ScheduleModal({
               setProjectId(e.target.value);
               setProjectName(p?.name ?? "");
             }}
-            className={FIELD_INPUT_CLASS}
+            className="ui-input"
           >
             <option value="">— Select project —</option>
             {projects.map((p) => (
@@ -89,7 +88,7 @@ export function ScheduleModal({
         <input
           value={schedule}
           onChange={(e) => setSchedule(e.target.value)}
-          className={`${FIELD_INPUT_CLASS} font-mono`}
+          className={`ui-input font-mono`}
           placeholder="0 9 * * 1"
         />
         <div className="mt-2 text-sm text-text-tertiary">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Field, FIELD_INPUT_CLASS } from "@/components/ui/form";
+import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
@@ -36,7 +36,7 @@ export function NewProjectButton() {
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. OrangeCat"
           autoFocus
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
       <Field label="Description">
@@ -44,7 +44,7 @@ export function NewProjectButton() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Bitcoin marketplace"
-          className={FIELD_INPUT_CLASS}
+          className="ui-input"
         />
       </Field>
     </ModalForm>
