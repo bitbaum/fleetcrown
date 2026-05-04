@@ -53,7 +53,7 @@ export default async function TodayPage() {
       </div>
 
       {/* State — what's pending */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
         <Suspense fallback={<CardSkeleton />}>
           <HabitsCard />
         </Suspense>
