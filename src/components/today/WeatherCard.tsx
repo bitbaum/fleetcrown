@@ -52,7 +52,7 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <div className="text-sm text-text-muted">Unavailable</div>
+        <div className="text-sm text-text-secondary">Unavailable</div>
       </Card>
     );
   }

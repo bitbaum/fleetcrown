@@ -98,7 +98,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
       )}
 
       {projects.length === 0 ? (
-        <p className="text-sm text-text-muted">No projects yet.</p>
+        <p className="text-sm text-text-secondary">No projects yet.</p>
       ) : (
         <ul className="space-y-2">
           {projects.map((p) => (

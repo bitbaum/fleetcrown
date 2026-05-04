@@ -24,7 +24,7 @@ export function CalendarCard() {
       {loading ? (
         <div className="text-sm text-text-muted animate-pulse">Loading...</div>
       ) : error || (data?.error && events.length === 0) ? (
-        <div className="text-sm text-text-muted">{error ?? data?.error}</div>
+        <div className="text-sm text-text-secondary">{error ?? data?.error}</div>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (

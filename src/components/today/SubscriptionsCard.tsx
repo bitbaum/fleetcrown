@@ -12,7 +12,7 @@ export async function SubscriptionsCard() {
     <Card>
       <CardHeader icon={CreditCard} title="Upcoming Bills" />
       {items.length === 0 ? (
-        <div className="text-sm md:text-base text-text-muted">No bills due soon</div>
+        <div className="text-sm md:text-base text-text-secondary">No bills due soon</div>
       ) : (
         <div className="space-y-2.5">
           {items.map((item) => (

@@ -18,9 +18,9 @@ export async function CommitmentsCard() {
       />
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-1.5 py-4 text-center">
-          <CheckCircle className="h-6 w-6 text-text-muted" />
-          <div className="text-sm text-text-muted">No active commitments</div>
-          <div className="text-xs text-text-muted">Use the button below to track things you&apos;ve promised</div>
+          <CheckCircle className="h-6 w-6 text-text-tertiary" />
+          <div className="text-sm text-text-secondary">No active commitments</div>
+          <div className="text-xs text-text-tertiary">Use the button below to track things you&apos;ve promised</div>
         </div>
       ) : (
         <div className="space-y-3">

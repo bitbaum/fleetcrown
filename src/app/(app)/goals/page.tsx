@@ -28,10 +28,10 @@ export default async function GoalsPage() {
 
       {goalTree.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-8 text-text-muted">
-            <Target className="h-10 w-10" />
-            <div className="text-sm">No goals yet</div>
-            <div className="text-xs">
+          <div className="flex flex-col items-center gap-3 py-8">
+            <Target className="h-10 w-10 text-text-tertiary" />
+            <div className="text-sm text-text-secondary">No goals yet</div>
+            <div className="text-xs text-text-tertiary text-center">
               Goals connect your projects, commitments, and people to what matters.
               <br />
               Ivy can help you define them — ask her.

@@ -174,7 +174,7 @@ export function LogConversationButton() {
             </div>
           )}
           {query.trim() && !searching && results.length === 0 && (
-            <div className="text-xs text-text-muted px-2 py-1">No results</div>
+            <div className="text-xs text-text-secondary px-2 py-1">No results</div>
           )}
         </div>
       )}

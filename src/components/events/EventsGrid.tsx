@@ -101,9 +101,9 @@ export function EventsGrid({
       {/* Active events */}
       <Card>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-8 text-text-muted">
-            <Calendar className="h-8 w-8" />
-            <div className="text-sm">
+          <div className="flex flex-col items-center gap-2 py-8">
+            <Calendar className="h-8 w-8 text-text-tertiary" />
+            <div className="text-sm text-text-secondary">
               {q || typeFilter ? "No events match your filter" : "No events recorded yet"}
             </div>
           </div>

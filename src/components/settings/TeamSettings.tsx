@@ -112,7 +112,7 @@ export function TeamSettings({ invitations: initial }: Props) {
       )}
 
       {invites.length === 0 && (
-        <p className="text-sm text-text-muted">No invitations yet. Create a link to invite someone.</p>
+        <p className="text-sm text-text-secondary">No invitations yet. Create a link to invite someone.</p>
       )}
     </section>
   );
