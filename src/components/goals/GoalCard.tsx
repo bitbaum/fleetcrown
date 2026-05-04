@@ -9,6 +9,7 @@ import type { Milestone } from "@/db/schema/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
@@ -18,16 +19,13 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [milestones, setMilestones] = useState<Milestone[]>(goal.milestones ?? []);
   const [targetDate, setTargetDate] = useState<Date | null>(goal.targetDate);
   const [togglingStatus, setTogglingStatus] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(goal.title);
-  const [savingTitle, setSavingTitle] = useState(false);
+  const [displayTitle, setDisplayTitle] = useState(goal.title);
   const [description, setDescription] = useState(goal.description);
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [descValue, setDescValue] = useState(goal.description ?? "");
-  const [savingDesc, setSavingDesc] = useState(false);
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
+  const titleEdit = useInlineEdit<string>(goal.title);
+  const descEdit = useInlineEdit<string>(goal.description ?? "");
 
   const handleAddChild = async () => {
     const title = childTitle.trim();
@@ -42,29 +40,21 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     }
   };
 
-  const commitTitle = async () => {
-    const trimmed = titleValue.trim();
-    if (!trimmed || trimmed === goal.title) { setEditingTitle(false); setTitleValue(goal.title); return; }
-    setSavingTitle(true);
-    try {
+  const commitTitle = () => {
+    const trimmed = titleEdit.draft.trim();
+    if (!trimmed || trimmed === displayTitle) { titleEdit.cancel(); return; }
+    titleEdit.commit(async () => {
       await patchGoal(goal.id, { title: trimmed });
-      goal.title = trimmed; // local ref update so re-mount shows correct value
-    } finally {
-      setSavingTitle(false);
-      setEditingTitle(false);
-    }
+      setDisplayTitle(trimmed);
+    });
   };
 
-  const commitDesc = async () => {
-    const trimmed = descValue.trim();
-    setSavingDesc(true);
-    try {
+  const commitDesc = () => {
+    const trimmed = descEdit.draft.trim();
+    descEdit.commit(async () => {
       await patchGoal(goal.id, { description: trimmed || null });
       setDescription(trimmed || null);
-    } finally {
-      setSavingDesc(false);
-      setEditingDesc(false);
-    }
+    });
   };
 
   const isCompleted = status === GOAL_STATUS.COMPLETED;
@@ -110,15 +100,15 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              {editingTitle ? (
-                savingTitle ? (
+              {titleEdit.editing ? (
+                titleEdit.saving ? (
                   <Loader2 className="ui-spinner text-text-muted" />
                 ) : (
                   <input
-                    value={titleValue}
-                    onChange={(e) => setTitleValue(e.target.value)}
+                    value={titleEdit.draft}
+                    onChange={(e) => titleEdit.setDraft(e.target.value)}
                     onBlur={commitTitle}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") { setEditingTitle(false); setTitleValue(goal.title); } }}
+                    onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") titleEdit.cancel(); }}
                     autoFocus
                     className={`bg-surface-raised border border-border-strong rounded px-2 py-0.5 focus:outline-none focus:border-border-strong ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
                   />
@@ -126,10 +116,10 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               ) : (
                 <div
                   className={`cursor-text hover:text-text-primary transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
-                  onClick={() => !isCompleted && setEditingTitle(true)}
+                  onClick={() => !isCompleted && titleEdit.start(displayTitle)}
                   title={isCompleted ? undefined : "Click to edit title"}
                 >
-                  {titleValue}
+                  {displayTitle}
                 </div>
               )}
               {status && status !== GOAL_STATUS.ACTIVE && (
@@ -141,13 +131,13 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 <DeleteGoalButton goalId={goal.id} />
               </div>
             </div>
-            {editingDesc ? (
+            {descEdit.editing ? (
               <div className="mt-1 flex items-start gap-1.5">
                 <textarea
-                  value={descValue}
-                  onChange={(e) => setDescValue(e.target.value)}
+                  value={descEdit.draft}
+                  onChange={(e) => descEdit.setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Escape") { setEditingDesc(false); setDescValue(description ?? ""); }
+                    if (e.key === "Escape") descEdit.cancel();
                     if (e.key === "Enter" && e.metaKey) commitDesc();
                   }}
                   autoFocus
@@ -156,11 +146,11 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   className="flex-1 resize-none ui-input-tight"
                 />
                 <div className="flex flex-col gap-1 shrink-0">
-                  <button onClick={commitDesc} disabled={savingDesc}
+                  <button onClick={commitDesc} disabled={descEdit.saving}
                     className="p-1.5 rounded ui-btn-confirm disabled:opacity-30">
-                    {savingDesc ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
+                    {descEdit.saving ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
-                  <button onClick={() => { setEditingDesc(false); setDescValue(description ?? ""); }}
+                  <button onClick={descEdit.cancel}
                     className="p-1.5 text-text-muted hover:text-text-secondary">
                     <X className="h-2.5 w-2.5" />
                   </button>
@@ -168,7 +158,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               </div>
             ) : (
               <button
-                onClick={() => !isCompleted && (setDescValue(description ?? ""), setEditingDesc(true))}
+                onClick={() => !isCompleted && descEdit.start(description ?? "")}
                 className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
                   isCompleted ? "cursor-default" :
                   description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
