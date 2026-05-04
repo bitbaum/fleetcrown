@@ -94,7 +94,7 @@ export function HabitRow({
           <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
         ) : habit.doneToday ? (
           <div className="h-4 w-4 rounded-full bg-status-positive/50 flex items-center justify-center">
-            <Check className="h-2.5 w-2.5 text-white" />
+            <Check className="h-2.5 w-2.5 text-text-inverted" />
           </div>
         ) : (
           <div className="h-4 w-4 rounded-full border border-border-strong hover:border-status-positive/60 transition-colors" />

@@ -30,7 +30,7 @@ export function ProjectDetailTabBar({
             onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-medium transition-colors border-b-2 ${
               isActive
-                ? "border-status-positive text-white"
+                ? "border-status-positive text-text-primary"
                 : "border-transparent text-text-tertiary hover:text-text-secondary hover:border-border-strong"
             }`}
           >

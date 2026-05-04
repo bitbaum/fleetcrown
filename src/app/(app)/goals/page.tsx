@@ -28,7 +28,7 @@ export default async function GoalsPage() {
 
       {goalTree.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-8 text-white/30">
+          <div className="flex flex-col items-center gap-3 py-8 text-text-muted">
             <Target className="h-10 w-10" />
             <div className="text-sm">No goals yet</div>
             <div className="text-xs">
