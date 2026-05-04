@@ -32,3 +32,6 @@ export const APP_LOCALE = process.env.COCKPIT_LOCALE ?? "de-CH";
 export const GOALS_DUE_SOON_DAYS = 14;
 export const EVENTS_DUE_SOON_DAYS = 30;
 export const SUBSCRIPTIONS_UPCOMING_DAYS = 14;
+
+/** How many days before an invitation link expires. */
+export const INVITATION_EXPIRY_DAYS = 7;

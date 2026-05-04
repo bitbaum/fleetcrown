@@ -80,7 +80,7 @@ export async function ActionQueueCard() {
                     : <X className="h-3.5 w-3.5 text-text-muted shrink-0" />}
                   <span className="flex-1 truncate text-sm text-text-secondary">{action.title}</span>
                   {action.reviewedAt && (
-                    <span className="text-xs text-text-muted shrink-0">
+                    <span className="text-xs text-text-tertiary shrink-0">
                       {compactRelativeDate(action.reviewedAt)}
                     </span>
                   )}
@@ -136,7 +136,7 @@ export async function ActionQueueCard() {
                       );
                     })}
                   </div>
-                  <div className="text-xs md:text-sm text-text-muted mt-2 italic">
+                  <div className="text-xs md:text-sm text-text-secondary mt-2 italic">
                     Ivy: {group.reasoning}
                   </div>
                 </div>
@@ -180,7 +180,7 @@ export async function ActionQueueCard() {
                     )}
 
                     {action.reasoning && (
-                      <div className="text-xs md:text-sm text-text-muted mt-2 italic">
+                      <div className="text-xs md:text-sm text-text-secondary mt-2 italic">
                         Ivy: {action.reasoning}
                       </div>
                     )}

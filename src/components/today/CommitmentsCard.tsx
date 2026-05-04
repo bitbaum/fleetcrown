@@ -14,7 +14,7 @@ export async function CommitmentsCard() {
       <CardHeader
         icon={CheckCircle}
         title="Commitments"
-        right={<span className="text-xs md:text-sm text-text-muted">{items.length} active</span>}
+        right={<span className="text-xs md:text-sm text-text-tertiary">{items.length} active</span>}
       />
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-1.5 py-4 text-center">

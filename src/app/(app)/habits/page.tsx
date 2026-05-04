@@ -1,23 +1,11 @@
 import { Repeat2, Flame } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
-import { getAllHabitsWithHistory } from "@/db/queries/habits";
+import { getAllHabitsWithHistory, scheduledDays } from "@/db/queries/habits";
 import { getCurrentUserId } from "@/lib/session";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
-import { type HabitFrequency, HABIT_FREQUENCY } from "@/lib/constants/statuses";
-
-function scheduledDays(frequency: HabitFrequency, days: number): number {
-  let count = 0;
-  for (let i = 0; i < days; i++) {
-    const dow = new Date(Date.now() - i * 86_400_000).getDay();
-    if (frequency === HABIT_FREQUENCY.DAILY) count++;
-    else if (frequency === HABIT_FREQUENCY.WEEKDAYS && dow >= 1 && dow <= 5) count++;
-    else if (frequency === HABIT_FREQUENCY.WEEKLY && dow === 1) count++;
-  }
-  return Math.max(1, count);
-}
 
 export default async function HabitsPage() {
   const userId = await getCurrentUserId();

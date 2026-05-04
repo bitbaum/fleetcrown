@@ -136,7 +136,7 @@ export function EventCard({
           {deadline && (
             <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
               {deadlineText}
-              <span className="text-text-muted ml-1">· {format(deadline, "d MMM yyyy")}</span>
+              <span className="text-text-tertiary ml-1">· {format(deadline, "d MMM yyyy")}</span>
             </span>
           )}
         </div>

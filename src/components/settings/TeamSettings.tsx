@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Copy, Check, Plus, Loader2 } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import type { Invitation } from "@/db/schema";
+import { INVITATION_EXPIRY_DAYS } from "@/lib/constants";
 
 type Props = { invitations: Invitation[] };
 
@@ -44,7 +45,7 @@ export function TeamSettings({ invitations: initial }: Props) {
     <section className="ui-panel p-6 space-y-5">
       <h2 className="font-medium text-text-primary">Team</h2>
       <p className="text-sm text-text-tertiary">
-        Invite collaborators to access this Cockpit instance. Links expire after 7 days.
+        Invite collaborators to access this Cockpit instance. Links expire after {INVITATION_EXPIRY_DAYS} days.
       </p>
 
       <div className="flex gap-2">

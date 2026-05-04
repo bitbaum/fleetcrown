@@ -32,6 +32,17 @@ function isDueToday(frequency: HabitFrequency): boolean {
   return true;
 }
 
+export function scheduledDays(frequency: HabitFrequency, days: number): number {
+  let count = 0;
+  for (let i = 0; i < days; i++) {
+    const dow = new Date(Date.now() - i * 86_400_000).getDay();
+    if (frequency === HABIT_FREQUENCY.DAILY) count++;
+    else if (frequency === HABIT_FREQUENCY.WEEKDAYS && dow >= 1 && dow <= 5) count++;
+    else if (frequency === HABIT_FREQUENCY.WEEKLY && dow === 1) count++;
+  }
+  return Math.max(1, count);
+}
+
 export type HabitWithStatus = {
   id: string;
   title: string;

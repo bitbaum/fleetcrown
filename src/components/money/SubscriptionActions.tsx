@@ -105,7 +105,7 @@ export function SubscriptionActions({
   if (cancelled) {
     return (
       <div className="mt-2 flex items-center gap-2">
-        <span className="text-xs text-text-muted">Marked cancelled</span>
+        <span className="text-xs text-text-tertiary">Marked cancelled</span>
         <DeleteButton
           onDelete={onDeleteRecord}
           label="Delete record?"
@@ -224,7 +224,7 @@ export function SubscriptionActions({
             </select>
           </div>
           <div className="flex gap-2 items-center">
-            <label className="text-[11px] text-text-muted shrink-0">Next due</label>
+            <label className="text-[11px] text-text-tertiary shrink-0">Next due</label>
             <input
               type="date"
               value={editNextDue}

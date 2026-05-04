@@ -2,12 +2,11 @@ import { eq, and, gt } from "drizzle-orm";
 import { db } from "@/db";
 import { invitations, users, type Invitation } from "@/db/schema";
 import { randomBytes } from "crypto";
-
-const EXPIRY_DAYS = 7;
+import { INVITATION_EXPIRY_DAYS } from "@/lib/constants";
 
 export async function createInvitation(createdBy: string, email?: string): Promise<Invitation> {
   const token = randomBytes(32).toString("hex");
-  const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
   const [row] = await db
     .insert(invitations)
     .values({ token, email: email?.toLowerCase().trim() || null, createdBy, expiresAt })
