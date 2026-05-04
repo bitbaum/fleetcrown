@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  CheckCircle2, Loader2, Zap, Info, ChevronDown, ChevronRight, ExternalLink,
+  CheckCircle2, Loader2, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
@@ -14,27 +14,6 @@ export function SessionBadge({ health }: { health: string }) {
   return <span className={cn("rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em]", color)}>{health}</span>;
 }
 
-export function MaturityBar({ maturity }: { maturity: string }) {
-  const m = maturity.match(/^(\d+)/);
-  if (!m) return null;
-  const n = parseInt(m[1], 10);
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="flex gap-0.5">
-        {Array.from({ length: 10 }, (_, i) => (
-          <div
-            key={i}
-            className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              i < n ? "bg-accent-text" : "bg-surface-overlay"
-            )}
-          />
-        ))}
-      </div>
-      <span className="text-sm text-text-secondary">{maturity.replace(/^\d+\/10\s*-?\s*/, "")}</span>
-    </div>
-  );
-}
 
 export function ClosedBanner({
   session,
@@ -192,29 +171,38 @@ export function ReadyBanner({
   );
 }
 
+const RUN_STATE_TAG: Record<string, string> = {
+  done:    "ui-tag ui-tag-positive",
+  error:   "ui-tag ui-tag-negative",
+  running: "ui-tag ui-tag-warning",
+};
+
 export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["latestOrchestrationRun"]> }) {
+  const stateClass = RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral";
   return (
-    <div className="space-y-3 ui-card-section">
+    <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="ui-kicker">latest orchestration</span>
-        <span className="ui-tag ui-tag-neutral">
-          {run.adapter} · {run.intent}
-        </span>
-        <span className="ui-badge">{run.state}</span>
+        <span className="ui-kicker">last run</span>
+        <span className="ui-tag ui-tag-neutral">{run.adapter} · {run.intent}</span>
+        <span className={stateClass}>{run.state}</span>
       </div>
       {run.summary?.done && (
-        <p className="text-base text-text-secondary"><span className="mr-2 ui-kicker">done</span>{run.summary.done}</p>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          <span className="mr-1.5 ui-kicker">done</span>{run.summary.done}
+        </p>
       )}
       {run.summary?.next && (
-        <p className="text-lg text-text-primary leading-snug"><span className="mr-2 ui-kicker">next</span>{run.summary.next}</p>
+        <p className="text-sm text-text-primary leading-snug">
+          <span className="mr-1.5 ui-kicker">next</span>{run.summary.next}
+        </p>
       )}
       {(run.summary?.tests || run.summary?.todos || run.summary?.health) && (
-        <p className="text-sm text-text-tertiary">
-          {[run.summary?.tests, run.summary?.todos, run.summary?.health].filter(Boolean).join(" · ")}
+        <p className="text-xs text-text-tertiary">
+          {[run.summary.tests, run.summary.todos, run.summary.health].filter(Boolean).join(" · ")}
         </p>
       )}
       {!run.summary && run.payload?.resultText && (
-        <p className="line-clamp-4 text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
+        <p className="line-clamp-3 text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
       )}
       {run.payload?.error && (
         <p className="text-sm text-status-negative">{run.payload.error}</p>
@@ -223,74 +211,3 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
   );
 }
 
-export function ProfilePanel({ profile }: { profile: NonNullable<ProjectState["profile"]> }) {
-  const [open, setOpen] = useState(false);
-
-  const keyAttrLabels: Record<string, string> = {
-    status: "Status", maturity: "Maturity", stack: "Stack", mission: "Mission",
-    customers: "Customers", architecture: "Architecture", url: "URL",
-    description: "Description", owner: "Owner", repo: "Repo",
-  };
-
-  const displayAttrs = Object.entries(profile.attrs)
-    .filter(([k]) => k in keyAttrLabels && profile.attrs[k])
-    .slice(0, 8);
-
-  if (!profile.description && !profile.status && !profile.mission && displayAttrs.length === 0) return null;
-
-  return (
-    <div className="border-t border-border-subtle">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-3 text-sm text-text-secondary transition-colors hover:text-text-primary"
-      >
-        <span className="flex items-center gap-1">
-          <Info className="h-4 w-4" />
-          Profile
-        </span>
-        {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-      </button>
-
-      {open && (
-        <div className="space-y-4 px-5 pb-5">
-          {profile.description && (
-            <p className="text-sm text-text-secondary leading-relaxed">{profile.description}</p>
-          )}
-          {profile.mission && (
-            <div>
-              <p className="ui-kicker mb-1">Mission</p>
-              <p className="text-sm text-text-secondary leading-relaxed italic">{profile.mission}</p>
-            </div>
-          )}
-          {profile.maturity && (
-            <div>
-              <p className="ui-kicker mb-1.5">Maturity</p>
-              <MaturityBar maturity={profile.maturity} />
-            </div>
-          )}
-          {displayAttrs
-            .filter(([k]) => !["description", "mission", "maturity"].includes(k))
-            .map(([k, v]) => (
-              <div key={k}>
-                <p className="ui-kicker mb-1">
-                  {keyAttrLabels[k] ?? k}
-                </p>
-                {k === "url" ? (
-                  <a
-                    href={v.startsWith("http") ? v : `https://${v}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-accent-text hover:text-text-primary"
-                  >
-                    {v} <ExternalLink className="h-3 w-3" />
-                  </a>
-                ) : (
-                  <p className="text-sm text-text-secondary leading-relaxed">{v}</p>
-                )}
-              </div>
-            ))}
-        </div>
-      )}
-    </div>
-  );
-}

@@ -10,7 +10,7 @@ import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { ProjectProfile } from "./ProjectProfile";
-import { LatestOrchestrationPanel, ProfilePanel } from "./project-card-helpers";
+import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
   ProjectCardHeader, SessionSummary, ProjectBanners, IntentButtonPanel,
 } from "./project-card-sections";
@@ -226,7 +226,7 @@ export function ProjectCard({
             onSend={send}
           />
           {latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
-          {profile && <ProfilePanel profile={profile} />}
+
           <IntentButtonPanel
             project={project}
             currentAdapter={currentAdapter}
