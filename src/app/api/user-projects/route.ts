@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { getCurrentUserId } from "@/lib/session";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { getUserProjects, createUserProject } from "@/db/queries/user-projects";
 
@@ -20,11 +20,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
-  const raw = await req.json().catch(() => null);
-  const parsed = CreateBody.safeParse(raw);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
-  const project = await createUserProject({ userId, ...parsed.data });
+  const dataOrResp = await readJsonBody(req, CreateBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const project = await createUserProject({ userId, ...dataOrResp });
   return NextResponse.json(project, { status: 201 });
 }

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getCurrentUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const PatchBody = z.object({
   username: z.preprocess(
@@ -24,11 +24,9 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   const userId = await getCurrentUserId();
-  const raw = await req.json().catch(() => null);
-  const parsed = PatchBody.safeParse(raw);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-
-  const { username, name, onboardedAt } = parsed.data;
+  const dataOrResp = await readJsonBody(req, PatchBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { username, name, onboardedAt } = dataOrResp;
 
   // Check username uniqueness
   if (username) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { getCurrentUserId } from "@/lib/session";
+import { readJsonBody, readIdParam, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { updateUserProject, deleteUserProject } from "@/db/queries/user-projects";
 
@@ -17,18 +17,19 @@ const UpdateBody = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
-  const { id } = await params;
-  const raw = await req.json().catch(() => null);
-  const parsed = UpdateBody.safeParse(raw);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  const updated = await updateUserProject(id, userId, parsed.data);
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const dataOrResp = await readJsonBody(req, UpdateBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const updated = await updateUserProject(idOrResp, userId, dataOrResp);
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(updated);
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
-  const { id } = await params;
-  await deleteUserProject(id, userId);
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  await deleteUserProject(idOrResp, userId);
   return NextResponse.json({ ok: true });
 }
