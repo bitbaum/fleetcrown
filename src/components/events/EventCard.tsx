@@ -25,6 +25,7 @@ export function EventCard({
   const [archiving, setArchiving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [draftName, setDraftName] = useState("");
   const [draftDeadline, setDraftDeadline] = useState("");
@@ -42,11 +43,12 @@ export function EventCard({
     setEditing(true);
   };
 
-  const cancelEdit = () => setEditing(false);
+  const cancelEdit = () => { setEditing(false); setSaveError(null); };
 
   const handleSave = async () => {
     if (!draftName.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const res = await patchJson(`/api/events/${event.id}`, {
         name: draftName.trim(),
@@ -54,11 +56,15 @@ export function EventCard({
         description: draftDescription.trim() || null,
         url: draftUrl.trim() || null,
       });
-      const json = (await res.json()) as { ok: boolean; event: EventRow };
+      const json = (await res.json()) as { ok: boolean; event: EventRow; error?: string };
       if (json.ok) {
         onEdit?.(json.event);
         setEditing(false);
+      } else {
+        setSaveError(json.error ?? "Failed to save");
       }
+    } catch {
+      setSaveError("Network error — try again");
     } finally {
       setSaving(false);
     }
@@ -101,6 +107,7 @@ export function EventCard({
           placeholder="Description (optional)"
           className="ui-input-compact w-full"
         />
+        {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={cancelEdit}

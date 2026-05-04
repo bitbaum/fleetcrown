@@ -24,6 +24,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [addingChild, setAddingChild] = useState(false);
   const [childTitle, setChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
+  const [childError, setChildError] = useState<string | null>(null);
   const titleEdit = useInlineEdit<string>(goal.title);
   const descEdit = useInlineEdit<string>(goal.description ?? "");
 
@@ -31,10 +32,19 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     const title = childTitle.trim();
     if (!title) return;
     setSavingChild(true);
+    setChildError(null);
     try {
       const res = await createGoal({ title, parentGoalId: goal.id });
-      const data = await res.json() as { ok?: boolean };
-      if (data.ok) { setChildTitle(""); setAddingChild(false); router.refresh(); }
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (data.ok) {
+        setChildTitle("");
+        setAddingChild(false);
+        router.refresh();
+      } else {
+        setChildError(data.error ?? "Failed to add sub-goal");
+      }
+    } catch {
+      setChildError("Network error — try again");
     } finally {
       setSavingChild(false);
     }
@@ -244,23 +254,26 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             <GoalCard key={child.id} goal={child} depth={depth + 1} />
           ))}
           {addingChild && (
-            <div className="flex items-center gap-1.5">
-              <input
-                value={childTitle}
-                onChange={(e) => setChildTitle(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); if (e.key === "Escape") { setAddingChild(false); setChildTitle(""); } }}
-                placeholder="Sub-goal title…"
-                autoFocus
-                className="flex-1 text-sm ui-input-tight"
-              />
-              <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
-                className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">
-                {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
-              </button>
-              <button onClick={() => { setAddingChild(false); setChildTitle(""); }}
-                className="ui-btn-row-action shrink-0">
-                <X className="h-3 w-3" />
-              </button>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={childTitle}
+                  onChange={(e) => { setChildTitle(e.target.value); setChildError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); if (e.key === "Escape") { setAddingChild(false); setChildTitle(""); setChildError(null); } }}
+                  placeholder="Sub-goal title…"
+                  autoFocus
+                  className="flex-1 text-sm ui-input-tight"
+                />
+                <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
+                  className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">
+                  {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
+                </button>
+                <button onClick={() => { setAddingChild(false); setChildTitle(""); setChildError(null); }}
+                  className="ui-btn-row-action shrink-0">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              {childError && <p className="text-xs text-status-negative ml-1">{childError}</p>}
             </div>
           )}
         </div>

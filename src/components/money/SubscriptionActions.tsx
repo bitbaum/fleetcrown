@@ -41,7 +41,9 @@ export function SubscriptionActions({
   const [deleted, setDeleted] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [paidError, setPaidError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [editName, setEditName] = useState(subName);
   const [editVendor, setEditVendor] = useState(vendor ?? "");
   const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
@@ -70,11 +72,18 @@ export function SubscriptionActions({
 
   async function onMarkPaid() {
     setMarkingPaid(true);
+    setPaidError(null);
     try {
       const newDue = advanceDueDate(nextDue, frequency);
-      await patchJson(`/api/subscriptions/${subId}`, { nextDue: newDue });
+      const res = await patchJson(`/api/subscriptions/${subId}`, { nextDue: newDue });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to mark paid");
+      }
       setPaid(true);
       router.refresh();
+    } catch (e) {
+      setPaidError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setMarkingPaid(false);
     }
@@ -82,8 +91,9 @@ export function SubscriptionActions({
 
   async function onSaveEdit() {
     setSaving(true);
+    setEditError(null);
     try {
-      await patchJson(`/api/subscriptions/${subId}`, {
+      const res = await patchJson(`/api/subscriptions/${subId}`, {
         name: editName.trim() || undefined,
         vendor: editVendor.trim() || null,
         amount: editAmount ? parseFloat(editAmount) : null,
@@ -93,8 +103,14 @@ export function SubscriptionActions({
         notes: editNotes || null,
         paymentMethod: editPaymentMethod || null,
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
       setEditing(false);
       router.refresh();
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -129,6 +145,7 @@ export function SubscriptionActions({
         </button>
       )}
       {paid && <span className="text-xs text-status-positive/50">Next due updated</span>}
+      {paidError && <span className="text-xs text-status-negative">{paidError}</span>}
 
       {/* Inline edit for amount/currency/notes */}
       {!isCancelled && (
@@ -254,8 +271,9 @@ export function SubscriptionActions({
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={() => setEditing(false)} className="ui-btn-text-cancel">Cancel</button>
+            <button onClick={() => { setEditing(false); setEditError(null); }} className="ui-btn-text-cancel">Cancel</button>
           </div>
+          {editError && <p className="text-xs text-status-negative">{editError}</p>}
         </div>
       )}
 

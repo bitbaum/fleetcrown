@@ -46,9 +46,11 @@ export function OverviewTab({
   const [actSummary, setActSummary] = useState("");
   const [actDate, setActDate] = useState(toLocalDateStr(new Date()));
   const [actSaving, setActSaving] = useState(false);
+  const [actError, setActError] = useState<string | null>(null);
 
   const handleLogActivity = async () => {
     setActSaving(true);
+    setActError(null);
     try {
       const res = await postJson(`/api/projects/${projectId}/interactions`, {
         channel: actChannel,
@@ -56,13 +58,17 @@ export function OverviewTab({
         summary: actSummary || undefined,
         occurredAt: actDate,
       });
-      const json = await res.json();
+      const json = await res.json() as { ok?: boolean; error?: string };
       if (json.ok) {
         setActivityList((prev) => [{ channel: actChannel, direction: INTERACTION_DIRECTION.OUTBOUND, summary: actSummary || null, occurredAt: actDate }, ...prev]);
         setLoggingActivity(false);
         setActSummary("");
         setActDate(toLocalDateStr(new Date()));
+      } else {
+        setActError(json.error ?? "Failed to log");
       }
+    } catch {
+      setActError("Network error — try again");
     } finally {
       setActSaving(false);
     }
@@ -230,6 +236,7 @@ export function OverviewTab({
               autoFocus
               className="w-full ui-input-tight"
             />
+            {actError && <p className="text-xs text-status-negative">{actError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={handleLogActivity}
@@ -238,7 +245,7 @@ export function OverviewTab({
               >
                 {actSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
               </button>
-              <button onClick={() => setLoggingActivity(false)} className="ui-btn-text-cancel">
+              <button onClick={() => { setLoggingActivity(false); setActError(null); }} className="ui-btn-text-cancel">
                 Cancel
               </button>
             </div>
