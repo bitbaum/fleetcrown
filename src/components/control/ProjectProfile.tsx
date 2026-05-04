@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { ExternalLink, ChevronDown, ChevronRight, Loader2, Globe } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, ChevronRight, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DIMENSIONS, interpolateDimensionPrompt } from "@/config/dimension-prompts";
 import type { ProjectState } from "@/app/api/control/route";
