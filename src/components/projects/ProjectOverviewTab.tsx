@@ -179,7 +179,7 @@ export function OverviewTab({
             {data.relations
               .filter((r) => r.targetType === ENTITY_TYPE.PERSON)
               .map((r, i) => (
-                <span key={i} className="px-2.5 py-1 rounded-full bg-surface-raised border border-border-subtle text-xs text-text-secondary">
+                <span key={i} className="ui-tag ui-tag-neutral">
                   {r.targetName}
                 </span>
               ))}

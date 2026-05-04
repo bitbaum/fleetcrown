@@ -143,7 +143,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           onChange={(e) => setQuery(e.target.value)}
           className="w-full rounded-2xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary outline-none transition-colors focus:border-accent-primary placeholder:text-text-muted"
         />
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-border-subtle bg-surface-base px-2 py-0.5 text-xs font-medium text-text-secondary">
+        <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
           {filtered.length}
         </span>
       </div>

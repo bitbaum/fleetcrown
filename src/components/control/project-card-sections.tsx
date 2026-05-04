@@ -70,7 +70,7 @@ export function ProjectCardHeader({
             </div>
             {git.behindRemote > 0 && (
               <div className="flex items-center gap-1.5">
-                <span className="rounded-full bg-status-warning/15 px-2 py-0.5 text-xs text-status-warning">
+                <span className="ui-tag ui-tag-warning">
                   ↓ {git.behindRemote} behind
                 </span>
                 <button
