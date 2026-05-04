@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL } from "@/lib/utils";
@@ -20,12 +19,13 @@ export function PersonDetail({
   personId,
   onClose,
   onInteractionLogged,
+  onDeleted,
 }: {
   personId: string;
   onClose: () => void;
   onInteractionLogged?: (personId: string, at: Date) => void;
+  onDeleted?: (personId: string) => void;
 }) {
-  const router = useRouter();
   const [data, setData] = useState<PersonDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [interactions, setInteractions] = useState<PersonDetailData["interactions"]>([]);
@@ -141,8 +141,8 @@ export function PersonDetail({
             <DeleteButton
               onDelete={async () => {
                 await deleteJson(`/api/people/${personId}`);
+                onDeleted?.(personId);
                 onClose();
-                router.refresh();
               }}
               label="Delete?"
               triggerTitle="Delete person"

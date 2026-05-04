@@ -1,7 +1,6 @@
 import { PageLayout } from "@/components/ui/page-layout";
 import { searchPeople, SORT_MODE } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
-import { NewPersonButton } from "@/components/people/NewPersonButton";
 import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/utils";
 import { getCurrentUserId } from "@/lib/session";
 
@@ -29,7 +28,6 @@ export default async function PeoplePage({
       title="People"
       subtitle={`Your social graph — ${total} contacts with context`}
       maxWidth="max-w-5xl"
-      right={<NewPersonButton />}
     >
       <PeopleGrid
         initialPeople={people}

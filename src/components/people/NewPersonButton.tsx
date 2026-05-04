@@ -7,7 +7,7 @@ import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
 import type { CreatePersonInput } from "@/db/queries/people";
 
-export function NewPersonButton() {
+export function NewPersonButton({ onCreated }: { onCreated?: () => void } = {}) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const { create, saving, error, setError } = useCreateMutation<CreatePersonInput>({
@@ -17,7 +17,11 @@ export function NewPersonButton() {
 
   const onReset = () => { setName(""); setDescription(""); setError(null); };
 
-  const onSubmit = () => create({ name: name.trim(), description: description.trim() || undefined });
+  const onSubmit = async () => {
+    const ok = await create({ name: name.trim(), description: description.trim() || undefined });
+    if (ok) onCreated?.();
+    return ok;
+  };
 
   return (
     <ModalForm

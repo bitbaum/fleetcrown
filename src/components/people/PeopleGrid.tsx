@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, ArrowUpDown, Users } from "lucide-react";
 import { PersonCard } from "./PersonCard";
 import { PersonDetail } from "./PersonDetail";
+import { NewPersonButton } from "./NewPersonButton";
 import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, type SortMode } from "@/lib/constants/statuses";
@@ -129,6 +130,7 @@ export function PeopleGrid({
           <ArrowUpDown className="h-3.5 w-3.5" />
           Sort: {SORT_LABELS[sort]}
         </button>
+        <NewPersonButton onCreated={() => search(query, sort, healthFilter, 0)} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -204,6 +206,11 @@ export function PeopleGrid({
           personId={selectedId}
           onClose={() => setSelectedId(null)}
           onInteractionLogged={handleLogged}
+          onDeleted={(id) => {
+            setPeople((prev) => prev.filter((p) => p.id !== id));
+            setTotal((t) => t - 1);
+            setSelectedId(null);
+          }}
         />
       )}
     </>
