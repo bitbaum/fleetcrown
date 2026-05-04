@@ -70,7 +70,7 @@ export function ProjectDetail({
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-white/30" />
           </div>
         ) : !data ? (
-          <p className="text-sm text-text-muted">Project not found</p>
+          <p className="text-sm text-text-secondary">Project not found</p>
         ) : tab === "overview" ? (
           <OverviewTab data={data} projectId={projectId} onReload={reload} />
         ) : tab === "prompts" ? (

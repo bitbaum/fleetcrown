@@ -246,7 +246,7 @@ export function ProjectProfile({
         <MetaSection profile={project.profile} />
       ) : (
         <div className="px-5 py-6 text-center">
-          <p className="text-sm text-text-muted">No profile — add metadata in the Projects view to enable full awareness.</p>
+          <p className="text-sm text-text-secondary">No profile — add metadata in the Projects view to enable full awareness.</p>
         </div>
       )}
 
