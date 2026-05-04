@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { TeamSettings } from "@/components/settings/TeamSettings";
+import { PageLayout } from "@/components/ui/page-layout";
 
 export const metadata = { title: "Settings — Cockpit" };
 
@@ -24,11 +25,10 @@ export default async function SettingsPage() {
   if (!user) redirect("/sign-in");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
-      <h1 className="text-2xl font-semibold text-text-primary">Settings</h1>
+    <PageLayout title="Settings" maxWidth="max-w-2xl">
       <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "" }} />
       <ProjectsSettings projects={projects} />
       <TeamSettings invitations={invitations} />
-    </div>
+    </PageLayout>
   );
 }
