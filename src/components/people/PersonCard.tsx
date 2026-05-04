@@ -23,12 +23,33 @@ export function PersonCard({
   const profession = person.attrs["profession"] ?? person.attrs["role"];
   const location = person.attrs["location"] ?? person.attrs["home_location"];
 
+  const quickChannel = channels[0] ?? CHANNEL_NAMES[0] ?? "other";
+
   const [logOpen, setLogOpen] = useState(false);
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
   const [direction, setDirection] = useState<InteractionDirection>(INTERACTION_DIRECTION.OUTBOUND);
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
+  const [quickSaving, setQuickSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [quickDone, setQuickDone] = useState(false);
+
+  async function submitQuick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setQuickSaving(true);
+    const occurredAt = new Date();
+    try {
+      await postJson(`/api/people/${person.id}/interactions`, {
+        channel: quickChannel,
+        direction: INTERACTION_DIRECTION.OUTBOUND,
+      });
+      setQuickDone(true);
+      onLogged?.(person.id, occurredAt);
+      setTimeout(() => setQuickDone(false), 1500);
+    } finally {
+      setQuickSaving(false);
+    }
+  }
 
   async function submitLog(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
@@ -112,13 +133,27 @@ export function PersonCard({
       </button>
 
       {!logOpen && (
-        <div className="flex justify-end px-4 pb-4">
+        <div className="flex items-center justify-between px-4 pb-4">
+          <button
+            onClick={submitQuick}
+            disabled={quickSaving || quickDone}
+            className={`opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ${SECONDARY_BUTTON_CLASS} disabled:opacity-40`}
+            title={`Log outbound via ${quickChannel}`}
+          >
+            {quickDone ? (
+              <><Check className="h-3 w-3 text-status-positive" /> Logged</>
+            ) : quickSaving ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> …</>
+            ) : (
+              <>→ Reached out</>
+            )}
+          </button>
           <button
             onClick={openLog}
             className={`opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ${SECONDARY_BUTTON_CLASS}`}
-            title="Log interaction"
+            title="Log with details"
           >
-            <Plus className="h-3 w-3" /> Log
+            <Plus className="h-3 w-3" /> Details
           </button>
         </div>
       )}
