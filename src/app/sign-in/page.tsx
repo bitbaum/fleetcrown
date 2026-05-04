@@ -1,9 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AuthShell, AuthCard, AuthInput, AuthSubmitButton, AuthDivider, AuthFooterLink,
+} from "@/components/auth/AuthShell";
 
 function GithubIcon() {
   return (
@@ -43,171 +45,80 @@ function SignInForm() {
   }
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden text-white"
-      style={{ background: "#050505" }}
-    >
-      {/* Background glows — same as landing */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute left-1/2 top-0 -translate-x-1/2"
+    <AuthShell showHomeLink>
+      <div className="mb-10 text-center">
+        <h1
+          className="font-bold"
           style={{
-            width: "700px",
-            height: "500px",
-            background: "radial-gradient(ellipse at center top, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, transparent 70%)",
+            fontSize: "clamp(36px, 5vw, 48px)",
+            lineHeight: 1.0,
+            letterSpacing: "-0.04em",
+            fontFamily: "var(--font-space-display)",
           }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-            maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-          }}
-        />
+        >
+          Welcome back
+        </h1>
+        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+          Sign in to your Cockpit.
+        </p>
       </div>
 
-      {/* Nav */}
-      <nav className="relative z-10 px-8 py-6 sm:px-14">
-        <Link
-          href="/"
-          className="text-base font-bold tracking-tight"
-          style={{ letterSpacing: "-0.02em" }}
+      <AuthCard>
+        <form onSubmit={handleLocal} className="space-y-3">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Local password
+            </label>
+            <AuthInput
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter password…"
+              autoComplete="current-password"
+            />
+          </div>
+          {error && <p className="text-sm text-status-negative">{error}</p>}
+          <AuthSubmitButton
+            loading={loading}
+            disabled={!password}
+            label="Sign in →"
+            loadingLabel="Signing in…"
+          />
+        </form>
+
+        <AuthDivider label="or continue with" />
+
+        <button
+          type="button"
+          onClick={handleGithub}
+          disabled={githubLoading}
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-40"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.10)",
+            color: "rgba(255,255,255,0.65)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.90)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.65)";
+          }}
         >
-          ✦ Cockpit
-        </Link>
-      </nav>
+          <GithubIcon />
+          {githubLoading ? "Redirecting…" : "Continue with GitHub"}
+        </button>
+      </AuthCard>
 
-      {/* Card */}
-      <main className="relative z-10 flex min-h-[calc(100vh-76px)] items-center justify-center px-4 pb-16">
-        <div className="w-full max-w-[400px]">
-
-          {/* Header */}
-          <div className="mb-10 text-center">
-            <h1
-              className="font-bold"
-              style={{
-                fontSize: "clamp(36px, 5vw, 48px)",
-                lineHeight: 1.0,
-                letterSpacing: "-0.04em",
-                fontFamily: "var(--font-space-display)",
-              }}
-            >
-              Welcome back
-            </h1>
-            <p
-              className="mt-3 text-base"
-              style={{ color: "rgba(255,255,255,0.38)" }}
-            >
-              Sign in to your Cockpit.
-            </p>
-          </div>
-
-          {/* Card */}
-          <div
-            className="rounded-2xl p-8 space-y-6"
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              backdropFilter: "blur(12px)",
-            }}
-          >
-            {/* Password form */}
-            <form onSubmit={handleLocal} className="space-y-3">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  Local password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Enter password…"
-                  autoComplete="current-password"
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none"
-                  style={{
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    transition: "border-color 0.15s",
-                  }}
-                  onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)"; }}
-                  onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
-                />
-              </div>
-
-              {error && (
-                <p className="text-sm text-status-negative">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !password}
-                className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
-                style={{ background: "#ffffff" }}
-              >
-                {loading ? "Signing in…" : "Sign in →"}
-              </button>
-            </form>
-
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
-                or continue with
-              </span>
-              <div className="h-px flex-1" style={{ background: "rgba(255,255,255,0.07)" }} />
-            </div>
-
-            {/* GitHub */}
-            <button
-              type="button"
-              onClick={handleGithub}
-              disabled={githubLoading}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-40"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.10)",
-                color: "rgba(255,255,255,0.65)",
-              }}
-              onFocus={undefined}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.90)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
-                e.currentTarget.style.color = "rgba(255,255,255,0.65)";
-              }}
-            >
-              <GithubIcon />
-              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
-            </button>
-          </div>
-
-          <p
-            className="mt-6 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.18)" }}
-          >
-            <Link
-              href="/"
-              className="transition-colors hover:text-white/50"
-            >
-              ← Back to home
-            </Link>
-          </p>
-        </div>
-      </main>
-    </div>
+      <AuthFooterLink href="/">← Back to home</AuthFooterLink>
+    </AuthShell>
   );
 }
 

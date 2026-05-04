@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { NAV_ITEMS } from "@/config/navigation";
 import { ThemeToggle } from "./ThemeToggle";
@@ -48,15 +49,13 @@ export function Sidebar() {
         })}
       </nav>
       <div className="border-t border-border-subtle px-3 py-4">
-        <form action="/api/auth/signout" method="POST">
-          <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            Sign out
-          </button>
-        </form>
+        <button
+          onClick={() => signOut({ callbackUrl: "/sign-in" })}
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          Sign out
+        </button>
       </div>
     </aside>
   );

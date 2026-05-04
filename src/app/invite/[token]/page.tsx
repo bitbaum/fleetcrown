@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { getJson, postJson } from "@/lib/api/fetch";
+import {
+  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge,
+} from "@/components/auth/AuthShell";
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -43,7 +46,6 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
 
-      // Auto sign-in with the local credentials provider
       const result = await signIn("local", { password, redirect: false });
       if (result?.ok) {
         router.push("/today");
@@ -57,152 +59,101 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     }
   }
 
+  const heading =
+    status === "loading" ? "Checking…" :
+    status === "invalid" ? "Link expired" :
+    "You're invited";
+
+  const subheading =
+    status === "loading" ? "Verifying your invitation link." :
+    status === "invalid" ? "This invitation is invalid or has already been used." :
+    prefillEmail ? `Joining as ${prefillEmail}.` : "Create your Cockpit account.";
+
   return (
-    <div
-      className="relative min-h-screen overflow-hidden text-white"
-      style={{ background: "#050505" }}
-    >
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute left-1/2 top-0 -translate-x-1/2"
+    <AuthShell>
+      <div className="mb-10 text-center">
+        <AuthIconBadge>✦</AuthIconBadge>
+        <h1
+          className="font-bold"
           style={{
-            width: "700px",
-            height: "500px",
-            background: "radial-gradient(ellipse at center top, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, transparent 70%)",
+            fontSize: "clamp(28px, 5vw, 40px)",
+            lineHeight: 1.05,
+            letterSpacing: "-0.04em",
           }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-            maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-          }}
-        />
+        >
+          {heading}
+        </h1>
+        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+          {subheading}
+        </p>
       </div>
 
-      <nav className="relative z-10 px-8 py-6 sm:px-14">
-        <span className="text-base font-bold" style={{ letterSpacing: "-0.02em" }}>✦ Cockpit</span>
-      </nav>
+      {status === "invalid" && (
+        <p className="text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <Link href="/sign-in" className="underline hover:text-white/60">Sign in</Link>{" "}
+          if you already have an account.
+        </p>
+      )}
 
-      <main className="relative z-10 flex min-h-[calc(100vh-76px)] items-center justify-center px-4 pb-16">
-        <div className="w-full max-w-[400px]">
-          <div className="mb-10 text-center">
-            <div
-              className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-xl"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-            >
-              ✦
-            </div>
-            <h1
-              className="font-bold"
-              style={{ fontSize: "clamp(28px, 5vw, 40px)", lineHeight: 1.05, letterSpacing: "-0.04em" }}
-            >
-              {status === "loading" ? "Checking…" : status === "invalid" ? "Link expired" : "You're invited"}
-            </h1>
-            <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
-              {status === "loading" && "Verifying your invitation link."}
-              {status === "invalid" && "This invitation is invalid or has already been used."}
-              {status === "valid" && (prefillEmail ? `Joining as ${prefillEmail}.` : "Create your Cockpit account.")}
-            </p>
-          </div>
+      {status === "valid" && (
+        <AuthCard>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <AuthField label="Your name">
+              <AuthInput
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Manu"
+                autoComplete="name"
+                required
+              />
+            </AuthField>
 
-          {status === "invalid" && (
-            <p className="text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
-              <Link href="/sign-in" className="underline hover:text-white/60">Sign in</Link> if you already have an account.
-            </p>
-          )}
+            {prefillEmail && (
+              <AuthField label="Email">
+                <AuthInput
+                  type="email"
+                  value={prefillEmail}
+                  disabled
+                  className="opacity-50 cursor-not-allowed"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                />
+              </AuthField>
+            )}
 
-          {status === "valid" && (
-            <div
-              className="rounded-2xl p-8 space-y-5"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
-            >
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Field label="Your name">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Manu"
-                    autoComplete="name"
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)"; }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
-                  />
-                </Field>
+            <AuthField label="Password">
+              <AuthInput
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                autoComplete="new-password"
+                required
+              />
+            </AuthField>
 
-                {prefillEmail && (
-                  <Field label="Email">
-                    <input
-                      type="email"
-                      value={prefillEmail}
-                      disabled
-                      className="w-full rounded-xl px-4 py-3 text-sm placeholder:text-white/20 outline-none opacity-50 cursor-not-allowed"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)" }}
-                    />
-                  </Field>
-                )}
+            <AuthField label="Confirm password">
+              <AuthInput
+                type="password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                required
+              />
+            </AuthField>
 
-                <Field label="Password">
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)"; }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
-                  />
-                </Field>
+            {error && <p className="text-sm text-status-negative">{error}</p>}
 
-                <Field label="Confirm password">
-                  <input
-                    type="password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="Repeat password"
-                    autoComplete="new-password"
-                    required
-                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none"
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.10)" }}
-                    onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.30)"; }}
-                    onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
-                  />
-                </Field>
-
-                {error && <p className="text-sm text-status-negative">{error}</p>}
-
-                <button
-                  type="submit"
-                  disabled={submitting || !name || !password || !confirm}
-                  className="w-full rounded-xl py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-35"
-                  style={{ background: "#ffffff", marginTop: "8px" }}
-                >
-                  {submitting ? "Creating account…" : "Create account →"}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="block text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>{label}</label>
-      {children}
-    </div>
+            <AuthSubmitButton
+              loading={submitting}
+              disabled={!name || !password || !confirm}
+              label="Create account →"
+              loadingLabel="Creating account…"
+            />
+          </form>
+        </AuthCard>
+      )}
+    </AuthShell>
   );
 }
