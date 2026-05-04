@@ -122,7 +122,7 @@ export function SessionSummary({
 }) {
   if (isClosed || (!session && !git)) return null;
   return (
-    <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
+    <div className="space-y-3 ui-card-section">
       {session?.done && (
         <p className="line-clamp-3 text-base text-text-secondary">
           <span className="mr-2 ui-kicker">done</span>{session.done}
@@ -259,7 +259,7 @@ export function IntentButtonPanel({
   const [clearingContext, setClearingContext] = useState(false);
 
   return (
-    <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
+    <div className="space-y-3 ui-card-section">
       <div className="flex flex-wrap gap-2">
         <button
           onClick={onToggleAutoContinue}

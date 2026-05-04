@@ -122,7 +122,7 @@ export function JobDetail({
           {/* Status row */}
           <div className="grid grid-cols-3 gap-3">
             <div className="ui-data-cell">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Last Run</div>
+              <div className="ui-micro-label mb-1">Last Run</div>
               {lastRun ? (
                 <div className="text-xs text-text-secondary">
                   {formatDistanceToNow(new Date(lastRun), { addSuffix: true })}
@@ -132,7 +132,7 @@ export function JobDetail({
               )}
             </div>
             <div className="ui-data-cell">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Status</div>
+              <div className="ui-micro-label mb-1">Status</div>
               {!status || status === "never" ? (
                 <div className="text-xs text-text-muted">Never run</div>
               ) : hasError ? (
@@ -148,7 +148,7 @@ export function JobDetail({
               )}
             </div>
             <div className="ui-data-cell">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-1">Next Run</div>
+              <div className="ui-micro-label mb-1">Next Run</div>
               {nextRun ? (
                 <div className="text-xs text-text-secondary">
                   {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}

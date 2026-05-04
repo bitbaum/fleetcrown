@@ -54,7 +54,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
   return (
     <div className="mt-2 p-3 rounded-lg border border-border-subtle bg-surface-base space-y-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] uppercase tracking-wider text-text-muted">New Event</span>
+        <span className="ui-micro-label">New Event</span>
         <button onClick={() => { setOpen(false); reset(); }} className="text-text-muted hover:text-text-secondary">
           <X className="h-3.5 w-3.5" />
         </button>

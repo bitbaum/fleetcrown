@@ -138,7 +138,7 @@ export function PromptsTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-text-muted font-medium">
+      <div className="flex items-center gap-2 ui-micro-label font-medium">
         <Bot className="h-3.5 w-3.5" />
         Autopilot Jobs {jobs.length > 0 && <span className="text-text-muted normal-case">({jobs.length})</span>}
       </div>

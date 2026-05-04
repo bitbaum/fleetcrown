@@ -41,7 +41,7 @@ export function Sidebar() {
                 <span className="mt-0.5 block text-xs text-text-muted">{item.description}</span>
               </div>
               {!item.active && (
-                <span className="ml-auto text-[10px] uppercase tracking-wider text-text-muted">soon</span>
+                <span className="ml-auto ui-micro-label">soon</span>
               )}
             </Link>
           );

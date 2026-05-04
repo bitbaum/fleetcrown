@@ -179,7 +179,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Input */}
-        <div className="shrink-0 border-t border-border-subtle px-5 pb-5 pt-4">
+        <div className="shrink-0 ui-card-section">
           <div className={`flex items-end gap-1 rounded-[1.5rem] border bg-surface-overlay transition-colors ${
             listening ? "border-accent-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent-primary)_16%,transparent)]" : "border-border-default"
           }`}>

@@ -194,7 +194,7 @@ export function ReadyBanner({
 
 export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["latestOrchestrationRun"]> }) {
   return (
-    <div className="space-y-3 border-t border-border-subtle px-5 pb-5 pt-4">
+    <div className="space-y-3 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
         <span className="ui-kicker">latest orchestration</span>
         <span className="ui-tag ui-tag-neutral">

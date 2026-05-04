@@ -111,7 +111,7 @@ export function OverviewTab({
         <div>
           {showEmpty ? (
             <div className="space-y-1">
-              <div className="text-[10px] uppercase tracking-wider text-text-muted mb-2">Add missing context</div>
+              <div className="ui-micro-label mb-2">Add missing context</div>
               {missingSuggested.map(({ key, label, placeholder }) => (
                 <div key={key}>
                   {addingKey === key ? (
@@ -172,7 +172,7 @@ export function OverviewTab({
 
       {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
         <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
+          <div className="flex items-center gap-1.5 ui-micro-label mb-2 font-medium">
             <Users className="h-3 w-3" /> People
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -188,7 +188,7 @@ export function OverviewTab({
       )}
 
       <div>
-        <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted mb-2 font-medium">
+        <div className="flex items-center gap-1.5 ui-micro-label mb-2 font-medium">
           <MessageSquare className="h-3 w-3" /> Recent Activity
         </div>
         <div className="space-y-3">

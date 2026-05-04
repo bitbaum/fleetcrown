@@ -60,7 +60,7 @@ function JobRow({
             {job.name}
           </span>
           {!job.enabled && (
-            <span className="text-[10px] uppercase tracking-wider text-text-muted shrink-0">off</span>
+            <span className="ui-micro-label shrink-0">off</span>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
@@ -172,7 +172,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
             <div key={pid}>
               <div className="flex items-center gap-1.5 px-2 mb-1">
                 <Folder className="h-3 w-3 text-text-muted" />
-                <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">
+                <span className="ui-micro-label font-medium">
                   {group.name}
                 </span>
               </div>
@@ -194,7 +194,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
             <div>
               {projectGroups.size > 0 && (
                 <div className="flex items-center gap-1.5 px-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-text-muted font-medium">
+                  <span className="ui-micro-label font-medium">
                     Global
                   </span>
                 </div>
