@@ -83,13 +83,13 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         >
           {heading}
         </h1>
-        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+        <p className="mt-3 text-base text-white/38">
           {subheading}
         </p>
       </div>
 
       {status === "invalid" && (
-        <p className="text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <p className="text-center text-sm text-white/35">
           <Link href="/sign-in" className="underline hover:text-white/60">Sign in</Link>{" "}
           if you already have an account.
         </p>

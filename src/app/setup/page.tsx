@@ -50,7 +50,7 @@ export default function SetupPage() {
         >
           Set up Cockpit
         </h1>
-        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+        <p className="mt-3 text-base text-white/38">
           Create your admin account to get started.
         </p>
       </div>
@@ -101,7 +101,7 @@ export default function SetupPage() {
         </form>
       </AuthCard>
 
-      <p className="mt-6 text-center text-sm" style={{ color: "rgba(255,255,255,0.18)" }}>
+      <p className="mt-6 text-center text-sm text-white/18">
         Already have an account?{" "}
         <Link href="/sign-in" className="transition-colors hover:text-white/50">
           Sign in
