@@ -102,7 +102,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                   <div className="text-sm font-medium text-text-primary">{goal.title}</div>
                   <button
                     onClick={() => handleUnlink(goal.id)}
-                    className="sm:opacity-0 sm:group-hover:opacity-100 text-text-muted hover:text-status-negative transition-all ml-auto shrink-0"
+                    className="ui-hover-reveal text-text-muted hover:text-status-negative transition-all ml-auto shrink-0"
                     title="Unlink from project"
                   >
                     <X className="h-3 w-3" />

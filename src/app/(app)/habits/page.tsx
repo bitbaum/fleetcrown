@@ -46,9 +46,7 @@ export default async function HabitsPage() {
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-medium text-text-primary">{h.title}</span>
                       {!h.active && (
-                        <span className="rounded-full border border-border-subtle px-2 py-0.5 text-sm text-text-tertiary">
-                          inactive
-                        </span>
+                        <span className="ui-tag ui-tag-neutral">inactive</span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">

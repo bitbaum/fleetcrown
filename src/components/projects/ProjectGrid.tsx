@@ -99,7 +99,7 @@ function ProjectCard({
             .filter(([k]) => !RESERVED.includes(k))
             .slice(0, 2)
             .map(([key, value]) => (
-              <span key={key} className="rounded-full border border-border-default bg-surface-overlay px-2 py-0.5 text-[10px] text-text-tertiary">
+              <span key={key} className="ui-micro-badge rounded-full border-border-default bg-surface-overlay text-text-tertiary">
                 {String(value).slice(0, 30)}
               </span>
             ))}
