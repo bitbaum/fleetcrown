@@ -168,15 +168,20 @@ export function PeopleGrid({
               key={person.id}
               person={person}
               onClick={() => setSelectedId(person.id)}
-              onLogged={(id, at) =>
+              onLogged={(id, at) => {
+                const newHealth = deriveRelationshipHealth(at);
+                const removedByFilter = healthFilter.length > 0 && !healthFilter.includes(newHealth);
                 setPeople((prev) =>
-                  prev.map((p) =>
-                    p.id === id
-                      ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: deriveRelationshipHealth(at) }
-                      : p,
-                  ),
-                )
-              }
+                  removedByFilter
+                    ? prev.filter((p) => p.id !== id)
+                    : prev.map((p) =>
+                        p.id === id
+                          ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: newHealth }
+                          : p,
+                      ),
+                );
+                if (removedByFilter) setTotal((t) => t - 1);
+              }}
             />
           ))}
         </div>
