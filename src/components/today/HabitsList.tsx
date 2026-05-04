@@ -23,6 +23,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
     );
     try {
       await patchJson(`/api/habits/${id}`, { done: !currentDone });
+      router.refresh();
     } catch {
       setHabits((prev) =>
         prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)),
@@ -43,6 +44,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   const removeHabit = async (id: string) => {
     await deleteJson(`/api/habits/${id}`);
     setHabits((prev) => prev.filter((h) => h.id !== id));
+    router.refresh();
   };
 
   const addHabit = async (input: { title: string; frequency: HabitFrequency }): Promise<boolean> => {
