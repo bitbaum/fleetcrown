@@ -26,7 +26,7 @@ export default function SignOutPage() {
         >
           Sign out?
         </h1>
-        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+        <p className="mt-3 text-base text-white/38">
           You&apos;ll need your password to sign back in.
         </p>
       </div>

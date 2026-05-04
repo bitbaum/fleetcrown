@@ -4,7 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AuthShell, AuthCard, AuthInput, AuthSubmitButton, AuthDivider, AuthFooterLink,
+  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthDivider, AuthFooterLink,
 } from "@/components/auth/AuthShell";
 
 function GithubIcon() {
@@ -58,21 +58,14 @@ function SignInForm() {
         >
           Welcome back
         </h1>
-        <p className="mt-3 text-base" style={{ color: "rgba(255,255,255,0.38)" }}>
+        <p className="mt-3 text-base text-white/38">
           Sign in to your Cockpit.
         </p>
       </div>
 
       <AuthCard>
         <form onSubmit={handleLocal} className="space-y-3">
-          <div className="space-y-1.5">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Local password
-            </label>
+          <AuthField label="Local password">
             <AuthInput
               id="password"
               type="password"
@@ -81,7 +74,7 @@ function SignInForm() {
               placeholder="Enter password…"
               autoComplete="current-password"
             />
-          </div>
+          </AuthField>
           {error && <p className="text-sm text-status-negative">{error}</p>}
           <AuthSubmitButton
             loading={loading}
