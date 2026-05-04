@@ -12,12 +12,14 @@ import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
 import { LogConversationButton } from "@/components/today/LogConversationButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
+import { getCurrentUserName } from "@/lib/session";
 
-export default function TodayPage() {
+export default async function TodayPage() {
+  const name = await getCurrentUserName();
   return (
     <div className="app-page max-w-4xl space-y-6">
       <div>
-        <Greeting />
+        <Greeting name={name} />
         <Suspense fallback={null}>
           <div className="mt-2">
             <SummaryBar />

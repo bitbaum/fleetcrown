@@ -12,9 +12,12 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
+      name: string | null;
+      email: string | null;
+      image: string | null;
       username: string | null;
       onboardedAt: Date | null;
-    } & Omit<import("next-auth").DefaultSession["user"], "id">;
+    };
   }
 }
 

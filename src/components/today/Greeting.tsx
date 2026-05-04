@@ -1,17 +1,15 @@
 "use client";
 
-import { DEFAULT_USER_NAME } from "@/lib/constants";
-
-export function Greeting() {
+export function Greeting({ name }: { name: string }) {
   const now = new Date();
   const hour = now.getHours();
 
   let greeting: string;
-  if (hour < 5) greeting = `Good night, ${DEFAULT_USER_NAME}`;
-  else if (hour < 12) greeting = `Good morning, ${DEFAULT_USER_NAME}`;
-  else if (hour < 17) greeting = `Good afternoon, ${DEFAULT_USER_NAME}`;
-  else if (hour < 21) greeting = `Good evening, ${DEFAULT_USER_NAME}`;
-  else greeting = `Good night, ${DEFAULT_USER_NAME}`;
+  if (hour < 5) greeting = `Good night, ${name}`;
+  else if (hour < 12) greeting = `Good morning, ${name}`;
+  else if (hour < 17) greeting = `Good afternoon, ${name}`;
+  else if (hour < 21) greeting = `Good evening, ${name}`;
+  else greeting = `Good night, ${name}`;
 
   return (
     <div>

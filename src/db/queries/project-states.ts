@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, or, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { projectStates, type NewProjectState } from "@/db/schema/project-states";
 
@@ -32,6 +32,8 @@ export async function getProjectState(projectKey: string) {
   return row ?? null;
 }
 
-export async function getAllProjectStates(): Promise<(typeof projectStates.$inferSelect)[]> {
-  return db.select().from(projectStates);
+export async function getProjectStatesByUserId(userId: string): Promise<(typeof projectStates.$inferSelect)[]> {
+  return db.select().from(projectStates).where(
+    or(eq(projectStates.userId, userId), isNull(projectStates.userId)),
+  );
 }

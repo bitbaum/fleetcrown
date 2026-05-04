@@ -5,7 +5,7 @@ import path from "path";
 import { getProjects } from "@/db/queries/projects";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
-import { getAllProjectStates, upsertProjectState } from "@/db/queries/project-states";
+import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
@@ -298,7 +298,7 @@ export async function GET() {
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, 30).catch((): ActivityItem[] => []),
-    getAllProjectStates().catch((): DbProjectState[] => []),
+    getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
     cleanupStaleOrchestrationRuns(userId).catch(() => {}),
   ]);
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
