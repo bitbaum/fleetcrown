@@ -10,7 +10,7 @@ import { JobDetail } from "./JobDetail";
 
 function StatusDot({ status, errors }: { status?: string; errors?: number }) {
   if (!status || status === "never")
-    return <span className="h-2 w-2 rounded-full bg-white/20 shrink-0" title="Never run" />;
+    return <span className="h-2 w-2 rounded-full bg-status-neutral shrink-0" title="Never run" />;
   if (status === "ok" || status === "completed")
     return <span className="ui-dot ui-dot-positive shrink-0" title="OK" />;
   if (errors && errors > 0)

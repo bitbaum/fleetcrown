@@ -38,7 +38,7 @@ export async function GoalsDueCard() {
                   <div className="w-10 h-1 bg-surface-overlay rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
-                        progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-white/25"
+                        progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-status-neutral"
                       }`}
                       style={{ width: `${Math.max(progress, 2)}%` }}
                     />
