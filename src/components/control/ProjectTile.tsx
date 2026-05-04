@@ -16,7 +16,7 @@ type Props = {
 
 export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch }: Props) {
   const { tab, git, session, agentRunning, dir } = project;
-  const tabOpen = zellijTabs.some((t) => t.toLowerCase() === tab.toLowerCase());
+  const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? tab).toLowerCase());
   const healthColor = session?.health ? (HEALTH_COLOR[session.health] ?? "text-text-muted") : null;
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;

@@ -249,7 +249,7 @@ export function ControlPanel() {
                     {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </button>
                   {idleOpen && (
-                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                       {idleProjects.map((project) => (
                         <ProjectTile
                           key={project.tab}

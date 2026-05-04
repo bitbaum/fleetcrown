@@ -50,6 +50,7 @@ export type CurrentPrompt = {
 
 export type ProjectState = {
   tab: string;
+  liveTab: string;
   dir: string;
   session: SessionState | null;
   git: GitState | null;
@@ -371,6 +372,7 @@ export async function GET() {
 
     return ({
     tab,
+    liveTab,
     dir,
     session,
     git: gitMap.get(dir) ?? null,
