@@ -1,4 +1,4 @@
-import { ORCHESTRATION_INTENTS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 type IntentGroup = "primary" | "action" | "more";
 
