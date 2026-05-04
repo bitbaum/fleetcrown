@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
 import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S } from "@/lib/constants/control";
-import type { ControlData, ProjectState } from "@/app/api/control/route";
-import type { FastProjectState } from "@/lib/control-fast-state";
-type Agent = "codex" | "claude";
+import type { ProjectState } from "@/app/api/control/route";
+import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { useControlData } from "@/hooks/use-control-data";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
-import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
@@ -17,7 +16,7 @@ import {
   NewProjectModal,
 } from "./control-panel-helpers";
 
-const ACTIVE_WINDOW_S = 300; // 5 min — project shows as full card if recently active
+const ACTIVE_WINDOW_S = 300;
 
 function isActiveProject(p: ProjectState, nowS: number): boolean {
   if (p.agentRunning) return true;
@@ -29,16 +28,15 @@ function isActiveProject(p: ProjectState, nowS: number): boolean {
 }
 
 export function ControlPanel() {
-  const [data, setData] = useState<ControlData | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [agent, setAgent] = useState<Agent | "">("");
-  const [draftModels, setDraftModels] = useState<Partial<Record<Agent, string>>>({});
-  const [savingAgent, setSavingAgent] = useState(false);
-  const [agentDirty, setAgentDirty] = useState(false);
-  const [lastTabResults, setLastTabResults] = useState<Array<{ status: string; tab?: string; reason?: string; error?: string }>>([]);
-  const [lastTabResultsAt, setLastTabResultsAt] = useState<number | null>(null);
+  const {
+    data, lastUpdated, refreshing, error, setError,
+    selectedAgent, model, savedConfig,
+    switchableRegistry, activeDefinition, selectedDefinition,
+    hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
+    refresh, inject, launchProject, runWithBrain, runCustomPrompt,
+    saveAgent, handleAgentSelect, handleModelChange,
+  } = useControlData();
+
   const [brainOpen, setBrainOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
@@ -49,130 +47,6 @@ export function ControlPanel() {
   const [newGitUrl, setNewGitUrl] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [createError, setCreateError] = useState("");
-  const inFlight = useRef(false);
-
-  const registry = data?.agentRegistry.agents ?? [];
-  const switchableRegistry = registry.filter((entry) => entry.switchable);
-  const defaultAgent = data?.agentRegistry.defaultAgent ?? switchableRegistry[0]?.id ?? "codex";
-  const selectedAgent = (agent || data?.agentConfig.agent || defaultAgent) as Agent;
-  const selectedDefinition = switchableRegistry.find((entry) => entry.id === selectedAgent) ?? null;
-  const activeDefinition = switchableRegistry.find((entry) => entry.id === data?.agentConfig.agent) ?? null;
-  const model = draftModels[selectedAgent] ?? data?.agentConfig.model ?? selectedDefinition?.defaultModel ?? "";
-  const savedConfig = data?.agentConfig ?? null;
-  const hasAgentChange = savedConfig ? selectedAgent !== savedConfig.agent : false;
-  const hasModelChange = savedConfig ? model.trim() !== savedConfig.model : false;
-  const hasPendingChange = hasAgentChange || hasModelChange;
-
-  const refresh = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    try {
-      const res = await fetch("/api/control");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const payload = await res.json() as ControlData;
-      setData(payload);
-      if (!agentDirty) {
-        setAgent(payload.agentConfig.agent);
-        setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
-      }
-      setLastUpdated(Date.now());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      if (manual) setRefreshing(false);
-    }
-  }, [agentDirty]);
-
-  // Full data poll — every 30s for slow data (git, DB, profiles)
-  useEffect(() => {
-    const poll = async () => {
-      if (document.hidden || inFlight.current) return;
-      inFlight.current = true;
-      await refresh();
-      inFlight.current = false;
-    };
-
-    poll();
-
-    const onVisibilityChange = () => { if (!document.hidden) poll(); };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    const id = setInterval(poll, 30_000);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [refresh]);
-
-  // SSE fast-state subscription — merges agent/session/prompt state in ~2s
-  const mergeProjectPatches = useCallback((patches: FastProjectState[]) => {
-    setData((prev) => {
-      if (!prev) return prev;
-      const updated = prev.projects.map((p) => {
-        const patch = patches.find((pp) => pp.tab === p.tab);
-        if (!patch) return p;
-        return {
-          ...p,
-          agentRunning: patch.agentRunning,
-          session: patch.session,
-          currentPrompt: patch.currentPrompt,
-          readyAt: patch.readyAt,
-          closingAt: patch.closingAt,
-          closedAt: patch.closedAt,
-        };
-      });
-      return { ...prev, projects: updated };
-    });
-    setLastUpdated(Date.now());
-  }, []);
-
-  useEffect(() => {
-    let es: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const connect = () => {
-      es = new EventSource("/api/control/stream");
-      es.addEventListener("projects-update", (e: MessageEvent) => {
-        try {
-          const payload = JSON.parse(e.data) as { projects: FastProjectState[] };
-          mergeProjectPatches(payload.projects);
-        } catch { /* ignore malformed events */ }
-      });
-      es.onerror = () => {
-        es?.close();
-        reconnectTimer = setTimeout(connect, 5_000);
-      };
-    };
-
-    connect();
-
-    return () => {
-      es?.close();
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-    };
-  }, [mergeProjectPatches]);
-
-  const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
-    const res = await fetch("/api/inject", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab, promptKey, customPrompt }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? `HTTP ${res.status}`);
-    }
-    setTimeout(refresh, 500);
-  };
-
-  const launchProject = async (tab: string, dir: string) => {
-    await fetch("/api/agent/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab, dir, agent: selectedAgent }),
-    });
-    setTimeout(() => refresh(true), 1500);
-  };
 
   const createAndLaunch = async () => {
     if (!newName.trim()) return;
@@ -204,79 +78,6 @@ export function ControlPanel() {
       setCreatingProject(false);
     }
   };
-
-  const runWithBrain = async (project: ControlData["projects"][number], intent: OrchestrationTaskIntentId) => {
-    setError(null);
-    const res = await fetch("/api/orchestration/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectKey: project.tab,
-        projectPath: project.dir,
-        adapter: data?.agentConfig.agent ?? "claude",
-        intent,
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-    await refresh(true);
-  };
-
-  const runCustomPrompt = async (project: ProjectState, prompt: string, ag: string) => {
-    if (!project.agentRunning) {
-      await fetch("/api/agent/launch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tab: project.tab, dir: project.dir, agent: ag }),
-      });
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-    const res = await fetch("/api/orchestration/run", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        projectKey: project.tab,
-        projectPath: project.dir,
-        adapter: ag,
-        intent: "custom",
-        customInstructions: prompt,
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-    await refresh(true);
-  };
-
-  const saveAgent = async (applyToOpenTabs: boolean) => {
-    setSavingAgent(true);
-    try {
-      const res = await fetch("/api/control/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent: selectedAgent, model, applyToOpenTabs }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-      setAgentDirty(false);
-      setLastTabResults(Array.isArray(body.tabResults) ? body.tabResults : []);
-      setLastTabResultsAt(Array.isArray(body.tabResults) ? Date.now() : null);
-      setDraftModels((current) => ({ ...current, [selectedAgent]: model }));
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update brain");
-    } finally {
-      setSavingAgent(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!lastTabResultsAt) return;
-    const id = setTimeout(() => {
-      setLastTabResults([]);
-      setLastTabResultsAt(null);
-    }, 30_000);
-    return () => clearTimeout(id);
-  }, [lastTabResultsAt]);
 
   const nowS = Math.floor(Date.now() / 1000);
   const running = data?.projects.filter((p) => p.agentRunning).length ?? 0;
@@ -351,19 +152,8 @@ export function ControlPanel() {
           selectedDefinition={selectedDefinition}
           lastTabResults={lastTabResults}
           lastTabResultsAt={lastTabResultsAt}
-          onAgentSelect={(agentId, defaultModel) => {
-            const next = agentId as Agent;
-            setAgentDirty(true);
-            setAgent(next);
-            setDraftModels((current) => ({
-              ...current,
-              [next]: current[next] ?? defaultModel ?? "",
-            }));
-          }}
-          onModelChange={(value) => {
-            setAgentDirty(true);
-            setDraftModels((current) => ({ ...current, [selectedAgent]: value }));
-          }}
+          onAgentSelect={handleAgentSelect}
+          onModelChange={handleModelChange}
           onSave={saveAgent}
         />
       </div>
