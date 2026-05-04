@@ -19,9 +19,11 @@ import { FIELD_INPUT_CLASS_COMPACT, ICON_BUTTON_CLASS, INLINE_SAVE_CLASS } from 
 export function PersonDetail({
   personId,
   onClose,
+  onInteractionLogged,
 }: {
   personId: string;
   onClose: () => void;
+  onInteractionLogged?: (personId: string, at: Date) => void;
 }) {
   const router = useRouter();
   const [data, setData] = useState<PersonDetailData | null>(null);
@@ -217,7 +219,14 @@ export function PersonDetail({
             </Section>
           )}
 
-          <InteractionsSection personId={data.id} interactions={interactions} onAdd={(ix) => setInteractions((prev) => [ix, ...prev])} />
+          <InteractionsSection
+            personId={data.id}
+            interactions={interactions}
+            onAdd={(ix) => {
+              setInteractions((prev) => [ix, ...prev]);
+              onInteractionLogged?.(personId, new Date(ix.occurredAt));
+            }}
+          />
 
           {data.relations.length > 0 && (
             <Section title="Connections">

@@ -90,6 +90,21 @@ export function PeopleGrid({
     setSort(SORT_ORDER[(idx + 1) % SORT_ORDER.length]);
   }
 
+  function handleLogged(id: string, at: Date) {
+    const newHealth = deriveRelationshipHealth(at);
+    const removedByFilter = healthFilter.length > 0 && !healthFilter.includes(newHealth);
+    setPeople((prev) =>
+      removedByFilter
+        ? prev.filter((p) => p.id !== id)
+        : prev.map((p) =>
+            p.id === id
+              ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: newHealth }
+              : p,
+          ),
+    );
+    if (removedByFilter) setTotal((t) => t - 1);
+  }
+
   return (
     <>
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
@@ -168,20 +183,7 @@ export function PeopleGrid({
               key={person.id}
               person={person}
               onClick={() => setSelectedId(person.id)}
-              onLogged={(id, at) => {
-                const newHealth = deriveRelationshipHealth(at);
-                const removedByFilter = healthFilter.length > 0 && !healthFilter.includes(newHealth);
-                setPeople((prev) =>
-                  removedByFilter
-                    ? prev.filter((p) => p.id !== id)
-                    : prev.map((p) =>
-                        p.id === id
-                          ? { ...p, lastInteraction: at, interactionCount: p.interactionCount + 1, health: newHealth }
-                          : p,
-                      ),
-                );
-                if (removedByFilter) setTotal((t) => t - 1);
-              }}
+              onLogged={handleLogged}
             />
           ))}
         </div>
@@ -198,7 +200,11 @@ export function PeopleGrid({
       )}
 
       {selectedId && (
-        <PersonDetail personId={selectedId} onClose={() => setSelectedId(null)} />
+        <PersonDetail
+          personId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onInteractionLogged={handleLogged}
+        />
       )}
     </>
   );
