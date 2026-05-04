@@ -97,20 +97,7 @@ function SignInForm() {
           type="button"
           onClick={handleGithub}
           disabled={githubLoading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium transition-all disabled:opacity-40"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.10)",
-            color: "rgba(255,255,255,0.65)",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.90)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)";
-            e.currentTarget.style.color = "rgba(255,255,255,0.65)";
-          }}
+          className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium bg-white/[0.06] border border-white/[0.10] text-white/65 hover:border-white/[0.22] hover:text-white/90 transition-all disabled:opacity-40"
         >
           <GithubIcon />
           {githubLoading ? "Redirecting…" : "Continue with GitHub"}
