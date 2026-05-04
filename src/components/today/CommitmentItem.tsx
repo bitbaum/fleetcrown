@@ -121,7 +121,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
           <div className="text-xs md:text-sm text-status-warning/70">{financialImpact}</div>
         )}
       </div>
-      <div className="flex gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      <div className="flex gap-0.5 shrink-0 ui-hover-reveal transition-opacity">
         <button
           onClick={() => setEditing(true)}
           title="Edit commitment"

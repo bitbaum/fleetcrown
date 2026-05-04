@@ -61,7 +61,7 @@ export function ChannelsSection({
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
-            className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ui-btn-icon"
+            className="shrink-0 ui-hover-reveal ui-btn-icon"
           >
             {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <X className="h-2.5 w-2.5" />}
           </button>

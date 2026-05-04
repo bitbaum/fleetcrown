@@ -116,7 +116,7 @@ export function DateInput({
         </button>
         <button
           onClick={() => commit("")}
-          className="text-text-muted hover:text-text-secondary transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+          className="text-text-muted hover:text-text-secondary transition-colors ui-hover-reveal"
           title="Clear deadline"
         >
           <X className="h-2.5 w-2.5" />
@@ -128,7 +128,7 @@ export function DateInput({
   return (
     <button
       onClick={() => ie.start("")}
-      className="text-xs text-text-muted hover:text-text-secondary transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+      className="text-xs text-text-muted hover:text-text-secondary transition-colors ui-hover-reveal"
       title="Set deadline"
     >
       Set deadline

@@ -161,7 +161,7 @@ export function EventCard({
         )}
       </div>
 
-      <div className="shrink-0 flex items-center gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
         {onEdit && !dimmed && (
           <button
             onClick={openEdit}

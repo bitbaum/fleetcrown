@@ -110,7 +110,7 @@ export function DetailAttrs({
               <span className="truncate text-right text-text-primary">{value}</span>
               <button
                 onClick={() => { setEditValue(value); setEditingKey(key); }}
-                className="shrink-0 sm:opacity-0 sm:group-hover:opacity-100 ui-btn-icon"
+                className="shrink-0 ui-hover-reveal ui-btn-icon"
               >
                 <Pencil className="h-2.5 w-2.5" />
               </button>

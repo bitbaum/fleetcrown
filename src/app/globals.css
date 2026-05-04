@@ -372,6 +372,9 @@
   .ui-btn-ready-more {
     @apply rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
+  /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
+  .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
+
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {
     @apply rounded-2xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
