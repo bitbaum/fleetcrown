@@ -83,7 +83,7 @@ export function JobDetail({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4 text-status-positive shrink-0" />
-              <h2 className="text-base font-semibold truncate">{job.name}</h2>
+              <h2 className="text-base font-semibold truncate" title={job.name}>{job.name}</h2>
             </div>
             <div className="text-xs text-text-tertiary mt-0.5">
               {humanSchedule(job.schedule.expr, job.schedule.tz)}
