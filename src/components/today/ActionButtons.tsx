@@ -16,17 +16,32 @@ export function ActionButtons({
 }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<DoneStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function onApprove() {
     setBusy(true);
-    await handleApprove(actionId);
-    setDone(ACTION_STATUS.APPROVED);
+    setError(null);
+    try {
+      await handleApprove(actionId);
+      setDone(ACTION_STATUS.APPROVED);
+    } catch {
+      setError("Failed — try again");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onReject() {
     setBusy(true);
-    await handleReject(actionId);
-    setDone(ACTION_STATUS.REJECTED);
+    setError(null);
+    try {
+      await handleReject(actionId);
+      setDone(ACTION_STATUS.REJECTED);
+    } catch {
+      setError("Failed — try again");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (done) {
@@ -39,7 +54,8 @@ export function ActionButtons({
 
   if (compact) {
     return (
-      <div className="flex gap-1 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
+        {error && <span className="text-[10px] text-status-negative mr-1">{error}</span>}
         <button
           onClick={onApprove}
           disabled={busy}
@@ -61,23 +77,26 @@ export function ActionButtons({
   }
 
   return (
-    <div className="flex gap-2 mt-3">
-      <button
-        onClick={onApprove}
-        disabled={busy}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md ui-btn-confirm transition-colors disabled:opacity-50"
-      >
-        <Check className="h-3 w-3" />
-        Done
-      </button>
-      <button
-        onClick={onReject}
-        disabled={busy}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border-subtle hover:bg-surface-raised text-text-secondary transition-colors disabled:opacity-50"
-      >
-        <X className="h-3 w-3" />
-        Skip
-      </button>
+    <div className="flex flex-col gap-1 mt-3">
+      {error && <p className="text-xs text-status-negative">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          onClick={onApprove}
+          disabled={busy}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md ui-btn-confirm transition-colors disabled:opacity-50"
+        >
+          <Check className="h-3 w-3" />
+          Done
+        </button>
+        <button
+          onClick={onReject}
+          disabled={busy}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-border-subtle hover:bg-surface-raised text-text-secondary transition-colors disabled:opacity-50"
+        >
+          <X className="h-3 w-3" />
+          Skip
+        </button>
+      </div>
     </div>
   );
 }
