@@ -22,7 +22,8 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
       ),
     );
     try {
-      await patchJson(`/api/habits/${id}`, { done: !currentDone });
+      const res = await patchJson(`/api/habits/${id}`, { done: !currentDone });
+      if (!res.ok) throw new Error("Failed");
       router.refresh();
     } catch {
       setHabits((prev) =>
@@ -42,7 +43,8 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   };
 
   const removeHabit = async (id: string) => {
-    await deleteJson(`/api/habits/${id}`);
+    const res = await deleteJson(`/api/habits/${id}`);
+    if (!res.ok) return;
     setHabits((prev) => prev.filter((h) => h.id !== id));
     router.refresh();
   };

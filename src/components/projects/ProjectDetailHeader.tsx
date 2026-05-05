@@ -62,7 +62,9 @@ export function ProjectDetailHeader({
 
   const saveDescription = async (next: string) => {
     const res = await patchJson(`/api/projects/${projectId}`, { description: next });
-    if ((await res.json()).ok) setDescOverride(next || null);
+    const json = await res.json() as { ok?: boolean; error?: string };
+    if (!json.ok) throw new Error(json.error ?? "Failed to save");
+    setDescOverride(next || null);
   };
 
   const saveStatus = async (next: string) => {

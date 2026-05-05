@@ -23,6 +23,7 @@ export function EventCard({
   dimmed?: boolean;
 }) {
   const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -72,8 +73,20 @@ export function EventCard({
 
   const handleArchive = async () => {
     setArchiving(true);
-    await patchJson(`/api/events/${event.id}`, { status: EVENT_STATUS.ARCHIVED });
-    onArchive?.(event.id);
+    setArchiveError(null);
+    try {
+      const res = await patchJson(`/api/events/${event.id}`, { status: EVENT_STATUS.ARCHIVED });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setArchiveError(data.error ?? "Failed to archive");
+        return;
+      }
+      onArchive?.(event.id);
+    } catch {
+      setArchiveError("Network error — try again");
+    } finally {
+      setArchiving(false);
+    }
   };
 
   if (editing) {
@@ -129,76 +142,81 @@ export function EventCard({
   }
 
   return (
-    <div className={`group flex items-start gap-3 py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
-      <div className="flex-1 min-w-0 space-y-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-wide">
-            {event.type}
-          </span>
-          {event.category && (
-            <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-wide">
-              {event.category}
+    <div className={`group py-3 border-b border-border-subtle last:border-0 ${dimmed ? "opacity-50" : ""}`}>
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-wide">
+              {event.type}
             </span>
-          )}
-          {deadline && (
-            <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
-              {deadlineText}
-              <span className="text-text-tertiary ml-1">· {format(deadline, "d MMM yyyy")}</span>
-            </span>
+            {event.category && (
+              <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-wide">
+                {event.category}
+              </span>
+            )}
+            {deadline && (
+              <span className={`text-[10px] ml-auto shrink-0 ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
+                {deadlineText}
+                <span className="text-text-tertiary ml-1">· {format(deadline, "d MMM yyyy")}</span>
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-start gap-1.5">
+            <span className="text-sm text-text-primary leading-snug">{event.name}</span>
+            {event.url && (
+              <a
+                href={event.url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 text-text-muted hover:text-text-secondary transition-colors mt-0.5"
+                title={event.url}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+
+          {event.description && (
+            <p className="text-xs text-text-tertiary leading-relaxed line-clamp-2">{event.description}</p>
           )}
         </div>
 
-        <div className="flex items-start gap-1.5">
-          <span className="text-sm text-text-primary leading-snug">{event.name}</span>
-          {event.url && (
-            <a
-              href={event.url}
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0 text-text-muted hover:text-text-secondary transition-colors mt-0.5"
-              title={event.url}
+        <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
+          {onEdit && !dimmed && (
+            <button
+              onClick={openEdit}
+              title="Edit event"
+              className="ui-btn-row-action"
             >
-              <ExternalLink className="h-3 w-3" />
-            </a>
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
           )}
+          {onArchive && (
+            <button
+              onClick={handleArchive}
+              disabled={archiving}
+              title="Archive event"
+              className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
+            >
+              {archiving ? <Loader2 className="ui-spinner-sm" /> : <Archive className="h-3.5 w-3.5" />}
+            </button>
+          )}
+          <DeleteButton
+            onDelete={async () => {
+              const res = await deleteJson(`/api/events/${event.id}`);
+              if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+              onDelete(event.id);
+            }}
+            label=""
+            triggerTitle="Delete event"
+            triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
+          />
         </div>
-
-        {event.description && (
-          <p className="text-xs text-text-tertiary leading-relaxed line-clamp-2">{event.description}</p>
-        )}
       </div>
-
-      <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
-        {onEdit && !dimmed && (
-          <button
-            onClick={openEdit}
-            title="Edit event"
-            className="ui-btn-row-action"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-        )}
-        {onArchive && (
-          <button
-            onClick={handleArchive}
-            disabled={archiving}
-            title="Archive event"
-            className="p-1.5 rounded text-text-muted hover:text-status-warning hover:bg-surface-raised transition-colors disabled:opacity-40"
-          >
-            {archiving ? <Loader2 className="ui-spinner-sm" /> : <Archive className="h-3.5 w-3.5" />}
-          </button>
-        )}
-        <DeleteButton
-          onDelete={async () => {
-            const res = await deleteJson(`/api/events/${event.id}`);
-            if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
-            onDelete(event.id);
-          }}
-          label=""
-          triggerTitle="Delete event"
-          triggerClassName="p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
-        />
-      </div>
+      {archiveError && (
+        <p className="mt-1 text-[11px] text-status-negative">{archiveError}</p>
+      )}
     </div>
   );
 }
