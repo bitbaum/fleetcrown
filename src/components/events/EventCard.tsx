@@ -190,7 +190,8 @@ export function EventCard({
         )}
         <DeleteButton
           onDelete={async () => {
-            await deleteJson(`/api/events/${event.id}`);
+            const res = await deleteJson(`/api/events/${event.id}`);
+            if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
             onDelete(event.id);
           }}
           label=""

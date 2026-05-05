@@ -114,7 +114,8 @@ export function ProjectDetailHeader({
           {data && (
             <DeleteButton
               onDelete={async () => {
-                await deleteJson(`/api/projects/${projectId}`);
+                const res = await deleteJson(`/api/projects/${projectId}`);
+                if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
                 onDeleteSuccess();
                 router.refresh();
               }}

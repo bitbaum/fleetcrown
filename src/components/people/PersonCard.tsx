@@ -32,16 +32,18 @@ export function PersonCard({
   const [quickSaving, setQuickSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [quickDone, setQuickDone] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
 
   async function submitQuick(e: React.MouseEvent) {
     e.stopPropagation();
     setQuickSaving(true);
     const occurredAt = new Date();
     try {
-      await postJson(`/api/people/${person.id}/interactions`, {
+      const res = await postJson(`/api/people/${person.id}/interactions`, {
         channel: quickChannel,
         direction: INTERACTION_DIRECTION.OUTBOUND,
       });
+      if (!res.ok) return;
       setQuickDone(true);
       onLogged?.(person.id, occurredAt);
       setTimeout(() => setQuickDone(false), 1500);
@@ -53,13 +55,18 @@ export function PersonCard({
   async function submitLog(e: React.MouseEvent | React.KeyboardEvent) {
     e.stopPropagation();
     setSaving(true);
+    setLogError(null);
     const occurredAt = new Date();
     try {
-      await postJson(`/api/people/${person.id}/interactions`, {
+      const res = await postJson(`/api/people/${person.id}/interactions`, {
         channel,
         direction,
         summary: summary.trim() || undefined,
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to log");
+      }
       setDone(true);
       setSummary("");
       onLogged?.(person.id, occurredAt);
@@ -67,6 +74,8 @@ export function PersonCard({
         setDone(false);
         setLogOpen(false);
       }, 1200);
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -82,6 +91,7 @@ export function PersonCard({
     setLogOpen(false);
     setSummary("");
     setDone(false);
+    setLogError(null);
   }
 
   return (
@@ -205,6 +215,7 @@ export function PersonCard({
                 autoFocus
                 className="w-full ui-input-compact"
               />
+              {logError && <p className="text-xs text-status-negative">{logError}</p>}
               <div className="flex items-center gap-2">
                 <button
                   onClick={submitLog}

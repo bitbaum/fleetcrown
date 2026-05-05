@@ -20,7 +20,9 @@ export function DetailAttrs({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
@@ -32,25 +34,39 @@ export function DetailAttrs({
   const saveEdit = async (key: string) => {
     if (!editValue.trim() || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      await setAttr(`/api/people/${personId}`, key, editValue.trim());
+      const res = await setAttr(`/api/people/${personId}`, key, editValue.trim());
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
       onUpdate({ ...attrs, [key]: editValue.trim() });
+      setEditingKey(null);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
-      setEditingKey(null);
     }
   };
 
   const saveNew = async () => {
     if (!newKey.trim() || !newValue.trim() || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      await setAttr(`/api/people/${personId}`, newKey.trim(), newValue.trim());
+      const res = await setAttr(`/api/people/${personId}`, newKey.trim(), newValue.trim());
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
       const normalizedKey = newKey.trim().toLowerCase().replace(/\s+/g, "_");
       onUpdate({ ...attrs, [normalizedKey]: newValue.trim() });
       setNewKey("");
       setNewValue("");
       setAddingNew(false);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
     }
@@ -58,12 +74,19 @@ export function DetailAttrs({
 
   const deleteAttr = async (key: string) => {
     setDeletingKey(key);
+    setDeleteError(null);
     try {
-      await removeAttr(`/api/people/${personId}`, key);
+      const res = await removeAttr(`/api/people/${personId}`, key);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(data.error ?? "Failed to delete");
+      }
       const next = { ...attrs };
       delete next[key];
       onUpdate(next);
       setEditingKey(null);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setDeletingKey(null);
     }
@@ -75,35 +98,39 @@ export function DetailAttrs({
         <div key={key} className="group flex justify-between gap-3 ui-list-row">
           <span className="shrink-0 text-text-secondary">{formatKey(key)}</span>
           {editingKey === key ? (
-            <div className="flex flex-1 items-center justify-end gap-1">
-              <input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveEdit(key);
-                  if (e.key === "Escape") setEditingKey(null);
-                }}
-                autoFocus
-                className="min-w-0 flex-1 rounded-lg border border-border-default bg-surface-overlay px-2 py-1 text-right text-xs text-text-primary outline-none transition-colors focus:border-accent-primary"
-              />
-              <button
-                onClick={() => saveEdit(key)}
-                disabled={saving}
-                className="ui-btn-icon-accent p-1"
-              >
-                {saving ? <Loader2 className="ui-spinner-2xs" /> : <Save className="h-2.5 w-2.5" />}
-              </button>
-              <button onClick={() => setEditingKey(null)} className="shrink-0 ui-btn-icon">
-                <X className="h-2.5 w-2.5" />
-              </button>
-              <button
-                onClick={() => deleteAttr(key)}
-                disabled={deletingKey === key}
-                className="shrink-0 ui-btn-icon hover:text-status-negative"
-                title="Delete attribute"
-              >
-                {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <Trash2 className="h-2.5 w-2.5" />}
-              </button>
+            <div className="flex flex-1 flex-col items-end gap-1">
+              <div className="flex w-full items-center justify-end gap-1">
+                <input
+                  value={editValue}
+                  onChange={(e) => { setEditValue(e.target.value); setSaveError(null); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit(key);
+                    if (e.key === "Escape") { setEditingKey(null); setSaveError(null); }
+                  }}
+                  autoFocus
+                  className="min-w-0 flex-1 rounded-lg border border-border-default bg-surface-overlay px-2 py-1 text-right text-xs text-text-primary outline-none transition-colors focus:border-accent-primary"
+                />
+                <button
+                  onClick={() => saveEdit(key)}
+                  disabled={saving}
+                  className="ui-btn-icon-accent p-1"
+                >
+                  {saving ? <Loader2 className="ui-spinner-2xs" /> : <Save className="h-2.5 w-2.5" />}
+                </button>
+                <button onClick={() => { setEditingKey(null); setSaveError(null); }} className="shrink-0 ui-btn-icon">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  onClick={() => deleteAttr(key)}
+                  disabled={deletingKey === key}
+                  className="shrink-0 ui-btn-icon hover:text-status-negative"
+                  title="Delete attribute"
+                >
+                  {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <Trash2 className="h-2.5 w-2.5" />}
+                </button>
+              </div>
+              {saveError && <p className="text-[10px] text-status-negative">{saveError}</p>}
+              {deleteError && <p className="text-[10px] text-status-negative">{deleteError}</p>}
             </div>
           ) : (
             <div className="flex min-w-0 items-center gap-1">
@@ -122,34 +149,37 @@ export function DetailAttrs({
         <EmptyState>No details yet</EmptyState>
       )}
       {addingNew ? (
-        <div className="flex items-center gap-1.5 pt-0.5">
-          <input
-            value={newKey}
-            onChange={(e) => setNewKey(e.target.value)}
-            placeholder="key"
-            className="w-20 ui-input-tight"
-          />
-          <input
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-            placeholder="value"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveNew();
-              if (e.key === "Escape") { setAddingNew(false); setNewKey(""); setNewValue(""); }
-            }}
-            autoFocus
-            className="flex-1 ui-input-tight"
-          />
-          <button
-            onClick={saveNew}
-            disabled={!newKey.trim() || !newValue.trim() || saving}
-            className="ui-btn-icon-accent p-1.5"
-          >
-            {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
-          </button>
-          <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); }} className="ui-btn-icon">
-            <X className="h-3 w-3" />
-          </button>
+        <div className="space-y-1 pt-0.5">
+          <div className="flex items-center gap-1.5">
+            <input
+              value={newKey}
+              onChange={(e) => { setNewKey(e.target.value); setSaveError(null); }}
+              placeholder="key"
+              className="w-20 ui-input-tight"
+            />
+            <input
+              value={newValue}
+              onChange={(e) => { setNewValue(e.target.value); setSaveError(null); }}
+              placeholder="value"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveNew();
+                if (e.key === "Escape") { setAddingNew(false); setNewKey(""); setNewValue(""); setSaveError(null); }
+              }}
+              autoFocus
+              className="flex-1 ui-input-tight"
+            />
+            <button
+              onClick={saveNew}
+              disabled={!newKey.trim() || !newValue.trim() || saving}
+              className="ui-btn-icon-accent p-1.5"
+            >
+              {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
+            </button>
+            <button onClick={() => { setAddingNew(false); setNewKey(""); setNewValue(""); setSaveError(null); }} className="ui-btn-icon">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
         </div>
       ) : (
         <button

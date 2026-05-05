@@ -139,7 +139,8 @@ export function PersonDetail({
           {data && (
             <DeleteButton
               onDelete={async () => {
-                await deleteJson(`/api/people/${personId}`);
+                const res = await deleteJson(`/api/people/${personId}`);
+                if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
                 onDeleted?.(personId);
                 onClose();
               }}

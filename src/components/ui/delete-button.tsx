@@ -20,34 +20,41 @@ export function DeleteButton({
 }) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     setDeleting(true);
+    setDeleteError(null);
     try {
       await onDelete();
+      setConfirming(false);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Failed to delete");
     } finally {
       setDeleting(false);
-      setConfirming(false);
     }
   };
 
   if (confirming) {
     return (
-      <div className="flex items-center gap-1 shrink-0">
-        {label && <span className="text-xs text-text-tertiary">{label}</span>}
-        <button
-          onClick={handleConfirm}
-          disabled={deleting}
-          className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
-        >
-          {deleting ? <Loader2 className="ui-spinner-xs" /> : "Yes"}
-        </button>
-        <button
-          onClick={() => setConfirming(false)}
-          className="ui-btn-text-cancel"
-        >
-          No
-        </button>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <div className="flex items-center gap-1">
+          {label && <span className="text-xs text-text-tertiary">{label}</span>}
+          <button
+            onClick={handleConfirm}
+            disabled={deleting}
+            className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50"
+          >
+            {deleting ? <Loader2 className="ui-spinner-xs" /> : "Yes"}
+          </button>
+          <button
+            onClick={() => { setConfirming(false); setDeleteError(null); }}
+            className="ui-btn-text-cancel"
+          >
+            No
+          </button>
+        </div>
+        {deleteError && <p className="text-[10px] text-status-negative">{deleteError}</p>}
       </div>
     );
   }
