@@ -34,3 +34,8 @@ export function getIntentLabel(id: string): string {
   return entry?.label ?? id.replace(/_/g, " ");
 }
 
+export function getAdapterLabel(adapter: string): string {
+  if (adapter === "openclaw") return "OpenClaw";
+  return adapter.charAt(0).toUpperCase() + adapter.slice(1);
+}
+

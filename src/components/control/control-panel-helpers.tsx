@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown } from "lucide-react";
-import { getIntentLabel } from "@/config/control-intents";
+import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { Modal } from "@/components/ui/modal";
@@ -91,7 +91,7 @@ export function BrainConfigPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-accent-text" />
-          <span className="text-text-primary font-medium">{activeDefinition?.label ?? selectedAgent}</span>
+          <span className="text-text-primary font-medium">{activeDefinition?.label ?? getAdapterLabel(selectedAgent)}</span>
           <span className="text-text-muted">·</span>
           <span className="text-text-secondary text-sm">{savedConfig?.model ?? model}</span>
         </div>
@@ -200,7 +200,7 @@ export function BrainConfigPanel({
           <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
             {savedConfig && (
               <span className="rounded-full border border-border-subtle bg-surface-base px-3 py-1.5">
-                Saved: <span className="text-text-primary">{savedConfig.agent}</span> · {savedConfig.model}
+                Saved: <span className="text-text-primary">{getAdapterLabel(savedConfig.agent)}</span> · {savedConfig.model}
               </span>
             )}
             {selectedDefinition?.defaultModel && (
