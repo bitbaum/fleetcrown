@@ -9,7 +9,11 @@ export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string
 
   async function onClick() {
     setBusy(true);
-    await handleFulfillCommitment(commitmentId);
+    try {
+      await handleFulfillCommitment(commitmentId);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (

@@ -9,7 +9,11 @@ export function DismissAlertButton({ alertId }: { alertId: string }) {
 
   async function onClick() {
     setBusy(true);
-    await handleDismissAlert(alertId);
+    try {
+      await handleDismissAlert(alertId);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
