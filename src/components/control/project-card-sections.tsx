@@ -142,21 +142,12 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
   return (
-    <div className="space-y-2 ui-card-section">
+    <div className="space-y-1 ui-card-section">
       {session.next && (
-        <p className="text-base text-text-primary leading-snug">
-          <span className="mr-2 ui-kicker">next</span>{session.next}
-        </p>
+        <p className="text-sm text-text-primary leading-snug">{session.next}</p>
       )}
       {session.done && (
-        <p className="text-sm text-text-secondary">
-          <span className="mr-2 ui-kicker">done</span>{session.done}
-        </p>
-      )}
-      {(session.tests || session.todos) && (
-        <p className="text-xs text-text-tertiary">
-          {[session.tests, session.todos].filter(Boolean).join(" · ")}
-        </p>
+        <p className="text-xs text-text-tertiary leading-snug">{session.done}</p>
       )}
     </div>
   );

@@ -51,9 +51,6 @@ export function ClosedBanner({
               <p className="text-base text-text-secondary leading-relaxed">{session.next}</p>
             </div>
           )}
-          {session.tests && (
-            <p className="text-sm text-text-tertiary">{session.tests}</p>
-          )}
         </div>
       )}
 
@@ -195,11 +192,6 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
       {run.summary?.next && (
         <p className="text-sm text-text-primary leading-snug">
           <span className="mr-1.5 ui-kicker">next</span>{run.summary.next}
-        </p>
-      )}
-      {(run.summary?.tests || run.summary?.todos || run.summary?.health) && (
-        <p className="text-xs text-text-tertiary">
-          {[run.summary.tests, run.summary.todos, run.summary.health].filter(Boolean).join(" · ")}
         </p>
       )}
       {!run.summary && run.payload?.resultText && (
