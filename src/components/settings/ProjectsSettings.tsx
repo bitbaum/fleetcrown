@@ -41,12 +41,13 @@ export function ProjectsSettings({ projects: initial }: Props) {
   };
 
   const remove = async (id: string) => {
-    try {
-      await deleteJson(`/api/user-projects/${id}`);
-      setProjects((p) => p.filter((x) => x.id !== id));
-    } catch {
-      // network error — leave list unchanged
+    const res = await deleteJson(`/api/user-projects/${id}`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      setError(body.error ?? "Failed to remove project");
+      return;
     }
+    setProjects((p) => p.filter((x) => x.id !== id));
   };
 
   return (
@@ -96,6 +97,8 @@ export function ProjectsSettings({ projects: initial }: Props) {
           </div>
         </div>
       )}
+
+      {error && !adding && <p className="text-sm text-status-negative">{error}</p>}
 
       {projects.length === 0 ? (
         <p className="text-sm text-text-secondary">No projects yet.</p>

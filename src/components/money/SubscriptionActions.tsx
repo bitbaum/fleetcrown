@@ -59,7 +59,8 @@ export function SubscriptionActions({
   const isOneTime = frequency === FREQUENCY.ONE_TIME;
 
   async function onDeleteRecord() {
-    await deleteJson(`/api/subscriptions/${subId}`);
+    const res = await deleteJson(`/api/subscriptions/${subId}`);
+    if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
     setDeleted(true);
     router.refresh();
   }

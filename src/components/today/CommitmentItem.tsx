@@ -131,7 +131,11 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         </button>
         <FulfillCommitmentButton commitmentId={id} />
         <DeleteButton
-          onDelete={async () => { await deleteJson(`/api/commitments/${id}`); router.refresh(); }}
+          onDelete={async () => {
+            const res = await deleteJson(`/api/commitments/${id}`);
+            if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+            router.refresh();
+          }}
           triggerTitle="Remove commitment"
           triggerClassName="p-1 rounded text-text-muted hover:text-status-negative/70 transition-colors shrink-0"
         />
