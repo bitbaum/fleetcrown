@@ -65,7 +65,7 @@ export function ChannelsSection({
         <div key={key} className="group flex items-center gap-3 ui-list-row">
           <ChannelIcon channel={key} />
           <span className="shrink-0 text-text-secondary">{stripChannelPrefix(key)}</span>
-          <span className="flex-1 truncate font-mono text-xs text-text-tertiary">{formatChannelValue(value)}</span>
+          <span className="flex-1 truncate font-mono text-xs text-text-tertiary" title={formatChannelValue(value)}>{formatChannelValue(value)}</span>
           <button
             onClick={() => deleteChannel(key)}
             disabled={deletingKey === key}
