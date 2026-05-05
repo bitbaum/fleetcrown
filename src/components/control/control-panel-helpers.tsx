@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import React from "react";
+import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { Modal } from "@/components/ui/modal";
@@ -63,6 +64,7 @@ export function BrainConfigPanel({
   onAgentSelect,
   onModelChange,
   onSave,
+  headerRight,
 }: {
   brainOpen: boolean;
   onToggle: () => void;
@@ -79,24 +81,28 @@ export function BrainConfigPanel({
   onAgentSelect: (agentId: string, defaultModel: string | undefined) => void;
   onModelChange: (value: string) => void;
   onSave: (applyToOpenTabs: boolean) => void;
+  headerRight?: React.ReactNode;
 }) {
   const modelSuggestions = selectedDefinition?.modelSuggestions ?? [];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-accent-text" />
           <span className="text-text-primary font-medium">{activeDefinition?.label ?? selectedAgent}</span>
           <span className="text-text-muted">·</span>
           <span className="text-text-secondary text-sm">{savedConfig?.model ?? model}</span>
         </div>
-        <button
-          onClick={onToggle}
-          className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
-        >
-          Change {brainOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-        </button>
+        <div className="flex items-center gap-3">
+          {headerRight}
+          <button
+            onClick={onToggle}
+            className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
+          >
+            Change {brainOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+        </div>
       </div>
 
       {brainOpen && (
@@ -173,14 +179,10 @@ export function BrainConfigPanel({
             </button>
           </div>
 
-          <p className="max-w-3xl text-base text-text-secondary">
-            Save Default only affects future launches. Switch Open Tabs restarts the currently open project tabs in Zellij with the selected backend and model.
-          </p>
-
           {lastTabResults.length > 0 && (
             <div className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm text-text-secondary">
               <div className="mb-1 text-text-primary">
-                Last tab switch result{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}
+                Last switch{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}
               </div>
               <ul className="space-y-1">
                 {lastTabResults.slice(0, 8).map((result, idx) => (
@@ -194,23 +196,10 @@ export function BrainConfigPanel({
             </div>
           )}
 
-          {activeDefinition && (
-            <div className="rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm text-text-secondary">
-              <span className="text-text-primary">{activeDefinition.label}</span>
-              {activeDefinition.capabilities.sessionLifecycleSignals
-                ? " supports the full loop — lifecycle hooks, ready signals, and autonomous continuation."
-                : " dispatches tasks via prompt injection. No stop/ready lifecycle signals — banners trigger from orchestration run completions only."}
-            </div>
-          )}
-
           <div className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-            <span className="rounded-full border border-border-subtle bg-surface-overlay px-3 py-1.5">
-              Selected: <span className="text-text-primary">{selectedDefinition?.label ?? selectedAgent}</span>
-              {model ? ` · ${model}` : ""}
-            </span>
             {savedConfig && (
               <span className="rounded-full border border-border-subtle bg-surface-base px-3 py-1.5">
-                Saved default: <span className="text-text-primary">{savedConfig.agent}</span> · {savedConfig.model}
+                Saved: <span className="text-text-primary">{savedConfig.agent}</span> · {savedConfig.model}
               </span>
             )}
             {selectedDefinition?.defaultModel && (
@@ -219,7 +208,7 @@ export function BrainConfigPanel({
                 onClick={() => onModelChange(selectedDefinition!.defaultModel)}
                 className="rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
               >
-                Use detected default: {selectedDefinition.defaultModel}
+                Use default: {selectedDefinition.defaultModel}
               </button>
             )}
           </div>
@@ -229,62 +218,6 @@ export function BrainConfigPanel({
   );
 }
 
-export function FleetStatusBar({
-  running,
-  waitingCount,
-  todayCommits,
-  total,
-  lastUpdated,
-  selectedAgent,
-  refreshing,
-  onNewProject,
-  onRefresh,
-}: {
-  running: number;
-  waitingCount: number;
-  todayCommits: number;
-  total: number;
-  lastUpdated: number | null;
-  selectedAgent: string;
-  refreshing: boolean;
-  onNewProject: () => void;
-  onRefresh: () => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-text-tertiary">
-      <span>
-        {total > 0 ? (
-          <>
-            {running > 0 && <span className="text-accent-text">{running} {selectedAgent} sessions running</span>}
-            {running > 0 && (waitingCount > 0 || todayCommits > 0) && " · "}
-            {waitingCount > 0 && <span className="text-status-positive">{waitingCount} waiting</span>}
-            {waitingCount > 0 && todayCommits > 0 && " · "}
-            {todayCommits > 0 && <span>+{todayCommits} commits today</span>}
-            {running === 0 && waitingCount === 0 && todayCommits === 0 && `${total} projects`}
-          </>
-        ) : "Loading…"}
-        {lastUpdated && ` · ${timeAgo(lastUpdated)}`}
-      </span>
-      <div className="flex items-center gap-3 self-start">
-        <button
-          onClick={onNewProject}
-          className="flex items-center gap-1 transition-colors hover:text-text-primary"
-        >
-          <Plus className="h-4 w-4" />
-          New project
-        </button>
-        <button
-          onClick={onRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-1 transition-colors hover:text-text-primary"
-        >
-          <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-          Refresh
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export function NewProjectModal({
   name,

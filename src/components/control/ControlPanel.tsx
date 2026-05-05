@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Terminal, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
+import { timeAgo } from "@/lib/dates";
 import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow } from "@/lib/constants/control";
 import type { ProjectState } from "@/app/api/control/route";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -13,7 +14,6 @@ import { ProjectTile } from "./ProjectTile";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
-  FleetStatusBar,
   NewProjectModal,
 } from "./control-panel-helpers";
 
@@ -87,7 +87,6 @@ export function ControlPanel() {
       !withinWindow(p.closingAt, nowS, CLOSING_WINDOW_S)
   ).length ?? 0;
   const todayCommits = data?.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0) ?? 0;
-  const total = data?.projects.length ?? 0;
 
   const sorted = data
     ? [...data.projects].sort((a, b) => {
@@ -110,32 +109,40 @@ export function ControlPanel() {
       })
     : null;
 
+  const headerRight = (
+    <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
+      {data ? (
+        <>
+          {running > 0 && <span className="font-medium text-accent-text tabular-nums">● {running}</span>}
+          {waitingCount > 0 && <span className="text-status-positive tabular-nums">{waitingCount} waiting</span>}
+          {todayCommits > 0 && <span className="tabular-nums">+{todayCommits}</span>}
+          {lastUpdated && <span className="hidden sm:inline">{timeAgo(lastUpdated)}</span>}
+        </>
+      ) : (
+        <span>Loading…</span>
+      )}
+      <button
+        onClick={() => refresh(true)}
+        disabled={refreshing}
+        title="Refresh"
+        className="rounded p-0.5 transition-colors hover:text-text-primary disabled:opacity-50"
+      >
+        <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+      </button>
+      <button
+        onClick={() => setNewProjectOpen(true)}
+        title="New project"
+        className="flex items-center gap-1 transition-colors hover:text-text-primary"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">New</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
-      <div className="ui-panel-raised space-y-5 p-5 md:p-7">
-        <div className="ui-stat-grid">
-          <div className="ui-stat-card">
-            <div className="ui-stat-label">Active sessions</div>
-            <div className="ui-stat-value">{running}</div>
-          </div>
-          <div className="ui-stat-card">
-            <div className="ui-stat-label">Waiting</div>
-            <div className="ui-stat-value">{waitingCount}</div>
-          </div>
-          <div className="ui-stat-card">
-            <div className="ui-stat-label">Commits today</div>
-            <div className="ui-stat-value">{todayCommits}</div>
-          </div>
-        </div>
-
-        {data?.recentActivity && (
-          <ActivityLogPanel
-            activities={data.recentActivity}
-            open={activityOpen}
-            onToggle={() => setActivityOpen((v) => !v)}
-          />
-        )}
-
+      <div className="ui-panel-raised space-y-4 p-5 md:p-6">
         <BrainConfigPanel
           brainOpen={brainOpen}
           onToggle={() => setBrainOpen((v) => !v)}
@@ -152,20 +159,17 @@ export function ControlPanel() {
           onAgentSelect={handleAgentSelect}
           onModelChange={handleModelChange}
           onSave={saveAgent}
+          headerRight={headerRight}
         />
-      </div>
 
-      <FleetStatusBar
-        running={running}
-        waitingCount={waitingCount}
-        todayCommits={todayCommits}
-        total={total}
-        lastUpdated={lastUpdated}
-        selectedAgent={selectedAgent}
-        refreshing={refreshing}
-        onNewProject={() => setNewProjectOpen(true)}
-        onRefresh={() => refresh(true)}
-      />
+        {data?.recentActivity && data.recentActivity.length > 0 && (
+          <ActivityLogPanel
+            activities={data.recentActivity}
+            open={activityOpen}
+            onToggle={() => setActivityOpen((v) => !v)}
+          />
+        )}
+      </div>
 
       {newProjectOpen && (
         <NewProjectModal
@@ -184,26 +188,6 @@ export function ControlPanel() {
 
       {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
 
-      {data && data.zellijTabs.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <Terminal className="h-4 w-4 text-text-muted shrink-0" />
-          {data.zellijTabs.map((t) => {
-            const hasProject = data.projects.some((p) => p.tab.toLowerCase() === t.toLowerCase());
-            return (
-              <span
-                key={t}
-                className={cn(
-                  "rounded-full px-2 py-1 font-mono text-[11px]",
-                  hasProject ? "bg-surface-raised text-text-secondary" : "bg-surface-overlay text-text-muted"
-                )}
-              >
-                {t}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
       {sorted ? (
         sorted.length > 0 ? (() => {
           const nowS2 = Math.floor(Date.now() / 1000);
@@ -214,7 +198,7 @@ export function ControlPanel() {
             project,
             prompts: data!.prompts,
             zellijTabs: data!.zellijTabs,
-            currentAdapter: data?.agentConfig.agent ?? "claude",
+            currentAdapter: selectedAgent,
             onInject: inject,
             onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
               try { await runWithBrain(projectState, intent); }
