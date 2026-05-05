@@ -59,17 +59,21 @@ export function InteractionsSection({
         <EmptyState>No interactions recorded</EmptyState>
       )}
       {list.map((ix, i) => (
-        <div key={i} className="flex items-center justify-between gap-3 ui-list-row">
-          <div className="flex items-center gap-2">
-            <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
-              {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
+        <div key={i} className="ui-list-row space-y-0.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
+                {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
+              </span>
+              <span className="text-text-secondary">{ix.channel}</span>
+            </div>
+            <span className="shrink-0 text-xs text-text-tertiary">
+              {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
             </span>
-            <span className="text-text-secondary">{ix.channel}</span>
-            {ix.summary && <span className="max-w-[180px] truncate text-xs text-text-tertiary">{ix.summary}</span>}
           </div>
-          <span className="shrink-0 text-xs text-text-tertiary">
-            {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
-          </span>
+          {ix.summary && (
+            <p className="text-xs text-text-tertiary leading-relaxed">{ix.summary}</p>
+          )}
         </div>
       ))}
 

@@ -178,7 +178,7 @@ export function EventCard({
           </div>
 
           {event.description && (
-            <p className="text-xs text-text-tertiary leading-relaxed line-clamp-2">{event.description}</p>
+            <p className="text-xs text-text-tertiary leading-relaxed">{event.description}</p>
           )}
         </div>
 
