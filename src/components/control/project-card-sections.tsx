@@ -304,6 +304,7 @@ export function IntentButtonPanel({
   autoContinueEnabled,
   sending,
   custom,
+  bannerActive,
   onToggleAutoContinue,
   onSendIntent,
   onSendCustom,
@@ -315,6 +316,7 @@ export function IntentButtonPanel({
   autoContinueEnabled: boolean;
   sending: string | null;
   custom: string;
+  bannerActive?: boolean;
   onToggleAutoContinue: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
   onSendCustom: () => void;
@@ -322,6 +324,7 @@ export function IntentButtonPanel({
   onCustomFocusChange: (focused: boolean) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
+  const [actionsExpanded, setActionsExpanded] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
 
   const appendTranscript = useCallback((text: string) => {
@@ -330,6 +333,33 @@ export function IntentButtonPanel({
   const { listening, supported, toggle: toggleMic } = useSpeechRecognition(appendTranscript);
 
   const inputProps = { custom, listening, supported, sending, onCustomChange, onCustomFocusChange, onSendCustom, toggleMic };
+
+  // When banner is active (ready/closed): banner already has the primary CTA.
+  // Collapse intent buttons behind "More actions" to reduce noise.
+  if (bannerActive && !actionsExpanded) {
+    return (
+      <div className="ui-card-section space-y-2">
+        <PromptInput {...inputProps} placeholder="Custom prompt…" />
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setActionsExpanded(true)}
+            className="flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary"
+          >
+            <ChevronDown className="h-3 w-3" />
+            More actions
+          </button>
+          <button
+            onClick={onToggleAutoContinue}
+            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+            className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
+          >
+            {autoContinueEnabled ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            Auto-continue {autoContinueEnabled ? "on" : "off"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // When running: no action needed — show only interrupt input
   if (project.agentRunning) {
@@ -356,6 +386,15 @@ export function IntentButtonPanel({
 
   return (
     <div className="space-y-3 ui-card-section">
+      {bannerActive && (
+        <button
+          onClick={() => setActionsExpanded(false)}
+          className="flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary"
+        >
+          <ChevronUp className="h-3 w-3" />
+          Fewer actions
+        </button>
+      )}
       <div className="flex flex-wrap gap-2">
         {PRIMARY_INTENTS.map(({ id, label }) => (
           <button

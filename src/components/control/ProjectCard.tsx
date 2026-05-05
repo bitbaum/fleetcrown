@@ -235,6 +235,7 @@ export function ProjectCard({
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}
             custom={custom}
+            bannerActive={isClosed || isReady || isOrchReady}
             onToggleAutoContinue={() => setAutoContinueEnabled((v) => !v)}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}
