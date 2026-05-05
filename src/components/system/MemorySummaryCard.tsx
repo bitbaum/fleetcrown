@@ -25,7 +25,7 @@ export async function MemorySummaryCard() {
             <Database className="h-3 w-3" /> Entities
           </div>
           <div className="text-2xl font-bold">{stats.totalEntities.toLocaleString()}</div>
-          <div className="text-xs text-text-muted mt-0.5">{stats.entityTypes.length} types</div>
+          <div className="text-xs text-text-tertiary mt-0.5">{stats.entityTypes.length} types</div>
         </div>
         <div>
           <div className="flex items-center gap-1.5 ui-micro-label mb-1">
@@ -37,7 +37,7 @@ export async function MemorySummaryCard() {
           {stats.entityTypes.slice(0, 4).map((row) => (
             <div key={row.type} className="flex items-center justify-between gap-2">
               <span className="text-[10px] text-text-tertiary capitalize">{row.type}</span>
-              <span className="text-[10px] text-text-muted font-mono">{Number(row.count).toLocaleString()}</span>
+              <span className="text-[10px] text-text-tertiary font-mono">{Number(row.count).toLocaleString()}</span>
             </div>
           ))}
         </div>

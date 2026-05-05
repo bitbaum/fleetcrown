@@ -174,7 +174,7 @@ function DimensionSection({
                 className="min-h-[36px] rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
               >
                 {p.label}
-                {uses > 0 && <span className="ml-2 text-[10px] text-text-muted">×{uses}</span>}
+                {uses > 0 && <span className="ml-2 text-[10px] text-text-tertiary">×{uses}</span>}
               </button>
             );
           })}

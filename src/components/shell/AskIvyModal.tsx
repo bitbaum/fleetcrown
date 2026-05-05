@@ -151,7 +151,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               }`}>
                 <div className="whitespace-pre-wrap">{msg.text}</div>
                 {msg.role === "ivy" && !msg.error && msg.durationMs && (
-                  <div className="mt-1.5 text-[10px] text-text-muted">
+                  <div className="mt-1.5 text-[10px] text-text-tertiary">
                     {(msg.durationMs / 1000).toFixed(1)}s{msg.model ? ` · ${msg.model}` : ""}
                   </div>
                 )}
@@ -170,7 +170,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                      elapsed < 25 ? "Composing a response…" :
                      "Almost there…"}
                   </span>
-                  <span className="ml-2 text-[10px] text-text-muted">{elapsed}s</span>
+                  <span className="ml-2 text-[10px] text-text-tertiary">{elapsed}s</span>
                 </div>
               </div>
             </div>
@@ -216,7 +216,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-2 text-center text-[10px] text-text-muted">
+          <div className="mt-2 text-center text-[10px] text-text-tertiary">
             Enter to send · Shift+Enter for new line · Esc to close
             {supported && <span> · 🎤 mic available</span>}
           </div>
