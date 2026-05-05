@@ -7,7 +7,13 @@ import {
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
 import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
+import { getIntentLabel } from "@/config/control-intents";
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
+
+function adapterLabel(adapter: string): string {
+  if (adapter === "openclaw") return "OpenClaw";
+  return adapter.charAt(0).toUpperCase() + adapter.slice(1);
+}
 
 export function SessionBadge({ health }: { health: string }) {
   const color = HEALTH_COLOR[health] ?? "text-text-tertiary";
@@ -183,7 +189,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
         <span className="ui-kicker">last run</span>
-        <span className="ui-tag ui-tag-neutral">{run.adapter} · {run.intent}</span>
+        <span className="ui-tag ui-tag-neutral">{adapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{run.state}</span>
       </div>
       {run.summary?.done && (

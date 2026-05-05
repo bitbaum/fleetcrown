@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown } from "lucide-react";
+import { getIntentLabel } from "@/config/control-intents";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { Modal } from "@/components/ui/modal";
@@ -37,7 +38,7 @@ export function ActivityLogPanel({
               <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
               <span className="text-text-muted">·</span>
               <span className="truncate text-text-secondary">
-                {item.customPrompt ? item.customPrompt.slice(0, 60) : item.intent}
+                {item.customPrompt ? item.customPrompt.slice(0, 60) : getIntentLabel(item.intent ?? "")}
               </span>
               <span className="ml-auto shrink-0 text-text-tertiary">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
             </div>
@@ -108,7 +109,7 @@ export function BrainConfigPanel({
       {brainOpen && (
         <div className="space-y-4">
           <div>
-            <div className="ui-kicker mb-2">Backend</div>
+            <div className="ui-kicker mb-2">Agent</div>
             <div className="grid gap-2 sm:grid-cols-2">
               {switchableRegistry.map((entry) => (
                 <button

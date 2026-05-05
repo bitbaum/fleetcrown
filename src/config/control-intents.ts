@@ -29,3 +29,8 @@ export const PRIMARY_INTENTS: IntentButton[] = byGroup("primary");
 export const ACTION_INTENTS: IntentButton[]  = byGroup("action");
 export const MORE_INTENTS: IntentButton[]    = byGroup("more");
 
+export function getIntentLabel(id: string): string {
+  const entry = INTENT_UI[id as OrchestrationTaskIntentId];
+  return entry?.label ?? id.replace(/_/g, " ");
+}
+
