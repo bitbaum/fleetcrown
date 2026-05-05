@@ -148,6 +148,7 @@ export function AttrRow({
 
 export function ClaudeSession({ projectName }: { projectName: string }) {
   const [session, setSession] = useState<SessionData | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
     getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(projectName)}`)
@@ -157,43 +158,64 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
 
   if (!session || !session.found) return null;
 
-  const healthColor = session.health.startsWith("green") || session.health.startsWith("good")
-    ? "text-status-positive"
-    : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
-    ? "text-status-negative"
-    : "text-status-warning";
+  const healthColor =
+    session.health.startsWith("green") || session.health.toLowerCase().startsWith("good")
+      ? "text-status-positive"
+      : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
+      ? "text-status-negative"
+      : "text-text-secondary";
 
   return (
-    <div className="rounded-lg border border-border-subtle bg-surface-base p-3 space-y-2">
-      <div className="flex items-center gap-1.5 ui-micro-label font-medium">
-        <Terminal className="h-3 w-3" /> Claude Session
+    <div className="rounded-xl border border-border-subtle bg-surface-base overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle/50">
+        <div className="flex items-center gap-2 text-text-secondary">
+          <Terminal className="h-3.5 w-3.5" />
+          <span className="text-sm font-medium">Session</span>
+          {session.health && (
+            <span className={`text-xs font-medium ${healthColor}`}>
+              · {session.health.split("—")[0].trim()}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setShowRaw((v) => !v)}
+          className="text-xs text-text-muted transition-colors hover:text-text-secondary"
+        >
+          {showRaw ? "Structured" : "Raw"}
+        </button>
       </div>
-      {session.done && (
-        <div>
-          <div className="ui-micro-label mb-0.5">Done</div>
-          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.done}</p>
+
+      {showRaw ? (
+        <pre className="px-4 py-3 text-xs text-text-secondary leading-relaxed whitespace-pre-wrap break-words font-mono">
+          {session.raw}
+        </pre>
+      ) : (
+        <div className="divide-y divide-border-subtle/40">
+          {session.next && (
+            <div className="px-4 py-3 space-y-1">
+              <p className="ui-kicker">up next</p>
+              <p className="text-sm text-text-primary leading-relaxed">{session.next}</p>
+            </div>
+          )}
+          {session.done && (
+            <div className="px-4 py-3 space-y-1">
+              <p className="ui-kicker">done</p>
+              <p className="text-sm text-text-secondary leading-relaxed">{session.done}</p>
+            </div>
+          )}
+          {(session.tests || session.todos || session.health) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
+              {session.tests && (
+                <span className="text-xs text-text-tertiary">{session.tests}</span>
+              )}
+              {session.todos && parseInt(session.todos.match(/^(\d+)/)?.[1] ?? "0", 10) > 0 && (
+                <span className="text-xs text-status-warning/80">{session.todos}</span>
+              )}
+            </div>
+          )}
         </div>
       )}
-      {session.next && (
-        <div>
-          <div className="ui-micro-label mb-0.5">Next</div>
-          <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
-        </div>
-      )}
-      {parseInt(session.todos?.match(/^(\d+)/)?.[1] ?? "0", 10) > 0 && (
-        <div>
-          <div className="text-[10px] text-status-warning/60 uppercase tracking-wider mb-0.5">Todos</div>
-          <p className="text-xs text-status-warning/70 leading-relaxed line-clamp-2">{session.todos}</p>
-        </div>
-      )}
-      <div className="flex items-center gap-4 pt-0.5">
-        {session.tests && (
-          <div className="text-[10px] text-text-tertiary">{session.tests}</div>
-        )}
-        {session.health && (
-          <div className={`text-[10px] font-medium ${healthColor}`}>{session.health.split("—")[0].trim()}</div>
-        )}
-      </div>
     </div>
   );
 }

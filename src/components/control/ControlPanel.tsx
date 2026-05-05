@@ -32,14 +32,13 @@ function isActiveProject(p: ProjectState, nowS: number): boolean {
 export function ControlPanel() {
   const {
     data, lastUpdated, refreshing, error, setError,
-    selectedAgent, model, savedConfig,
-    switchableRegistry, activeDefinition, selectedDefinition,
+    selectedAgent, model,
+    switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
 
-  const [brainOpen, setBrainOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
@@ -144,15 +143,11 @@ export function ControlPanel() {
     <div className="space-y-5">
       <div className="ui-panel-raised space-y-4 p-5 md:p-6">
         <BrainConfigPanel
-          brainOpen={brainOpen}
-          onToggle={() => setBrainOpen((v) => !v)}
           selectedAgent={selectedAgent}
           switchableRegistry={switchableRegistry}
           model={model}
-          savedConfig={savedConfig}
           hasPendingChange={hasPendingChange}
           savingAgent={savingAgent}
-          activeDefinition={activeDefinition}
           selectedDefinition={selectedDefinition}
           lastTabResults={lastTabResults}
           lastTabResultsAt={lastTabResultsAt}

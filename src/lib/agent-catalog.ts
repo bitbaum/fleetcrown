@@ -33,7 +33,7 @@ export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAge
         id: "codex",
         label: "Codex",
         defaultModel: codexModel,
-        modelSuggestions: [codexModel, "gpt-5.4", "gpt-5-codex"],
+        modelSuggestions: [...new Set([codexModel, "gpt-5.4", "gpt-5-codex"])],
         processMatchers: ["codex"],
         switchable: true,
         available: true,
@@ -48,7 +48,7 @@ export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAge
         id: "claude",
         label: "Claude",
         defaultModel: claudeModel,
-        modelSuggestions: [
+        modelSuggestions: [...new Set([
           claudeModel,
           "sonnet",
           "opus",
@@ -56,7 +56,7 @@ export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAge
           "claude-sonnet-4-5",
           "claude-opus-4-1",
           "claude-3-7-sonnet-latest",
-        ],
+        ])],
         processMatchers: ["claude"],
         switchable: true,
         available: true,

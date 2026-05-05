@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronsDown } from "lucide-react";
+import { ChevronsDown, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow,
@@ -36,7 +36,7 @@ export function ProjectCard({
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"status" | "profile">("status");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(null);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
@@ -155,42 +155,31 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
-      <div className="flex items-stretch border-b border-border-subtle">
-        <button
-          onClick={() => setActiveTab("status")}
-          className={cn(
-            "px-5 py-2.5 text-sm font-medium transition-colors",
-            activeTab === "status"
-              ? "border-b-2 border-accent-primary text-text-primary"
-              : "text-text-secondary hover:text-text-primary"
-          )}
-        >
-          Status
-        </button>
-        <button
-          onClick={() => setActiveTab("profile")}
-          className={cn(
-            "px-5 py-2.5 text-sm font-medium transition-colors",
-            activeTab === "profile"
-              ? "border-b-2 border-accent-primary text-text-primary"
-              : "text-text-secondary hover:text-text-primary"
-          )}
-        >
-          Profile
-        </button>
-        {onCollapse && (
+      <div className="flex items-center border-b border-border-subtle px-2">
+        <div className="ml-auto flex items-center">
           <button
-            onClick={onCollapse}
-            title="Collapse to tile"
-            className="ml-auto flex items-center gap-1.5 px-3.5 py-2 text-xs text-text-muted transition-colors hover:text-text-secondary"
+            onClick={() => setProfileOpen((v) => !v)}
+            title="Project profile & agent config"
+            className={cn(
+              "px-2.5 py-2 text-xs transition-colors",
+              profileOpen ? "text-text-secondary" : "text-text-muted hover:text-text-secondary"
+            )}
           >
-            <ChevronsDown className="h-3.5 w-3.5" />
-            Collapse
+            <SlidersHorizontal className="h-3.5 w-3.5" />
           </button>
-        )}
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              title="Collapse to tile"
+              className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-text-muted transition-colors hover:text-text-secondary"
+            >
+              <ChevronsDown className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {activeTab === "profile" && (
+      {profileOpen && (
         <ProjectProfile
           project={project}
           globalAdapter={currentAdapter}
@@ -201,7 +190,7 @@ export function ProjectCard({
         />
       )}
 
-      {activeTab === "status" && (
+      {!profileOpen && (
         <>
           <ProjectCardHeader
             project={project}
@@ -210,7 +199,7 @@ export function ProjectCard({
             isReady={isReady}
             isOrchReady={isOrchReady}
           />
-          <SessionSummary session={project.session} git={project.git} isClosed={isClosed} />
+          <SessionSummary session={project.session} isClosed={isClosed} />
           <ProjectBanners
             isClosed={isClosed}
             isClosing={isClosing}
