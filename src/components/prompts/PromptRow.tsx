@@ -23,7 +23,7 @@ export function PromptRow({
         <div className="flex items-start gap-4 px-5 py-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="truncate text-lg font-semibold text-text-primary">{template.name}</span>
+              <span className="truncate text-lg font-semibold text-text-primary" title={template.name}>{template.name}</span>
               {template.scope === "global" ? (
                 <span className="ui-badge"><Globe className="h-3 w-3" /> global</span>
               ) : (

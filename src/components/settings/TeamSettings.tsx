@@ -79,7 +79,7 @@ export function TeamSettings({ invitations: initial }: Props) {
                 className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-base px-4 py-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="truncate font-mono text-xs text-text-secondary">
+                  <p className="truncate font-mono text-xs text-text-secondary" title={inviteUrl(inv.token)}>
                     {inviteUrl(inv.token).replace(/^https?:\/\//, "")}
                   </p>
                   {inv.email && (
