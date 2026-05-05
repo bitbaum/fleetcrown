@@ -53,7 +53,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
       <div className="min-w-0 flex-1">
         <span className="text-sm font-medium text-text-primary">{tab}</span>
         {session?.next && (
-          <p className="mt-0.5 truncate text-xs text-text-tertiary">{session.next}</p>
+          <p className="mt-0.5 truncate text-xs text-text-tertiary" title={session.next}>{session.next}</p>
         )}
       </div>
 

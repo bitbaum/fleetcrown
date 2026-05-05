@@ -23,7 +23,7 @@ export function FeaturedCard({
           <div className="flex-1 min-w-0">
             <span className={`ui-chip ${meta.color}`}>{meta.label}</span>
             <div className="mt-3 text-xl font-semibold leading-snug text-text-primary">{template.name}</div>
-            <div className="mt-1.5 line-clamp-3 text-base leading-relaxed text-text-secondary">
+            <div className="mt-1.5 text-base leading-relaxed text-text-secondary">
               {template.description}
             </div>
           </div>
