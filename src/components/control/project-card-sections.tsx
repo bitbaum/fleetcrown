@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
   Pause, Play, Eraser, Loader2, Send, Mic, MicOff,
+  SlidersHorizontal, ChevronsDown,
 } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { cn } from "@/lib/utils";
@@ -22,12 +23,18 @@ export function ProjectCardHeader({
   isClosed,
   isReady,
   isOrchReady,
+  profileOpen,
+  onProfileToggle,
+  onCollapse,
 }: {
   project: ProjectState;
   tabOpen: boolean;
   isClosed: boolean;
   isReady: boolean;
   isOrchReady: boolean;
+  profileOpen: boolean;
+  onProfileToggle: () => void;
+  onCollapse?: () => void;
 }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -89,17 +96,38 @@ export function ProjectCardHeader({
         )}
       </div>
 
-      {profile?.url && (
-        <a
-          href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 text-text-muted transition-colors hover:text-text-primary"
-          onClick={(e) => e.stopPropagation()}
+      <div className="flex shrink-0 items-center gap-1">
+        {profile?.url && (
+          <a
+            href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 text-text-muted transition-colors hover:text-text-primary"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        )}
+        <button
+          onClick={onProfileToggle}
+          title={profileOpen ? "Close profile" : "Project profile"}
+          className={cn(
+            "p-1 transition-colors hover:text-text-primary",
+            profileOpen ? "text-accent-text" : "text-text-muted",
+          )}
         >
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      )}
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            title="Collapse"
+            className="p-1 text-text-muted transition-colors hover:text-text-primary"
+          >
+            <ChevronsDown className="h-4 w-4" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

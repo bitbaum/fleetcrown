@@ -155,30 +155,6 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
-      <div className="flex items-center border-b border-border-subtle px-2">
-        <div className="ml-auto flex items-center">
-          <button
-            onClick={() => setProfileOpen((v) => !v)}
-            title="Project profile & agent config"
-            className={cn(
-              "px-2.5 py-2 text-xs transition-colors",
-              profileOpen ? "text-text-secondary" : "text-text-muted hover:text-text-secondary"
-            )}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-          </button>
-          {onCollapse && (
-            <button
-              onClick={onCollapse}
-              title="Collapse to tile"
-              className="flex items-center gap-1.5 px-2.5 py-2 text-xs text-text-muted transition-colors hover:text-text-secondary"
-            >
-              <ChevronsDown className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
       {profileOpen && (
         <ProjectProfile
           project={project}
@@ -198,6 +174,9 @@ export function ProjectCard({
             isClosed={isClosed}
             isReady={isReady}
             isOrchReady={isOrchReady}
+            profileOpen={profileOpen}
+            onProfileToggle={() => setProfileOpen((v) => !v)}
+            onCollapse={onCollapse}
           />
           <SessionSummary session={project.session} isClosed={isClosed} />
           <ProjectBanners
