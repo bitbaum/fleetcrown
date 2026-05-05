@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronsDown, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow,
