@@ -134,7 +134,7 @@ export function DetailAttrs({
             </div>
           ) : (
             <div className="flex min-w-0 items-center gap-1">
-              <span className="truncate text-right text-text-primary">{value}</span>
+              <span className="truncate text-right text-text-primary" title={value}>{value}</span>
               <button
                 onClick={() => { setEditValue(value); setEditingKey(key); }}
                 className="shrink-0 ui-hover-reveal ui-btn-icon"
