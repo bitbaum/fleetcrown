@@ -110,7 +110,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <div className="h-4 w-4 rounded-full border border-border-strong shrink-0 mt-0.5" />
       )}
       <div className="min-w-0 flex-1">
-        <div className="text-sm md:text-base line-clamp-2">{description}</div>
+        <div className="text-sm md:text-base">{description}</div>
         {dueDate && (
           <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-text-tertiary"}`}>
             {isOverdue ? "Overdue" : "Due"}{" "}

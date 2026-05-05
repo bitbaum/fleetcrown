@@ -16,8 +16,7 @@ export async function EventsDueCard() {
   const overdueCount = items.filter((e) => e.deadline && isPast(new Date(e.deadline))).length;
 
   return (
-    <div className="md:col-span-2">
-      <Card>
+    <Card>
         <CardHeader
           icon={Calendar}
           title="Upcoming Deadlines"
@@ -82,6 +81,5 @@ export async function EventsDueCard() {
           </Link>
         </div>
       </Card>
-    </div>
   );
 }

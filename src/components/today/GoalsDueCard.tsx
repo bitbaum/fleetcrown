@@ -13,8 +13,7 @@ export async function GoalsDueCard() {
   if (items.length === 0) return null;
 
   return (
-    <div className="md:col-span-2">
-      <Card>
+    <Card>
         <CardHeader
           icon={Target}
           title="Goals Due Soon"
@@ -64,6 +63,5 @@ export async function GoalsDueCard() {
           </Link>
         </div>
       </Card>
-    </div>
   );
 }
