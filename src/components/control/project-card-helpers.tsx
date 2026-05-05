@@ -195,7 +195,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
         </p>
       )}
       {!run.summary && run.payload?.resultText && (
-        <p className="line-clamp-3 text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
+        <p className="text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
       )}
       {run.payload?.error && (
         <p className="text-sm text-status-negative">{run.payload.error}</p>

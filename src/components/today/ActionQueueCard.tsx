@@ -128,7 +128,7 @@ export async function ActionQueueCard() {
                           <div className="min-w-0">
                             <span className="text-sm md:text-base">{a.title}</span>
                             {body && (
-                              <div className="text-xs text-text-secondary line-clamp-2 mt-0.5">{body}</div>
+                              <div className="text-xs text-text-secondary mt-0.5">{body}</div>
                             )}
                           </div>
                           <ActionButtons actionId={a.id} compact />
