@@ -20,7 +20,7 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
         <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasError ? "bg-status-negative" : job.enabled ? "bg-status-positive" : "bg-status-neutral"}`} />
         <div className="flex-1 min-w-0">
           <div className="text-xs text-text-primary truncate">{job.name}</div>
-          <div className="text-[10px] text-text-muted font-mono mt-0.5">{job.schedule}</div>
+          <div className="text-[10px] text-text-tertiary font-mono mt-0.5">{job.schedule}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -140,7 +140,7 @@ export function PromptsTab({
     <div className="space-y-4">
       <div className="flex items-center gap-2 ui-micro-label font-medium">
         <Bot className="h-3.5 w-3.5" />
-        Autopilot Jobs {jobs.length > 0 && <span className="text-text-muted normal-case">({jobs.length})</span>}
+        Autopilot Jobs {jobs.length > 0 && <span className="text-text-tertiary normal-case">({jobs.length})</span>}
       </div>
 
       {jobs.length === 0 ? (

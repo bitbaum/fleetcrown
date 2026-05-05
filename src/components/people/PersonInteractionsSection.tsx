@@ -61,7 +61,7 @@ export function InteractionsSection({
       {list.map((ix, i) => (
         <div key={i} className="flex items-center justify-between gap-3 ui-list-row">
           <div className="flex items-center gap-2">
-            <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-muted" : "text-status-positive/60"}`}>
+            <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
               {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
             </span>
             <span className="text-text-secondary">{ix.channel}</span>

@@ -66,7 +66,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
             </span>
           )}
           {git?.branch && (
-            <span className="flex items-center gap-1 text-[11px] text-text-muted">
+            <span className="flex items-center gap-1 text-[11px] text-text-tertiary">
               <GitBranch className="h-3 w-3" />
               {git.branch}
             </span>

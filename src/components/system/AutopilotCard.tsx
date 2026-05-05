@@ -72,7 +72,7 @@ function JobRow({
             </span>
           )}
           {!hasError && nextRun && (
-            <span className="flex items-center gap-1 text-[10px] text-text-muted shrink-0">
+            <span className="flex items-center gap-1 text-[10px] text-text-tertiary shrink-0">
               <Clock className="h-2.5 w-2.5" />
               {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
             </span>

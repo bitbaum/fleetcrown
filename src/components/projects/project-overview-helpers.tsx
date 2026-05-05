@@ -180,7 +180,7 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
           <p className="text-xs text-text-secondary leading-relaxed line-clamp-3">{session.next}</p>
         </div>
       )}
-      {session.todos && session.todos !== "0 TODOs" && session.todos !== "0" && (
+      {parseInt(session.todos?.match(/^(\d+)/)?.[1] ?? "0", 10) > 0 && (
         <div>
           <div className="text-[10px] text-status-warning/60 uppercase tracking-wider mb-0.5">Todos</div>
           <p className="text-xs text-status-warning/70 leading-relaxed line-clamp-2">{session.todos}</p>

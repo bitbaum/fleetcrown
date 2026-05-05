@@ -21,7 +21,7 @@ export function MaturityBar({ value }: { value: string }) {
           />
         ))}
       </div>
-      <span className="text-[10px] text-text-muted">{score}/10</span>
+      <span className="text-[10px] text-text-tertiary">{score}/10</span>
     </div>
   );
 }

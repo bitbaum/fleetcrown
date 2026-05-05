@@ -113,7 +113,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                 )}
                 {!isCompleted && (
                   <div className="mt-2">
-                    <div className="flex items-center justify-between text-[10px] text-text-muted mb-1">
+                    <div className="flex items-center justify-between text-[10px] text-text-tertiary mb-1">
                       <span>{progress}%</span>
                       {milestones.length > 0 && <span>{done}/{milestones.length} milestones</span>}
                     </div>

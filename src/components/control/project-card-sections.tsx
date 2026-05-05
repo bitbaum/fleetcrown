@@ -397,7 +397,7 @@ export function IntentButtonPanel({
               title={r.customPrompt}
               className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
             >
-              {r.count > 1 && <span className="mr-1.5 text-text-muted">×{r.count}</span>}
+              {r.count > 1 && <span className="mr-1.5 text-text-tertiary">×{r.count}</span>}
               {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
             </button>
           ))}
