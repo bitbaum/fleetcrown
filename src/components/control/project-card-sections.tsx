@@ -237,6 +237,67 @@ export function ProjectBanners({
   );
 }
 
+function PromptInput({
+  custom,
+  listening,
+  supported,
+  sending,
+  placeholder,
+  onCustomChange,
+  onCustomFocusChange,
+  onSendCustom,
+  toggleMic,
+}: {
+  custom: string;
+  listening: boolean;
+  supported: boolean;
+  sending: string | null;
+  placeholder: string;
+  onCustomChange: (v: string) => void;
+  onCustomFocusChange: (f: boolean) => void;
+  onSendCustom: () => void;
+  toggleMic: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      <div className="relative min-w-0 flex-1">
+        <input
+          type="text"
+          value={custom}
+          onChange={(e) => onCustomChange(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
+          onFocus={() => onCustomFocusChange(true)}
+          onBlur={() => onCustomFocusChange(false)}
+          placeholder={listening ? "Listening…" : placeholder}
+          className={cn("ui-input w-full", supported && "pr-10", listening && "border-status-negative/40")}
+        />
+        {supported && (
+          <button
+            type="button"
+            onClick={toggleMic}
+            title={listening ? "Stop recording" : "Voice input"}
+            className={cn(
+              "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
+              listening
+                ? "text-status-negative animate-pulse hover:bg-status-negative/10"
+                : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
+            )}
+          >
+            {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+          </button>
+        )}
+      </div>
+      <button
+        onClick={onSendCustom}
+        disabled={!custom.trim() || sending !== null}
+        className="ui-btn-lg shrink-0 py-3.5 sm:px-5"
+      >
+        <Send className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export function IntentButtonPanel({
   project,
   currentAdapter,
@@ -268,31 +329,42 @@ export function IntentButtonPanel({
   }, [custom, onCustomChange]);
   const { listening, supported, toggle: toggleMic } = useSpeechRecognition(appendTranscript);
 
+  const inputProps = { custom, listening, supported, sending, onCustomChange, onCustomFocusChange, onSendCustom, toggleMic };
+
+  // When running: no action needed — show only interrupt input
+  if (project.agentRunning) {
+    return (
+      <div className="ui-card-section space-y-2">
+        <PromptInput {...inputProps} placeholder="Send interrupt…" />
+        {project.recentCustomPrompts.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {project.recentCustomPrompts.slice(0, 3).map((r) => (
+              <button
+                key={r.customPrompt}
+                onClick={() => onCustomChange(r.customPrompt)}
+                title={r.customPrompt}
+                className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
+              >
+                {r.customPrompt.length > 50 ? r.customPrompt.slice(0, 50) + "…" : r.customPrompt}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 ui-card-section">
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={onToggleAutoContinue}
-          title={
-            autoContinueEnabled
-              ? "Pause automatic continue for this tab"
-              : "Resume automatic continue for this tab"
-          }
-          className="ui-btn-lg-outline inline-flex items-center gap-2"
-        >
-          {autoContinueEnabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          {autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-        </button>
-
         {PRIMARY_INTENTS.map(({ id, label }) => (
           <button
             key={id}
             onClick={() => onSendIntent(id)}
             disabled={sending !== null}
-            className="ui-btn-lg flex flex-col items-start"
+            className="ui-btn-lg"
           >
-            <span>{label}</span>
-            <span className="text-xs opacity-60">via {currentAdapter}</span>
+            {sending === id ? "…" : label}
           </button>
         ))}
 
@@ -351,42 +423,7 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <input
-            type="text"
-            value={custom}
-            onChange={(e) => onCustomChange(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
-            onFocus={() => onCustomFocusChange(true)}
-            onBlur={() => onCustomFocusChange(false)}
-            placeholder={listening ? "Listening…" : "Custom prompt…"}
-            className={cn("ui-input w-full", supported && "pr-10", listening && "border-status-negative/40")}
-          />
-          {supported && (
-            <button
-              type="button"
-              onClick={toggleMic}
-              title={listening ? "Stop recording" : "Voice input"}
-              className={cn(
-                "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
-                listening
-                  ? "text-status-negative animate-pulse hover:bg-status-negative/10"
-                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
-              )}
-            >
-              {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-            </button>
-          )}
-        </div>
-        <button
-          onClick={onSendCustom}
-          disabled={!custom.trim() || sending !== null}
-          className="ui-btn-lg shrink-0 py-3.5 sm:px-5"
-        >
-          <Send className="h-4 w-4" />
-        </button>
-      </div>
+      <PromptInput {...inputProps} placeholder="Custom prompt…" />
 
       {project.recentCustomPrompts.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
@@ -403,6 +440,17 @@ export function IntentButtonPanel({
           ))}
         </div>
       )}
+
+      <div className="flex items-center justify-end">
+        <button
+          onClick={onToggleAutoContinue}
+          title={autoContinueEnabled ? "Pause automatic continue for this tab" : "Resume automatic continue for this tab"}
+          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
+        >
+          {autoContinueEnabled ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          Auto-continue {autoContinueEnabled ? "on" : "off"}
+        </button>
+      </div>
     </div>
   );
 }

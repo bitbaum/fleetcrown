@@ -6,13 +6,8 @@ import { cn } from "@/lib/utils";
 import { DIMENSIONS, interpolateDimensionPrompt } from "@/config/dimension-prompts";
 import type { ProjectState } from "@/app/api/control/route";
 
-const AGENTS = [
-  { id: "claude", label: "Claude" },
-  { id: "codex", label: "Codex" },
-  { id: "openclaw", label: "OpenClaw" },
-] as const;
-
-type AgentId = (typeof AGENTS)[number]["id"];
+type AgentEntry = { id: string; label: string };
+type AgentId = string;
 
 function MaturityDots({ maturity }: { maturity: string }) {
   const m = maturity.match(/^(\d+)/);
@@ -188,12 +183,14 @@ export function ProjectProfile({
   project,
   globalAdapter,
   localAgent,
+  availableAgents,
   onSetAgent,
   onRunPrompt,
 }: {
   project: ProjectState;
   globalAdapter: string;
   localAgent: AgentId | null;
+  availableAgents: AgentEntry[];
   onSetAgent: (agent: AgentId | null) => void;
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
 }) {
@@ -220,7 +217,7 @@ export function ProjectProfile({
       <div className="flex items-center gap-3 border-t border-border-subtle px-5 py-3">
         <span className="ui-kicker shrink-0">Agent</span>
         <div className="flex gap-1.5">
-          {AGENTS.map((a) => (
+          {availableAgents.map((a) => (
             <button
               key={a.id}
               onClick={() => onSetAgent(localAgent === a.id ? null : a.id)}

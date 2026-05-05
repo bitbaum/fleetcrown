@@ -20,6 +20,7 @@ export function ProjectCard({
   prompts,
   zellijTabs,
   currentAdapter,
+  availableAgents,
   onInject,
   onRunWithBrain,
   onRunCustomPrompt,
@@ -29,13 +30,14 @@ export function ProjectCard({
   prompts: PromptMeta[];
   zellijTabs: string[];
   currentAdapter: string;
+  availableAgents: { id: string; label: string }[];
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<"status" | "profile">("status");
-  const [localAgent, setLocalAgent] = useState<"claude" | "codex" | "openclaw" | null>(null);
+  const [localAgent, setLocalAgent] = useState<string | null>(null);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
   const [typingActive, setTypingActive] = useState(false);
@@ -193,6 +195,7 @@ export function ProjectCard({
           project={project}
           globalAdapter={currentAdapter}
           localAgent={localAgent}
+          availableAgents={availableAgents}
           onSetAgent={setLocalAgent}
           onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
         />

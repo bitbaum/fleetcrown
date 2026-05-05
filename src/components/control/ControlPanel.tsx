@@ -199,6 +199,7 @@ export function ControlPanel() {
             prompts: data!.prompts,
             zellijTabs: data!.zellijTabs,
             currentAdapter: selectedAgent,
+            availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
             onInject: inject,
             onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
               try { await runWithBrain(projectState, intent); }
