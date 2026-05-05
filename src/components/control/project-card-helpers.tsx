@@ -108,7 +108,7 @@ export function RunningBanner({ label, startedAt }: { label: string; startedAt: 
     <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
       <div className="flex items-center gap-2">
         <Loader2 className="ui-spinner-sm text-accent-text shrink-0" />
-        <span className="truncate text-sm font-medium text-accent-text">{label}</span>
+        <span className="truncate text-sm font-medium text-accent-text" title={label}>{label}</span>
         <span className={cn("ml-auto shrink-0 text-sm tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>
     </div>

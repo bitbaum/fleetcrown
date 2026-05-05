@@ -57,7 +57,7 @@ export function ProjectCardHeader({
           {tabOpen && <span title="Terminal open"><Terminal className="h-3.5 w-3.5 shrink-0 text-accent-text" /></span>}
           {session?.health && <SessionBadge health={session.health} />}
           {profile?.status && !session?.health && (
-            <span className="truncate text-sm text-text-tertiary">{profile.status}</span>
+            <span className="truncate text-sm text-text-tertiary" title={profile.status}>{profile.status}</span>
           )}
         </div>
 

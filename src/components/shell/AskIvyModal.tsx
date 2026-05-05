@@ -117,7 +117,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                         : <FolderOpen className="h-3 w-3 text-text-muted shrink-0" />
                       }
                     </div>
-                    <p className="text-[10px] text-text-secondary leading-snug line-clamp-2">
+                    <p className="text-[10px] text-text-secondary leading-snug line-clamp-2" title={t.description}>
                       {t.description}
                     </p>
                     <span className={`self-start mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>

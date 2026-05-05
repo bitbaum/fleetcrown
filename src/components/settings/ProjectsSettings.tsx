@@ -110,12 +110,12 @@ export function ProjectsSettings({ projects: initial }: Props) {
               className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-raised px-4 py-3"
             >
               <div className="min-w-0">
-                <div className="text-sm font-medium text-text-primary truncate">{p.name}</div>
+                <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>
                 {p.dirPath && (
-                  <div className="text-xs text-text-tertiary truncate font-mono">{p.dirPath}</div>
+                  <div className="text-xs text-text-tertiary truncate font-mono" title={p.dirPath}>{p.dirPath}</div>
                 )}
                 {p.gitUrl && (
-                  <div className="text-xs text-text-tertiary truncate">{p.gitUrl}</div>
+                  <div className="text-xs text-text-tertiary truncate" title={p.gitUrl}>{p.gitUrl}</div>
                 )}
               </div>
               <button

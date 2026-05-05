@@ -42,9 +42,9 @@ function ProjectCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-text-primary">{project.name}</div>
+          <div className="truncate text-base font-semibold text-text-primary" title={project.name}>{project.name}</div>
           {description && (
-            <div className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
+            <div className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary" title={description}>
               {description}
             </div>
           )}

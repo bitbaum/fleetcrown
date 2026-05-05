@@ -37,7 +37,7 @@ export function ActivityLogPanel({
             <div key={item.id} className="flex items-baseline gap-2 text-sm">
               <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
               <span className="text-text-muted">·</span>
-              <span className="truncate text-text-secondary">
+              <span className="truncate text-text-secondary" title={item.customPrompt ?? getIntentLabel(item.intent ?? "")}>
                 {item.customPrompt ? item.customPrompt.slice(0, 60) : getIntentLabel(item.intent ?? "")}
               </span>
               <span className="ml-auto shrink-0 text-text-tertiary">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>

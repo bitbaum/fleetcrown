@@ -36,7 +36,7 @@ export function StatusBadge({ value }: { value: string }) {
     ? "bg-status-warning-subtle text-status-warning border-status-warning/25"
     : "bg-accent-muted text-accent-text border-accent-primary/25";
   return (
-    <span className={`ui-micro-badge truncate max-w-[180px] ${cls}`}>
+    <span className={`ui-micro-badge truncate max-w-[180px] ${cls}`} title={value}>
       {value}
     </span>
   );

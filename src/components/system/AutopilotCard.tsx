@@ -56,7 +56,7 @@ function JobRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-text-muted" : ""}`}>
+          <span className={`text-sm font-medium truncate ${!job.enabled ? "text-text-muted" : ""}`} title={job.name}>
             {job.name}
           </span>
           {!job.enabled && (
@@ -66,7 +66,7 @@ function JobRow({
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-text-tertiary">{humanSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
-            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate">
+            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate" title={job.state.lastError}>
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
               {job.state.lastError}
             </span>

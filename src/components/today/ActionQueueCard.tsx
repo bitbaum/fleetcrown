@@ -78,7 +78,7 @@ export async function ActionQueueCard() {
                   {done
                     ? <Check className="h-3.5 w-3.5 text-status-positive shrink-0" />
                     : <X className="h-3.5 w-3.5 text-text-muted shrink-0" />}
-                  <span className="flex-1 truncate text-sm text-text-secondary">{action.title}</span>
+                  <span className="flex-1 truncate text-sm text-text-secondary" title={action.title}>{action.title}</span>
                   {action.reviewedAt && (
                     <span className="text-xs text-text-tertiary shrink-0">
                       {compactRelativeDate(action.reviewedAt)}
