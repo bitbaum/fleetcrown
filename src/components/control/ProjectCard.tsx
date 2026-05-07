@@ -40,16 +40,14 @@ export function ProjectCard({
   const [typingActive, setTypingActive] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
   const autoContinueKey = `control:auto-continue:${project.tab.toLowerCase()}`;
-
-  useEffect(() => {
+  const [autoContinueEnabled, setAutoContinueEnabled] = useState(() => {
     try {
-      const stored = window.localStorage.getItem(autoContinueKey);
-      if (stored === "off") setAutoContinueEnabled(false);
-      if (stored === "on") setAutoContinueEnabled(true);
-    } catch { /* ignore storage failures */ }
-  }, [autoContinueKey]);
+      return window.localStorage.getItem(autoContinueKey) !== "off";
+    } catch {
+      return true;
+    }
+  });
 
   useEffect(() => {
     try {

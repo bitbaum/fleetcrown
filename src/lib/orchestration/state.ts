@@ -1,7 +1,6 @@
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import type { OrchestrationEventType } from "./contract";
-
-const READY_WINDOW_S = 86400;
+import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
 
 export type LifecycleEventSnapshot = Partial<Record<OrchestrationEventType, Date>>;
 
@@ -37,9 +36,9 @@ function resolveTs(
 ): number | null {
   if (runtimeTs !== null) return runtimeTs;
   const eventS = toUnixSeconds(eventTs);
-  if (eventS !== null && (nowS - eventS) < READY_WINDOW_S) return eventS;
+  if (eventS !== null && (nowS - eventS) < SENTINEL_VALIDITY_S) return eventS;
   const dbS = toUnixSeconds(dbTs);
-  if (dbS !== null && (nowS - dbS) < READY_WINDOW_S) return dbS;
+  if (dbS !== null && (nowS - dbS) < SENTINEL_VALIDITY_S) return dbS;
   return null;
 }
 

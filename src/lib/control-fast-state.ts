@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { SESSIONS_DIR, stateFile } from "@/lib/agent-config";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
+import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
 import type { CurrentPrompt, SessionState } from "@/app/api/control/route";
 
 export function parseSession(tab: string): SessionState | null {
@@ -83,8 +84,6 @@ export type FastProjectState = {
   closedAt: number | null;
 };
 
-const READY_WINDOW_S = 86400;
-
 export function readFastState(
   projects: Array<{ tab: string; dir: string }>,
   agentCwds: string[]
@@ -100,9 +99,9 @@ export function readFastState(
       agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
       session: parseSession(tab),
       currentPrompt: readCurrentPrompt(tab),
-      readyAt:   tmpReady   !== null && (nowS - tmpReady)   < READY_WINDOW_S ? tmpReady   : null,
-      closingAt: tmpClosing !== null && (nowS - tmpClosing) < READY_WINDOW_S ? tmpClosing : null,
-      closedAt:  tmpClosed  !== null && (nowS - tmpClosed)  < READY_WINDOW_S ? tmpClosed  : null,
+      readyAt:   tmpReady   !== null && (nowS - tmpReady)   < SENTINEL_VALIDITY_S ? tmpReady   : null,
+      closingAt: tmpClosing !== null && (nowS - tmpClosing) < SENTINEL_VALIDITY_S ? tmpClosing : null,
+      closedAt:  tmpClosed  !== null && (nowS - tmpClosed)  < SENTINEL_VALIDITY_S ? tmpClosed  : null,
     };
   });
 }

@@ -7,3 +7,5 @@ node_modules
 .playwright-mcp/
 *.png
 *.jpeg
+.local-toolchain/
+.python-vendor/
