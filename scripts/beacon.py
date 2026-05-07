@@ -23,6 +23,7 @@ _bootstrap_vendor_packages()
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QLineEdit, QGraphicsDropShadowEffect, QFrame,
+    QScrollArea,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt6.QtGui import QColor, QCursor, QFont
@@ -155,20 +156,40 @@ QWidget#summary_card {{
     border-radius: 12px;
     border: 1px solid {border};
 }}
+QWidget#summary_scroll_content {{
+    background: transparent;
+}}
 QLabel#sum_val {{
     color: {text1};
     font-size: 15px;
     line-height: 1.6;
-}}
-QPushButton#expand {{
     background: transparent;
-    color: {text3};
-    border: none;
-    font-size: 12px;
-    padding: 4px 0px;
-    text-align: left;
 }}
-QPushButton#expand:hover {{ color: {accent}; }}
+
+/* ── Minimal scrollbar ── */
+QScrollArea {{
+    background: transparent;
+    border: none;
+}}
+QScrollBar:vertical {{
+    background: transparent;
+    width: 5px;
+    margin: 4px 2px 4px 0;
+}}
+QScrollBar::handle:vertical {{
+    background: {border};
+    border-radius: 3px;
+    min-height: 24px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {text3};
+}}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+    height: 0;
+}}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+    background: transparent;
+}}
 
 /* ── Action buttons — DEV group ── */
 QPushButton#primary {{
@@ -437,10 +458,10 @@ class BasePopup(QWidget):
     def _position(self):
         scr = QApplication.primaryScreen().availableGeometry()
         self.adjustSize()
-        self.move(
-            scr.right()  - self.sizeHint().width()  - 24,
-            scr.bottom() - self.sizeHint().height() - 24,
-        )
+        x = scr.right()  - self.sizeHint().width()  - 24
+        y = scr.bottom() - self.sizeHint().height() - 24
+        y = max(y, scr.top() + 16)   # never clip off the top of the screen
+        self.move(x, y)
 
     def _choose(self, key):
         self.result = key
@@ -557,11 +578,47 @@ class ContinuePopup(BasePopup):
                 if k in ('done', 'next', 'in_progress', 'tests', 'todos', 'health'):
                     parsed[k] = v.strip()
 
+        # ── Outer card ────────────────────────────────────────────────────────
         box = QWidget()
         box.setObjectName("summary_card")
-        box_lay = QVBoxLayout(box)
-        box_lay.setContentsMargins(18, 16, 18, 16)
-        box_lay.setSpacing(14)
+        box_outer = QVBoxLayout(box)
+        box_outer.setContentsMargins(0, 0, 0, 0)
+        box_outer.setSpacing(0)
+
+        # ── Scrollable content inside the card ───────────────────────────────
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setMaximumHeight(300)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        content = QWidget()
+        content.setObjectName("summary_scroll_content")
+        content_lay = QVBoxLayout(content)
+        content_lay.setContentsMargins(18, 16, 12, 16)
+        content_lay.setSpacing(14)
+
+        # ── Bullet row factory ────────────────────────────────────────────────
+        BULLET_WIDTH = 544   # content width minus scrollbar and margins
+
+        def _make_bullet(item_text, bullet_char, bullet_color, text_style):
+            item_row = QHBoxLayout()
+            item_row.setSpacing(8)
+            item_row.setContentsMargins(0, 1, 0, 1)
+            b_lbl = QLabel(bullet_char)
+            b_lbl.setStyleSheet(f"color:{bullet_color};font-size:14px;font-weight:700;background:transparent;")
+            b_lbl.setFixedWidth(16)
+            item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
+            v_lbl = QLabel(item_text)
+            v_lbl.setObjectName("sum_val")
+            v_lbl.setWordWrap(True)
+            v_lbl.setMaximumWidth(BULLET_WIDTH)
+            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            if text_style:
+                v_lbl.setStyleSheet(text_style + "background:transparent;")
+            item_row.addWidget(v_lbl, 1)
+            return item_row
 
         # ── Health strip — only show when there's something worth flagging ──
         def _strip_notable(k, v):
@@ -586,38 +643,17 @@ class ContinuePopup(BasePopup):
                 icon = {'tests': '🧪', 'todos': '📝', 'health': '❤️'}[mk]
                 color = h_color if mk == 'health' else C['text2']
                 lbl = QLabel(f"{icon}  {parsed[mk]}")
-                lbl.setStyleSheet(f"color:{color};font-size:12px;font-weight:600;")
+                lbl.setStyleSheet(f"color:{color};font-size:12px;font-weight:600;background:transparent;")
                 strip.addWidget(lbl)
             strip.addStretch()
-            box_lay.addLayout(strip)
+            content_lay.addLayout(strip)
 
             if any(k in parsed for k in ('done', 'next', 'in_progress')):
                 div = QFrame()
                 div.setStyleSheet(f"background:{C['border']};max-height:1px;min-height:1px;")
-                box_lay.addWidget(div)
+                content_lay.addWidget(div)
 
-        # ── Bullet row factory ────────────────────────────────────────────────
-        MAX_WIDTH = 530
-
-        def _make_bullet(item_text, bullet_char, bullet_color, text_style):
-            item_row = QHBoxLayout()
-            item_row.setSpacing(8)
-            item_row.setContentsMargins(0, 2, 0, 2)
-            b_lbl = QLabel(bullet_char)
-            b_lbl.setStyleSheet(f"color:{bullet_color};font-size:14px;font-weight:700;")
-            b_lbl.setFixedWidth(16)
-            item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
-            v_lbl = QLabel(item_text)
-            v_lbl.setObjectName("sum_val")
-            v_lbl.setWordWrap(True)
-            v_lbl.setMaximumWidth(MAX_WIDTH)
-            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            if text_style:
-                v_lbl.setStyleSheet(text_style)
-            item_row.addWidget(v_lbl, 1)
-            return item_row
-
-        # ── Narrative rows — UP NEXT first (actionable), DONE last (context) ──
+        # ── Narrative rows — UP NEXT first (actionable), DONE last ───────────
         narrative = [
             (C['cyan'],  "UP NEXT",     'next',        True),
             (C['amber'], "IN PROGRESS", 'in_progress', True),
@@ -628,15 +664,14 @@ class ContinuePopup(BasePopup):
             v = QLabel(self.session)
             v.setObjectName("sum_val")
             v.setWordWrap(True)
-            v.setMaximumWidth(MAX_WIDTH)
+            v.setMaximumWidth(BULLET_WIDTH)
             v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            box_lay.addWidget(v)
+            content_lay.addWidget(v)
 
         for color, label, key, prominent in narrative:
             if key not in parsed:
                 continue
             val_text = parsed[key]
-
             items = [s.strip() for s in val_text.split("; ") if s.strip()]
             bullet_char  = "→" if prominent else "✓"
             bullet_color = color if prominent else C['text2']
@@ -647,40 +682,17 @@ class ContinuePopup(BasePopup):
 
             k_lbl = QLabel(label)
             k_lbl.setStyleSheet(
-                f"color:{color};font-size:11px;font-weight:700;letter-spacing:1.2px;")
+                f"color:{color};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
             section.addWidget(k_lbl)
 
-            # First item — always visible
-            section.addLayout(_make_bullet(items[0], bullet_char, bullet_color, text_style))
+            for itm in items:
+                section.addLayout(_make_bullet(itm, bullet_char, bullet_color, text_style))
 
-            # Remaining items — hidden by default, toggled by expand button
-            if len(items) > 1:
-                rest = QWidget()
-                rest_lay = QVBoxLayout(rest)
-                rest_lay.setContentsMargins(0, 0, 0, 0)
-                rest_lay.setSpacing(4)
-                for itm in items[1:]:
-                    rest_lay.addLayout(_make_bullet(itm, bullet_char, bullet_color, text_style))
-                rest.setVisible(False)
+            content_lay.addLayout(section)
 
-                n_more = len(items) - 1
-                expand_btn = QPushButton(f"Show {n_more} more ↓")
-                expand_btn.setObjectName("expand")
-                expand_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-
-                def _toggle(checked=False, rw=rest, btn=expand_btn, n=n_more):
-                    vis = rw.isVisible()
-                    rw.setVisible(not vis)
-                    btn.setText("Show less ↑" if not vis else f"Show {n} more ↓")
-                    self.adjustSize()
-                    self._position()
-
-                expand_btn.clicked.connect(_toggle)
-                section.addWidget(rest)
-                section.addWidget(expand_btn)
-
-            box_lay.addLayout(section)
-
+        content_lay.addStretch()
+        scroll.setWidget(content)
+        box_outer.addWidget(scroll)
         lay.addWidget(box)
 
     # ── mic / whisper ─────────────────────────────────────────────────────────
