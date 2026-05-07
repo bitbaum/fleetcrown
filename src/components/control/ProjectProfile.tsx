@@ -1,13 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ExternalLink, ChevronRight, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DIMENSIONS, interpolateDimensionPrompt } from "@/config/dimension-prompts";
+import { useFetch } from "@/hooks/use-fetch";
+import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 
 type AgentEntry = { id: string; label: string };
 type AgentId = string;
+
+// Dimension display metadata — the order and icons live here in the UI layer
+const DIMENSION_META: Record<string, { label: string; icon: string }> = {
+  engineering: { label: "Engineering",  icon: "⚙" },
+  product:     { label: "Product",      icon: "📦" },
+  ux:          { label: "UX / Design",  icon: "🎨" },
+  marketing:   { label: "Marketing",    icon: "📣" },
+  content:     { label: "Content",      icon: "✍" },
+  business:    { label: "Business",     icon: "💼" },
+  deploy:      { label: "Deploy",       icon: "🚀" },
+};
+
+const DIMENSION_ORDER = ["engineering", "product", "ux", "marketing", "content", "business", "deploy"];
+
+function interpolate(
+  template: string,
+  ctx: { name: string; path: string; mission?: string; stack?: string; url?: string },
+): string {
+  return template
+    .replace(/\{name\}/g, ctx.name)
+    .replace(/\{path\}/g, ctx.path)
+    .replace(/\{mission\}/g, ctx.mission ?? "not specified")
+    .replace(/\{stack\}/g, ctx.stack ?? "not specified")
+    .replace(/\{url\}/g, ctx.url ?? "not deployed yet");
+}
 
 function MaturityDots({ maturity }: { maturity: string }) {
   const m = maturity.match(/^(\d+)/);
@@ -36,11 +62,7 @@ function StatusChip({ value }: { value: string }) {
   const v = value.toLowerCase();
   const active = v.includes("active") || v.includes("live") || v.includes("production");
   const warn = v.includes("pause") || v.includes("hold") || v.includes("slow");
-  const cls = active
-    ? "ui-tag ui-tag-positive"
-    : warn
-      ? "ui-tag ui-tag-warning"
-      : "ui-tag ui-tag-neutral";
+  const cls = active ? "ui-tag ui-tag-positive" : warn ? "ui-tag ui-tag-warning" : "ui-tag ui-tag-neutral";
   return <span className={cls}>{value}</span>;
 }
 
@@ -60,20 +82,15 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
 
   return (
     <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
-      {/* Description */}
       {profile.description && (
         <p className="text-[0.9375rem] leading-[1.65] text-text-secondary">{profile.description}</p>
       )}
-
-      {/* Mission callout */}
       {profile.mission && (
         <div className="border-l-2 border-accent-primary/40 pl-4">
           <p className="ui-kicker mb-1.5">Mission</p>
           <p className="text-sm leading-relaxed text-text-primary">{profile.mission}</p>
         </div>
       )}
-
-      {/* Core stats row */}
       {(profile.status || profile.maturity) && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           {profile.status && (
@@ -90,8 +107,6 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
           )}
         </div>
       )}
-
-      {/* URL */}
       {profile.url && (
         <a
           href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
@@ -104,13 +119,9 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
           <ExternalLink className="h-3 w-3 opacity-60" />
         </a>
       )}
-
-      {/* Stack + extra attrs */}
       {(profile.stack || extraAttrs.length > 0) && (
         <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-base">
-          {profile.stack && (
-            <MetaRow label="Stack">{profile.stack}</MetaRow>
-          )}
+          {profile.stack && <MetaRow label="Stack">{profile.stack}</MetaRow>}
           {extraAttrs.map(([k, v]) => (
             <MetaRow key={k} label={k.replace(/_/g, " ")}>{v}</MetaRow>
           ))}
@@ -121,19 +132,23 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
 }
 
 function DimensionSection({
-  dimension,
+  dimensionId,
+  prompts,
   project,
   usageCounts,
   isSending,
   onRun,
 }: {
-  dimension: (typeof DIMENSIONS)[number];
+  dimensionId: string;
+  prompts: AgentPrompt[];
   project: ProjectState;
   usageCounts: Map<string, number>;
   isSending: boolean;
   onRun: (prompt: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const meta = DIMENSION_META[dimensionId];
+  if (!meta || prompts.length === 0) return null;
 
   const ctx = {
     name: project.tab,
@@ -150,25 +165,25 @@ function DimensionSection({
         className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
       >
         <span className="flex items-center gap-2.5">
-          <span className="text-base leading-none">{dimension.icon}</span>
-          <span className="text-sm font-medium text-text-secondary group-hover:text-text-primary">{dimension.label}</span>
+          <span className="text-base leading-none">{meta.icon}</span>
+          <span className="text-sm font-medium text-text-secondary">{meta.label}</span>
         </span>
         <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
       </button>
 
       {open && (
         <div className="flex flex-wrap gap-2 px-4 pb-4 pt-1 sm:px-5">
-          {dimension.prompts.map((p) => {
-            const rendered = interpolateDimensionPrompt(p.prompt, ctx);
+          {prompts.map((p) => {
+            const rendered = interpolate(p.prompt, ctx);
             const uses = usageCounts.get(rendered) ?? 0;
             return (
               <button
-                key={p.label}
+                key={p.key}
                 onClick={() => onRun(rendered)}
                 disabled={isSending}
                 className="min-h-10 rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
               >
-                {p.label}
+                {p.icon} {p.label}
                 {uses > 0 && <span className="ml-2 text-[10px] text-text-tertiary">×{uses}</span>}
               </button>
             );
@@ -196,6 +211,23 @@ export function ProjectProfile({
 }) {
   const [sending, setSending] = useState(false);
   const activeAgent = localAgent ?? (globalAdapter as AgentId);
+
+  const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
+
+  // Group dimension prompts by dimensionId, ordered by DIMENSION_ORDER
+  const dimensionGroups = useMemo(() => {
+    if (!allPrompts) return [];
+    const byDim = new Map<string, AgentPrompt[]>();
+    for (const p of allPrompts) {
+      if (!p.dimensionId || p.style === "internal") continue;
+      if (!byDim.has(p.dimensionId)) byDim.set(p.dimensionId, []);
+      byDim.get(p.dimensionId)!.push(p);
+    }
+    return DIMENSION_ORDER.filter((id) => byDim.has(id)).map((id) => ({
+      id,
+      prompts: byDim.get(id)!,
+    }));
+  }, [allPrompts]);
 
   const usageCounts = new Map<string, number>();
   for (const r of project.recentCustomPrompts) {
@@ -243,15 +275,18 @@ export function ProjectProfile({
         <MetaSection profile={project.profile} />
       ) : (
         <div className="px-4 py-6 text-center sm:px-5">
-          <p className="text-sm text-text-secondary">No profile — add metadata in the Projects view to enable full awareness.</p>
+          <p className="text-sm text-text-secondary">
+            No profile — add metadata in the Projects view to enable full awareness.
+          </p>
         </div>
       )}
 
-      {/* Dimension prompt sections */}
-      {DIMENSIONS.map((dim) => (
+      {/* Dimension prompt sections — loaded from ~/.config/agent-prompts.json */}
+      {dimensionGroups.map(({ id, prompts }) => (
         <DimensionSection
-          key={dim.id}
-          dimension={dim}
+          key={id}
+          dimensionId={id}
+          prompts={prompts}
           project={project}
           usageCounts={usageCounts}
           isSending={sending}
