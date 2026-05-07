@@ -603,7 +603,9 @@ class ContinuePopup(BasePopup):
                 box_lay.addWidget(div)
 
         # ── Narrative rows — UP NEXT first (actionable), DONE last (context) ──
-        PREVIEW = 200
+        # next/in_progress show in full — they're actionable and must be read.
+        # done truncates at 400 chars since it's context, not a call-to-action.
+        PREVIEW_CONTEXT = 400
         narrative = [
             (C['cyan'],  "UP NEXT",     'next',        True),
             (C['amber'], "IN PROGRESS", 'in_progress', True),
@@ -615,6 +617,7 @@ class ContinuePopup(BasePopup):
             v.setObjectName("sum_val")
             v.setWordWrap(True)
             v.setMaximumWidth(480)
+            v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             box_lay.addWidget(v)
 
         for color, label, key, prominent in narrative:
@@ -629,11 +632,16 @@ class ContinuePopup(BasePopup):
                 f"color:{color};font-size:12px;font-weight:700;letter-spacing:1.0px;")
             row.addWidget(k_lbl)
 
-            is_long = len(val_text) > PREVIEW
-            v_lbl   = QLabel(val_text[:PREVIEW] + ("…" if is_long else ""))
+            # Actionable fields (next, in_progress) shown in full — no truncation.
+            # Context fields (done) get a soft limit so the popup stays compact.
+            preview = None if prominent else PREVIEW_CONTEXT
+            is_long = preview is not None and len(val_text) > preview
+            display_text = val_text[:preview] + ("…" if is_long else "") if is_long else val_text
+            v_lbl = QLabel(display_text)
             v_lbl.setObjectName("sum_val")
             v_lbl.setWordWrap(True)
             v_lbl.setMaximumWidth(480)
+            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             if not prominent:
                 v_lbl.setStyleSheet(f"color:{C['text2']};font-size:14px;line-height:1.5;")
             row.addWidget(v_lbl)
@@ -643,6 +651,7 @@ class ContinuePopup(BasePopup):
                 full.setObjectName("sum_more")
                 full.setWordWrap(True)
                 full.setMaximumWidth(480)
+                full.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 if not prominent:
                     full.setStyleSheet(f"color:{C['text2']};font-size:14px;line-height:1.5;")
                 full.setVisible(False)
