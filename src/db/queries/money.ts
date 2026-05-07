@@ -40,6 +40,54 @@ export const PatchSubscriptionBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
+export type PatchSubscriptionInput = z.infer<typeof PatchSubscriptionBody>;
+
+export async function createSubscription(userId: string, data: CreateSubscriptionInput) {
+  const [created] = await db
+    .insert(subscriptions)
+    .values({
+      userId,
+      name: data.name,
+      vendor: data.vendor || null,
+      amount: data.amount ?? null,
+      currency: data.currency,
+      frequency: data.frequency,
+      nextDue: data.nextDue ? new Date(data.nextDue) : null,
+      paymentMethod: data.paymentMethod || null,
+      notes: data.notes || null,
+      status: SUB_STATUS.ACTIVE,
+    })
+    .returning();
+  return created;
+}
+
+export async function patchSubscription(userId: string, id: string, data: PatchSubscriptionInput) {
+  const patch: Partial<typeof subscriptions.$inferInsert> = { updatedAt: new Date() };
+  if (data.nextDue !== undefined) patch.nextDue = data.nextDue ? new Date(data.nextDue) : null;
+  if (data.amount !== undefined) patch.amount = data.amount;
+  if (data.notes !== undefined) patch.notes = data.notes.trim() || null;
+  if (data.status !== undefined) patch.status = data.status;
+  if (data.name !== undefined) patch.name = data.name;
+  if (data.vendor !== undefined) patch.vendor = data.vendor.trim() || null;
+  if (data.paymentMethod !== undefined) patch.paymentMethod = data.paymentMethod.trim() || null;
+  if (data.currency !== undefined) patch.currency = data.currency;
+  if (data.frequency !== undefined) patch.frequency = data.frequency;
+  const [updated] = await db
+    .update(subscriptions)
+    .set(patch)
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
+    .returning();
+  return updated ?? null;
+}
+
+export async function deleteSubscription(userId: string, id: string) {
+  const [deleted] = await db
+    .delete(subscriptions)
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
+    .returning({ id: subscriptions.id });
+  return deleted ?? null;
+}
+
 export async function getActiveSubscriptions(userId: string) {
   return db
     .select()

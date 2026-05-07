@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_COCKPIT_UI } from "@/lib/constants";
-import { searchPeople, SORT_MODE, type SortMode } from "@/db/queries/people";
-import { db } from "@/db";
-import { entities } from "@/db/schema";
+import { searchPeople, createPerson, SORT_MODE, type SortMode, CreatePersonBody } from "@/db/queries/people";
 import { getCurrentUserId } from "@/lib/session";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
-import { CreatePersonBody } from "@/db/queries/people";
 
 const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);
 
@@ -15,20 +10,9 @@ export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
   const dataOrResp = await readJsonBody(req, CreatePersonBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { name, description } = dataOrResp;
 
   try {
-    const [created] = await db
-      .insert(entities)
-      .values({
-        userId,
-        name,
-        type: ENTITY_TYPE.PERSON,
-        description: description || null,
-        source: SOURCE_COCKPIT_UI,
-      })
-      .returning({ id: entities.id, name: entities.name });
-
+    const created = await createPerson(userId, dataOrResp);
     return NextResponse.json({ ok: true, person: created }, { status: 201 });
   } catch (e: unknown) {
     const dup = handleDuplicateEntityNameError(e, "person");

@@ -28,7 +28,46 @@ export const PatchEventBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
+export type CreateEventInput = z.infer<typeof CreateEventBody>;
 export type PatchEventInput = z.infer<typeof PatchEventBody>;
+
+export async function createEvent(userId: string, data: CreateEventInput, source?: string) {
+  const [created] = await db
+    .insert(events)
+    .values({
+      userId,
+      name: data.name,
+      type: data.type.toLowerCase(),
+      description: data.description || null,
+      url: data.url || null,
+      deadline: data.deadline ? new Date(data.deadline) : null,
+      category: data.category?.toLowerCase() || null,
+      status: EVENT_STATUS.ACTIVE,
+      source: source ?? null,
+    })
+    .returning();
+  return created;
+}
+
+export async function patchEvent(userId: string, id: string, data: PatchEventInput) {
+  const [updated] = await db
+    .update(events)
+    .set({
+      ...(data.status !== undefined && { status: data.status }),
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.description !== undefined && { description: data.description }),
+      ...(data.url !== undefined && { url: data.url }),
+      ...(data.deadline !== undefined && { deadline: data.deadline ? new Date(data.deadline) : null }),
+      updatedAt: new Date(),
+    })
+    .where(and(eq(events.id, id), eq(events.userId, userId)))
+    .returning();
+  return updated ?? null;
+}
+
+export async function deleteEvent(userId: string, id: string) {
+  await db.delete(events).where(and(eq(events.id, id), eq(events.userId, userId)));
+}
 
 export async function getEventsDueSoon(userId: string, days = EVENTS_DUE_SOON_DAYS): Promise<EventRow[]> {
   const soon = new Date();

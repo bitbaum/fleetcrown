@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPersonDetail } from "@/db/queries/people";
+import { getPersonDetail, patchPerson, deletePerson, PatchPersonBody } from "@/db/queries/people";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import { db } from "@/db";
-import { entities } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/session";
-import { PatchPersonBody } from "@/db/queries/people";
 
 export async function PATCH(
   req: NextRequest,
@@ -14,22 +10,12 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
   const dataOrResp = await readJsonBody(req, PatchPersonBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
-  if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
-  if (dataOrResp.description !== undefined) patch.description = dataOrResp.description.trim() || null;
-
   try {
-    const [updated] = await db
-      .update(entities)
-      .set(patch)
-      .where(and(eq(entities.id, id), eq(entities.userId, userId)))
-      .returning({ id: entities.id });
-
+    const updated = await patchPerson(userId, idOrResp, dataOrResp);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
@@ -47,13 +33,8 @@ export async function DELETE(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
-  const [deleted] = await db
-    .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
-    .returning({ id: entities.id });
-
+  const deleted = await deletePerson(userId, idOrResp);
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

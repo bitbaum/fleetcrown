@@ -1,4 +1,4 @@
-import { DEFAULT_USER_EXTERNAL_ID } from "@/lib/constants";
+import { DEFAULT_USER_EXTERNAL_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
@@ -182,6 +182,34 @@ export async function getPersonDetail(userId: string, id: string) {
     relations: [...relationsFrom, ...relationsTo],
     interactions: recentInteractions,
   };
+}
+
+export async function createPerson(userId: string, { name, description }: CreatePersonInput) {
+  const [created] = await db
+    .insert(entities)
+    .values({ userId, name, type: ENTITY_TYPE.PERSON, description: description || null, source: SOURCE_COCKPIT_UI })
+    .returning({ id: entities.id, name: entities.name });
+  return created;
+}
+
+export async function patchPerson(userId: string, id: string, data: z.infer<typeof PatchPersonBody>) {
+  const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
+  if (data.name !== undefined) patch.name = data.name;
+  if (data.description !== undefined) patch.description = data.description.trim() || null;
+  const [updated] = await db
+    .update(entities)
+    .set(patch)
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
+    .returning({ id: entities.id });
+  return updated ?? null;
+}
+
+export async function deletePerson(userId: string, id: string) {
+  const [deleted] = await db
+    .delete(entities)
+    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
+    .returning({ id: entities.id });
+  return deleted ?? null;
 }
 
 export async function createInteraction(

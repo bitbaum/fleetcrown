@@ -1,7 +1,7 @@
 import { GOAL_STATUS, type GoalStatus } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { goals, entities, type Milestone } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const MilestoneSchema = z.object({
@@ -46,6 +46,66 @@ export type GoalWithChildren = {
   entityName: string | null;
   children: GoalWithChildren[];
 };
+
+export async function listActiveGoals(userId: string) {
+  return db
+    .select({ id: goals.id, title: goals.title, status: goals.status, entityId: goals.entityId })
+    .from(goals)
+    .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE)))
+    .orderBy(goals.title);
+}
+
+export async function createGoal(userId: string, data: CreateGoalInput) {
+  const [created] = await db
+    .insert(goals)
+    .values({
+      userId,
+      title: data.title,
+      description: data.description || null,
+      targetDate: data.targetDate ? new Date(data.targetDate) : null,
+      parentGoalId: data.parentGoalId || null,
+      entityId: data.entityId || null,
+      status: GOAL_STATUS.ACTIVE,
+      progress: 0,
+    })
+    .returning();
+  return created;
+}
+
+export async function patchGoal(userId: string, id: string, data: z.infer<typeof PatchGoalBody>) {
+  const patch: Partial<typeof goals.$inferInsert> = { updatedAt: new Date() };
+  if (data.title !== undefined) patch.title = data.title;
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.progress !== undefined) patch.progress = data.progress;
+  if (data.status !== undefined) patch.status = data.status;
+  if (data.milestones !== undefined) patch.milestones = data.milestones;
+  if (data.targetDate !== undefined) patch.targetDate = data.targetDate ? new Date(data.targetDate) : null;
+  if (data.entityId !== undefined) patch.entityId = data.entityId || null;
+  if (patch.status === GOAL_STATUS.COMPLETED) patch.completedAt = new Date();
+  else if (patch.status === GOAL_STATUS.ACTIVE) patch.completedAt = null;
+  const [updated] = await db
+    .update(goals)
+    .set(patch)
+    .where(and(eq(goals.id, id), eq(goals.userId, userId)))
+    .returning();
+  return updated ?? null;
+}
+
+export async function deleteGoal(userId: string, id: string): Promise<number> {
+  const [owned] = await db.select({ id: goals.id }).from(goals).where(and(eq(goals.id, id), eq(goals.userId, userId)));
+  if (!owned) return 0;
+  const allGoals = await db.select({ id: goals.id, parentGoalId: goals.parentGoalId }).from(goals).where(eq(goals.userId, userId));
+  function collectSubtree(rootId: string): string[] {
+    const ids = [rootId];
+    for (const g of allGoals) {
+      if (g.parentGoalId === rootId) ids.push(...collectSubtree(g.id));
+    }
+    return ids;
+  }
+  const idsToDelete = collectSubtree(id);
+  await db.delete(goals).where(inArray(goals.id, idsToDelete));
+  return idsToDelete.length;
+}
 
 export async function getGoals(userId: string): Promise<GoalWithChildren[]> {
   const allGoals = await db

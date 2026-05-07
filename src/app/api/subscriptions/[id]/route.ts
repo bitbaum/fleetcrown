@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { subscriptions } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { patchSubscription, deleteSubscription, PatchSubscriptionBody } from "@/db/queries/money";
 import { getCurrentUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
-import { PatchSubscriptionBody } from "@/db/queries/money";
 
 export async function PATCH(
   req: NextRequest,
@@ -13,28 +10,11 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
   const dataOrResp = await readJsonBody(req, PatchSubscriptionBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Partial<typeof subscriptions.$inferInsert> = { updatedAt: new Date() };
-  if (dataOrResp.nextDue !== undefined) patch.nextDue = dataOrResp.nextDue ? new Date(dataOrResp.nextDue) : null;
-  if (dataOrResp.amount !== undefined) patch.amount = dataOrResp.amount;
-  if (dataOrResp.notes !== undefined) patch.notes = dataOrResp.notes.trim() || null;
-  if (dataOrResp.status !== undefined) patch.status = dataOrResp.status;
-  if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
-  if (dataOrResp.vendor !== undefined) patch.vendor = dataOrResp.vendor.trim() || null;
-  if (dataOrResp.paymentMethod !== undefined) patch.paymentMethod = dataOrResp.paymentMethod.trim() || null;
-  if (dataOrResp.currency !== undefined) patch.currency = dataOrResp.currency;
-  if (dataOrResp.frequency !== undefined) patch.frequency = dataOrResp.frequency;
-
-  const [updated] = await db
-    .update(subscriptions)
-    .set(patch)
-    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
-    .returning();
-
+  const updated = await patchSubscription(userId, idOrResp, dataOrResp);
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true, subscription: updated });
 }
@@ -46,13 +26,8 @@ export async function DELETE(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
-  const [deleted] = await db
-    .delete(subscriptions)
-    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
-    .returning({ id: subscriptions.id });
-
+  const deleted = await deleteSubscription(userId, idOrResp);
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }
