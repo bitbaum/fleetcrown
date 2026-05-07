@@ -148,6 +148,24 @@ function splitItems(text: string): string[] {
   return text.split(/;\s+/).map((s) => s.trim()).filter(Boolean);
 }
 
+function BulletList({ items, icon, iconClass, textClass }: {
+  items: string[];
+  icon: string;
+  iconClass: string;
+  textClass: string;
+}) {
+  return (
+    <div className="space-y-2.5">
+      {items.map((item, i) => (
+        <div key={i} className="flex gap-3">
+          <span className={cn("shrink-0 select-none font-bold leading-relaxed", iconClass)}>{icon}</span>
+          <p className={cn("select-text text-base leading-relaxed", textClass)}>{item}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SessionSummary({
   session,
   isClosed,
@@ -155,34 +173,57 @@ export function SessionSummary({
   session: ProjectState["session"];
   isClosed: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
 
   const nextItems = session.next ? splitItems(session.next) : [];
   const doneItems = session.done ? splitItems(session.done) : [];
+  const needsExpand = nextItems.length > 1 || doneItems.length > 0;
 
-  return (
-    <div className="border-t border-border-subtle px-5 py-5 space-y-5 md:px-6">
-      {nextItems.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-accent-text">Up next</p>
-          {nextItems.map((item, i) => (
-            <div key={i} className="flex gap-3">
-              <span className="shrink-0 select-none text-accent-text font-bold leading-relaxed">→</span>
-              <p className="select-text text-base leading-relaxed text-text-primary">{item}</p>
-            </div>
-          ))}
+  // Collapsed: one primary next item visible, "Show all" toggle if there's more
+  if (!expanded) {
+    const preview = nextItems[0] ?? doneItems[0] ?? "";
+    return (
+      <div className="ui-card-section">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 gap-3">
+            <span className="mt-0.5 shrink-0 select-none font-bold text-accent-text">→</span>
+            <p className="select-text text-base leading-relaxed text-text-primary">{preview}</p>
+          </div>
+          {needsExpand && (
+            <button
+              onClick={() => setExpanded(true)}
+              className="shrink-0 whitespace-nowrap text-sm text-text-muted transition-colors hover:text-text-secondary"
+            >
+              Show all ↓
+            </button>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  // Expanded: full list with section labels
+  return (
+    <div className="ui-card-section space-y-5">
+      <div className="flex items-center justify-between">
+        <span className="ui-kicker text-accent-text">Up next</span>
+        <button
+          onClick={() => setExpanded(false)}
+          className="text-sm text-text-muted transition-colors hover:text-text-secondary"
+        >
+          ↑ Collapse
+        </button>
+      </div>
+      {nextItems.length > 0 && (
+        <BulletList items={nextItems} icon="→" iconClass="text-accent-text" textClass="text-text-primary" />
       )}
       {doneItems.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-bold uppercase tracking-[0.12em] text-text-muted">Done</p>
-          {doneItems.map((item, i) => (
-            <div key={i} className="flex gap-3">
-              <span className="shrink-0 select-none text-status-positive font-bold leading-relaxed">✓</span>
-              <p className="select-text text-base leading-relaxed text-text-secondary">{item}</p>
-            </div>
-          ))}
+        <div className="space-y-2.5">
+          <p className="ui-kicker">Done</p>
+          <BulletList items={doneItems} icon="✓" iconClass="text-status-positive" textClass="text-text-secondary" />
         </div>
       )}
     </div>
