@@ -399,18 +399,20 @@ export function IntentButtonPanel({
                 {sending === id ? "…" : label}
               </button>
             ))}
-            <button
-              onClick={() => setShowMore((v) => !v)}
-              className="ui-chip-action-compact text-text-muted"
-            >
-              {showMore ? "↑ Less" : "More ↓"}
-            </button>
+            {!showMore && (
+              <button
+                onClick={() => setShowMore(true)}
+                className="ui-chip-action-compact text-text-muted"
+              >
+                More ↓
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {showMore && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 border-t border-border-subtle pt-2">
           {MORE_INTENTS.map(({ id, label }) => (
             <button
               key={id}
@@ -439,6 +441,12 @@ export function IntentButtonPanel({
               Clear context
             </button>
           )}
+          <button
+            onClick={() => setShowMore(false)}
+            className="ui-chip-action-compact text-text-muted"
+          >
+            ↑ Less
+          </button>
         </div>
       )}
 
