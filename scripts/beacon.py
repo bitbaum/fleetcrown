@@ -632,43 +632,33 @@ class ContinuePopup(BasePopup):
                 f"color:{color};font-size:12px;font-weight:700;letter-spacing:1.0px;")
             row.addWidget(k_lbl)
 
-            # Actionable fields (next, in_progress) shown in full — no truncation.
-            # Context fields (done) get a soft limit so the popup stays compact.
-            preview = None if prominent else PREVIEW_CONTEXT
-            is_long = preview is not None and len(val_text) > preview
-            display_text = val_text[:preview] + ("…" if is_long else "") if is_long else val_text
-            v_lbl = QLabel(display_text)
-            v_lbl.setObjectName("sum_val")
-            v_lbl.setWordWrap(True)
-            v_lbl.setMaximumWidth(480)
-            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            if not prominent:
-                v_lbl.setStyleSheet(f"color:{C['text2']};font-size:14px;line-height:1.5;")
-            row.addWidget(v_lbl)
+            # Split on "; " into bullet items — matches the web card's splitItems() logic.
+            # Each semicolon-separated clause becomes its own copyable row.
+            items = [s.strip() for s in val_text.split("; ") if s.strip()]
+            bullet_char = "→" if prominent else "✓"
+            bullet_color = color if prominent else C['text2']
+            text_style = "" if prominent else f"color:{C['text2']};font-size:14px;"
 
-            if is_long:
-                full = QLabel(val_text)
-                full.setObjectName("sum_more")
-                full.setWordWrap(True)
-                full.setMaximumWidth(480)
-                full.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-                if not prominent:
-                    full.setStyleSheet(f"color:{C['text2']};font-size:14px;line-height:1.5;")
-                full.setVisible(False)
-                tog = SafeButton("▸ show more")
-                tog.setObjectName("expand")
-                tog.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                tog.pressed.connect(self._cancel_countdown)
-                def _flip(b=tog, s=v_lbl, f=full):
-                    expanded = f.isVisible()
-                    s.setVisible(expanded)
-                    f.setVisible(not expanded)
-                    b.setText("▾ show less" if not expanded else "▸ show more")
-                    self.adjustSize()
-                    self._position()
-                tog.clicked.connect(_flip)
-                row.addWidget(tog)
-                row.addWidget(full)
+            for item_text in items:
+                item_row = QHBoxLayout()
+                item_row.setSpacing(6)
+                item_row.setContentsMargins(0, 2, 0, 2)
+
+                b_lbl = QLabel(bullet_char)
+                b_lbl.setStyleSheet(f"color:{bullet_color};font-size:13px;font-weight:700;")
+                b_lbl.setFixedWidth(14)
+                item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
+
+                v_lbl = QLabel(item_text)
+                v_lbl.setObjectName("sum_val")
+                v_lbl.setWordWrap(True)
+                v_lbl.setMaximumWidth(460)
+                v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                if text_style:
+                    v_lbl.setStyleSheet(text_style)
+                item_row.addWidget(v_lbl, 1)
+
+                row.addLayout(item_row)
 
             box_lay.addLayout(row)
 
