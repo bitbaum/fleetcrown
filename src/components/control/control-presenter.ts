@@ -81,6 +81,7 @@ export function getProjectDisplayState(
   const showRunningBanner = !isClosing && Boolean(project.currentPrompt) && isRunning;
   const showLatestOrchestration =
     Boolean(project.latestOrchestrationRun) &&
+    !isRunning &&
     !showRunningBanner &&
     !isReady &&
     !isOrchestrationReady &&

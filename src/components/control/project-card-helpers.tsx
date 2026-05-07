@@ -12,8 +12,19 @@ import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 
 export function SessionBadge({ health }: { health: string }) {
-  const color = HEALTH_COLOR[health] ?? "text-text-tertiary";
-  return <span className={cn("rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em]", color)}>{health}</span>;
+  // Agents write verbose health like "GOOD — deployed; all tests pass" or
+  // "LINT CLEAN, BUILD CLEAN, 0 TS ERRORS". Extract first segment as badge label.
+  const short = health.split(/\s*[,—–]\s*/)[0].trim();
+  const color = HEALTH_COLOR[short.toLowerCase()] ?? "text-text-tertiary";
+  const hasMore = short.length < health.trim().length;
+  return (
+    <span
+      title={hasMore ? health : undefined}
+      className={cn("max-w-[16rem] truncate rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-[0.16em]", color)}
+    >
+      {short}
+    </span>
+  );
 }
 
 
