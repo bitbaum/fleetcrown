@@ -1,6 +1,6 @@
 import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users, Check, X } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { getPendingActions, getRecentActions } from "@/db/queries/actions";
+import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
 import { getCurrentUserId } from "@/lib/session";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
@@ -24,11 +24,11 @@ type ActionGroup = {
 };
 
 function groupSimilarActions(
-  actions: Awaited<ReturnType<typeof getPendingActions>>,
-): { groups: ActionGroup[]; standalone: typeof actions } {
+  actions: ActionRow[],
+): { groups: ActionGroup[]; standalone: ActionRow[] } {
   // Group "Check in with X" actions (same type + same reasoning pattern)
-  const checkins: typeof actions = [];
-  const standalone: typeof actions = [];
+  const checkins: ActionRow[] = [];
+  const standalone: ActionRow[] = [];
 
   for (const a of actions) {
     if (a.type === ACTION_TYPE.SEND_MESSAGE && a.title.startsWith("Check in with ")) {

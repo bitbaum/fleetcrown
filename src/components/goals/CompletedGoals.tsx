@@ -3,11 +3,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { GoalCard } from "./GoalCard";
-import type { getGoals } from "@/db/queries/goals";
+import type { GoalWithChildren } from "@/db/queries/goals";
 
-type Goal = Awaited<ReturnType<typeof getGoals>>[number];
-
-export function CompletedGoals({ goals }: { goals: Goal[] }) {
+export function CompletedGoals({ goals }: { goals: GoalWithChildren[] }) {
   const [open, setOpen] = useState(false);
 
   if (goals.length === 0) return null;

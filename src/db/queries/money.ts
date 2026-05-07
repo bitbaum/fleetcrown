@@ -1,5 +1,7 @@
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
+
+export type SubscriptionRow = typeof subscriptions.$inferSelect;
 import { eq, and, sql } from "drizzle-orm";
 import { SUB_STATUS, COMMITMENT_STATUS, type SubStatus } from "@/lib/constants/statuses";
 import {
@@ -147,7 +149,7 @@ export async function cancelSubscription(id: string, userId: string) {
 }
 
 export function calculateMonthlyBurn(
-  subs: Awaited<ReturnType<typeof getActiveSubscriptions>>,
+  subs: SubscriptionRow[],
 ): MonthlyBurn {
   const totals: Record<string, number> = { CHF: 0, USD: 0, EUR: 0, GBP: 0 };
 

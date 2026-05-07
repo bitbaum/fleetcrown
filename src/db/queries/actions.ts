@@ -3,6 +3,8 @@ import { actions } from "@/db/schema";
 import { eq, and, desc, ne, sql } from "drizzle-orm";
 import { ACTION_STATUS } from "@/lib/constants/statuses";
 
+export type ActionRow = typeof actions.$inferSelect;
+
 export async function getPendingActions(userId: string) {
   return db
     .select()
