@@ -176,6 +176,7 @@ export function ProjectBanners({
   isClosing,
   isReady,
   isOrchReady,
+  isRunning,
   showRunning,
   session,
   git,
@@ -191,6 +192,7 @@ export function ProjectBanners({
   isClosing: boolean;
   isReady: boolean;
   isOrchReady: boolean;
+  isRunning: boolean;
   showRunning: boolean;
   session: ProjectState["session"];
   git: ProjectState["git"];
@@ -241,6 +243,17 @@ export function ProjectBanners({
       )}
       {showRunning && currentPrompt && (
         <RunningBanner label={currentPrompt.label} startedAt={currentPrompt.startedAt} />
+      )}
+      {isRunning && !currentPrompt && !isClosing && (
+        <div className="border-t border-accent-primary/20 bg-accent-primary/[0.03] px-5 py-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="ui-spinner-sm text-accent-text shrink-0" />
+            <span className="text-sm text-accent-text">Agent active</span>
+            {git?.todayCount ? (
+              <span className="ml-auto text-sm text-text-secondary tabular-nums">+{git.todayCount} commits today</span>
+            ) : null}
+          </div>
+        </div>
       )}
     </>
   );

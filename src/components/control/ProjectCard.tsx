@@ -167,6 +167,7 @@ export function ProjectCard({
             isClosing={display.isClosing}
             isReady={display.isReady}
             isOrchReady={display.isOrchestrationReady}
+            isRunning={display.isRunning}
             showRunning={display.showRunningBanner}
             session={project.session}
             git={project.git}
