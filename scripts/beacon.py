@@ -692,6 +692,7 @@ class ContinuePopup(BasePopup):
 
         content_lay.addStretch()
         scroll.setWidget(content)
+        scroll.viewport().setStyleSheet(f"background: {C['surface']};")
         box_outer.addWidget(scroll)
         lay.addWidget(box)
 
