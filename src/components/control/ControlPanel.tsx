@@ -1,33 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
-import { READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow } from "@/lib/constants/control";
 import type { ProjectState } from "@/app/api/control/route";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
+import { buildControlPageState } from "./control-presenter";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
+  LaunchTabModal,
   NewProjectModal,
 } from "./control-panel-helpers";
-
-const ACTIVE_WINDOW_S = 300;
-
-function isActiveProject(p: ProjectState, nowS: number): boolean {
-  return (
-    p.agentRunning ||
-    withinWindow(p.readyAt, nowS, ACTIVE_WINDOW_S) ||
-    withinWindow(p.closingAt, nowS, ACTIVE_WINDOW_S) ||
-    withinWindow(p.closedAt, nowS, ACTIVE_WINDOW_S) ||
-    p.currentPrompt !== null
-  );
-}
 
 export function ControlPanel() {
   const {
@@ -48,6 +37,41 @@ export function ControlPanel() {
   const [newGitUrl, setNewGitUrl] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [launchingProject, setLaunchingProject] = useState(false);
+  const [launchError, setLaunchError] = useState("");
+  const [launchTarget, setLaunchTarget] = useState<{ tab: string; dir: string } | null>(null);
+  const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
+  const [launchAgentId, setLaunchAgentId] = useState("");
+  const [launchModel, setLaunchModel] = useState("");
+
+  const openLaunchModal = (tab: string, dir: string, preferredAgentId?: string) => {
+    const preferred = launchableAgents.find((entry) => entry.id === preferredAgentId)
+      ?? launchableAgents.find((entry) => entry.id === selectedAgent)
+      ?? launchableAgents[0]
+      ?? null;
+    if (!preferred) {
+      setError("No launchable agents are configured.");
+      return;
+    }
+    setLaunchTarget({ tab, dir });
+    setLaunchAgentId(preferred.id);
+    setLaunchModel(preferred.defaultModel);
+    setLaunchError("");
+  };
+
+  const confirmLaunch = async () => {
+    if (!launchTarget) return;
+    setLaunchingProject(true);
+    setLaunchError("");
+    try {
+      await launchProject(launchTarget.tab, launchTarget.dir, launchAgentId, launchModel.trim() || undefined);
+      setLaunchTarget(null);
+    } catch (e) {
+      setLaunchError(e instanceof Error ? e.message : "Failed to launch project");
+    } finally {
+      setLaunchingProject(false);
+    }
+  };
 
   const createAndLaunch = async () => {
     if (!newName.trim()) return;
@@ -63,8 +87,10 @@ export function ControlPanel() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to create project");
       }
-      if (newDir.trim()) await launchProject(newName.trim(), newDir.trim());
       setNewProjectOpen(false);
+      if (newDir.trim()) {
+        openLaunchModal(newName.trim(), newDir.trim());
+      }
       setNewName("");
       setNewDir("");
       setNewGitUrl("");
@@ -77,44 +103,18 @@ export function ControlPanel() {
   };
 
   const nowS = Math.floor(Date.now() / 1000);
-  const running = data?.projects.filter((p) => p.agentRunning).length ?? 0;
-  const waitingCount = data?.projects.filter(
-    (p) =>
-      !p.agentRunning &&
-      withinWindow(p.readyAt, nowS, READY_WINDOW_S) &&
-      !withinWindow(p.closedAt, nowS, CLOSED_WINDOW_S) &&
-      !withinWindow(p.closingAt, nowS, CLOSING_WINDOW_S)
-  ).length ?? 0;
-  const todayCommits = data?.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0) ?? 0;
-
-  const sorted = data
-    ? [...data.projects].sort((a, b) => {
-        const n = Math.floor(Date.now() / 1000);
-        const aReady  = !a.agentRunning && withinWindow(a.readyAt, n, READY_WINDOW_S);
-        const bReady  = !b.agentRunning && withinWindow(b.readyAt, n, READY_WINDOW_S);
-        const aClosed = withinWindow(a.closedAt, n, CLOSED_WINDOW_S);
-        const bClosed = withinWindow(b.closedAt, n, CLOSED_WINDOW_S);
-        if (aClosed && !bClosed) return -1;
-        if (!aClosed && bClosed) return 1;
-        if (aReady && !bReady) return -1;
-        if (!aReady && bReady) return 1;
-        if (a.agentRunning && !b.agentRunning) return -1;
-        if (!a.agentRunning && b.agentRunning) return 1;
-        const aActive = (a.git?.todayCount ?? 0) > 0;
-        const bActive = (b.git?.todayCount ?? 0) > 0;
-        if (aActive && !bActive) return -1;
-        if (!aActive && bActive) return 1;
-        return 0;
-      })
-    : null;
+  const pageState = data ? buildControlPageState(data, expandedTabs, nowS) : null;
+  const sorted = pageState?.sortedProjects ?? null;
+  const activeProjects = pageState?.activeProjects ?? [];
+  const idleProjects = pageState?.idleProjects ?? [];
+  const dashboard = pageState?.dashboard ?? null;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
       {data ? (
         <>
-          {running > 0 && <span className="font-medium text-accent-text tabular-nums">● {running}</span>}
-          {waitingCount > 0 && <span className="text-status-positive tabular-nums">{waitingCount} waiting</span>}
-          {todayCommits > 0 && <span className="tabular-nums">+{todayCommits}</span>}
+          {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums">● {dashboard.runningCount}</span>}
+          {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
           {lastUpdated && <span className="hidden sm:inline">{timeAgo(lastUpdated)}</span>}
         </>
       ) : (
@@ -139,31 +139,108 @@ export function ControlPanel() {
     </div>
   );
 
-  return (
-    <div className="space-y-5">
-      <div className="ui-panel-raised space-y-4 p-5 md:p-6">
-        <BrainConfigPanel
-          selectedAgent={selectedAgent}
-          switchableRegistry={switchableRegistry}
-          model={model}
-          hasPendingChange={hasPendingChange}
-          savingAgent={savingAgent}
-          selectedDefinition={selectedDefinition}
-          lastTabResults={lastTabResults}
-          lastTabResultsAt={lastTabResultsAt}
-          onAgentSelect={handleAgentSelect}
-          onModelChange={handleModelChange}
-          onSave={saveAgent}
-          headerRight={headerRight}
-        />
+  const cardProps = (project: ProjectState) => ({
+    project,
+    prompts: data!.prompts,
+    zellijTabs: data!.zellijTabs,
+    currentAdapter: selectedAgent,
+    availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
+    onInject: inject,
+    onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
+      try { await runWithBrain(projectState, intent); }
+      catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
+    },
+    onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
+      try { await runCustomPrompt(projectState, prompt, ag); }
+      catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
+    },
+  });
 
-        {data?.recentActivity && data.recentActivity.length > 0 && (
-          <ActivityLogPanel
-            activities={data.recentActivity}
-            open={activityOpen}
-            onToggle={() => setActivityOpen((v) => !v)}
+  const collapseTab = (tab: string) =>
+    setExpandedTabs((tabs) => {
+      const next = new Set(tabs);
+      next.delete(tab);
+      return next;
+    });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
+        <section className="ui-control-hero">
+          <BrainConfigPanel
+            selectedAgent={selectedAgent}
+            switchableRegistry={switchableRegistry}
+            model={model}
+            hasPendingChange={hasPendingChange}
+            savingAgent={savingAgent}
+            selectedDefinition={selectedDefinition}
+            lastTabResults={lastTabResults}
+            lastTabResultsAt={lastTabResultsAt}
+            onAgentSelect={handleAgentSelect}
+            onModelChange={handleModelChange}
+            onSave={saveAgent}
+            headerRight={headerRight}
           />
-        )}
+        </section>
+
+        <section className="ui-control-sidepanel">
+          {dashboard && (
+            <>
+              <div className="space-y-2">
+                <p className="ui-kicker">Control inventory</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="ui-control-metric-card">
+                    <div className="ui-control-metric-label">
+                      <FolderKanban className="h-3.5 w-3.5" />
+                      Projects in control
+                    </div>
+                    <div className="ui-control-metric-value">{dashboard.controlProjectCount}</div>
+                    <p className="ui-control-metric-note">{dashboard.idleCount} currently idle</p>
+                  </div>
+                  <div className="ui-control-metric-card">
+                    <div className="ui-control-metric-label">
+                      <Activity className="h-3.5 w-3.5" />
+                      Running now
+                    </div>
+                    <div className="ui-control-metric-value">{dashboard.runningCount}</div>
+                    <p className="ui-control-metric-note">Live agent execution</p>
+                  </div>
+                  <div className="ui-control-metric-card">
+                    <div className="ui-control-metric-label">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Needs input
+                    </div>
+                    <div className="ui-control-metric-value">{dashboard.waitingCount}</div>
+                    <p className="ui-control-metric-note">Ready for the next prompt</p>
+                  </div>
+                  <div className="ui-control-metric-card">
+                    <div className="ui-control-metric-label">
+                      <PanelsTopLeft className="h-3.5 w-3.5" />
+                      Open tabs
+                    </div>
+                    <div className="ui-control-metric-value">{dashboard.openTabCount}</div>
+                    <p className="ui-control-metric-note">
+                      {dashboard.expandedCount > 0
+                        ? `${dashboard.expandedCount} manually expanded`
+                        : "Zellij-backed project tabs"}
+                    </p>
+                  </div>
+                </div>
+                {dashboard.inventoryNote && (
+                  <p className="text-sm leading-relaxed text-text-tertiary">{dashboard.inventoryNote}</p>
+                )}
+              </div>
+
+              {data && data.recentActivity.length > 0 && (
+                <ActivityLogPanel
+                  activities={data.recentActivity}
+                  open={activityOpen}
+                  onToggle={() => setActivityOpen((v) => !v)}
+                />
+              )}
+            </>
+          )}
+        </section>
       </div>
 
       {newProjectOpen && (
@@ -181,80 +258,75 @@ export function ControlPanel() {
         />
       )}
 
+      {launchTarget && (
+        <LaunchTabModal
+          tab={launchTarget.tab}
+          dir={launchTarget.dir}
+          agents={launchableAgents}
+          selectedAgentId={launchAgentId}
+          selectedModel={launchModel}
+          launching={launchingProject}
+          error={launchError}
+          onAgentChange={(agentId) => {
+            const agent = launchableAgents.find((entry) => entry.id === agentId);
+            setLaunchAgentId(agentId);
+            setLaunchModel(agent?.defaultModel ?? "");
+          }}
+          onModelChange={setLaunchModel}
+          onLaunch={confirmLaunch}
+          onClose={() => setLaunchTarget(null)}
+        />
+      )}
+
       {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
 
       {sorted ? (
-        sorted.length > 0 ? (() => {
-          const nowS2 = Math.floor(Date.now() / 1000);
-          const activeProjects = sorted.filter((p) => isActiveProject(p, nowS2) || expandedTabs.has(p.tab));
-          const idleProjects = sorted.filter((p) => !isActiveProject(p, nowS2) && !expandedTabs.has(p.tab));
+        sorted.length > 0 ? (
+          <div className="space-y-4">
+            {activeProjects.map((project) => (
+              <ProjectCard
+                key={project.tab}
+                {...cardProps(project)}
+                onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
+              />
+            ))}
 
-          const cardProps = (project: ProjectState) => ({
-            project,
-            prompts: data!.prompts,
-            zellijTabs: data!.zellijTabs,
-            currentAdapter: selectedAgent,
-            availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
-            onInject: inject,
-            onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
-              try { await runWithBrain(projectState, intent); }
-              catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
-            },
-            onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
-              try { await runCustomPrompt(projectState, prompt, ag); }
-              catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
-            },
-          });
-
-          const collapseTab = (tab: string) =>
-            setExpandedTabs((s) => { const n = new Set(s); n.delete(tab); return n; });
-
-          return (
-            <div className="space-y-3">
-              {activeProjects.map((project) => (
-                <ProjectCard
-                  key={project.tab}
-                  {...cardProps(project)}
-                  onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
-                />
-              ))}
-
-              {idleProjects.length > 0 && (
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setIdleOpen((v) => !v)}
-                    className="flex items-center gap-1 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
-                  >
-                    <span>Idle ({idleProjects.length})</span>
-                    {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </button>
-                  {idleOpen && (
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                      {idleProjects.map((project) => (
-                        <ProjectTile
-                          key={project.tab}
-                          project={project}
-                          currentAdapter={selectedAgent}
-                          zellijTabs={data!.zellijTabs}
-                          onExpand={() => setExpandedTabs((s) => new Set([...s, project.tab]))}
-                          onLaunch={() => launchProject(project.tab, project.dir)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })() : (
-          <p className="py-8 text-center text-sm text-text-tertiary">
+            {idleProjects.length > 0 && (
+              <div className="ui-control-idle-section">
+                <button
+                  onClick={() => setIdleOpen((v) => !v)}
+                  className="flex items-center gap-1 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
+                >
+                  <span className="font-medium text-text-secondary">Idle projects</span>
+                  <span className="text-text-muted">({idleProjects.length})</span>
+                  {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </button>
+                {idleOpen && (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {idleProjects.map((project) => (
+                      <ProjectTile
+                        key={project.tab}
+                        project={project}
+                        currentAdapter={selectedAgent}
+                        zellijTabs={data!.zellijTabs}
+                        onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
+                        onLaunch={() => openLaunchModal(project.tab, project.dir)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="ui-empty-panel py-8 text-sm">
             No projects configured for the control panel
           </p>
         )
       ) : (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-[1.5rem] border border-border-subtle bg-surface-base" />
+            <div key={i} className="ui-card-shell h-40 animate-pulse" />
           ))}
         </div>
       )}

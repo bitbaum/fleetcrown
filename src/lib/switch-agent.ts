@@ -14,9 +14,9 @@ function shellEscape(value: string): string {
 
 function buildAgentLaunchCommand(config: { agent: Agent; model: string }, dir: string): string {
   const escapedDir = shellEscape(dir);
-  if (config.agent === "claude") return `cd ${escapedDir} && claude`;
+  if (config.agent === "claude") return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
   const escapedModel = shellEscape(config.model);
-  return `cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+  return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
 }
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
 import { restartOpenProjectTabs, type SwitchTabResult } from "@/lib/agent-runtime";

@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import fs from "fs";
-import { type Agent, getAgentRegistryEntry } from "@/lib/agent-registry";
-import { parseProjectsConf } from "@/lib/claude-config";
+import { buildAgentOptionLaunchCommand, type Agent, type AgentOption, getAgentRegistryEntry } from "@/lib/agent-registry";
+import { parseProjectsConf } from "@/lib/agent-config";
 
 export type ProjectTab = {
   tab: string;
@@ -75,17 +75,9 @@ export function restartOpenProjectTabs(commandForDir: (dir: string) => string): 
   });
 }
 
-export function launchAgentInTab(tab: string, dir: string, agent: "claude" | "codex", model?: string): void {
+export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, model?: string): void {
   ensureTabExists(tab);
-  const escapedDir = `'${dir.replace(/'/g, `'\\''`)}'`;
-  let command: string;
-  if (agent === "claude") {
-    command = `cd ${escapedDir} && claude`;
-  } else {
-    const m = model ?? "gpt-5.4";
-    const escapedModel = `'${m.replace(/'/g, `'\\''`)}'`;
-    command = `cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
-  }
+  const command = buildAgentOptionLaunchCommand({ agent, model }, dir);
   restartTab(tab, command);
 }
 

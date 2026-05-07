@@ -14,7 +14,7 @@ export function Card({
   return (
     <Comp
       className={cn(
-        "ui-panel p-5 md:p-6 text-left",
+        "ui-card-shell ui-card-padding text-left",
         onClick && "ui-panel-interactive cursor-pointer",
         className,
       )}
@@ -35,17 +35,19 @@ export function CardHeader({
   right?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-center gap-2.5">
-      <Icon className="h-4 w-4 md:h-5 md:w-5 text-text-tertiary" />
-      <h3 className="text-base font-medium text-text-primary">{title}</h3>
-      {right && <div className="ml-auto">{right}</div>}
+    <div className="ui-card-header">
+      <div className="ui-card-header-main flex items-center gap-2.5">
+        <Icon className="h-4 w-4 shrink-0 text-text-tertiary md:h-5 md:w-5" />
+        <h3 className="min-w-0 text-base font-medium text-text-primary">{title}</h3>
+      </div>
+      {right && <div className="sm:ml-auto">{right}</div>}
     </div>
   );
 }
 
 export function CardSkeleton() {
   return (
-    <div className="ui-panel animate-pulse p-5 md:p-6">
+    <div className="ui-card-shell animate-pulse p-4 sm:p-5 md:p-6">
       <div className="h-4 bg-border-default rounded w-24 mb-3" />
       <div className="space-y-2">
         <div className="h-3 bg-border-subtle rounded w-full" />

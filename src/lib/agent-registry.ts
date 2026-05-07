@@ -182,13 +182,13 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
     {
       id: "gemini",
       label: "Gemini",
-      defaultModel: "local-cli-default",
-      modelSuggestions: ["local-cli-default"],
+      defaultModel: "auto",
+      modelSuggestions: ["auto", "pro", "flash", "flash-lite"],
       processMatchers: ["gemini"],
       switchable: false,
       ...geminiAvailability,
       capabilities: {
-        tabSwitching: false,
+        tabSwitching: true,
         manualPromptInjection: false,
         autonomousPromptLoop: false,
         sessionLifecycleSignals: false,
@@ -201,6 +201,11 @@ export function sanitizeAgentId(value: string | undefined): Agent {
   return value === "claude" ? "claude" : "codex";
 }
 
+export function sanitizeAgentOption(value: string | undefined): AgentOption {
+  if (value === "claude" || value === "openclaw" || value === "gemini") return value;
+  return "codex";
+}
+
 function listSwitchableAgentRegistry(): Array<AgentRegistryEntry & { id: Agent }> {
   return listAgentRegistry().filter((entry): entry is AgentRegistryEntry & { id: Agent } => entry.switchable);
 }
@@ -209,8 +214,8 @@ export function getDefaultAgentId(): Agent {
   return listSwitchableAgentRegistry()[0]?.id ?? "codex";
 }
 
-export function getAgentRegistryEntry(agent: Agent): AgentRegistryEntry {
-  const registry = listSwitchableAgentRegistry();
+export function getAgentRegistryEntry(agent: AgentOption): AgentRegistryEntry {
+  const registry = listAgentRegistry();
   return registry.find((entry) => entry.id === agent) ?? registry[0];
 }
 
@@ -252,9 +257,30 @@ export function syncAgentSettings(agent: Agent, model: string): void {
 export function buildAgentLaunchCommand(config: { agent: Agent; model: string }, dir: string): string {
   const escapedDir = shellEscape(dir);
   if (config.agent === "claude") {
-    return `cd ${escapedDir} && claude`;
+    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
   }
 
   const escapedModel = shellEscape(config.model);
-  return `cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+  return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+}
+
+export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; model?: string }, dir: string): string {
+  const escapedDir = shellEscape(dir);
+  const model = config.model?.trim();
+
+  switch (config.agent) {
+    case "claude":
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
+    case "gemini": {
+      const modelFlag = model ? ` -m ${shellEscape(model)}` : "";
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && gemini${modelFlag}`;
+    }
+    case "openclaw":
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && openclaw tui`;
+    case "codex":
+    default: {
+      const escapedModel = shellEscape(model || "gpt-5.4");
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+    }
+  }
 }

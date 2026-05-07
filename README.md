@@ -1,78 +1,89 @@
 # Cockpit
 
-George's private life OS, powered by Ivy. A unified dark-themed
-mobile-first dashboard for people, money, goals, projects, habits,
-events, and system health. Built for one person but designed to be
-replicated for others.
+Cockpit is a multi-user dashboard for running AI agent fleets across
+projects, with life-OS views layered into the same interface. Users
+sign in with GitHub, register projects, launch and monitor agents,
+and keep goals, people, habits, money, and events in one place.
 
 ## Stack
 
 - **Next.js 16** (App Router, Server Components, Server Actions)
 - **TypeScript strict** — schema is SSOT for types via Drizzle's
   `$inferSelect` / `$inferInsert`
-- **Tailwind CSS 4 + shadcn/ui** — always dark mode
-- **Drizzle ORM** on **PostgreSQL 17** (self-hosted, `cockpit` database)
-- **zod** validation at every API boundary
+- **Tailwind CSS 4 + shadcn/ui**
+- **NextAuth v5 beta** with GitHub OAuth
+- **Drizzle ORM** on **PostgreSQL 17**
+- **zod** validation at API boundaries
 
 ## Views
 
-| Route       | What's there                                                          |
-| ----------- | --------------------------------------------------------------------- |
-| `/today`    | Calendar, weather, commitments, bills, daily habit check-off          |
-| `/people`   | 1,286 contacts, search, detail panel, inline name/notes edit          |
-| `/money`    | Subscriptions, monthly burn                                           |
-| `/goals`    | Hierarchical tree, progress, milestones, inline target/progress edit  |
-| `/projects` | Projects + GitHub CI, inline editors for name/desc/status/maturity    |
-| `/habits`   | 30-day heatmap per habit, streak indicator, summary stats             |
-| `/events`   | Opportunities and deadlines, type-chip filter, archive flow           |
-| `/prompts`  | Prompt library, run-now via Ivy, schedule as cron job                 |
-| `/system`   | Gateway, memory, disk, uptime, autopilot jobs                         |
-| `/memory`   | Knowledge-graph stats and recent activity                             |
+| Route | What's there |
+| ----- | ------------ |
+| `/` | Landing page with sign-in entry |
+| `/setup` | Bootstrap flow when no users exist yet |
+| `/sign-in` | GitHub sign-in |
+| `/today` | Calendar, weather, commitments, bills, daily habit check-off |
+| `/control` | Agent fleet command center and orchestration status |
+| `/projects` | Projects, repo health, sync actions, inline editing |
+| `/goals` | Hierarchical goals, milestones, inline target/progress edit |
+| `/people` | Contacts, search, detail panel, inline name/notes edit |
+| `/habits` | 30-day heatmap per habit, streak indicator, summary stats |
+| `/events` | Opportunities and deadlines, filter chips, archive flow |
+| `/money` | Subscriptions and monthly burn |
+| `/prompts` | Prompt library, run-now flow, scheduler |
+| `/system` | Runtime health, uptime, autopilot jobs |
+| `/thoughts` | Published essays on architecture and execution systems |
+| `/settings` | Profile and team invite management |
+| `/u/[username]` | Public user profile |
+| `/invite/[token]` | Invitation acceptance flow |
 
 ## Architecture
 
-```
+```text
 src/
-├── app/             Pages + API routes (thin, delegate to queries/components)
+├── app/             Pages, auth flows, and API routes
 ├── components/
-│   ├── ui/          Shared primitives (Card, Modal, Drawer, Field, EmptyState, …)
-│   ├── shell/       AppShell, Sidebar, MobileNav, AskIvyModal
+│   ├── ui/          Shared primitives and layout helpers
+│   ├── shell/       App shell, navigation, shared chrome
+│   ├── control/     Agent fleet controls and project cards
 │   └── <domain>/    today, people, projects, goals, money, habits, events,
-│                    prompts, system — one folder per view
-├── config/          SSOT for navigation, channels, prompt-library, subscriptions
+│                    prompts, settings, system
+├── config/          SSOT for navigation, channels, prompt library, subscriptions
 ├── db/
-│   ├── schema/      Drizzle tables (SSOT for all types)
-│   └── queries/     Data access functions, one file per domain
+│   ├── schema/      Drizzle tables and inferred types
+│   └── queries/     Data access functions by domain
 ├── hooks/           useFetch, useCreateMutation, useInlineEdit
-└── lib/             constants, dates, tools, utils, api/* wrappers
+└── lib/             constants, auth/session helpers, dates, tools, utils
 ```
 
 ## Setup
 
-Postgres has to be running locally with the `cockpit` database
-created. Set `DATABASE_URL` in `.env.local`:
+Set these required environment variables in `.env.local`:
 
 ```bash
-echo 'DATABASE_URL=postgresql://localhost/cockpit' >> .env.local
+DATABASE_URL=postgresql://localhost/cockpit
+AUTH_SECRET=replace-me
+AUTH_GITHUB_ID=replace-me
+AUTH_GITHUB_SECRET=replace-me
 ```
 
-Push the schema:
+Postgres needs a local `cockpit` database. Then push the schema:
 
 ```bash
 DATABASE_URL=$YOUR_URL npx drizzle-kit push
 ```
 
-The seed script (`scripts/seed.ts`) reads from George's personal
-knowledge graph at `~/.openclaw/knowledge.sqlite` and contacts at
-`~/.openclaw/workspace/data/contact-resolver.json`. **A fresh clone
-will not have those files** — the schema-only setup gives you an
-empty database that the UI handles gracefully (every page has an
-empty state). To populate with real data, either:
+On a fresh clone, visit `/setup` to create the first user. After that,
+GitHub OAuth handles sign-in.
 
-- Provide the two `~/.openclaw/*` files yourself, then run
+The seed script (`scripts/seed.ts`) reads from local personal data
+sources under `~/.openclaw/*`. A fresh clone will not have those
+files, so schema-only setup is the default path. To populate with real
+data, either:
+
+- Provide the `~/.openclaw/*` files yourself, then run
   `DATABASE_URL=$YOUR_URL npx tsx scripts/seed.ts`, or
-- Add rows directly via the Cockpit UI (every "New X" button works
-  against an empty database).
+- Add rows directly via the Cockpit UI against an empty database.
 
 ## Dev Commands
 
@@ -95,3 +106,9 @@ CVEs in the dep graph.
 rule book for non-obvious decisions: SSOT rules, naming conventions,
 data-flow boundaries, security patterns. Read it before making
 substantive changes.
+
+For orchestration architecture and migration direction, also read:
+
+- `docs/architecture-first-principles.md`
+- `docs/debt-reduction-roadmap.md`
+- `docs/openclaw-orchestration-plan.md`

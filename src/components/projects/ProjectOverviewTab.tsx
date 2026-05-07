@@ -85,7 +85,7 @@ export function OverviewTab({
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
           {ISSUE_DISPLAY.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, label, border, bg, text, body }) => (
-            <div key={key} className={`rounded-lg border ${border} ${bg} p-3`}>
+            <div key={key} className={`ui-card-shell ${border} ${bg} p-3`}>
               <div className={`flex items-center gap-1.5 ${text} text-[10px] uppercase tracking-wider font-semibold mb-1.5`}>
                 <Icon className="h-3.5 w-3.5" /> {label}
               </div>
@@ -134,7 +134,7 @@ export function OverviewTab({
                   ) : (
                     <button
                       onClick={() => setAddingKey(key)}
-                      className="flex items-center gap-1.5 w-full text-left py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+                    className="flex min-h-9 w-full items-center gap-1.5 py-1.5 text-left text-xs text-text-muted transition-colors hover:text-text-secondary"
                     >
                       <Plus className="h-3 w-3 shrink-0" />
                       <span className="font-medium text-text-tertiary">{label}</span>
@@ -150,7 +150,7 @@ export function OverviewTab({
           ) : (
             <button
               onClick={() => setShowEmpty(true)}
-              className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+              className="ui-link-subtle flex min-h-9 items-center gap-1.5"
             >
               <Plus className="h-3.5 w-3.5" />
               Add {missingSuggested.map((s) => s.label.toLowerCase()).join(", ")}
@@ -170,7 +170,7 @@ export function OverviewTab({
       ) : (
         <button
           onClick={() => setAddingKey("__custom__")}
-          className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors"
+          className="flex min-h-9 items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-status-positive"
         >
           <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>

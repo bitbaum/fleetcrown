@@ -58,7 +58,7 @@ export function ScheduleModal({
         </button>
       </div>
 
-      <div className="rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4">
+      <div className="ui-card-shell p-4">
         <div className="mb-1 text-base font-medium text-text-primary">{template.name}</div>
         <div className="text-base text-text-secondary">{template.description}</div>
       </div>

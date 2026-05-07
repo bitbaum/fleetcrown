@@ -3,6 +3,8 @@
 import { Cpu, HardDrive, Clock, Radio } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { useFetch } from "@/hooks/use-fetch";
+import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
+import { HEALTH_THRESHOLDS } from "@/config/ui";
 
 type MemInfo = { totalMiB: number; usedMiB: number; availMiB: number };
 type SwapInfo = { totalMiB: number; usedMiB: number };
@@ -22,12 +24,17 @@ function mibToGib(mib: number) {
 
 function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) {
   const pct = totalMiB > 0 ? Math.round((usedMiB / totalMiB) * 100) : 0;
-  const color = pct > 85 ? "bg-status-negative" : pct > 65 ? "bg-status-warning" : "bg-status-positive";
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
+      <ProgressBar
+        value={pct}
+        tone={getProgressTone(pct, {
+          negativeAt: HEALTH_THRESHOLDS.criticalPct,
+          warningAt: HEALTH_THRESHOLDS.warningPct,
+          lowTone: "positive",
+        })}
+        className="h-2 flex-1"
+      />
       <span className="w-10 text-right text-sm text-text-tertiary">{pct}%</span>
     </div>
   );
@@ -51,7 +58,7 @@ export function SystemStats() {
         <CardHeader icon={Radio} title="OpenClaw Gateway" />
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${gatewayStatus === "ok" ? "bg-status-positive" : "bg-status-negative"}`} />
-          <span className="text-base text-text-primary">{gatewayStatus === "ok" ? "Connected" : "Offline"}</span>
+          <span className="text-base text-text-primary">{gatewayStatus === "ok" ? "Reachable" : "Unavailable"}</span>
         </div>
       </Card>
 
@@ -95,14 +102,15 @@ export function SystemStats() {
               <span>{disk.used} / {disk.size} ({disk.avail} free)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-overlay">
-                <div
-                  className={`h-full rounded-full ${
-                    parseInt(disk.pct) > 85 ? "bg-status-negative" : parseInt(disk.pct) > 65 ? "bg-status-warning" : "bg-status-positive"
-                  }`}
-                  style={{ width: disk.pct }}
-                />
-              </div>
+              <ProgressBar
+                value={parseInt(disk.pct, 10) || 0}
+                tone={getProgressTone(parseInt(disk.pct, 10) || 0, {
+                  negativeAt: HEALTH_THRESHOLDS.criticalPct,
+                  warningAt: HEALTH_THRESHOLDS.warningPct,
+                  lowTone: "positive",
+                })}
+                className="h-2 flex-1"
+              />
               <span className="w-10 text-right text-sm text-text-tertiary">{disk.pct}</span>
             </div>
           </div>

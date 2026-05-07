@@ -36,11 +36,11 @@ function ProjectCard({
   return (
     <div
       onClick={onOpen}
-      className={`group relative flex cursor-pointer flex-col gap-3 rounded-[1.5rem] border p-4 transition-all hover:bg-surface-raised ${
+      className={`ui-card-shell ui-panel-interactive group relative flex cursor-pointer flex-col gap-3 p-4 sm:p-5 ${
         hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"
       }`}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="truncate text-base font-semibold text-text-primary" title={project.name}>{project.name}</div>
           {description && (
@@ -50,14 +50,14 @@ function ProjectCard({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ui-card-actions shrink-0 self-start">
           {prodUrl && (
             <a
               href={prodUrl}
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="rounded-lg p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
+              className="ui-icon-action min-h-8 min-w-8 rounded-lg p-1.5"
               title="Open production site"
             >
               <Globe className="h-3.5 w-3.5" />
@@ -69,7 +69,7 @@ function ProjectCard({
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="rounded-lg p-1 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary"
+              className="ui-icon-action min-h-8 min-w-8 rounded-lg p-1.5"
               title="Open repo"
             >
               <GitBranch className="h-3.5 w-3.5" />
@@ -106,7 +106,7 @@ function ProjectCard({
         </div>
       )}
 
-      <div className="absolute bottom-3 right-3 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute bottom-3 right-3 opacity-30 transition-opacity group-hover:opacity-100">
         <Zap className="h-3 w-3 text-text-muted" />
       </div>
     </div>
@@ -141,7 +141,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           placeholder="Search projects..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-2xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary outline-none transition-colors focus:border-accent-primary placeholder:text-text-muted"
+          className="ui-search-input"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
           {filtered.length}
@@ -166,7 +166,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((project) => (
           <ProjectCard
             key={project.id}

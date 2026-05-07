@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import {
-  READY_WINDOW_S, CLOSED_WINDOW_S, CLOSING_WINDOW_S, withinWindow,
-} from "@/lib/constants/control";
 import type { ProjectState, PromptMeta } from "@/app/api/control/route";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { getProjectDisplayState } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
@@ -78,20 +76,8 @@ export function ProjectCard({
   }, []);
 
   const nowS = Math.floor(Date.now() / 1000);
-  const isClosed   = !dismissed && !project.agentRunning && withinWindow(project.closedAt, nowS, CLOSED_WINDOW_S);
-  const isClosing  = !dismissed && !isClosed && withinWindow(project.closingAt, nowS, CLOSING_WINDOW_S);
-  const isReady    = !dismissed && !isClosed && !isClosing && !project.agentRunning && withinWindow(project.readyAt, nowS, READY_WINDOW_S);
-
+  const display = getProjectDisplayState(project, zellijTabs, nowS, dismissed);
   const latestOrchRun = project.latestOrchestrationRun;
-  const latestOrchFinishedAtS = latestOrchRun?.finishedAt
-    ? Math.floor(new Date(latestOrchRun.finishedAt).getTime() / 1000)
-    : null;
-  const isOrchReady =
-    !dismissed && !isReady && !isClosed && !isClosing && !project.agentRunning &&
-    latestOrchRun?.state === "done" &&
-    withinWindow(latestOrchFinishedAtS, nowS, READY_WINDOW_S);
-
-  const showRunning = !isClosing && project.currentPrompt !== null && project.agentRunning;
 
   const sendCustom = async () => {
     if (!custom.trim()) return;
@@ -136,18 +122,17 @@ export function ProjectCard({
     }
   };
 
-  const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? project.tab).toLowerCase());
   const paused = !autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0;
 
   return (
     <div
       className={cn(
-        "ui-panel-raised overflow-hidden",
-        isClosed
+        "ui-card-shell-raised overflow-hidden",
+        display.isClosed
           ? "border-status-positive/30 bg-status-positive/[0.02]"
-          : isClosing
+          : display.isClosing
           ? "border-status-warning/25 bg-status-warning/[0.02]"
-          : isReady || isOrchReady
+          : display.isReady || display.isOrchestrationReady
           ? "border-status-positive/40 bg-status-positive/[0.03]"
           : project.agentRunning
           ? "border-accent-primary/25 bg-accent-primary/[0.02]"
@@ -169,21 +154,21 @@ export function ProjectCard({
         <>
           <ProjectCardHeader
             project={project}
-            tabOpen={tabOpen}
-            isClosed={isClosed}
-            isReady={isReady}
-            isOrchReady={isOrchReady}
+            tabOpen={display.tabOpen}
+            isClosed={display.isClosed}
+            isReady={display.isReady}
+            isOrchReady={display.isOrchestrationReady}
             profileOpen={profileOpen}
             onProfileToggle={() => setProfileOpen((v) => !v)}
             onCollapse={onCollapse}
           />
-          <SessionSummary session={project.session} isClosed={isClosed} />
+          <SessionSummary session={project.session} isClosed={display.isClosed} />
           <ProjectBanners
-            isClosed={isClosed}
-            isClosing={isClosing}
-            isReady={isReady}
-            isOrchReady={isOrchReady}
-            showRunning={showRunning}
+            isClosed={display.isClosed}
+            isClosing={display.isClosing}
+            isReady={display.isReady}
+            isOrchReady={display.isOrchestrationReady}
+            showRunning={display.showRunningBanner}
             session={project.session}
             git={project.git}
             closingAt={project.closingAt}
@@ -194,7 +179,7 @@ export function ProjectCard({
             onDismiss={() => setDismissed(true)}
             onSend={send}
           />
-          {latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
+          {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 
           <IntentButtonPanel
             project={project}
@@ -202,7 +187,7 @@ export function ProjectCard({
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}
             custom={custom}
-            bannerActive={isClosed || isReady || isOrchReady}
+            bannerActive={display.isClosed || display.isReady || display.isOrchestrationReady}
             onToggleAutoContinue={() => setAutoContinueEnabled((v) => !v)}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}

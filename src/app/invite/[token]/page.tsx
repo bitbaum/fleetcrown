@@ -6,7 +6,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { getJson, postJson } from "@/lib/api/fetch";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge,
+  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
 
 export default function InvitePage({ params }: { params: Promise<{ token: string }> }) {
@@ -71,22 +71,15 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
   return (
     <AuthShell>
-      <div className="mb-10 text-center">
-        <AuthIconBadge>✦</AuthIconBadge>
-        <h1
-          className="font-bold leading-[1.05] tracking-[-0.04em]"
-          style={{ fontSize: "clamp(28px, 5vw, 40px)" }}
-        >
-          {heading}
-        </h1>
-        <p className="mt-3 text-base text-white/38">
-          {subheading}
-        </p>
-      </div>
+      <AuthHeading
+        badge={<AuthIconBadge>✦</AuthIconBadge>}
+        title={heading}
+        description={subheading}
+      />
 
       {status === "invalid" && (
-        <p className="text-center text-sm text-white/35">
-          <Link href="/sign-in" className="underline hover:text-white/60">Sign in</Link>{" "}
+        <p className="ui-auth-note">
+          <Link href="/sign-in" className="ui-auth-inline-link">Sign in</Link>{" "}
           if you already have an account.
         </p>
       )}
@@ -111,7 +104,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
                   type="email"
                   value={prefillEmail}
                   disabled
-                  className="opacity-50 cursor-not-allowed text-white/60"
+                  className="ui-auth-input-disabled"
                 />
               </AuthField>
             )}

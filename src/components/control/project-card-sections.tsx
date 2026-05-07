@@ -47,86 +47,97 @@ export function ProjectCardHeader({
     : "text-text-muted";
 
   return (
-    <div className="flex min-w-0 items-start justify-between gap-3 px-5 py-4">
-      <div className="min-w-0 space-y-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <Circle className={cn("h-2.5 w-2.5 shrink-0 fill-current", dotColor)} />
-          <span className="truncate text-lg font-medium text-text-primary" title={project.tab}>
-            {project.tab}
-          </span>
-          {tabOpen && <span title="Terminal open"><Terminal className="h-3.5 w-3.5 shrink-0 text-accent-text" /></span>}
-          {session?.health && <SessionBadge health={session.health} />}
-          {profile?.status && !session?.health && (
-            <span className="truncate text-sm text-text-tertiary" title={profile.status}>{profile.status}</span>
+    <div className="px-4 py-4 sm:px-5 md:px-6">
+      <div className="ui-card-header !mb-0">
+        <div className="ui-card-header-main space-y-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Circle className={cn("h-2.5 w-2.5 shrink-0 fill-current", dotColor)} />
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="truncate text-base font-semibold text-text-primary sm:text-lg" title={project.tab}>
+                  {project.tab}
+                </span>
+                {tabOpen && (
+                  <span title="Terminal open" className="ui-tag ui-tag-neutral gap-1.5">
+                    <Terminal className="h-3 w-3 shrink-0" />
+                    Live tab
+                  </span>
+                )}
+                {session?.health && <SessionBadge health={session.health} />}
+              </div>
+              {profile?.status && !session?.health && (
+                <p className="mt-1 truncate text-sm text-text-tertiary" title={profile.status}>{profile.status}</p>
+              )}
+            </div>
+          </div>
+
+          {git && (
+            <div className="ui-control-card-header-meta">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <GitBranch className="h-3.5 w-3.5" />
+                <span className="max-w-[16rem] truncate" title={git.branch}>{git.branch}</span>
+                {git.dirty && <span className="text-status-warning">✎</span>}
+                {git.todayCount > 0 && <span className="text-status-positive/80">+{git.todayCount}</span>}
+              </div>
+              {git.behindRemote > 0 && (
+                <>
+                  <span className="text-status-warning">↓{git.behindRemote}</span>
+                  <button
+                    onClick={async () => {
+                      setSyncing(true);
+                      setSyncResult(null);
+                      try {
+                        const res = await postJson("/api/project/sync", { dir: project.dir });
+                        const data = await res.json();
+                        setSyncResult(res.ok ? "✓" : (data.error ?? "Failed"));
+                      } finally {
+                        setSyncing(false);
+                      }
+                    }}
+                    disabled={syncing}
+                    className="ui-chip-action-compact border-status-warning/30 text-status-warning hover:text-text-primary"
+                  >
+                    {syncing ? "…" : "pull"}
+                  </button>
+                  {syncResult && <span>{syncResult}</span>}
+                </>
+              )}
+            </div>
           )}
         </div>
 
-        {git && (
-          <div className="flex flex-wrap items-center gap-2 text-sm text-text-tertiary">
-            <div className="flex items-center gap-1">
-              <GitBranch className="h-3.5 w-3.5" />
-              <span className="max-w-[16rem] truncate" title={git.branch}>{git.branch}</span>
-              {git.dirty && <span className="text-status-warning">✎</span>}
-              {git.todayCount > 0 && <span className="text-status-positive/80">+{git.todayCount}</span>}
-            </div>
-            {git.behindRemote > 0 && (
-              <>
-                <span className="text-status-warning">↓{git.behindRemote}</span>
-                <button
-                  onClick={async () => {
-                    setSyncing(true);
-                    setSyncResult(null);
-                    try {
-                      const res = await postJson("/api/project/sync", { dir: project.dir });
-                      const data = await res.json();
-                      setSyncResult(res.ok ? "✓" : (data.error ?? "Failed"));
-                    } finally {
-                      setSyncing(false);
-                    }
-                  }}
-                  disabled={syncing}
-                  className="text-status-warning transition-colors hover:text-text-primary disabled:opacity-50"
-                >
-                  {syncing ? "…" : "pull"}
-                </button>
-                {syncResult && <span>{syncResult}</span>}
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1">
-        {profile?.url && (
-          <a
-            href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1 text-text-muted transition-colors hover:text-text-primary"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
-        <button
-          onClick={onProfileToggle}
-          title={profileOpen ? "Close profile" : "Project profile"}
-          className={cn(
-            "p-1 transition-colors hover:text-text-primary",
-            profileOpen ? "text-accent-text" : "text-text-muted",
+        <div className="ui-card-actions shrink-0 self-start">
+          {profile?.url && (
+            <a
+              href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ui-icon-action"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
           )}
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-        </button>
-        {onCollapse && (
           <button
-            onClick={onCollapse}
-            title="Collapse"
-            className="p-1 text-text-muted transition-colors hover:text-text-primary"
+            onClick={onProfileToggle}
+            title={profileOpen ? "Close profile" : "Project profile"}
+            className={cn(
+              "ui-icon-action",
+              profileOpen ? "text-accent-text" : "text-text-muted",
+            )}
           >
-            <ChevronsDown className="h-4 w-4" />
+            <SlidersHorizontal className="h-4 w-4" />
           </button>
-        )}
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              title="Collapse"
+              className="ui-icon-action"
+            >
+              <ChevronsDown className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -142,13 +153,21 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
   return (
-    <div className="space-y-1 ui-card-section">
-      {session.next && (
-        <p className="text-sm text-text-primary leading-snug">{session.next}</p>
-      )}
-      {session.done && (
-        <p className="text-xs text-text-tertiary leading-snug">{session.done}</p>
-      )}
+    <div className="ui-card-section">
+      <div className="grid gap-3 md:grid-cols-2">
+        {session.next && (
+          <div className="ui-control-summary-card">
+            <p className="ui-kicker">Up next</p>
+            <p className="mt-1 text-sm leading-relaxed text-text-primary">{session.next}</p>
+          </div>
+        )}
+        {session.done && (
+          <div className="ui-control-summary-card">
+            <p className="ui-kicker">Last done</p>
+            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{session.done}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -250,8 +269,8 @@ function PromptInput({
   toggleMic: () => void;
 }) {
   return (
-    <div className="flex gap-2">
-      <div className="relative min-w-0 flex-1">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
         <input
           type="text"
           value={custom}
@@ -281,7 +300,7 @@ function PromptInput({
       <button
         onClick={onSendCustom}
         disabled={!custom.trim() || sending !== null}
-        className="ui-btn-lg shrink-0 py-3.5 sm:px-5"
+        className="ui-btn-lg inline-flex min-h-11 shrink-0 items-center justify-center py-3.5 sm:px-5"
       >
         <Send className="h-4 w-4" />
       </button>
@@ -338,7 +357,7 @@ export function IntentButtonPanel({
                 key={r.customPrompt}
                 onClick={() => onCustomChange(r.customPrompt)}
                 title={r.customPrompt}
-                className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
+                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
               >
                 {r.customPrompt.length > 50 ? r.customPrompt.slice(0, 50) + "…" : r.customPrompt}
               </button>
@@ -358,41 +377,46 @@ export function IntentButtonPanel({
 
       {/* Intent chips — hidden when banner is active (banner has the primary CTA) */}
       {!bannerActive && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {primaryAndAction.map(({ id, label }) => (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="ui-kicker">Next action</p>
             <button
-              key={id}
-              onClick={() => onSendIntent(id)}
-              disabled={sending !== null}
-              className="rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40"
+              onClick={onToggleAutoContinue}
+              title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+              className="ui-icon-action min-h-8 min-w-8 p-1.5"
             >
-              {sending === id ? "…" : label}
+              {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             </button>
-          ))}
-          <button
-            onClick={() => setShowMore((v) => !v)}
-            className="rounded-xl border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
-          >
-            {showMore ? "Less" : "···"}
-          </button>
-          <button
-            onClick={onToggleAutoContinue}
-            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-            className="ml-auto text-text-muted transition-colors hover:text-text-secondary"
-          >
-            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </button>
+          </div>
+          <div className="ui-control-intent-grid">
+            {primaryAndAction.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => onSendIntent(id)}
+                disabled={sending !== null}
+                className="ui-chip-action-compact"
+              >
+                {sending === id ? "…" : label}
+              </button>
+            ))}
+            <button
+              onClick={() => setShowMore((v) => !v)}
+              className="ui-chip-action-compact text-text-muted"
+            >
+              {showMore ? "Less" : "···"}
+            </button>
+          </div>
         </div>
       )}
 
       {showMore && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {MORE_INTENTS.map(({ id, label }) => (
             <button
               key={id}
               onClick={() => onSendIntent(id)}
               disabled={sending !== null}
-              className="rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary disabled:opacity-40"
+              className="ui-chip-action-compact text-text-tertiary"
             >
               {sending === id ? "…" : label}
             </button>
@@ -409,7 +433,7 @@ export function IntentButtonPanel({
               }}
               disabled={clearingContext}
               title="Send /clear to reset Claude's context window"
-              className="flex items-center gap-1.5 rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-status-warning disabled:opacity-40"
+              className="ui-chip-action-compact inline-flex items-center gap-1.5 text-text-tertiary hover:text-status-warning"
             >
               {clearingContext ? <Loader2 className="ui-spinner-sm" /> : <Eraser className="h-3.5 w-3.5" />}
               Clear context
@@ -421,12 +445,12 @@ export function IntentButtonPanel({
       {recentPrompts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {recentPrompts.map((r) => (
-            <button
-              key={r.customPrompt}
-              onClick={() => onCustomChange(r.customPrompt)}
-              title={r.customPrompt}
-              className="max-w-[18rem] truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
-            >
+                <button
+                  key={r.customPrompt}
+                  onClick={() => onCustomChange(r.customPrompt)}
+                  title={r.customPrompt}
+                  className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+                >
               {r.count > 1 && <span className="mr-1.5">×{r.count}</span>}
               {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
             </button>

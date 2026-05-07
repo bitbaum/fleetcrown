@@ -42,7 +42,7 @@ export function TeamSettings({ invitations: initial }: Props) {
     typeof window !== "undefined" ? `${window.location.origin}/invite/${token}` : `/invite/${token}`;
 
   return (
-    <section className="ui-panel p-6 space-y-5">
+    <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Team</h2>
       <p className="text-sm text-text-tertiary">
         Invite collaborators to access this Cockpit instance. Links expire after {INVITATION_EXPIRY_DAYS} days.
@@ -76,7 +76,7 @@ export function TeamSettings({ invitations: initial }: Props) {
             return (
               <div
                 key={inv.id}
-                className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-base px-4 py-3"
+                className="ui-card-shell flex items-center gap-3 px-4 py-3"
               >
                 <div className="flex-1 min-w-0">
                   <p className="truncate font-mono text-xs text-text-secondary" title={inviteUrl(inv.token)}>
@@ -96,7 +96,7 @@ export function TeamSettings({ invitations: initial }: Props) {
                 {!used && !expired && (
                   <button
                     onClick={() => copy(inv.token)}
-                    className="shrink-0 text-text-muted transition-colors hover:text-text-primary"
+                    className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
                     title="Copy link"
                   >
                     {copied === inv.token ? (

@@ -124,7 +124,7 @@ export function EventCard({
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={cancelEdit}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-text-tertiary hover:text-text-secondary hover:bg-surface-raised transition-colors"
+            className="ui-chip-action-compact inline-flex items-center gap-1 text-text-tertiary"
           >
             <X className="h-3 w-3" /> Cancel
           </button>

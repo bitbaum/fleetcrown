@@ -4,8 +4,9 @@ import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthDivider, AuthFooterLink,
+  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthDivider, AuthFooterLink, AuthHeading, AuthSecondaryButton,
 } from "@/components/auth/AuthShell";
+import Link from "next/link";
 
 function GithubIcon() {
   return (
@@ -45,18 +46,17 @@ function SignInForm() {
   }
 
   return (
-    <AuthShell showHomeLink>
-      <div className="mb-10 text-center">
-        <h1
-          className="font-bold leading-none tracking-[-0.04em]"
-          style={{ fontSize: "clamp(36px, 5vw, 48px)" }}
+    <AuthShell
+      navRight={(
+        <Link
+          href="/"
+          className="ui-public-nav-action"
         >
-          Welcome back
-        </h1>
-        <p className="mt-3 text-base text-white/38">
-          Sign in to your Cockpit.
-        </p>
-      </div>
+          Home
+        </Link>
+      )}
+    >
+      <AuthHeading title="Welcome back" description="Sign in to your Cockpit." />
 
       <AuthCard>
         <form onSubmit={handleLocal} className="space-y-3">
@@ -81,15 +81,15 @@ function SignInForm() {
 
         <AuthDivider label="or continue with" />
 
-        <button
+        <AuthSecondaryButton
           type="button"
           onClick={handleGithub}
           disabled={githubLoading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-xl py-3 text-sm font-medium bg-white/[0.06] border border-white/[0.10] text-white/65 hover:border-white/[0.22] hover:text-white/90 transition-all disabled:opacity-40"
+          className="ui-auth-secondary-btn-strong gap-2.5"
         >
           <GithubIcon />
           {githubLoading ? "Redirecting…" : "Continue with GitHub"}
-        </button>
+        </AuthSecondaryButton>
       </AuthCard>
 
       <AuthFooterLink href="/">← Back to home</AuthFooterLink>

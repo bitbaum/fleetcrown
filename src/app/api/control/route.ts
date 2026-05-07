@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { getProjects } from "@/db/queries/projects";
+import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
@@ -16,13 +17,14 @@ import {
   resolveEffectiveTab,
   readPromptMeta,
   type PromptMeta,
-} from "@/lib/claude-config";
+} from "@/lib/agent-config";
 import {
   parseSession,
   readTmpTs,
   readCurrentPrompt,
   getAgentCwds,
 } from "@/lib/control-fast-state";
+import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
 
 // Re-export so the ControlPanel can import PromptMeta from this route file (its existing import path).
@@ -118,6 +120,12 @@ export type ControlData = {
     manualPromptInjection: boolean;
     autonomousPromptLoop: boolean;
     sessionLifecycleSignals: boolean;
+  };
+  inventory: {
+    source: "user_projects" | "projects_conf_fallback";
+    trackedProjectCount: number;
+    controlProjectCount: number;
+    linkedDirectoryCount: number;
   };
   projects: ProjectState[];
   prompts: PromptMeta[];
@@ -283,7 +291,8 @@ export async function GET() {
 
   // DB projects for this user; fall back to conf file for backward compat
   const dbUserProjects = await getUserProjects(userId).catch(() => []);
-  const projects = dbUserProjects.length > 0
+  const usingUserProjects = dbUserProjects.length > 0;
+  const projects = usingUserProjects
     ? dbUserProjects
         .filter((p) => p.dirPath)
         .map((p) => ({ tab: p.name, dir: p.dirPath! }))
@@ -296,16 +305,16 @@ export async function GET() {
   const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
   const agentCwds = getAgentCwds(allMatchers);
   const projectKeys = projects.map((p) => p.tab);
-  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, 30).catch((): ActivityItem[] => []),
     getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
+    getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
+      .catch(() => new Map()),
     cleanupStaleOrchestrationRuns(userId).catch(() => {}),
   ]);
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
-  // 24-hour window: DB ready/closing/closed timestamps older than this are not surfaced
-  const READY_WINDOW_S = 86400;
 
   const states: ProjectState[] = projects.map(({ tab, dir }) => {
     const latestRun = latestRuns.get(dir);
@@ -349,17 +358,9 @@ export async function GET() {
     }
 
     const nowS = Math.floor(Date.now() / 1000);
-    const tmpReady   = readTmpTs(stateFile.ready(liveTab));
-    const tmpClosing = readTmpTs(stateFile.closing(liveTab));
-    const tmpClosed  = readTmpTs(stateFile.closed(liveTab));
-
-    // Fall back to DB value when /tmp is empty, but only within the 24-hour window
-    const dbReady   = dbState?.readyAt   ? Math.floor(dbState.readyAt.getTime()   / 1000) : null;
-    const dbClosing = dbState?.closingAt ? Math.floor(dbState.closingAt.getTime() / 1000) : null;
-    const dbClosed  = dbState?.closedAt  ? Math.floor(dbState.closedAt.getTime()  / 1000) : null;
-
-    const resolveTs = (tmp: number | null, db: number | null) =>
-      tmp ?? (db !== null && (nowS - db) < READY_WINDOW_S ? db : null);
+    const tmpReady   = readTmpTs(stateFile.ready(liveTab))   ?? readTmpTs(stateFile.claudeReady(liveTab));
+    const tmpClosing = readTmpTs(stateFile.closing(liveTab)) ?? readTmpTs(stateFile.claudeClosing(liveTab));
+    const tmpClosed  = readTmpTs(stateFile.closed(liveTab))  ?? readTmpTs(stateFile.claudeClosed(liveTab));
 
     const tmpPrompt = readCurrentPrompt(liveTab);
     const currentPrompt: CurrentPrompt | null = tmpPrompt ?? (dbState?.currentPromptKey ? {
@@ -370,6 +371,36 @@ export async function GET() {
         : 0,
     } : null);
 
+    const lifecycleEvents = latestLifecycleEvents.get(tab);
+    const derivedLifecycle = deriveLifecycleState({
+      runtime: {
+        readyAt: tmpReady,
+        closingAt: tmpClosing,
+        closedAt: tmpClosed,
+        currentPromptStartedAt: currentPrompt?.startedAt ?? null,
+      },
+      events: lifecycleEvents,
+      dbState,
+      nowS,
+    });
+
+    for (const event of collectRuntimeLifecycleEvents({
+      readyAt: tmpReady,
+      closingAt: tmpClosing,
+      closedAt: tmpClosed,
+      currentPromptStartedAt: currentPrompt?.startedAt ?? null,
+    })) {
+      if (!shouldPersistLifecycleEvent(event, lifecycleEvents)) continue;
+      createOrchestrationEvent({
+        userId,
+        projectKey: tab,
+        eventType: event.type,
+        source: event.source,
+        detail: event.detail,
+        happenedAt: new Date(event.at * 1000),
+      }).catch(() => {});
+    }
+
     return ({
     tab,
     liveTab,
@@ -379,9 +410,9 @@ export async function GET() {
     agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
     profile: matchProfile(tab, dir, dbProjects),
     currentPrompt,
-    readyAt:   resolveTs(tmpReady,   dbReady),
-    closingAt: resolveTs(tmpClosing, dbClosing),
-    closedAt:  resolveTs(tmpClosed,  dbClosed),
+    readyAt:   derivedLifecycle.readyAt,
+    closingAt: derivedLifecycle.closingAt,
+    closedAt:  derivedLifecycle.closedAt,
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
@@ -407,6 +438,14 @@ export async function GET() {
       manualPromptInjection: true,
       autonomousPromptLoop: true,
       sessionLifecycleSignals: true,
+    },
+    inventory: {
+      source: usingUserProjects ? "user_projects" : "projects_conf_fallback",
+      trackedProjectCount: usingUserProjects ? dbUserProjects.length : projects.length,
+      controlProjectCount: projects.length,
+      linkedDirectoryCount: usingUserProjects
+        ? dbUserProjects.filter((project) => Boolean(project.dirPath)).length
+        : projects.length,
     },
     projects: states,
     prompts,

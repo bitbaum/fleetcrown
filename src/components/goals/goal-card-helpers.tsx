@@ -52,7 +52,7 @@ export function ProgressInput({
   return (
     <button
       onClick={() => ie.start(String(initial))}
-      className="text-xs text-text-tertiary hover:text-text-secondary transition-colors tabular-nums"
+      className="ui-link-subtle tabular-nums"
       title="Click to edit progress"
     >
       {initial}%

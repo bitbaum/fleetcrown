@@ -76,7 +76,7 @@ export async function EventsDueCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-border-subtle">
-          <Link href="/events" className="text-xs text-text-tertiary hover:text-text-secondary transition-colors">
+          <Link href="/events" className="ui-link-subtle">
             Open Events →
           </Link>
         </div>

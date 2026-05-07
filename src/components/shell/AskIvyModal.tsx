@@ -56,7 +56,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
   const displayedPrompts = showAllPrompts ? GLOBAL_PROMPTS : QUICK_PROMPTS;
 
   return (
-    <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
+      <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="shrink-0 border-b border-border-subtle px-5 py-4">
           <div className="flex items-center justify-between gap-3">
@@ -67,7 +67,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               <div className="text-base font-medium text-text-primary">Ask Ivy</div>
             </div>
           </div>
-          <button onClick={onClose} disabled={loading} className="rounded-xl p-2 text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-30">
+          <button onClick={onClose} disabled={loading} className="ui-icon-action disabled:opacity-30">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -106,7 +106,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                       }
                     }}
                     disabled={loading}
-                    className="group flex flex-col gap-1 rounded-2xl border border-border-subtle bg-surface-base px-3.5 py-3 text-left transition-all hover:bg-surface-raised hover:border-border-default disabled:opacity-30"
+                    className="ui-card-shell group flex flex-col gap-1 px-3.5 py-3 text-left transition-all hover:bg-surface-raised hover:border-border-default disabled:opacity-30"
                   >
                     <div className="flex items-center justify-between gap-1.5">
                       <span className="text-xs font-medium text-text-primary transition-colors leading-tight">
@@ -161,7 +161,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
           {loading && (
             <div className="flex justify-start">
-              <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm border border-border-subtle bg-surface-raised px-4 py-3">
+              <div className="ui-card-shell-raised flex items-center gap-2.5 rounded-bl-sm px-4 py-3">
                 <Loader2 className="ui-spinner-sm text-status-positive shrink-0" />
                 <div>
                   <span className="text-xs text-text-secondary">
@@ -180,7 +180,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
 
         {/* Input */}
         <div className="shrink-0 ui-card-section">
-          <div className={`flex items-end gap-1 rounded-[1.5rem] border bg-surface-overlay transition-colors ${
+          <div className={`ui-card-shell flex items-end gap-1 bg-surface-overlay transition-colors ${
             listening ? "border-accent-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent-primary)_16%,transparent)]" : "border-border-default"
           }`}>
             <textarea
@@ -199,7 +199,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                 onClick={toggleMic}
                 disabled={loading}
                 title={listening ? "Stop recording" : "Voice input"}
-                className={`m-1 rounded-2xl p-2.5 transition-colors shrink-0 ${
+                className={`m-1 shrink-0 rounded-2xl p-2.5 transition-colors ${
                   listening
                     ? "bg-status-negative/20 text-status-negative hover:bg-status-negative/30 animate-pulse"
                     : "text-text-muted hover:text-text-primary hover:bg-surface-raised"

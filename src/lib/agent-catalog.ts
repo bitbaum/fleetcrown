@@ -1,20 +1,9 @@
+import { listAgentRegistry, type AgentOption, type AgentRegistryEntry } from "@/lib/agent-registry";
+
 export type SwitchableAgent = "codex" | "claude";
 
-export type AgentCatalogEntry = {
-  id: SwitchableAgent;
-  label: string;
-  defaultModel: string;
-  modelSuggestions: string[];
-  processMatchers: string[];
-  switchable: true;
-  available: true;
-  availabilityReason?: string;
-  capabilities: {
-    tabSwitching: boolean;
-    manualPromptInjection: boolean;
-    autonomousPromptLoop: boolean;
-    sessionLifecycleSignals: boolean;
-  };
+export type AgentCatalogEntry = AgentRegistryEntry & {
+  id: AgentOption;
 };
 
 export type AgentCatalog = {
@@ -23,50 +12,25 @@ export type AgentCatalog = {
 };
 
 export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAgent, string>>, defaultAgent: SwitchableAgent): AgentCatalog {
-  const codexModel = models.codex?.trim() || "gpt-5.4";
-  const claudeModel = models.claude?.trim() || "sonnet";
+  const agents = listAgentRegistry().map((entry) => {
+    if (entry.id === "codex") {
+      const model = models.codex?.trim() || entry.defaultModel;
+      return {
+        ...entry,
+        defaultModel: model,
+        modelSuggestions: [...new Set([model, ...entry.modelSuggestions])],
+      };
+    }
+    if (entry.id === "claude") {
+      const model = models.claude?.trim() || entry.defaultModel;
+      return {
+        ...entry,
+        defaultModel: model,
+        modelSuggestions: [...new Set([model, ...entry.modelSuggestions])],
+      };
+    }
+    return entry;
+  });
 
-  return {
-    defaultAgent,
-    agents: [
-      {
-        id: "codex",
-        label: "Codex",
-        defaultModel: codexModel,
-        modelSuggestions: [...new Set([codexModel, "gpt-5.4", "gpt-5-codex"])],
-        processMatchers: ["codex"],
-        switchable: true,
-        available: true,
-        capabilities: {
-          tabSwitching: true,
-          manualPromptInjection: true,
-          autonomousPromptLoop: false,
-          sessionLifecycleSignals: false,
-        },
-      },
-      {
-        id: "claude",
-        label: "Claude",
-        defaultModel: claudeModel,
-        modelSuggestions: [...new Set([
-          claudeModel,
-          "sonnet",
-          "opus",
-          "haiku",
-          "claude-sonnet-4-5",
-          "claude-opus-4-1",
-          "claude-3-7-sonnet-latest",
-        ])],
-        processMatchers: ["claude"],
-        switchable: true,
-        available: true,
-        capabilities: {
-          tabSwitching: true,
-          manualPromptInjection: true,
-          autonomousPromptLoop: true,
-          sessionLifecycleSignals: true,
-        },
-      },
-    ],
-  };
+  return { defaultAgent, agents };
 }

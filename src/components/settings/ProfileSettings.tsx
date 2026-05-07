@@ -36,7 +36,7 @@ export function ProfileSettings({ user }: Props) {
   };
 
   return (
-    <section className="ui-panel p-6 space-y-5">
+    <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Profile</h2>
 
       {user.image && (

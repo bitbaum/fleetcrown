@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
-import fs from "fs";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
+import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -36,22 +36,10 @@ function shellEscape(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function parseProjectsConf(): Array<{ tab: string; dir: string }> {
-  const home = process.env.HOME ?? "/home/g";
-  const conf = `${home}/.config/claude-projects.conf`;
-  if (!fs.existsSync(conf)) return [];
-  return fs.readFileSync(conf, "utf-8").split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"))
-    .map((line) => line.split("|").map((p) => p.trim()))
-    .filter((parts) => parts.length >= 2)
-    .map(([tab, dir]) => ({ tab, dir }));
-}
-
 function buildLaunchCommand(agent: "codex" | "claude", model: string, dir: string): string {
   const escapedDir = shellEscape(dir);
-  if (agent === "claude") return `cd ${escapedDir} && claude`;
-  return `cd ${escapedDir} && codex --model ${shellEscape(model)} --no-alt-screen`;
+  if (agent === "claude") return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
+  return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${shellEscape(model)} --no-alt-screen`;
 }
 
 function applyToOpenTabs(agent: "codex" | "claude", model: string): SwitchTabResult[] {

@@ -23,24 +23,31 @@ export function ActivityLogPanel({
 }) {
   if (activities.length === 0) return null;
   return (
-    <div>
+    <div className="space-y-3 border-t border-border-subtle pt-4">
       <button
         onClick={onToggle}
         className="flex items-center gap-1 text-sm text-text-secondary transition-colors hover:text-text-primary"
       >
-        Activity log <span className="ml-1 text-text-tertiary">({activities.length})</span>
+        <span className="ui-kicker">Recent activity</span>
+        <span className="text-text-tertiary">({activities.length})</span>
         {open ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
       </button>
       {open && (
-        <div className="mt-2 space-y-1.5">
+        <div className="space-y-2">
           {activities.slice(0, 20).map((item) => (
-            <div key={item.id} className="flex items-baseline gap-2 text-sm">
-              <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
-              <span className="text-text-muted">·</span>
-              <span className="truncate text-text-secondary" title={item.customPrompt ?? getIntentLabel(item.intent ?? "")}>
-                {item.customPrompt ? item.customPrompt.slice(0, 60) : getIntentLabel(item.intent ?? "")}
-              </span>
-              <span className="ml-auto shrink-0 text-text-tertiary">{timeAgo(new Date(item.dispatchedAt).getTime())}</span>
+            <div key={item.id} className="ui-control-activity-item">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="shrink-0 font-medium text-text-primary">{item.projectKey}</span>
+                <span className="ml-auto shrink-0 text-xs text-text-tertiary">
+                  {timeAgo(new Date(item.dispatchedAt).getTime())}
+                </span>
+              </div>
+              <p
+                className="mt-1 text-sm leading-relaxed text-text-secondary"
+                title={item.customPrompt ?? getIntentLabel(item.intent ?? "")}
+              >
+                {item.customPrompt ? item.customPrompt.slice(0, 120) : getIntentLabel(item.intent ?? "")}
+              </p>
             </div>
           ))}
         </div>
@@ -79,17 +86,31 @@ export function BrainConfigPanel({
   const modelSuggestions = selectedDefinition?.modelSuggestions ?? [];
 
   return (
-    <div className="space-y-3">
-      {/* Agent chips + page-level actions */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Bot className="h-4 w-4 shrink-0 text-accent-text" />
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="ui-kicker">Active brain</p>
+          <div className="flex items-center gap-2 text-text-primary">
+            <Bot className="h-4 w-4 shrink-0 text-accent-text" />
+            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              {selectedDefinition?.label ?? selectedAgent}
+            </h2>
+          </div>
+          <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
+            Choose the default interactive agent and model for Control-driven launches and orchestrated continuation.
+          </p>
+        </div>
+        {headerRight && <div className="shrink-0">{headerRight}</div>}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         {switchableRegistry.map((entry) => (
           <button
             key={entry.id}
             type="button"
             onClick={() => onAgentSelect(entry.id, entry.defaultModel)}
             className={cn(
-              "rounded-full border px-3 py-1 text-sm transition-colors",
+              "rounded-full border px-3 py-1.5 text-sm transition-colors",
               selectedAgent === entry.id
                 ? "border-accent-primary bg-accent-muted text-text-primary"
                 : "border-border-subtle text-text-secondary hover:text-text-primary",
@@ -98,60 +119,63 @@ export function BrainConfigPanel({
             {entry.label}
           </button>
         ))}
-        {headerRight && <div className="ml-auto">{headerRight}</div>}
       </div>
 
-      {/* Model input + suggestions + save actions */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          list={`model-options-${selectedAgent}`}
-          value={model}
-          onChange={(e) => onModelChange(e.target.value)}
-          className="ui-input min-w-0 flex-1 basis-36"
-          placeholder={selectedDefinition?.defaultModel ?? "Model"}
-        />
-        <datalist id={`model-options-${selectedAgent}`}>
-          {modelSuggestions.map((option) => (
-            <option key={option} value={option} />
-          ))}
-        </datalist>
-        {modelSuggestions.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onModelChange(option)}
-            className={cn(
-              "rounded-full border px-2.5 py-1 text-xs transition-colors",
-              model === option
-                ? "border-accent-primary bg-accent-muted text-text-primary"
-                : "border-border-subtle text-text-tertiary hover:text-text-secondary",
-            )}
-          >
-            {option}
-          </button>
-        ))}
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="space-y-3">
+          <input
+            list={`model-options-${selectedAgent}`}
+            value={model}
+            onChange={(e) => onModelChange(e.target.value)}
+            className="ui-input min-w-0"
+            placeholder={selectedDefinition?.defaultModel ?? "Model"}
+          />
+          <datalist id={`model-options-${selectedAgent}`}>
+            {modelSuggestions.map((option) => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+          <div className="flex flex-wrap gap-1.5">
+            {modelSuggestions.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onModelChange(option)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                  model === option
+                    ? "border-accent-primary bg-accent-muted text-text-primary"
+                    : "border-border-subtle text-text-tertiary hover:text-text-secondary",
+                )}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {hasPendingChange && (
-          <>
+          <div className="flex flex-wrap items-start gap-2 lg:justify-end">
             <button
               onClick={() => onSave(false)}
               disabled={savingAgent || !model.trim()}
-              className="rounded-full border border-border-default px-3 py-1 text-sm text-text-secondary transition-colors hover:text-text-primary disabled:opacity-40"
+              className="ui-btn-secondary"
             >
               Save
             </button>
             <button
               onClick={() => onSave(true)}
               disabled={savingAgent || !model.trim()}
-              className="rounded-full bg-accent-primary px-3 py-1 text-sm text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40"
+              className="ui-btn-primary"
             >
-              {savingAgent ? "…" : "Apply"}
+              {savingAgent ? "…" : "Apply to open tabs"}
             </button>
-          </>
+          </div>
         )}
       </div>
 
       {lastTabResults.length > 0 && (
-        <div className="text-xs text-text-tertiary">
+        <div className="rounded-2xl border border-border-subtle bg-surface-overlay px-4 py-3 text-xs text-text-tertiary">
           Last switch{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}:{" "}
           {lastTabResults.slice(0, 4).map((r, i) => (
             <span key={i}>{r.tab ? `${r.tab} ${r.status}` : r.status}{r.error ? ` (${r.error})` : ""}{i < Math.min(lastTabResults.length, 4) - 1 ? ", " : ""}</span>
@@ -225,6 +249,125 @@ export function NewProjectModal({
         >
           {creating ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
           {dir.trim() ? "Create & launch" : "Create"}
+        </button>
+        <button onClick={onClose} className="ui-btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+export function LaunchTabModal({
+  tab,
+  dir,
+  agents,
+  selectedAgentId,
+  selectedModel,
+  launching,
+  error,
+  onAgentChange,
+  onModelChange,
+  onLaunch,
+  onClose,
+}: {
+  tab: string;
+  dir: string;
+  agents: AgentEntry[];
+  selectedAgentId: string;
+  selectedModel: string;
+  launching: boolean;
+  error: string;
+  onAgentChange: (agentId: string) => void;
+  onModelChange: (value: string) => void;
+  onLaunch: () => void;
+  onClose: () => void;
+}) {
+  const selected = agents.find((agent) => agent.id === selectedAgentId) ?? agents[0] ?? null;
+  const supportsModel = !!selected && selected.modelSuggestions.length > 0;
+
+  return (
+    <Modal onClose={onClose} size="md">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-medium text-text-primary">Launch development tab</h3>
+          <p className="mt-1 text-sm text-text-tertiary">{tab} · {dir}</p>
+        </div>
+        <button onClick={onClose} className="text-text-muted hover:text-text-primary">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          {agents.map((agent) => (
+            <button
+              key={agent.id}
+              type="button"
+              onClick={() => onAgentChange(agent.id)}
+              disabled={!agent.available}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                selectedAgentId === agent.id
+                  ? "border-accent-primary bg-accent-muted text-text-primary"
+                  : "border-border-subtle text-text-secondary hover:text-text-primary",
+                !agent.available && "cursor-not-allowed opacity-40",
+              )}
+              title={agent.available ? `${agent.label}` : (agent.availabilityReason ?? `${agent.label} unavailable`)}
+            >
+              {agent.label}
+            </button>
+          ))}
+        </div>
+
+        {selected && !selected.available && (
+          <p className="text-sm text-status-warning">{selected.availabilityReason ?? `${selected.label} is unavailable on this machine.`}</p>
+        )}
+
+        {selected && supportsModel && (
+          <div className="space-y-2">
+            <input
+              list={`launch-model-options-${selected.id}`}
+              value={selectedModel}
+              onChange={(e) => onModelChange(e.target.value)}
+              className="ui-input w-full"
+              placeholder={selected.defaultModel}
+            />
+            <datalist id={`launch-model-options-${selected.id}`}>
+              {selected.modelSuggestions.map((option) => (
+                <option key={option} value={option} />
+              ))}
+            </datalist>
+            <div className="flex flex-wrap gap-1.5">
+              {selected.modelSuggestions.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onModelChange(option)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    selectedModel === option
+                      ? "border-accent-primary bg-accent-muted text-text-primary"
+                      : "border-border-subtle text-text-tertiary hover:text-text-secondary",
+                  )}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {error && <p className="text-sm text-status-negative">{error}</p>}
+      <div className="flex gap-2 pt-1">
+        <button
+          onClick={onLaunch}
+          disabled={launching || !selected || !selected.available || (supportsModel && !selectedModel.trim())}
+          className="ui-btn-primary flex-1 gap-1.5"
+        >
+          {launching ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
+          Launch
         </button>
         <button onClick={onClose} className="ui-btn-secondary">
           Cancel

@@ -79,7 +79,7 @@ export function ProjectDetailHeader({
 
   return (
     <div className="shrink-0 bg-surface-drawer border-b border-border-subtle">
-      <div className="flex items-start gap-3 px-5 pt-4 pb-3">
+      <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:flex-row sm:items-start sm:px-5">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <NameEditor value={displayName} editable={!!data && !loading} onSave={saveName} />
@@ -90,13 +90,13 @@ export function ProjectDetailHeader({
           <DescriptionEditor value={description} onSave={saveDescription} />
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="ui-card-actions shrink-0 self-start">
           {prodUrl && (
             <a
               href={prodUrl}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
+              className="ui-icon-action"
               title="Live site"
             >
               <Globe className="h-4 w-4" />
@@ -107,7 +107,7 @@ export function ProjectDetailHeader({
               href={repo}
               target="_blank"
               rel="noreferrer"
-              className="p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
+              className="ui-icon-action"
               title="Repository"
             >
               <GitBranch className="h-4 w-4" />
@@ -123,12 +123,12 @@ export function ProjectDetailHeader({
               }}
               label="Delete?"
               triggerTitle="Delete project"
-              triggerClassName="ml-1 p-1.5 rounded ui-btn-danger hover:bg-surface-raised transition-colors"
+              triggerClassName="ui-icon-action ml-1 text-status-negative hover:bg-surface-raised"
             />
           )}
           <button
             onClick={onClose}
-            className="ml-1 p-1.5 rounded hover:bg-surface-overlay text-text-tertiary hover:text-text-secondary transition-colors"
+            className="ui-icon-action ml-1"
           >
             <X className="h-4 w-4" />
           </button>
@@ -136,7 +136,7 @@ export function ProjectDetailHeader({
       </div>
 
       {data && (
-        <div className="flex flex-wrap items-center gap-2 px-5 pb-3">
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5">
           <StatusEditor value={effectiveStatus} onSave={saveStatus} />
           <MaturityEditor value={effectiveMaturity} onSave={saveMaturity} />
           {hasIssues && (

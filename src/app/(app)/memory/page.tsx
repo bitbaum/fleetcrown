@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 // Record<EntityType,…> makes TS fail the build if a new ENTITY_TYPE
 // member is added without a colour here — no silent fallback.
@@ -130,12 +131,7 @@ export default async function MemoryPage() {
                   </div>
                   <span className="text-text-secondary">{Number(row.count).toLocaleString()}</span>
                 </div>
-                <div className="h-2 rounded-full overflow-hidden bg-surface-overlay">
-                  <div
-                    className="h-full rounded-full bg-accent-primary"
-                    style={{ width: `${Math.max(pct, 1)}%` }}
-                  />
-                </div>
+                <ProgressBar value={pct} minPercent={1} tone="accent" className="h-2" />
               </div>
             );
           })}

@@ -4,6 +4,15 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { count } from "drizzle-orm";
+import { PublicSurface } from "@/components/public/PublicSurface";
+import {
+  LANDING_BADGE,
+  LANDING_FEATURES,
+  LANDING_FOOTER,
+  LANDING_HEADLINE,
+  LANDING_SUBTITLE,
+} from "@/config/marketing";
+import { PUBLIC_SURFACE } from "@/config/ui";
 
 export default async function LandingPage() {
   const [{ value }] = await db.select({ value: count() }).from(users);
@@ -13,91 +22,39 @@ export default async function LandingPage() {
   if (session?.user) redirect("/today");
 
   return (
-    <div className="relative min-h-screen overflow-hidden text-white bg-[#050505]">
-
-      {/* Background: layered glows */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Primary center glow — much more visible */}
-        <div
-          className="absolute left-1/2 top-0 -translate-x-1/2"
-          style={{
-            width: "900px",
-            height: "700px",
-            background: "radial-gradient(ellipse at center top, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 40%, transparent 70%)",
-          }}
-        />
-        {/* Secondary ambient fill */}
-        <div
-          className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2"
-          style={{
-            width: "1200px",
-            height: "600px",
-            background: "radial-gradient(ellipse, rgba(255,255,255,0.04) 0%, transparent 60%)",
-          }}
-        />
-        {/* Fine grid */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-            maskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%)",
-          }}
-        />
-      </div>
-
-      {/* Nav */}
-      <nav className="relative z-10 flex items-center justify-between px-8 py-6 sm:px-14">
-        <span className="text-base font-bold tracking-[-0.02em]">
-          ✦ Cockpit
-        </span>
+    <PublicSurface
+      right={(
         <Link
           href="/sign-in"
-          className="rounded-full px-5 py-2 text-sm font-medium transition-all border border-white/[0.12] text-white/55 hover:border-white/[0.22] hover:text-white/80"
+          className="ui-public-nav-action"
         >
           Sign in
         </Link>
-      </nav>
-
-      {/* Hero */}
-      <main className="relative z-10 flex min-h-[calc(100vh-76px)] flex-col items-center justify-center px-6 pb-28 text-center">
-
-        {/* Pill */}
-        <div className="mb-12 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium bg-white/[0.05] border border-white/[0.10] text-white/45 tracking-[0.02em]">
+      )}
+    >
+      <main
+        className="relative z-10 flex flex-col items-center justify-center px-6 pb-28 text-center"
+        style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}
+      >
+        <div className="ui-public-badge mb-12">
           <span className="h-1.5 w-1.5 rounded-full bg-status-positive" />
-          Private · Self-hosted · Open source
+          {LANDING_BADGE}
         </div>
 
-        {/* Headline */}
-        <h1
-          className="max-w-4xl font-bold"
-          style={{
-            fontSize: "clamp(52px, 8vw, 108px)",
-            lineHeight: 1.0,
-            letterSpacing: "-0.04em",
-            fontFamily: "var(--font-space-display)",
-          }}
-        >
-          Command your
+        <h1 className="ui-public-title">
+          {LANDING_HEADLINE[0]}
           <br />
-          <span className="text-white/28">AI fleet.</span>
+          <span className="ui-public-title-muted">{LANDING_HEADLINE[1]}</span>
         </h1>
 
-        {/* Subline */}
-        <p className="mt-8 max-w-md text-lg leading-relaxed text-white/40">
-          Add projects. Launch agents. Watch them build.
-          <br className="hidden sm:block" />
-          Stay in command — no code required.
+        <p className="ui-public-subtitle">
+          {LANDING_SUBTITLE}
         </p>
 
-        {/* CTAs */}
         <div className="mt-10 flex items-center gap-3">
           <Link
             href="/sign-in"
-            className="rounded-full px-8 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-85 bg-white"
+            className="ui-public-primary-action"
           >
             Get started →
           </Link>
@@ -105,35 +62,29 @@ export default async function LandingPage() {
             href="https://github.com/g-but/cockpit"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full px-8 py-3 text-sm font-medium transition-all border border-white/[0.12] text-white/50 hover:border-white/[0.22] hover:text-white/80"
+            className="ui-public-nav-action px-8 py-3"
           >
             View source
           </a>
         </div>
 
-        {/* Features row */}
         <div className="mt-24 grid w-full max-w-3xl gap-4 sm:grid-cols-3">
-          {[
-            { icon: "⊞", title: "Fleet view", body: "All your AI agents on one screen. See what's running, what's ready, what needs attention." },
-            { icon: "⚡", title: "Auto-continue", body: "Agents stop, you get a popup. One keypress to resume, redirect, or close the session." },
-            { icon: "◎", title: "Life OS", body: "Today view, goals, habits, people, money — all piped through the same AI pipeline." },
-          ].map(({ icon, title, body }) => (
+          {LANDING_FEATURES.map(({ icon, title, body }) => (
             <div
               key={title}
-              className="rounded-2xl p-6 text-left bg-white/[0.03] border border-white/[0.07]"
+              className="ui-public-feature-card"
             >
-              <div className="mb-3 text-xl text-white/60">{icon}</div>
-              <div className="mb-1.5 text-sm font-semibold text-white/80">{title}</div>
-              <p className="text-sm leading-relaxed text-white/35">{body}</p>
+              <div className="ui-public-feature-icon">{icon}</div>
+              <div className="ui-public-feature-title">{title}</div>
+              <p className="ui-public-feature-body">{body}</p>
             </div>
           ))}
         </div>
 
-        {/* Footer line */}
-        <p className="mt-16 text-xs text-white/[0.18] tracking-[0.04em]">
-          BUILT ON CLAUDE · RUNS ON YOUR MACHINE · NO DATA LEAVES YOUR HOME
+        <p className="ui-public-footer">
+          {LANDING_FOOTER}
         </p>
       </main>
-    </div>
+    </PublicSurface>
   );
 }

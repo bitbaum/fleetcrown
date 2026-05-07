@@ -95,7 +95,7 @@ export function PersonCard({
   }
 
   return (
-    <div className="group w-full rounded-[1.5rem] border border-border-subtle bg-surface-base transition-colors hover:bg-surface-raised">
+    <div className="ui-card-shell group w-full transition-colors hover:bg-surface-raised">
       <button onClick={onClick} className="w-full p-4 text-left md:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">
@@ -225,12 +225,12 @@ export function PersonCard({
                   {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
                   Log
                 </button>
-                <button
-                  onClick={cancelLog}
-                  className="text-xs text-text-tertiary transition-colors hover:text-text-secondary"
-                >
-                  Cancel
-                </button>
+                  <button
+                    onClick={cancelLog}
+                    className="ui-link-subtle"
+                  >
+                    Cancel
+                  </button>
               </div>
             </>
           )}

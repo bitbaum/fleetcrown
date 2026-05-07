@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CockpitMark } from "@/components/shell/CockpitMark";
 
 export async function generateMetadata({
   params,
@@ -29,8 +30,8 @@ export default async function PublicProfilePage({
   return (
     <div className="flex min-h-screen flex-col bg-surface-page text-text-primary">
       <nav className="flex items-center justify-between px-6 py-5 sm:px-10">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="text-accent-primary">✦</span> Cockpit
+        <Link href="/" className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
+          <CockpitMark showWordmark={false} />
         </Link>
       </nav>
 

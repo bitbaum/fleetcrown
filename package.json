@@ -8,6 +8,7 @@
     "start": "next start",
     "migrate": "drizzle-kit push",
     "lint": "eslint",
+    "check:design": "bash scripts/check-design-system.sh",
     "smoke": "bash scripts/smoke.sh",
     "prepare": "husky"
   },

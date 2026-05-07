@@ -81,7 +81,7 @@ export function RunModal({
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-6">
           <div>
             <div className="ui-kicker mb-2">Resolved Prompt</div>
-            <pre className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary">
+            <pre className="ui-code-surface">
               {resolvedMessage}
             </pre>
           </div>
@@ -131,7 +131,7 @@ export function RunModal({
                 )}
               </div>
               {running && (
-                <div className="flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-overlay p-4 text-base text-text-secondary">
+                <div className="ui-card-shell flex items-center gap-2 p-4 text-base text-text-secondary">
                   <Loader2 className="ui-spinner text-accent-primary" />
                   Ivy is working… (this may take up to 60s)
                 </div>
@@ -142,7 +142,7 @@ export function RunModal({
                 </div>
               )}
               {result && (
-                <pre className="whitespace-pre-wrap rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4 text-sm leading-relaxed text-text-secondary">
+                <pre className="ui-code-surface">
                   {result}
                 </pre>
               )}

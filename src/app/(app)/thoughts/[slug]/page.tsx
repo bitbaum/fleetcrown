@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageLayout } from "@/components/ui/page-layout";
-import { getThought, listThoughts } from "@/lib/thoughts-content";
+import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
+import { getAdjacentThoughts, getRelatedThoughts, getThought, listThoughts, parseThoughtBlocks } from "@/lib/thoughts-content";
 
 export function generateStaticParams() {
   return listThoughts().map((a) => ({ slug: a.slug }));
@@ -14,34 +16,74 @@ export default async function ThoughtArticlePage({
   const { slug } = await params;
   const article = getThought(slug);
   if (!article) notFound();
+  const blocks = parseThoughtBlocks(article.body);
+  const { previous, next } = getAdjacentThoughts(slug);
+  const related = getRelatedThoughts(slug);
 
   return (
     <PageLayout title={article.title} subtitle={article.summary} maxWidth="max-w-5xl">
-      <article className="ui-panel-raised space-y-6 p-6 md:p-8">
-        {article.body.split("\n\n").map((block, i) => {
-          if (block.startsWith("## ")) {
-            return (
-              <h2 key={i} className="text-2xl font-medium text-text-primary">
-                {block.replace(/^##\s+/, "")}
-              </h2>
-            );
-          }
-          if (block.startsWith("- ")) {
-            return (
-              <ul key={i} className="list-disc pl-6 text-base text-text-secondary md:text-lg">
-                {block.split("\n").map((line) => (
-                  <li key={line}>{line.replace(/^-\s+/, "")}</li>
-                ))}
-              </ul>
-            );
-          }
-          return (
-            <p key={i} className="text-base leading-relaxed text-text-secondary md:text-lg">
-              {block}
-            </p>
-          );
-        })}
-      </article>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/thoughts" className="ui-btn-chip">All essays</Link>
+          <span className="ui-badge">{article.publishedAt}</span>
+          <span className="ui-badge">{article.readingTimeMin} min</span>
+          {article.tags.map((tag) => (
+            <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
+          ))}
+        </div>
+
+        <article className="ui-card-shell-raised space-y-6 p-6 md:p-8">
+          {blocks.map((block, i) => {
+            switch (block.type) {
+              case "h2":
+                return (
+                  <h2 key={i} className="text-2xl font-medium text-text-primary">
+                    {block.text}
+                  </h2>
+                );
+              case "h3":
+                return (
+                  <h3 key={i} className="text-xl font-medium text-text-primary">
+                    {block.text}
+                  </h3>
+                );
+              case "ul":
+                return (
+                  <ul key={i} className="list-disc space-y-2 pl-6 text-base text-text-secondary md:text-lg">
+                    {block.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                );
+              case "ol":
+                return (
+                  <ol key={i} className="list-decimal space-y-2 pl-6 text-base text-text-secondary md:text-lg">
+                    {block.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                );
+              case "blockquote":
+                return (
+                  <blockquote key={i} className="border-l-2 border-border-default pl-4 italic text-text-secondary md:text-lg">
+                    {block.text.map((line) => (
+                      <p key={line}>{line}</p>
+                    ))}
+                  </blockquote>
+                );
+              case "p":
+              default:
+                return (
+                  <p key={i} className="text-base leading-relaxed text-text-secondary md:text-lg">
+                    {block.text}
+                  </p>
+                );
+            }
+          })}
+        </article>
+
+        <ThoughtArticleNav previous={previous} next={next} related={related} />
+      </div>
     </PageLayout>
   );
 }

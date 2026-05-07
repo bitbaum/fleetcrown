@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
-import { stateFile, readProjectsMap } from "@/lib/claude-config";
+import { stateFile, readProjectsMap } from "@/lib/agent-config";
 import { injectIntoTab } from "@/lib/zellij";
 import { auth } from "@/auth";
 import { readJsonBody, z } from "@/lib/api/route-helpers";

@@ -7,7 +7,7 @@ export default function Loading() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="ui-panel-raised p-5">
+          <div key={i} className="ui-card-shell-raised p-5">
             <div className="mb-4 h-5 w-28 rounded-2xl bg-surface-overlay" />
             <div className="space-y-2">
               <div className="h-4 w-full rounded-2xl bg-surface-overlay" />

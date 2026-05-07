@@ -119,7 +119,7 @@ export function InteractionsSection({
             >
               {saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
             </button>
-            <button onClick={() => setLogging(false)} className="px-1 text-xs text-text-tertiary hover:text-text-secondary">
+            <button onClick={() => setLogging(false)} className="ui-link-subtle-button">
               Cancel
             </button>
           </div>

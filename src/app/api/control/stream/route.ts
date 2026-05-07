@@ -1,7 +1,7 @@
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
-import { parseProjectsConf } from "@/lib/claude-config";
+import { parseProjectsConf } from "@/lib/agent-config";
 import { getAgentCwds, readFastState } from "@/lib/control-fast-state";
 import { getCurrentUserId } from "@/lib/session";
 import type { FastProjectState } from "@/lib/control-fast-state";

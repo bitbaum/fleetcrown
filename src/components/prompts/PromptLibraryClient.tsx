@@ -68,7 +68,7 @@ export function PromptLibraryClient({
       <CategoryBar active={activeCategory} templates={templates} onSelect={setActiveCategory} />
 
       {filtered.length === 0 ? (
-        <div className="ui-panel-raised flex flex-col items-center gap-3 py-12 text-center text-text-secondary">
+        <div className="ui-empty-panel py-12 text-text-secondary">
           <Search className="h-8 w-8 text-text-muted" />
           <div className="text-lg font-medium text-text-primary">No prompts match your filters</div>
           <div className="max-w-xl text-base text-text-secondary">

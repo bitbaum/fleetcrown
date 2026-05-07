@@ -116,7 +116,7 @@ export function PeopleGrid({
             placeholder="Search people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-2xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-accent-primary"
+            className="ui-search-input"
           />
           <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
             {total}
@@ -124,7 +124,7 @@ export function PeopleGrid({
         </div>
         <button
           onClick={cycleSort}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl border border-border-default bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+          className="ui-btn-chip shrink-0 rounded-2xl px-4 py-3"
           title={`Sort: ${SORT_LABELS[sort]}`}
         >
           <ArrowUpDown className="h-3.5 w-3.5" />
@@ -142,8 +142,8 @@ export function PeopleGrid({
               onClick={() => toggleHealth(value)}
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? "border-accent-primary bg-accent-muted text-accent-text"
-                  : "border-border-default bg-surface-base text-text-secondary hover:bg-surface-raised hover:text-text-primary"
+                  ? "ui-chip-filter-active"
+                  : "ui-chip-filter border-border-default bg-surface-base"
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT_COLOR[value]}`} />
@@ -154,7 +154,7 @@ export function PeopleGrid({
         {healthFilter.length > 0 && (
           <button
             onClick={() => setHealthFilter([])}
-            className="inline-flex items-center rounded-full border border-border-default px-3 py-1.5 text-sm text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary"
+            className="ui-chip-filter rounded-full px-3 py-1.5 text-sm"
           >
             Clear
           </button>
@@ -162,7 +162,7 @@ export function PeopleGrid({
       </div>
 
       {people.length === 0 ? (
-        <div className="ui-panel flex flex-col items-center gap-3 py-14 text-center text-text-tertiary">
+        <div className="ui-empty-panel">
           <Users className="h-8 w-8" />
           <div className="text-base text-text-secondary">
             {query || healthFilter.length > 0
@@ -195,7 +195,7 @@ export function PeopleGrid({
         <button
           onClick={() => search(query, sort, healthFilter, offset + LIMIT)}
           disabled={loading}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-border-default bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
+          className="ui-btn-chip w-full rounded-2xl px-4 py-3"
         >
           {loading ? "Loading..." : `Load more (${people.length} of ${total})`}
         </button>

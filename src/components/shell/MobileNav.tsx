@@ -2,18 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS } from "@/config/navigation";
+import { MOBILE_NAV_ITEMS } from "@/config/navigation";
+import { isCurrentPath } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
-
-const MOBILE_TABS = NAV_ITEMS.filter((item) => item.mobile);
 
 export function MobileNav() {
   const pathname = usePathname();
 
   return (
     <nav className="fixed bottom-3 inset-x-3 z-50 flex md:hidden rounded-[1.75rem] border border-border-default bg-surface-base/92 px-2 py-2 backdrop-blur-xl shadow-[var(--shadow-panel-strong)]">
-      {MOBILE_TABS.map((item) => {
-        const isActive = pathname.startsWith(item.href);
+      {MOBILE_NAV_ITEMS.map((item) => {
+        const isActive = isCurrentPath(pathname, item.href);
         const Icon = item.icon;
         return (
           <Link

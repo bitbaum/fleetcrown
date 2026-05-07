@@ -18,7 +18,7 @@ export function FeaturedCard({
 
   return (
     <>
-      <div className="ui-panel-raised ui-panel-interactive flex flex-col gap-4 p-5">
+      <div className="ui-card-shell-raised ui-panel-interactive flex flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <span className={`ui-chip ${meta.color}`}>{meta.label}</span>

@@ -11,7 +11,7 @@ type Props = {
   currentAdapter: string;
   zellijTabs: string[];
   onExpand: () => void;
-  onLaunch: () => Promise<void>;
+  onLaunch: () => void;
 };
 
 export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch }: Props) {
@@ -25,7 +25,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
     e.stopPropagation();
     if (!canLaunch || launching) return;
     setLaunching(true);
-    try { await onLaunch(); } finally { setLaunching(false); }
+    try { onLaunch(); } finally { setLaunching(false); }
   };
 
   return (
@@ -34,58 +34,62 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
       tabIndex={0}
       onClick={onExpand}
       onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onExpand()}
-      className="ui-panel flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-raised"
+      className="ui-card-shell ui-panel-interactive flex w-full cursor-pointer flex-col gap-3 px-4 py-4 text-left"
     >
-      {/* Status dot / spinner */}
-      <div className="mt-0.5 shrink-0">
-        {agentRunning ? (
-          <Loader2 className="ui-spinner-sm text-accent-text" />
-        ) : (
-          <span className={cn(
-            "block h-2 w-2 rounded-full border",
-            healthColor ? "border-transparent bg-current" : "border-border-default bg-transparent",
-            healthColor ?? "text-border-default",
-          )} />
-        )}
-      </div>
-
-      {/* Name + next */}
-      <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium text-text-primary">{tab}</span>
-        {session?.next && (
-          <p className="mt-0.5 truncate text-xs text-text-tertiary" title={session.next}>{session.next}</p>
-        )}
-      </div>
-
-      {/* Branch + health + launch */}
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <div className="flex items-center gap-2">
-          {tabOpen && (
-            <span title="Terminal open" className="flex items-center gap-1 text-[11px] text-accent-text">
-              <Terminal className="h-3 w-3" />
-            </span>
-          )}
-          {git?.branch && (
-            <span className="flex items-center gap-1 text-[11px] text-text-tertiary">
-              <GitBranch className="h-3 w-3" />
-              {git.branch}
-            </span>
-          )}
-          {canLaunch && !agentRunning && (
-            <button
-              onClick={handleLaunch}
-              disabled={launching}
-              title={`Launch ${currentAdapter} in ${tab}`}
-              className="rounded-full p-1 text-text-muted transition-colors hover:bg-surface-overlay hover:text-accent-text"
-            >
-              {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
-            </button>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 shrink-0">
+          {agentRunning ? (
+            <Loader2 className="ui-spinner-sm text-accent-text" />
+          ) : (
+            <span className={cn(
+              "block h-2.5 w-2.5 rounded-full border",
+              healthColor ? "border-transparent bg-current" : "border-border-default bg-transparent",
+              healthColor ?? "text-border-default",
+            )} />
           )}
         </div>
-        {session?.health && (
-          <span className={cn("text-[10px] font-medium uppercase tracking-wide", healthColor ?? "text-text-muted")}>
-            {session.health}
-          </span>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold text-text-primary">{tab}</span>
+            {tabOpen && (
+              <span title="Terminal open" className="ui-tag ui-tag-neutral gap-1">
+                <Terminal className="h-3 w-3" />
+                Open
+              </span>
+            )}
+          </div>
+          {session?.next && (
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={session.next}>{session.next}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-text-tertiary">
+          {git?.branch && (
+            <span className="flex items-center gap-1">
+              <GitBranch className="h-3 w-3" />
+              <span className="max-w-[10rem] truncate">{git.branch}</span>
+            </span>
+          )}
+          {session?.health && (
+            <span className={cn("font-medium uppercase tracking-wide", healthColor ?? "text-text-muted")}>
+              {session.health}
+            </span>
+          )}
+        </div>
+
+        {canLaunch && !agentRunning && (
+          <button
+            onClick={handleLaunch}
+            disabled={launching}
+            title={`Launch ${currentAdapter} in ${tab}`}
+            className="ui-chip-action-compact inline-flex items-center gap-1.5"
+          >
+            {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
+            Launch
+          </button>
         )}
       </div>
     </div>

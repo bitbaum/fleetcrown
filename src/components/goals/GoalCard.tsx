@@ -11,6 +11,7 @@ import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
+import { ProgressBar } from "@/components/ui/progress-bar";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const router = useRouter();
@@ -201,12 +202,12 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     onUpdate={setTargetDate}
                   />
                 </div>
-                <div className="h-1.5 bg-surface-raised rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-status-positive/60 rounded-full transition-all"
-                    style={{ width: `${Math.max(progress, 1)}%` }}
-                  />
-                </div>
+                <ProgressBar
+                  value={progress}
+                  minPercent={1}
+                  className="h-1.5 bg-surface-raised"
+                  indicatorClassName="bg-status-positive/60"
+                />
               </div>
             )}
 

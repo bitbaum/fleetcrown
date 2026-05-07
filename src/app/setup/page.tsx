@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/api/fetch";
 import {
-  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge,
+  AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
 
 export default function SetupPage() {
@@ -37,18 +37,11 @@ export default function SetupPage() {
 
   return (
     <AuthShell>
-      <div className="mb-10 text-center">
-        <AuthIconBadge>✦</AuthIconBadge>
-        <h1
-          className="font-bold leading-[1.05] tracking-[-0.04em]"
-          style={{ fontSize: "clamp(32px, 5vw, 44px)" }}
-        >
-          Set up Cockpit
-        </h1>
-        <p className="mt-3 text-base text-white/38">
-          Create your admin account to get started.
-        </p>
-      </div>
+      <AuthHeading
+        badge={<AuthIconBadge>✦</AuthIconBadge>}
+        title="Set up Cockpit"
+        description="Create your admin account to get started."
+      />
 
       <AuthCard>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -96,9 +89,9 @@ export default function SetupPage() {
         </form>
       </AuthCard>
 
-      <p className="mt-6 text-center text-sm text-white/18">
+      <p className="ui-auth-footer">
         Already have an account?{" "}
-        <Link href="/sign-in" className="transition-colors hover:text-white/50">
+        <Link href="/sign-in" className="ui-auth-footer-link">
           Sign in
         </Link>
       </p>

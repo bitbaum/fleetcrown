@@ -51,7 +51,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
   };
 
   return (
-    <section className="ui-panel p-6 space-y-5">
+    <section className="ui-settings-section">
       <div className="flex items-center justify-between">
         <h2 className="font-medium text-text-primary">Projects</h2>
         <button onClick={() => setAdding((v) => !v)} className="ui-btn-secondary py-1.5 text-xs gap-1.5">
@@ -60,7 +60,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
       </div>
 
       {adding && (
-        <div className="ui-panel-raised p-4 space-y-3">
+        <div className="ui-settings-subpanel">
           <input
             autoFocus
             value={name}
@@ -107,7 +107,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
           {projects.map((p) => (
             <li
               key={p.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-raised px-4 py-3"
+              className="ui-list-item"
             >
               <div className="min-w-0">
                 <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>

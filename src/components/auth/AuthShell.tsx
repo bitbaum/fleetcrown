@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PublicSurface } from "@/components/public/PublicSurface";
+import { PUBLIC_SURFACE } from "@/config/ui";
 
 export function AuthField({
   label,
@@ -9,9 +11,7 @@ export function AuthField({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-sm font-medium text-white/55">
-        {label}
-      </label>
+      <label className="ui-auth-label">{label}</label>
       {children}
     </div>
   );
@@ -21,7 +21,7 @@ export function AuthInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none bg-white/[0.06] border border-white/[0.10] focus:border-white/30 transition-colors ${props.className ?? ""}`}
+      className={`ui-auth-input ${props.className ?? ""}`}
       style={props.style}
     />
   );
@@ -29,8 +29,26 @@ export function AuthInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl p-8 space-y-5 bg-white/[0.04] border border-white/[0.09] backdrop-blur-[12px]">
+    <div className="ui-auth-card">
       {children}
+    </div>
+  );
+}
+
+export function AuthHeading({
+  title,
+  description,
+  badge,
+}: {
+  title: string;
+  description: string;
+  badge?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-10 text-center">
+      {badge}
+      <h1 className="ui-auth-title">{title}</h1>
+      <p className="ui-auth-subtitle">{description}</p>
     </div>
   );
 }
@@ -53,7 +71,7 @@ export function AuthSubmitButton({
       type={onClick ? "button" : "submit"}
       onClick={onClick}
       disabled={loading || disabled}
-      className="w-full rounded-xl py-3 text-sm font-semibold text-black bg-white transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35"
+      className="ui-auth-submit-btn"
     >
       {loading && loadingLabel ? loadingLabel : label}
     </button>
@@ -62,60 +80,26 @@ export function AuthSubmitButton({
 
 export function AuthShell({
   children,
-  showHomeLink = false,
+  navRight,
 }: {
   children: React.ReactNode;
-  showHomeLink?: boolean;
+  navRight?: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden text-white bg-[#050505]">
-      {/* Background: layered glows + grid */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute left-1/2 top-0 -translate-x-1/2"
-          style={{
-            width: "700px",
-            height: "500px",
-            background: "radial-gradient(ellipse at center top, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 45%, transparent 70%)",
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)," +
-              "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-            backgroundSize: "80px 80px",
-            maskImage: "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%)",
-          }}
-        />
-      </div>
-
-      {/* Nav */}
-      <nav className="relative z-10 px-8 py-6 sm:px-14">
-        {showHomeLink ? (
-          <Link href="/" className="text-base font-bold tracking-[-.02em]">
-            ✦ Cockpit
-          </Link>
-        ) : (
-          <span className="text-base font-bold tracking-[-.02em]">
-            ✦ Cockpit
-          </span>
-        )}
-      </nav>
-
-      <main className="relative z-10 flex min-h-[calc(100vh-76px)] items-center justify-center px-4 pb-16">
+    <PublicSurface right={navRight}>
+      <main
+        className="relative z-10 flex items-center justify-center px-4 pb-16"
+        style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}
+      >
         <div className="w-full max-w-[400px]">{children}</div>
       </main>
-    </div>
+    </PublicSurface>
   );
 }
 
 export function AuthIconBadge({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-xl bg-white/[0.06] border border-white/[0.10]">
+    <div className="ui-auth-icon-badge">
       {children}
     </div>
   );
@@ -124,9 +108,9 @@ export function AuthIconBadge({ children }: { children: React.ReactNode }) {
 export function AuthDivider({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="h-px flex-1 bg-white/[0.07]" />
-      <span className="text-xs text-white/[0.22]">{label}</span>
-      <div className="h-px flex-1 bg-white/[0.07]" />
+      <div className="ui-auth-divider-line" />
+      <span className="ui-auth-divider-label">{label}</span>
+      <div className="ui-auth-divider-line" />
     </div>
   );
 }
@@ -139,10 +123,24 @@ export function AuthFooterLink({
   children: React.ReactNode;
 }) {
   return (
-    <p className="mt-6 text-center text-sm text-white/[0.18]">
-      <Link href={href} className="transition-colors hover:text-white/50">
+    <p className="ui-auth-footer">
+      <Link href={href} className="ui-auth-footer-link">
         {children}
       </Link>
     </p>
+  );
+}
+
+export function AuthSecondaryButton({
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      {...props}
+      className={`ui-auth-secondary-btn ${props.className ?? ""}`}
+    >
+      {children}
+    </button>
   );
 }

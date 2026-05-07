@@ -58,7 +58,7 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative w-full ui-panel-raised rounded-[2rem]",
+          "relative w-full ui-card-shell-raised rounded-[2rem]",
           SIZE_CLASSES[size],
           padded && "p-5 space-y-4",
           panelMargin,

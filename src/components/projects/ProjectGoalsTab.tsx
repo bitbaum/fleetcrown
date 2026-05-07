@@ -5,6 +5,8 @@ import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
 import { patchGoal, listGoals, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { LinkedGoal } from "./project-detail-types";
+import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
+import { GOAL_PROGRESS_THRESHOLDS } from "@/config/ui";
 
 type PanelMode = "idle" | "link" | "create";
 
@@ -117,12 +119,16 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                       <span>{progress}%</span>
                       {milestones.length > 0 && <span>{done}/{milestones.length} milestones</span>}
                     </div>
-                    <div className="h-1 bg-surface-raised rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${progress >= 80 ? "bg-status-positive" : progress >= 50 ? "bg-status-warning" : "bg-accent-primary"}`}
-                        style={{ width: `${Math.max(progress, 1)}%` }}
-                      />
-                    </div>
+                    <ProgressBar
+                      value={progress}
+                      minPercent={1}
+                      tone={getProgressTone(progress, {
+                        positiveAt: GOAL_PROGRESS_THRESHOLDS.healthyPct,
+                        warningAt: GOAL_PROGRESS_THRESHOLDS.cautionPct,
+                        lowTone: "accent",
+                      })}
+                      className="h-1 bg-surface-raised"
+                    />
                   </div>
                 )}
                 {milestones.length > 0 && (

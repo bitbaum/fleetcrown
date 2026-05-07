@@ -116,7 +116,7 @@ export function DescriptionEditor({
   return (
     <button
       onClick={() => ie.start(value ?? "")}
-      className="w-full text-left text-xs text-text-tertiary hover:text-text-secondary mt-0.5 leading-relaxed transition-colors"
+      className="ui-link-subtle mt-0.5 w-full text-left leading-relaxed"
       title="Click to edit description"
     >
       {value ?? <span className="italic text-text-muted">Add a description…</span>}

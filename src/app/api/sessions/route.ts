@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS, type OrchestrationTaskSummaryField } from "@/lib/orchestration";
-import { SESSIONS_DIR } from "@/lib/claude-config";
+import { SESSIONS_DIR } from "@/lib/agent-config";
 
 export type SessionData = {
   found: false;

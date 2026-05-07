@@ -39,3 +39,5 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "thoughts", label: "Thoughts", description: "Essays on architecture & systems", href: "/thoughts", icon: BookOpen,     active: true,  mobile: false },
   { id: "settings", label: "Settings", description: "Profile & team management",        href: "/settings", icon: Settings,     active: true,  mobile: false },
 ];
+
+export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.mobile);

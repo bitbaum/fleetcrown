@@ -4,7 +4,10 @@
 
 Replace the current Claude-centric prompt loop with a neutral orchestration layer that can drive project work through OpenClaw first, while keeping Claude as an adapter instead of the architecture.
 
-This document is the SSOT for the migration plan, boundaries, and first implementation phases.
+This document is the SSOT for the OpenClaw-oriented migration path.
+
+For the broader governing rules, invariants, and phased architecture plan,
+see [architecture-first-principles.md](./architecture-first-principles.md).
 
 ## Problem
 

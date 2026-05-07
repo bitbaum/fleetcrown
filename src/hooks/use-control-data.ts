@@ -9,6 +9,7 @@ import { getJson, postJson } from "@/lib/api/fetch";
 type Agent = "codex" | "claude";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
+export type LaunchAgentOption = Pick<AgentEntry, "id" | "label" | "defaultModel" | "modelSuggestions" | "available" | "availabilityReason" | "capabilities">;
 
 export interface ControlDataHook {
   data: ControlData | null;
@@ -27,7 +28,7 @@ export interface ControlDataHook {
   lastTabResultsAt: number | null;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
-  launchProject: (tab: string, dir: string) => Promise<void>;
+  launchProject: (tab: string, dir: string, agent?: string, model?: string) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
   saveAgent: (applyToOpenTabs: boolean) => Promise<void>;
@@ -162,8 +163,13 @@ export function useControlData(): ControlDataHook {
     setTimeout(refresh, 500);
   };
 
-  const launchProject = async (tab: string, dir: string) => {
-    await postJson("/api/agent/launch", { tab, dir, agent: selectedAgent });
+  const launchProject = async (tab: string, dir: string, agent?: string, model?: string) => {
+    await postJson("/api/agent/launch", {
+      tab,
+      dir,
+      agent: agent ?? selectedAgent,
+      model,
+    });
     setTimeout(() => refresh(true), 1500);
   };
 

@@ -38,15 +38,15 @@ export function ClosedBanner({
       </div>
 
       {session && (
-        <div className="space-y-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {session.done && (
-            <div className="space-y-0.5">
+            <div className="ui-control-summary-card bg-status-positive/[0.06]">
               <p className="ui-kicker">Shipped</p>
               <p className="text-base text-text-primary leading-relaxed">{session.done}</p>
             </div>
           )}
           {session.next && (
-            <div className="space-y-0.5">
+            <div className="ui-control-summary-card bg-status-positive/[0.03]">
               <p className="ui-kicker">Up next</p>
               <p className="text-base text-text-secondary leading-relaxed">{session.next}</p>
             </div>
@@ -154,7 +154,7 @@ export function ReadyBanner({
           </button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="ui-control-intent-grid">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p) => (
           <button
             key={p.key}
@@ -177,6 +177,19 @@ const RUN_STATE_TAG: Record<string, string> = {
 
 export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["latestOrchestrationRun"]> }) {
   const stateClass = RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral";
+  const [expanded, setExpanded] = useState(false);
+  const hasSummary = Boolean(run.summary?.done || run.summary?.next);
+  const fallbackText = run.payload?.resultText?.trim() ?? "";
+
+  const shorten = (value: string, max = 180) => {
+    if (value.length <= max) return value;
+    return `${value.slice(0, max).trimEnd()}…`;
+  };
+
+  const summaryDone = run.summary?.done?.trim() ?? "";
+  const summaryNext = run.summary?.next?.trim() ?? "";
+  const resultText = expanded ? fallbackText : shorten(fallbackText, 220);
+
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
@@ -184,23 +197,40 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{run.state}</span>
       </div>
-      {run.summary?.done && (
-        <p className="text-sm text-text-secondary leading-relaxed">
-          <span className="mr-1.5 ui-kicker">done</span>{run.summary.done}
-        </p>
+
+      {summaryNext && (
+        <div className="space-y-1">
+          <p className="ui-kicker">next</p>
+          <p className="text-sm leading-snug text-text-primary">{summaryNext}</p>
+        </div>
       )}
-      {run.summary?.next && (
-        <p className="text-sm text-text-primary leading-snug">
-          <span className="mr-1.5 ui-kicker">next</span>{run.summary.next}
-        </p>
+
+      {summaryDone && (
+        <div className="space-y-1">
+          <p className="ui-kicker">done</p>
+          <p className="text-sm leading-relaxed text-text-secondary">{summaryDone}</p>
+        </div>
       )}
-      {!run.summary && run.payload?.resultText && (
-        <p className="text-sm text-text-secondary leading-relaxed">{run.payload.resultText}</p>
+
+      {!hasSummary && fallbackText && (
+        <div className="space-y-1">
+          <p className="ui-kicker">result</p>
+          <p className="text-sm leading-relaxed text-text-secondary">{resultText}</p>
+          {fallbackText.length > 220 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              className="ui-link-subtle text-xs"
+            >
+              {expanded ? "Show less" : "Show full result"}
+            </button>
+          )}
+        </div>
       )}
+
       {run.payload?.error && (
         <p className="text-sm text-status-negative">{run.payload.error}</p>
       )}
     </div>
   );
 }
-

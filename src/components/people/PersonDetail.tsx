@@ -185,7 +185,7 @@ export function PersonDetail({
                 </button>
                 <button
                   onClick={() => { descEdit.cancel(); setDescError(null); }}
-                  className="px-1 text-xs text-text-tertiary hover:text-text-secondary"
+                  className="ui-link-subtle-button"
                 >
                   Cancel
                 </button>
@@ -194,7 +194,7 @@ export function PersonDetail({
           ) : (
             <button
               onClick={() => descEdit.start(description ?? "")}
-              className="w-full rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-left text-base text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+              className="ui-card-shell w-full px-4 py-3 text-left text-base text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
               title="Click to edit notes"
             >
               {description ?? <span className="italic text-text-muted">Add a note…</span>}

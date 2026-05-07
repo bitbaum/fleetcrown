@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
+import { APP_DESCRIPTION, APP_NAME } from "@/config/brand";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -21,8 +22,8 @@ const spaceGroteskDisplay = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Cockpit",
-  description: "Your AI fleet. One dashboard.",
+  title: APP_NAME,
+  description: APP_DESCRIPTION,
 };
 
 export default function RootLayout({

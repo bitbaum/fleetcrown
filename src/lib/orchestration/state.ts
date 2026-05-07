@@ -1,0 +1,88 @@
+import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
+import type { OrchestrationEventType } from "./contract";
+
+const READY_WINDOW_S = 86400;
+
+export type LifecycleEventSnapshot = Partial<Record<OrchestrationEventType, Date>>;
+
+export type RuntimeLifecycleFacts = {
+  readyAt: number | null;
+  closingAt: number | null;
+  closedAt: number | null;
+  currentPromptStartedAt: number | null;
+};
+
+export type DerivedLifecycleState = {
+  readyAt: number | null;
+  closingAt: number | null;
+  closedAt: number | null;
+};
+
+type RuntimeEventCandidate = {
+  type: OrchestrationEventType;
+  at: number;
+  source: "runtime-sentinel" | "runtime-prompt";
+  detail?: string;
+};
+
+function toUnixSeconds(date: Date | null | undefined): number | null {
+  return date ? Math.floor(date.getTime() / 1000) : null;
+}
+
+function resolveTs(
+  runtimeTs: number | null,
+  eventTs: Date | undefined,
+  dbTs: Date | null | undefined,
+  nowS: number,
+): number | null {
+  if (runtimeTs !== null) return runtimeTs;
+  const eventS = toUnixSeconds(eventTs);
+  if (eventS !== null && (nowS - eventS) < READY_WINDOW_S) return eventS;
+  const dbS = toUnixSeconds(dbTs);
+  if (dbS !== null && (nowS - dbS) < READY_WINDOW_S) return dbS;
+  return null;
+}
+
+export function deriveLifecycleState(args: {
+  runtime: RuntimeLifecycleFacts;
+  events?: LifecycleEventSnapshot;
+  dbState?: DbProjectState | null;
+  nowS?: number;
+}): DerivedLifecycleState {
+  const { runtime, events, dbState } = args;
+  const nowS = args.nowS ?? Math.floor(Date.now() / 1000);
+
+  return {
+    readyAt: resolveTs(runtime.readyAt, events?.input_requested, dbState?.readyAt, nowS),
+    closingAt: resolveTs(runtime.closingAt, events?.close_requested, dbState?.closingAt, nowS),
+    closedAt: resolveTs(runtime.closedAt, events?.session_closed, dbState?.closedAt, nowS),
+  };
+}
+
+export function collectRuntimeLifecycleEvents(runtime: RuntimeLifecycleFacts): RuntimeEventCandidate[] {
+  const events: RuntimeEventCandidate[] = [];
+
+  if (runtime.readyAt !== null) {
+    events.push({ type: "input_requested", at: runtime.readyAt, source: "runtime-sentinel" });
+  }
+  if (runtime.closingAt !== null) {
+    events.push({ type: "close_requested", at: runtime.closingAt, source: "runtime-sentinel" });
+  }
+  if (runtime.closedAt !== null) {
+    events.push({ type: "session_closed", at: runtime.closedAt, source: "runtime-sentinel" });
+  }
+  if (runtime.currentPromptStartedAt !== null && runtime.currentPromptStartedAt > 0) {
+    events.push({ type: "task_started", at: runtime.currentPromptStartedAt, source: "runtime-prompt" });
+  }
+
+  return events;
+}
+
+export function shouldPersistLifecycleEvent(
+  event: RuntimeEventCandidate,
+  latestEvents?: LifecycleEventSnapshot,
+): boolean {
+  const latest = latestEvents?.[event.type];
+  if (!latest) return true;
+  return Math.floor(latest.getTime() / 1000) < event.at;
+}

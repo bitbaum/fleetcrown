@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { SESSIONS_DIR, stateFile } from "@/lib/claude-config";
+import { SESSIONS_DIR, stateFile } from "@/lib/agent-config";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
 import type { CurrentPrompt, SessionState } from "@/app/api/control/route";
 
@@ -41,7 +41,10 @@ export function readTmpTs(filename: string): number | null {
 
 export function readCurrentPrompt(tab: string): CurrentPrompt | null {
   try {
-    const file = stateFile.prompt(tab);
+    let file = stateFile.prompt(tab);
+    if (!fs.existsSync(file)) {
+      file = stateFile.claudePrompt(tab);
+    }
     if (!fs.existsSync(file)) return null;
     const obj = JSON.parse(fs.readFileSync(file, "utf-8"));
     if (typeof obj?.key === "string" && typeof obj?.label === "string" && typeof obj?.startedAt === "number") {
@@ -88,9 +91,9 @@ export function readFastState(
 ): FastProjectState[] {
   const nowS = Math.floor(Date.now() / 1000);
   return projects.map(({ tab, dir }) => {
-    const tmpReady   = readTmpTs(stateFile.ready(tab));
-    const tmpClosing = readTmpTs(stateFile.closing(tab));
-    const tmpClosed  = readTmpTs(stateFile.closed(tab));
+    const tmpReady   = readTmpTs(stateFile.ready(tab))   ?? readTmpTs(stateFile.claudeReady(tab));
+    const tmpClosing = readTmpTs(stateFile.closing(tab)) ?? readTmpTs(stateFile.claudeClosing(tab));
+    const tmpClosed  = readTmpTs(stateFile.closed(tab))  ?? readTmpTs(stateFile.claudeClosed(tab));
 
     return {
       tab,

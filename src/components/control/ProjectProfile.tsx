@@ -46,7 +46,7 @@ function StatusChip({ value }: { value: string }) {
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[6rem_1fr] gap-x-4 items-baseline py-2.5 border-b border-border-subtle/50 last:border-0">
+    <div className="grid gap-y-1 border-b border-border-subtle/50 py-2.5 last:border-0 sm:grid-cols-[6rem_1fr] sm:items-baseline sm:gap-x-4">
       <span className="ui-kicker shrink-0">{label}</span>
       <span className="text-sm leading-relaxed text-text-secondary">{children}</span>
     </div>
@@ -59,7 +59,7 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
   );
 
   return (
-    <div className="px-5 pb-5 pt-4 space-y-5">
+    <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
       {/* Description */}
       {profile.description && (
         <p className="text-[0.9375rem] leading-[1.65] text-text-secondary">{profile.description}</p>
@@ -107,7 +107,7 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
 
       {/* Stack + extra attrs */}
       {(profile.stack || extraAttrs.length > 0) && (
-        <div className="rounded-xl border border-border-subtle bg-surface-base overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-base">
           {profile.stack && (
             <MetaRow label="Stack">{profile.stack}</MetaRow>
           )}
@@ -147,7 +147,7 @@ function DimensionSection({
     <div className="border-t border-border-subtle">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-5 py-3 text-left transition-colors hover:bg-surface-raised/40"
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
       >
         <span className="flex items-center gap-2.5">
           <span className="text-base leading-none">{dimension.icon}</span>
@@ -157,7 +157,7 @@ function DimensionSection({
       </button>
 
       {open && (
-        <div className="flex flex-wrap gap-2 px-5 pb-4 pt-1">
+        <div className="flex flex-wrap gap-2 px-4 pb-4 pt-1 sm:px-5">
           {dimension.prompts.map((p) => {
             const rendered = interpolateDimensionPrompt(p.prompt, ctx);
             const uses = usageCounts.get(rendered) ?? 0;
@@ -166,7 +166,7 @@ function DimensionSection({
                 key={p.label}
                 onClick={() => onRun(rendered)}
                 disabled={isSending}
-                className="min-h-[36px] rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
+                className="min-h-10 rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
               >
                 {p.label}
                 {uses > 0 && <span className="ml-2 text-[10px] text-text-tertiary">×{uses}</span>}
@@ -214,9 +214,9 @@ export function ProjectProfile({
   return (
     <div>
       {/* Agent selector */}
-      <div className="flex items-center gap-3 border-t border-border-subtle px-5 py-3">
+      <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:px-5">
         <span className="ui-kicker shrink-0">Agent</span>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {availableAgents.map((a) => (
             <button
               key={a.id}
@@ -242,7 +242,7 @@ export function ProjectProfile({
       {project.profile ? (
         <MetaSection profile={project.profile} />
       ) : (
-        <div className="px-5 py-6 text-center">
+        <div className="px-4 py-6 text-center sm:px-5">
           <p className="text-sm text-text-secondary">No profile — add metadata in the Projects view to enable full awareness.</p>
         </div>
       )}
