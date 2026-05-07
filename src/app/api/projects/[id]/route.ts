@@ -6,7 +6,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-import { PatchProjectBody } from "@/db/queries/projects";
+import { patchProject, deleteProject, PatchProjectBody } from "@/db/queries/projects";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   const nameLower = projectName.toLowerCase();
@@ -38,22 +38,12 @@ export async function PATCH(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
   const dataOrResp = await readJsonBody(req, PatchProjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
-  if (dataOrResp.name !== undefined) patch.name = dataOrResp.name;
-  if (dataOrResp.description !== undefined) patch.description = dataOrResp.description.trim() || null;
-
   try {
-    const [updated] = await db
-      .update(entities)
-      .set(patch)
-      .where(and(eq(entities.id, id), eq(entities.userId, userId)))
-      .returning({ id: entities.id });
-
+    const updated = await patchProject(userId, idOrResp, dataOrResp);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
@@ -71,13 +61,8 @@ export async function DELETE(
   const userId = await getCurrentUserId();
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
-  const id = idOrResp;
 
-  const [deleted] = await db
-    .delete(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)))
-    .returning({ id: entities.id });
-
+  const deleted = await deleteProject(userId, idOrResp);
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

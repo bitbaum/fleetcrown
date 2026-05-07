@@ -25,6 +25,39 @@ export const PatchCommitmentBody = z.object({
 });
 
 export type CreateCommitmentInput = z.infer<typeof CreateCommitmentBody>;
+export type PatchCommitmentInput = z.infer<typeof PatchCommitmentBody>;
+
+export async function createCommitment(userId: string, data: CreateCommitmentInput, source?: string) {
+  const [created] = await db
+    .insert(commitments)
+    .values({
+      userId,
+      description: data.description,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      financialImpact: data.financialImpact || null,
+      status: COMMITMENT_STATUS.ACTIVE,
+      source: source ?? null,
+    })
+    .returning();
+  return created;
+}
+
+export async function patchCommitment(userId: string, id: string, data: PatchCommitmentInput) {
+  const patch: Partial<typeof commitments.$inferInsert> = { updatedAt: new Date() };
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.dueDate !== undefined) patch.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+  if (data.financialImpact !== undefined) patch.financialImpact = data.financialImpact?.trim() || null;
+  const [updated] = await db
+    .update(commitments)
+    .set(patch)
+    .where(and(eq(commitments.id, id), eq(commitments.userId, userId)))
+    .returning();
+  return updated ?? null;
+}
+
+export async function deleteCommitment(userId: string, id: string) {
+  await db.delete(commitments).where(and(eq(commitments.id, id), eq(commitments.userId, userId)));
+}
 
 export async function fulfillCommitment(id: string, userId: string) {
   await db
