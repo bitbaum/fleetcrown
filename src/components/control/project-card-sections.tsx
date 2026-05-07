@@ -162,25 +162,25 @@ export function SessionSummary({
   const doneItems = session.done ? splitItems(session.done) : [];
 
   return (
-    <div className="border-t border-border-subtle px-4 py-3 space-y-3 sm:px-5 md:px-6">
+    <div className="border-t border-border-subtle px-4 py-4 space-y-4 sm:px-5 md:px-6">
       {nextItems.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="ui-kicker text-accent-text/70">Up next</p>
+        <div className="space-y-2">
+          <p className="ui-kicker text-accent-text/80">Up next</p>
           {nextItems.map((item, i) => (
-            <div key={i} className="flex gap-2 text-sm leading-snug">
-              <span className="mt-0.5 shrink-0 select-none text-accent-text">→</span>
-              <p className="select-text text-text-primary">{item}</p>
+            <div key={i} className="flex gap-2.5 leading-relaxed">
+              <span className="mt-0.5 shrink-0 select-none text-base text-accent-text">→</span>
+              <p className="select-text text-sm text-text-primary">{item}</p>
             </div>
           ))}
         </div>
       )}
       {doneItems.length > 0 && (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="ui-kicker">Done</p>
           {doneItems.map((item, i) => (
-            <div key={i} className="flex gap-2 text-sm leading-snug">
-              <span className="mt-0.5 shrink-0 select-none text-status-positive">✓</span>
-              <p className="select-text text-text-secondary">{item}</p>
+            <div key={i} className="flex gap-2.5 leading-relaxed">
+              <span className="mt-0.5 shrink-0 select-none text-base text-status-positive">✓</span>
+              <p className="select-text text-sm text-text-secondary">{item}</p>
             </div>
           ))}
         </div>
