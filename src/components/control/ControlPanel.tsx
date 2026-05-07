@@ -17,6 +17,7 @@ import {
   LaunchTabModal,
   NewProjectModal,
 } from "./control-panel-helpers";
+import { BootstrapModal } from "./BootstrapModal";
 
 export function ControlPanel() {
   const {
@@ -31,6 +32,7 @@ export function ControlPanel() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
+  const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDir, setNewDir] = useState("");
@@ -129,8 +131,8 @@ export function ControlPanel() {
         <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
       </button>
       <button
-        onClick={() => setNewProjectOpen(true)}
-        title="New project"
+        onClick={() => setBootstrapOpen(true)}
+        title="Bootstrap new project"
         className="flex items-center gap-1 transition-colors hover:text-text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
@@ -242,6 +244,17 @@ export function ControlPanel() {
           )}
         </section>
       </div>
+
+      {bootstrapOpen && (
+        <BootstrapModal
+          agentId={selectedAgent}
+          agentModel={model}
+          onClose={async () => {
+            setBootstrapOpen(false);
+            await refresh(true);
+          }}
+        />
+      )}
 
       {newProjectOpen && (
         <NewProjectModal

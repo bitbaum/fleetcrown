@@ -152,28 +152,23 @@ QLabel#hint {{
 /* ── Session summary ── */
 QWidget#summary_card {{
     background: {surface};
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid {border};
 }}
 QLabel#sum_val {{
     color: {text1};
-    font-size: 16px;
-    line-height: 1.55;
-}}
-QLabel#sum_more {{
-    color: {text1};
-    font-size: 16px;
-    line-height: 1.55;
+    font-size: 15px;
+    line-height: 1.6;
 }}
 QPushButton#expand {{
     background: transparent;
     color: {text3};
     border: none;
     font-size: 12px;
-    padding: 2px 0px;
+    padding: 4px 0px;
     text-align: left;
 }}
-QPushButton#expand:hover {{ color: {text2}; }}
+QPushButton#expand:hover {{ color: {accent}; }}
 
 /* ── Action buttons — DEV group ── */
 QPushButton#primary {{
@@ -565,8 +560,8 @@ class ContinuePopup(BasePopup):
         box = QWidget()
         box.setObjectName("summary_card")
         box_lay = QVBoxLayout(box)
-        box_lay.setContentsMargins(16, 14, 16, 14)
-        box_lay.setSpacing(12)
+        box_lay.setContentsMargins(18, 16, 18, 16)
+        box_lay.setSpacing(14)
 
         # ── Health strip — only show when there's something worth flagging ──
         def _strip_notable(k, v):
@@ -591,8 +586,7 @@ class ContinuePopup(BasePopup):
                 icon = {'tests': '🧪', 'todos': '📝', 'health': '❤️'}[mk]
                 color = h_color if mk == 'health' else C['text2']
                 lbl = QLabel(f"{icon}  {parsed[mk]}")
-                lbl.setStyleSheet(
-                    f"color:{color};font-size:12px;font-weight:600;")
+                lbl.setStyleSheet(f"color:{color};font-size:12px;font-weight:600;")
                 strip.addWidget(lbl)
             strip.addStretch()
             box_lay.addLayout(strip)
@@ -602,21 +596,39 @@ class ContinuePopup(BasePopup):
                 div.setStyleSheet(f"background:{C['border']};max-height:1px;min-height:1px;")
                 box_lay.addWidget(div)
 
+        # ── Bullet row factory ────────────────────────────────────────────────
+        MAX_WIDTH = 530
+
+        def _make_bullet(item_text, bullet_char, bullet_color, text_style):
+            item_row = QHBoxLayout()
+            item_row.setSpacing(8)
+            item_row.setContentsMargins(0, 2, 0, 2)
+            b_lbl = QLabel(bullet_char)
+            b_lbl.setStyleSheet(f"color:{bullet_color};font-size:14px;font-weight:700;")
+            b_lbl.setFixedWidth(16)
+            item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
+            v_lbl = QLabel(item_text)
+            v_lbl.setObjectName("sum_val")
+            v_lbl.setWordWrap(True)
+            v_lbl.setMaximumWidth(MAX_WIDTH)
+            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            if text_style:
+                v_lbl.setStyleSheet(text_style)
+            item_row.addWidget(v_lbl, 1)
+            return item_row
+
         # ── Narrative rows — UP NEXT first (actionable), DONE last (context) ──
-        # next/in_progress show in full — they're actionable and must be read.
-        # done truncates at 400 chars since it's context, not a call-to-action.
-        PREVIEW_CONTEXT = 400
         narrative = [
             (C['cyan'],  "UP NEXT",     'next',        True),
             (C['amber'], "IN PROGRESS", 'in_progress', True),
-            (C['green'], "DONE",        'done',         False),
+            (C['green'], "DONE",        'done',        False),
         ]
         has_narrative = any(k in parsed for _, _, k, _ in narrative)
         if not has_narrative and not meta_keys:
             v = QLabel(self.session)
             v.setObjectName("sum_val")
             v.setWordWrap(True)
-            v.setMaximumWidth(480)
+            v.setMaximumWidth(MAX_WIDTH)
             v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             box_lay.addWidget(v)
 
@@ -624,43 +636,50 @@ class ContinuePopup(BasePopup):
             if key not in parsed:
                 continue
             val_text = parsed[key]
-            row = QVBoxLayout()
-            row.setSpacing(4)
+
+            items = [s.strip() for s in val_text.split("; ") if s.strip()]
+            bullet_char  = "→" if prominent else "✓"
+            bullet_color = color if prominent else C['text2']
+            text_style   = "" if prominent else f"color:{C['text2']};font-size:14px;"
+
+            section = QVBoxLayout()
+            section.setSpacing(6)
 
             k_lbl = QLabel(label)
             k_lbl.setStyleSheet(
-                f"color:{color};font-size:12px;font-weight:700;letter-spacing:1.0px;")
-            row.addWidget(k_lbl)
+                f"color:{color};font-size:11px;font-weight:700;letter-spacing:1.2px;")
+            section.addWidget(k_lbl)
 
-            # Split on "; " into bullet items — matches the web card's splitItems() logic.
-            # Each semicolon-separated clause becomes its own copyable row.
-            items = [s.strip() for s in val_text.split("; ") if s.strip()]
-            bullet_char = "→" if prominent else "✓"
-            bullet_color = color if prominent else C['text2']
-            text_style = "" if prominent else f"color:{C['text2']};font-size:14px;"
+            # First item — always visible
+            section.addLayout(_make_bullet(items[0], bullet_char, bullet_color, text_style))
 
-            for item_text in items:
-                item_row = QHBoxLayout()
-                item_row.setSpacing(6)
-                item_row.setContentsMargins(0, 2, 0, 2)
+            # Remaining items — hidden by default, toggled by expand button
+            if len(items) > 1:
+                rest = QWidget()
+                rest_lay = QVBoxLayout(rest)
+                rest_lay.setContentsMargins(0, 0, 0, 0)
+                rest_lay.setSpacing(4)
+                for itm in items[1:]:
+                    rest_lay.addLayout(_make_bullet(itm, bullet_char, bullet_color, text_style))
+                rest.setVisible(False)
 
-                b_lbl = QLabel(bullet_char)
-                b_lbl.setStyleSheet(f"color:{bullet_color};font-size:13px;font-weight:700;")
-                b_lbl.setFixedWidth(14)
-                item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
+                n_more = len(items) - 1
+                expand_btn = QPushButton(f"Show {n_more} more ↓")
+                expand_btn.setObjectName("expand")
+                expand_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
-                v_lbl = QLabel(item_text)
-                v_lbl.setObjectName("sum_val")
-                v_lbl.setWordWrap(True)
-                v_lbl.setMaximumWidth(460)
-                v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-                if text_style:
-                    v_lbl.setStyleSheet(text_style)
-                item_row.addWidget(v_lbl, 1)
+                def _toggle(checked=False, rw=rest, btn=expand_btn, n=n_more):
+                    vis = rw.isVisible()
+                    rw.setVisible(not vis)
+                    btn.setText("Show less ↑" if not vis else f"Show {n} more ↓")
+                    self.adjustSize()
+                    self._position()
 
-                row.addLayout(item_row)
+                expand_btn.clicked.connect(_toggle)
+                section.addWidget(rest)
+                section.addWidget(expand_btn)
 
-            box_lay.addLayout(row)
+            box_lay.addLayout(section)
 
         lay.addWidget(box)
 
@@ -782,7 +801,7 @@ class ContinuePopup(BasePopup):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(16, 16, 16, 16)
 
-        card = self._make_card(540)
+        card = self._make_card(600)
         lay  = QVBoxLayout(card)
         lay.setContentsMargins(20, 18, 20, 16)
         lay.setSpacing(0)
