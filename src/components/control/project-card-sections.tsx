@@ -153,21 +153,19 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
   return (
-    <div className="ui-card-section">
-      <div className="grid gap-3 md:grid-cols-2">
-        {session.next && (
-          <div className="ui-control-summary-card">
-            <p className="ui-kicker">Up next</p>
-            <p className="mt-1 text-sm leading-relaxed text-text-primary">{session.next}</p>
-          </div>
-        )}
-        {session.done && (
-          <div className="ui-control-summary-card">
-            <p className="ui-kicker">Last done</p>
-            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{session.done}</p>
-          </div>
-        )}
-      </div>
+    <div className="border-t border-border-subtle px-4 py-3 space-y-1.5 sm:px-5 md:px-6">
+      {session.next && (
+        <div className="flex gap-2.5 text-sm leading-snug">
+          <span className="ui-kicker shrink-0 mt-px">next</span>
+          <span className="line-clamp-2 text-text-primary" title={session.next}>{session.next}</span>
+        </div>
+      )}
+      {session.done && (
+        <div className="flex gap-2.5 text-sm leading-snug">
+          <span className="ui-kicker shrink-0 mt-px">done</span>
+          <span className="line-clamp-1 text-text-tertiary" title={session.done}>{session.done}</span>
+        </div>
+      )}
     </div>
   );
 }
