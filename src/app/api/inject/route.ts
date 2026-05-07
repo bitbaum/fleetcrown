@@ -9,9 +9,11 @@ import {
   readPrompts,
   readPromptMeta,
   buildPromptWithSession,
-} from "@/lib/claude-config";
+} from "@/lib/agent-config";
 import { injectIntoTab } from "@/lib/zellij";
+import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { upsertProjectState } from "@/db/queries/project-states";
+import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -72,6 +74,9 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = await getCurrentUserId();
+  const eventIntent: OrchestrationTaskIntentId | undefined = promptKey && ORCHESTRATION_TASK_INTENT_IDS.includes(promptKey as OrchestrationTaskIntentId)
+    ? (promptKey as OrchestrationTaskIntentId)
+    : customPrompt ? "custom" : undefined;
 
   try {
     injectIntoTab(effectiveTab, prompt);
@@ -95,9 +100,33 @@ export async function POST(req: NextRequest) {
       currentPromptStartedAt: new Date(nowS * 1000),
     }).catch(() => {});
 
-    // Any injection means we're continuing — clear stale close state from prior sessions
+    createOrchestrationEvent({
+      userId,
+      projectKey: canonical,
+      eventType: promptKey === "close_session" ? "close_requested" : "continue_requested",
+      source: "api-inject",
+      adapter: "claude",
+      intent: eventIntent,
+      detail: promptLabel,
+      happenedAt: new Date(nowS * 1000),
+    }).catch(() => {});
+
+    createOrchestrationEvent({
+      userId,
+      projectKey: canonical,
+      eventType: "task_started",
+      source: "api-inject",
+      adapter: "claude",
+      intent: eventIntent,
+      detail: promptLabel,
+      happenedAt: new Date(nowS * 1000),
+    }).catch(() => {});
+
+    // Any injection means we're continuing — clear stale ready/closed state (both naming conventions)
     try { fs.unlinkSync(stateFile.ready(effectiveTab)); } catch { /* gone */ }
+    try { fs.unlinkSync(stateFile.claudeReady(effectiveTab)); } catch { /* gone */ }
     try { fs.unlinkSync(stateFile.closed(effectiveTab)); } catch { /* gone */ }
+    try { fs.unlinkSync(stateFile.claudeClosed(effectiveTab)); } catch { /* gone */ }
 
     if (promptKey === "close_session") {
       // Suppress the next stop-hook popup — infrastructure-side, reliable

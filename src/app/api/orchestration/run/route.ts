@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { spawn, exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -6,7 +8,7 @@ import path from "node:path";
 const execAsync = promisify(exec);
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab } from "@/lib/zellij";
-import { resolveEffectiveTab } from "@/lib/claude-config";
+import { buildPromptWithSession, resolveEffectiveTab, stateFile } from "@/lib/agent-config";
 import {
   ORCHESTRATION_ADAPTER_IDS,
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -15,8 +17,10 @@ import {
   type OrchestrationTaskRequest,
 } from "@/lib/orchestration";
 import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } from "@/lib/orchestration";
+import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
+import { upsertProjectState } from "@/db/queries/project-states";
 import { getCurrentUserId } from "@/lib/session";
 
 const RunOrchestrationBody = z.object({
@@ -46,6 +50,10 @@ async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskR
   });
 }
 
+function shellEscape(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
@@ -64,9 +72,8 @@ export async function POST(req: NextRequest) {
     customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
   }).catch(() => {});
 
-  // Inject-based adapters: render the task prompt and inject it into the zellij tab.
-  // No DB run created — tracking comes from zellij session hooks.
-  if (request.adapter === "claude" || request.adapter === "codex") {
+  // Claude remains hook-driven via prompt injection into a live tab.
+  if (request.adapter === "claude") {
     try {
       const prompt = renderTaskForAdapter(request);
       // Resolve alias: "Cockpit" may be running as "Cockpit Claude" in this session.
@@ -77,6 +84,91 @@ export async function POST(req: NextRequest) {
         effectiveKey = resolveEffectiveTab(request.projectKey, activeTabs);
       } catch { /* Zellij unavailable — use projectKey as-is */ }
       injectIntoTab(effectiveKey, prompt);
+      return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: `Inject failed: ${message}` }, { status: 500 });
+    }
+  }
+
+  // Codex has no native stop hook in this environment, so run the task as a
+  // one-shot command in the project tab and hand completion back to the same
+  // stop-hook bridge Beacon already uses for Claude.
+  if (request.adapter === "codex") {
+    try {
+      const basePrompt = renderTaskForAdapter(request);
+      let effectiveKey = request.projectKey;
+      try {
+        const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
+        const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
+        effectiveKey = resolveEffectiveTab(request.projectKey, activeTabs);
+      } catch { /* Zellij unavailable — use projectKey as-is */ }
+
+      const prompt = buildPromptWithSession(basePrompt, effectiveKey);
+      const promptFile = path.join("/tmp", `cockpit-codex-prompt-${randomUUID()}.txt`);
+      fs.writeFileSync(promptFile, prompt);
+
+      const nowS = Math.floor(Date.now() / 1000);
+      fs.writeFileSync(stateFile.prompt(effectiveKey), JSON.stringify({
+        key: request.intent,
+        label: intent.name,
+        startedAt: nowS,
+      }));
+
+      upsertProjectState({
+        projectKey: request.projectKey,
+        userId,
+        tabName: effectiveKey,
+        currentPromptKey: request.intent,
+        currentPromptLabel: intent.name,
+        currentPromptStartedAt: new Date(nowS * 1000),
+      }).catch(() => {});
+
+      createOrchestrationEvent({
+        userId,
+        projectKey: request.projectKey,
+        eventType: request.intent === "close_session" ? "close_requested" : "continue_requested",
+        source: "api-orchestration",
+        adapter: "codex",
+        intent: request.intent,
+        detail: intent.name,
+        happenedAt: new Date(nowS * 1000),
+      }).catch(() => {});
+
+      createOrchestrationEvent({
+        userId,
+        projectKey: request.projectKey,
+        eventType: "task_started",
+        source: "api-orchestration",
+        adapter: "codex",
+        intent: request.intent,
+        detail: intent.name,
+        happenedAt: new Date(nowS * 1000),
+      }).catch(() => {});
+
+      try { fs.unlinkSync(stateFile.ready(effectiveKey)); } catch { /* gone */ }
+      try { fs.unlinkSync(stateFile.claudeReady(effectiveKey)); } catch { /* gone */ }
+      try { fs.unlinkSync(stateFile.closed(effectiveKey)); } catch { /* gone */ }
+      try { fs.unlinkSync(stateFile.claudeClosed(effectiveKey)); } catch { /* gone */ }
+
+      if (request.intent === "close_session") {
+        fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
+        fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
+      } else {
+        try { fs.unlinkSync(stateFile.closing(effectiveKey)); } catch { /* gone */ }
+      }
+
+      const runner = path.join(process.cwd(), "scripts", "run-codex-task.sh");
+      const command = [
+        "bash",
+        shellEscape(runner),
+        shellEscape(effectiveKey),
+        shellEscape(request.projectPath),
+        shellEscape(promptFile),
+        shellEscape(request.model?.trim() || "gpt-5.4"),
+      ].join(" ");
+
+      injectIntoTab(effectiveKey, command);
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
