@@ -11,7 +11,7 @@ import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/proje
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
-import { buildSwitchableAgentCatalog, type AgentCatalog, type SwitchableAgent } from "@/lib/agent-catalog";
+import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import {
   stateFile,
   parseProjectsConf,
