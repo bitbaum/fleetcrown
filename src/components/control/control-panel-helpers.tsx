@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Plus, X, Loader2, Bot, ChevronUp, ChevronDown } from "lucide-react";
-import { getIntentLabel } from "@/config/control-intents";
+import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { Modal } from "@/components/ui/modal";
@@ -93,7 +93,7 @@ export function BrainConfigPanel({
           <div className="flex items-center gap-2 text-text-primary">
             <Bot className="h-4 w-4 shrink-0 text-accent-text" />
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              {selectedDefinition?.label ?? selectedAgent}
+              {selectedDefinition?.label ?? getAdapterLabel(selectedAgent)}
             </h2>
           </div>
           <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">

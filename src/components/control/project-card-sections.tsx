@@ -403,7 +403,7 @@ export function IntentButtonPanel({
               onClick={() => setShowMore((v) => !v)}
               className="ui-chip-action-compact text-text-muted"
             >
-              {showMore ? "Less" : "···"}
+              {showMore ? "↑ Less" : "More ↓"}
             </button>
           </div>
         </div>
