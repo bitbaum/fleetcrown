@@ -153,17 +153,17 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
   return (
-    <div className="border-t border-border-subtle px-4 py-3 space-y-1.5 sm:px-5 md:px-6">
+    <div className="border-t border-border-subtle px-4 py-3 space-y-2.5 sm:px-5 md:px-6">
       {session.next && (
-        <div className="flex gap-2.5 text-sm leading-snug">
-          <span className="ui-kicker shrink-0 mt-px">next</span>
-          <span className="line-clamp-2 text-text-primary" title={session.next}>{session.next}</span>
+        <div className="flex gap-2 text-sm leading-snug">
+          <span className="mt-0.5 shrink-0 text-accent-text">→</span>
+          <p className="text-text-primary">{session.next}</p>
         </div>
       )}
       {session.done && (
-        <div className="flex gap-2.5 text-sm leading-snug">
-          <span className="ui-kicker shrink-0 mt-px">done</span>
-          <span className="line-clamp-1 text-text-tertiary" title={session.done}>{session.done}</span>
+        <div className="flex gap-2 text-sm leading-snug">
+          <span className="mt-0.5 shrink-0 text-text-muted">✓</span>
+          <p className="line-clamp-3 text-text-secondary" title={session.done}>{session.done}</p>
         </div>
       )}
     </div>
