@@ -578,122 +578,97 @@ class ContinuePopup(BasePopup):
                 if k in ('done', 'next', 'in_progress', 'tests', 'todos', 'health'):
                     parsed[k] = v.strip()
 
-        # ── Outer card ────────────────────────────────────────────────────────
         box = QWidget()
         box.setObjectName("summary_card")
-        box_outer = QVBoxLayout(box)
-        box_outer.setContentsMargins(0, 0, 0, 0)
-        box_outer.setSpacing(0)
+        box_lay = QVBoxLayout(box)
+        box_lay.setContentsMargins(18, 16, 18, 16)
+        box_lay.setSpacing(10)
 
-        # ── Scrollable content inside the card ───────────────────────────────
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setMaximumHeight(300)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        W = 548  # max label width inside the card
 
-        content = QWidget()
-        content.setObjectName("summary_scroll_content")
-        content_lay = QVBoxLayout(content)
-        content_lay.setContentsMargins(18, 16, 12, 16)
-        content_lay.setSpacing(14)
-
-        # ── Bullet row factory ────────────────────────────────────────────────
-        BULLET_WIDTH = 544   # content width minus scrollbar and margins
-
-        def _make_bullet(item_text, bullet_char, bullet_color, text_style):
-            item_row = QHBoxLayout()
-            item_row.setSpacing(8)
-            item_row.setContentsMargins(0, 1, 0, 1)
-            b_lbl = QLabel(bullet_char)
-            b_lbl.setStyleSheet(f"color:{bullet_color};font-size:14px;font-weight:700;background:transparent;")
-            b_lbl.setFixedWidth(16)
-            item_row.addWidget(b_lbl, 0, Qt.AlignmentFlag.AlignTop)
-            v_lbl = QLabel(item_text)
-            v_lbl.setObjectName("sum_val")
-            v_lbl.setWordWrap(True)
-            v_lbl.setMaximumWidth(BULLET_WIDTH)
-            v_lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            if text_style:
-                v_lbl.setStyleSheet(text_style + "background:transparent;")
-            item_row.addWidget(v_lbl, 1)
-            return item_row
-
-        # ── Health strip — only show when there's something worth flagging ──
-        def _strip_notable(k, v):
-            if k == 'tests'  and v.lower() in ('no suite', 'no tests', 'n/a', ''):
-                return False
-            if k == 'todos'  and v.strip().startswith('0'):
-                return False
-            if k == 'health' and v.lower().startswith(('good', 'excellent')):
-                return False
-            return True
-        meta_keys = [k for k in ('tests', 'todos', 'health')
-                     if k in parsed and _strip_notable(k, parsed[k])]
-        if meta_keys:
-            health_val = parsed.get('health', '').lower()
-            h_color = (C['green']  if health_val in ('good', 'excellent')
-                  else C['red']    if health_val == 'critical'
-                  else C['amber'])
-            strip = QHBoxLayout()
-            strip.setSpacing(16)
-            strip.addStretch()
-            for mk in meta_keys:
-                icon = {'tests': '🧪', 'todos': '📝', 'health': '❤️'}[mk]
-                color = h_color if mk == 'health' else C['text2']
-                lbl = QLabel(f"{icon}  {parsed[mk]}")
-                lbl.setStyleSheet(f"color:{color};font-size:12px;font-weight:600;background:transparent;")
-                strip.addWidget(lbl)
-            strip.addStretch()
-            content_lay.addLayout(strip)
-
-            if any(k in parsed for k in ('done', 'next', 'in_progress')):
-                div = QFrame()
-                div.setStyleSheet(f"background:{C['border']};max-height:1px;min-height:1px;")
-                content_lay.addWidget(div)
-
-        # ── Narrative rows — UP NEXT first (actionable), DONE last ───────────
-        narrative = [
-            (C['cyan'],  "UP NEXT",     'next',        True),
-            (C['amber'], "IN PROGRESS", 'in_progress', True),
-            (C['green'], "DONE",        'done',        False),
-        ]
-        has_narrative = any(k in parsed for _, _, k, _ in narrative)
-        if not has_narrative and not meta_keys:
-            v = QLabel(self.session)
-            v.setObjectName("sum_val")
+        def _make_bullet(text, char, color, size=15):
+            row = QHBoxLayout()
+            row.setSpacing(8)
+            row.setContentsMargins(0, 2, 0, 2)
+            b = QLabel(char)
+            b.setStyleSheet(f"color:{color};font-size:{size}px;font-weight:700;background:transparent;")
+            b.setFixedWidth(16)
+            row.addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
+            v = QLabel(text)
             v.setWordWrap(True)
-            v.setMaximumWidth(BULLET_WIDTH)
+            v.setMaximumWidth(W)
+            v.setStyleSheet(f"color:{C['text1']};font-size:{size}px;background:transparent;")
             v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            content_lay.addWidget(v)
+            row.addWidget(v, 1)
+            return row
 
-        for color, label, key, prominent in narrative:
-            if key not in parsed:
-                continue
-            val_text = parsed[key]
-            items = [s.strip() for s in val_text.split("; ") if s.strip()]
-            bullet_char  = "→" if prominent else "✓"
-            bullet_color = color if prominent else C['text2']
-            text_style   = "" if prominent else f"color:{C['text2']};font-size:14px;"
+        # ── UP NEXT — always fully visible, it's what drives the next action ──
+        if 'next' in parsed:
+            lbl = QLabel("UP NEXT")
+            lbl.setStyleSheet(
+                f"color:{C['cyan']};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
+            box_lay.addWidget(lbl)
+            for itm in [s.strip() for s in parsed['next'].split('; ') if s.strip()]:
+                box_lay.addLayout(_make_bullet(itm, "→", C['cyan']))
 
-            section = QVBoxLayout()
-            section.setSpacing(6)
+        # ── IN PROGRESS — visible when present ───────────────────────────────
+        if 'in_progress' in parsed:
+            if 'next' in parsed:
+                box_lay.addSpacing(6)
+            lbl = QLabel("IN PROGRESS")
+            lbl.setStyleSheet(
+                f"color:{C['amber']};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
+            box_lay.addWidget(lbl)
+            for itm in [s.strip() for s in parsed['in_progress'].split('; ') if s.strip()]:
+                box_lay.addLayout(_make_bullet(itm, "◉", C['amber']))
 
-            k_lbl = QLabel(label)
-            k_lbl.setStyleSheet(
-                f"color:{color};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
-            section.addWidget(k_lbl)
+        # ── DONE — collapsed by default: count chip + expand ─────────────────
+        if 'done' in parsed:
+            done_items = [s.strip() for s in parsed['done'].split('; ') if s.strip()]
+            if 'next' in parsed or 'in_progress' in parsed:
+                box_lay.addSpacing(6)
 
-            for itm in items:
-                section.addLayout(_make_bullet(itm, bullet_char, bullet_color, text_style))
+            done_row = QHBoxLayout()
+            done_row.setSpacing(6)
+            done_lbl = QLabel(f"DONE  ·  {len(done_items)} completed")
+            done_lbl.setStyleSheet(
+                f"color:{C['text3']};font-size:11px;font-weight:700;letter-spacing:1.0px;background:transparent;")
+            done_row.addWidget(done_lbl)
+            done_row.addStretch()
 
-            content_lay.addLayout(section)
+            toggle_btn = QPushButton("▸")
+            toggle_btn.setObjectName("expand")
+            toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            done_row.addWidget(toggle_btn)
+            box_lay.addLayout(done_row)
 
-        content_lay.addStretch()
-        scroll.setWidget(content)
-        scroll.viewport().setStyleSheet(f"background: {C['surface']};")
-        box_outer.addWidget(scroll)
+            done_body = QWidget()
+            done_body.setVisible(False)
+            done_body_lay = QVBoxLayout(done_body)
+            done_body_lay.setContentsMargins(0, 4, 0, 0)
+            done_body_lay.setSpacing(4)
+            for itm in done_items:
+                done_body_lay.addLayout(_make_bullet(itm, "✓", C['green'], size=13))
+
+            def _toggle_done(checked=False, body=done_body, btn=toggle_btn):
+                vis = body.isVisible()
+                body.setVisible(not vis)
+                btn.setText("▾" if not vis else "▸")
+                self.adjustSize()
+                self._position()
+
+            toggle_btn.clicked.connect(_toggle_done)
+            box_lay.addWidget(done_body)
+
+        # ── Fallback: raw session text ────────────────────────────────────────
+        if not any(k in parsed for k in ('next', 'in_progress', 'done')):
+            v = QLabel(self.session)
+            v.setWordWrap(True)
+            v.setMaximumWidth(W)
+            v.setStyleSheet(f"color:{C['text1']};font-size:15px;background:transparent;")
+            v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            box_lay.addWidget(v)
+
         lay.addWidget(box)
 
     # ── mic / whisper ─────────────────────────────────────────────────────────
