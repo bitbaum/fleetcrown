@@ -6,7 +6,7 @@ import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import { Modal } from "@/components/ui/modal";
-import type { ControlData } from "@/app/api/control/route";
+import type { ControlData } from "@/lib/control-types";
 
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type ActivityItem = ControlData["recentActivity"][number];

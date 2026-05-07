@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ExternalLink, ChevronRight, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DIMENSIONS, interpolateDimensionPrompt } from "@/config/dimension-prompts";
-import type { ProjectState } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
 
 type AgentEntry = { id: string; label: string };
 type AgentId = string;

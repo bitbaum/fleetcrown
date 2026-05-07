@@ -5,7 +5,7 @@ import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkl
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
-import type { ProjectState } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { ProjectCard } from "./ProjectCard";

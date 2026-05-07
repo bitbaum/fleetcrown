@@ -3,7 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
 import { getZellijTabs } from "@/lib/zellij";
-import { getProjects } from "@/db/queries/projects";
+import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
@@ -27,112 +27,12 @@ import {
 } from "@/lib/control-fast-state";
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
+import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData } from "@/lib/control-types";
 
-// Re-export so the ControlPanel can import PromptMeta from this route file (its existing import path).
+export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData };
 export type { PromptMeta, ActivityItem };
 
 const execAsync = promisify(exec);
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export type ProjectProfile = {
-  description: string;
-  status: string;
-  maturity: string;
-  stack: string;
-  url: string;
-  mission: string;
-  attrs: Record<string, string>;
-};
-
-export type CurrentPrompt = {
-  key: string;
-  label: string;
-  startedAt: number;
-};
-
-export type ProjectState = {
-  tab: string;
-  liveTab: string;
-  dir: string;
-  session: SessionState | null;
-  git: GitState | null;
-  agentRunning: boolean;
-  profile: ProjectProfile | null;
-  currentPrompt: CurrentPrompt | null;
-  readyAt: number | null;
-  closingAt: number | null;
-  closedAt: number | null;
-  recentCustomPrompts: RecentCustomPrompt[];
-  latestOrchestrationRun: {
-    adapter: string;
-    intent: string;
-    state: string;
-    startedAt: string;
-    finishedAt: string | null;
-    summary: {
-      done: string;
-      next: string;
-      tests: string;
-      todos: string;
-      health: string;
-    } | null;
-    payload: {
-      resultText?: string;
-      error?: string;
-      durationMs?: number;
-      model?: string;
-    } | null;
-  } | null;
-};
-
-export type SessionState = {
-  done: string;
-  next: string;
-  tests: string;
-  todos: string;
-  health: string;
-  mtime: number;
-};
-
-export type GitState = {
-  branch: string;
-  lastMsg: string;
-  lastWhen: string;
-  dirty: boolean;
-  todayCount: number;
-  /** Commits the remote is ahead of local HEAD (0 = in sync, requires fetch) */
-  behindRemote: number;
-  /** Last 5 commits formatted as "HASH DATE: MESSAGE" */
-  recentCommits: string[];
-};
-
-type AgentConfig = {
-  agent: SwitchableAgent;
-  model: string;
-};
-
-type AgentRegistry = AgentCatalog;
-
-export type ControlData = {
-  agentRegistry: AgentRegistry;
-  agentConfig: AgentConfig;
-  orchestration: {
-    manualPromptInjection: boolean;
-    autonomousPromptLoop: boolean;
-    sessionLifecycleSignals: boolean;
-  };
-  inventory: {
-    source: "user_projects" | "projects_conf_fallback";
-    trackedProjectCount: number;
-    controlProjectCount: number;
-    linkedDirectoryCount: number;
-  };
-  projects: ProjectState[];
-  prompts: PromptMeta[];
-  zellijTabs: string[];
-  recentActivity: ActivityItem[];
-};
 
 // ── Slow-data cache (git + DB) ────────────────────────────────────────────────
 // git state and DB profiles change infrequently; PIDs/session/tmp files are always read fresh.
@@ -140,7 +40,7 @@ export type ControlData = {
 
 type SlowCache = {
   gitMap: Map<string, GitState>;
-  dbProjects: Awaited<ReturnType<typeof getProjects>>;
+  dbProjects: ProjectRow[];
   zellijTabs: string[];
   dirs: string[];        // dirs list used to build this cache
   builtAt: number;
@@ -153,7 +53,7 @@ const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, trigger
 async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   const [gitMap, dbProjects, zellijTabs] = await Promise.all([
     fetchAllGitStates(dirs),
-    getProjects(userId).catch(() => [] as Awaited<ReturnType<typeof getProjects>>),
+    getProjects(userId).catch(() => [] as ProjectRow[]),
     getZellijTabs(),
   ]);
   return { gitMap, dbProjects, zellijTabs, dirs, builtAt: Date.now() };
@@ -245,7 +145,7 @@ wait
 function matchProfile(
   tab: string,
   dir: string,
-  dbProjects: Awaited<ReturnType<typeof getProjects>>
+  dbProjects: ProjectRow[]
 ): ProjectProfile | null {
   const tabLower = tab.toLowerCase().replace(/[-_]/g, "");
   const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
@@ -278,7 +178,7 @@ export async function GET() {
   const userId = await getCurrentUserId();
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
-  const agentRegistry: AgentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
+  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
   const prompts = readPromptMeta();
 
   // DB projects for this user; fall back to conf file for backward compat

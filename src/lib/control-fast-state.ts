@@ -3,7 +3,7 @@ import path from "path";
 import { SESSIONS_DIR, stateFile } from "@/lib/agent-config";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
 import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
-import type { CurrentPrompt, SessionState } from "@/app/api/control/route";
+import type { CurrentPrompt, SessionState } from "@/lib/control-types";
 
 export function parseSession(tab: string): SessionState | null {
   const file = path.join(SESSIONS_DIR, `${tab}.md`);

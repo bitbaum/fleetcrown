@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
 import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
-import type { ProjectState, PromptMeta } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
+import type { PromptMeta } from "@/lib/agent-config";
 
 export function SessionBadge({ health }: { health: string }) {
   const color = HEALTH_COLOR[health] ?? "text-text-tertiary";

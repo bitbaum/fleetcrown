@@ -4,7 +4,7 @@ import {
   READY_WINDOW_S,
   withinWindow,
 } from "@/lib/constants/control";
-import type { ControlData, ProjectState } from "@/app/api/control/route";
+import type { ControlData, ProjectState } from "@/lib/control-types";
 
 const ACTIVE_WINDOW_S = 300;
 

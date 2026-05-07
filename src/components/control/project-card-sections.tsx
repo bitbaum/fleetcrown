@@ -12,7 +12,8 @@ import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
-import type { ProjectState, PromptMeta } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
+import type { PromptMeta } from "@/lib/agent-config";
 import {
   SessionBadge, ClosedBanner, ClosingBanner, RunningBanner, ReadyBanner,
 } from "./project-card-helpers";
@@ -157,13 +158,13 @@ export function SessionSummary({
       {session.next && (
         <div className="flex gap-2 text-sm leading-snug">
           <span className="mt-0.5 shrink-0 text-accent-text">→</span>
-          <p className="text-text-primary">{session.next}</p>
+          <p className="select-text text-text-primary">{session.next}</p>
         </div>
       )}
       {session.done && (
         <div className="flex gap-2 text-sm leading-snug">
           <span className="mt-0.5 shrink-0 text-text-muted">✓</span>
-          <p className="line-clamp-3 text-text-secondary" title={session.done}>{session.done}</p>
+          <p className="select-text text-text-secondary">{session.done}</p>
         </div>
       )}
     </div>

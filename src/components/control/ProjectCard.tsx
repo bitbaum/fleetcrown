@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { ProjectState, PromptMeta } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
+import type { PromptMeta } from "@/lib/agent-config";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectDisplayState } from "./control-presenter";

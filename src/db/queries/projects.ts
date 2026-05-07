@@ -74,3 +74,5 @@ export async function getProjects(userId: string) {
     attrs: attrsByEntity.get(p.id) ?? {},
   }));
 }
+
+export type ProjectRow = Awaited<ReturnType<typeof getProjects>>[number];

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, GitBranch, Play, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HEALTH_COLOR } from "@/lib/constants/control";
-import type { ProjectState } from "@/app/api/control/route";
+import type { ProjectState } from "@/lib/control-types";
 
 type Props = {
   project: ProjectState;

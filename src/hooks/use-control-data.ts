@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ControlData, ProjectState } from "@/app/api/control/route";
+import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson } from "@/lib/api/fetch";
