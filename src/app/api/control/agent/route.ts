@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
 import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
+import { buildAgentLaunchCommand } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -33,12 +34,6 @@ export async function GET() {
   return NextResponse.json({ registry, config });
 }
 
-function buildLaunchCommand(agent: "codex" | "claude", model: string, dir: string): string {
-  const escapedDir = shellEscape(dir);
-  if (agent === "claude") return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
-  return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${shellEscape(model)} --no-alt-screen`;
-}
-
 function applyToOpenTabs(agent: "codex" | "claude", model: string): SwitchTabResult[] {
   try {
     execSync("command -v zellij >/dev/null 2>&1");
@@ -61,7 +56,7 @@ function applyToOpenTabs(agent: "codex" | "claude", model: string): SwitchTabRes
 
   const openSet = new Set(openTabs);
   return projects.map(({ tab, dir }) => {
-    const command = buildLaunchCommand(agent, model, dir);
+    const command = buildAgentLaunchCommand({ agent, model }, dir);
     if (!openSet.has(tab.toLowerCase())) return { tab, dir, command, status: "skipped" as const };
     try {
       execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
