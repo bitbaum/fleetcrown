@@ -9,3 +9,6 @@ node_modules
 *.jpeg
 .local-toolchain/
 .python-vendor/
+next-env.d.ts
+**/__pycache__/
+*.pyc
