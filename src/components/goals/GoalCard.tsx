@@ -95,7 +95,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
           <button
             onClick={toggleComplete}
             disabled={togglingStatus}
-            className="shrink-0 mt-0.5 disabled:opacity-50"
+            className="shrink-0 mt-0.5 p-1.5 -m-1.5 rounded hover:bg-surface-raised transition-colors disabled:opacity-50"
             title={isCompleted ? "Mark active" : "Mark completed"}
           >
             {togglingStatus ? (

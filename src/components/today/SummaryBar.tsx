@@ -73,14 +73,14 @@ function Pill({
 
   if (href) {
     return (
-      <Link href={href} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
+      <Link href={href} className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
         {inner}
       </Link>
     );
   }
 
   return (
-    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium ${colors}`}>
+    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium ${colors}`}>
       {inner}
     </div>
   );
