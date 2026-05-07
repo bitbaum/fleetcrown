@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
 import fs from "fs";
 import {
   stateFile,
@@ -10,14 +8,12 @@ import {
   readPromptMeta,
   buildPromptWithSession,
 } from "@/lib/agent-config";
-import { injectIntoTab } from "@/lib/zellij";
+import { injectIntoTab, getZellijTabs } from "@/lib/zellij";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const execAsync = promisify(exec);
 
 const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
@@ -37,21 +33,16 @@ export async function POST(req: NextRequest) {
   }
 
   // Resolve the live Zellij tab name (canonical may be an alias of the running tab).
+  const activeTabs = await getZellijTabs();
   let effectiveTab = canonical;
-  try {
-    const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
-    const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
-    if (activeTabs.length > 0) {
-      effectiveTab = resolveEffectiveTab(canonical, activeTabs);
-      if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
-        return NextResponse.json(
-          { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-          { status: 422 },
-        );
-      }
+  if (activeTabs.length > 0) {
+    effectiveTab = resolveEffectiveTab(canonical, activeTabs);
+    if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
+      return NextResponse.json(
+        { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
+        { status: 422 },
+      );
     }
-  } catch {
-    // Zellij unavailable — proceed anyway so non-Zellij use cases aren't blocked.
   }
 
   let prompt: string;

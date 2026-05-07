@@ -1,4 +1,5 @@
 import { runTool } from "@/lib/tools";
+import { shellEscape } from "@/lib/zellij";
 import type { OrchestrationTaskRequest } from "../contract";
 import { renderTaskForAdapter } from "../renderers";
 
@@ -19,10 +20,6 @@ type OpenClawAgentResponse = {
   };
   error?: string;
 };
-
-function shellEscape(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
 
 export async function runOpenClawIntent(request: OrchestrationTaskRequest): Promise<OpenClawRunResult> {
   const prompt = renderTaskForAdapter({ ...request, adapter: "openclaw" }, "openclaw");

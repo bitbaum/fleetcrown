@@ -1,13 +1,11 @@
 import fs from "node:fs";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { spawn, exec } from "node:child_process";
-import { promisify } from "node:util";
+import { spawn } from "node:child_process";
 import path from "node:path";
 
-const execAsync = promisify(exec);
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { injectIntoTab } from "@/lib/zellij";
+import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
 import { buildPromptWithSession, resolveEffectiveTab, stateFile } from "@/lib/agent-config";
 import {
   ORCHESTRATION_ADAPTER_IDS,
@@ -50,10 +48,6 @@ async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskR
   });
 }
 
-function shellEscape(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
-
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
@@ -72,17 +66,16 @@ export async function POST(req: NextRequest) {
     customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
   }).catch(() => {});
 
+  // Resolve zellij alias once — "Cockpit" may run as "Cockpit Claude" in this session.
+  const activeTabs = await getZellijTabs();
+  const effectiveKey = activeTabs.length > 0
+    ? resolveEffectiveTab(request.projectKey, activeTabs)
+    : request.projectKey;
+
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
     try {
       const prompt = renderTaskForAdapter(request);
-      // Resolve alias: "Cockpit" may be running as "Cockpit Claude" in this session.
-      let effectiveKey = request.projectKey;
-      try {
-        const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
-        const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
-        effectiveKey = resolveEffectiveTab(request.projectKey, activeTabs);
-      } catch { /* Zellij unavailable — use projectKey as-is */ }
       injectIntoTab(effectiveKey, prompt);
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
@@ -97,12 +90,6 @@ export async function POST(req: NextRequest) {
   if (request.adapter === "codex") {
     try {
       const basePrompt = renderTaskForAdapter(request);
-      let effectiveKey = request.projectKey;
-      try {
-        const { stdout } = await execAsync("zellij action query-tab-names", { timeout: 2000 });
-        const activeTabs = stdout.trim().split("\n").map((t) => t.trim()).filter(Boolean);
-        effectiveKey = resolveEffectiveTab(request.projectKey, activeTabs);
-      } catch { /* Zellij unavailable — use projectKey as-is */ }
 
       const prompt = buildPromptWithSession(basePrompt, effectiveKey);
       const promptFile = path.join("/tmp", `cockpit-codex-prompt-${randomUUID()}.txt`);

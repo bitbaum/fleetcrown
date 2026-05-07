@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { existsSync } from "fs";
 import { HOME } from "@/lib/constants";
+import { shellEscape } from "@/lib/zellij";
 
 const CLAUDE_SETTINGS_FILE = path.join(HOME, ".claude", "settings.json");
 const DOTFILES_CLAUDE_SETTINGS_FILE = path.join(HOME, "dev", "dotfiles", ".claude", "settings.json");
@@ -26,10 +27,6 @@ export type AgentRegistryEntry = {
     sessionLifecycleSignals: boolean;
   };
 };
-
-function shellEscape(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
 
 function parseTomlStringField(raw: string, key: string): string | null {
   const match = raw.match(new RegExp(`^\\s*${key}\\s*=\\s*"([^"\\n]+)"`, "m"));

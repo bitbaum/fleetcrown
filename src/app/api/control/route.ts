@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
+import { getZellijTabs } from "@/lib/zellij";
 import { getProjects } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
@@ -148,15 +149,6 @@ type SlowCache = {
 let slowCache: SlowCache | null = null;
 let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
-
-async function getZellijTabs(): Promise<string[]> {
-  try {
-    const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
-    return stdout.split("\n").map((s) => s.trim()).filter(Boolean);
-  } catch {
-    return [];
-  }
-}
 
 async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   const [gitMap, dbProjects, zellijTabs] = await Promise.all([

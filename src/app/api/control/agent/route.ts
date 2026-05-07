@@ -3,6 +3,7 @@ import { execSync } from "child_process";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
 import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
+import { shellEscape } from "@/lib/zellij";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const AGENT_IDS = ["codex", "claude"] as const;
@@ -30,10 +31,6 @@ export async function GET() {
   const registry: AgentRegistry = buildSwitchableAgentCatalog(prefs.models, config.agent);
 
   return NextResponse.json({ registry, config });
-}
-
-function shellEscape(value: string): string {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function buildLaunchCommand(agent: "codex" | "claude", model: string, dir: string): string {
