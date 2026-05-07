@@ -210,7 +210,7 @@ export function BootstrapModal({
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {generating ? "Generating brief…" : "Generate brief →"}
+              {generating ? "Generating brief… (~30s)" : "Generate brief →"}
             </button>
             <button onClick={onClose} className="ui-btn-secondary">Cancel</button>
           </div>

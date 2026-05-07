@@ -637,7 +637,10 @@ class ContinuePopup(BasePopup):
             done_row.addStretch()
 
             toggle_btn = QPushButton("▸")
-            toggle_btn.setObjectName("expand")
+            toggle_btn.setStyleSheet(
+                f"background:transparent;color:{C['text3']};border:none;"
+                f"font-size:14px;padding:1px 6px;"
+            )
             toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             done_row.addWidget(toggle_btn)
             box_lay.addLayout(done_row)
@@ -654,8 +657,10 @@ class ContinuePopup(BasePopup):
                 vis = body.isVisible()
                 body.setVisible(not vis)
                 btn.setText("▾" if not vis else "▸")
-                self.adjustSize()
-                self._position()
+                # Scroll to the bottom after expanding so DONE items are visible
+                if not vis:
+                    QTimer.singleShot(50, lambda: scr_area.verticalScrollBar().setValue(
+                        scr_area.verticalScrollBar().maximum()))
 
             toggle_btn.clicked.connect(_toggle_done)
             box_lay.addWidget(done_body)
@@ -669,7 +674,21 @@ class ContinuePopup(BasePopup):
             v.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             box_lay.addWidget(v)
 
-        lay.addWidget(box)
+        box_lay.addStretch()
+
+        # Wrap in a scroll area so expanded DONE never overflows the screen
+        scr_area = QScrollArea()
+        scr_area.setWidget(box)
+        scr_area.setWidgetResizable(True)
+        scr_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scr_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scr_area.setFrameShape(QFrame.Shape.NoFrame)
+        scr_area.setStyleSheet("background:transparent;border:none;")
+        scr_area.viewport().setStyleSheet("background:transparent;")
+        avail_h = QApplication.primaryScreen().availableGeometry().height()
+        scr_area.setMaximumHeight(int(avail_h * 0.55))
+
+        lay.addWidget(scr_area)
 
     # ── mic / whisper ─────────────────────────────────────────────────────────
 

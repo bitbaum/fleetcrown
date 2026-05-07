@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { auth } from "@/auth";
 
-const execAsync = promisify(exec);
+export const maxDuration = 90;
 
 const AiBriefBody = z.object({
   description: z.string().min(10).max(4000),
@@ -54,15 +53,28 @@ export async function POST(req: NextRequest) {
   const { description } = dataOrResp;
 
   try {
-    const schemaArg = JSON.stringify(BRIEF_SCHEMA);
-    const promptArg = BRIEF_PROMPT(description);
+    const stdout = await new Promise<string>((resolve, reject) => {
+      let out = "";
+      let err = "";
+      const child = spawn("claude", [
+        "--print",
+        "--no-session-persistence",
+        "--output-format", "json",
+        "--json-schema", JSON.stringify(BRIEF_SCHEMA),
+        BRIEF_PROMPT(description),
+      ]);
+      child.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+      child.stderr.on("data", (d: Buffer) => { err += d.toString(); });
+      child.on("close", (code) => {
+        if (code === 0) resolve(out);
+        else reject(new Error(err || `claude exited with code ${code}`));
+      });
+      child.on("error", reject);
+      setTimeout(() => { child.kill(); reject(new Error("timeout")); }, 90_000);
+    });
 
-    const { stdout } = await execAsync(
-      `claude --print --no-session-persistence --json-schema ${JSON.stringify(schemaArg)} ${JSON.stringify(promptArg)}`,
-      { timeout: 30_000, maxBuffer: 512 * 1024 },
-    );
-
-    const brief = JSON.parse(stdout.trim());
+    const envelope = JSON.parse(stdout.trim());
+    const brief = envelope.structured_output ?? envelope;
     return NextResponse.json({ brief });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
