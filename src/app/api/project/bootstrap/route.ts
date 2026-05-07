@@ -3,7 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { auth } from "@/auth";
-import { postJson } from "@/lib/api/fetch";
+import { createUserProject } from "@/db/queries/user-projects";
 import os from "os";
 import path from "path";
 import fs from "fs";
@@ -105,11 +105,7 @@ export async function POST(req: NextRequest) {
 
   // ── 5. Register project in Cockpit DB ────────────────────────────────────
   try {
-    await postJson("/api/user-projects", {
-      name,
-      dirPath: dir,
-      gitUrl,
-    });
+    await createUserProject({ userId: session.user.id, name, dirPath: dir, gitUrl: gitUrl || undefined });
     steps.push({ step: "Register in Cockpit", ok: true });
   } catch {
     steps.push({ step: "Register in Cockpit", ok: false, detail: "Non-fatal — project still created" });
