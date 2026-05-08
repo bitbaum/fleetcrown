@@ -41,13 +41,10 @@ export const stateFile = {
   prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
   lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
   
-  // Backward compatibility
-  claudeReady:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
-  claudeClosing:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closing-${tab}`),
-  claudeClosed:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
-  claudeSentinel: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-session-closed-${tab}`),
-  claudePrompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-current-prompt-${tab}`),
-  claudeLock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-stop-active-${tab}`),
+  // Legacy names — kept for cleanup unlinkSync calls in inject + orchestration routes.
+  // No new files are written with these names; only used to delete stale on-disk files.
+  claudeReady:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
+  claudeClosed: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
 } as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────

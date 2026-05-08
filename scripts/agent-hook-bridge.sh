@@ -83,19 +83,16 @@ handle_stop() {
     fi
     : > "$lock"  # stale — overwrite
   fi
-  touch "/tmp/claude-stop-active-${TAB_NAME}"
-  trap "rm -f '$lock' /tmp/claude-stop-active-${TAB_NAME}" EXIT
+  trap "rm -f '$lock'" EXIT
 
   rm -f "/tmp/agent-current-prompt-${TAB_NAME}" "/tmp/claude-current-prompt-${TAB_NAME}"
 
   sentinel="/tmp/agent-session-closed-${TAB_NAME}"
-  [ ! -f "$sentinel" ] && sentinel="/tmp/claude-session-closed-${TAB_NAME}"
   if [ -f "$sentinel" ]; then
     log "close-session sentinel found — writing closed file and exiting without popup"
     rm -f "$sentinel"
     closed_ts=$(date +%s)
     echo "$closed_ts" > "/tmp/agent-closed-${TAB_NAME}"
-    echo "$closed_ts" > "/tmp/claude-closed-${TAB_NAME}"
     rm -f "/tmp/agent-ready-${TAB_NAME}" "/tmp/claude-ready-${TAB_NAME}"
     rm -f "/tmp/agent-closing-${TAB_NAME}" "/tmp/claude-closing-${TAB_NAME}"
     patch_project_state "$TAB_NAME" "closedAt"
@@ -107,7 +104,6 @@ handle_stop() {
 
   ready_ts=$(date +%s)
   echo "$ready_ts" > "/tmp/agent-ready-${TAB_NAME}"
-  echo "$ready_ts" > "/tmp/claude-ready-${TAB_NAME}"
   patch_project_state "$TAB_NAME" "readyAt"
 
   play_sound "complete"
@@ -209,7 +205,6 @@ handle_notification() {
   [ -z "${TAB_NAME:-}" ] && exit 0
 
   lock="/tmp/agent-stop-active-${TAB_NAME}"
-  [ ! -f "$lock" ] && lock="/tmp/claude-stop-active-${TAB_NAME}"
   if [ -f "$lock" ]; then
     age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
     if [ "$age" -lt 300 ]; then
@@ -218,16 +213,9 @@ handle_notification() {
     rm -f "$lock"
   fi
 
-  sentinel="/tmp/agent-session-closed-${TAB_NAME}"
-  [ ! -f "$sentinel" ] && sentinel="/tmp/claude-session-closed-${TAB_NAME}"
-  closing="/tmp/agent-closing-${TAB_NAME}"
-  [ ! -f "$closing" ] && closing="/tmp/claude-closing-${TAB_NAME}"
-  closed="/tmp/agent-closed-${TAB_NAME}"
-  [ ! -f "$closed" ] && closed="/tmp/claude-closed-${TAB_NAME}"
-
-  [ -f "$sentinel" ] && exit 0
-  [ -f "$closing" ] && exit 0
-  [ -f "$closed" ] && exit 0
+  [ -f "/tmp/agent-session-closed-${TAB_NAME}" ] && exit 0
+  [ -f "/tmp/agent-closing-${TAB_NAME}" ] && exit 0
+  [ -f "/tmp/agent-closed-${TAB_NAME}" ] && exit 0
 
   play_sound "window-attention"
 

@@ -250,9 +250,9 @@ export async function GET() {
     }
 
     const nowS = Math.floor(Date.now() / 1000);
-    const tmpReady   = readTmpTs(stateFile.ready(liveTab))   ?? readTmpTs(stateFile.claudeReady(liveTab));
-    const tmpClosing = readTmpTs(stateFile.closing(liveTab)) ?? readTmpTs(stateFile.claudeClosing(liveTab));
-    const tmpClosed  = readTmpTs(stateFile.closed(liveTab))  ?? readTmpTs(stateFile.claudeClosed(liveTab));
+    const tmpReady   = readTmpTs(stateFile.ready(liveTab));
+    const tmpClosing = readTmpTs(stateFile.closing(liveTab));
+    const tmpClosed  = readTmpTs(stateFile.closed(liveTab));
 
     // currentPrompt is transient runtime state — only the /tmp file is authoritative.
     // DB fallback would cause "Running: <stale task>" after a system reboot (no processes,
