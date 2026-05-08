@@ -84,11 +84,13 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
           <button
             onClick={handleLaunch}
             disabled={launching}
-            title={`Launch ${currentAdapter} in ${tab}`}
+            title={project.agentPref
+              ? `Launch ${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""} in ${tab}`
+              : `Launch ${currentAdapter} in ${tab}`}
             className="ui-chip-action-compact inline-flex items-center gap-1.5"
           >
             {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
-            Launch
+            {project.agentPref ? `${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""}` : "Launch"}
           </button>
         )}
       </div>

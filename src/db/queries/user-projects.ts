@@ -20,7 +20,7 @@ export async function createUserProject(
 export async function updateUserProject(
   id: string,
   userId: string,
-  data: Partial<Pick<UserProject, "name" | "dirPath" | "gitUrl" | "description" | "stack" | "agentPref" | "position" | "isActive">>,
+  data: Partial<Pick<UserProject, "name" | "dirPath" | "gitUrl" | "description" | "stack" | "agentPref" | "modelPref" | "position" | "isActive">>,
 ): Promise<UserProject | null> {
   const [row] = await db
     .update(userProjects)

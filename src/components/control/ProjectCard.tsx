@@ -35,7 +35,7 @@ export function ProjectCard({
   onCollapse?: () => void;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
-  const [localAgent, setLocalAgent] = useState<string | null>(null);
+  const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
   const [typingActive, setTypingActive] = useState(false);

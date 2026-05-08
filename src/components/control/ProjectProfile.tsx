@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { ExternalLink, ChevronRight, Loader2, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
+import { patchJson } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 
@@ -210,7 +211,14 @@ export function ProjectProfile({
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
 }) {
   const [sending, setSending] = useState(false);
-  const activeAgent = localAgent ?? (globalAdapter as AgentId);
+  const activeAgent = localAgent ?? (project.agentPref as AgentId | null) ?? (globalAdapter as AgentId);
+
+  const persistAgentPref = (agentId: AgentId | null) => {
+    if (project.id) {
+      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
+    }
+    onSetAgent(agentId);
+  };
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
 
@@ -252,7 +260,7 @@ export function ProjectProfile({
           {availableAgents.map((a) => (
             <button
               key={a.id}
-              onClick={() => onSetAgent(localAgent === a.id ? null : a.id)}
+              onClick={() => persistAgentPref(localAgent === a.id ? null : a.id as AgentId)}
               className={cn(
                 "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
                 activeAgent === a.id

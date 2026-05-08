@@ -52,7 +52,7 @@ export function useControlData(): ControlDataHook {
 
   const registry = data?.agentRegistry.agents ?? [];
   const switchableRegistry = registry.filter((entry) => entry.switchable);
-  const defaultAgent = data?.agentRegistry.defaultAgent ?? switchableRegistry[0]?.id ?? "codex";
+  const defaultAgent = data?.agentRegistry.defaultAgent ?? switchableRegistry[0]?.id ?? "claude";
   const selectedAgent = (agent || data?.agentConfig.agent || defaultAgent) as Agent;
   const selectedDefinition = switchableRegistry.find((entry) => entry.id === selectedAgent) ?? null;
   const activeDefinition = switchableRegistry.find((entry) => entry.id === data?.agentConfig.agent) ?? null;

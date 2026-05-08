@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { postJson } from "@/lib/api/fetch";
+import { postJson, patchJson } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -41,13 +41,14 @@ export function ControlPanel() {
   const [createError, setCreateError] = useState("");
   const [launchingProject, setLaunchingProject] = useState(false);
   const [launchError, setLaunchError] = useState("");
-  const [launchTarget, setLaunchTarget] = useState<{ tab: string; dir: string } | null>(null);
+  const [launchTarget, setLaunchTarget] = useState<{ id: string | null; tab: string; dir: string } | null>(null);
   const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
   const [launchAgentId, setLaunchAgentId] = useState("");
   const [launchModel, setLaunchModel] = useState("");
 
-  const openLaunchModal = (tab: string, dir: string, preferredAgentId?: string) => {
-    const preferred = launchableAgents.find((entry) => entry.id === preferredAgentId)
+  const openLaunchModal = (project: ProjectState, preferredAgentId?: string) => {
+    const savedAgentId = project.agentPref ?? preferredAgentId;
+    const preferred = launchableAgents.find((entry) => entry.id === savedAgentId)
       ?? launchableAgents.find((entry) => entry.id === selectedAgent)
       ?? launchableAgents[0]
       ?? null;
@@ -55,9 +56,9 @@ export function ControlPanel() {
       setError("No launchable agents are configured.");
       return;
     }
-    setLaunchTarget({ tab, dir });
+    setLaunchTarget({ id: project.id, tab: project.tab, dir: project.dir });
     setLaunchAgentId(preferred.id);
-    setLaunchModel(preferred.defaultModel);
+    setLaunchModel(project.modelPref ?? preferred.defaultModel);
     setLaunchError("");
   };
 
@@ -67,6 +68,10 @@ export function ControlPanel() {
     setLaunchError("");
     try {
       await launchProject(launchTarget.tab, launchTarget.dir, launchAgentId, launchModel.trim() || undefined);
+      // Persist the chosen agent + model so next launch pre-fills them
+      if (launchTarget.id) {
+        patchJson(`/api/user-projects/${launchTarget.id}`, { agentPref: launchAgentId, modelPref: launchModel.trim() || undefined }).catch(() => {});
+      }
       setLaunchTarget(null);
     } catch (e) {
       setLaunchError(e instanceof Error ? e.message : "Failed to launch project");
@@ -89,9 +94,10 @@ export function ControlPanel() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Failed to create project");
       }
+      const newProject = await res.json().catch(() => null);
       setNewProjectOpen(false);
       if (newDir.trim()) {
-        openLaunchModal(newName.trim(), newDir.trim());
+        openLaunchModal({ id: newProject?.id ?? null, tab: newName.trim(), dir: newDir.trim(), agentPref: null, modelPref: null } as ProjectState);
       }
       setNewName("");
       setNewDir("");
@@ -323,7 +329,7 @@ export function ControlPanel() {
                         currentAdapter={selectedAgent}
                         zellijTabs={data!.zellijTabs}
                         onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
-                        onLaunch={() => openLaunchModal(project.tab, project.dir)}
+                        onLaunch={() => openLaunchModal(project)}
                       />
                     ))}
                   </div>

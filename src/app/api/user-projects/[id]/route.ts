@@ -11,6 +11,7 @@ const UpdateBody = z.object({
   description: z.preprocess(emptyToUndefined, z.string().trim().max(500).optional()),
   stack: z.preprocess(emptyToUndefined, z.string().trim().max(200).optional()),
   agentPref: z.preprocess(emptyToUndefined, z.string().trim().max(60).optional()),
+  modelPref: z.preprocess(emptyToUndefined, z.string().trim().max(160).optional()),
   position: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });

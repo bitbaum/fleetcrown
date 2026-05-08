@@ -38,9 +38,12 @@ export type GitState = {
 };
 
 export type ProjectState = {
+  id: string | null;
   tab: string;
   liveTab: string;
   dir: string;
+  agentPref: string | null;
+  modelPref: string | null;
   session: SessionState | null;
   git: GitState | null;
   agentRunning: boolean;

@@ -187,8 +187,8 @@ export async function GET() {
   const projects = usingUserProjects
     ? dbUserProjects
         .filter((p) => p.dirPath)
-        .map((p) => ({ tab: p.name, dir: p.dirPath! }))
-    : parseProjectsConf();
+        .map((p) => ({ id: p.id, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }))
+    : parseProjectsConf().map((p) => ({ id: null, agentPref: null, modelPref: null, ...p }));
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
@@ -208,7 +208,7 @@ export async function GET() {
   ]);
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
 
-  const states: ProjectState[] = projects.map(({ tab, dir }) => {
+  const states: ProjectState[] = projects.map(({ id, tab, dir, agentPref, modelPref }) => {
     const latestRun = latestRuns.get(dir);
     const dbState = dbStateMap.get(tab.toLowerCase());
 
@@ -294,9 +294,12 @@ export async function GET() {
     }
 
     return ({
+    id,
     tab,
     liveTab,
     dir,
+    agentPref,
+    modelPref,
     session,
     git: gitMap.get(dir) ?? null,
     agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),

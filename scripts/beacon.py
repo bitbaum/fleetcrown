@@ -77,8 +77,8 @@ def _load_theme() -> dict:
         surface2 = "#222222",
         border   = "#2c2c2c",
         group_bg = "#0d0d0d",
-        accent   = "#8b92ff",
-        accent_d = "#151840",
+        accent   = "#e8e8e8",
+        accent_d = "#1a1a1a",
         ship     = "#4ade80",
         ship_d   = "#0d2b1a",
         text1    = "#eaeaea",
@@ -108,7 +108,7 @@ SS = """
 /* ── Card ── */
 QWidget#card {{
     background: {card};
-    border-radius: 18px;
+    border-radius: 24px;
     border: 1px solid {border};
 }}
 
@@ -193,33 +193,32 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
 
 /* ── Action buttons — DEV group ── */
 QPushButton#primary {{
-    background: {accent_d};
-    color: {accent};
-    border: 1.5px solid {accent};
-    border-radius: 9px;
+    background: {text1};
+    color: #111111;
+    border: none;
+    border-radius: 8px;
     padding: 10px 14px;
     font-size: 13px;
     font-weight: 700;
     text-align: left;
 }}
 QPushButton#primary:hover {{
-    background: #232870;
-    color: {text1};
-    border-color: {text1};
+    background: #cccccc;
+    color: #111111;
 }}
 QPushButton#action {{
-    background: {surface};
+    background: transparent;
     color: {text2};
     border: 1px solid {border};
-    border-radius: 9px;
+    border-radius: 8px;
     padding: 10px 14px;
     font-size: 13px;
     text-align: left;
 }}
 QPushButton#action:hover {{
-    background: {surface2};
+    background: {surface};
     color: {text1};
-    border-color: {accent};
+    border-color: {text3};
 }}
 
 /* ── Action buttons — SHIP group ── */
@@ -227,7 +226,7 @@ QPushButton#ship_primary {{
     background: {ship_d};
     color: {ship};
     border: 1.5px solid {ship};
-    border-radius: 9px;
+    border-radius: 8px;
     padding: 10px 14px;
     font-size: 13px;
     font-weight: 700;
@@ -239,16 +238,16 @@ QPushButton#ship_primary:hover {{
     border-color: {ship};
 }}
 QPushButton#ship_action {{
-    background: {surface};
+    background: transparent;
     color: {text2};
     border: 1px solid {border};
-    border-radius: 9px;
+    border-radius: 8px;
     padding: 10px 14px;
     font-size: 13px;
     text-align: left;
 }}
 QPushButton#ship_action:hover {{
-    background: {surface2};
+    background: {surface};
     color: {text1};
     border-color: {ship};
 }}
@@ -324,16 +323,16 @@ QLineEdit#custom {{
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 13px;
-    selection-background-color: {accent_d};
+    selection-background-color: {surface2};
 }}
 QLineEdit#custom:focus {{
-    border-color: {accent};
-    background: #131830;
+    border-color: {text3};
+    background: {surface2};
 }}
 
 /* ── Confirm popup ── */
 QWidget#code_box {{
-    background: #080b18;
+    background: {group_bg};
     border-radius: 10px;
     border: 1px solid {border};
 }}
@@ -1148,35 +1147,154 @@ class ConfirmPopup(BasePopup):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def main():
-    if len(sys.argv) < 3:
-        sys.exit(1)
+def _web_stop(label: str, session_file: str) -> None:
+    """Open a Cockpit web page for the session-stop beacon instead of PyQt6."""
+    import urllib.request, urllib.error, time, json as _json
+
+    COCKPIT = "http://localhost:3000"
+    TIMEOUT_S = 120
+    POLL_S = 0.8
+
+    session_content = ""
+    if session_file and os.path.exists(session_file):
+        try:
+            session_content = open(session_file).read().strip()
+        except OSError:
+            pass
+
+    def _cockpit_ready() -> bool:
+        try:
+            r = urllib.request.urlopen(f"{COCKPIT}/api/control", timeout=2)
+            return r.status == 200
+        except Exception:
+            return False
+
+    def _start_cockpit():
+        env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
+        subprocess.Popen(
+            ["bash", "-lc", "cd ~/dev/cockpit && npm run dev"],
+            env=env, start_new_session=True,
+        )
+
+    def _open_browser(url: str):
+        env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
+        # Prefer app-mode (no browser chrome) for a focused popup feel
+        app_flags = ["--app=" + url, "--window-size=520,820", "--window-position=9999,9999"]
+        for cmd, extra in (
+            (["brave-browser"], app_flags),
+            (["google-chrome"], app_flags),
+            (["chromium"], app_flags),
+            (["chromium-browser"], app_flags),
+            (["x-www-browser", url], []),
+            (["xdg-open", url], []),
+            (["firefox", url], []),
+        ):
+            try:
+                full_cmd = cmd + extra if extra else cmd
+                subprocess.Popen(full_cmd, env=env, start_new_session=True,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
+            except FileNotFoundError:
+                continue
+
+    def _create_session() -> str | None:
+        data = _json.dumps({"project": label, "sessionContent": session_content}).encode()
+        req  = urllib.request.Request(
+            f"{COCKPIT}/api/beacon",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            resp = urllib.request.urlopen(req, timeout=5)
+            return _json.loads(resp.read())["id"]
+        except Exception:
+            return None
+
+    def _poll_choice(session_id: str, deadline: float) -> str | None:
+        url = f"{COCKPIT}/api/beacon/{session_id}"
+        while time.time() < deadline:
+            try:
+                resp = urllib.request.urlopen(url, timeout=3)
+                data = _json.loads(resp.read())
+                if data.get("choice"):
+                    return data["choice"]
+            except Exception:
+                pass
+            time.sleep(POLL_S)
+        return None
+
+    # Ensure Cockpit is running
+    if not _cockpit_ready():
+        _start_cockpit()
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            if _cockpit_ready():
+                break
+            time.sleep(1)
+        if not _cockpit_ready():
+            # Fall back to PyQt if Cockpit never started
+            _pyqt_stop(label, session_file)
+            return
+
+    session_id = _create_session()
+    if not session_id:
+        _pyqt_stop(label, session_file)
+        return
+
+    _open_browser(f"{COCKPIT}/beacon/{session_id}")
+
+    choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
+    if choice:
+        print(choice)
+        sys.exit(0)
+    sys.exit(1)
+
+
+def _pyqt_stop(label: str, session_file: str) -> None:
+    """Fallback: show the PyQt6 ContinuePopup when Cockpit is unavailable."""
     os.environ.setdefault("DISPLAY", ":0")
     app = QApplication(sys.argv)
     app.setApplicationName("Beacon")
-
-    mode = sys.argv[1]
-    if mode == "confirm":
-        tool    = sys.argv[2]
-        cf      = sys.argv[3] if len(sys.argv) > 3 else ""
-        command = open(cf).read().strip() if cf and os.path.exists(cf) else ""
-        popup   = ConfirmPopup(tool, command)
-    else:
-        label   = sys.argv[2]
-        sf      = sys.argv[3] if len(sys.argv) > 3 else ""
-        popup   = ContinuePopup(mode, label, sf)
-
+    popup = ContinuePopup("stop", label, session_file)
     popup.show()
     popup.raise_()
-    popup.activateWindow()  # needed on X11 to raise above other windows
-    # Re-run position after the event loop has laid out widgets (word-wrap heights settle)
+    popup.activateWindow()
     QTimer.singleShot(0, popup._position)
     app.exec()
-
     if popup.result:
         print(popup.result)
         sys.exit(0)
     sys.exit(1)
+
+
+def main():
+    if len(sys.argv) < 3:
+        sys.exit(1)
+    os.environ.setdefault("DISPLAY", ":0")
+
+    mode = sys.argv[1]
+    if mode == "confirm":
+        # Confirm popup must block synchronously — keep PyQt6 for this
+        app = QApplication(sys.argv)
+        app.setApplicationName("Beacon")
+        tool    = sys.argv[2]
+        cf      = sys.argv[3] if len(sys.argv) > 3 else ""
+        command = open(cf).read().strip() if cf and os.path.exists(cf) else ""
+        popup   = ConfirmPopup(tool, command)
+        popup.show()
+        popup.raise_()
+        popup.activateWindow()
+        QTimer.singleShot(0, popup._position)
+        app.exec()
+        if popup.result:
+            print(popup.result)
+            sys.exit(0)
+        sys.exit(1)
+    else:
+        label = sys.argv[2]
+        sf    = sys.argv[3] if len(sys.argv) > 3 else ""
+        _web_stop(label, sf)
 
 
 if __name__ == "__main__":

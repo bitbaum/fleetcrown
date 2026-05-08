@@ -3,7 +3,7 @@ import path from "path";
 import { HOME } from "@/lib/constants";
 type Agent = "codex" | "claude";
 
-const DEFAULT_AGENT: Agent = "codex";
+const DEFAULT_AGENT: Agent = "claude";
 const DEFAULT_MODELS: Record<Agent, string> = {
   codex: "gpt-5.4",
   claude: "sonnet",

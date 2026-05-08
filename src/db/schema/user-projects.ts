@@ -10,6 +10,7 @@ export const userProjects = pgTable("user_projects", {
   description: text("description"),
   stack:       text("stack"),
   agentPref:   text("agent_pref"),              // per-project agent override
+  modelPref:   text("model_pref"),              // per-project model override
   position:    integer("position").default(0),  // user-defined sort order
   isActive:    boolean("is_active").default(true).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
