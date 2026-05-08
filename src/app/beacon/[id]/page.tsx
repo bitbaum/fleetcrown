@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, Check, ArrowRight, Pause, Play, Mic, Square, ExternalLink } from "lucide-react";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 type BeaconSession = {
   id: string;
@@ -445,6 +446,7 @@ export default function BeaconPage() {
               <ExternalLink className="h-3 w-3" />
               Cockpit
             </button>
+            <ThemeToggle compact />
             <span className="ui-tag ui-tag-positive">● done</span>
           </div>
         </div>
@@ -517,7 +519,7 @@ export default function BeaconPage() {
 
         {/* Controls row */}
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-text-muted">
+          <p className="text-[11px] text-text-tertiary">
             {countdown > 0
               ? paused ? "Paused · Space to resume" : `Auto in ${countdown}s · Space to pause`
               : "Type to redirect · Enter to send"}
@@ -586,7 +588,7 @@ export default function BeaconPage() {
                 </p>
               )}
               {micState === "processing" && !micError && (
-                <p className="text-[11px] text-text-muted animate-pulse">Processing…</p>
+                <p className="text-[11px] text-text-tertiary animate-pulse">Processing…</p>
               )}
             </div>
             {micState === "recording" && !micError ? (
