@@ -1393,7 +1393,9 @@ def _web_stop(label: str, session_file: str) -> None:
         _pyqt_stop(label, session_file)
         return
 
-    _open_browser(f"{COCKPIT}/beacon/{session_id}")
+    _s = _load_settings()
+    countdown = int(_s.get("countdown_seconds", _s.get("countdown_secs", COUNTDOWN_SECONDS)))
+    _open_browser(f"{COCKPIT}/beacon/{session_id}?countdown={countdown}")
 
     choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
     if choice:

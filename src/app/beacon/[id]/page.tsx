@@ -127,13 +127,20 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function readCountdownParam(): number {
+  if (typeof window === "undefined") return 30;
+  const raw = new URLSearchParams(window.location.search).get("countdown");
+  const n = raw ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 30;
+}
+
 export default function BeaconPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<BeaconSession | null>(null);
   const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
   const [custom, setCustom] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [countdown, setCountdown] = useState(30);
+  const [countdown, setCountdown] = useState(readCountdownParam);
   const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [micState, setMicState] = useState<MicState>("idle");
