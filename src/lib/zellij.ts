@@ -19,10 +19,11 @@ export async function getZellijTabs(): Promise<string[]> {
 }
 
 export function injectIntoTab(tab: string, prompt: string): void {
-  const escaped = prompt.replace(/'/g, `'"'"'`);
-  execSync(`zellij action go-to-tab-name '${tab}'`);
+  // shellEscape both arguments — go-to-tab-name is case-sensitive and the tab
+  // name may contain spaces or quotes that would break unescaped interpolation
+  execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
   execSync("sleep 0.3");
-  execSync(`zellij action write-chars '${escaped}'`);
+  execSync(`zellij action write-chars ${shellEscape(prompt)}`);
   execSync("sleep 0.1");
   execSync("zellij action write 13");
 }

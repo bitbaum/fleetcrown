@@ -106,20 +106,25 @@ export function readProjectsMap(): Map<string, string> {
 
 /**
  * Given a canonical tab name and the currently active Zellij tab names,
- * return the live tab name to use for /tmp sentinel file operations and injection.
+ * return the live tab name to use for injection and /tmp sentinel files.
  *
- * When the canonical name (e.g. "Cockpit") is not alive but a conf alias
- * that maps to the same directory (e.g. "Cockpit Claude") is, return that alias.
- * Falls back to canonical when Zellij is unavailable or no alias matches.
+ * IMPORTANT: always returns the EXACT casing from activeTabs (zellij's ground
+ * truth), never from the conf file. `zellij action go-to-tab-name` is
+ * case-sensitive — returning conf casing causes silent navigation failure and
+ * write-chars lands on whichever tab is currently focused (wrong tab).
  */
 export function resolveEffectiveTab(canonical: string, activeTabs: string[]): string {
   if (!activeTabs.length) return canonical;
-  const isAlive = (name: string) => activeTabs.some((t) => t.toLowerCase() === name.toLowerCase());
-  if (isAlive(canonical)) return canonical;
+  // Return exact zellij casing — case-insensitive match, exact-case return
+  const findAlive = (name: string) => activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
+  const liveMatch = findAlive(canonical);
+  if (liveMatch) return liveMatch;
+  // Canonical not open; try a conf alias pointing to the same directory
   const all = parseProjectsConf();
   const canonicalDir = all.find((p) => p.tab.toLowerCase() === canonical.toLowerCase())?.dir;
   if (!canonicalDir) return canonical;
-  return all.find((p) => p.dir === canonicalDir && isAlive(p.tab))?.tab ?? canonical;
+  const aliasEntry = all.find((p) => p.dir === canonicalDir && findAlive(p.tab));
+  return aliasEntry ? (findAlive(aliasEntry.tab) ?? canonical) : canonical;
 }
 
 /**
