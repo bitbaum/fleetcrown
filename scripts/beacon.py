@@ -22,11 +22,11 @@ _bootstrap_vendor_packages()
 
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QLineEdit, QGraphicsDropShadowEffect, QFrame,
+    QPushButton, QLabel, QLineEdit, QFrame,
     QScrollArea,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QFont
+from PyQt6.QtGui import QColor, QCursor, QFont, QPalette
 
 
 # ── Whisper speech-to-text ────────────────────────────────────────────────────
@@ -535,7 +535,13 @@ class BasePopup(QWidget):
             Qt.WindowType.Tool |
             Qt.WindowType.WindowDoesNotAcceptFocus
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # Solid background — WA_TranslucentBackground causes fully-transparent
+        # windows on Linux without a compositor. Use QPalette instead so the
+        # window always paints the card colour regardless of compositor state.
+        pal = self.palette()
+        pal.setColor(QPalette.ColorRole.Window, QColor(C["card"]))
+        self.setPalette(pal)
+        self.setAutoFillBackground(True)
         self.setStyleSheet(SS)
         self._dismiss_timer = QTimer(singleShot=True)
         self._dismiss_timer.timeout.connect(self._dismiss)
@@ -550,16 +556,6 @@ class BasePopup(QWidget):
     def _make_card(self, width=440):
         card = DraggableCard()
         card.setObjectName("card")
-        sh = QGraphicsDropShadowEffect()
-        if _is_dark_mode():
-            sh.setBlurRadius(60)
-            sh.setOffset(0, 16)
-            sh.setColor(QColor(0, 0, 0, 200))
-        else:
-            sh.setBlurRadius(40)
-            sh.setOffset(0, 8)
-            sh.setColor(QColor(0, 0, 0, 60))
-        card.setGraphicsEffect(sh)
         card.setFixedWidth(width)
         return card
 
@@ -921,7 +917,7 @@ class ContinuePopup(BasePopup):
 
     def _build(self):
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(16, 16, 16, 16)
+        outer.setContentsMargins(0, 0, 0, 0)
 
         card = self._make_card(600)
         lay  = QVBoxLayout(card)
@@ -1184,7 +1180,7 @@ class ConfirmPopup(BasePopup):
 
     def _build(self):
         outer = QVBoxLayout(self)
-        outer.setContentsMargins(16, 16, 16, 16)
+        outer.setContentsMargins(0, 0, 0, 0)
 
         card = self._make_card(460)
         lay  = QVBoxLayout(card)
