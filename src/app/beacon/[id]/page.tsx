@@ -116,8 +116,10 @@ export default function BeaconPage() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [listening, setListening] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
+  const [micError, setMicError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const pausedRef = useRef(false);
+  const cancelledRef = useRef(false);     // once true, auto-submit is permanently off
   const recRef = useRef<{ abort: () => void } | null>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
@@ -166,9 +168,12 @@ export default function BeaconPage() {
     setPaused((p) => !p);
   }, []);
 
+  // Permanently halt auto-submit. pausedRef stays true so the interval never
+  // fires again; cancelledRef is a second guard inside the setCountdown callback.
   const cancelCountdown = useCallback(() => {
+    pausedRef.current = true;
+    cancelledRef.current = true;
     setCountdown(0);
-    pausedRef.current = false;
     setPaused(false);
   }, []);
 
@@ -179,11 +184,12 @@ export default function BeaconPage() {
       setListening(false);
       return;
     }
+    type SRError = { error: string };
     type SRCtor = new () => {
       start(): void; abort(): void;
-      lang: string; interimResults: boolean;
+      lang: string; interimResults: boolean; continuous: boolean;
       onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-      onerror: (() => void) | null;
+      onerror: ((e: SRError) => void) | null;
       onend: (() => void) | null;
     };
     const w = window as unknown as Record<string, unknown>;
@@ -192,6 +198,7 @@ export default function BeaconPage() {
     const rec = new SR();
     rec.lang = "en-US";
     rec.interimResults = false;
+    rec.continuous = false;
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       setCustom((prev) => (prev ? `${prev} ${transcript}` : transcript).trim());
@@ -199,23 +206,48 @@ export default function BeaconPage() {
       cancelCountdown();
       inputRef.current?.focus();
     };
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e) => {
+      setListening(false);
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        setMicUnavailable(true);
+        setMicError("Mic permission denied — allow in browser settings");
+      } else if (e.error === "network") {
+        setMicError("Network error — Chrome speech needs internet");
+      } else if (e.error === "no-speech") {
+        setMicError("No speech detected");
+      } else {
+        setMicError(`Mic error: ${e.error}`);
+      }
+    };
     rec.onend = () => setListening(false);
     recRef.current = rec;
-    rec.start();
-    setListening(true);
-    pausedRef.current = true;
-    setPaused(true);
+    try {
+      rec.start();
+      setListening(true);
+      setMicError("");
+      pausedRef.current = true;
+      setPaused(true);
+    } catch {
+      setListening(false);
+      setMicUnavailable(true);
+      setMicError("Speech recognition not available");
+    }
   }, [listening, cancelCountdown]);
 
-  // Countdown — interval skips ticks when paused
+  // Countdown — skips ticks when paused; double-guards against submit if cancelled
   useEffect(() => {
     if (!session || submitted) return;
     const primary = promptsRef.current.find((p) => p.style === "primary" && p.slot === 1);
     if (!primary) return;
     const t = setInterval(() => {
-      if (pausedRef.current) return;
+      if (pausedRef.current || cancelledRef.current) return;
       setCountdown((c) => {
+        if (cancelledRef.current) return 0;          // second guard — race-safe
+        if (inputRef.current?.value.trim()) {        // mirrors PyQt _tick safety check
+          cancelledRef.current = true;
+          pausedRef.current = true;
+          return 0;
+        }
         if (c <= 1) {
           clearInterval(t);
           submitRef.current(String(primary.slot ?? "1"));
@@ -249,7 +281,7 @@ export default function BeaconPage() {
 
   const handleCustomChange = (v: string) => {
     setCustom(v);
-    if (v) cancelCountdown();
+    cancelCountdown();          // cancel on any input activity, not just non-empty
   };
 
   if (!session) {
@@ -377,6 +409,7 @@ export default function BeaconPage() {
             ref={inputRef}
             value={custom}
             onChange={(e) => handleCustomChange(e.target.value)}
+            onFocus={cancelCountdown}
             onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
             placeholder={listening ? "Listening…" : "Custom prompt…"}
             className="ui-input flex-1"
@@ -402,6 +435,10 @@ export default function BeaconPage() {
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>
+
+        {micError && (
+          <p className="text-[11px] text-status-negative">{micError}</p>
+        )}
 
         {/* Dismiss */}
         <button
