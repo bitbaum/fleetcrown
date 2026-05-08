@@ -254,14 +254,10 @@ export async function GET() {
     const tmpClosing = readTmpTs(stateFile.closing(liveTab)) ?? readTmpTs(stateFile.claudeClosing(liveTab));
     const tmpClosed  = readTmpTs(stateFile.closed(liveTab))  ?? readTmpTs(stateFile.claudeClosed(liveTab));
 
-    const tmpPrompt = readCurrentPrompt(liveTab);
-    const currentPrompt: CurrentPrompt | null = tmpPrompt ?? (dbState?.currentPromptKey ? {
-      key:       dbState.currentPromptKey,
-      label:     dbState.currentPromptLabel ?? dbState.currentPromptKey,
-      startedAt: dbState.currentPromptStartedAt
-        ? Math.floor(dbState.currentPromptStartedAt.getTime() / 1000)
-        : 0,
-    } : null);
+    // currentPrompt is transient runtime state — only the /tmp file is authoritative.
+    // DB fallback would cause "Running: <stale task>" after a system reboot (no processes,
+    // no /tmp files, but DB still has the old currentPromptKey).
+    const currentPrompt: CurrentPrompt | null = readCurrentPrompt(liveTab);
 
     const lifecycleEvents = latestLifecycleEvents.get(tab);
     const derivedLifecycle = deriveLifecycleState({
