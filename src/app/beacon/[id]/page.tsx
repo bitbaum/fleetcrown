@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
+import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { parseSessionText } from "@/lib/session-content";
 
 type BeaconSession = {
@@ -108,9 +109,9 @@ function BeaconBody({
   onSubmitted: (label: string) => void;
 }) {
   const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project.toLowerCase());
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
   const [custom, setCustom] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
-  const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
   const [countdown, setCountdown] = useState(readCountdownParam);
   const [queueEditingIndex, setQueueEditingIndex] = useState<number | null>(null);
   const [queueEditText, setQueueEditText] = useState("");
@@ -120,20 +121,6 @@ function BeaconBody({
   const submitRef = useRef<(choice: string) => void>(() => {});
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
-
-  // Sync paused state from localStorage — queue is owned by usePromptQueue above.
-  useEffect(() => {
-    const tab = session.project.toLowerCase();
-    const sync = () => {
-      try {
-        setAutoContinueEnabled(localStorage.getItem(`control:auto-continue:${tab}`) !== "off");
-      } catch { /* ignore */ }
-    };
-    sync();
-    const interval = setInterval(sync, 2000);
-    window.addEventListener("storage", sync);
-    return () => { clearInterval(interval); window.removeEventListener("storage", sync); };
-  }, [session.project]);
 
   // Display-only countdown — Cockpit's control panel is the actual inject authority.
   useEffect(() => {
@@ -215,13 +202,6 @@ function BeaconBody({
     if (!custom.trim()) return;
     enqueue(custom.trim());
     setCustom("");
-  };
-
-  const toggleAutoContinue = () => {
-    const tab = session.project.toLowerCase();
-    const next = !autoContinueEnabled;
-    try { localStorage.setItem(`control:auto-continue:${tab}`, next ? "on" : "off"); } catch { /* ignore */ }
-    setAutoContinueEnabled(next);
   };
 
   const confirmQueueEdit = (i: number) => {

@@ -14,6 +14,7 @@ import {
   ProjectCardHeader, SessionSummary, ProjectBanners, IntentButtonPanel,
 } from "./project-card-sections";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
+import { useAutoContinue } from "@/hooks/use-auto-continue";
 
 export function ProjectCard({
   project,
@@ -43,16 +44,9 @@ export function ProjectCard({
   const [typingActive, setTypingActive] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const autoContinueKey = `control:auto-continue:${project.tab.toLowerCase()}`;
-  const [autoContinueEnabled, setAutoContinueEnabled] = useState(() => {
-    try {
-      // Require explicit opt-in ("on") — default OFF to prevent double injection
-      // when the user is also actively using the same terminal for conversations.
-      return window.localStorage.getItem(autoContinueKey) === "on";
-    } catch {
-      return false;
-    }
-  });
+  // Default OFF — explicit opt-in only, to prevent double injection when the user
+  // is actively typing in the same terminal. Setting persists across page loads.
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinueHook } = useAutoContinue(project.tab);
 
   const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue } = usePromptQueue(project.tab);
 
@@ -64,12 +58,6 @@ export function ProjectCard({
     }
     prevAgentRunning.current = project.agentRunning;
   }, [project.agentRunning]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(autoContinueKey, autoContinueEnabled ? "on" : "off");
-    } catch { /* ignore storage failures */ }
-  }, [autoContinueEnabled, autoContinueKey]);
 
   useEffect(() => {
     let clearAt: ReturnType<typeof setTimeout> | undefined;
@@ -155,9 +143,8 @@ export function ProjectCard({
 
   // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire
   const handleToggleAutoContinue = () => {
-    const next = !autoContinueEnabled;
-    setAutoContinueEnabled(next);
-    if (!next) {
+    toggleAutoContinueHook();
+    if (autoContinueEnabled) {
       postJson("/api/beacon/cancel", { tab: project.tab }).catch(() => {});
     }
   };
