@@ -5,19 +5,27 @@ import { useState, useEffect, useCallback } from "react";
 export function usePromptQueue(tab: string) {
   const key = `control:queue:${tab.toLowerCase()}`;
 
-  const [queue, setQueue] = useState<string[]>(() => {
+  // Start empty — lazy initializer would run on the server (where window is absent)
+  // and the SSR'd [] would then overwrite localStorage on the first client effect.
+  // Instead, we hydrate from localStorage in a useEffect (client-only).
+  const [initialized, setInitialized] = useState(false);
+  const [queue, setQueue] = useState<string[]>([]);
+
+  // Read from localStorage once on mount (client-only).
+  useEffect(() => {
     try {
       const raw = window.localStorage.getItem(key);
-      return raw ? (JSON.parse(raw) as string[]) : [];
-    } catch {
-      return [];
-    }
-  });
+      setQueue(raw ? (JSON.parse(raw) as string[]) : []); // eslint-disable-line react-hooks/set-state-in-effect
+    } catch { /* ignore */ }
+    setInitialized(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Write to localStorage whenever React state changes.
+  // Write to localStorage only after the initial hydration read, so we never
+  // overwrite stored items with the pre-hydration empty state.
   useEffect(() => {
+    if (!initialized) return;
     try { window.localStorage.setItem(key, JSON.stringify(queue)); } catch { /* ignore */ }
-  }, [queue, key]);
+  }, [initialized, queue, key]);
 
   // React to queue changes made by other windows (e.g. beacon popup).
   useEffect(() => {

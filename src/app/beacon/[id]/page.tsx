@@ -142,6 +142,21 @@ function BeaconBody({
     return () => clearInterval(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
+  useEffect(() => {
+    if (prompts.length === 0) return;
+    const t = setTimeout(() => {
+      const h = Math.min(document.documentElement.scrollHeight + 2, 900);
+      try {
+        const right  = window.screenLeft + window.outerWidth;
+        const bottom = window.screenTop  + window.outerHeight;
+        window.resizeTo(520, h);
+        window.moveTo(right - 520, Math.max(bottom - h, 16));
+      } catch { /* blocked in non-popup windows */ }
+    }, 120);
+    return () => clearTimeout(t);
+  }, [prompts.length, queue.length]);
+
   const appendTranscript = useCallback((text: string) => {
     setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
     inputRef.current?.focus();
@@ -519,22 +534,6 @@ export default function BeaconPage() {
     return () => clearInterval(interval);
   }, [id, submitted]);
 
-  // Auto-fit Chrome app window to content height + reposition to bottom-right
-  useEffect(() => {
-    if (!session || prompts.length === 0) return;
-    const fit = () => {
-      const h = Math.min(document.documentElement.scrollHeight + 2, 900);
-      const w = 520;
-      try {
-        const right  = window.screenLeft + window.outerWidth;
-        const bottom = window.screenTop  + window.outerHeight;
-        window.resizeTo(w, h);
-        window.moveTo(right - w, Math.max(bottom - h, 16));
-      } catch { /* blocked in non-popup windows */ }
-    };
-    const t = setTimeout(fit, 120);
-    return () => clearTimeout(t);
-  }, [session, prompts]);
 
   if (!session) {
     return (
