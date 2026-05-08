@@ -171,10 +171,20 @@ inject_prompt() {
   local tab="$1"
   local prompt="$2"
   [ -z "$tab" ] && return 1
-  # Double-quote args — zellij go-to-tab-name is case-sensitive, must pass exact name
+
+  # go-to-tab-name is fire-and-forget — the switch completes asynchronously.
+  # Poll dump-layout until the focused tab matches before sending characters,
+  # so write-chars never lands in the previously focused pane.
   zellij action go-to-tab-name "$tab" 2>/dev/null
-  sleep 0.3
-  # Use printf to avoid word-splitting and glob expansion on the prompt text
+  local i active
+  for i in $(seq 1 20); do
+    active=$(zellij action dump-layout 2>/dev/null \
+      | grep 'focus=true' | grep 'tab name=' \
+      | sed 's/.*tab name="\([^"]*\)".*/\1/' | head -1)
+    [ "$active" = "$tab" ] && break
+    sleep 0.05
+  done
+
   zellij action write-chars -- "$prompt" 2>/dev/null
   sleep 0.1
   zellij action write 13 2>/dev/null
