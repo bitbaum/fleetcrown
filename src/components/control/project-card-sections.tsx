@@ -669,7 +669,7 @@ export function IntentButtonPanel({
     <div className="space-y-2.5 ui-card-section">
       <PromptInput {...inputProps} placeholder="Custom prompt…" />
       {queue.length > 0 && (
-        <QueueList queue={queue} onRemove={onRemoveFromQueue} />
+        <QueueList queue={queue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} />
       )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
