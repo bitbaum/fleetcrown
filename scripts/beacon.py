@@ -508,14 +508,20 @@ class SafeButton(QPushButton):
             super().keyPressEvent(e)
 
 class FocusCancelInput(QLineEdit):
-    def __init__(self, on_focus):
+    def __init__(self, on_focus, on_engage=None):
         super().__init__()
         self._on_focus = on_focus
+        self._on_engage = on_engage
+
+    def mousePressEvent(self, e):
+        # Fire on_engage BEFORE super() so the window accepts focus by the
+        # time Qt tries to forward keyboard events to this widget.
+        if self._on_engage:
+            self._on_engage()
+        super().mousePressEvent(e)
+
     def focusInEvent(self, e):
         self._on_focus()
-        # Grab OS-level focus so keyboard input reaches this field.
-        # WindowDoesNotAcceptFocus only blocks automatic focus on show;
-        # an explicit activateWindow() after a deliberate click is fine.
         w = self.window()
         if w:
             w.activateWindow()
@@ -614,6 +620,7 @@ class ContinuePopup(BasePopup):
         self._model_btn       = None
         self._whisper         = None
         self._mic_state       = "idle"
+        self._input_engaged   = False   # set on first click of the custom field
         self._whisper_model   = _s.get("whisper_model", "base")
         self._rec_secs        = 0
         self._auto_secs       = 0
@@ -639,14 +646,33 @@ class ContinuePopup(BasePopup):
         if self._countdown_label:
             self._countdown_label.setText("↵ Enter to send")
 
+    def _engage_input(self):
+        """Called when user clicks the custom input field.
+
+        On X11/Linux, WindowDoesNotAcceptFocus tells the WM never to grant
+        keyboard focus to this window — even after a deliberate click.
+        We strip that hint and re-show the window so the WM routes keystrokes
+        here from this point on.
+        """
+        self._input_engaged = True
+        self._cancel_countdown()
+        flags = self.windowFlags()
+        if flags & Qt.WindowType.WindowDoesNotAcceptFocus:
+            self.setWindowFlags(flags & ~Qt.WindowType.WindowDoesNotAcceptFocus)
+            self.show()   # re-apply window flags (brief repaint, position unchanged)
+        self.activateWindow()
+        self.raise_()
+        if self._custom_input:
+            self._custom_input.setFocus(Qt.FocusReason.MouseFocusReason)
+
     def _start_countdown(self):
         self._timer = QTimer(interval=1000)
         self._timer.timeout.connect(self._tick)
         self._timer.start()
 
     def _tick(self):
-        # If user has started typing, cancel the countdown instead of auto-submitting
-        if self._custom_input and self._custom_input.text().strip():
+        # If user clicked the input OR has started typing, cancel the countdown
+        if self._input_engaged or (self._custom_input and self._custom_input.text().strip()):
             self._cancel_countdown()
             return
         self._secs -= 1
@@ -658,7 +684,8 @@ class ContinuePopup(BasePopup):
                 f"Auto-running ⚡ in {self._secs}s  ·  Esc to cancel")
 
     def _choose(self, key):
-        # If user is composing a custom prompt, don't auto-choose an action
+        # Only block an auto/button choice if the user has actually typed a custom prompt.
+        # _input_engaged alone (clicked but empty) should not block explicit button presses.
         if not key.startswith("custom:") and self._custom_input and self._custom_input.text().strip():
             self._cancel_countdown()
             return
@@ -667,8 +694,8 @@ class ContinuePopup(BasePopup):
         super()._choose(key)
 
     def _dismiss(self):
-        # Never auto-dismiss while the user is composing a custom prompt
-        if self._custom_input and self._custom_input.text().strip():
+        # Never auto-dismiss while the user has clicked the input or is composing
+        if self._input_engaged or (self._custom_input and self._custom_input.text().strip()):
             self._pause_dismiss()
             return
         if self._timer and self._timer.isActive():
@@ -1013,7 +1040,7 @@ class ContinuePopup(BasePopup):
         input_row = QHBoxLayout()
         input_row.setSpacing(8)
 
-        self._custom_input = FocusCancelInput(self._cancel_countdown)
+        self._custom_input = FocusCancelInput(self._cancel_countdown, self._engage_input)
         self._custom_input.setObjectName("custom")
         self._custom_input.setPlaceholderText("Custom prompt — type or speak…")
         self._custom_input.returnPressed.connect(self._submit_custom)
