@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ExternalLink, ChevronRight, Loader2, Globe } from "lucide-react";
+import { ExternalLink, ChevronRight, Loader2, Globe, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
+import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 
 type AgentEntry = { id: string; label: string };
 type AgentId = string;
@@ -195,6 +196,75 @@ function DimensionSection({
   );
 }
 
+const HEALTH_STYLE: Record<string, string> = {
+  good:              "ui-tag ui-tag-positive",
+  "needs attention": "ui-tag ui-tag-warning",
+  critical:          "ui-tag ui-tag-negative",
+};
+
+function DevLogSection({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false);
+  const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
+
+  const entries: DevLogEntry[] = useMemo(() => {
+    if (!project?.devLog) return [];
+    return [...project.devLog].reverse().slice(0, 12);
+  }, [project]);
+
+  if (!project) return null;
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="border-t border-border-subtle">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
+      >
+        <span className="flex items-center gap-2.5">
+          <History className="h-3.5 w-3.5 text-text-muted" />
+          <span className="text-sm font-medium text-text-secondary">Dev Log</span>
+          <span className="ml-1 text-xs text-text-muted">({entries.length})</span>
+        </span>
+        <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
+      </button>
+
+      {open && (
+        <div className="space-y-3 px-4 pb-4 pt-1 sm:px-5">
+          {entries.map((entry, i) => {
+            const d = new Date(entry.date);
+            const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+            const healthKey = entry.health.toLowerCase();
+            const healthCls = HEALTH_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
+            return (
+              <div key={i} className="rounded-xl border border-border-subtle bg-surface-base p-3 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-text-muted">{dateStr}</span>
+                  {entry.health && <span className={healthCls}>{entry.health}</span>}
+                </div>
+                {entry.done && (
+                  <p className="text-xs leading-relaxed text-text-secondary">
+                    <span className="font-medium text-text-tertiary">done </span>{entry.done}
+                  </p>
+                )}
+                {entry.next && (
+                  <p className="text-xs leading-relaxed text-text-primary">
+                    <span className="font-medium text-accent-text">→ </span>{entry.next}
+                  </p>
+                )}
+                {(entry.tests || entry.todos) && (
+                  <p className="text-[11px] text-text-muted">
+                    {[entry.tests, entry.todos ? `${entry.todos} TODOs` : ""].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProjectProfile({
   project,
   globalAdapter,
@@ -301,6 +371,9 @@ export function ProjectProfile({
           onRun={handleRun}
         />
       ))}
+
+      {/* Dev log — appended automatically when beacon sessions end */}
+      {project.id && <DevLogSection projectId={project.id} />}
     </div>
   );
 }

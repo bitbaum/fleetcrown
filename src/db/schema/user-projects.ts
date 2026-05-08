@@ -1,5 +1,14 @@
-import { pgTable, uuid, text, boolean, integer, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+
+export type DevLogEntry = {
+  date: string;
+  done: string;
+  next: string;
+  tests: string;
+  todos: string;
+  health: string;
+};
 
 export const userProjects = pgTable("user_projects", {
   id:          uuid("id").primaryKey().defaultRandom(),
@@ -13,6 +22,7 @@ export const userProjects = pgTable("user_projects", {
   modelPref:   text("model_pref"),              // per-project model override
   position:    integer("position").default(0),  // user-defined sort order
   isActive:    boolean("is_active").default(true).notNull(),
+  devLog:      jsonb("dev_log").$type<DevLogEntry[]>().default([]).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [

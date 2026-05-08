@@ -10,6 +10,15 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
+export async function getUserProject(id: string, userId: string): Promise<UserProject | null> {
+  const [row] = await db
+    .select()
+    .from(userProjects)
+    .where(and(eq(userProjects.id, id), eq(userProjects.userId, userId)))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function createUserProject(
   data: Omit<NewUserProject, "id" | "createdAt" | "updatedAt">,
 ): Promise<UserProject> {

@@ -1261,6 +1261,21 @@ class ConfirmPopup(BasePopup):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def _cursor_screen_position(width: int = 520, height: int = 820) -> tuple[int, int]:
+    """Return (x, y) for bottom-right of the screen that contains the cursor."""
+    try:
+        app = QApplication.instance() or QApplication(sys.argv[:1])
+        cursor_pos = QCursor.pos()
+        screen = QApplication.screenAt(cursor_pos) or QApplication.primaryScreen()
+        scr = screen.availableGeometry()
+        x = scr.right()  - width  - 24
+        y = scr.bottom() - height - 24
+        y = max(y, scr.top() + 16)
+        return x, y
+    except Exception:
+        return 1360, 180   # reasonable fallback
+
+
 def _web_stop(label: str, session_file: str) -> None:
     """Open a Cockpit web page for the session-stop beacon instead of PyQt6."""
     import urllib.request, urllib.error, time, json as _json
@@ -1292,8 +1307,9 @@ def _web_stop(label: str, session_file: str) -> None:
 
     def _open_browser(url: str):
         env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
-        # Prefer app-mode (no browser chrome) for a focused popup feel
-        app_flags = ["--app=" + url, "--window-size=520,820", "--window-position=9999,9999"]
+        # Position window at bottom-right of the screen containing the cursor
+        x, y = _cursor_screen_position(520, 820)
+        app_flags = ["--app=" + url, "--window-size=520,820", f"--window-position={x},{y}"]
         for cmd, extra in (
             (["brave-browser"], app_flags),
             (["google-chrome"], app_flags),
@@ -1408,7 +1424,7 @@ def main():
     else:
         label = sys.argv[2]
         sf    = sys.argv[3] if len(sys.argv) > 3 else ""
-        _pyqt_stop(label, sf)
+        _web_stop(label, sf)
 
 
 if __name__ == "__main__":

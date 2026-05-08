@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, readIdParam, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
-import { updateUserProject, deleteUserProject } from "@/db/queries/user-projects";
+import { getUserProject, updateUserProject, deleteUserProject } from "@/db/queries/user-projects";
 
 const UpdateBody = z.object({
   name: z.string().trim().min(1).max(120).optional(),
@@ -15,6 +15,15 @@ const UpdateBody = z.object({
   position: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 });
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getCurrentUserId();
+  const idOrResp = await readIdParam(params);
+  if (idOrResp instanceof NextResponse) return idOrResp;
+  const project = await getUserProject(idOrResp, userId);
+  if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(project);
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getCurrentUserId();
