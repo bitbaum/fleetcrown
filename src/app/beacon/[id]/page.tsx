@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Loader2, Check, ArrowRight, ExternalLink,
-  X, ChevronUp, ChevronDown, Send, ListPlus, Mic,
+  X, ChevronUp, ChevronDown, Send, ListPlus, Mic, Pause, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
@@ -202,6 +202,13 @@ function BeaconBody({
     setCustom("");
   };
 
+  const toggleAutoContinue = () => {
+    const tab = session.project.toLowerCase();
+    const next = !autoContinueEnabled;
+    try { localStorage.setItem(`control:auto-continue:${tab}`, next ? "on" : "off"); } catch { /* ignore */ }
+    setAutoContinueEnabled(next);
+  };
+
   const confirmQueueEdit = (i: number) => {
     edit(i, queueEditText);
     setQueueEditingIndex(null);
@@ -350,15 +357,26 @@ function BeaconBody({
       )}
 
       {/* Status line */}
-      <p className="text-[11px] text-text-tertiary">
-        {custom.trim()
-          ? "Enter to send · Alt+Enter to queue"
-          : !autoContinueEnabled
-          ? "Auto-continue is paused · enable in Cockpit to resume"
-          : countdown > 0
-          ? `Cockpit continues in ${countdown}s · click to choose`
-          : "Continuing via Cockpit…"}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] text-text-tertiary">
+          {custom.trim()
+            ? "Enter to send · Alt+Enter to queue"
+            : !autoContinueEnabled
+            ? "Auto-continue paused"
+            : countdown > 0
+            ? `Cockpit continues in ${countdown}s · click to choose`
+            : "Continuing via Cockpit…"}
+        </p>
+        <button
+          onClick={toggleAutoContinue}
+          title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+          className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
+        >
+          {autoContinueEnabled
+            ? <Pause className="h-3.5 w-3.5" />
+            : <Play className="h-3.5 w-3.5 text-accent-text" />}
+        </button>
+      </div>
 
       {/* Custom input — matches control panel PromptInput */}
       <div className="space-y-1.5">
@@ -454,12 +472,9 @@ function BeaconBody({
                 ))}
               </div>
             )}
-            {!listening && custom && (
-              <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
-            )}
           </div>
         )}
-        {!micError && !listening && !processing && custom && (
+        {!listening && custom && (
           <div className="flex justify-end px-0.5">
             <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
           </div>
