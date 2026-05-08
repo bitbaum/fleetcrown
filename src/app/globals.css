@@ -67,6 +67,8 @@
   --color-status-negative:        var(--status-negative);
   --color-status-negative-subtle: var(--status-negative-subtle);
   --color-status-neutral:         var(--status-neutral);
+  /* Public/editorial surface — always near-black regardless of app theme */
+  --color-surface-public:  var(--surface-public);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -159,6 +161,7 @@
   --surface-overlay:   oklch(0.94 0 0);
   --surface-modal:     oklch(1 0 0);
   --surface-drawer:    oklch(0.98 0 0);
+  --surface-public:    oklch(0.04 0 0);
   --border-subtle:       oklch(0.90 0 0 / 90%);
   --border-default:      oklch(0.82 0 0 / 95%);
   --border-strong:       oklch(0.60 0 0);
@@ -292,7 +295,7 @@
     @apply flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
   .ui-public-surface {
-    @apply relative min-h-screen overflow-hidden bg-[#050505] text-white;
+    @apply relative min-h-screen overflow-hidden bg-surface-public text-white;
   }
   .ui-public-backdrop {
     @apply pointer-events-none absolute inset-0 overflow-hidden;
@@ -431,11 +434,11 @@
   }
   .ui-panel-interactive { @apply transition-colors hover:bg-surface-raised; }
   .ui-card-shell {
-    @apply rounded-[1.5rem] border border-border-subtle bg-surface-base;
+    @apply rounded-2xl border border-border-subtle bg-surface-base;
     box-shadow: var(--shadow-panel);
   }
   .ui-card-shell-raised {
-    @apply rounded-[1.5rem] border border-border-subtle bg-surface-raised;
+    @apply rounded-2xl border border-border-subtle bg-surface-raised;
     box-shadow: var(--shadow-panel);
   }
   .ui-card-padding {
@@ -457,29 +460,29 @@
     @apply rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
   }
   .ui-empty-panel {
-    @apply flex flex-col items-center gap-3 rounded-[1.5rem] border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
+    @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);
   }
   .ui-settings-section {
-    @apply space-y-5 rounded-[1.5rem] border border-border-subtle bg-surface-base p-5 sm:p-6;
+    @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-5 sm:p-6;
     box-shadow: var(--shadow-panel);
   }
   .ui-settings-subpanel {
-    @apply space-y-3 rounded-[1.5rem] border border-border-subtle bg-surface-raised p-4;
+    @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4;
     box-shadow: var(--shadow-panel);
   }
   .ui-list-item {
     @apply flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-raised px-4 py-3;
   }
   .ui-search-input {
-    @apply w-full rounded-2xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary placeholder:text-text-muted outline-none transition-colors;
+    @apply w-full rounded-xl border border-border-default bg-surface-overlay py-3 pl-11 pr-16 text-base text-text-primary placeholder:text-text-muted outline-none transition-colors;
   }
   .ui-search-input:focus {
     @apply border-border-strong;
     box-shadow: 0 0 0 2px oklch(1 0 0 / 6%);
   }
   .ui-code-surface {
-    @apply max-h-56 overflow-y-auto whitespace-pre-wrap rounded-[1.5rem] border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary;
+    @apply max-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary;
   }
   .ui-link-subtle {
     @apply text-xs text-text-tertiary transition-colors hover:text-text-secondary;
@@ -561,39 +564,39 @@
   }
   /* Full-width accent submit button (modal forms) */
   .ui-btn-submit {
-    @apply flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40;
+    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-40;
   }
   /* Large card-level CTA buttons (control panel intent / action rows) */
   .ui-btn-lg {
-    @apply rounded-2xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50;
+    @apply rounded-xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50;
   }
   .ui-btn-lg-outline {
-    @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
+    @apply rounded-xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
-    @apply rounded-2xl bg-accent-primary px-4 py-2.5 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
+    @apply rounded-lg bg-accent-primary px-3 py-2 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
   }
   .ui-btn-ready-action {
-    @apply rounded-2xl border border-border-default bg-surface-overlay px-4 py-2.5 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+    @apply rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
   }
   .ui-btn-ready-more {
-    @apply rounded-2xl border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
+    @apply rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
 
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {
-    @apply rounded-2xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply rounded-xl border border-border-subtle bg-surface-overlay text-text-tertiary transition-colors hover:border-border-default hover:text-text-primary;
   }
 
   /* Filter/tab toggle pill */
   .ui-chip-filter {
-    @apply rounded-2xl border border-border-subtle bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+    @apply rounded-xl border border-border-subtle bg-surface-overlay px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
   .ui-chip-filter-active {
-    @apply rounded-2xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
+    @apply rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
   }
   /* Inline category/scope chip — shape only; caller adds color classes */
   .ui-chip {
@@ -630,14 +633,14 @@
 
   /* Control */
   .ui-control-hero {
-    @apply relative overflow-hidden rounded-[1.75rem] border border-border-subtle bg-surface-raised p-5 sm:p-6;
+    @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-5 sm:p-6;
     box-shadow: var(--shadow-panel);
     background-image:
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
       linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent);
   }
   .ui-control-sidepanel {
-    @apply space-y-4 rounded-[1.75rem] border border-border-subtle bg-surface-raised p-5 sm:p-6;
+    @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-5 sm:p-6;
     box-shadow: var(--shadow-panel);
   }
   .ui-control-metric-card {
@@ -656,7 +659,7 @@
     @apply rounded-2xl border border-border-subtle bg-surface-base p-3.5;
   }
   .ui-control-idle-section {
-    @apply space-y-3 rounded-[1.5rem] border border-border-subtle bg-surface-raised/60 p-4 sm:p-5;
+    @apply space-y-3 rounded-xl border border-border-subtle bg-surface-raised/60 p-4 sm:p-5;
   }
   .ui-control-summary-card {
     @apply rounded-2xl border border-border-subtle bg-surface-overlay px-4 py-3;

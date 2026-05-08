@@ -166,5 +166,5 @@ export function useWhisperMic(onResult: (text: string) => void) {
     }, 60_000);
   }, [listening, processing, cleanup, startLevelTracking, onResult]);
 
-  return { listening, processing, error, toggle, waveformBars, recordingSeconds };
+  return { listening, processing, error, toggle, waveformBars, recordingSeconds, maxSeconds: 60 };
 }

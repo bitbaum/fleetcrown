@@ -10,23 +10,24 @@ import {
 } from "@/config/shell";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Hydrate from localStorage on mount — deferred so server and client agree on initial render.
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem(SIDEBAR_COLLAPSE_STORAGE_KEY);
-      if (stored !== null) return stored === "true";
-      return window.innerWidth < SIDEBAR_COLLAPSE_BREAKPOINT;
-    } catch {
-      return false;
-    }
-  });
+      if (stored !== null) {
+        setSidebarCollapsed(stored === "true"); // eslint-disable-line react-hooks/set-state-in-effect
+      } else {
+        setSidebarCollapsed(window.innerWidth < SIDEBAR_COLLAPSE_BREAKPOINT); // eslint-disable-line react-hooks/set-state-in-effect
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     try {
       window.localStorage.setItem(SIDEBAR_COLLAPSE_STORAGE_KEY, String(sidebarCollapsed));
-    } catch {
-      // Ignore storage failures.
-    }
+    } catch { /* ignore */ }
   }, [sidebarCollapsed]);
 
   return (

@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { homedir } from "os";
 import { join, dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 
 const SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
 
@@ -36,7 +37,7 @@ async function writeSettings(data: Record<string, unknown>): Promise<void> {
 export async function GET() {
   const s = await readSettings();
   const result: BeaconSettingsData = {
-    countdown_seconds: typeof s.countdown_seconds === "number" ? s.countdown_seconds : 30,
+    countdown_seconds: typeof s.countdown_seconds === "number" ? s.countdown_seconds : DEFAULT_BEACON_COUNTDOWN_S,
     whisper_model: typeof s.whisper_model === "string" ? s.whisper_model : "base",
     prefer_browser_ready_ui: s.prefer_browser_ready_ui === true,
   };

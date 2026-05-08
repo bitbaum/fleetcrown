@@ -8,6 +8,8 @@ if [ -z "$MODE" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Wire-format prefix for custom prompts — must match CUSTOM_CHOICE_PREFIX in src/lib/constants/control.ts
+readonly CUSTOM_CHOICE_PREFIX="custom:"
 python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/agent-hook-lib.sh"
@@ -141,10 +143,10 @@ handle_stop() {
   [ -z "$choice" ] && exit 0
 
   local inject_key inject_label
-  if [[ "$choice" == custom:* ]]; then
-    prompt="${choice#custom:}"
+  if [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]]; then
+    prompt="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
     inject_key="custom"
-    inject_label="${choice#custom:}"
+    inject_label="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
   else
     key=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | .key' "$_PROMPTS" 2>/dev/null)
     [ -z "$key" ] && log "no key for slot=$choice" && exit 0

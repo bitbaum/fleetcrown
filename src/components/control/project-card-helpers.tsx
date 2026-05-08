@@ -59,7 +59,7 @@ export function ClosedBanner({
           )}
           {session.next && (
             <div className="ui-control-summary-card bg-status-positive/[0.03]">
-              <p className="ui-kicker">Up next</p>
+              <p className="ui-kicker">Agent&apos;s plan</p>
               <p className="text-base text-text-secondary leading-relaxed">{session.next}</p>
             </div>
           )}
@@ -144,7 +144,8 @@ export function ReadyBanner({
   paused = false,
   title = "Agent finished",
   autoContinueEnabled = true,
-  queueLength = 0,
+  nextQueueItem,
+  queueTotal = 0,
 }: {
   prompts: PromptMeta[];
   onSend: (key: string) => void;
@@ -153,15 +154,25 @@ export function ReadyBanner({
   paused?: boolean;
   title?: string;
   autoContinueEnabled?: boolean;
-  queueLength?: number;
+  nextQueueItem?: string;
+  queueTotal?: number;
 }) {
   const [seconds, setSeconds] = useState(AUTO_INJECT_S);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
-  // Stable ref so the effect never re-runs just because the callback identity changed
   const onAutoInjectRef = useRef(onAutoInject);
   const onSendRef = useRef(onSend);
   useEffect(() => { onAutoInjectRef.current = onAutoInject; }, [onAutoInject]);
   useEffect(() => { onSendRef.current = onSend; }, [onSend]);
+
+  // Reset countdown when a queue item arrives while banner is visible — this ensures
+  // items queued from the beacon popup (which has a longer countdown than 12s) are
+  // picked up on this cycle rather than stranded until the next ready event.
+  const prevQueueItemRef = useRef(nextQueueItem);
+  useEffect(() => {
+    const wasEmpty = !prevQueueItemRef.current;
+    prevQueueItemRef.current = nextQueueItem;
+    if (wasEmpty && nextQueueItem) setSeconds(AUTO_INJECT_S); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [nextQueueItem]);
 
   useEffect(() => {
     if (paused || !autoContinueEnabled) return;
@@ -174,23 +185,34 @@ export function ReadyBanner({
     return () => clearTimeout(id);
   }, [seconds, paused, autoContinueEnabled, primaryKey]);
 
+  const timerLabel = !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
+
+  // What actually fires when the countdown hits zero
+  const nextLabel = nextQueueItem
+    ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
+    : "AI picks next task";
+
   return (
     <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Zap className="h-3.5 w-3.5 text-status-positive" />
           <span className="text-sm font-medium text-status-positive">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          {queueLength > 0 && (
-            <span className="ui-tag ui-tag-neutral">Queue {queueLength}</span>
-          )}
-          <span className="text-sm text-text-secondary tabular-nums">{!autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`}</span>
+          <span className="font-mono text-xs text-text-muted tabular-nums">{timerLabel}</span>
           <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
         </div>
       </div>
+
+      {/* Pipeline preview — what the countdown will actually fire */}
+      <p className="mb-2 truncate font-mono text-xs text-text-muted">
+        <span className="mr-1 text-text-muted">→</span>
+        {nextLabel}
+      </p>
+
       <div className="ui-control-intent-grid">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p) => (
           <button

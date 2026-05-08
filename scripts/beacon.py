@@ -77,6 +77,10 @@ class WhisperThread(QThread):
             self.failed.emit(str(exc))
 
 
+# ── Wire-format constants (must match src/lib/constants/control.ts) ──────────
+
+CUSTOM_CHOICE_PREFIX = "custom:"
+
 # ── Palette ───────────────────────────────────────────────────────────────────
 
 _THEME_PATH = os.path.expanduser("~/.config/agent-dashboard-theme.json")
@@ -697,7 +701,7 @@ class ContinuePopup(BasePopup):
     def _choose(self, key):
         # Only block an auto/button choice if the user has actually typed a custom prompt.
         # _input_engaged alone (clicked but empty) should not block explicit button presses.
-        if not key.startswith("custom:") and self._custom_input and self._custom_input.text().strip():
+        if not key.startswith(CUSTOM_CHOICE_PREFIX) and self._custom_input and self._custom_input.text().strip():
             self._cancel_countdown()
             return
         if self._timer and self._timer.isActive():
@@ -1186,7 +1190,7 @@ class ContinuePopup(BasePopup):
     def _submit_custom(self):
         text = self._custom_input.text().strip()
         if text:
-            self._choose(f"custom:{text}")
+            self._choose(f"{CUSTOM_CHOICE_PREFIX}{text}")
 
     def keyPressEvent(self, e):
         key = e.key()

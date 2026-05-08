@@ -3,7 +3,8 @@
 export const READY_WINDOW_S   = 600;    // 10 min — "Agent finished" banner
 export const CLOSED_WINDOW_S  = 3600;   // 1 hour — "Session closed" banner
 export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banner
-export const AUTO_INJECT_S    = 12;     // countdown before auto-inject on ready
+export const AUTO_INJECT_S             = 12;  // countdown before auto-inject in control panel
+export const DEFAULT_BEACON_COUNTDOWN_S = 30;  // default countdown in beacon popup (user-configurable)
 
 // How long a sentinel file or DB event remains valid as a source of lifecycle state.
 // Intentionally much larger than the UI display windows so DB state can survive a banner dismiss.
@@ -13,6 +14,9 @@ export const SENTINEL_VALIDITY_S = 86400; // 24 hours
 export function withinWindow(ts: number | null, nowS: number, windowS: number): boolean {
   return ts !== null && nowS - ts < windowS;
 }
+
+/** Wire-format prefix used in beacon choice handshake: "custom:<prompt text>" */
+export const CUSTOM_CHOICE_PREFIX = "custom:";
 
 export const HEALTH_COLOR: Record<string, string> = {
   good:      "text-status-positive",

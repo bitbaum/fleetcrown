@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getJson, patchJson } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
+import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 
 const WHISPER_MODELS = [
   { value: "tiny",   label: "Tiny",   note: "~39 MB · fastest, lower accuracy" },
@@ -15,7 +16,7 @@ const WHISPER_MODELS = [
 
 export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
-  const [countdown, setCountdown] = useState(30);
+  const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [model, setModel] = useState("base");
   const [browserUi, setBrowserUi] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,7 +107,7 @@ export function BeaconSettings() {
                 min={5}
                 max={300}
                 value={countdown}
-                onChange={(e) => setCountdown(Math.max(5, Math.min(300, parseInt(e.target.value) || 30)))}
+                onChange={(e) => setCountdown(Math.max(5, Math.min(300, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
                 className="ui-input w-24 tabular-nums"
               />
               <span className="text-sm text-text-tertiary">seconds</span>

@@ -4,33 +4,17 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Loader2, Check, ArrowRight, ExternalLink,
-  X, ChevronUp, ChevronDown, Send, ListPlus, Mic, Pause, Play,
+  Pause, Play,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
+import { QueueList, PromptInput } from "@/components/control/project-card-sections";
 import { parseSessionText } from "@/lib/session-content";
-
-type BeaconSession = {
-  id: string;
-  project: string;
-  sessionContent: string;
-  createdAt: number;
-  choice: string | null;
-};
-
-type AgentPrompt = {
-  key: string;
-  slot: number | null;
-  icon: string;
-  label: string;
-  style: "primary" | "action" | "more" | "dimension" | "internal";
-  category: string;
-  dimensionId: string | null;
-  prompt: string;
-};
+import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX } from "@/lib/constants/control";
+import type { BeaconSession } from "@/app/api/beacon/route";
+import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 
 function SessionSummary({ content }: { content: string }) {
   const s = parseSessionText(content);
@@ -41,7 +25,7 @@ function SessionSummary({ content }: { content: string }) {
     <div className="ui-panel rounded-2xl p-5 space-y-4">
       {s.next.length > 0 && (
         <div className="space-y-2">
-          <p className="ui-kicker text-[10px] tracking-widest">Up Next</p>
+          <p className="ui-kicker text-[10px] tracking-widest">Agent&apos;s plan</p>
           {s.next.map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
               <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-text" />
@@ -89,10 +73,10 @@ function SessionSummary({ content }: { content: string }) {
 }
 
 function readCountdownParam(): number {
-  if (typeof window === "undefined") return 12;
+  if (typeof window === "undefined") return DEFAULT_BEACON_COUNTDOWN_S;
   const raw = new URLSearchParams(window.location.search).get("countdown");
   const n = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 12;
+  return Number.isFinite(n) && n > 0 && n <= 300 ? n : DEFAULT_BEACON_COUNTDOWN_S;
 }
 
 // ─── BeaconBody ─────────────────────────────────────────────────────────────
@@ -113,21 +97,21 @@ function BeaconBody({
   const [custom, setCustom] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [countdown, setCountdown] = useState(readCountdownParam);
-  const [queueEditingIndex, setQueueEditingIndex] = useState<number | null>(null);
-  const [queueEditText, setQueueEditText] = useState("");
-  const queueEditRef = useRef<HTMLTextAreaElement>(null);
+  const pendingMicActionRef = useRef<"send" | "queue" | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
-  // Display-only countdown — Cockpit's control panel is the actual inject authority.
+  // Display-only countdown — actual injection is the control panel's authority.
+  // Re-runs when autoContinueEnabled changes so the interval is cleared on Pause.
   useEffect(() => {
-    if (countdown <= 0) return;
+    if (!autoContinueEnabled || countdown <= 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoContinueEnabled]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {
@@ -145,18 +129,25 @@ function BeaconBody({
   }, [prompts.length, queue.length]);
 
   const appendTranscript = useCallback((text: string) => {
-    setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
+    const newText = (custom ? `${custom} ${text}` : text).trim();
+    setCustom(newText);
     inputRef.current?.focus();
-  }, []);
+    const pending = pendingMicActionRef.current;
+    if (pending && newText) {
+      pendingMicActionRef.current = null;
+      if (pending === "send") submitRef.current(`${CUSTOM_CHOICE_PREFIX}${newText}`);
+      else enqueue(newText);
+    }
+  }, [custom, enqueue]);
 
-  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } =
+  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds, maxSeconds: maxRecordingSeconds } =
     useWhisperMic(appendTranscript);
 
   const submit = useCallback(async (choice: string) => {
     const all = promptsRef.current;
     let label = "";
-    if (choice.startsWith("custom:")) {
-      label = choice.slice("custom:".length).trim();
+    if (choice.startsWith(CUSTOM_CHOICE_PREFIX)) {
+      label = choice.slice(CUSTOM_CHOICE_PREFIX.length).trim();
     } else {
       const slot = parseInt(choice);
       const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
@@ -193,20 +184,25 @@ function BeaconBody({
   }, []);
 
   const handleSendCustom = () => {
+    if (listening) {
+      pendingMicActionRef.current = "send";
+      toggleMic();
+      return;
+    }
     if (!custom.trim()) return;
-    submit(`custom:${custom.trim()}`);
+    submit(`${CUSTOM_CHOICE_PREFIX}${custom.trim()}`);
     setCustom("");
   };
 
   const handleEnqueue = () => {
+    if (listening) {
+      pendingMicActionRef.current = "queue";
+      toggleMic();
+      return;
+    }
     if (!custom.trim()) return;
     enqueue(custom.trim());
     setCustom("");
-  };
-
-  const confirmQueueEdit = (i: number) => {
-    edit(i, queueEditText);
-    setQueueEditingIndex(null);
   };
 
   const primaryPrompts = prompts.filter((p) => p.style === "primary");
@@ -223,67 +219,13 @@ function BeaconBody({
 
       {/* Queue */}
       {queue.length > 0 && (
-        <div className="rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 space-y-1">
-          <p className="ui-kicker mb-2">Up next · {queue.length}</p>
-          {queue.map((prompt, i) => (
-            <div key={i} className="flex items-start gap-1.5">
-              <span className={cn(
-                "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
-                i === 0 ? "text-accent-text" : "text-text-muted",
-              )}>
-                {i + 1}
-              </span>
-
-              {queueEditingIndex === i ? (
-                <textarea
-                  ref={queueEditRef}
-                  value={queueEditText}
-                  onChange={(e) => setQueueEditText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmQueueEdit(i); }
-                    if (e.key === "Escape") setQueueEditingIndex(null);
-                  }}
-                  onBlur={() => confirmQueueEdit(i)}
-                  rows={2}
-                  className="ui-input flex-1 resize-none text-sm"
-                  style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
-                />
-              ) : (
-                <button
-                  onClick={() => { remove(i); submit(`custom:${prompt}`); }}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    setQueueEditingIndex(i);
-                    setQueueEditText(prompt);
-                    setTimeout(() => queueEditRef.current?.focus(), 0);
-                  }}
-                  title="Click to send · Double-click to edit"
-                  className={cn(
-                    "flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary",
-                    i === 0 ? "text-text-primary" : "text-text-tertiary",
-                  )}
-                >
-                  {prompt}
-                </button>
-              )}
-
-              <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
-                <button onClick={() => reorder(i, i - 1)} disabled={i === 0}
-                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move up">
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <button onClick={() => reorder(i, i + 1)} disabled={i === queue.length - 1}
-                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move down">
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-                <button onClick={() => remove(i)}
-                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary" title="Remove">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <QueueList
+          queue={queue}
+          onSend={(i) => { remove(i); submit(`${CUSTOM_CHOICE_PREFIX}${queue[i]}`); }}
+          onRemove={remove}
+          onReorder={reorder}
+          onEdit={edit}
+        />
       )}
 
       {/* Primary action */}
@@ -351,16 +293,18 @@ function BeaconBody({
         </div>
       )}
 
-      {/* Status line */}
+      {/* Status line — shows exactly what the countdown will fire */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-text-tertiary">
           {custom.trim()
             ? "Enter to send · Alt+Enter to queue"
             : !autoContinueEnabled
             ? "Auto-continue paused"
-            : countdown > 0
-            ? `Cockpit continues in ${countdown}s · click to choose`
-            : "Continuing via Cockpit…"}
+            : countdown <= 0
+            ? "Continuing via Cockpit…"
+            : queue.length > 0
+            ? `→ "${queue[0].length > 40 ? queue[0].slice(0, 38) + "…" : queue[0]}" in ${countdown}s${queue.length > 1 ? ` · +${queue.length - 1} more` : ""}`
+            : `AI continues based on plan above in ${countdown}s`}
         </p>
         <button
           onClick={toggleAutoContinue}
@@ -373,108 +317,29 @@ function BeaconBody({
         </button>
       </div>
 
-      {/* Custom input — matches control panel PromptInput */}
-      <div className="space-y-1.5">
-        <div className="flex gap-2">
-          <div className="relative min-w-0 flex-1">
-            <textarea
-              ref={inputRef}
-              value={custom}
-              rows={1}
-              onChange={(e) => setCustom(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (e.altKey) handleEnqueue();
-                  else handleSendCustom();
-                }
-              }}
-              placeholder={
-                listening ? "Recording… click mic to stop"
-                : processing ? "Transcribing…"
-                : "Custom prompt…"
-              }
-              className={cn(
-                "ui-input w-full resize-none pr-10",
-                listening && "border-status-negative/40",
-                processing && "border-accent-primary/30",
-              )}
-              style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
-            />
-            <button
-              type="button"
-              onClick={toggleMic}
-              disabled={processing}
-              title={listening ? "Stop recording" : "Voice input (Whisper)"}
-              className={cn(
-                "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
-                listening
-                  ? "text-status-negative animate-pulse hover:bg-status-negative/10"
-                  : processing
-                  ? "text-text-muted opacity-50"
-                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
-              )}
-            >
-              {processing
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : listening
-                ? <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
-                : <Mic className="h-3.5 w-3.5" />}
-            </button>
-          </div>
-
-          <div className="flex shrink-0 gap-1.5">
-            <button
-              onClick={handleEnqueue}
-              disabled={!custom.trim()}
-              title="Add to queue (runs after current task) · Alt+Enter"
-              className="ui-icon-action min-h-11 rounded-xl border border-border-default px-3 disabled:opacity-40"
-            >
-              <ListPlus className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleSendCustom}
-              disabled={!custom.trim()}
-              className="ui-btn-lg inline-flex min-h-11 items-center justify-center py-3.5 sm:px-5 disabled:opacity-40"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+      {/* Custom input — shared PromptInput component, same as control panel */}
+      <PromptInput
+        custom={custom}
+        listening={listening}
+        processing={processing}
+        micError={micError}
+        sending={null}
+        placeholder="Custom prompt…"
+        showQueue
+        waveformBars={waveformBars}
+        recordingSeconds={recordingSeconds}
+        maxRecordingSeconds={maxRecordingSeconds}
+        textareaRef={inputRef}
+        onCustomChange={setCustom}
+        onSendCustom={handleSendCustom}
+        onEnqueue={handleEnqueue}
+        toggleMic={toggleMic}
+      />
+      {!listening && custom && (
+        <div className="flex justify-end px-0.5">
+          <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
         </div>
-
-        {/* Mic status row */}
-        {(micError || listening || processing) && (
-          <div className="flex items-center justify-between px-0.5">
-            <div className="flex items-center">
-              {micError && <p className="text-[11px] text-status-negative">{micError}</p>}
-              {listening && !micError && (() => {
-                const flat = recordingSeconds >= 2 && waveformBars.every((b) => b < 0.02);
-                const secs = recordingSeconds;
-                const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
-                return flat
-                  ? <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
-                  : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
-              })()}
-              {processing && !micError && (
-                <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>
-              )}
-            </div>
-            {listening && !micError && (
-              <div className="flex items-end gap-[2px]" style={{ height: 16 }}>
-                {waveformBars.map((h, i) => (
-                  <div key={i} className="rounded-full bg-status-negative"
-                    style={{ width: 2, height: Math.max(2, Math.round(h * 14)), transition: "height 75ms ease" }} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {!listening && custom && (
-          <div className="flex justify-end px-0.5">
-            <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Dismiss */}
       <button
@@ -547,7 +412,7 @@ export default function BeaconPage() {
             </p>
           </div>
           <button
-            onClick={() => window.open("http://localhost:3000/control", "_blank")}
+            onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle py-2.5 text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary"
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -569,7 +434,7 @@ export default function BeaconPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.open("http://localhost:3000/control", "_blank")}
+              onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
               title="Open Cockpit control panel"
               className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
             >

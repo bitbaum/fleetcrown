@@ -15,6 +15,7 @@ import {
 } from "./project-card-sections";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
+import { isAutoContinueEnabledSync } from "@/lib/control-storage";
 
 export function ProjectCard({
   project,
@@ -48,7 +49,8 @@ export function ProjectCard({
   // is actively typing in the same terminal. Setting persists across page loads.
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinueHook } = useAutoContinue(project.tab);
 
-  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue } = usePromptQueue(project.tab);
+  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue } = usePromptQueue(project.tab);
+  const [merging, setMerging] = useState(false);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -93,6 +95,18 @@ export function ProjectCard({
     }
   };
 
+  // Used by IntentButtonPanel after recording stops — custom state may be stale at that point
+  const sendText = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, text.trim());
+    } finally {
+      setSending(null);
+    }
+  }, [project.tab, onInject]);
+
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
     setSending(intent);
     setDismissed(true);
@@ -124,8 +138,13 @@ export function ProjectCard({
     }
   };
 
-  // When auto-continue countdown fires: drain the queue first, fall back to next_best
+  // When auto-continue countdown fires: drain the queue first, fall back to next_best.
+  // Re-read localStorage synchronously before injecting — cross-window storage events
+  // (from beacon popup Pause button) can arrive after the React countdown effect has
+  // already scheduled this call, so React state may not reflect the latest pause state.
   const handleAutoInject = useCallback(async () => {
+    if (!isAutoContinueEnabledSync(project.tab)) return;
+
     const queued = shiftQueue();
     if (queued) {
       setSending("custom");
@@ -140,6 +159,36 @@ export function ProjectCard({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shiftQueue, project.tab, onInject]);
+
+  // Send a specific queue item immediately (remove it + inject)
+  const handleSendFromQueue = useCallback(async (index: number) => {
+    const item = queue[index];
+    if (!item) return;
+    removeFromQueue(index);
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, item);
+    } finally {
+      setSending(null);
+    }
+  }, [queue, removeFromQueue, project.tab, onInject]);
+
+  // Merge all queue items into one coherent prompt via AI, then load into input
+  const handleMergeQueue = useCallback(async () => {
+    if (queue.length < 2) return;
+    setMerging(true);
+    try {
+      const res = await postJson("/api/control/merge-prompts", { prompts: queue });
+      const data = await res.json();
+      if (data.merged) {
+        clearQueue();
+        setCustom(data.merged);
+      }
+    } catch { /* ignore */ } finally {
+      setMerging(false);
+    }
+  }, [queue, clearQueue]);
 
   // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire
   const handleToggleAutoContinue = () => {
@@ -203,7 +252,8 @@ export function ProjectCard({
             prompts={prompts}
             autoContinueEnabled={autoContinueEnabled}
             paused={paused}
-            queueLength={queue.length}
+            nextQueueItem={queue[0]}
+            queueTotal={queue.length}
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={handleAutoInject}
@@ -218,13 +268,17 @@ export function ProjectCard({
             custom={custom}
             queue={queue}
             bannerActive={display.isClosed || display.isReady || display.isOrchestrationReady}
+            merging={merging}
             onToggleAutoContinue={handleToggleAutoContinue}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}
             onEnqueueCustom={enqueue}
+            onSendText={sendText}
+            onSendFromQueue={handleSendFromQueue}
             onRemoveFromQueue={removeFromQueue}
             onReorderInQueue={reorderInQueue}
             onEditInQueue={editInQueue}
+            onMergeQueue={handleMergeQueue}
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
           />

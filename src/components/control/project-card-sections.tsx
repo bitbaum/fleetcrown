@@ -5,7 +5,7 @@ import {
   GitBranch, Circle, Terminal, ExternalLink,
   Pause, Play, Eraser, Loader2, Send, Mic,
   SlidersHorizontal, ChevronsDown, ListPlus, X,
-  ChevronUp, ChevronDown,
+  GripVertical, Sparkles,
 } from "lucide-react";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import type { PromptMeta } from "@/lib/agent-config";
 import {
   SessionBadge, ClosedBanner, ClosingBanner, RunningBanner, ReadyBanner,
 } from "./project-card-helpers";
+import { splitSessionItems } from "@/lib/session-content";
 
 export function ProjectCardHeader({
   project,
@@ -145,10 +146,6 @@ export function ProjectCardHeader({
   );
 }
 
-function splitItems(text: string): string[] {
-  return text.split(/;\s+/).map((s) => s.trim()).filter(Boolean);
-}
-
 function BulletList({ items, icon, iconClass, textClass }: {
   items: string[];
   icon: string;
@@ -179,8 +176,8 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
 
-  const nextItems = session.next ? splitItems(session.next) : [];
-  const doneItems = session.done ? splitItems(session.done) : [];
+  const nextItems = session.next ? splitSessionItems(session.next) : [];
+  const doneItems = session.done ? splitSessionItems(session.done) : [];
   const needsExpand = nextItems.length > 1 || doneItems.length > 0;
 
   // Collapsed: one primary next item visible, "Show all" toggle if there's more
@@ -210,7 +207,7 @@ export function SessionSummary({
   return (
     <div className="ui-card-section space-y-5">
       <div className="flex items-center justify-between">
-        <span className="ui-kicker text-accent-text">Up next</span>
+        <span className="ui-kicker text-accent-text">Agent&apos;s plan</span>
         <button
           onClick={() => setExpanded(false)}
           className="text-sm text-text-muted transition-colors hover:text-text-secondary"
@@ -245,7 +242,8 @@ export function ProjectBanners({
   prompts,
   autoContinueEnabled,
   paused,
-  queueLength = 0,
+  nextQueueItem,
+  queueTotal = 0,
   onDismiss,
   onSend,
   onAutoInject,
@@ -263,7 +261,8 @@ export function ProjectBanners({
   prompts: PromptMeta[];
   autoContinueEnabled: boolean;
   paused: boolean;
-  queueLength?: number;
+  nextQueueItem?: string;
+  queueTotal?: number;
   onDismiss: () => void;
   onSend: (key: string) => void;
   onAutoInject?: () => void;
@@ -290,7 +289,8 @@ export function ProjectBanners({
           paused={paused}
           title="Agent finished"
           autoContinueEnabled={autoContinueEnabled}
-          queueLength={queueLength}
+          nextQueueItem={nextQueueItem}
+          queueTotal={queueTotal}
         />
       )}
       {isOrchReady && (
@@ -306,7 +306,8 @@ export function ProjectBanners({
           paused={paused}
           title="Task finished"
           autoContinueEnabled={autoContinueEnabled}
-          queueLength={queueLength}
+          nextQueueItem={nextQueueItem}
+          queueTotal={queueTotal}
         />
       )}
       {showRunning && currentPrompt && (
@@ -337,7 +338,8 @@ export function ProjectBanners({
   );
 }
 
-function PromptInput({
+// Exported so the beacon popup can import this instead of duplicating it.
+export function PromptInput({
   custom,
   listening,
   processing,
@@ -347,6 +349,8 @@ function PromptInput({
   showQueue,
   waveformBars,
   recordingSeconds,
+  maxRecordingSeconds,
+  textareaRef,
   onCustomChange,
   onCustomFocusChange,
   onSendCustom,
@@ -362,8 +366,10 @@ function PromptInput({
   showQueue?: boolean;
   waveformBars?: number[];
   recordingSeconds?: number;
+  maxRecordingSeconds?: number;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   onCustomChange: (v: string) => void;
-  onCustomFocusChange: (f: boolean) => void;
+  onCustomFocusChange?: (f: boolean) => void;
   onSendCustom: () => void;
   onEnqueue?: () => void;
   toggleMic: () => void;
@@ -373,19 +379,20 @@ function PromptInput({
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
           <textarea
+            ref={textareaRef}
             rows={1}
             value={custom}
             onChange={(e) => onCustomChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && custom.trim()) {
+              if (e.key === "Enter" && !e.shiftKey && (custom.trim() || listening)) {
                 e.preventDefault();
                 if (e.altKey && onEnqueue) onEnqueue();
                 else onSendCustom();
               }
             }}
-            onFocus={() => onCustomFocusChange(true)}
-            onBlur={() => onCustomFocusChange(false)}
-            placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : placeholder}
+            onFocus={() => onCustomFocusChange?.(true)}
+            onBlur={() => onCustomFocusChange?.(false)}
+            placeholder={listening ? "Recording… click ↗ to send" : processing ? "Transcribing…" : placeholder}
             className={cn(
               "ui-input w-full resize-none pr-10",
               listening && "border-status-negative/40",
@@ -418,8 +425,8 @@ function PromptInput({
           {showQueue && onEnqueue && (
             <button
               onClick={onEnqueue}
-              disabled={!custom.trim() || sending !== null}
-              title="Add to queue (runs after current task) · Alt+Enter"
+              disabled={(!custom.trim() && !listening) || sending !== null}
+              title={listening ? "Stop recording and add to queue" : "Add to queue · Alt+Enter"}
               className="ui-icon-action min-h-11 rounded-xl border border-border-default px-3 disabled:opacity-40"
             >
               <ListPlus className="h-4 w-4" />
@@ -427,7 +434,8 @@ function PromptInput({
           )}
           <button
             onClick={onSendCustom}
-            disabled={!custom.trim() || sending !== null}
+            disabled={(!custom.trim() && !listening) || sending !== null}
+            title={listening ? "Stop recording and send" : undefined}
             className="ui-btn-lg inline-flex min-h-11 items-center justify-center py-3.5 sm:px-5"
           >
             <Send className="h-4 w-4" />
@@ -442,7 +450,8 @@ function PromptInput({
             {listening && !micError && (() => {
               const flat = (recordingSeconds ?? 0) >= 2 && (waveformBars ?? []).every((b) => b < 0.02);
               const secs = recordingSeconds ?? 0;
-              const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+              const max = maxRecordingSeconds ?? 60;
+              const label = `${secs}s / ${max}s`;
               return flat
                 ? <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
                 : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
@@ -463,20 +472,28 @@ function PromptInput({
   );
 }
 
-function QueueList({
+export function QueueList({
   queue,
+  onSend,
   onRemove,
   onReorder,
   onEdit,
+  onMerge,
+  merging,
 }: {
   queue: string[];
+  onSend?: (i: number) => void;
   onRemove?: (i: number) => void;
   onReorder?: (from: number, to: number) => void;
   onEdit?: (i: number, text: string) => void;
+  onMerge?: () => void;
+  merging?: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
   const editRef = useRef<HTMLTextAreaElement>(null);
+  const dragIndex = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
 
   const startEdit = (i: number) => {
     setEditingIndex(i);
@@ -490,10 +507,47 @@ function QueueList({
   };
 
   return (
-    <div className="space-y-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5">
-      <p className="ui-kicker mb-2">Up next · {queue.length}</p>
+    <div className="space-y-0 border-t border-border-subtle">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 sm:px-5">
+        <p className="ui-kicker">Queue · {queue.length}</p>
+        {queue.length >= 2 && onMerge && (
+          <button
+            onClick={onMerge}
+            disabled={merging}
+            title="Merge all items into one coherent prompt with AI"
+            className="flex items-center gap-1 text-[10px] text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
+          >
+            {merging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {merging ? "Merging…" : "AI merge"}
+          </button>
+        )}
+      </div>
       {queue.map((item, i) => (
-        <div key={i} className="flex items-start gap-1.5">
+        <div
+          key={i}
+          draggable={onReorder ? true : undefined}
+          onDragStart={() => { dragIndex.current = i; }}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (dragIndex.current !== null && dragIndex.current !== i && onReorder) {
+              onReorder(dragIndex.current, i);
+            }
+            setDragOver(null);
+            dragIndex.current = null;
+          }}
+          onDragEnd={() => { setDragOver(null); dragIndex.current = null; }}
+          className={cn(
+            "flex items-start gap-2 px-4 py-2 sm:px-5",
+            dragOver === i && "bg-accent-primary/5",
+            "border-b border-border-subtle last:border-b-0",
+          )}
+        >
+          {onReorder && (
+            <div className="mt-[3px] shrink-0 cursor-grab text-text-muted hover:text-text-secondary active:cursor-grabbing">
+              <GripVertical className="h-3.5 w-3.5" />
+            </div>
+          )}
           <span className={cn(
             "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
             i === 0 ? "text-accent-text" : "text-text-muted",
@@ -518,48 +572,39 @@ function QueueList({
           ) : (
             <button
               onClick={() => onEdit && startEdit(i)}
-              title={onEdit ? "Click to edit" : undefined}
+              title="Click to edit · use → to send now"
               className={cn(
-                "flex-1 text-left text-sm leading-snug",
+                "flex-1 text-left text-sm leading-snug transition-colors",
                 i === 0 ? "text-text-primary" : "text-text-tertiary",
-                onEdit && "cursor-text hover:text-text-primary",
+                onEdit && "hover:text-text-primary",
               )}
             >
               {item}
             </button>
           )}
 
-          <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
-            {onReorder && (
-              <button
-                onClick={() => i > 0 && onReorder(i, i - 1)}
-                disabled={i === 0}
-                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0"
-                title="Move up"
-              >
-                <ChevronUp className="h-3 w-3" />
-              </button>
-            )}
-            {onReorder && (
-              <button
-                onClick={() => i < queue.length - 1 && onReorder(i, i + 1)}
-                disabled={i === queue.length - 1}
-                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0"
-                title="Move down"
-              >
-                <ChevronDown className="h-3 w-3" />
-              </button>
-            )}
-            {onRemove && (
-              <button
-                onClick={() => onRemove(i)}
-                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
-                title="Remove from queue"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
+          {editingIndex !== i && (
+            <div className="mt-0.5 flex shrink-0 gap-0.5">
+              {onSend && (
+                <button
+                  onClick={() => onSend(i)}
+                  className="rounded p-0.5 text-text-muted transition-colors hover:text-accent-text"
+                  title="Send now"
+                >
+                  <Send className="h-3 w-3" />
+                </button>
+              )}
+              {onRemove && (
+                <button
+                  onClick={() => onRemove(i)}
+                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                  title="Remove from queue"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -574,13 +619,17 @@ export function IntentButtonPanel({
   custom,
   queue = [],
   bannerActive,
+  merging,
   onToggleAutoContinue,
   onSendIntent,
   onSendCustom,
   onEnqueueCustom,
+  onSendFromQueue,
   onRemoveFromQueue,
   onReorderInQueue,
   onEditInQueue,
+  onMergeQueue,
+  onSendText,
   onCustomChange,
   onCustomFocusChange,
 }: {
@@ -591,35 +640,70 @@ export function IntentButtonPanel({
   custom: string;
   queue?: string[];
   bannerActive?: boolean;
+  merging?: boolean;
   onToggleAutoContinue: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
   onSendCustom: () => void;
   onEnqueueCustom?: (prompt: string) => void;
+  onSendFromQueue?: (index: number) => void;
   onRemoveFromQueue?: (index: number) => void;
   onReorderInQueue?: (from: number, to: number) => void;
   onEditInQueue?: (index: number, text: string) => void;
+  onMergeQueue?: () => void;
+  // Direct-text send used when recording stops: bypasses stale `custom` state
+  onSendText?: (text: string) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
+  const pendingMicActionRef = useRef<"send" | "queue" | null>(null);
 
   const appendTranscript = useCallback((text: string) => {
-    onCustomChange((custom ? custom + " " : "") + text);
-  }, [custom, onCustomChange]);
-  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } = useWhisperMic(appendTranscript);
+    const newText = (custom ? `${custom} ${text}` : text).trim();
+    onCustomChange(newText);
+    const pending = pendingMicActionRef.current;
+    if (pending) {
+      pendingMicActionRef.current = null;
+      if (pending === "send" && onSendText && newText) {
+        onSendText(newText);
+        onCustomChange("");
+      } else if (pending === "queue" && onEnqueueCustom && newText) {
+        onEnqueueCustom(newText);
+        onCustomChange("");
+      }
+    }
+  }, [custom, onCustomChange, onSendText, onEnqueueCustom]);
 
-  const handleEnqueue = () => {
+  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds, maxSeconds: maxRecordingSeconds } = useWhisperMic(appendTranscript);
+
+  // When recording is active, Send/Queue stop the mic and queue the action for post-transcription.
+  const handleSendCustom = useCallback(() => {
+    if (listening) {
+      pendingMicActionRef.current = "send";
+      toggleMic();
+      return;
+    }
+    onSendCustom();
+  }, [listening, toggleMic, onSendCustom]);
+
+  const handleEnqueue = useCallback(() => {
+    if (listening) {
+      pendingMicActionRef.current = "queue";
+      toggleMic();
+      return;
+    }
     if (custom.trim() && onEnqueueCustom) {
       onEnqueueCustom(custom.trim());
       onCustomChange("");
     }
-  };
+  }, [listening, toggleMic, custom, onEnqueueCustom, onCustomChange]);
 
   const inputProps = {
-    custom, listening, processing, micError, sending, waveformBars, recordingSeconds,
-    onCustomChange, onCustomFocusChange, onSendCustom, toggleMic,
+    custom, listening, processing, micError, sending, waveformBars, recordingSeconds, maxRecordingSeconds,
+    onCustomChange, onCustomFocusChange, toggleMic,
     showQueue: !!onEnqueueCustom,
+    onSendCustom: handleSendCustom,
     onEnqueue: handleEnqueue,
   };
 
@@ -642,7 +726,7 @@ export function IntentButtonPanel({
           </button>
         </div>
         {queue.length > 0 && (
-          <QueueList queue={queue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} />
+          <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
         )}
         {recentPrompts.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
@@ -669,7 +753,7 @@ export function IntentButtonPanel({
     <div className="space-y-2.5 ui-card-section">
       <PromptInput {...inputProps} placeholder="Custom prompt…" />
       {queue.length > 0 && (
-        <QueueList queue={queue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} />
+        <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
       )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
