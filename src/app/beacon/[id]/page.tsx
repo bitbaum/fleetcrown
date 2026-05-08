@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, Pause, Play, Mic, MicOff } from "lucide-react";
+import { Loader2, Check, ArrowRight, Pause, Play, Mic, MicOff, ExternalLink } from "lucide-react";
 
 type BeaconSession = {
   id: string;
@@ -105,6 +105,18 @@ function SessionSummary({ content }: { content: string }) {
   );
 }
 
+// Pulsing ring shown when mic is active
+function MicPulse() {
+  return (
+    <span className="relative flex h-4 w-4">
+      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-negative opacity-50" />
+      <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full">
+        <MicOff className="h-4 w-4 text-status-negative" />
+      </span>
+    </span>
+  );
+}
+
 export default function BeaconPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<BeaconSession | null>(null);
@@ -117,10 +129,11 @@ export default function BeaconPage() {
   const [listening, setListening] = useState(false);
   const [micUnavailable, setMicUnavailable] = useState(false);
   const [micError, setMicError] = useState("");
+  const [interimText, setInterimText] = useState(""); // live interim transcript
   const inputRef = useRef<HTMLInputElement>(null);
   const pausedRef = useRef(false);
-  const cancelledRef = useRef(false);     // once true, auto-submit is permanently off
-  const recRef = useRef<{ abort: () => void } | null>(null);
+  const cancelledRef = useRef(false);
+  const recRef = useRef<{ abort(): void; stop(): void } | null>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
 
@@ -138,7 +151,6 @@ export default function BeaconPage() {
       const h = Math.min(document.documentElement.scrollHeight + 2, 900);
       const w = 520;
       try {
-        // Read position before resize (resizeTo anchors top-left, so reposition after)
         const right  = window.screenLeft + window.outerWidth;
         const bottom = window.screenTop  + window.outerHeight;
         window.resizeTo(w, h);
@@ -168,8 +180,6 @@ export default function BeaconPage() {
     setPaused((p) => !p);
   }, []);
 
-  // Permanently halt auto-submit. pausedRef stays true so the interval never
-  // fires again; cancelledRef is a second guard inside the setCountdown callback.
   const cancelCountdown = useCallback(() => {
     pausedRef.current = true;
     cancelledRef.current = true;
@@ -177,49 +187,86 @@ export default function BeaconPage() {
     setPaused(false);
   }, []);
 
-  // Mic via Web Speech API (Chrome-native, no deps)
+  // Mic via Web Speech API — interimResults for live preview
   const toggleMic = useCallback(() => {
     if (listening) {
-      recRef.current?.abort();
+      recRef.current?.stop();
       setListening(false);
+      setInterimText("");
       return;
     }
+
+    type SRResult = { transcript: string; isFinal: boolean };
+    type SRResultList = ArrayLike<ArrayLike<SRResult>> & { isFinal: boolean; resultIndex?: number };
+    type SREvent = { results: SRResultList; resultIndex: number };
     type SRError = { error: string };
     type SRCtor = new () => {
-      start(): void; abort(): void;
-      lang: string; interimResults: boolean; continuous: boolean;
-      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+      start(): void; abort(): void; stop(): void;
+      lang: string; interimResults: boolean; continuous: boolean; maxAlternatives: number;
+      onresult: ((e: SREvent) => void) | null;
       onerror: ((e: SRError) => void) | null;
       onend: (() => void) | null;
     };
+
     const w = window as unknown as Record<string, unknown>;
     const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SRCtor | undefined;
-    if (!SR) { setMicUnavailable(true); return; }
+    if (!SR) {
+      setMicUnavailable(true);
+      setMicError("Speech recognition not available in this browser");
+      return;
+    }
+
     const rec = new SR();
     rec.lang = "en-US";
-    rec.interimResults = false;
-    rec.continuous = false;
+    rec.interimResults = true;   // show live text as you speak
+    rec.continuous = false;       // stop after natural pause
+    rec.maxAlternatives = 1;
+
     rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setCustom((prev) => (prev ? `${prev} ${transcript}` : transcript).trim());
-      setListening(false);
-      cancelCountdown();
-      inputRef.current?.focus();
+      let interim = "";
+      let finalText = "";
+      for (let i = e.resultIndex; i < (e.results as unknown as SRResult[][]).length; i++) {
+        const res = (e.results as unknown as SRResultList)[i];
+        const transcript = (res[0] as SRResult).transcript;
+        if ((res as unknown as { isFinal: boolean }).isFinal) {
+          finalText += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      if (finalText) {
+        setCustom((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
+        setInterimText("");
+        cancelCountdown();
+        inputRef.current?.focus();
+      } else {
+        setInterimText(interim);
+      }
     };
+
     rec.onerror = (e) => {
       setListening(false);
+      setInterimText("");
       if (e.error === "not-allowed" || e.error === "service-not-allowed") {
         setMicUnavailable(true);
         setMicError("Mic permission denied — allow in browser settings");
       } else if (e.error === "network") {
-        setMicError("Network error — Chrome speech needs internet");
+        setMicError("Network error — speech API needs internet access");
       } else if (e.error === "no-speech") {
-        setMicError("No speech detected");
+        setMicError("No speech detected — try again");
+      } else if (e.error === "aborted") {
+        // user stopped, not an error
+        setMicError("");
       } else {
         setMicError(`Mic error: ${e.error}`);
       }
     };
-    rec.onend = () => setListening(false);
+
+    rec.onend = () => {
+      setListening(false);
+      setInterimText("");
+    };
+
     recRef.current = rec;
     try {
       rec.start();
@@ -227,14 +274,13 @@ export default function BeaconPage() {
       setMicError("");
       pausedRef.current = true;
       setPaused(true);
-    } catch {
+    } catch (err) {
       setListening(false);
-      setMicUnavailable(true);
-      setMicError("Speech recognition not available");
+      setMicError(`Could not start mic: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [listening, cancelCountdown]);
 
-  // Countdown — skips ticks when paused; double-guards against submit if cancelled
+  // Countdown
   useEffect(() => {
     if (!session || submitted) return;
     const primary = promptsRef.current.find((p) => p.style === "primary" && p.slot === 1);
@@ -242,8 +288,8 @@ export default function BeaconPage() {
     const t = setInterval(() => {
       if (pausedRef.current || cancelledRef.current) return;
       setCountdown((c) => {
-        if (cancelledRef.current) return 0;          // second guard — race-safe
-        if (inputRef.current?.value.trim()) {        // mirrors PyQt _tick safety check
+        if (cancelledRef.current) return 0;
+        if (inputRef.current?.value.trim()) {
           cancelledRef.current = true;
           pausedRef.current = true;
           return 0;
@@ -281,8 +327,11 @@ export default function BeaconPage() {
 
   const handleCustomChange = (v: string) => {
     setCustom(v);
-    cancelCountdown();          // cancel on any input activity, not just non-empty
+    cancelCountdown();
   };
+
+  const wordCount = custom.trim() ? custom.trim().split(/\s+/).length : 0;
+  const charCount = custom.length;
 
   if (!session) {
     return (
@@ -315,7 +364,17 @@ export default function BeaconPage() {
             <p className="ui-kicker text-[10px] tracking-widest">Session complete</p>
             <h1 className="mt-1 text-xl font-bold text-text-primary">{session.project}</h1>
           </div>
-          <span className="ui-tag ui-tag-positive">● done</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.open("http://localhost:3000/control", "_blank")}
+              title="Open Cockpit control panel"
+              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Cockpit
+            </button>
+            <span className="ui-tag ui-tag-positive">● done</span>
+          </div>
         </div>
 
         {/* Session summary */}
@@ -384,7 +443,7 @@ export default function BeaconPage() {
           </div>
         )}
 
-        {/* Controls row: countdown hint + pause */}
+        {/* Controls row */}
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-text-muted">
             {countdown > 0
@@ -404,41 +463,67 @@ export default function BeaconPage() {
         </div>
 
         {/* Custom input + mic */}
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            value={custom}
-            onChange={(e) => handleCustomChange(e.target.value)}
-            onFocus={cancelCountdown}
-            onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
-            placeholder={listening ? "Listening…" : "Custom prompt…"}
-            className="ui-input flex-1"
-          />
-          {!micUnavailable && (
-            <button
-              onClick={toggleMic}
-              title={listening ? "Stop recording" : "Speak a prompt (browser mic)"}
-              className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
-                listening
-                  ? "border-status-negative/40 bg-status-negative-subtle text-status-negative"
-                  : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
-              }`}
-            >
-              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-            </button>
-          )}
-          <button
-            onClick={() => custom.trim() && submit(`custom:${custom.trim()}`)}
-            disabled={!custom.trim()}
-            className="ui-btn-primary px-4 disabled:opacity-40"
-          >
-            <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        <div className="space-y-1.5">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                value={custom}
+                onChange={(e) => handleCustomChange(e.target.value)}
+                onFocus={cancelCountdown}
+                onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
+                placeholder={listening ? (interimText || "Listening…") : "Custom prompt…"}
+                className={`ui-input w-full ${listening && !custom ? "placeholder:text-status-negative/60 placeholder:italic" : ""}`}
+              />
+              {/* Live interim transcript overlay */}
+              {listening && interimText && (
+                <div className="pointer-events-none absolute inset-0 flex items-center px-3">
+                  <span className="truncate text-sm italic text-text-tertiary">{interimText}</span>
+                </div>
+              )}
+            </div>
 
-        {micError && (
-          <p className="text-[11px] text-status-negative">{micError}</p>
-        )}
+            {/* Mic button */}
+            {!micUnavailable && (
+              <button
+                onClick={toggleMic}
+                title={listening ? "Stop recording" : "Speak a prompt"}
+                className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
+                  listening
+                    ? "border-status-negative/40 bg-status-negative/10 text-status-negative"
+                    : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
+                }`}
+              >
+                {listening ? <MicPulse /> : <Mic className="h-4 w-4" />}
+              </button>
+            )}
+
+            <button
+              onClick={() => custom.trim() && submit(`custom:${custom.trim()}`)}
+              disabled={!custom.trim()}
+              className="ui-btn-primary px-4 disabled:opacity-40"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Status row below input */}
+          <div className="flex items-center justify-between px-0.5">
+            <div className="min-h-[16px]">
+              {micError && (
+                <p className="text-[11px] text-status-negative">{micError}</p>
+              )}
+              {listening && !micError && (
+                <p className="text-[11px] text-status-negative animate-pulse">Recording…</p>
+              )}
+            </div>
+            {custom && (
+              <p className="text-[11px] tabular-nums text-text-muted">
+                {wordCount}w · {charCount}c
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Dismiss */}
         <button
