@@ -119,6 +119,8 @@ export default function BeaconPage() {
   const [submittedLabel, setSubmittedLabel] = useState("");
   const [countdown, setCountdown] = useState(readCountdownParam);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
+  const [queuedPrompts, setQueuedPrompts] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
@@ -129,6 +131,23 @@ export default function BeaconPage() {
     fetch(`/api/beacon/${id}`).then((r) => r.json()).then(setSession).catch(() => {});
     fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
   }, [id]);
+
+  // Sync paused state and queue from localStorage (same origin as control panel).
+  useEffect(() => {
+    if (!session) return;
+    const tab = session.project.toLowerCase();
+    const sync = () => {
+      try {
+        setAutoContinueEnabled(localStorage.getItem(`control:auto-continue:${tab}`) !== "off");
+        const raw = localStorage.getItem(`control:queue:${tab}`);
+        setQueuedPrompts(raw ? (JSON.parse(raw) as string[]) : []);
+      } catch { /* ignore */ }
+    };
+    sync();
+    const interval = setInterval(sync, 2000);
+    window.addEventListener("storage", sync);
+    return () => { clearInterval(interval); window.removeEventListener("storage", sync); };
+  }, [session?.project]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
   useEffect(() => {
@@ -294,6 +313,23 @@ export default function BeaconPage() {
         {/* Session summary */}
         {session.sessionContent && <SessionSummary content={session.sessionContent} />}
 
+        {/* Queue — items that will fire before auto-continue */}
+        {queuedPrompts.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="ui-kicker text-[10px] tracking-widest">Queued · {queuedPrompts.length}</p>
+            {queuedPrompts.map((prompt, i) => (
+              <button
+                key={i}
+                onClick={() => submit(`custom:${prompt}`)}
+                className="w-full rounded-xl border border-border-subtle px-4 py-2.5 text-left text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary"
+              >
+                <span className="mr-2 text-text-muted tabular-nums">{i + 1}.</span>
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Primary actions */}
         {primaryPrompts.length > 0 && (
           <div className="space-y-2">
@@ -305,10 +341,12 @@ export default function BeaconPage() {
               >
                 <span className="text-base leading-none">{p.icon}</span>
                 <span className="flex-1">{p.label}</span>
-                {countdown > 0 && p.slot === 1 && (
-                  <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">
-                    ⚡ {countdown}s
-                  </span>
+                {p.slot === 1 && (
+                  !autoContinueEnabled
+                    ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 text-xs">⏸ Paused</span>
+                    : countdown > 0
+                    ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">⚡ {countdown}s</span>
+                    : null
                 )}
               </button>
             ))}
@@ -362,6 +400,8 @@ export default function BeaconPage() {
           <p className="text-[11px] text-text-tertiary">
             {custom.trim()
               ? "Enter to send · overrides auto-continue"
+              : !autoContinueEnabled
+              ? "Auto-continue is paused · enable in Cockpit to resume"
               : countdown > 0
               ? `Cockpit continues in ${countdown}s · click to choose`
               : "Continuing via Cockpit…"}
