@@ -15,8 +15,8 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Public pages and invite registration — always accessible
-  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/invite/")) {
+  // Public pages, invite registration, and beacon popup — always accessible
+  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/invite/") || pathname.startsWith("/beacon/")) {
     return NextResponse.next();
   }
 
