@@ -6,7 +6,7 @@ import {
   Pause, Play, Eraser, Loader2, Send, Mic, MicOff,
   SlidersHorizontal, ChevronsDown,
 } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
@@ -331,7 +331,8 @@ export function ProjectBanners({
 function PromptInput({
   custom,
   listening,
-  supported,
+  processing,
+  micError,
   sending,
   placeholder,
   onCustomChange,
@@ -341,7 +342,8 @@ function PromptInput({
 }: {
   custom: string;
   listening: boolean;
-  supported: boolean;
+  processing: boolean;
+  micError: string;
   sending: string | null;
   placeholder: string;
   onCustomChange: (v: string) => void;
@@ -350,41 +352,55 @@ function PromptInput({
   toggleMic: () => void;
 }) {
   return (
+    <div className="flex flex-col gap-1.5">
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-        <input
-          type="text"
-          value={custom}
-          onChange={(e) => onCustomChange(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
-          onFocus={() => onCustomFocusChange(true)}
-          onBlur={() => onCustomFocusChange(false)}
-          placeholder={listening ? "Listening…" : placeholder}
-          className={cn("ui-input w-full", supported && "pr-10", listening && "border-status-negative/40")}
-        />
-        {supported && (
+          <input
+            type="text"
+            value={custom}
+            onChange={(e) => onCustomChange(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
+            onFocus={() => onCustomFocusChange(true)}
+            onBlur={() => onCustomFocusChange(false)}
+            placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : placeholder}
+            className={cn(
+              "ui-input w-full pr-10",
+              listening && "border-status-negative/40",
+              processing && "border-accent-primary/30",
+            )}
+          />
           <button
             type="button"
             onClick={toggleMic}
-            title={listening ? "Stop recording" : "Voice input"}
+            disabled={processing}
+            title={listening ? "Stop recording" : "Voice input (Whisper)"}
             className={cn(
               "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
               listening
                 ? "text-status-negative animate-pulse hover:bg-status-negative/10"
+                : processing
+                ? "text-text-muted opacity-50"
                 : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
             )}
           >
-            {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+            {processing
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : listening
+              ? <MicOff className="h-3.5 w-3.5" />
+              : <Mic className="h-3.5 w-3.5" />}
           </button>
-        )}
+        </div>
+        <button
+          onClick={onSendCustom}
+          disabled={!custom.trim() || sending !== null}
+          className="ui-btn-lg inline-flex min-h-11 shrink-0 items-center justify-center py-3.5 sm:px-5"
+        >
+          <Send className="h-4 w-4" />
+        </button>
       </div>
-      <button
-        onClick={onSendCustom}
-        disabled={!custom.trim() || sending !== null}
-        className="ui-btn-lg inline-flex min-h-11 shrink-0 items-center justify-center py-3.5 sm:px-5"
-      >
-        <Send className="h-4 w-4" />
-      </button>
+      {micError && (
+        <p className="px-0.5 text-[11px] text-status-negative">{micError}</p>
+      )}
     </div>
   );
 }
@@ -420,9 +436,9 @@ export function IntentButtonPanel({
   const appendTranscript = useCallback((text: string) => {
     onCustomChange((custom ? custom + " " : "") + text);
   }, [custom, onCustomChange]);
-  const { listening, supported, toggle: toggleMic } = useSpeechRecognition(appendTranscript);
+  const { listening, processing, error: micError, toggle: toggleMic } = useWhisperMic(appendTranscript);
 
-  const inputProps = { custom, listening, supported, sending, onCustomChange, onCustomFocusChange, onSendCustom, toggleMic };
+  const inputProps = { custom, listening, processing, micError, sending, onCustomChange, onCustomFocusChange, onSendCustom, toggleMic };
 
   const recentPrompts = project.recentCustomPrompts.slice(0, project.agentRunning ? 3 : undefined);
 

@@ -34,6 +34,8 @@ from PyQt6.QtGui import QColor, QCursor, QFont, QPalette
 class WhisperThread(QThread):
     transcribed = pyqtSignal(str)
     failed      = pyqtSignal(str)
+    # Emitted while recording is still active — carries peak amplitude 0.0–1.0
+    level       = pyqtSignal(float)
     RATE = 16_000
 
     def __init__(self, model: str = "base"):
@@ -51,17 +53,26 @@ class WhisperThread(QThread):
             def cb(indata, *_):
                 if self._recording:
                     frames.append(indata.copy())
+                    peak = float(np.abs(indata).max())
+                    self.level.emit(peak)
             with sd.InputStream(samplerate=self.RATE, channels=1,
                                 dtype="float32", callback=cb):
                 while self._recording:
                     self.msleep(80)
             if not frames:
+                self.failed.emit("No audio captured — check your microphone")
                 return
             audio = np.concatenate(frames).flatten()
-            out   = whisper.load_model(self._model_name).transcribe(audio, fp16=False)
-            text  = out.get("text", "").strip()
+            peak  = float(np.abs(audio).max())
+            if peak < 0.003:
+                self.failed.emit("Microphone too quiet — speak closer or raise input volume")
+                return
+            out  = whisper.load_model(self._model_name).transcribe(audio, fp16=False)
+            text = out.get("text", "").strip()
             if text:
                 self.transcribed.emit(text)
+            else:
+                self.failed.emit("No speech detected — try speaking more clearly")
         except Exception as exc:
             self.failed.emit(str(exc))
 
@@ -862,19 +873,33 @@ class ContinuePopup(BasePopup):
         self._mic_state = "recording"
         self._rec_secs  = 0
         self._apply_mic("recording", "● 0s")
-        self._set_mic_status(f"Recording  ·  click 🎤 again to stop", C['red'])
+        self._set_mic_status("Recording  ·  speak now  ·  click 🎤 to stop", C['amber'])
         self._rec_timer = QTimer(interval=1000)
         self._rec_timer.timeout.connect(self._rec_tick)
         self._rec_timer.start()
+        self._rec_peak  = 0.0
         self._whisper = WhisperThread(model=self._whisper_model)
         self._whisper.transcribed.connect(self._on_transcribed)
         self._whisper.failed.connect(self._on_transcribe_error)
         self._whisper.finished.connect(self._on_thread_finished)
+        self._whisper.level.connect(self._on_mic_level)
         self._whisper.start()
+
+    def _on_mic_level(self, peak: float):
+        self._rec_peak = max(self._rec_peak, peak)
 
     def _rec_tick(self):
         self._rec_secs += 1
+        # Show a simple level bar so the user knows the mic is picking up audio
+        bars = min(8, int(self._rec_peak * 40))
+        level_str = "▮" * bars + "▯" * (8 - bars)
         self._apply_mic("recording", f"● {self._rec_secs}s")
+        if self._mic_status:
+            self._set_mic_status(
+                f"Recording  ·  {level_str}  ·  click 🎤 to stop",
+                C['red'] if self._rec_peak > 0.003 else C['amber'],
+            )
+        self._rec_peak = 0.0  # reset for next tick window
 
     def _stop_recording(self):
         if hasattr(self, "_rec_timer"):

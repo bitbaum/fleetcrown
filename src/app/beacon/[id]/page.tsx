@@ -162,6 +162,7 @@ export default function BeaconPage() {
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const peakRef = useRef<number>(0);
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
@@ -264,6 +265,7 @@ export default function BeaconPage() {
   const startWaveformAnimation = useCallback(() => {
     const analyser = analyserRef.current;
     if (!analyser) return;
+    peakRef.current = 0;
     const dataArray = new Uint8Array(analyser.frequencyBinCount);
     const tick = () => {
       analyser.getByteFrequencyData(dataArray);
@@ -274,6 +276,8 @@ export default function BeaconPage() {
         const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
         return avg / 255;
       });
+      const framePeak = Math.max(...bars);
+      if (framePeak > peakRef.current) peakRef.current = framePeak;
       setWaveformBars(bars);
       animFrameRef.current = requestAnimationFrame(tick);
     };
@@ -297,8 +301,14 @@ export default function BeaconPage() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setMicError(`Mic access denied: ${msg}`);
+      const name = err instanceof Error ? (err as DOMException).name : "";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setMicError("Mic blocked — open chrome://settings/content/microphone and allow localhost");
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setMicError("No microphone found — check your audio input device");
+      } else {
+        setMicError(`Mic unavailable: ${err instanceof Error ? err.message : String(err)}`);
+      }
       return;
     }
 
@@ -332,7 +342,13 @@ export default function BeaconPage() {
 
       if (blob.size < 100) {
         setMicState("idle");
-        setMicError("Recording too short — hold mic button while speaking");
+        setMicError("Recording too short — hold the mic button while speaking");
+        return;
+      }
+
+      if (peakRef.current < 0.01) {
+        setMicState("idle");
+        setMicError("Microphone too quiet — speak closer or raise your input volume");
         return;
       }
 
@@ -630,11 +646,16 @@ export default function BeaconPage() {
               {micError && (
                 <p className="text-[11px] text-status-negative">{micError}</p>
               )}
-              {micState === "recording" && !micError && (
-                <p className="text-[11px] text-status-negative">
-                  Recording · {formatRecordingTime(recordingSeconds)}
-                </p>
-              )}
+              {micState === "recording" && !micError && (() => {
+                const flat = recordingSeconds >= 2 && waveformBars.every((b) => b < 0.02);
+                return flat ? (
+                  <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
+                ) : (
+                  <p className="text-[11px] text-status-negative">
+                    Recording · {formatRecordingTime(recordingSeconds)}
+                  </p>
+                );
+              })()}
               {micState === "processing" && !micError && (
                 <p className="text-[11px] text-text-tertiary animate-pulse">Processing…</p>
               )}
