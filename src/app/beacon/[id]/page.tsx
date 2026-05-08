@@ -2,9 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, ExternalLink, X, ChevronUp, ChevronDown } from "lucide-react";
+import {
+  Loader2, Check, ArrowRight, ExternalLink,
+  X, ChevronUp, ChevronDown, Send, ListPlus, Mic,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
+import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { parseSessionText } from "@/lib/session-content";
 
 type BeaconSession = {
@@ -25,7 +30,6 @@ type AgentPrompt = {
   dimensionId: string | null;
   prompt: string;
 };
-
 
 function SessionSummary({ content }: { content: string }) {
   const s = parseSessionText(content);
@@ -83,26 +87,6 @@ function SessionSummary({ content }: { content: string }) {
   );
 }
 
-function Waveform({ bars }: { bars: number[] }) {
-  return (
-    <div className="flex items-end gap-[2px]" style={{ height: 20 }}>
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          className="rounded-full bg-status-negative"
-          style={{ width: 3, height: Math.max(2, Math.round(h * 18)), transition: "height 75ms ease" }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function formatRecordingTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
 function readCountdownParam(): number {
   if (typeof window === "undefined") return 12;
   const raw = new URLSearchParams(window.location.search).get("countdown");
@@ -110,72 +94,402 @@ function readCountdownParam(): number {
   return Number.isFinite(n) && n > 0 && n <= 300 ? n : 12;
 }
 
-export default function BeaconPage() {
-  const { id } = useParams<{ id: string }>();
-  const [session, setSession] = useState<BeaconSession | null>(null);
-  const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
+// ─── BeaconBody ─────────────────────────────────────────────────────────────
+// Owns all interactive state for a loaded session. Keeping it separate ensures
+// usePromptQueue is called exactly once per project key in this window.
+
+function BeaconBody({
+  session,
+  prompts,
+  onSubmitted,
+}: {
+  session: BeaconSession;
+  prompts: AgentPrompt[];
+  onSubmitted: (label: string) => void;
+}) {
+  const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project.toLowerCase());
   const [custom, setCustom] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedLabel, setSubmittedLabel] = useState("");
-  const [countdown, setCountdown] = useState(readCountdownParam);
   const [moreOpen, setMoreOpen] = useState(false);
   const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
-  const [queuedPrompts, setQueuedPrompts] = useState<string[]>([]);
+  const [countdown, setCountdown] = useState(readCountdownParam);
   const [queueEditingIndex, setQueueEditingIndex] = useState<number | null>(null);
   const [queueEditText, setQueueEditText] = useState("");
   const queueEditRef = useRef<HTMLTextAreaElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
+  // Sync paused state from localStorage — queue is owned by usePromptQueue above.
   useEffect(() => {
-    fetch(`/api/beacon/${id}`).then((r) => r.json()).then(setSession).catch(() => {});
-    fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
-  }, [id]);
-
-  // Sync paused state and queue from localStorage (same origin as control panel).
-  useEffect(() => {
-    if (!session) return;
     const tab = session.project.toLowerCase();
     const sync = () => {
       try {
         setAutoContinueEnabled(localStorage.getItem(`control:auto-continue:${tab}`) !== "off");
-        const raw = localStorage.getItem(`control:queue:${tab}`);
-        setQueuedPrompts(raw ? (JSON.parse(raw) as string[]) : []);
       } catch { /* ignore */ }
     };
     sync();
     const interval = setInterval(sync, 2000);
     window.addEventListener("storage", sync);
     return () => { clearInterval(interval); window.removeEventListener("storage", sync); };
-  }, [session?.project]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session.project]);
 
-  const queueKey = session ? `control:queue:${session.project.toLowerCase()}` : null;
+  // Display-only countdown — Cockpit's control panel is the actual inject authority.
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const writeQueue = useCallback((next: string[]) => {
-    if (!queueKey) return;
-    try { localStorage.setItem(queueKey, JSON.stringify(next)); } catch { /* ignore */ }
-    setQueuedPrompts(next);
-  }, [queueKey]);
+  const appendTranscript = useCallback((text: string) => {
+    setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
+    inputRef.current?.focus();
+  }, []);
 
-  const removeFromQueue = useCallback((index: number) => {
-    writeQueue(queuedPrompts.filter((_, i) => i !== index));
-  }, [queuedPrompts, writeQueue]);
+  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } =
+    useWhisperMic(appendTranscript);
 
-  const reorderInQueue = useCallback((from: number, to: number) => {
-    const next = [...queuedPrompts];
-    const [item] = next.splice(from, 1);
-    next.splice(to, 0, item);
-    writeQueue(next);
-  }, [queuedPrompts, writeQueue]);
+  const submit = useCallback(async (choice: string) => {
+    const all = promptsRef.current;
+    let label = "";
+    if (choice.startsWith("custom:")) {
+      label = choice.slice("custom:".length).trim();
+    } else {
+      const slot = parseInt(choice);
+      const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
+      label = matched ? `${matched.icon} ${matched.label}` : choice;
+    }
+    onSubmitted(label);
+    await fetch(`/api/beacon/${session.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ choice }),
+    }).catch(() => {});
+    setTimeout(() => window.close(), 400);
+  }, [session.id, onSubmitted]);
 
-  const editInQueue = useCallback((index: number, text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    writeQueue(queuedPrompts.map((item, i) => (i === index ? trimmed : item)));
-  }, [queuedPrompts, writeQueue]);
+  useEffect(() => { submitRef.current = submit; }, [submit]);
+
+  // Keyboard: Esc close · 1–9 direct slot pick
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (document.activeElement === inputRef.current) return;
+      if (e.key === "Escape") { window.close(); return; }
+      const n = parseInt(e.key);
+      if (!isNaN(n) && n >= 1 && n <= 9) {
+        const all = [
+          ...promptsRef.current.filter((p) => p.style === "primary"),
+          ...promptsRef.current.filter((p) => p.style === "action"),
+        ];
+        const target = all.find((p) => p.slot === n) ?? all[n - 1];
+        if (target) submitRef.current(String(target.slot ?? target.key));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  const handleSendCustom = () => {
+    if (!custom.trim()) return;
+    submit(`custom:${custom.trim()}`);
+    setCustom("");
+  };
+
+  const handleEnqueue = () => {
+    if (!custom.trim()) return;
+    enqueue(custom.trim());
+    setCustom("");
+  };
+
+  const confirmQueueEdit = (i: number) => {
+    edit(i, queueEditText);
+    setQueueEditingIndex(null);
+  };
+
+  const primaryPrompts = prompts.filter((p) => p.style === "primary");
+  const actionPrompts = prompts.filter((p) => p.style === "action");
+  const morePrompts = prompts.filter((p) => p.style === "more");
+
+  const wordCount = custom.trim() ? custom.trim().split(/\s+/).length : 0;
+  const charCount = custom.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Session summary */}
+      {session.sessionContent && <SessionSummary content={session.sessionContent} />}
+
+      {/* Queue */}
+      {queue.length > 0 && (
+        <div className="rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 space-y-1">
+          <p className="ui-kicker mb-2">Up next · {queue.length}</p>
+          {queue.map((prompt, i) => (
+            <div key={i} className="flex items-start gap-1.5">
+              <span className={cn(
+                "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
+                i === 0 ? "text-accent-text" : "text-text-muted",
+              )}>
+                {i + 1}
+              </span>
+
+              {queueEditingIndex === i ? (
+                <textarea
+                  ref={queueEditRef}
+                  value={queueEditText}
+                  onChange={(e) => setQueueEditText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmQueueEdit(i); }
+                    if (e.key === "Escape") setQueueEditingIndex(null);
+                  }}
+                  onBlur={() => confirmQueueEdit(i)}
+                  rows={2}
+                  className="ui-input flex-1 resize-none text-sm"
+                  style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
+                />
+              ) : (
+                <button
+                  onClick={() => { remove(i); submit(`custom:${prompt}`); }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setQueueEditingIndex(i);
+                    setQueueEditText(prompt);
+                    setTimeout(() => queueEditRef.current?.focus(), 0);
+                  }}
+                  title="Click to send · Double-click to edit"
+                  className={cn(
+                    "flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary",
+                    i === 0 ? "text-text-primary" : "text-text-tertiary",
+                  )}
+                >
+                  {prompt}
+                </button>
+              )}
+
+              <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
+                <button onClick={() => reorder(i, i - 1)} disabled={i === 0}
+                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move up">
+                  <ChevronUp className="h-3 w-3" />
+                </button>
+                <button onClick={() => reorder(i, i + 1)} disabled={i === queue.length - 1}
+                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move down">
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                <button onClick={() => remove(i)}
+                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary" title="Remove">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Primary action */}
+      {primaryPrompts.length > 0 && (
+        <div className="space-y-2">
+          {primaryPrompts.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => submit(String(p.slot ?? p.key))}
+              className="ui-btn-primary w-full justify-start gap-3 px-4 py-3 text-left text-[0.9375rem]"
+            >
+              <span className="text-base leading-none">{p.icon}</span>
+              <span className="flex-1">{p.label}</span>
+              {p.slot === 1 && (
+                !autoContinueEnabled
+                  ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 text-xs">⏸ Paused</span>
+                  : countdown > 0
+                  ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">⚡ {countdown}s</span>
+                  : null
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {actionPrompts.length > 0 && (
+        <div className="space-y-1.5">
+          {actionPrompts.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => submit(String(p.slot ?? p.key))}
+              className="ui-btn-secondary w-full justify-start gap-3 px-4 py-2.5 text-left"
+            >
+              <span className="text-sm leading-none">{p.icon}</span>
+              <span className="text-sm">{p.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* More */}
+      {morePrompts.length > 0 && (
+        <div>
+          <button
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex items-center gap-2 py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+          >
+            <span>{moreOpen ? "▾" : "▸"}</span>
+            More prompts ({morePrompts.length})
+          </button>
+          {moreOpen && (
+            <div className="mt-1.5 space-y-1">
+              {morePrompts.map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => submit(String(p.slot ?? p.key))}
+                  className="w-full rounded-xl px-4 py-2 text-left text-sm text-text-tertiary hover:bg-surface-raised hover:text-text-primary transition-colors"
+                >
+                  {p.icon} {p.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Status line */}
+      <p className="text-[11px] text-text-tertiary">
+        {custom.trim()
+          ? "Enter to send · Alt+Enter to queue"
+          : !autoContinueEnabled
+          ? "Auto-continue is paused · enable in Cockpit to resume"
+          : countdown > 0
+          ? `Cockpit continues in ${countdown}s · click to choose`
+          : "Continuing via Cockpit…"}
+      </p>
+
+      {/* Custom input — matches control panel PromptInput */}
+      <div className="space-y-1.5">
+        <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              ref={inputRef}
+              value={custom}
+              rows={1}
+              onChange={(e) => setCustom(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (e.altKey) handleEnqueue();
+                  else handleSendCustom();
+                }
+              }}
+              placeholder={
+                listening ? "Recording… click mic to stop"
+                : processing ? "Transcribing…"
+                : "Custom prompt…"
+              }
+              className={cn(
+                "ui-input w-full resize-none pr-10",
+                listening && "border-status-negative/40",
+                processing && "border-accent-primary/30",
+              )}
+              style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
+            />
+            <button
+              type="button"
+              onClick={toggleMic}
+              disabled={processing}
+              title={listening ? "Stop recording" : "Voice input (Whisper)"}
+              className={cn(
+                "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1 transition-colors",
+                listening
+                  ? "text-status-negative animate-pulse hover:bg-status-negative/10"
+                  : processing
+                  ? "text-text-muted opacity-50"
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-raised",
+              )}
+            >
+              {processing
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : listening
+                ? <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                : <Mic className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
+          <div className="flex shrink-0 gap-1.5">
+            <button
+              onClick={handleEnqueue}
+              disabled={!custom.trim()}
+              title="Add to queue (runs after current task) · Alt+Enter"
+              className="ui-icon-action min-h-11 rounded-xl border border-border-default px-3 disabled:opacity-40"
+            >
+              <ListPlus className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleSendCustom}
+              disabled={!custom.trim()}
+              className="ui-btn-lg inline-flex min-h-11 items-center justify-center py-3.5 sm:px-5 disabled:opacity-40"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mic status row */}
+        {(micError || listening || processing) && (
+          <div className="flex items-center justify-between px-0.5">
+            <div className="flex items-center">
+              {micError && <p className="text-[11px] text-status-negative">{micError}</p>}
+              {listening && !micError && (() => {
+                const flat = recordingSeconds >= 2 && waveformBars.every((b) => b < 0.02);
+                const secs = recordingSeconds;
+                const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+                return flat
+                  ? <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
+                  : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
+              })()}
+              {processing && !micError && (
+                <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>
+              )}
+            </div>
+            {listening && !micError && (
+              <div className="flex items-end gap-[2px]" style={{ height: 16 }}>
+                {waveformBars.map((h, i) => (
+                  <div key={i} className="rounded-full bg-status-negative"
+                    style={{ width: 2, height: Math.max(2, Math.round(h * 14)), transition: "height 75ms ease" }} />
+                ))}
+              </div>
+            )}
+            {!listening && custom && (
+              <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
+            )}
+          </div>
+        )}
+        {!micError && !listening && !processing && custom && (
+          <div className="flex justify-end px-0.5">
+            <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
+          </div>
+        )}
+      </div>
+
+      {/* Dismiss */}
+      <button
+        onClick={() => window.close()}
+        className="w-full py-2 text-center text-xs text-text-muted hover:text-text-secondary transition-colors"
+      >
+        Dismiss · Esc
+      </button>
+    </div>
+  );
+}
+
+// ─── BeaconPage ──────────────────────────────────────────────────────────────
+
+export default function BeaconPage() {
+  const { id } = useParams<{ id: string }>();
+  const [session, setSession] = useState<BeaconSession | null>(null);
+  const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [submittedLabel, setSubmittedLabel] = useState("");
+
+  useEffect(() => {
+    fetch(`/api/beacon/${id}`).then((r) => r.json()).then(setSession).catch(() => {});
+    fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
+  }, [id]);
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
   useEffect(() => {
@@ -207,66 +521,6 @@ export default function BeaconPage() {
     return () => clearTimeout(t);
   }, [session, prompts]);
 
-  // Display-only countdown — Cockpit's control panel is the actual inject authority.
-  // This just shows the user how long until auto-continue fires.
-  useEffect(() => {
-    if (!session || submitted || countdown <= 0) return;
-    const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [session?.id, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const appendTranscript = useCallback((text: string) => {
-    setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
-    inputRef.current?.focus();
-  }, []);
-
-  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } = useWhisperMic(appendTranscript);
-
-  const submit = useCallback(async (choice: string) => {
-    if (submitted) return;
-    setSubmitted(true);
-    const all = promptsRef.current;
-    let label = "";
-    if (choice.startsWith("custom:")) {
-      label = choice.slice("custom:".length).trim();
-    } else {
-      const slot = parseInt(choice);
-      const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
-      label = matched ? `${matched.icon} ${matched.label}` : choice;
-    }
-    setSubmittedLabel(label);
-    await fetch(`/api/beacon/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ choice }),
-    }).catch(() => {});
-    setTimeout(() => window.close(), 400);
-  }, [id, submitted]);
-
-  useEffect(() => { submitRef.current = submit; }, [submit]);
-
-  // Keyboard: Esc close · 1–9 direct slot pick
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (document.activeElement === inputRef.current) return;
-      if (e.key === "Escape") { window.close(); return; }
-      const n = parseInt(e.key);
-      if (!isNaN(n) && n >= 1 && n <= 9) {
-        const all = [
-          ...promptsRef.current.filter((p) => p.style === "primary"),
-          ...promptsRef.current.filter((p) => p.style === "action"),
-        ];
-        const target = all.find((p) => p.slot === n) ?? all[n - 1];
-        if (target) submitRef.current(String(target.slot ?? target.key));
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
-
-  const wordCount = custom.trim() ? custom.trim().split(/\s+/).length : 0;
-  const charCount = custom.length;
-
   if (!session) {
     return (
       <div className="flex h-64 items-center justify-center bg-surface-page">
@@ -292,7 +546,7 @@ export default function BeaconPage() {
           </div>
           <div className="ui-panel rounded-xl p-4 space-y-2">
             <p className="text-sm text-text-secondary">
-              Claude is now executing this task for <span className="font-medium text-text-primary">{session?.project}</span>.
+              Claude is now executing this task for <span className="font-medium text-text-primary">{session.project}</span>.
             </p>
             <p className="text-xs text-text-tertiary">
               Watch progress in the Control panel — this window will close automatically.
@@ -310,16 +564,11 @@ export default function BeaconPage() {
     );
   }
 
-  const primaryPrompts = prompts.filter((p) => p.style === "primary");
-  const actionPrompts = prompts.filter((p) => p.style === "action");
-  const morePrompts = prompts.filter((p) => p.style === "more");
-
   return (
     <div className="bg-surface-page p-4 sm:p-6">
-      <div className="mx-auto max-w-lg space-y-4">
-
+      <div className="mx-auto max-w-lg">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div>
             <p className="ui-kicker text-[10px] tracking-widest">Session complete</p>
             <h1 className="mt-1 text-xl font-bold text-text-primary">{session.project}</h1>
@@ -338,222 +587,11 @@ export default function BeaconPage() {
           </div>
         </div>
 
-        {/* Session summary */}
-        {session.sessionContent && <SessionSummary content={session.sessionContent} />}
-
-        {/* Queue — items that will fire before auto-continue */}
-        {queuedPrompts.length > 0 && (
-          <div className="rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 space-y-1">
-            <p className="ui-kicker mb-2">Up next · {queuedPrompts.length}</p>
-            {queuedPrompts.map((prompt, i) => (
-              <div key={i} className="flex items-start gap-1.5">
-                <span className={`mt-[3px] shrink-0 text-[10px] font-bold tabular-nums ${i === 0 ? "text-accent-text" : "text-text-muted"}`}>
-                  {i + 1}
-                </span>
-
-                {queueEditingIndex === i ? (
-                  <textarea
-                    ref={queueEditRef}
-                    value={queueEditText}
-                    onChange={(e) => setQueueEditText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); editInQueue(i, queueEditText); setQueueEditingIndex(null); }
-                      if (e.key === "Escape") setQueueEditingIndex(null);
-                    }}
-                    onBlur={() => { editInQueue(i, queueEditText); setQueueEditingIndex(null); }}
-                    rows={2}
-                    className="ui-input flex-1 resize-none text-sm"
-                    style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
-                  />
-                ) : (
-                  <button
-                    onClick={() => { removeFromQueue(i); submit(`custom:${prompt}`); }}
-                    onDoubleClick={(e) => { e.stopPropagation(); setQueueEditingIndex(i); setQueueEditText(prompt); setTimeout(() => queueEditRef.current?.focus(), 0); }}
-                    title="Click to send · Double-click to edit"
-                    className={`flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary ${i === 0 ? "text-text-primary" : "text-text-tertiary"}`}
-                  >
-                    {prompt}
-                  </button>
-                )}
-
-                <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
-                  <button onClick={() => i > 0 && reorderInQueue(i, i - 1)} disabled={i === 0}
-                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move up">
-                    <ChevronUp className="h-3 w-3" />
-                  </button>
-                  <button onClick={() => i < queuedPrompts.length - 1 && reorderInQueue(i, i + 1)} disabled={i === queuedPrompts.length - 1}
-                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move down">
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                  <button onClick={() => removeFromQueue(i)}
-                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary" title="Remove">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Primary actions */}
-        {primaryPrompts.length > 0 && (
-          <div className="space-y-2">
-            {primaryPrompts.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => submit(String(p.slot ?? p.key))}
-                className="ui-btn-primary w-full justify-start gap-3 px-4 py-3 text-left text-[0.9375rem]"
-              >
-                <span className="text-base leading-none">{p.icon}</span>
-                <span className="flex-1">{p.label}</span>
-                {p.slot === 1 && (
-                  !autoContinueEnabled
-                    ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 text-xs">⏸ Paused</span>
-                    : countdown > 0
-                    ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">⚡ {countdown}s</span>
-                    : null
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Action buttons */}
-        {actionPrompts.length > 0 && (
-          <div className="space-y-1.5">
-            {actionPrompts.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => submit(String(p.slot ?? p.key))}
-                className="ui-btn-secondary w-full justify-start gap-3 px-4 py-2.5 text-left"
-              >
-                <span className="text-sm leading-none">{p.icon}</span>
-                <span className="text-sm">{p.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* More */}
-        {morePrompts.length > 0 && (
-          <div>
-            <button
-              onClick={() => setMoreOpen((v) => !v)}
-              className="flex items-center gap-2 py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
-            >
-              <span>{moreOpen ? "▾" : "▸"}</span>
-              More prompts ({morePrompts.length})
-            </button>
-            {moreOpen && (
-              <div className="mt-1.5 space-y-1">
-                {morePrompts.map((p) => (
-                  <button
-                    key={p.key}
-                    onClick={() => submit(String(p.slot ?? p.key))}
-                    className="w-full rounded-xl px-4 py-2 text-left text-sm text-text-tertiary hover:bg-surface-raised hover:text-text-primary transition-colors"
-                  >
-                    {p.icon} {p.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Controls row */}
-        <div className="flex items-center">
-          <p className="text-[11px] text-text-tertiary">
-            {custom.trim()
-              ? "Enter to send · overrides auto-continue"
-              : !autoContinueEnabled
-              ? "Auto-continue is paused · enable in Cockpit to resume"
-              : countdown > 0
-              ? `Cockpit continues in ${countdown}s · click to choose`
-              : "Continuing via Cockpit…"}
-          </p>
-        </div>
-
-        {/* Custom input + mic */}
-        <div className="space-y-1.5">
-          <div className="flex gap-2">
-            <input
-              ref={inputRef}
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
-              placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : "Custom prompt…"}
-              className={`ui-input flex-1 ${listening ? "border-status-negative/40" : processing ? "border-accent-primary/30" : ""}`}
-            />
-
-            {/* Mic button */}
-            <button
-              onClick={toggleMic}
-              disabled={processing}
-              title={listening ? "Stop recording" : "Speak a prompt"}
-              className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
-                listening
-                  ? "animate-pulse border-status-negative/40 bg-status-negative/10 text-status-negative"
-                  : processing
-                  ? "border-border-subtle bg-surface-base text-text-muted opacity-60"
-                  : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
-              }`}
-            >
-              {processing && <Loader2 className="h-4 w-4 animate-spin" />}
-              {!processing && (
-                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
-                  {listening
-                    ? <rect x="6" y="6" width="12" height="12" rx="2" />
-                    : <><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>}
-                </svg>
-              )}
-            </button>
-
-            <button
-              onClick={() => custom.trim() && submit(`custom:${custom.trim()}`)}
-              disabled={!custom.trim()}
-              className="ui-btn-primary px-4 disabled:opacity-40"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Status row below input */}
-          <div className="flex items-center justify-between px-0.5">
-            <div className="min-h-[16px] flex items-center">
-              {micError && (
-                <p className="text-[11px] text-status-negative">{micError}</p>
-              )}
-              {listening && !micError && (() => {
-                const flat = recordingSeconds >= 2 && waveformBars.every((b) => b < 0.02);
-                return flat ? (
-                  <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
-                ) : (
-                  <p className="text-[11px] text-status-negative">
-                    Recording · {formatRecordingTime(recordingSeconds)}
-                  </p>
-                );
-              })()}
-              {processing && !micError && (
-                <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>
-              )}
-            </div>
-            {listening && !micError ? (
-              <Waveform bars={waveformBars} />
-            ) : custom ? (
-              <p className="text-[11px] tabular-nums text-text-muted">
-                {wordCount}w · {charCount}c
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Dismiss */}
-        <button
-          onClick={() => window.close()}
-          className="w-full py-2 text-center text-xs text-text-muted hover:text-text-secondary transition-colors"
-        >
-          Dismiss · Esc
-        </button>
+        <BeaconBody
+          session={session}
+          prompts={prompts}
+          onSubmitted={(label) => { setSubmitted(true); setSubmittedLabel(label); }}
+        />
       </div>
     </div>
   );
