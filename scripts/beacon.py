@@ -70,35 +70,113 @@ class WhisperThread(QThread):
 
 _THEME_PATH = os.path.expanduser("~/.config/agent-dashboard-theme.json")
 
+def _is_dark_mode() -> bool:
+    """Detect OS-level dark/light preference (GNOME + KDE)."""
+    # GNOME: explicit color-scheme setting
+    try:
+        r = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+            capture_output=True, text=True, timeout=1,
+        )
+        out = r.stdout.strip().strip("'\"").lower()
+        if "prefer-dark" in out:
+            return True
+        if "prefer-light" in out:
+            return False
+        # "default" → fall through to other checks
+    except Exception:
+        pass
+    # KDE Plasma: color scheme name contains "dark"
+    try:
+        r = subprocess.run(
+            ["kreadconfig5", "--group", "General", "--key", "ColorScheme"],
+            capture_output=True, text=True, timeout=1,
+        )
+        scheme = r.stdout.strip().lower()
+        if scheme:
+            return "dark" in scheme
+    except Exception:
+        pass
+    # GNOME fallback: GTK theme name
+    try:
+        r = subprocess.run(
+            ["gsettings", "get", "org.gnome.desktop.interface", "gtk-theme"],
+            capture_output=True, text=True, timeout=1,
+        )
+        return "dark" in r.stdout.lower()
+    except Exception:
+        pass
+    return True  # default: dark
+
+_DARK_PALETTE = dict(
+    card             = "#111111",
+    surface          = "#1a1a1a",
+    surface2         = "#222222",
+    border           = "#2c2c2c",
+    group_bg         = "#0d0d0d",
+    accent           = "#e8e8e8",
+    accent_d         = "#1a1a1a",
+    btn_primary_bg   = "#e8e8e8",
+    btn_primary_fg   = "#111111",
+    btn_primary_hover= "#cccccc",
+    allow_hover      = "#163322",
+    deny_hover       = "#3d1212",
+    label_next       = "#38bdf8",
+    label_progress   = "#fbbf24",
+    ship             = "#4ade80",
+    ship_d           = "#0d2b1a",
+    text1            = "#eaeaea",
+    text2            = "#909090",
+    text3            = "#555555",
+    group_lbl        = "#5c5c5c",
+    green            = "#4ade80",
+    green_d          = "#0d2b1a",
+    amber            = "#fbbf24",
+    amber_d          = "#2a1800",
+    red              = "#f87171",
+    red_d            = "#2d0f0f",
+    cyan             = "#38bdf8",
+    purple           = "#c084fc",
+)
+
+_LIGHT_PALETTE = dict(
+    card             = "#ffffff",
+    surface          = "#f5f5f5",
+    surface2         = "#ededed",
+    border           = "#d4d4d4",
+    group_bg         = "#f0f0f0",
+    accent           = "#111111",
+    accent_d         = "#f5f5f5",
+    btn_primary_bg   = "#111111",
+    btn_primary_fg   = "#ffffff",
+    btn_primary_hover= "#333333",
+    allow_hover      = "#15803d",
+    deny_hover       = "#b91c1c",
+    label_next       = "#0369a1",
+    label_progress   = "#92400e",
+    ship             = "#15803d",
+    ship_d           = "#dcfce7",
+    text1            = "#111111",
+    text2            = "#555555",
+    text3            = "#909090",
+    group_lbl        = "#909090",
+    green            = "#15803d",
+    green_d          = "#dcfce7",
+    amber            = "#92400e",
+    amber_d          = "#fef3c7",
+    red              = "#b91c1c",
+    red_d            = "#fee2e2",
+    cyan             = "#0369a1",
+    purple           = "#7c3aed",
+)
+
 def _load_theme() -> dict:
-    default_theme = dict(
-        card     = "#111111",
-        surface  = "#1a1a1a",
-        surface2 = "#222222",
-        border   = "#2c2c2c",
-        group_bg = "#0d0d0d",
-        accent   = "#e8e8e8",
-        accent_d = "#1a1a1a",
-        ship     = "#4ade80",
-        ship_d   = "#0d2b1a",
-        text1    = "#eaeaea",
-        text2    = "#909090",
-        text3    = "#555555",
-        group_lbl= "#5c5c5c",
-        green    = "#4ade80",
-        green_d  = "#0d2b1a",
-        amber    = "#fbbf24",
-        amber_d  = "#2a1800",
-        red      = "#f87171",
-        red_d    = "#2d0f0f",
-        cyan     = "#38bdf8",
-        purple   = "#c084fc",
-    )
+    default_theme = dict(_DARK_PALETTE if _is_dark_mode() else _LIGHT_PALETTE)
     try:
         if os.path.exists(_THEME_PATH):
             loaded = json.load(open(_THEME_PATH))
             default_theme.update(loaded)
-    except:
+    except Exception:
         pass
     return default_theme
 
@@ -153,7 +231,7 @@ QLabel#hint {{
 /* ── Session summary ── */
 QWidget#summary_card {{
     background: {surface};
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid {border};
 }}
 QWidget#summary_scroll_content {{
@@ -161,8 +239,8 @@ QWidget#summary_scroll_content {{
 }}
 QLabel#sum_val {{
     color: {text1};
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
     background: transparent;
 }}
 
@@ -193,8 +271,8 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
 
 /* ── Action buttons — DEV group ── */
 QPushButton#primary {{
-    background: {text1};
-    color: #111111;
+    background: {btn_primary_bg};
+    color: {btn_primary_fg};
     border: none;
     border-radius: 8px;
     padding: 10px 14px;
@@ -203,8 +281,8 @@ QPushButton#primary {{
     text-align: left;
 }}
 QPushButton#primary:hover {{
-    background: #cccccc;
-    color: #111111;
+    background: {btn_primary_hover};
+    color: {btn_primary_fg};
 }}
 QPushButton#action {{
     background: transparent;
@@ -233,7 +311,7 @@ QPushButton#ship_primary {{
     text-align: left;
 }}
 QPushButton#ship_primary:hover {{
-    background: #163a22;
+    background: {allow_hover};
     color: {text1};
     border-color: {ship};
 }}
@@ -352,7 +430,7 @@ QPushButton#allow {{
     font-size: 13px;
     font-weight: 700;
 }}
-QPushButton#allow:hover {{ background: #163322; }}
+QPushButton#allow:hover {{ background: {allow_hover}; }}
 QPushButton#deny {{
     background: {red_d};
     color: {red};
@@ -362,7 +440,7 @@ QPushButton#deny {{
     font-size: 13px;
     font-weight: 700;
 }}
-QPushButton#deny:hover {{ background: #3d1212; }}
+QPushButton#deny:hover {{ background: {deny_hover}; }}
 """.format(**C)
 
 COUNTDOWN_SECONDS = 12   # default; overridden by settings file if present
@@ -585,10 +663,17 @@ class ContinuePopup(BasePopup):
 
         W = 548  # max label width inside the card
 
-        def _make_bullet(text, char, color, size=15):
+        def _section_label(text, color):
+            lbl = QLabel(text)
+            lbl.setStyleSheet(
+                f"color:{color};font-size:10px;font-weight:700;"
+                f"letter-spacing:1.5px;background:transparent;")
+            return lbl
+
+        def _make_bullet(text, char, color, size=14):
             row = QHBoxLayout()
             row.setSpacing(8)
-            row.setContentsMargins(0, 2, 0, 2)
+            row.setContentsMargins(0, 1, 0, 1)
             b = QLabel(char)
             b.setStyleSheet(f"color:{color};font-size:{size}px;font-weight:700;background:transparent;")
             b.setFixedWidth(16)
@@ -603,42 +688,38 @@ class ContinuePopup(BasePopup):
 
         # ── UP NEXT — always fully visible, it's what drives the next action ──
         if 'next' in parsed:
-            lbl = QLabel("UP NEXT")
-            lbl.setStyleSheet(
-                f"color:{C['cyan']};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
-            box_lay.addWidget(lbl)
+            box_lay.addWidget(_section_label("UP NEXT", C['label_next']))
+            box_lay.addSpacing(4)
             for itm in [s.strip() for s in parsed['next'].split('; ') if s.strip()]:
-                box_lay.addLayout(_make_bullet(itm, "→", C['cyan']))
+                box_lay.addLayout(_make_bullet(itm, "→", C['label_next']))
 
         # ── IN PROGRESS — visible when present ───────────────────────────────
         if 'in_progress' in parsed:
             if 'next' in parsed:
-                box_lay.addSpacing(6)
-            lbl = QLabel("IN PROGRESS")
-            lbl.setStyleSheet(
-                f"color:{C['amber']};font-size:11px;font-weight:700;letter-spacing:1.2px;background:transparent;")
-            box_lay.addWidget(lbl)
+                box_lay.addSpacing(8)
+            box_lay.addWidget(_section_label("IN PROGRESS", C['label_progress']))
+            box_lay.addSpacing(4)
             for itm in [s.strip() for s in parsed['in_progress'].split('; ') if s.strip()]:
-                box_lay.addLayout(_make_bullet(itm, "◉", C['amber']))
+                box_lay.addLayout(_make_bullet(itm, "◉", C['label_progress']))
 
         # ── DONE — collapsed by default: count chip + expand ─────────────────
         if 'done' in parsed:
             done_items = [s.strip() for s in parsed['done'].split('; ') if s.strip()]
             if 'next' in parsed or 'in_progress' in parsed:
-                box_lay.addSpacing(6)
+                box_lay.addSpacing(10)
 
             done_row = QHBoxLayout()
             done_row.setSpacing(6)
             done_lbl = QLabel(f"DONE  ·  {len(done_items)} completed")
             done_lbl.setStyleSheet(
-                f"color:{C['text3']};font-size:11px;font-weight:700;letter-spacing:1.0px;background:transparent;")
+                f"color:{C['text3']};font-size:10px;font-weight:700;letter-spacing:1.2px;background:transparent;")
             done_row.addWidget(done_lbl)
             done_row.addStretch()
 
             toggle_btn = QPushButton("▸")
             toggle_btn.setStyleSheet(
                 f"background:transparent;color:{C['text3']};border:none;"
-                f"font-size:14px;padding:1px 6px;"
+                f"font-size:13px;padding:1px 6px;"
             )
             toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             done_row.addWidget(toggle_btn)
@@ -1294,7 +1375,7 @@ def main():
     else:
         label = sys.argv[2]
         sf    = sys.argv[3] if len(sys.argv) > 3 else ""
-        _web_stop(label, sf)
+        _pyqt_stop(label, sf)
 
 
 if __name__ == "__main__":
