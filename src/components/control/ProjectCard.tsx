@@ -44,9 +44,11 @@ export function ProjectCard({
   const autoContinueKey = `control:auto-continue:${project.tab.toLowerCase()}`;
   const [autoContinueEnabled, setAutoContinueEnabled] = useState(() => {
     try {
-      return window.localStorage.getItem(autoContinueKey) !== "off";
+      // Require explicit opt-in ("on") — default OFF to prevent double injection
+      // when the user is also actively using the same terminal for conversations.
+      return window.localStorage.getItem(autoContinueKey) === "on";
     } catch {
-      return true;
+      return false;
     }
   });
 

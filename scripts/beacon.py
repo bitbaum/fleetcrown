@@ -1317,8 +1317,8 @@ def _terminal_screen_position(width: int = 520, height: int = 640) -> tuple[int,
             except Exception:
                 pass
 
-        # Fallback: cursor position (may be on wrong screen)
-        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+        # Fallback: primary screen — safer than cursor which can be anywhere
+        screen = QApplication.primaryScreen()
         return _position_for_screen(screen)
     except Exception:
         return 1360, 180  # reasonable fallback

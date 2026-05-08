@@ -92,6 +92,25 @@ handle_stop() {
 
   play_sound "complete"
 
+  # Ensure the screen-position sentinel exists so beacon.py knows which monitor to
+  # appear on. The claude() bash wrapper writes this at launch, but context-limit
+  # continuations (started with ! or --continue) bypass the wrapper and miss it.
+  # Write primary monitor geometry as a safe fallback — no cursor dependency.
+  if [ -n "${ZELLIJ_PANE_ID:-}" ] && [ ! -f "/tmp/claude-screen-${ZELLIJ_PANE_ID}" ]; then
+    _primary_geo=$(xrandr --query 2>/dev/null \
+      | awk '/ connected primary / {
+          for (i=1;i<=NF;i++) {
+            if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) {
+              n=split($i,a,/[x+]/);
+              if(n==4) print a[3]","a[4]","a[1]","a[2];
+              break
+            }
+          }
+          exit
+        }')
+    [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
+  fi
+
   if should_skip_native_popup && curl -sf --max-time 1 "http://localhost:3000/api/control" >/dev/null 2>&1; then
     log "Cockpit running — skipping native popup"
     exit 0
