@@ -171,6 +171,19 @@ export default function BeaconPage() {
     fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
   }, [id]);
 
+  // Close automatically if the Control panel injected a prompt and cancelled this session.
+  useEffect(() => {
+    if (submitted) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/beacon/${id}`);
+        const data = (await res.json()) as BeaconSession;
+        if (data.choice !== null) window.close();
+      } catch { /* network error — ignore */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [id, submitted]);
+
   // Auto-fit Chrome app window to content height + reposition to bottom-right
   useEffect(() => {
     if (!session || prompts.length === 0) return;

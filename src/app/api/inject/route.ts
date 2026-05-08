@@ -9,6 +9,7 @@ import {
   buildPromptWithSession,
 } from "@/lib/agent-config";
 import { injectIntoTab, getZellijTabs } from "@/lib/zellij";
+import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -71,6 +72,7 @@ export async function POST(req: NextRequest) {
 
   try {
     injectIntoTab(effectiveTab, prompt);
+    cancelActiveBeaconSessions(effectiveTab);
 
     const nowS = Math.floor(Date.now() / 1000);
 

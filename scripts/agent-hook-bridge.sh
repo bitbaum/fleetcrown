@@ -66,18 +66,21 @@ handle_stop() {
   log "fired — label=$label"
   [ -z "${TAB_NAME:-}" ] && exit 0
 
-  # Guard: skip if a beacon is already active for this tab (rapid turn completions
-  # can fire multiple concurrent stop hooks — only the first should show a popup).
-  local existing_lock="/tmp/agent-stop-active-${TAB_NAME}"
-  [ ! -f "$existing_lock" ] && existing_lock="/tmp/claude-stop-active-${TAB_NAME}"
-  if [ -f "$existing_lock" ]; then
+  # Atomically claim the stop-active lock using noclobber so concurrent stop hooks
+  # can't both pass the check. A plain test-then-write is a TOCTOU race in bash.
+  local lock="/tmp/agent-stop-active-${TAB_NAME}"
+  if ! ( set -C; : > "$lock" ) 2>/dev/null; then
+    # File exists — skip if recent, overwrite if stale (crashed process left it behind).
     local existing_age
-    existing_age=$(( $(date +%s) - $(stat -c %Y "$existing_lock" 2>/dev/null || echo 0) ))
+    existing_age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
     if [ "$existing_age" -lt 90 ]; then
       log "skipping popup — another stop is active for ${TAB_NAME} (${existing_age}s old)"
       exit 0
     fi
+    : > "$lock"  # stale — overwrite
   fi
+  touch "/tmp/claude-stop-active-${TAB_NAME}"
+  trap "rm -f '$lock' /tmp/claude-stop-active-${TAB_NAME}" EXIT
 
   rm -f "/tmp/agent-current-prompt-${TAB_NAME}" "/tmp/claude-current-prompt-${TAB_NAME}"
 
@@ -128,10 +131,6 @@ handle_stop() {
     log "Cockpit running — skipping native popup"
     exit 0
   fi
-
-  local lock="/tmp/agent-stop-active-${TAB_NAME}"
-  touch "$lock" "/tmp/claude-stop-active-${TAB_NAME}"
-  trap "rm -f '$lock' /tmp/claude-stop-active-${TAB_NAME}" EXIT
 
   session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
   if ! choice=$(beacon_python stop "$label" "$session_file" 2>>"$LOG"); then

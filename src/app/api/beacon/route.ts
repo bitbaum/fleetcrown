@@ -31,6 +31,28 @@ export function readBeaconSession(id: string): BeaconSession | null {
   }
 }
 
+/**
+ * Cancel any active beacon sessions for the given tab (project name).
+ * Setting choice to "" signals beacon.py's polling loop to exit cleanly,
+ * and the beacon popup page polls the same endpoint and closes itself.
+ * Called by /api/inject so panel injections don't race with an open popup.
+ */
+export function cancelActiveBeaconSessions(tab: string): void {
+  try {
+    const cutoff = Date.now() - 150_000;
+    for (const file of fs.readdirSync(BEACON_DIR)) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const p = path.join(BEACON_DIR, file);
+        const s = JSON.parse(fs.readFileSync(p, "utf-8")) as BeaconSession;
+        if (s.project === tab && s.choice === null && s.createdAt > cutoff) {
+          fs.writeFileSync(p, JSON.stringify({ ...s, choice: "" }));
+        }
+      } catch { /* corrupt or race-deleted file */ }
+    }
+  } catch { /* BEACON_DIR doesn't exist — nothing to cancel */ }
+}
+
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
