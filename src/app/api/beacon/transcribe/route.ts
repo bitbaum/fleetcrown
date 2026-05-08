@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
   ]);
 
   try {
-    await writeFile(tmpPath, Buffer.from(await audio.arrayBuffer()));
+    const buf = Buffer.from(await audio.arrayBuffer());
+    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
+    await writeFile(tmpPath, buf);
     const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, tmpPath, model], {
       timeout: 60_000,
       maxBuffer: 1024 * 1024,
@@ -40,8 +42,11 @@ export async function POST(req: NextRequest) {
     if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
     return NextResponse.json({ text });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    // execFile errors include stderr in err.stderr — surface it so the UI shows the real problem
+    type ExecError = Error & { stderr?: string };
+    const e = err as ExecError;
+    const detail = e.stderr?.trim() || e.message;
+    return NextResponse.json({ error: detail }, { status: 500 });
   } finally {
     await unlink(tmpPath).catch(() => {});
   }

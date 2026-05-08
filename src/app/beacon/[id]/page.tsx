@@ -300,7 +300,10 @@ export default function BeaconPage() {
     source.connect(analyser);
     analyserRef.current = analyser;
 
-    const recorder = new MediaRecorder(stream);
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : "audio/webm";
+    const recorder = new MediaRecorder(stream, { mimeType });
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
@@ -311,8 +314,15 @@ export default function BeaconPage() {
       stopMicCleanup();
       setMicState("processing");
 
-      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const actualMime = mediaRecorderRef.current?.mimeType ?? "audio/webm";
+      const blob = new Blob(audioChunksRef.current, { type: actualMime });
       audioChunksRef.current = [];
+
+      if (blob.size < 100) {
+        setMicState("idle");
+        setMicError("Recording too short — hold mic button while speaking");
+        return;
+      }
 
       const form = new FormData();
       form.append("audio", blob, "recording.webm");
