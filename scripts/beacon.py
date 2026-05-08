@@ -1263,9 +1263,8 @@ def _terminal_screen_position(width: int = 520, height: int = 640) -> tuple[int,
     """Return (x, y) bottom-right of the screen containing the terminal window.
 
     Detection order:
-      1. $WINDOWID env var (set by many terminal emulators)
-      2. xdotool getactivewindow (the focused window at launch time)
-      3. Cursor position as last resort
+      1. /tmp/claude-screen-<ZELLIJ_PANE_ID> written at claude startup (most reliable)
+      2. Cursor position as fallback
     """
     def _position_for_screen(screen) -> tuple[int, int]:
         scr = screen.availableGeometry()
@@ -1277,35 +1276,21 @@ def _terminal_screen_position(width: int = 520, height: int = 640) -> tuple[int,
     try:
         app = QApplication.instance() or QApplication(sys.argv[:1])
 
-        # Try to get window geometry via xdotool (works for $WINDOWID or active window)
-        win_id = os.environ.get("WINDOWID", "")
-        xdotool_cmd = (
-            ["xdotool", "getwindowgeometry", "--shell", win_id]
-            if win_id else
-            ["xdotool", "getactivewindow", "getwindowgeometry", "--shell"]
-        )
-        try:
-            r = subprocess.run(xdotool_cmd, capture_output=True, text=True, timeout=2)
-            if r.returncode == 0:
-                geo: dict[str, int] = {}
-                for line in r.stdout.splitlines():
-                    if "=" in line:
-                        k, _, v = line.partition("=")
-                        try:
-                            geo[k.strip()] = int(v.strip())
-                        except ValueError:
-                            pass
-                if "X" in geo and "Y" in geo:
-                    # Pick the Qt screen that contains the window's top-left corner
-                    from PyQt6.QtCore import QPoint
-                    pt = QPoint(geo["X"] + geo.get("WIDTH", 0) // 2,
-                                geo["Y"] + geo.get("HEIGHT", 0) // 2)
-                    screen = QApplication.screenAt(pt) or QApplication.primaryScreen()
-                    return _position_for_screen(screen)
-        except Exception:
-            pass
+        # Read the screen recorded at claude startup (cursor was in terminal then)
+        pane_id = os.environ.get("ZELLIJ_PANE_ID", "")
+        if pane_id:
+            screen_file = f"/tmp/claude-screen-{pane_id}"
+            try:
+                line = open(screen_file).read().strip()
+                sx, sy, sw, sh = (int(v) for v in line.split(","))
+                from PyQt6.QtCore import QPoint
+                pt = QPoint(sx + sw // 2, sy + sh // 2)
+                screen = QApplication.screenAt(pt) or QApplication.primaryScreen()
+                return _position_for_screen(screen)
+            except Exception:
+                pass
 
-        # Fallback: cursor position
+        # Fallback: cursor position (may be on wrong screen)
         screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
         return _position_for_screen(screen)
     except Exception:
