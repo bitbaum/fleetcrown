@@ -304,14 +304,24 @@ export function ProjectBanners({
         <RunningBanner label={currentPrompt.label} startedAt={currentPrompt.startedAt} />
       )}
       {isRunning && !currentPrompt && !isClosing && (
-        <div className="border-t border-accent-primary/20 bg-accent-primary/[0.03] px-5 py-3">
+        <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
           <div className="flex items-center gap-2">
             <Loader2 className="ui-spinner-sm text-accent-text shrink-0" />
-            <span className="text-sm text-accent-text">Agent active</span>
+            <span className="text-sm font-medium text-accent-text">Agent active</span>
             {git?.todayCount ? (
               <span className="ml-auto text-sm text-text-secondary tabular-nums">+{git.todayCount} commits today</span>
             ) : null}
           </div>
+          {session?.next && (
+            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">
+              Next: {session.next}
+            </p>
+          )}
+          {!session?.next && session?.done && (
+            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-1">
+              Last: {session.done}
+            </p>
+          )}
         </div>
       )}
     </>
