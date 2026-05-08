@@ -112,7 +112,7 @@ export default function BeaconPage() {
   const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
   const [custom, setCustom] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(30);
   const [moreOpen, setMoreOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -220,7 +220,9 @@ export default function BeaconPage() {
                 <span className="text-base leading-none">{p.icon}</span>
                 <span className="flex-1">{p.label}</span>
                 {countdown > 0 && p.slot === 1 && (
-                  <span className="ml-auto text-xs opacity-60">{countdown}s</span>
+                  <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">
+                    ⚡ {countdown}s
+                  </span>
                 )}
               </button>
             ))}
@@ -270,6 +272,9 @@ export default function BeaconPage() {
         )}
 
         {/* Custom input */}
+        <p className="text-[11px] text-text-muted">
+          Type to redirect · Enter to send · typing stops countdown
+        </p>
         <div className="flex gap-2">
           <input
             ref={inputRef}
