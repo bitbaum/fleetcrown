@@ -169,13 +169,17 @@ function BulletList({ items, icon, iconClass, textClass }: {
 export function SessionSummary({
   session,
   isClosed,
+  isRunning,
 }: {
   session: ProjectState["session"];
   isClosed: boolean;
+  isRunning?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  if (isClosed || !session) return null;
+  // Hide while the agent is actively running a known prompt — the RunningBanner
+  // already shows what's happening and session.next is from the previous turn.
+  if (isClosed || isRunning || !session) return null;
   if (!session.next && !session.done) return null;
 
   const nextItems = session.next ? splitItems(session.next) : [];
@@ -301,7 +305,7 @@ export function ProjectBanners({
         />
       )}
       {showRunning && currentPrompt && (
-        <RunningBanner label={currentPrompt.label} startedAt={currentPrompt.startedAt} />
+        <RunningBanner label={currentPrompt.label} promptKey={currentPrompt.key} startedAt={currentPrompt.startedAt} />
       )}
       {isRunning && !currentPrompt && !isClosing && (
         <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
@@ -355,19 +359,20 @@ function PromptInput({
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-col gap-2 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <input
-            type="text"
+          <textarea
+            rows={1}
             value={custom}
             onChange={(e) => onCustomChange(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && custom.trim() && onSendCustom()}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && custom.trim()) { e.preventDefault(); onSendCustom(); } }}
             onFocus={() => onCustomFocusChange(true)}
             onBlur={() => onCustomFocusChange(false)}
             placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : placeholder}
             className={cn(
-              "ui-input w-full pr-10",
+              "ui-input w-full resize-none pr-10",
               listening && "border-status-negative/40",
               processing && "border-accent-primary/30",
             )}
+            style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
           />
           <button
             type="button"
@@ -442,11 +447,22 @@ export function IntentButtonPanel({
 
   const recentPrompts = project.recentCustomPrompts.slice(0, project.agentRunning ? 3 : undefined);
 
-  // Running: interrupt input + recent prompts only
+  // Running: interrupt input + pause toggle + recent prompts
   if (project.agentRunning) {
     return (
       <div className="ui-card-section space-y-2">
-        <PromptInput {...inputProps} placeholder="Send interrupt…" />
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+            <PromptInput {...inputProps} placeholder="Send interrupt…" />
+          </div>
+          <button
+            onClick={onToggleAutoContinue}
+            title={autoContinueEnabled ? "Pause auto-continue when done" : "Resume auto-continue"}
+            className="ui-icon-action shrink-0 self-start rounded-xl border border-border-default px-3 py-[0.65rem]"
+          >
+            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          </button>
+        </div>
         {recentPrompts.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {recentPrompts.map((r) => (

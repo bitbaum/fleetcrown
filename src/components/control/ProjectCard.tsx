@@ -162,7 +162,7 @@ export function ProjectCard({
         />
       ) : (
         <>
-          <SessionSummary session={project.session} isClosed={display.isClosed} />
+          <SessionSummary session={project.session} isClosed={display.isClosed} isRunning={display.isRunning && !!project.currentPrompt} />
           <ProjectBanners
             isClosed={display.isClosed}
             isClosing={display.isClosing}

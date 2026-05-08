@@ -101,7 +101,7 @@ export function ClosingBanner({ startedAt }: { startedAt: number }) {
   );
 }
 
-export function RunningBanner({ label, startedAt }: { label: string; startedAt: number }) {
+export function RunningBanner({ label, promptKey, startedAt }: { label: string; promptKey: string; startedAt: number }) {
   const [elapsed, setElapsed] = useState(() => Math.floor(Date.now() / 1000) - startedAt);
   useEffect(() => {
     const id = setInterval(() => setElapsed(Math.floor(Date.now() / 1000) - startedAt), 1000);
@@ -114,14 +114,23 @@ export function RunningBanner({ label, startedAt }: { label: string; startedAt: 
     ? `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
     : `${elapsed}s`;
 
-  const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-secondary";
+  const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-muted";
+  const isCustom = promptKey === "custom";
 
   return (
     <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
-      <div className="flex items-center gap-2">
-        <Loader2 className="ui-spinner-sm text-accent-text shrink-0" />
-        <span className="truncate text-sm font-medium text-accent-text" title={label}>{label}</span>
-        <span className={cn("ml-auto shrink-0 text-sm tabular-nums", timerClass)}>{elapsedStr}</span>
+      <div className="flex items-start gap-2.5">
+        <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-text/60">Running</p>
+          <p className="truncate text-sm font-medium text-text-primary" title={label}>
+            {isCustom ? "Custom prompt" : label}
+          </p>
+          {isCustom && label && (
+            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-text-tertiary">{label}</p>
+          )}
+        </div>
+        <span className={cn("shrink-0 pt-[3px] text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>
     </div>
   );
