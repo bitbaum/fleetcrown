@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, Pause, Play, Mic, MicOff, ExternalLink } from "lucide-react";
+import { Loader2, Check, ArrowRight, Pause, Play, Mic, Square, ExternalLink } from "lucide-react";
 
 type BeaconSession = {
   id: string;
@@ -31,6 +31,8 @@ type ParsedSession = {
   todos: string;
   health: string;
 };
+
+type MicState = "idle" | "recording" | "processing";
 
 function parseSession(content: string): ParsedSession {
   const result: ParsedSession = { done: [], next: [], in_progress: [], tests: "", todos: "", health: "" };
@@ -105,16 +107,24 @@ function SessionSummary({ content }: { content: string }) {
   );
 }
 
-// Pulsing ring shown when mic is active
-function MicPulse() {
+function Waveform({ bars }: { bars: number[] }) {
   return (
-    <span className="relative flex h-4 w-4">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-negative opacity-50" />
-      <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full">
-        <MicOff className="h-4 w-4 text-status-negative" />
-      </span>
-    </span>
+    <div className="flex items-end gap-[2px]" style={{ height: 20 }}>
+      {bars.map((h, i) => (
+        <div
+          key={i}
+          className="rounded-full bg-status-negative"
+          style={{ width: 3, height: Math.max(2, Math.round(h * 18)), transition: "height 75ms ease" }}
+        />
+      ))}
+    </div>
   );
+}
+
+function formatRecordingTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export default function BeaconPage() {
@@ -126,16 +136,23 @@ export default function BeaconPage() {
   const [countdown, setCountdown] = useState(30);
   const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [micUnavailable, setMicUnavailable] = useState(false);
+  const [micState, setMicState] = useState<MicState>("idle");
   const [micError, setMicError] = useState("");
-  const [interimText, setInterimText] = useState(""); // live interim transcript
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [waveformBars, setWaveformBars] = useState<number[]>(Array(16).fill(0));
   const inputRef = useRef<HTMLInputElement>(null);
   const pausedRef = useRef(false);
   const cancelledRef = useRef(false);
-  const recRef = useRef<{ abort(): void; stop(): void } | null>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
@@ -161,17 +178,54 @@ export default function BeaconPage() {
     return () => clearTimeout(t);
   }, [session, prompts]);
 
+  const stopMicCleanup = useCallback(() => {
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (recordingTimerRef.current !== null) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (autoStopTimerRef.current !== null) {
+      clearTimeout(autoStopTimerRef.current);
+      autoStopTimerRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setWaveformBars(Array(16).fill(0));
+    setRecordingSeconds(0);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      stopMicCleanup();
+    };
+  }, [stopMicCleanup]);
+
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
     setSubmitted(true);
-    recRef.current?.abort();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    stopMicCleanup();
     await fetch(`/api/beacon/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ choice }),
     }).catch(() => {});
     setTimeout(() => window.close(), 400);
-  }, [id, submitted]);
+  }, [id, submitted, stopMicCleanup]);
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
 
@@ -187,98 +241,109 @@ export default function BeaconPage() {
     setPaused(false);
   }, []);
 
-  // Mic via Web Speech API — interimResults for live preview
-  const toggleMic = useCallback(() => {
-    if (listening) {
-      recRef.current?.stop();
-      setListening(false);
-      setInterimText("");
+  const startWaveformAnimation = useCallback(() => {
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const tick = () => {
+      analyser.getByteFrequencyData(dataArray);
+      const barCount = 16;
+      const step = Math.floor(dataArray.length / barCount);
+      const bars = Array.from({ length: barCount }, (_, i) => {
+        const slice = dataArray.slice(i * step, (i + 1) * step);
+        const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+        return avg / 255;
+      });
+      setWaveformBars(bars);
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const toggleMic = useCallback(async () => {
+    if (micState === "recording") {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
       return;
     }
 
-    type SRResult = { transcript: string; isFinal: boolean };
-    type SRResultList = ArrayLike<ArrayLike<SRResult>> & { isFinal: boolean; resultIndex?: number };
-    type SREvent = { results: SRResultList; resultIndex: number };
-    type SRError = { error: string };
-    type SRCtor = new () => {
-      start(): void; abort(): void; stop(): void;
-      lang: string; interimResults: boolean; continuous: boolean; maxAlternatives: number;
-      onresult: ((e: SREvent) => void) | null;
-      onerror: ((e: SRError) => void) | null;
-      onend: (() => void) | null;
-    };
+    if (micState === "processing") return;
 
-    const w = window as unknown as Record<string, unknown>;
-    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SRCtor | undefined;
-    if (!SR) {
-      setMicUnavailable(true);
-      setMicError("Speech recognition not available in this browser");
-      return;
-    }
+    setMicError("");
+    audioChunksRef.current = [];
 
-    const rec = new SR();
-    rec.lang = "en-US";
-    rec.interimResults = true;   // show live text as you speak
-    rec.continuous = false;       // stop after natural pause
-    rec.maxAlternatives = 1;
-
-    rec.onresult = (e) => {
-      let interim = "";
-      let finalText = "";
-      for (let i = e.resultIndex; i < (e.results as unknown as SRResult[][]).length; i++) {
-        const res = (e.results as unknown as SRResultList)[i];
-        const transcript = (res[0] as SRResult).transcript;
-        if ((res as unknown as { isFinal: boolean }).isFinal) {
-          finalText += transcript;
-        } else {
-          interim += transcript;
-        }
-      }
-      if (finalText) {
-        setCustom((prev) => (prev ? `${prev} ${finalText}` : finalText).trim());
-        setInterimText("");
-        cancelCountdown();
-        inputRef.current?.focus();
-      } else {
-        setInterimText(interim);
-      }
-    };
-
-    rec.onerror = (e) => {
-      setListening(false);
-      setInterimText("");
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        setMicUnavailable(true);
-        setMicError("Mic permission denied — allow in browser settings");
-      } else if (e.error === "network") {
-        setMicError("Network error — speech API needs internet access");
-      } else if (e.error === "no-speech") {
-        setMicError("No speech detected — try again");
-      } else if (e.error === "aborted") {
-        // user stopped, not an error
-        setMicError("");
-      } else {
-        setMicError(`Mic error: ${e.error}`);
-      }
-    };
-
-    rec.onend = () => {
-      setListening(false);
-      setInterimText("");
-    };
-
-    recRef.current = rec;
+    let stream: MediaStream;
     try {
-      rec.start();
-      setListening(true);
-      setMicError("");
-      pausedRef.current = true;
-      setPaused(true);
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
-      setListening(false);
-      setMicError(`Could not start mic: ${err instanceof Error ? err.message : String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      setMicError(`Mic access denied: ${msg}`);
+      return;
     }
-  }, [listening, cancelCountdown]);
+
+    streamRef.current = stream;
+
+    const audioCtx = new AudioContext();
+    audioContextRef.current = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+
+    const recorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    recorder.onstop = async () => {
+      stopMicCleanup();
+      setMicState("processing");
+
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      audioChunksRef.current = [];
+
+      const form = new FormData();
+      form.append("audio", blob, "recording.webm");
+
+      try {
+        const res = await fetch("/api/beacon/transcribe", { method: "POST", body: form });
+        const data = (await res.json()) as { text?: string; error?: string };
+        if (!res.ok || !data.text) {
+          setMicError(data.error ?? "No speech detected");
+        } else {
+          setCustom((prev) => (prev ? `${prev} ${data.text}` : data.text!).trim());
+          cancelCountdown();
+          inputRef.current?.focus();
+        }
+      } catch (err) {
+        setMicError(err instanceof Error ? err.message : "Transcription failed");
+      } finally {
+        setMicState("idle");
+      }
+    };
+
+    recorder.start(100);
+    setMicState("recording");
+    setRecordingSeconds(0);
+    pausedRef.current = true;
+    setPaused(true);
+
+    startWaveformAnimation();
+
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingSeconds((s) => s + 1);
+    }, 1000);
+
+    autoStopTimerRef.current = setTimeout(() => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+    }, 60_000);
+  }, [micState, cancelCountdown, stopMicCleanup, startWaveformAnimation]);
 
   // Countdown
   useEffect(() => {
@@ -465,38 +530,33 @@ export default function BeaconPage() {
         {/* Custom input + mic */}
         <div className="space-y-1.5">
           <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                ref={inputRef}
-                value={custom}
-                onChange={(e) => handleCustomChange(e.target.value)}
-                onFocus={cancelCountdown}
-                onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
-                placeholder={listening ? (interimText || "Listening…") : "Custom prompt…"}
-                className={`ui-input w-full ${listening && !custom ? "placeholder:text-status-negative/60 placeholder:italic" : ""}`}
-              />
-              {/* Live interim transcript overlay */}
-              {listening && interimText && (
-                <div className="pointer-events-none absolute inset-0 flex items-center px-3">
-                  <span className="truncate text-sm italic text-text-tertiary">{interimText}</span>
-                </div>
-              )}
-            </div>
+            <input
+              ref={inputRef}
+              value={custom}
+              onChange={(e) => handleCustomChange(e.target.value)}
+              onFocus={cancelCountdown}
+              onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
+              placeholder="Custom prompt…"
+              className="ui-input flex-1"
+            />
 
             {/* Mic button */}
-            {!micUnavailable && (
-              <button
-                onClick={toggleMic}
-                title={listening ? "Stop recording" : "Speak a prompt"}
-                className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
-                  listening
-                    ? "border-status-negative/40 bg-status-negative/10 text-status-negative"
-                    : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
-                }`}
-              >
-                {listening ? <MicPulse /> : <Mic className="h-4 w-4" />}
-              </button>
-            )}
+            <button
+              onClick={toggleMic}
+              disabled={micState === "processing"}
+              title={micState === "recording" ? "Stop recording" : "Speak a prompt"}
+              className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
+                micState === "recording"
+                  ? "animate-pulse border-status-negative/40 bg-status-negative/10 text-status-negative"
+                  : micState === "processing"
+                  ? "border-border-subtle bg-surface-base text-text-muted opacity-60"
+                  : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
+              }`}
+            >
+              {micState === "recording" && <Square className="h-4 w-4" />}
+              {micState === "processing" && <Loader2 className="h-4 w-4 animate-spin" />}
+              {micState === "idle" && <Mic className="h-4 w-4" />}
+            </button>
 
             <button
               onClick={() => custom.trim() && submit(`custom:${custom.trim()}`)}
@@ -509,19 +569,26 @@ export default function BeaconPage() {
 
           {/* Status row below input */}
           <div className="flex items-center justify-between px-0.5">
-            <div className="min-h-[16px]">
+            <div className="min-h-[16px] flex items-center">
               {micError && (
                 <p className="text-[11px] text-status-negative">{micError}</p>
               )}
-              {listening && !micError && (
-                <p className="text-[11px] text-status-negative animate-pulse">Recording…</p>
+              {micState === "recording" && !micError && (
+                <p className="text-[11px] text-status-negative">
+                  Recording · {formatRecordingTime(recordingSeconds)}
+                </p>
+              )}
+              {micState === "processing" && !micError && (
+                <p className="text-[11px] text-text-muted animate-pulse">Processing…</p>
               )}
             </div>
-            {custom && (
+            {micState === "recording" && !micError ? (
+              <Waveform bars={waveformBars} />
+            ) : custom ? (
               <p className="text-[11px] tabular-nums text-text-muted">
                 {wordCount}w · {charCount}c
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 
