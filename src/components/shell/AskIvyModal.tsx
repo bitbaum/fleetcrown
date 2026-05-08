@@ -5,7 +5,7 @@ import { X, Send, Loader2, Mic, MicOff, Globe, FolderOpen, ChevronDown, ChevronU
 import { CATEGORY_META } from "@/config/prompt-library";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { type Message, QUICK_PROMPTS, GLOBAL_PROMPTS, useElapsedTimer } from "./ask-ivy-helpers";
 
 export function AskIvyModal({ onClose }: { onClose: () => void }) {
@@ -25,7 +25,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
-  const { listening, supported, toggle: toggleMic } = useSpeechRecognition(appendTranscript);
+  const { listening, processing: micProcessing, error: micError, toggle: toggleMic } = useWhisperMic(appendTranscript);
 
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -181,33 +181,37 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
         {/* Input */}
         <div className="shrink-0 ui-card-section">
           <div className={`ui-card-shell flex items-end gap-1 bg-surface-overlay transition-colors ${
-            listening ? "border-accent-primary shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent-primary)_16%,transparent)]" : "border-border-default"
+            listening
+              ? "border-status-negative shadow-[0_0_0_3px_color-mix(in_oklch,var(--status-negative)_16%,transparent)]"
+              : micProcessing
+              ? "border-accent-primary/50"
+              : "border-border-default"
           }`}>
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={listening ? "Listening…" : "Ask Ivy anything…"}
+              placeholder={listening ? "Recording — click mic to stop…" : micProcessing ? "Transcribing…" : "Ask Ivy anything…"}
               rows={1}
               disabled={loading}
               className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none max-h-32 disabled:opacity-50"
               style={{ fieldSizing: "content" } as React.CSSProperties}
             />
-            {supported && (
-              <button
-                onClick={toggleMic}
-                disabled={loading}
-                title={listening ? "Stop recording" : "Voice input"}
-                className={`m-1 shrink-0 rounded-2xl p-2.5 transition-colors ${
-                  listening
-                    ? "bg-status-negative/20 text-status-negative hover:bg-status-negative/30 animate-pulse"
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-raised"
-                }`}
-              >
-                {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              </button>
-            )}
+            <button
+              onClick={toggleMic}
+              disabled={loading || micProcessing}
+              title={listening ? "Stop recording" : micProcessing ? "Transcribing…" : "Voice input (Whisper)"}
+              className={`m-1 shrink-0 rounded-2xl p-2.5 transition-colors ${
+                listening
+                  ? "bg-status-negative/20 text-status-negative hover:bg-status-negative/30 animate-pulse"
+                  : micProcessing
+                  ? "text-text-muted opacity-60"
+                  : "text-text-muted hover:text-text-primary hover:bg-surface-raised"
+              }`}
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : micProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+            </button>
             <button
               onClick={() => send()}
               disabled={!input.trim() || loading}
@@ -216,9 +220,11 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               <Send className="h-4 w-4" />
             </button>
           </div>
-          <div className="mt-2 text-center text-[10px] text-text-tertiary">
-            Enter to send · Shift+Enter for new line · Esc to close
-            {supported && <span> · 🎤 mic available</span>}
+          {micError && (
+            <p className="mt-1.5 text-center text-[10px] text-status-negative">{micError}</p>
+          )}
+          <div className="mt-1.5 text-center text-[10px] text-text-tertiary">
+            Enter to send · Shift+Enter for new line · Esc to close · 🎤 Whisper
           </div>
         </div>
     </Modal>
