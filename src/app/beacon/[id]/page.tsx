@@ -129,6 +129,24 @@ export default function BeaconPage() {
     fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
   }, [id]);
 
+  // Auto-fit Chrome app window to content height + reposition to bottom-right
+  useEffect(() => {
+    if (!session || prompts.length === 0) return;
+    const fit = () => {
+      const h = Math.min(document.documentElement.scrollHeight + 2, 900);
+      const w = 520;
+      try {
+        // Read position before resize (resizeTo anchors top-left, so reposition after)
+        const right  = window.screenLeft + window.outerWidth;
+        const bottom = window.screenTop  + window.outerHeight;
+        window.resizeTo(w, h);
+        window.moveTo(right - w, Math.max(bottom - h, 16));
+      } catch { /* blocked in non-popup windows */ }
+    };
+    const t = setTimeout(fit, 120);
+    return () => clearTimeout(t);
+  }, [session, prompts]);
+
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
     setSubmitted(true);
@@ -236,7 +254,7 @@ export default function BeaconPage() {
 
   if (!session) {
     return (
-      <div className="flex h-screen items-center justify-center bg-surface-page">
+      <div className="flex h-64 items-center justify-center bg-surface-page">
         <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
       </div>
     );
@@ -244,7 +262,7 @@ export default function BeaconPage() {
 
   if (submitted) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-surface-page">
+      <div className="flex h-48 flex-col items-center justify-center gap-3 bg-surface-page">
         <Check className="h-8 w-8 text-status-positive" />
         <p className="text-sm text-text-secondary">Running…</p>
       </div>
@@ -256,7 +274,7 @@ export default function BeaconPage() {
   const morePrompts = prompts.filter((p) => p.style === "more");
 
   return (
-    <div className="min-h-screen bg-surface-page p-4 sm:p-6">
+    <div className="bg-surface-page p-4 sm:p-6">
       <div className="mx-auto max-w-lg space-y-4">
 
         {/* Header */}

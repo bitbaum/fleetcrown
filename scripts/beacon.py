@@ -1263,7 +1263,7 @@ class ConfirmPopup(BasePopup):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def _terminal_screen_position(width: int = 520, height: int = 820) -> tuple[int, int]:
+def _terminal_screen_position(width: int = 520, height: int = 640) -> tuple[int, int]:
     """Return (x, y) bottom-right of the screen containing the terminal window.
 
     Detection order:
@@ -1348,8 +1348,8 @@ def _web_stop(label: str, session_file: str) -> None:
     def _open_browser(url: str):
         env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
         # Position window at bottom-right of the screen containing the terminal
-        x, y = _terminal_screen_position(520, 820)
-        app_flags = ["--app=" + url, "--window-size=520,820", f"--window-position={x},{y}"]
+        x, y = _terminal_screen_position(520, 640)
+        app_flags = ["--app=" + url, "--window-size=520,640", f"--window-position={x},{y}"]
         for cmd, extra in (
             (["brave-browser"], app_flags),
             (["google-chrome"], app_flags),
