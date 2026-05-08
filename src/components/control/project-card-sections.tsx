@@ -443,7 +443,7 @@ function PromptInput({
               const secs = recordingSeconds ?? 0;
               const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
               return flat
-                ? <p className="text-[11px] text-status-warning">No audio detected</p>
+                ? <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
                 : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
             })()}
             {processing && !micError && <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>}

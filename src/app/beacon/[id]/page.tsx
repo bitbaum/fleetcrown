@@ -469,7 +469,7 @@ export default function BeaconPage() {
                 );
               })()}
               {processing && !micError && (
-                <p className="text-[11px] text-text-tertiary animate-pulse">Processing…</p>
+                <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>
               )}
             </div>
             {listening && !micError ? (

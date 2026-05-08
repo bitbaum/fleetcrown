@@ -65,7 +65,7 @@ export function BeaconSettings() {
       <div>
         <h2 className="font-medium text-text-primary">Beacon</h2>
         <p className="mt-1 text-sm text-text-tertiary">
-          Controls the session-stop popup that appears when Claude finishes a task.
+          Controls the popup and auto-continue behavior when an agent finishes a task.
         </p>
       </div>
 
@@ -88,11 +88,11 @@ export function BeaconSettings() {
             </div>
             <div className="space-y-0.5">
               <label htmlFor="beacon-browser-ui" className="text-sm font-medium text-text-primary cursor-pointer">
-                Use web UI beacon
+                Control panel only (skip popup)
               </label>
               <p className="text-xs text-text-muted">
-                Opens the Cockpit web popup instead of the native desktop dialog when Claude finishes.
-                Enables mic input, session summaries, and light/dark mode.
+                When enabled: no popup window opens — the Control panel&apos;s ReadyBanner handles auto-continue.
+                When disabled (default): a web popup window opens with session summary, queue, and prompt choices.
               </p>
             </div>
           </div>
