@@ -44,6 +44,24 @@ The filesystem is the message bus. The critical files are:
 
 The ZELLIJ_PANE_ID environment variable is the key that makes all of this work. Zellij assigns each pane a stable integer ID. Claude inherits this from its environment. Every hook that fires inside that Claude session inherits it too. It is the thread that ties a process back to its tab.
 
+```mermaid
+flowchart LR
+    Claude["Claude Code\n(Zellij pane)"]
+    Bridge["hook-bridge.sh"]
+    FS["/tmp/ files\n(filesystem bus)"]
+    Beacon["beacon.py\n(PyQt6 / Chrome)"]
+    Cockpit["Cockpit\n(Next.js)"]
+    Zellij["Zellij server"]
+
+    Claude -->|"Stop hook · stdin JSON"| Bridge
+    Bridge -->|"write agent-ready-{tab}\nread claude-pane-{PANE_ID}"| FS
+    Bridge -->|"invoke"| Beacon
+    Beacon -->|"POST /api/beacon\npoll GET /api/beacon/{id}"| Cockpit
+    Cockpit -->|"SSE stream reads\nagent-ready · current-prompt"| FS
+    Bridge -->|"go-to-tab-name\nwrite-chars · write 13"| Zellij
+    Zellij -->|"types prompt\ninto focused pane"| Claude
+```
+
 ## Three Injection Pathways
 
 There are three distinct paths by which a prompt can reach Claude. That number is already a warning sign. When a system has three ways to accomplish the same thing, each will silently diverge from the others.
@@ -69,6 +87,30 @@ The TypeScript route resolves the live Zellij tab name by calling `getZellijTabs
 ### Path C: The PyQt6 native popup
 
 When Cockpit is not running, `_web_stop` starts it and waits 30 seconds. If Cockpit never responds, `_pyqt_stop` shows a native Qt window synchronously. The user clicks. The choice is captured the same way as Path A and processed through the same injection code.
+
+```mermaid
+flowchart TD
+    Stop["Claude stops"]
+    Bridge["hook-bridge.sh"]
+    Ready["/tmp/agent-ready-{tab}"]
+
+    Stop --> Bridge
+    Bridge --> Ready
+
+    Bridge -->|"Cockpit running"| WebBeacon["Path A · Web beacon popup"]
+    Bridge -->|"Cockpit down"| QtPopup["Path C · PyQt6 native popup"]
+    Ready -->|"user clicks inject"| Panel["Path B · Control panel\nPOST /api/inject"]
+
+    WebBeacon -->|"slot choice → stdout"| BashInject["inject_prompt\nbash · 2-field session format"]
+    QtPopup -->|"slot choice → stdout"| BashInject
+    Panel --> TSInject["injectIntoTab\nTypeScript · 5-field session format"]
+
+    BashInject --> Zellij["zellij write-chars"]
+    TSInject --> Zellij
+    Zellij --> Claude["Claude Code"]
+```
+
+Three paths enter. Two different prompt formats exit. The divergence at the inject step is Bug Four.
 
 ## Bug One: Tab Resolution Fails Silently When It Matters Most
 
