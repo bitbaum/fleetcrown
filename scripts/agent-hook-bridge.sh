@@ -109,14 +109,21 @@ handle_stop() {
   log "popup choice=$choice"
   [ -z "$choice" ] && exit 0
 
+  local inject_key inject_label
   if [[ "$choice" == custom:* ]]; then
     prompt="${choice#custom:}"
+    inject_key="custom"
+    inject_label="${choice#custom:}"
   else
     key=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | .key' "$_PROMPTS" 2>/dev/null)
     [ -z "$key" ] && log "no key for slot=$choice" && exit 0
 
     base=$(get_prompt "$key")
     [ -z "$base" ] && log "prompt not found for key=$key" && exit 0
+
+    inject_key="$key"
+    inject_label=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | (.icon + " " + .label)' "$_PROMPTS" 2>/dev/null | head -1)
+    [ -z "$inject_label" ] && inject_label="$key"
 
     if [ "$key" = "close_session" ]; then
       touch "/tmp/agent-session-closed-${TAB_NAME}"
@@ -137,6 +144,11 @@ handle_stop() {
   fi
 
   emit_or_inject_prompt "$TAB_NAME" "$prompt"
+
+  # Sync state so Control panel and web beacon reflect the running task immediately.
+  # Without this, the UI shows "waiting for input" until the next Claude stop hook fires.
+  write_inject_state "$TAB_NAME" "$inject_key" "$inject_label"
+  log "injected key=$inject_key label=$inject_label"
 }
 
 handle_notification() {

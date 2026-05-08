@@ -171,11 +171,29 @@ inject_prompt() {
   local tab="$1"
   local prompt="$2"
   [ -z "$tab" ] && return 1
+  # Double-quote args — zellij go-to-tab-name is case-sensitive, must pass exact name
   zellij action go-to-tab-name "$tab" 2>/dev/null
   sleep 0.3
-  zellij action write-chars "$prompt" 2>/dev/null
+  # Use printf to avoid word-splitting and glob expansion on the prompt text
+  zellij action write-chars -- "$prompt" 2>/dev/null
   sleep 0.1
   zellij action write 13 2>/dev/null
+}
+
+# Call after every injection to keep the Control panel and web beacon in sync.
+# Writes agent-current-prompt-<tab> so the UI shows which task is running,
+# and clears agent-ready-<tab> so the UI stops showing "waiting for input".
+write_inject_state() {
+  local tab="$1" key="$2" label="$3"
+  local now
+  now=$(date +%s)
+  # Current-prompt sentinel — TypeScript reads this to show the running task
+  printf '{"key":"%s","label":"%s","startedAt":%s}\n' "$key" "$label" "$now" \
+    > "/tmp/agent-current-prompt-${tab}"
+  # Clear ready/closed state so the UI transitions to "running"
+  rm -f "/tmp/agent-ready-${tab}"      "/tmp/claude-ready-${tab}"
+  rm -f "/tmp/agent-closed-${tab}"     "/tmp/claude-closed-${tab}"
+  rm -f "/tmp/agent-stop-active-${tab}" "/tmp/claude-stop-active-${tab}"
 }
 
 play_sound() {
