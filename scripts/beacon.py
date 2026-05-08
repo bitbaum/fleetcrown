@@ -171,11 +171,17 @@ _LIGHT_PALETTE = dict(
 )
 
 def _load_theme() -> dict:
-    default_theme = dict(_DARK_PALETTE if _is_dark_mode() else _LIGHT_PALETTE)
+    is_dark = _is_dark_mode()
+    default_theme = dict(_DARK_PALETTE if is_dark else _LIGHT_PALETTE)
     try:
         if os.path.exists(_THEME_PATH):
             loaded = json.load(open(_THEME_PATH))
-            default_theme.update(loaded)
+            # Support nested {"dark": {...}, "light": {...}} from export-beacon-theme.py
+            mode_key = "dark" if is_dark else "light"
+            if mode_key in loaded:
+                default_theme.update(loaded[mode_key])
+            elif not any(k in loaded for k in ("dark", "light")):
+                default_theme.update(loaded)  # legacy flat format
     except Exception:
         pass
     return default_theme
