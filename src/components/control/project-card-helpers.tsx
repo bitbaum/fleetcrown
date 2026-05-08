@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   CheckCircle2, Loader2, Zap,
 } from "lucide-react";
@@ -140,26 +140,39 @@ export function ReadyBanner({
   prompts,
   onSend,
   onDismiss,
+  onAutoInject,
   paused = false,
   title = "Agent finished",
   autoContinueEnabled = true,
+  queueLength = 0,
 }: {
   prompts: PromptMeta[];
   onSend: (key: string) => void;
   onDismiss: () => void;
+  onAutoInject?: () => void;
   paused?: boolean;
   title?: string;
   autoContinueEnabled?: boolean;
+  queueLength?: number;
 }) {
   const [seconds, setSeconds] = useState(AUTO_INJECT_S);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
+  // Stable ref so the effect never re-runs just because the callback identity changed
+  const onAutoInjectRef = useRef(onAutoInject);
+  const onSendRef = useRef(onSend);
+  useEffect(() => { onAutoInjectRef.current = onAutoInject; }, [onAutoInject]);
+  useEffect(() => { onSendRef.current = onSend; }, [onSend]);
 
   useEffect(() => {
     if (paused || !autoContinueEnabled) return;
-    if (seconds <= 0) { onSend(primaryKey); return; }
+    if (seconds <= 0) {
+      if (onAutoInjectRef.current) onAutoInjectRef.current();
+      else onSendRef.current(primaryKey);
+      return;
+    }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [seconds, paused, autoContinueEnabled, onSend, primaryKey]);
+  }, [seconds, paused, autoContinueEnabled, primaryKey]);
 
   return (
     <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
@@ -169,6 +182,9 @@ export function ReadyBanner({
           <span className="text-sm font-medium text-status-positive">{title}</span>
         </div>
         <div className="flex items-center gap-2">
+          {queueLength > 0 && (
+            <span className="ui-tag ui-tag-neutral">Queue {queueLength}</span>
+          )}
           <span className="text-sm text-text-secondary tabular-nums">{!autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`}</span>
           <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss

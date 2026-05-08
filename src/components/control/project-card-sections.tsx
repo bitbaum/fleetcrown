@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
   Pause, Play, Eraser, Loader2, Send, Mic, MicOff,
-  SlidersHorizontal, ChevronsDown,
+  SlidersHorizontal, ChevronsDown, ListPlus, X,
 } from "lucide-react";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { cn } from "@/lib/utils";
@@ -169,17 +169,13 @@ function BulletList({ items, icon, iconClass, textClass }: {
 export function SessionSummary({
   session,
   isClosed,
-  isRunning,
 }: {
   session: ProjectState["session"];
   isClosed: boolean;
-  isRunning?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  // Hide while the agent is actively running a known prompt — the RunningBanner
-  // already shows what's happening and session.next is from the previous turn.
-  if (isClosed || isRunning || !session) return null;
+  if (isClosed || !session) return null;
   if (!session.next && !session.done) return null;
 
   const nextItems = session.next ? splitItems(session.next) : [];
@@ -248,8 +244,10 @@ export function ProjectBanners({
   prompts,
   autoContinueEnabled,
   paused,
+  queueLength = 0,
   onDismiss,
   onSend,
+  onAutoInject,
 }: {
   isClosed: boolean;
   isClosing: boolean;
@@ -264,8 +262,10 @@ export function ProjectBanners({
   prompts: PromptMeta[];
   autoContinueEnabled: boolean;
   paused: boolean;
+  queueLength?: number;
   onDismiss: () => void;
   onSend: (key: string) => void;
+  onAutoInject?: () => void;
 }) {
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
@@ -285,9 +285,11 @@ export function ProjectBanners({
           prompts={prompts}
           onSend={onSend}
           onDismiss={onDismiss}
+          onAutoInject={onAutoInject}
           paused={paused}
           title="Agent finished"
           autoContinueEnabled={autoContinueEnabled}
+          queueLength={queueLength}
         />
       )}
       {isOrchReady && (
@@ -299,9 +301,11 @@ export function ProjectBanners({
             onSend(key);
           }}
           onDismiss={onDismiss}
+          onAutoInject={onAutoInject}
           paused={paused}
           title="Task finished"
           autoContinueEnabled={autoContinueEnabled}
+          queueLength={queueLength}
         />
       )}
       {showRunning && currentPrompt && (
@@ -339,9 +343,11 @@ function PromptInput({
   micError,
   sending,
   placeholder,
+  showQueue,
   onCustomChange,
   onCustomFocusChange,
   onSendCustom,
+  onEnqueue,
   toggleMic,
 }: {
   custom: string;
@@ -350,9 +356,11 @@ function PromptInput({
   micError: string;
   sending: string | null;
   placeholder: string;
+  showQueue?: boolean;
   onCustomChange: (v: string) => void;
   onCustomFocusChange: (f: boolean) => void;
   onSendCustom: () => void;
+  onEnqueue?: () => void;
   toggleMic: () => void;
 }) {
   return (
@@ -363,7 +371,13 @@ function PromptInput({
             rows={1}
             value={custom}
             onChange={(e) => onCustomChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && custom.trim()) { e.preventDefault(); onSendCustom(); } }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && custom.trim()) {
+                e.preventDefault();
+                if (e.altKey && onEnqueue) onEnqueue();
+                else onSendCustom();
+              }
+            }}
             onFocus={() => onCustomFocusChange(true)}
             onBlur={() => onCustomFocusChange(false)}
             placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : placeholder}
@@ -395,17 +409,62 @@ function PromptInput({
               : <Mic className="h-3.5 w-3.5" />}
           </button>
         </div>
-        <button
-          onClick={onSendCustom}
-          disabled={!custom.trim() || sending !== null}
-          className="ui-btn-lg inline-flex min-h-11 shrink-0 items-center justify-center py-3.5 sm:px-5"
-        >
-          <Send className="h-4 w-4" />
-        </button>
+        <div className="flex shrink-0 gap-1.5">
+          {showQueue && onEnqueue && (
+            <button
+              onClick={onEnqueue}
+              disabled={!custom.trim() || sending !== null}
+              title="Add to queue (runs after current task) · Alt+Enter"
+              className="ui-icon-action min-h-11 rounded-xl border border-border-default px-3 disabled:opacity-40"
+            >
+              <ListPlus className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={onSendCustom}
+            disabled={!custom.trim() || sending !== null}
+            className="ui-btn-lg inline-flex min-h-11 items-center justify-center py-3.5 sm:px-5"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {micError && (
         <p className="px-0.5 text-[11px] text-status-negative">{micError}</p>
       )}
+    </div>
+  );
+}
+
+function QueueList({ queue, onRemove }: { queue: string[]; onRemove?: (i: number) => void }) {
+  return (
+    <div className="space-y-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5">
+      <p className="ui-kicker mb-2">Up next · {queue.length}</p>
+      {queue.map((item, i) => (
+        <div key={i} className="flex items-start gap-2">
+          <span className={cn(
+            "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
+            i === 0 ? "text-accent-text" : "text-text-muted",
+          )}>
+            {i + 1}
+          </span>
+          <span className={cn(
+            "flex-1 text-sm leading-snug",
+            i === 0 ? "text-text-primary" : "text-text-tertiary",
+          )}>
+            {item}
+          </span>
+          {onRemove && (
+            <button
+              onClick={() => onRemove(i)}
+              className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+              title="Remove from queue"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -416,10 +475,13 @@ export function IntentButtonPanel({
   autoContinueEnabled,
   sending,
   custom,
+  queue = [],
   bannerActive,
   onToggleAutoContinue,
   onSendIntent,
   onSendCustom,
+  onEnqueueCustom,
+  onRemoveFromQueue,
   onCustomChange,
   onCustomFocusChange,
 }: {
@@ -428,10 +490,13 @@ export function IntentButtonPanel({
   autoContinueEnabled: boolean;
   sending: string | null;
   custom: string;
+  queue?: string[];
   bannerActive?: boolean;
   onToggleAutoContinue: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
   onSendCustom: () => void;
+  onEnqueueCustom?: (prompt: string) => void;
+  onRemoveFromQueue?: (index: number) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
 }) {
@@ -443,7 +508,19 @@ export function IntentButtonPanel({
   }, [custom, onCustomChange]);
   const { listening, processing, error: micError, toggle: toggleMic } = useWhisperMic(appendTranscript);
 
-  const inputProps = { custom, listening, processing, micError, sending, onCustomChange, onCustomFocusChange, onSendCustom, toggleMic };
+  const handleEnqueue = () => {
+    if (custom.trim() && onEnqueueCustom) {
+      onEnqueueCustom(custom.trim());
+      onCustomChange("");
+    }
+  };
+
+  const inputProps = {
+    custom, listening, processing, micError, sending,
+    onCustomChange, onCustomFocusChange, onSendCustom, toggleMic,
+    showQueue: !!onEnqueueCustom,
+    onEnqueue: handleEnqueue,
+  };
 
   const recentPrompts = project.recentCustomPrompts.slice(0, project.agentRunning ? 3 : undefined);
 
@@ -463,6 +540,9 @@ export function IntentButtonPanel({
             {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
           </button>
         </div>
+        {queue.length > 0 && (
+          <QueueList queue={queue} onRemove={onRemoveFromQueue} />
+        )}
         {recentPrompts.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {recentPrompts.map((r) => (
@@ -487,6 +567,9 @@ export function IntentButtonPanel({
   return (
     <div className="space-y-2.5 ui-card-section">
       <PromptInput {...inputProps} placeholder="Custom prompt…" />
+      {queue.length > 0 && (
+        <QueueList queue={queue} onRemove={onRemoveFromQueue} />
+      )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
       {!bannerActive && primary && (

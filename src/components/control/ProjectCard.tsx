@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
@@ -12,6 +13,7 @@ import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
   ProjectCardHeader, SessionSummary, ProjectBanners, IntentButtonPanel,
 } from "./project-card-sections";
+import { usePromptQueue } from "@/hooks/use-prompt-queue";
 
 export function ProjectCard({
   project,
@@ -51,6 +53,8 @@ export function ProjectCard({
       return false;
     }
   });
+
+  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue } = usePromptQueue(project.tab);
 
   useEffect(() => {
     try {
@@ -123,6 +127,32 @@ export function ProjectCard({
     }
   };
 
+  // When auto-continue countdown fires: drain the queue first, fall back to next_best
+  const handleAutoInject = useCallback(async () => {
+    const queued = shiftQueue();
+    if (queued) {
+      setSending("custom");
+      setDismissed(true);
+      try {
+        await onInject(project.tab, undefined, queued);
+      } finally {
+        setSending(null);
+      }
+    } else {
+      await sendIntent("next_best");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shiftQueue, project.tab, onInject]);
+
+  // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire
+  const handleToggleAutoContinue = () => {
+    const next = !autoContinueEnabled;
+    setAutoContinueEnabled(next);
+    if (!next) {
+      postJson("/api/beacon/cancel", { tab: project.tab }).catch(() => {});
+    }
+  };
+
   const paused = !autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0;
 
   return (
@@ -162,7 +192,7 @@ export function ProjectCard({
         />
       ) : (
         <>
-          <SessionSummary session={project.session} isClosed={display.isClosed} isRunning={display.isRunning && !!project.currentPrompt} />
+          <SessionSummary session={project.session} isClosed={display.isClosed} />
           <ProjectBanners
             isClosed={display.isClosed}
             isClosing={display.isClosing}
@@ -177,8 +207,10 @@ export function ProjectCard({
             prompts={prompts}
             autoContinueEnabled={autoContinueEnabled}
             paused={paused}
+            queueLength={queue.length}
             onDismiss={() => setDismissed(true)}
             onSend={send}
+            onAutoInject={handleAutoInject}
           />
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 
@@ -188,10 +220,13 @@ export function ProjectCard({
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}
             custom={custom}
+            queue={queue}
             bannerActive={display.isClosed || display.isReady || display.isOrchestrationReady}
-            onToggleAutoContinue={() => setAutoContinueEnabled((v) => !v)}
+            onToggleAutoContinue={handleToggleAutoContinue}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}
+            onEnqueueCustom={enqueue}
+            onRemoveFromQueue={removeFromQueue}
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
           />

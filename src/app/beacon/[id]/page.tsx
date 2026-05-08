@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, Pause, Play, Mic, Square, ExternalLink } from "lucide-react";
+import { Loader2, Check, ArrowRight, Pause, Play, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
+import { useWhisperMic } from "@/hooks/use-whisper-mic";
+import { parseSessionText } from "@/lib/session-content";
 
 type BeaconSession = {
   id: string;
@@ -24,36 +26,15 @@ type AgentPrompt = {
   prompt: string;
 };
 
-type ParsedSession = {
-  done: string[];
-  next: string[];
-  in_progress: string[];
-  tests: string;
-  todos: string;
-  health: string;
-};
-
-type MicState = "idle" | "recording" | "processing";
-
-function parseSession(content: string): ParsedSession {
-  const result: ParsedSession = { done: [], next: [], in_progress: [], tests: "", todos: "", health: "" };
-  for (const line of content.split("\n")) {
-    if (!line.includes(":")) continue;
-    const [rawKey, ...rest] = line.split(":");
-    const k = rawKey.trim().toLowerCase();
-    const v = rest.join(":").trim();
-    if (k === "done") result.done = v.split(";").map((s) => s.trim()).filter(Boolean);
-    else if (k === "next") result.next = v.split(";").map((s) => s.trim()).filter(Boolean);
-    else if (k === "in_progress") result.in_progress = v.split(";").map((s) => s.trim()).filter(Boolean);
-    else if (k === "tests") result.tests = v;
-    else if (k === "todos") result.todos = v;
-    else if (k === "health") result.health = v;
-  }
-  return result;
+function readCountdownParam(): number {
+  if (typeof window === "undefined") return 30;
+  const raw = new URLSearchParams(window.location.search).get("countdown");
+  const n = raw ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 30;
 }
 
 function SessionSummary({ content }: { content: string }) {
-  const s = parseSession(content);
+  const s = parseSessionText(content);
   const [doneOpen, setDoneOpen] = useState(false);
   if (!content.trim()) return null;
 
@@ -128,13 +109,6 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function readCountdownParam(): number {
-  if (typeof window === "undefined") return 30;
-  const raw = new URLSearchParams(window.location.search).get("countdown");
-  const n = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 30;
-}
-
 export default function BeaconPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<BeaconSession | null>(null);
@@ -145,24 +119,11 @@ export default function BeaconPage() {
   const [countdown, setCountdown] = useState(readCountdownParam);
   const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const [micState, setMicState] = useState<MicState>("idle");
-  const [micError, setMicError] = useState("");
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [waveformBars, setWaveformBars] = useState<number[]>(Array(16).fill(0));
   const inputRef = useRef<HTMLInputElement>(null);
   const pausedRef = useRef(false);
   const cancelledRef = useRef(false);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const animFrameRef = useRef<number | null>(null);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const peakRef = useRef<number>(0);
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
@@ -201,44 +162,35 @@ export default function BeaconPage() {
     return () => clearTimeout(t);
   }, [session, prompts]);
 
-  const stopMicCleanup = useCallback(() => {
-    if (animFrameRef.current !== null) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    if (recordingTimerRef.current !== null) {
-      clearInterval(recordingTimerRef.current);
-      recordingTimerRef.current = null;
-    }
-    if (autoStopTimerRef.current !== null) {
-      clearTimeout(autoStopTimerRef.current);
-      autoStopTimerRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    setWaveformBars(Array(16).fill(0));
-    setRecordingSeconds(0);
+  const cancelCountdown = useCallback(() => {
+    pausedRef.current = true;
+    cancelledRef.current = true;
+    setCountdown(0);
+    setPaused(false);
   }, []);
 
+  const appendTranscript = useCallback((text: string) => {
+    setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
+    cancelCountdown();
+    inputRef.current?.focus();
+  }, [cancelCountdown]);
+
+  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } = useWhisperMic(appendTranscript);
+
+  // Pause countdown while mic is active. The ref keeps the countdown loop in sync;
+  // the state drives UI only — read it in the render, not in the effect body.
+  const micActive = listening || processing;
   useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      stopMicCleanup();
-    };
-  }, [stopMicCleanup]);
+    if (micActive) {
+      pausedRef.current = true;
+    }
+  }, [micActive]);
+  // Merge mic-active into the displayed paused state without a cascading effect
+  const displayPaused = paused || micActive;
 
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
     setSubmitted(true);
-    // Resolve a human-readable label for the confirmation screen
     const all = promptsRef.current;
     let label = "";
     if (choice.startsWith("custom:")) {
@@ -249,17 +201,13 @@ export default function BeaconPage() {
       label = matched ? `${matched.icon} ${matched.label}` : choice;
     }
     setSubmittedLabel(label);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
-    }
-    stopMicCleanup();
     await fetch(`/api/beacon/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ choice }),
     }).catch(() => {});
     setTimeout(() => window.close(), 400);
-  }, [id, submitted, stopMicCleanup]);
+  }, [id, submitted]);
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
 
@@ -267,142 +215,6 @@ export default function BeaconPage() {
     pausedRef.current = !pausedRef.current;
     setPaused((p) => !p);
   }, []);
-
-  const cancelCountdown = useCallback(() => {
-    pausedRef.current = true;
-    cancelledRef.current = true;
-    setCountdown(0);
-    setPaused(false);
-  }, []);
-
-  const startWaveformAnimation = useCallback(() => {
-    const analyser = analyserRef.current;
-    if (!analyser) return;
-    peakRef.current = 0;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    const tick = () => {
-      analyser.getByteFrequencyData(dataArray);
-      const barCount = 16;
-      const step = Math.floor(dataArray.length / barCount);
-      const bars = Array.from({ length: barCount }, (_, i) => {
-        const slice = dataArray.slice(i * step, (i + 1) * step);
-        const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
-        return avg / 255;
-      });
-      const framePeak = Math.max(...bars);
-      if (framePeak > peakRef.current) peakRef.current = framePeak;
-      setWaveformBars(bars);
-      animFrameRef.current = requestAnimationFrame(tick);
-    };
-    animFrameRef.current = requestAnimationFrame(tick);
-  }, []);
-
-  const toggleMic = useCallback(async () => {
-    if (micState === "recording") {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      return;
-    }
-
-    if (micState === "processing") return;
-
-    setMicError("");
-    audioChunksRef.current = [];
-
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (err) {
-      const name = err instanceof Error ? (err as DOMException).name : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        setMicError("Mic blocked — open chrome://settings/content/microphone and allow localhost");
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        setMicError("No microphone found — check your audio input device");
-      } else {
-        setMicError(`Mic unavailable: ${err instanceof Error ? err.message : String(err)}`);
-      }
-      return;
-    }
-
-    streamRef.current = stream;
-
-    const audioCtx = new AudioContext();
-    audioContextRef.current = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    analyserRef.current = analyser;
-
-    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-      ? "audio/webm;codecs=opus"
-      : "audio/webm";
-    const recorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    recorder.onstop = async () => {
-      stopMicCleanup();
-      setMicState("processing");
-
-      const actualMime = mediaRecorderRef.current?.mimeType ?? "audio/webm";
-      const blob = new Blob(audioChunksRef.current, { type: actualMime });
-      audioChunksRef.current = [];
-
-      if (blob.size < 100) {
-        setMicState("idle");
-        setMicError("Recording too short — hold the mic button while speaking");
-        return;
-      }
-
-      if (peakRef.current < 0.01) {
-        setMicState("idle");
-        setMicError("Microphone too quiet — speak closer or raise your input volume");
-        return;
-      }
-
-      const form = new FormData();
-      form.append("audio", blob, "recording.webm");
-
-      try {
-        const res = await fetch("/api/beacon/transcribe", { method: "POST", body: form });
-        const data = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok || !data.text) {
-          setMicError(data.error ?? "No speech detected");
-        } else {
-          setCustom((prev) => (prev ? `${prev} ${data.text}` : data.text!).trim());
-          cancelCountdown();
-          inputRef.current?.focus();
-        }
-      } catch (err) {
-        setMicError(err instanceof Error ? err.message : "Transcription failed");
-      } finally {
-        setMicState("idle");
-      }
-    };
-
-    recorder.start(100);
-    setMicState("recording");
-    setRecordingSeconds(0);
-    pausedRef.current = true;
-    setPaused(true);
-
-    startWaveformAnimation();
-
-    recordingTimerRef.current = setInterval(() => {
-      setRecordingSeconds((s) => s + 1);
-    }, 1000);
-
-    autoStopTimerRef.current = setTimeout(() => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-    }, 60_000);
-  }, [micState, cancelCountdown, stopMicCleanup, startWaveformAnimation]);
 
   // Countdown
   useEffect(() => {
@@ -598,17 +410,17 @@ export default function BeaconPage() {
         <div className="flex items-center justify-between">
           <p className="text-[11px] text-text-tertiary">
             {countdown > 0
-              ? paused ? "Paused · Space to resume" : `Auto in ${countdown}s · Space to pause`
+              ? displayPaused ? "Paused · Space to resume" : `Auto in ${countdown}s · Space to pause`
               : "Type to redirect · Enter to send"}
           </p>
           {countdown > 0 && (
             <button
               onClick={togglePause}
-              title={paused ? "Resume countdown (Space)" : "Pause countdown (Space)"}
+              title={displayPaused ? "Resume countdown (Space)" : "Pause countdown (Space)"}
               className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
             >
-              {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-              {paused ? "Resume" : "Pause"}
+              {displayPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+              {displayPaused ? "Resume" : "Pause"}
             </button>
           )}
         </div>
@@ -622,26 +434,31 @@ export default function BeaconPage() {
               onChange={(e) => handleCustomChange(e.target.value)}
               onFocus={cancelCountdown}
               onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
-              placeholder="Custom prompt…"
-              className="ui-input flex-1"
+              placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : "Custom prompt…"}
+              className={`ui-input flex-1 ${listening ? "border-status-negative/40" : processing ? "border-accent-primary/30" : ""}`}
             />
 
             {/* Mic button */}
             <button
               onClick={toggleMic}
-              disabled={micState === "processing"}
-              title={micState === "recording" ? "Stop recording" : "Speak a prompt"}
+              disabled={processing}
+              title={listening ? "Stop recording" : "Speak a prompt"}
               className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
-                micState === "recording"
+                listening
                   ? "animate-pulse border-status-negative/40 bg-status-negative/10 text-status-negative"
-                  : micState === "processing"
+                  : processing
                   ? "border-border-subtle bg-surface-base text-text-muted opacity-60"
                   : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
               }`}
             >
-              {micState === "recording" && <Square className="h-4 w-4" />}
-              {micState === "processing" && <Loader2 className="h-4 w-4 animate-spin" />}
-              {micState === "idle" && <Mic className="h-4 w-4" />}
+              {processing && <Loader2 className="h-4 w-4 animate-spin" />}
+              {!processing && (
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
+                  {listening
+                    ? <rect x="6" y="6" width="12" height="12" rx="2" />
+                    : <><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>}
+                </svg>
+              )}
             </button>
 
             <button
@@ -659,7 +476,7 @@ export default function BeaconPage() {
               {micError && (
                 <p className="text-[11px] text-status-negative">{micError}</p>
               )}
-              {micState === "recording" && !micError && (() => {
+              {listening && !micError && (() => {
                 const flat = recordingSeconds >= 2 && waveformBars.every((b) => b < 0.02);
                 return flat ? (
                   <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
@@ -669,11 +486,11 @@ export default function BeaconPage() {
                   </p>
                 );
               })()}
-              {micState === "processing" && !micError && (
+              {processing && !micError && (
                 <p className="text-[11px] text-text-tertiary animate-pulse">Processing…</p>
               )}
             </div>
-            {micState === "recording" && !micError ? (
+            {listening && !micError ? (
               <Waveform bars={waveformBars} />
             ) : custom ? (
               <p className="text-[11px] tabular-nums text-text-muted">

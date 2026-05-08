@@ -1,18 +1,22 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 export function useWhisperMic(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [waveformBars, setWaveformBars] = useState<number[]>(Array(16).fill(0));
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const peakRef = useRef(0);
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cleanup = useCallback(() => {
     if (animFrameRef.current !== null) {
@@ -23,6 +27,10 @@ export function useWhisperMic(onResult: (text: string) => void) {
       clearTimeout(autoStopRef.current);
       autoStopRef.current = null;
     }
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
     if (audioCtxRef.current) {
       audioCtxRef.current.close().catch(() => {});
       audioCtxRef.current = null;
@@ -31,7 +39,13 @@ export function useWhisperMic(onResult: (text: string) => void) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+    analyserRef.current = null;
+    setWaveformBars(Array(16).fill(0));
+    setRecordingSeconds(0);
   }, []);
+
+  // Cleanup on unmount
+  useEffect(() => () => { cleanup(); }, [cleanup]);
 
   const startLevelTracking = useCallback((stream: MediaStream) => {
     peakRef.current = 0;
@@ -40,13 +54,23 @@ export function useWhisperMic(onResult: (text: string) => void) {
       audioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
+      analyser.fftSize = 64; // 32 frequency bins → 16 waveform bars
       source.connect(analyser);
+      analyserRef.current = analyser;
       const data = new Uint8Array(analyser.frequencyBinCount);
       const tick = () => {
         analyser.getByteFrequencyData(data);
+        // Peak for silence detection
         const frame = Math.max(...data) / 255;
         if (frame > peakRef.current) peakRef.current = frame;
+        // 16 waveform bars
+        const step = Math.max(1, Math.floor(data.length / 16));
+        const bars = Array.from({ length: 16 }, (_, i) => {
+          const slice = data.slice(i * step, (i + 1) * step);
+          const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+          return avg / 255;
+        });
+        setWaveformBars(bars);
         animFrameRef.current = requestAnimationFrame(tick);
       };
       animFrameRef.current = requestAnimationFrame(tick);
@@ -134,11 +158,13 @@ export function useWhisperMic(onResult: (text: string) => void) {
 
     recorder.start(100);
     setListening(true);
+    setRecordingSeconds(0);
+    timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
 
     autoStopRef.current = setTimeout(() => {
       if (recorderRef.current?.state !== "inactive") recorderRef.current?.stop();
     }, 60_000);
   }, [listening, processing, cleanup, startLevelTracking, onResult]);
 
-  return { listening, processing, error, toggle };
+  return { listening, processing, error, toggle, waveformBars, recordingSeconds };
 }

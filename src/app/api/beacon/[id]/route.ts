@@ -6,28 +6,17 @@ import { userProjects } from "@/db/schema";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { beaconPath, readBeaconSession } from "@/app/api/beacon/route";
+import { parseSessionText } from "@/lib/session-content";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 
 const RespondBody = z.object({
   choice: z.string().min(1).max(2000),
 });
 
-function parseSessionEntry(content: string): Partial<DevLogEntry> {
-  const entry: Record<string, string> = {};
-  for (const line of content.split("\n")) {
-    const idx = line.indexOf(":");
-    if (idx <= 0) continue;
-    const k = line.slice(0, idx).trim().toLowerCase();
-    const v = line.slice(idx + 1).trim();
-    if (["done", "next", "tests", "todos", "health"].includes(k)) entry[k] = v;
-  }
-  return entry;
-}
-
 async function appendDevLog(projectName: string, content: string): Promise<void> {
   if (!content.trim()) return;
-  const parsed = parseSessionEntry(content);
-  if (!parsed.done && !parsed.next) return;
+  const parsed = parseSessionText(content);
+  if (!parsed.done.length && !parsed.next.length) return;
 
   const userId = await getCurrentUserId();
   const project = await db.query.userProjects.findFirst({
@@ -38,11 +27,11 @@ async function appendDevLog(projectName: string, content: string): Promise<void>
 
   const entry: DevLogEntry = {
     date: new Date().toISOString(),
-    done: parsed.done ?? "",
-    next: parsed.next ?? "",
-    tests: parsed.tests ?? "",
-    todos: parsed.todos ?? "",
-    health: parsed.health ?? "good",
+    done: parsed.done.join("; "),
+    next: parsed.next.join("; "),
+    tests: parsed.tests,
+    todos: parsed.todos,
+    health: parsed.health || "good",
   };
   await db
     .update(userProjects)
