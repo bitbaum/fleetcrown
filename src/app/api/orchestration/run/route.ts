@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
+import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { buildPromptWithSession, resolveEffectiveTab, stateFile } from "@/lib/agent-config";
 import {
   ORCHESTRATION_ADAPTER_IDS,
@@ -77,6 +78,7 @@ export async function POST(req: NextRequest) {
     try {
       const prompt = renderTaskForAdapter(request);
       injectIntoTab(effectiveKey, prompt);
+      cancelActiveBeaconSessions(effectiveKey);
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

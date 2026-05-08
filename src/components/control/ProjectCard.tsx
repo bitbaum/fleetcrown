@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
@@ -55,6 +55,15 @@ export function ProjectCard({
   });
 
   const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue } = usePromptQueue(project.tab);
+
+  // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
+  const prevAgentRunning = useRef(project.agentRunning);
+  useEffect(() => {
+    if (!prevAgentRunning.current && project.agentRunning) {
+      setDismissed(false);
+    }
+    prevAgentRunning.current = project.agentRunning;
+  }, [project.agentRunning]);
 
   useEffect(() => {
     try {

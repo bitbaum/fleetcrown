@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
-  Pause, Play, Eraser, Loader2, Send, Mic, MicOff,
+  Pause, Play, Eraser, Loader2, Send, Mic,
   SlidersHorizontal, ChevronsDown, ListPlus, X,
 } from "lucide-react";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
@@ -344,6 +344,8 @@ function PromptInput({
   sending,
   placeholder,
   showQueue,
+  waveformBars,
+  recordingSeconds,
   onCustomChange,
   onCustomFocusChange,
   onSendCustom,
@@ -357,6 +359,8 @@ function PromptInput({
   sending: string | null;
   placeholder: string;
   showQueue?: boolean;
+  waveformBars?: number[];
+  recordingSeconds?: number;
   onCustomChange: (v: string) => void;
   onCustomFocusChange: (f: boolean) => void;
   onSendCustom: () => void;
@@ -405,7 +409,7 @@ function PromptInput({
             {processing
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
               : listening
-              ? <MicOff className="h-3.5 w-3.5" />
+              ? <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
               : <Mic className="h-3.5 w-3.5" />}
           </button>
         </div>
@@ -429,8 +433,30 @@ function PromptInput({
           </button>
         </div>
       </div>
-      {micError && (
-        <p className="px-0.5 text-[11px] text-status-negative">{micError}</p>
+      {/* Mic status row */}
+      {(micError || listening || processing) && (
+        <div className="flex items-center justify-between px-0.5">
+          <div className="flex items-center">
+            {micError && <p className="text-[11px] text-status-negative">{micError}</p>}
+            {listening && !micError && (() => {
+              const flat = (recordingSeconds ?? 0) >= 2 && (waveformBars ?? []).every((b) => b < 0.02);
+              const secs = recordingSeconds ?? 0;
+              const label = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+              return flat
+                ? <p className="text-[11px] text-status-warning">No audio detected</p>
+                : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
+            })()}
+            {processing && !micError && <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>}
+          </div>
+          {listening && !micError && waveformBars && (
+            <div className="flex items-end gap-[2px]" style={{ height: 16 }}>
+              {waveformBars.map((h, i) => (
+                <div key={i} className="rounded-full bg-status-negative"
+                  style={{ width: 2, height: Math.max(2, Math.round(h * 14)), transition: "height 75ms ease" }} />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -506,7 +532,7 @@ export function IntentButtonPanel({
   const appendTranscript = useCallback((text: string) => {
     onCustomChange((custom ? custom + " " : "") + text);
   }, [custom, onCustomChange]);
-  const { listening, processing, error: micError, toggle: toggleMic } = useWhisperMic(appendTranscript);
+  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } = useWhisperMic(appendTranscript);
 
   const handleEnqueue = () => {
     if (custom.trim() && onEnqueueCustom) {
@@ -516,7 +542,7 @@ export function IntentButtonPanel({
   };
 
   const inputProps = {
-    custom, listening, processing, micError, sending,
+    custom, listening, processing, micError, sending, waveformBars, recordingSeconds,
     onCustomChange, onCustomFocusChange, onSendCustom, toggleMic,
     showQueue: !!onEnqueueCustom,
     onEnqueue: handleEnqueue,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, Pause, Play, ExternalLink } from "lucide-react";
+import { Loader2, Check, ArrowRight, ExternalLink } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { parseSessionText } from "@/lib/session-content";
@@ -26,12 +26,6 @@ type AgentPrompt = {
   prompt: string;
 };
 
-function readCountdownParam(): number {
-  if (typeof window === "undefined") return 30;
-  const raw = new URLSearchParams(window.location.search).get("countdown");
-  const n = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 30;
-}
 
 function SessionSummary({ content }: { content: string }) {
   const s = parseSessionText(content);
@@ -109,6 +103,13 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+function readCountdownParam(): number {
+  if (typeof window === "undefined") return 12;
+  const raw = new URLSearchParams(window.location.search).get("countdown");
+  const n = raw ? parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n > 0 && n <= 300 ? n : 12;
+}
+
 export default function BeaconPage() {
   const { id } = useParams<{ id: string }>();
   const [session, setSession] = useState<BeaconSession | null>(null);
@@ -117,11 +118,8 @@ export default function BeaconPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedLabel, setSubmittedLabel] = useState("");
   const [countdown, setCountdown] = useState(readCountdownParam);
-  const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pausedRef = useRef(false);
-  const cancelledRef = useRef(false);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
 
@@ -162,31 +160,20 @@ export default function BeaconPage() {
     return () => clearTimeout(t);
   }, [session, prompts]);
 
-  const cancelCountdown = useCallback(() => {
-    pausedRef.current = true;
-    cancelledRef.current = true;
-    setCountdown(0);
-    setPaused(false);
-  }, []);
+  // Display-only countdown — Cockpit's control panel is the actual inject authority.
+  // This just shows the user how long until auto-continue fires.
+  useEffect(() => {
+    if (!session || submitted || countdown <= 0) return;
+    const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [session?.id, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const appendTranscript = useCallback((text: string) => {
     setCustom((prev) => (prev ? `${prev} ${text}` : text).trim());
-    cancelCountdown();
     inputRef.current?.focus();
-  }, [cancelCountdown]);
+  }, []);
 
   const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds } = useWhisperMic(appendTranscript);
-
-  // Pause countdown while mic is active. The ref keeps the countdown loop in sync;
-  // the state drives UI only — read it in the render, not in the effect body.
-  const micActive = listening || processing;
-  useEffect(() => {
-    if (micActive) {
-      pausedRef.current = true;
-    }
-  }, [micActive]);
-  // Merge mic-active into the displayed paused state without a cascading effect
-  const displayPaused = paused || micActive;
 
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
@@ -211,42 +198,11 @@ export default function BeaconPage() {
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
 
-  const togglePause = useCallback(() => {
-    pausedRef.current = !pausedRef.current;
-    setPaused((p) => !p);
-  }, []);
-
-  // Countdown
-  useEffect(() => {
-    if (!session || submitted) return;
-    const primary = promptsRef.current.find((p) => p.style === "primary" && p.slot === 1);
-    if (!primary) return;
-    const t = setInterval(() => {
-      if (pausedRef.current || cancelledRef.current) return;
-      setCountdown((c) => {
-        if (cancelledRef.current) return 0;
-        if (inputRef.current?.value.trim()) {
-          cancelledRef.current = true;
-          pausedRef.current = true;
-          return 0;
-        }
-        if (c <= 1) {
-          clearInterval(t);
-          submitRef.current(String(primary.slot ?? "1"));
-          return 0;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [session?.id, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keyboard: Esc close · Space pause · 1–6 direct slot pick
+  // Keyboard: Esc close · 1–9 direct slot pick
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (document.activeElement === inputRef.current) return;
       if (e.key === "Escape") { window.close(); return; }
-      if (e.key === " ") { e.preventDefault(); togglePause(); return; }
       const n = parseInt(e.key);
       if (!isNaN(n) && n >= 1 && n <= 9) {
         const all = [
@@ -259,12 +215,7 @@ export default function BeaconPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [togglePause]);
-
-  const handleCustomChange = (v: string) => {
-    setCustom(v);
-    cancelCountdown();
-  };
+  }, []);
 
   const wordCount = custom.trim() ? custom.trim().split(/\s+/).length : 0;
   const charCount = custom.length;
@@ -407,22 +358,14 @@ export default function BeaconPage() {
         )}
 
         {/* Controls row */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center">
           <p className="text-[11px] text-text-tertiary">
-            {countdown > 0
-              ? displayPaused ? "Paused · Space to resume" : `Auto in ${countdown}s · Space to pause`
-              : "Type to redirect · Enter to send"}
+            {custom.trim()
+              ? "Enter to send · overrides auto-continue"
+              : countdown > 0
+              ? `Cockpit continues in ${countdown}s · click to choose`
+              : "Continuing via Cockpit…"}
           </p>
-          {countdown > 0 && (
-            <button
-              onClick={togglePause}
-              title={displayPaused ? "Resume countdown (Space)" : "Pause countdown (Space)"}
-              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
-            >
-              {displayPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
-              {displayPaused ? "Resume" : "Pause"}
-            </button>
-          )}
         </div>
 
         {/* Custom input + mic */}
@@ -431,8 +374,7 @@ export default function BeaconPage() {
             <input
               ref={inputRef}
               value={custom}
-              onChange={(e) => handleCustomChange(e.target.value)}
-              onFocus={cancelCountdown}
+              onChange={(e) => setCustom(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
               placeholder={listening ? "Recording… click mic to stop" : processing ? "Transcribing…" : "Custom prompt…"}
               className={`ui-input flex-1 ${listening ? "border-status-negative/40" : processing ? "border-accent-primary/30" : ""}`}
