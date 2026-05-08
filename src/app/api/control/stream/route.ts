@@ -1,8 +1,9 @@
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
-import { parseProjectsConf } from "@/lib/agent-config";
+import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
 import { getAgentCwds, readFastState } from "@/lib/control-fast-state";
+import { getZellijTabs } from "@/lib/zellij";
 import { getCurrentUserId } from "@/lib/session";
 import type { FastProjectState } from "@/lib/control-fast-state";
 
@@ -23,9 +24,18 @@ export async function GET() {
   const allMatchers = agentRegistry.agents.flatMap((e) => e.processMatchers);
 
   const dbUserProjects = await getUserProjects(userId).catch(() => []);
-  const projects = dbUserProjects.length > 0
+  const confProjects = dbUserProjects.length > 0
     ? dbUserProjects.filter((p) => p.dirPath).map((p) => ({ tab: p.name, dir: p.dirPath! }))
     : parseProjectsConf();
+
+  // Resolve each project's canonical tab name to its exact zellij casing once at stream start.
+  // go-to-tab-name and /tmp sentinel files all use zellij exact casing — using conf casing
+  // causes /tmp reads to miss updates until the 30s fallback poll catches up.
+  const activeTabs = await getZellijTabs();
+  const projects = confProjects.map(({ tab, dir }) => ({
+    tab: resolveEffectiveTab(tab, activeTabs),
+    dir,
+  }));
 
   let lastSent: FastProjectState[] = [];
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
