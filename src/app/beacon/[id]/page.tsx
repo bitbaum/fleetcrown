@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight } from "lucide-react";
+import { Loader2, Check, ArrowRight, Pause, Play, Mic, MicOff } from "lucide-react";
 
 type BeaconSession = {
   id: string;
@@ -112,31 +112,27 @@ export default function BeaconPage() {
   const [custom, setCustom] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [micUnavailable, setMicUnavailable] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pausedRef = useRef(false);
+  const recRef = useRef<{ abort: () => void } | null>(null);
+  const promptsRef = useRef<AgentPrompt[]>([]);
+  const submitRef = useRef<(choice: string) => void>(() => {});
+
+  useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
   useEffect(() => {
-    fetch(`/api/beacon/${id}`)
-      .then((r) => r.json())
-      .then(setSession)
-      .catch(() => {});
-    fetch("/api/prompts/agent")
-      .then((r) => r.json())
-      .then(setPrompts)
-      .catch(() => {});
+    fetch(`/api/beacon/${id}`).then((r) => r.json()).then(setSession).catch(() => {});
+    fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
   }, [id]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") window.close();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, []);
 
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
     setSubmitted(true);
+    recRef.current?.abort();
     await fetch(`/api/beacon/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -145,28 +141,97 @@ export default function BeaconPage() {
     setTimeout(() => window.close(), 400);
   }, [id, submitted]);
 
-  // Auto-submit first primary prompt on countdown
+  useEffect(() => { submitRef.current = submit; }, [submit]);
+
+  const togglePause = useCallback(() => {
+    pausedRef.current = !pausedRef.current;
+    setPaused((p) => !p);
+  }, []);
+
+  const cancelCountdown = useCallback(() => {
+    setCountdown(0);
+    pausedRef.current = false;
+    setPaused(false);
+  }, []);
+
+  // Mic via Web Speech API (Chrome-native, no deps)
+  const toggleMic = useCallback(() => {
+    if (listening) {
+      recRef.current?.abort();
+      setListening(false);
+      return;
+    }
+    type SRCtor = new () => {
+      start(): void; abort(): void;
+      lang: string; interimResults: boolean;
+      onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+      onerror: (() => void) | null;
+      onend: (() => void) | null;
+    };
+    const w = window as unknown as Record<string, unknown>;
+    const SR = (w.SpeechRecognition ?? w.webkitSpeechRecognition) as SRCtor | undefined;
+    if (!SR) { setMicUnavailable(true); return; }
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setCustom((prev) => (prev ? `${prev} ${transcript}` : transcript).trim());
+      setListening(false);
+      cancelCountdown();
+      inputRef.current?.focus();
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    recRef.current = rec;
+    rec.start();
+    setListening(true);
+    pausedRef.current = true;
+    setPaused(true);
+  }, [listening, cancelCountdown]);
+
+  // Countdown — interval skips ticks when paused
   useEffect(() => {
     if (!session || submitted) return;
-    const primary = prompts.find((p) => p.style === "primary" && p.slot === 1);
+    const primary = promptsRef.current.find((p) => p.style === "primary" && p.slot === 1);
     if (!primary) return;
     const t = setInterval(() => {
+      if (pausedRef.current) return;
       setCountdown((c) => {
         if (c <= 1) {
           clearInterval(t);
-          submit(String(primary.slot ?? "1"));
+          submitRef.current(String(primary.slot ?? "1"));
           return 0;
         }
         return c - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [session, prompts, submit, submitted]);
+  }, [session?.id, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cancel countdown on any custom input
+  // Keyboard: Esc close · Space pause · 1–6 direct slot pick
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (document.activeElement === inputRef.current) return;
+      if (e.key === "Escape") { window.close(); return; }
+      if (e.key === " ") { e.preventDefault(); togglePause(); return; }
+      const n = parseInt(e.key);
+      if (!isNaN(n) && n >= 1 && n <= 9) {
+        const all = [
+          ...promptsRef.current.filter((p) => p.style === "primary"),
+          ...promptsRef.current.filter((p) => p.style === "action"),
+        ];
+        const target = all.find((p) => p.slot === n) ?? all[n - 1];
+        if (target) submitRef.current(String(target.slot ?? target.key));
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [togglePause]);
+
   const handleCustomChange = (v: string) => {
     setCustom(v);
-    if (v) setCountdown(0);
+    if (v) cancelCountdown();
   };
 
   if (!session) {
@@ -193,6 +258,7 @@ export default function BeaconPage() {
   return (
     <div className="min-h-screen bg-surface-page p-4 sm:p-6">
       <div className="mx-auto max-w-lg space-y-4">
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -203,9 +269,7 @@ export default function BeaconPage() {
         </div>
 
         {/* Session summary */}
-        {session.sessionContent && (
-          <SessionSummary content={session.sessionContent} />
-        )}
+        {session.sessionContent && <SessionSummary content={session.sessionContent} />}
 
         {/* Primary actions */}
         {primaryPrompts.length > 0 && (
@@ -270,19 +334,48 @@ export default function BeaconPage() {
           </div>
         )}
 
-        {/* Custom input */}
-        <p className="text-[11px] text-text-muted">
-          Type to redirect · Enter to send · typing stops countdown
-        </p>
+        {/* Controls row: countdown hint + pause */}
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-text-muted">
+            {countdown > 0
+              ? paused ? "Paused · Space to resume" : `Auto in ${countdown}s · Space to pause`
+              : "Type to redirect · Enter to send"}
+          </p>
+          {countdown > 0 && (
+            <button
+              onClick={togglePause}
+              title={paused ? "Resume countdown (Space)" : "Pause countdown (Space)"}
+              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
+            >
+              {paused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+              {paused ? "Resume" : "Pause"}
+            </button>
+          )}
+        </div>
+
+        {/* Custom input + mic */}
         <div className="flex gap-2">
           <input
             ref={inputRef}
             value={custom}
             onChange={(e) => handleCustomChange(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && custom.trim() && submit(`custom:${custom.trim()}`)}
-            placeholder="Custom prompt…"
+            placeholder={listening ? "Listening…" : "Custom prompt…"}
             className="ui-input flex-1"
           />
+          {!micUnavailable && (
+            <button
+              onClick={toggleMic}
+              title={listening ? "Stop recording" : "Speak a prompt (browser mic)"}
+              className={`flex items-center justify-center rounded-xl border px-3 transition-colors ${
+                listening
+                  ? "border-status-negative/40 bg-status-negative-subtle text-status-negative"
+                  : "border-border-subtle bg-surface-base text-text-muted hover:border-border-default hover:text-text-secondary"
+              }`}
+            >
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          )}
           <button
             onClick={() => custom.trim() && submit(`custom:${custom.trim()}`)}
             disabled={!custom.trim()}
@@ -297,7 +390,7 @@ export default function BeaconPage() {
           onClick={() => window.close()}
           className="w-full py-2 text-center text-xs text-text-muted hover:text-text-secondary transition-colors"
         >
-          Dismiss  ·  Esc
+          Dismiss · Esc
         </button>
       </div>
     </div>
