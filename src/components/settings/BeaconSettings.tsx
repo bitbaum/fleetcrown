@@ -1,0 +1,125 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { getJson, patchJson } from "@/lib/api/fetch";
+import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
+
+const WHISPER_MODELS = [
+  { value: "tiny",   label: "Tiny",   note: "~39 MB · fastest, lower accuracy" },
+  { value: "base",   label: "Base",   note: "~74 MB · good balance (default)" },
+  { value: "small",  label: "Small",  note: "~244 MB · better accuracy" },
+  { value: "medium", label: "Medium", note: "~769 MB · high accuracy" },
+  { value: "large",  label: "Large",  note: "~1.5 GB · best accuracy, slowest" },
+] as const;
+
+export function BeaconSettings() {
+  const [data, setData] = useState<BeaconSettingsData | null>(null);
+  const [countdown, setCountdown] = useState(30);
+  const [model, setModel] = useState("base");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getJson<BeaconSettingsData>("/api/beacon-settings").then((d) => {
+      setData(d);
+      setCountdown(d.countdown_seconds);
+      setModel(d.whisper_model);
+    }).catch(() => {});
+  }, []);
+
+  const dirty = data !== null && (countdown !== data.countdown_seconds || model !== data.whisper_model);
+
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      const res = await patchJson("/api/beacon-settings", {
+        countdown_seconds: countdown,
+        whisper_model: model,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "Failed to save");
+      }
+      setData({ countdown_seconds: countdown, whisper_model: model });
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="ui-settings-section">
+      <div>
+        <h2 className="font-medium text-text-primary">Beacon</h2>
+        <p className="mt-1 text-sm text-text-tertiary">
+          Controls the session-stop popup that appears when Claude finishes a task.
+        </p>
+      </div>
+
+      {data === null ? (
+        <div className="flex items-center gap-2 text-sm text-text-muted">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {/* Countdown */}
+          <div className="space-y-1.5">
+            <label className="ui-kicker">Auto-continue countdown</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={5}
+                max={300}
+                value={countdown}
+                onChange={(e) => setCountdown(Math.max(5, Math.min(300, parseInt(e.target.value) || 30)))}
+                className="ui-input w-24 tabular-nums"
+              />
+              <span className="text-sm text-text-tertiary">seconds</span>
+            </div>
+            <p className="text-xs text-text-muted">
+              How long the beacon waits before auto-submitting the primary action. Currently {countdown}s.
+            </p>
+          </div>
+
+          {/* Whisper model */}
+          <div className="space-y-1.5">
+            <label className="ui-kicker">Voice transcription model</label>
+            <select
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="ui-input"
+            >
+              {WHISPER_MODELS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label} — {m.note}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-text-muted">
+              Whisper model used when you speak into the beacon mic. Larger models are more accurate but slower.
+              Model files are cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-sm text-status-negative">{error}</p>}
+      {saved && <p className="text-sm text-text-secondary">Saved.</p>}
+
+      <button
+        onClick={save}
+        disabled={saving || !dirty}
+        className="ui-btn-primary"
+      >
+        {saving && <Loader2 className="ui-spinner" />}
+        Save changes
+      </button>
+    </section>
+  );
+}

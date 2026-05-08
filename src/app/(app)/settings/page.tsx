@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { TeamSettings } from "@/components/settings/TeamSettings";
+import { BeaconSettings } from "@/components/settings/BeaconSettings";
 import { PageLayout } from "@/components/ui/page-layout";
 
 export const metadata = { title: "Settings — Cockpit" };
@@ -27,6 +28,7 @@ export default async function SettingsPage() {
   return (
     <PageLayout title="Settings" maxWidth="max-w-2xl">
       <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "" }} />
+      <BeaconSettings />
       <ProjectsSettings projects={projects} />
       <TeamSettings invitations={invitations} />
     </PageLayout>
