@@ -10,6 +10,8 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Wire-format prefix for custom prompts — must match CUSTOM_CHOICE_PREFIX in src/lib/constants/control.ts
 readonly CUSTOM_CHOICE_PREFIX="custom:"
+# Override via COCKPIT_URL env var for non-default ports or remote deployments.
+readonly COCKPIT_URL="${COCKPIT_URL:-http://localhost:3000}"
 python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/agent-hook-lib.sh"
@@ -33,7 +35,7 @@ patch_project_state() {
   local field="$2"
   local iso_now
   iso_now=$(date -Iseconds)
-  curl -sf -X PATCH "http://localhost:3000/api/project-states/${tab_name}" \
+  curl -sf -X PATCH "${COCKPIT_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
@@ -129,7 +131,7 @@ handle_stop() {
     [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
   fi
 
-  if should_skip_native_popup && curl -sf --max-time 2 "http://localhost:3000/api/health" >/dev/null 2>&1; then
+  if should_skip_native_popup && curl -sf --max-time 2 "${COCKPIT_URL}/api/health" >/dev/null 2>&1; then
     log "Cockpit running — skipping native popup"
     exit 0
   fi

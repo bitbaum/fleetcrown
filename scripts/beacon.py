@@ -81,6 +81,11 @@ class WhisperThread(QThread):
 
 CUSTOM_CHOICE_PREFIX = "custom:"
 
+# ── Runtime config ────────────────────────────────────────────────────────────
+
+# Override via COCKPIT_URL env var for non-default ports or remote deployments.
+COCKPIT_URL = os.environ.get("COCKPIT_URL", "http://localhost:3000").rstrip("/")
+
 # ── Palette ───────────────────────────────────────────────────────────────────
 
 _THEME_PATH = os.path.expanduser("~/.config/agent-dashboard-theme.json")
@@ -991,7 +996,7 @@ class ContinuePopup(BasePopup):
 
         dash_btn = QPushButton("⊞ Cockpit")
         dash_btn.setObjectName("dash")
-        dash_btn.setToolTip("Open Cockpit control panel (localhost:3000/control)")
+        dash_btn.setToolTip(f"Open Cockpit control panel ({COCKPIT_URL}/control)")
         dash_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         dash_btn.clicked.connect(self._open_cockpit)
         hdr.addWidget(dash_btn)
@@ -1133,12 +1138,12 @@ class ContinuePopup(BasePopup):
 
     def _open_cockpit(self):
         import urllib.request
-        url = "http://localhost:3000/control"
+        url = f"{COCKPIT_URL}/control"
         env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
 
         def _cockpit_ready():
             try:
-                r = urllib.request.urlopen("http://localhost:3000/api/health", timeout=2)
+                r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=2)
                 return r.status == 200
             except Exception:
                 return False
@@ -1179,7 +1184,7 @@ class ContinuePopup(BasePopup):
         if attempt > 20:   # give up after 40s — never open a broken URL
             return
         try:
-            r = urllib.request.urlopen("http://localhost:3000/api/health", timeout=2)
+            r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=2)
             if r.status == 200:
                 launch_browser()
                 return
@@ -1358,7 +1363,6 @@ def _web_stop(label: str, session_file: str) -> None:
     """Open a Cockpit web page for the session-stop beacon instead of PyQt6."""
     import urllib.request, urllib.error, time, json as _json
 
-    COCKPIT = "http://localhost:3000"
     TIMEOUT_S = 120
     POLL_S = 0.8
 
@@ -1372,7 +1376,7 @@ def _web_stop(label: str, session_file: str) -> None:
     def _cockpit_ready() -> bool:
         try:
             # Use /api/health (instant response) not /api/control (slow DB+git endpoint)
-            r = urllib.request.urlopen(f"{COCKPIT}/api/health", timeout=5)
+            r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=5)
             return r.status == 200
         except Exception:
             return False
@@ -1412,7 +1416,7 @@ def _web_stop(label: str, session_file: str) -> None:
     def _create_session() -> str | None:
         data = _json.dumps({"project": label, "sessionContent": session_content}).encode()
         req  = urllib.request.Request(
-            f"{COCKPIT}/api/beacon",
+            f"{COCKPIT_URL}/api/beacon",
             data=data,
             headers={"Content-Type": "application/json"},
             method="POST",
@@ -1424,7 +1428,7 @@ def _web_stop(label: str, session_file: str) -> None:
             return None
 
     def _poll_choice(session_id: str, deadline: float) -> str | None:
-        url = f"{COCKPIT}/api/beacon/{session_id}"
+        url = f"{COCKPIT_URL}/api/beacon/{session_id}"
         while time.time() < deadline:
             try:
                 # 8s timeout: 3s was too tight for cold Next.js route compilation
@@ -1461,7 +1465,7 @@ def _web_stop(label: str, session_file: str) -> None:
 
     _s = _load_settings()
     countdown = int(_s.get("countdown_seconds", _s.get("countdown_secs", COUNTDOWN_SECONDS)))
-    _open_browser(f"{COCKPIT}/beacon/{session_id}?countdown={countdown}")
+    _open_browser(f"{COCKPIT_URL}/beacon/{session_id}?countdown={countdown}")
 
     choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
     if choice is not None:
