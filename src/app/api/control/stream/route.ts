@@ -28,14 +28,19 @@ export async function GET() {
     ? dbUserProjects.filter((p) => p.dirPath).map((p) => ({ tab: p.name, dir: p.dirPath! }))
     : parseProjectsConf();
 
-  // Resolve each project's canonical tab name to its exact zellij casing once at stream start.
-  // go-to-tab-name and /tmp sentinel files all use zellij exact casing — using conf casing
-  // causes /tmp reads to miss updates until the 30s fallback poll catches up.
-  const activeTabs = await getZellijTabs();
-  const projects = confProjects.map(({ tab, dir }) => ({
-    tab: resolveEffectiveTab(tab, activeTabs),
-    dir,
-  }));
+  // Resolve each project's canonical tab name to its exact zellij casing.
+  // The cache is refreshed every 10s in the background so new Claude sessions
+  // or tab renames don't leave the stream reading stale /tmp sentinel paths.
+  let zellijTabCache = await getZellijTabs();
+  let lastTabRefreshMs = Date.now();
+
+  const TAB_CACHE_TTL_MS = 10_000;
+
+  const refreshTabsCacheIfStale = () => {
+    if (Date.now() - lastTabRefreshMs < TAB_CACHE_TTL_MS) return;
+    lastTabRefreshMs = Date.now();
+    getZellijTabs().then((tabs) => { zellijTabCache = tabs; }).catch(() => {});
+  };
 
   let lastSent: FastProjectState[] = [];
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,6 +54,11 @@ export async function GET() {
       };
 
       const tick = () => {
+        refreshTabsCacheIfStale();
+        const projects = confProjects.map(({ tab, dir }) => ({
+          tab: resolveEffectiveTab(tab, zellijTabCache),
+          dir,
+        }));
         const agentCwds = getAgentCwds(allMatchers);
         const current = readFastState(projects, agentCwds);
 
@@ -82,8 +92,12 @@ export async function GET() {
       };
 
       // Initial snapshot
+      const initialProjects = confProjects.map(({ tab, dir }) => ({
+        tab: resolveEffectiveTab(tab, zellijTabCache),
+        dir,
+      }));
       const agentCwds = getAgentCwds(allMatchers);
-      lastSent = readFastState(projects, agentCwds);
+      lastSent = readFastState(initialProjects, agentCwds);
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();
 
