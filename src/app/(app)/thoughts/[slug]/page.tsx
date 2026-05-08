@@ -1,7 +1,9 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { PageLayout } from "@/components/ui/page-layout";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
+import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, listThoughts, parseThoughtBlocks } from "@/lib/thoughts-content";
 
 export function generateStaticParams() {
@@ -72,12 +74,37 @@ export default async function ThoughtArticlePage({
                   </blockquote>
                 );
               case "p":
-              default:
                 return (
                   <p key={i} className="text-base leading-relaxed text-text-secondary md:text-lg">
                     {block.text}
                   </p>
                 );
+              case "image":
+                return (
+                  <figure key={i} className="space-y-2">
+                    <Image
+                      src={block.src}
+                      alt={block.alt}
+                      width={1200}
+                      height={675}
+                      className="w-full rounded-xl object-cover"
+                      unoptimized={block.src.startsWith("http")}
+                    />
+                    {block.alt && (
+                      <figcaption className="text-center text-sm text-text-muted">{block.alt}</figcaption>
+                    )}
+                  </figure>
+                );
+              case "code":
+                return block.lang === "mermaid" ? (
+                  <MermaidDiagram key={i} chart={block.text} />
+                ) : (
+                  <pre key={i} className="overflow-x-auto rounded-xl bg-surface-raised p-4 text-sm text-text-secondary">
+                    <code>{block.text}</code>
+                  </pre>
+                );
+              default:
+                return null;
             }
           })}
         </article>

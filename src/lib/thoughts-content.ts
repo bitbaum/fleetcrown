@@ -21,7 +21,9 @@ export type ThoughtBlock =
   | { type: "ul"; items: string[] }
   | { type: "ol"; items: string[] }
   | { type: "blockquote"; text: string[] }
-  | { type: "p"; text: string };
+  | { type: "p"; text: string }
+  | { type: "image"; alt: string; src: string }
+  | { type: "code"; lang: string; text: string };
 
 function parseFrontmatter(raw: string): { meta: Record<string, string>; body: string } {
   if (!raw.startsWith("---\n")) return { meta: {}, body: raw };
@@ -155,6 +157,28 @@ export function parseThoughtBlocks(body: string): ThoughtBlock[] {
       continue;
     }
 
+    // Fenced code block: ```lang\n...\n```
+    if (line.startsWith("```")) {
+      const lang = line.slice(3).trim();
+      const codeLines: string[] = [];
+      i += 1;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        codeLines.push(lines[i]);
+        i += 1;
+      }
+      i += 1; // skip closing ```
+      blocks.push({ type: "code", lang, text: codeLines.join("\n") });
+      continue;
+    }
+
+    // Standalone image: ![alt](src)
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) {
+      blocks.push({ type: "image", alt: imgMatch[1], src: imgMatch[2] });
+      i += 1;
+      continue;
+    }
+
     const paragraph: string[] = [];
     while (
       i < lines.length &&
@@ -163,7 +187,9 @@ export function parseThoughtBlocks(body: string): ThoughtBlock[] {
       !lines[i].startsWith("### ") &&
       !lines[i].startsWith("- ") &&
       !/^\d+\.\s+/.test(lines[i]) &&
-      !lines[i].startsWith("> ")
+      !lines[i].startsWith("> ") &&
+      !lines[i].startsWith("```") &&
+      !lines[i].match(/^!\[/)
     ) {
       paragraph.push(lines[i].trim());
       i += 1;
