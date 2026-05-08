@@ -58,11 +58,14 @@ export function getProjectDisplayState(
     !dismissed &&
     !isClosed &&
     withinWindow(project.closingAt, nowS, CLOSING_WINDOW_S);
+  // Ready when the stop hook has fired recently AND no prompt is actively running.
+  // We do NOT require !agentRunning because the claude process stays alive between
+  // turns — using it would permanently suppress the ready state for all active sessions.
   const isReady =
     !dismissed &&
     !isClosed &&
     !isClosing &&
-    !project.agentRunning &&
+    !project.currentPrompt &&
     withinWindow(project.readyAt, nowS, READY_WINDOW_S);
 
   const latestFinishedAtS = project.latestOrchestrationRun?.finishedAt
@@ -73,12 +76,14 @@ export function getProjectDisplayState(
     !isReady &&
     !isClosed &&
     !isClosing &&
-    !project.agentRunning &&
+    !project.currentPrompt &&
     project.latestOrchestrationRun?.state === "done" &&
     withinWindow(latestFinishedAtS, nowS, READY_WINDOW_S);
 
   const isRunning = project.agentRunning;
-  const showRunningBanner = !isClosing && Boolean(project.currentPrompt) && isRunning;
+  // Show the running banner whenever a prompt is actively tracked — don't require
+  // isRunning because the process may not yet appear in /proc on the current tick.
+  const showRunningBanner = !isClosing && !isReady && Boolean(project.currentPrompt);
   const showLatestOrchestration =
     Boolean(project.latestOrchestrationRun) &&
     !isRunning &&

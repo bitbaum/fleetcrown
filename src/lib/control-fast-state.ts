@@ -62,7 +62,15 @@ export function getAgentCwds(processMatchers: string[]): string[] {
       if (!/^\d+$/.test(entry)) continue;
       try {
         const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
-        if (!processMatchers.some((matcher) => cmdline.includes(matcher))) continue;
+        // Match against argv[0] basename only — a full-string scan of the whole
+        // cmdline produces false positives when shell-snapshot scripts are run via
+        // `/bin/bash -c source /home/g/.claude/shell-snapshots/...` (the path
+        // contains "claude" but the process is just a bash helper, not the agent).
+        const argv0 = cmdline.split("\0")[0] ?? "";
+        const basename = argv0.includes("/") ? argv0.split("/").pop()! : argv0;
+        if (!processMatchers.some(
+          (m) => basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`),
+        )) continue;
         cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
       } catch {
         // process disappeared mid-scan
