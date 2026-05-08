@@ -469,6 +469,31 @@ def _load_prompt_meta() -> list:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+class DraggableCard(QWidget):
+    """Card widget that lets the user drag the whole popup window."""
+    def __init__(self):
+        super().__init__()
+        self._drag_pos = None
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            wh = self.window().windowHandle()
+            if wh:
+                wh.startSystemMove()
+            else:
+                self._drag_pos = event.globalPosition().toPoint() - self.window().frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton and self._drag_pos is not None:
+            self.window().move(event.globalPosition().toPoint() - self._drag_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
+
+
 class SafeButton(QPushButton):
     def keyPressEvent(self, e):
         if e.key() == Qt.Key.Key_Space:
@@ -498,7 +523,6 @@ class BasePopup(QWidget):
     def __init__(self, timeout_ms=35_000):
         super().__init__()
         self.result = None
-        self._drag_pos = None
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -511,20 +535,6 @@ class BasePopup(QWidget):
         self._dismiss_timer.timeout.connect(self._dismiss)
         self._dismiss_timer.start(timeout_ms)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.MouseButton.LeftButton and self._drag_pos is not None:
-            self.move(event.globalPosition().toPoint() - self._drag_pos)
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        self._drag_pos = None
-        super().mouseReleaseEvent(event)
-
     def _pause_dismiss(self):
         self._dismiss_timer.stop()
 
@@ -532,7 +542,7 @@ class BasePopup(QWidget):
         self._dismiss_timer.start(ms)
 
     def _make_card(self, width=440):
-        card = QWidget()
+        card = DraggableCard()
         card.setObjectName("card")
         sh = QGraphicsDropShadowEffect()
         if _is_dark_mode():
