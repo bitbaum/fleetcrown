@@ -563,14 +563,10 @@ class BasePopup(QWidget):
         return d
 
     def _position(self):
-        # Appear on whichever screen the cursor is on (active workspace)
-        cursor_pos = QCursor.pos()
-        screen = QApplication.screenAt(cursor_pos) or QApplication.primaryScreen()
-        scr = screen.availableGeometry()
+        # Appear on whichever screen the terminal is on
         self.adjustSize()
-        x = scr.right()  - self.sizeHint().width()  - 24
-        y = scr.bottom() - self.sizeHint().height() - 24
-        y = max(y, scr.top() + 16)
+        w, h = self.sizeHint().width(), self.sizeHint().height()
+        x, y = _terminal_screen_position(w, h)
         self.move(x, y)
 
     def _choose(self, key):
@@ -1261,19 +1257,57 @@ class ConfirmPopup(BasePopup):
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-def _cursor_screen_position(width: int = 520, height: int = 820) -> tuple[int, int]:
-    """Return (x, y) for bottom-right of the screen that contains the cursor."""
-    try:
-        app = QApplication.instance() or QApplication(sys.argv[:1])
-        cursor_pos = QCursor.pos()
-        screen = QApplication.screenAt(cursor_pos) or QApplication.primaryScreen()
+def _terminal_screen_position(width: int = 520, height: int = 820) -> tuple[int, int]:
+    """Return (x, y) bottom-right of the screen containing the terminal window.
+
+    Detection order:
+      1. $WINDOWID env var (set by many terminal emulators)
+      2. xdotool getactivewindow (the focused window at launch time)
+      3. Cursor position as last resort
+    """
+    def _position_for_screen(screen) -> tuple[int, int]:
         scr = screen.availableGeometry()
         x = scr.right()  - width  - 24
         y = scr.bottom() - height - 24
         y = max(y, scr.top() + 16)
         return x, y
+
+    try:
+        app = QApplication.instance() or QApplication(sys.argv[:1])
+
+        # Try to get window geometry via xdotool (works for $WINDOWID or active window)
+        win_id = os.environ.get("WINDOWID", "")
+        xdotool_cmd = (
+            ["xdotool", "getwindowgeometry", "--shell", win_id]
+            if win_id else
+            ["xdotool", "getactivewindow", "getwindowgeometry", "--shell"]
+        )
+        try:
+            r = subprocess.run(xdotool_cmd, capture_output=True, text=True, timeout=2)
+            if r.returncode == 0:
+                geo: dict[str, int] = {}
+                for line in r.stdout.splitlines():
+                    if "=" in line:
+                        k, _, v = line.partition("=")
+                        try:
+                            geo[k.strip()] = int(v.strip())
+                        except ValueError:
+                            pass
+                if "X" in geo and "Y" in geo:
+                    # Pick the Qt screen that contains the window's top-left corner
+                    from PyQt6.QtCore import QPoint
+                    pt = QPoint(geo["X"] + geo.get("WIDTH", 0) // 2,
+                                geo["Y"] + geo.get("HEIGHT", 0) // 2)
+                    screen = QApplication.screenAt(pt) or QApplication.primaryScreen()
+                    return _position_for_screen(screen)
+        except Exception:
+            pass
+
+        # Fallback: cursor position
+        screen = QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()
+        return _position_for_screen(screen)
     except Exception:
-        return 1360, 180   # reasonable fallback
+        return 1360, 180  # reasonable fallback
 
 
 def _web_stop(label: str, session_file: str) -> None:
@@ -1307,8 +1341,8 @@ def _web_stop(label: str, session_file: str) -> None:
 
     def _open_browser(url: str):
         env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
-        # Position window at bottom-right of the screen containing the cursor
-        x, y = _cursor_screen_position(520, 820)
+        # Position window at bottom-right of the screen containing the terminal
+        x, y = _terminal_screen_position(520, 820)
         app_flags = ["--app=" + url, "--window-size=520,820", f"--window-position={x},{y}"]
         for cmd, extra in (
             (["brave-browser"], app_flags),
