@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, ExternalLink, X } from "lucide-react";
+import { Loader2, Check, ArrowRight, ExternalLink, X, ChevronUp, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { parseSessionText } from "@/lib/session-content";
@@ -121,6 +121,9 @@ export default function BeaconPage() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [autoContinueEnabled, setAutoContinueEnabled] = useState(true);
   const [queuedPrompts, setQueuedPrompts] = useState<string[]>([]);
+  const [queueEditingIndex, setQueueEditingIndex] = useState<number | null>(null);
+  const [queueEditText, setQueueEditText] = useState("");
+  const queueEditRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
@@ -149,16 +152,30 @@ export default function BeaconPage() {
     return () => { clearInterval(interval); window.removeEventListener("storage", sync); };
   }, [session?.project]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const queueKey = session ? `control:queue:${session.project.toLowerCase()}` : null;
+
+  const writeQueue = useCallback((next: string[]) => {
+    if (!queueKey) return;
+    try { localStorage.setItem(queueKey, JSON.stringify(next)); } catch { /* ignore */ }
+    setQueuedPrompts(next);
+  }, [queueKey]);
+
   const removeFromQueue = useCallback((index: number) => {
-    if (!session) return;
-    const key = `control:queue:${session.project.toLowerCase()}`;
-    try {
-      const raw = localStorage.getItem(key);
-      const q: string[] = raw ? JSON.parse(raw) : [];
-      localStorage.setItem(key, JSON.stringify(q.filter((_, i) => i !== index)));
-      setQueuedPrompts((prev) => prev.filter((_, i) => i !== index));
-    } catch { /* ignore */ }
-  }, [session]);
+    writeQueue(queuedPrompts.filter((_, i) => i !== index));
+  }, [queuedPrompts, writeQueue]);
+
+  const reorderInQueue = useCallback((from: number, to: number) => {
+    const next = [...queuedPrompts];
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    writeQueue(next);
+  }, [queuedPrompts, writeQueue]);
+
+  const editInQueue = useCallback((index: number, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    writeQueue(queuedPrompts.map((item, i) => (i === index ? trimmed : item)));
+  }, [queuedPrompts, writeQueue]);
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
   useEffect(() => {
@@ -329,23 +346,50 @@ export default function BeaconPage() {
           <div className="rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 space-y-1">
             <p className="ui-kicker mb-2">Up next · {queuedPrompts.length}</p>
             {queuedPrompts.map((prompt, i) => (
-              <div key={i} className="flex items-start gap-2">
+              <div key={i} className="flex items-start gap-1.5">
                 <span className={`mt-[3px] shrink-0 text-[10px] font-bold tabular-nums ${i === 0 ? "text-accent-text" : "text-text-muted"}`}>
                   {i + 1}
                 </span>
-                <button
-                  onClick={() => { removeFromQueue(i); submit(`custom:${prompt}`); }}
-                  className={`flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary ${i === 0 ? "text-text-primary" : "text-text-tertiary"}`}
-                >
-                  {prompt}
-                </button>
-                <button
-                  onClick={() => removeFromQueue(i)}
-                  className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
-                  title="Remove from queue"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+
+                {queueEditingIndex === i ? (
+                  <textarea
+                    ref={queueEditRef}
+                    value={queueEditText}
+                    onChange={(e) => setQueueEditText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); editInQueue(i, queueEditText); setQueueEditingIndex(null); }
+                      if (e.key === "Escape") setQueueEditingIndex(null);
+                    }}
+                    onBlur={() => { editInQueue(i, queueEditText); setQueueEditingIndex(null); }}
+                    rows={2}
+                    className="ui-input flex-1 resize-none text-sm"
+                    style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
+                  />
+                ) : (
+                  <button
+                    onClick={() => { removeFromQueue(i); submit(`custom:${prompt}`); }}
+                    onDoubleClick={(e) => { e.stopPropagation(); setQueueEditingIndex(i); setQueueEditText(prompt); setTimeout(() => queueEditRef.current?.focus(), 0); }}
+                    title="Click to send · Double-click to edit"
+                    className={`flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary ${i === 0 ? "text-text-primary" : "text-text-tertiary"}`}
+                  >
+                    {prompt}
+                  </button>
+                )}
+
+                <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
+                  <button onClick={() => i > 0 && reorderInQueue(i, i - 1)} disabled={i === 0}
+                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move up">
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => i < queuedPrompts.length - 1 && reorderInQueue(i, i + 1)} disabled={i === queuedPrompts.length - 1}
+                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0" title="Move down">
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => removeFromQueue(i)}
+                    className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary" title="Remove">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

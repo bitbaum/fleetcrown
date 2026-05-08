@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
   Pause, Play, Eraser, Loader2, Send, Mic,
   SlidersHorizontal, ChevronsDown, ListPlus, X,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { cn } from "@/lib/utils";
@@ -462,33 +463,103 @@ function PromptInput({
   );
 }
 
-function QueueList({ queue, onRemove }: { queue: string[]; onRemove?: (i: number) => void }) {
+function QueueList({
+  queue,
+  onRemove,
+  onReorder,
+  onEdit,
+}: {
+  queue: string[];
+  onRemove?: (i: number) => void;
+  onReorder?: (from: number, to: number) => void;
+  onEdit?: (i: number, text: string) => void;
+}) {
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editText, setEditText] = useState("");
+  const editRef = useRef<HTMLTextAreaElement>(null);
+
+  const startEdit = (i: number) => {
+    setEditingIndex(i);
+    setEditText(queue[i]);
+    setTimeout(() => editRef.current?.focus(), 0);
+  };
+
+  const confirmEdit = () => {
+    if (editingIndex !== null && onEdit) onEdit(editingIndex, editText);
+    setEditingIndex(null);
+  };
+
   return (
     <div className="space-y-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5">
       <p className="ui-kicker mb-2">Up next · {queue.length}</p>
       {queue.map((item, i) => (
-        <div key={i} className="flex items-start gap-2">
+        <div key={i} className="flex items-start gap-1.5">
           <span className={cn(
             "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
             i === 0 ? "text-accent-text" : "text-text-muted",
           )}>
             {i + 1}
           </span>
-          <span className={cn(
-            "flex-1 text-sm leading-snug",
-            i === 0 ? "text-text-primary" : "text-text-tertiary",
-          )}>
-            {item}
-          </span>
-          {onRemove && (
+
+          {editingIndex === i ? (
+            <textarea
+              ref={editRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmEdit(); }
+                if (e.key === "Escape") setEditingIndex(null);
+              }}
+              onBlur={confirmEdit}
+              rows={2}
+              className="ui-input flex-1 resize-none text-sm"
+              style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
+            />
+          ) : (
             <button
-              onClick={() => onRemove(i)}
-              className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
-              title="Remove from queue"
+              onClick={() => onEdit && startEdit(i)}
+              title={onEdit ? "Click to edit" : undefined}
+              className={cn(
+                "flex-1 text-left text-sm leading-snug",
+                i === 0 ? "text-text-primary" : "text-text-tertiary",
+                onEdit && "cursor-text hover:text-text-primary",
+              )}
             >
-              <X className="h-3 w-3" />
+              {item}
             </button>
           )}
+
+          <div className="shrink-0 flex flex-col gap-0.5 pt-0.5">
+            {onReorder && (
+              <button
+                onClick={() => i > 0 && onReorder(i, i - 1)}
+                disabled={i === 0}
+                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0"
+                title="Move up"
+              >
+                <ChevronUp className="h-3 w-3" />
+              </button>
+            )}
+            {onReorder && (
+              <button
+                onClick={() => i < queue.length - 1 && onReorder(i, i + 1)}
+                disabled={i === queue.length - 1}
+                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary disabled:opacity-0"
+                title="Move down"
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            )}
+            {onRemove && (
+              <button
+                onClick={() => onRemove(i)}
+                className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                title="Remove from queue"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -508,6 +579,8 @@ export function IntentButtonPanel({
   onSendCustom,
   onEnqueueCustom,
   onRemoveFromQueue,
+  onReorderInQueue,
+  onEditInQueue,
   onCustomChange,
   onCustomFocusChange,
 }: {
@@ -523,6 +596,8 @@ export function IntentButtonPanel({
   onSendCustom: () => void;
   onEnqueueCustom?: (prompt: string) => void;
   onRemoveFromQueue?: (index: number) => void;
+  onReorderInQueue?: (from: number, to: number) => void;
+  onEditInQueue?: (index: number, text: string) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
 }) {
@@ -567,7 +642,7 @@ export function IntentButtonPanel({
           </button>
         </div>
         {queue.length > 0 && (
-          <QueueList queue={queue} onRemove={onRemoveFromQueue} />
+          <QueueList queue={queue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} />
         )}
         {recentPrompts.length > 0 && (
           <div className="flex flex-wrap gap-1.5">

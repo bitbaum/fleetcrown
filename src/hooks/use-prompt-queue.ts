@@ -51,7 +51,23 @@ export function usePromptQueue(tab: string) {
     setQueue((q) => q.filter((_, i) => i !== index));
   }, []);
 
+  const reorder = useCallback((from: number, to: number) => {
+    setQueue((q) => {
+      if (from < 0 || to < 0 || from >= q.length || to >= q.length) return q;
+      const next = [...q];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }, []);
+
+  const edit = useCallback((index: number, text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setQueue((q) => q.map((item, i) => (i === index ? trimmed : item)));
+  }, []);
+
   const clear = useCallback(() => setQueue([]), []);
 
-  return { queue, enqueue, shift, remove, clear };
+  return { queue, enqueue, shift, remove, reorder, edit, clear };
 }

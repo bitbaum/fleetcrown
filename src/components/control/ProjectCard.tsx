@@ -54,7 +54,7 @@ export function ProjectCard({
     }
   });
 
-  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue } = usePromptQueue(project.tab);
+  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue } = usePromptQueue(project.tab);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -236,6 +236,8 @@ export function ProjectCard({
             onSendCustom={sendCustom}
             onEnqueueCustom={enqueue}
             onRemoveFromQueue={removeFromQueue}
+            onReorderInQueue={reorderInQueue}
+            onEditInQueue={editInQueue}
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
           />
