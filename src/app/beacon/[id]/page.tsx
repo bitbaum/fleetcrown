@@ -141,6 +141,7 @@ export default function BeaconPage() {
   const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
   const [custom, setCustom] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submittedLabel, setSubmittedLabel] = useState("");
   const [countdown, setCountdown] = useState(readCountdownParam);
   const [paused, setPaused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -223,6 +224,17 @@ export default function BeaconPage() {
   const submit = useCallback(async (choice: string) => {
     if (submitted) return;
     setSubmitted(true);
+    // Resolve a human-readable label for the confirmation screen
+    const all = promptsRef.current;
+    let label = "";
+    if (choice.startsWith("custom:")) {
+      label = choice.slice("custom:".length).trim();
+    } else {
+      const slot = parseInt(choice);
+      const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
+      label = matched ? `${matched.icon} ${matched.label}` : choice;
+    }
+    setSubmittedLabel(label);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
@@ -426,9 +438,35 @@ export default function BeaconPage() {
 
   if (submitted) {
     return (
-      <div className="flex h-48 flex-col items-center justify-center gap-3 bg-surface-page">
-        <Check className="h-8 w-8 text-status-positive" />
-        <p className="text-sm text-text-secondary">Running…</p>
+      <div className="bg-surface-page p-6">
+        <div className="mx-auto max-w-lg space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-positive/15">
+              <Check className="h-5 w-5 text-status-positive" />
+            </div>
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-widest text-status-positive">Dispatched</p>
+              <p className="mt-0.5 text-base font-semibold text-text-primary">
+                {submittedLabel || "Agent running…"}
+              </p>
+            </div>
+          </div>
+          <div className="ui-panel rounded-xl p-4 space-y-2">
+            <p className="text-sm text-text-secondary">
+              Claude is now executing this task for <span className="font-medium text-text-primary">{session?.project}</span>.
+            </p>
+            <p className="text-xs text-text-tertiary">
+              Watch progress in the Control panel — this window will close automatically.
+            </p>
+          </div>
+          <button
+            onClick={() => window.open("http://localhost:3000/control", "_blank")}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle py-2.5 text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open Control panel
+          </button>
+        </div>
       </div>
     );
   }
