@@ -138,7 +138,18 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
-      {profileOpen && (
+      <ProjectCardHeader
+        project={project}
+        tabOpen={display.tabOpen}
+        isClosed={display.isClosed}
+        isReady={display.isReady}
+        isOrchReady={display.isOrchestrationReady}
+        profileOpen={profileOpen}
+        onProfileToggle={() => setProfileOpen((v) => !v)}
+        onCollapse={onCollapse}
+      />
+
+      {profileOpen ? (
         <ProjectProfile
           project={project}
           globalAdapter={currentAdapter}
@@ -147,20 +158,8 @@ export function ProjectCard({
           onSetAgent={setLocalAgent}
           onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
         />
-      )}
-
-      {!profileOpen && (
+      ) : (
         <>
-          <ProjectCardHeader
-            project={project}
-            tabOpen={display.tabOpen}
-            isClosed={display.isClosed}
-            isReady={display.isReady}
-            isOrchReady={display.isOrchestrationReady}
-            profileOpen={profileOpen}
-            onProfileToggle={() => setProfileOpen((v) => !v)}
-            onCollapse={onCollapse}
-          />
           <SessionSummary session={project.session} isClosed={display.isClosed} />
           <ProjectBanners
             isClosed={display.isClosed}
