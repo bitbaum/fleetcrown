@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
-import { Loader2, Check, ArrowRight, ExternalLink } from "lucide-react";
+import { Loader2, Check, ArrowRight, ExternalLink, X } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { parseSessionText } from "@/lib/session-content";
@@ -148,6 +148,17 @@ export default function BeaconPage() {
     window.addEventListener("storage", sync);
     return () => { clearInterval(interval); window.removeEventListener("storage", sync); };
   }, [session?.project]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const removeFromQueue = useCallback((index: number) => {
+    if (!session) return;
+    const key = `control:queue:${session.project.toLowerCase()}`;
+    try {
+      const raw = localStorage.getItem(key);
+      const q: string[] = raw ? JSON.parse(raw) : [];
+      localStorage.setItem(key, JSON.stringify(q.filter((_, i) => i !== index)));
+      setQueuedPrompts((prev) => prev.filter((_, i) => i !== index));
+    } catch { /* ignore */ }
+  }, [session]);
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
   useEffect(() => {
@@ -315,17 +326,27 @@ export default function BeaconPage() {
 
         {/* Queue — items that will fire before auto-continue */}
         {queuedPrompts.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="ui-kicker text-[10px] tracking-widest">Queued · {queuedPrompts.length}</p>
+          <div className="rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 space-y-1">
+            <p className="ui-kicker mb-2">Up next · {queuedPrompts.length}</p>
             {queuedPrompts.map((prompt, i) => (
-              <button
-                key={i}
-                onClick={() => submit(`custom:${prompt}`)}
-                className="w-full rounded-xl border border-border-subtle px-4 py-2.5 text-left text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary"
-              >
-                <span className="mr-2 text-text-muted tabular-nums">{i + 1}.</span>
-                {prompt}
-              </button>
+              <div key={i} className="flex items-start gap-2">
+                <span className={`mt-[3px] shrink-0 text-[10px] font-bold tabular-nums ${i === 0 ? "text-accent-text" : "text-text-muted"}`}>
+                  {i + 1}
+                </span>
+                <button
+                  onClick={() => { removeFromQueue(i); submit(`custom:${prompt}`); }}
+                  className={`flex-1 text-left text-sm leading-snug transition-colors hover:text-text-primary ${i === 0 ? "text-text-primary" : "text-text-tertiary"}`}
+                >
+                  {prompt}
+                </button>
+                <button
+                  onClick={() => removeFromQueue(i)}
+                  className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                  title="Remove from queue"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             ))}
           </div>
         )}

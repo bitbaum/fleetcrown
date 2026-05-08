@@ -14,9 +14,22 @@ export function usePromptQueue(tab: string) {
     }
   });
 
+  // Write to localStorage whenever React state changes.
   useEffect(() => {
     try { window.localStorage.setItem(key, JSON.stringify(queue)); } catch { /* ignore */ }
   }, [queue, key]);
+
+  // React to queue changes made by other windows (e.g. beacon popup).
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== key) return;
+      try {
+        setQueue(e.newValue ? (JSON.parse(e.newValue) as string[]) : []);
+      } catch { /* ignore malformed */ }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [key]);
 
   const enqueue = useCallback((prompt: string) => {
     const trimmed = prompt.trim();
