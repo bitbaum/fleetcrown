@@ -1,4 +1,6 @@
 import type { Milestone } from "@/db/schema/goals";
+import type { DevLogEntry } from "@/db/schema/user-projects";
+export type { DevLogEntry };
 
 export type LinkedGoal = {
   id: string;
@@ -31,6 +33,7 @@ export type ProjectData = {
   interactions: Array<{ channel: string; direction: string; summary: string | null; occurredAt: string }>;
   linkedJobs: LinkedJob[];
   linkedGoals: LinkedGoal[];
+  devLog: DevLogEntry[];
 };
 
 export type Tab = "overview" | "prompts" | "goals";

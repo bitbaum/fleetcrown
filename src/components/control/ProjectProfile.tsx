@@ -8,6 +8,7 @@ import { patchJson } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
+import { DevLogList } from "@/components/shared/DevLogList";
 
 type AgentEntry = { id: string; label: string };
 type AgentId = string;
@@ -196,12 +197,6 @@ function DimensionSection({
   );
 }
 
-const HEALTH_STYLE: Record<string, string> = {
-  good:              "ui-tag ui-tag-positive",
-  "needs attention": "ui-tag ui-tag-warning",
-  critical:          "ui-tag ui-tag-negative",
-};
-
 function DevLogSection({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
@@ -229,36 +224,8 @@ function DevLogSection({ projectId }: { projectId: string }) {
       </button>
 
       {open && (
-        <div className="space-y-3 px-4 pb-4 pt-1 sm:px-5">
-          {entries.map((entry, i) => {
-            const d = new Date(entry.date);
-            const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-            const healthKey = entry.health.toLowerCase();
-            const healthCls = HEALTH_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
-            return (
-              <div key={i} className="rounded-xl border border-border-subtle bg-surface-base p-3 space-y-1.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-text-muted">{dateStr}</span>
-                  {entry.health && <span className={healthCls}>{entry.health}</span>}
-                </div>
-                {entry.done && (
-                  <p className="text-xs leading-relaxed text-text-secondary">
-                    <span className="font-medium text-text-tertiary">done </span>{entry.done}
-                  </p>
-                )}
-                {entry.next && (
-                  <p className="text-xs leading-relaxed text-text-primary">
-                    <span className="font-medium text-accent-text">→ </span>{entry.next}
-                  </p>
-                )}
-                {(entry.tests || entry.todos) && (
-                  <p className="text-[11px] text-text-muted">
-                    {[entry.tests, entry.todos ? `${entry.todos} TODOs` : ""].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+        <div className="px-4 pb-4 pt-1 sm:px-5">
+          <DevLogList entries={entries} />
         </div>
       )}
     </div>

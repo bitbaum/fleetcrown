@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
+import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, History } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
+import { DevLogList } from "@/components/shared/DevLogList";
 import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
@@ -259,6 +260,31 @@ export function OverviewTab({
           </button>
         )}
       </div>
+
+      {data.devLog.length > 0 && (
+        <DevLogSection entries={data.devLog} />
+      )}
+    </div>
+  );
+}
+
+function DevLogSection({ entries }: { entries: import("./project-detail-types").DevLogEntry[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors py-1"
+      >
+        <History className="h-3.5 w-3.5" />
+        Session Log ({entries.length})
+        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="mt-2">
+          <DevLogList entries={entries} />
+        </div>
+      )}
     </div>
   );
 }

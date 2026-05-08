@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals } from "@/db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { entities, entityRelations, interactions, goals, userProjects } from "@/db/schema";
+import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
@@ -83,8 +83,8 @@ export async function GET(
 
   if (!project) return NextResponse.json(null, { status: 404 });
 
-  // Parallel: attrs, relations, interactions, and linked goals are independent
-  const [attrMap, relations, recentInteractions, linkedGoals] = await Promise.all([
+  // Parallel: attrs, relations, interactions, linked goals, and devLog are independent
+  const [attrMap, relations, recentInteractions, linkedGoals, userProject] = await Promise.all([
     fetchAttributesByEntityIds([id]),
     db
       .select()
@@ -109,6 +109,10 @@ export async function GET(
       .from(goals)
       .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
       .orderBy(desc(goals.progress)),
+    db.query.userProjects.findFirst({
+      where: and(eq(userProjects.userId, userId), ilike(userProjects.name, project.name)),
+      columns: { devLog: true },
+    }),
   ]);
 
   const attrs = attrMap.get(id) ?? {};
@@ -149,5 +153,6 @@ export async function GET(
     })),
     linkedJobs,
     linkedGoals,
+    devLog: [...(userProject?.devLog ?? [])].reverse().slice(0, 20),
   });
 }
