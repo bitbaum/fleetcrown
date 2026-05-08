@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import { Loader2, Check, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type BeaconSession = {
   id: string;
