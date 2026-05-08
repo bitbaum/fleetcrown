@@ -1,11 +1,23 @@
 /**
- * Shared parser for Claude session handoff files.
- * Format: "key: value" lines, semicolons separate list items within a value.
+ * Shared parsers for Claude session handoff content.
+ *
+ * Two formats exist:
+ *   parseSessionText  — beacon DB content; done/next/in_progress are semicolon-delimited lists
+ *   parseSessionFile  — on-disk .md handoff files; multi-line values, stops at ## sections
  */
+
+import {
+  ORCHESTRATION_TASK_SUMMARY_FIELDS,
+  type OrchestrationTaskSummaryField,
+  type OrchestrationTaskSummary,
+} from "@/lib/orchestration/contract";
 
 export function splitSessionItems(text: string): string[] {
   return text.split(/;\s+/).map((s) => s.trim()).filter(Boolean);
 }
+
+// ── Beacon DB content parser ──────────────────────────────────────────────────
+
 export type ParsedSession = {
   done: string[];
   next: string[];
@@ -29,5 +41,41 @@ export function parseSessionText(content: string): ParsedSession {
     else if (k === "todos") result.todos = v;
     else if (k === "health") result.health = v;
   }
+  return result;
+}
+
+// ── On-disk .md session file parser ──────────────────────────────────────────
+// Supports multi-line values (continuation lines after the initial "key: val"
+// line are appended until the next key or a ## section header is reached).
+
+export function parseSessionFile(raw: string): OrchestrationTaskSummary {
+  const result = Object.fromEntries(
+    ORCHESTRATION_TASK_SUMMARY_FIELDS.map((f) => [f, ""]),
+  ) as Record<OrchestrationTaskSummaryField, string>;
+
+  let current: OrchestrationTaskSummaryField | null = null;
+  const buffer: string[] = [];
+
+  const flush = () => {
+    if (current && buffer.length > 0) result[current] = buffer.join("\n").trim();
+    buffer.length = 0;
+  };
+
+  const fieldRe = new RegExp(`^(${ORCHESTRATION_TASK_SUMMARY_FIELDS.join("|")}):\\s*(.*)`);
+  for (const line of raw.split("\n")) {
+    const m = line.match(fieldRe);
+    if (m) {
+      flush();
+      current = m[1] as OrchestrationTaskSummaryField;
+      if (m[2]) buffer.push(m[2]);
+    } else if (current && line.startsWith("## ")) {
+      flush();
+      current = null;
+    } else if (current) {
+      buffer.push(line);
+    }
+  }
+  flush();
+
   return result;
 }

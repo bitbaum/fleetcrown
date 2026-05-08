@@ -725,6 +725,8 @@ class ContinuePopup(BasePopup):
     # ── session summary ───────────────────────────────────────────────────────
 
     def _build_summary(self, lay):
+        # Python port of parseSessionFile() in src/lib/session-content.ts.
+        # Single-line parse is sufficient for display; keep field list in sync.
         parsed = {}
         for line in self.session.strip().split('\n'):
             if ':' in line:

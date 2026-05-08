@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { SESSIONS_DIR, stateFile } from "@/lib/agent-config";
-import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
 import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
+import { parseSessionFile } from "@/lib/session-content";
 import type { CurrentPrompt, SessionState } from "@/lib/control-types";
 
 export function parseSession(tab: string): SessionState | null {
@@ -10,21 +10,9 @@ export function parseSession(tab: string): SessionState | null {
   if (!fs.existsSync(file)) return null;
   try {
     const raw = fs.readFileSync(file, "utf-8");
-    const fields: Record<string, string> = {};
-    const fieldPattern = ORCHESTRATION_TASK_SUMMARY_FIELDS.join("|");
-    for (const line of raw.split("\n")) {
-      const m = line.match(new RegExp(`^(${fieldPattern}):\\s*(.*)`));
-      if (m) fields[m[1]] = m[2].trim();
-    }
+    const fields = parseSessionFile(raw);
     const mtime = fs.statSync(file).mtimeMs;
-    return {
-      done:   fields.done  ?? "",
-      next:   fields.next  ?? "",
-      tests:  fields.tests ?? "",
-      todos:  fields.todos ?? "",
-      health: fields.health ?? "",
-      mtime,
-    };
+    return { ...fields, mtime };
   } catch {
     return null;
   }
