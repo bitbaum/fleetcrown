@@ -17,6 +17,7 @@ export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
   const [countdown, setCountdown] = useState(30);
   const [model, setModel] = useState("base");
+  const [browserUi, setBrowserUi] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -26,10 +27,15 @@ export function BeaconSettings() {
       setData(d);
       setCountdown(d.countdown_seconds);
       setModel(d.whisper_model);
+      setBrowserUi(d.prefer_browser_ready_ui);
     }).catch(() => {});
   }, []);
 
-  const dirty = data !== null && (countdown !== data.countdown_seconds || model !== data.whisper_model);
+  const dirty = data !== null && (
+    countdown !== data.countdown_seconds ||
+    model !== data.whisper_model ||
+    browserUi !== data.prefer_browser_ready_ui
+  );
 
   const save = async () => {
     setSaving(true);
@@ -39,12 +45,13 @@ export function BeaconSettings() {
       const res = await patchJson("/api/beacon-settings", {
         countdown_seconds: countdown,
         whisper_model: model,
+        prefer_browser_ready_ui: browserUi,
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(body.error ?? "Failed to save");
       }
-      setData({ countdown_seconds: countdown, whisper_model: model });
+      setData({ countdown_seconds: countdown, whisper_model: model, prefer_browser_ready_ui: browserUi });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -68,6 +75,28 @@ export function BeaconSettings() {
         </div>
       ) : (
         <div className="space-y-5">
+          {/* Web UI mode */}
+          <div className="flex items-start gap-3">
+            <div className="flex h-5 items-center pt-0.5">
+              <input
+                id="beacon-browser-ui"
+                type="checkbox"
+                checked={browserUi}
+                onChange={(e) => setBrowserUi(e.target.checked)}
+                className="h-4 w-4 rounded border-border-default accent-accent-primary cursor-pointer"
+              />
+            </div>
+            <div className="space-y-0.5">
+              <label htmlFor="beacon-browser-ui" className="text-sm font-medium text-text-primary cursor-pointer">
+                Use web UI beacon
+              </label>
+              <p className="text-xs text-text-muted">
+                Opens the Cockpit web popup instead of the native desktop dialog when Claude finishes.
+                Enables mic input, session summaries, and light/dark mode.
+              </p>
+            </div>
+          </div>
+
           {/* Countdown */}
           <div className="space-y-1.5">
             <label className="ui-kicker">Auto-continue countdown</label>

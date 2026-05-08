@@ -11,11 +11,13 @@ const VALID_MODELS = ["tiny", "base", "small", "medium", "large"] as const;
 const PatchBody = z.object({
   countdown_seconds: z.number().int().min(5).max(300).optional(),
   whisper_model: z.enum(VALID_MODELS).optional(),
+  prefer_browser_ready_ui: z.boolean().optional(),
 });
 
 export type BeaconSettingsData = {
   countdown_seconds: number;
   whisper_model: string;
+  prefer_browser_ready_ui: boolean;
 };
 
 async function readSettings(): Promise<Record<string, unknown>> {
@@ -36,6 +38,7 @@ export async function GET() {
   const result: BeaconSettingsData = {
     countdown_seconds: typeof s.countdown_seconds === "number" ? s.countdown_seconds : 30,
     whisper_model: typeof s.whisper_model === "string" ? s.whisper_model : "base",
+    prefer_browser_ready_ui: s.prefer_browser_ready_ui === true,
   };
   return NextResponse.json(result);
 }
@@ -47,6 +50,7 @@ export async function PATCH(req: NextRequest) {
   const current = await readSettings();
   if (dataOrResp.countdown_seconds !== undefined) current.countdown_seconds = dataOrResp.countdown_seconds;
   if (dataOrResp.whisper_model !== undefined) current.whisper_model = dataOrResp.whisper_model;
+  if (dataOrResp.prefer_browser_ready_ui !== undefined) current.prefer_browser_ready_ui = dataOrResp.prefer_browser_ready_ui;
   await writeSettings(current);
   return NextResponse.json({ ok: true });
 }
