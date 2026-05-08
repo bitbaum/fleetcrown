@@ -1426,7 +1426,11 @@ def _web_stop(label: str, session_file: str) -> None:
                 # 8s timeout: 3s was too tight for cold Next.js route compilation
                 resp = urllib.request.urlopen(url, timeout=8)
                 data = _json.loads(resp.read())
-                if data.get("choice"):
+                # Use `is not None` — empty string "" signals cancellation and must
+                # be returned so the bash caller can `[ -z "$choice" ] && exit 0`.
+                # Truthiness check would skip "" and keep polling until timeout,
+                # causing bash to fall back to slot 1 and double-inject.
+                if data.get("choice") is not None:
                     return data["choice"]
             except Exception:
                 pass
@@ -1456,8 +1460,8 @@ def _web_stop(label: str, session_file: str) -> None:
     _open_browser(f"{COCKPIT}/beacon/{session_id}?countdown={countdown}")
 
     choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
-    if choice:
-        print(choice)
+    if choice is not None:
+        print(choice)  # may be "" (cancellation) — bash handles with [ -z "$choice" ] && exit 0
         sys.exit(0)
     sys.exit(1)
 
