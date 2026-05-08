@@ -164,14 +164,28 @@ handle_stop() {
       patch_project_state "$TAB_NAME" "closingAt"
     fi
 
+    local session_update_block
+    session_update_block="When done, update ${session_file} with exactly these lines:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count> TODOs
+health: <good | needs attention | critical>"
+
     if [ -f "$session_file" ]; then
       local session
       session=$(cat "$session_file")
-      prompt=$(printf '%s\n\nSession state from last run:\n%s\n\nUpdate %s when done: what you completed and what remains.' \
-        "$base" "$session" "$session_file")
+      prompt="${base}
+
+Session state from last run:
+${session}
+
+${session_update_block}"
     else
-      prompt=$(printf '%s\n\nBefore stopping, create %s with two lines: "done: <what you completed>" and "next: <what remains>".' \
-        "$base" "$session_file")
+      prompt="${base}
+
+Before stopping, create ${session_file}.
+${session_update_block}"
     fi
   fi
 
