@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
     try {
-      const prompt = renderTaskForAdapter(request);
+      const prompt = buildPromptWithSession(renderTaskForAdapter(request), request.projectKey);
       injectIntoTab(effectiveKey, prompt);
       cancelActiveBeaconSessions(effectiveKey);
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
