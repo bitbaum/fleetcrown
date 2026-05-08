@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (stored !== null) {
         setSidebarCollapsed(stored === "true"); // eslint-disable-line react-hooks/set-state-in-effect
       } else {
-        setSidebarCollapsed(window.innerWidth < SIDEBAR_COLLAPSE_BREAKPOINT); // eslint-disable-line react-hooks/set-state-in-effect
+        setSidebarCollapsed(window.innerWidth < SIDEBAR_COLLAPSE_BREAKPOINT);
       }
     } catch { /* ignore */ }
   }, []);
