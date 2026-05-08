@@ -50,6 +50,11 @@ export function getProjectDisplayState(
   nowS: number,
   dismissed = false,
 ): ProjectDisplayState {
+  // If the agent process is gone but the currentPrompt file wasn't cleaned up (process
+  // crashed before the stop hook ran), treat the file as absent so the UI doesn't get
+  // stuck on "Running: <stale task>" indefinitely.
+  const currentPrompt = project.agentRunning ? project.currentPrompt : null;
+
   const isClosed =
     !dismissed &&
     !project.agentRunning &&
@@ -65,7 +70,7 @@ export function getProjectDisplayState(
     !dismissed &&
     !isClosed &&
     !isClosing &&
-    !project.currentPrompt &&
+    !currentPrompt &&
     withinWindow(project.readyAt, nowS, READY_WINDOW_S);
 
   const latestFinishedAtS = project.latestOrchestrationRun?.finishedAt
@@ -76,14 +81,14 @@ export function getProjectDisplayState(
     !isReady &&
     !isClosed &&
     !isClosing &&
-    !project.currentPrompt &&
+    !currentPrompt &&
     project.latestOrchestrationRun?.state === "done" &&
     withinWindow(latestFinishedAtS, nowS, READY_WINDOW_S);
 
   const isRunning = project.agentRunning;
   // Show the running banner whenever a prompt is actively tracked — don't require
   // isRunning because the process may not yet appear in /proc on the current tick.
-  const showRunningBanner = !isClosing && !isReady && Boolean(project.currentPrompt);
+  const showRunningBanner = !isClosing && !isReady && Boolean(currentPrompt);
   const showLatestOrchestration =
     Boolean(project.latestOrchestrationRun) &&
     !isRunning &&
@@ -100,7 +105,7 @@ export function getProjectDisplayState(
     withinWindow(project.readyAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closingAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closedAt, nowS, ACTIVE_WINDOW_S) ||
-    project.currentPrompt !== null;
+    currentPrompt !== null;
 
   const tone: ProjectDisplayState["tone"] = isClosed
     ? "closed"
