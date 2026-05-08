@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
 import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
+import { readyAtKey } from "@/lib/control-storage";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
@@ -137,6 +138,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
 }
 
 export function ReadyBanner({
+  tab,
   prompts,
   onSend,
   onDismiss,
@@ -147,6 +149,7 @@ export function ReadyBanner({
   nextQueueItem,
   queueTotal = 0,
 }: {
+  tab?: string;
   prompts: PromptMeta[];
   onSend: (key: string) => void;
   onDismiss: () => void;
@@ -157,7 +160,18 @@ export function ReadyBanner({
   nextQueueItem?: string;
   queueTotal?: number;
 }) {
-  const [seconds, setSeconds] = useState(AUTO_INJECT_S);
+  const [seconds, setSeconds] = useState(() => {
+    if (tab) {
+      try {
+        const stored = localStorage.getItem(readyAtKey(tab));
+        if (stored) {
+          const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
+          return Math.max(0, AUTO_INJECT_S - elapsed);
+        }
+      } catch {}
+    }
+    return AUTO_INJECT_S;
+  });
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
   const onAutoInjectRef = useRef(onAutoInject);
   const onSendRef = useRef(onSend);

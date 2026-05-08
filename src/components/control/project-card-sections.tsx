@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { cn } from "@/lib/utils";
+import { compactRelativeDate } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -43,6 +44,15 @@ export function ProjectCardHeader({
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { git, session, profile } = project;
 
+  const isIdle = !project.agentRunning && !isReady && !isOrchReady && !isClosed;
+  const lastActiveMs = session?.mtime ?? (project.closedAt ? project.closedAt * 1000 : null);
+  const lastActiveLabel = lastActiveMs
+    ? compactRelativeDate(new Date(lastActiveMs))
+    : git?.lastWhen ?? null;
+  const healthShort = session?.health
+    ? session.health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase()
+    : null;
+
   const dotColor = project.agentRunning
     ? "text-accent-text animate-pulse"
     : isClosed || isReady || isOrchReady
@@ -66,8 +76,16 @@ export function ProjectCardHeader({
                     Live tab
                   </span>
                 )}
-                {session?.health && <SessionBadge health={session.health} />}
+                {/* Health badge only for active/ready/closed — idle projects fold it into the context line below */}
+                {!isIdle && session?.health && <SessionBadge health={session.health} />}
               </div>
+              {/* Idle context line: "last 2d ago · good" — replaces the health badge for quiet projects */}
+              {isIdle && (lastActiveLabel || healthShort) && (
+                <p className="mt-0.5 text-xs text-text-muted">
+                  {[lastActiveLabel && `last ${lastActiveLabel}`, healthShort].filter(Boolean).join(" · ")}
+                </p>
+              )}
+              {/* Profile status when no health available (any state) */}
               {profile?.status && !session?.health && (
                 <p className="mt-1 truncate text-sm text-text-tertiary" title={profile.status}>{profile.status}</p>
               )}
@@ -79,8 +97,10 @@ export function ProjectCardHeader({
               <div className="flex min-w-0 items-center gap-1.5">
                 <GitBranch className="h-3.5 w-3.5" />
                 <span className="max-w-[16rem] truncate" title={git.branch}>{git.branch}</span>
-                {git.dirty && <span className="text-status-warning">✎</span>}
-                {git.todayCount > 0 && <span className="text-status-positive/80">+{git.todayCount}</span>}
+                {git.dirty && <span className="text-status-warning" title="Uncommitted changes">✎</span>}
+                {git.todayCount > 0 && (
+                  <span className="text-status-positive/80" title={`${git.todayCount} commit${git.todayCount > 1 ? "s" : ""} today`}>+{git.todayCount}</span>
+                )}
               </div>
               {git.behindRemote > 0 && (
                 <>
@@ -229,6 +249,7 @@ export function SessionSummary({
 }
 
 export function ProjectBanners({
+  tab,
   isClosed,
   isClosing,
   isReady,
@@ -248,6 +269,7 @@ export function ProjectBanners({
   onSend,
   onAutoInject,
 }: {
+  tab: string;
   isClosed: boolean;
   isClosing: boolean;
   isReady: boolean;
@@ -282,6 +304,7 @@ export function ProjectBanners({
       {isClosing && <ClosingBanner startedAt={closingAt!} />}
       {isReady && (
         <ReadyBanner
+          tab={tab}
           prompts={prompts}
           onSend={onSend}
           onDismiss={onDismiss}
@@ -295,6 +318,7 @@ export function ProjectBanners({
       )}
       {isOrchReady && (
         <ReadyBanner
+          tab={tab}
           prompts={prompts}
           onSend={(key) => {
             const intent = mapClaudePromptToIntent(key);

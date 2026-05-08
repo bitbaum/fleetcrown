@@ -15,7 +15,7 @@ import {
 } from "./project-card-sections";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
-import { isAutoContinueEnabledSync } from "@/lib/control-storage";
+import { isAutoContinueEnabledSync, readyAtKey } from "@/lib/control-storage";
 
 export function ProjectCard({
   project,
@@ -42,11 +42,8 @@ export function ProjectCard({
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
-  const [typingActive, setTypingActive] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  // Default OFF — explicit opt-in only, to prevent double injection when the user
-  // is actively typing in the same terminal. Setting persists across page loads.
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinueHook } = useAutoContinue(project.tab);
 
   const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue } = usePromptQueue(project.tab);
@@ -61,26 +58,21 @@ export function ProjectCard({
     prevAgentRunning.current = project.agentRunning;
   }, [project.agentRunning]);
 
-  useEffect(() => {
-    let clearAt: ReturnType<typeof setTimeout> | undefined;
-    const markTyping = () => {
-      setTypingActive(true);
-      if (clearAt) clearTimeout(clearAt);
-      clearAt = setTimeout(() => setTypingActive(false), 8000);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      markTyping();
-    };
-    window.addEventListener("keydown", onKeyDown, { passive: true });
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      if (clearAt) clearTimeout(clearAt);
-    };
-  }, []);
-
   const nowS = Math.floor(Date.now() / 1000);
   const display = getProjectDisplayState(project, zellijTabs, nowS, dismissed);
+
+  // Write/clear readyAt timestamp so the beacon popup can initialise its countdown
+  // from the same origin — both views show the same remaining seconds.
+  const isReadyNow = display.isReady || display.isOrchestrationReady;
+  const prevIsReadyRef = useRef(false);
+  useEffect(() => {
+    if (isReadyNow && !prevIsReadyRef.current) {
+      try { localStorage.setItem(readyAtKey(project.tab), Date.now().toString()); } catch {}
+    } else if (!isReadyNow && prevIsReadyRef.current) {
+      try { localStorage.removeItem(readyAtKey(project.tab)); } catch {}
+    }
+    prevIsReadyRef.current = isReadyNow;
+  }, [isReadyNow, project.tab]);
   const latestOrchRun = project.latestOrchestrationRun;
 
   const sendCustom = async () => {
@@ -198,7 +190,7 @@ export function ProjectCard({
     }
   };
 
-  const paused = !autoContinueEnabled || typingActive || customFocused || custom.trim().length > 0;
+  const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0;
 
   return (
     <div
@@ -239,6 +231,7 @@ export function ProjectCard({
         <>
           <SessionSummary session={project.session} isClosed={display.isClosed} />
           <ProjectBanners
+            tab={project.tab}
             isClosed={display.isClosed}
             isClosing={display.isClosing}
             isReady={display.isReady}

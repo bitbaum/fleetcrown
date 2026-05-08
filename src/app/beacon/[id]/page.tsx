@@ -12,7 +12,8 @@ import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { QueueList, PromptInput } from "@/components/control/project-card-sections";
 import { parseSessionText } from "@/lib/session-content";
-import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
+import { readyAtKey } from "@/lib/control-storage";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 
@@ -96,7 +97,19 @@ function BeaconBody({
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
   const [custom, setCustom] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
-  const [countdown, setCountdown] = useState(readCountdownParam);
+  const [countdown, setCountdown] = useState(() => {
+    // Initialise from the shared readyAt timestamp written by the control panel
+    // so both views count down from the same origin and show the same number.
+    try {
+      const stored = localStorage.getItem(readyAtKey(session.project));
+      if (stored) {
+        const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
+        return Math.max(0, AUTO_INJECT_S - elapsed);
+      }
+    } catch {}
+    return readCountdownParam();
+  });
+  const autoFiredRef = useRef(false);
   const pendingMicActionRef = useRef<"send" | "queue" | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
@@ -104,14 +117,27 @@ function BeaconBody({
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
-  // Display-only countdown — actual injection is the control panel's authority.
-  // Re-runs when autoContinueEnabled changes so the interval is cleared on Pause.
+  // Countdown — pauses when auto-continue is off or user is composing a prompt.
+  // Fires real injection at T=0 (queue first, then primary prompt).
+  const isComposing = custom.trim().length > 0;
   useEffect(() => {
-    if (!autoContinueEnabled || countdown <= 0) return;
+    if (!autoContinueEnabled || isComposing || countdown <= 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoContinueEnabled]);
+  }, [autoContinueEnabled, isComposing]);
+
+  useEffect(() => {
+    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current) return;
+    autoFiredRef.current = true;
+    const all = promptsRef.current;
+    const primary = all.find((p) => p.style === "primary");
+    const choice = queue.length > 0
+      ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
+      : primary ? String(primary.slot ?? primary.key) : "1";
+    submitRef.current(choice);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [countdown, autoContinueEnabled]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {
@@ -301,7 +327,7 @@ function BeaconBody({
             : !autoContinueEnabled
             ? "Auto-continue paused"
             : countdown <= 0
-            ? "Continuing via Cockpit…"
+            ? "Dispatching…"
             : queue.length > 0
             ? `→ "${queue[0].length > 40 ? queue[0].slice(0, 38) + "…" : queue[0]}" in ${countdown}s${queue.length > 1 ? ` · +${queue.length - 1} more` : ""}`
             : `AI continues based on plan above in ${countdown}s`}
