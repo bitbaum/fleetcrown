@@ -186,7 +186,7 @@ SS = """
 /* ── Card ── */
 QWidget#card {{
     background: {card};
-    border-radius: 24px;
+    border-radius: 16px;
     border: 1px solid {border};
 }}
 
@@ -498,6 +498,7 @@ class BasePopup(QWidget):
     def __init__(self, timeout_ms=35_000):
         super().__init__()
         self.result = None
+        self._drag_pos = None
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
@@ -510,6 +511,20 @@ class BasePopup(QWidget):
         self._dismiss_timer.timeout.connect(self._dismiss)
         self._dismiss_timer.start(timeout_ms)
 
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.MouseButton.LeftButton and self._drag_pos is not None:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_pos = None
+        super().mouseReleaseEvent(event)
+
     def _pause_dismiss(self):
         self._dismiss_timer.stop()
 
@@ -520,9 +535,14 @@ class BasePopup(QWidget):
         card = QWidget()
         card.setObjectName("card")
         sh = QGraphicsDropShadowEffect()
-        sh.setBlurRadius(70)
-        sh.setOffset(0, 20)
-        sh.setColor(QColor(0, 0, 0, 230))
+        if _is_dark_mode():
+            sh.setBlurRadius(60)
+            sh.setOffset(0, 16)
+            sh.setColor(QColor(0, 0, 0, 200))
+        else:
+            sh.setBlurRadius(40)
+            sh.setOffset(0, 8)
+            sh.setColor(QColor(0, 0, 0, 60))
         card.setGraphicsEffect(sh)
         card.setFixedWidth(width)
         return card
@@ -533,11 +553,14 @@ class BasePopup(QWidget):
         return d
 
     def _position(self):
-        scr = QApplication.primaryScreen().availableGeometry()
+        # Appear on whichever screen the cursor is on (active workspace)
+        cursor_pos = QCursor.pos()
+        screen = QApplication.screenAt(cursor_pos) or QApplication.primaryScreen()
+        scr = screen.availableGeometry()
         self.adjustSize()
         x = scr.right()  - self.sizeHint().width()  - 24
         y = scr.bottom() - self.sizeHint().height() - 24
-        y = max(y, scr.top() + 16)   # never clip off the top of the screen
+        y = max(y, scr.top() + 16)
         self.move(x, y)
 
     def _choose(self, key):
@@ -765,7 +788,7 @@ class ContinuePopup(BasePopup):
         scr_area.setFrameShape(QFrame.Shape.NoFrame)
         scr_area.setStyleSheet("background:transparent;border:none;")
         scr_area.viewport().setStyleSheet("background:transparent;")
-        avail_h = QApplication.primaryScreen().availableGeometry().height()
+        avail_h = (QApplication.screenAt(QCursor.pos()) or QApplication.primaryScreen()).availableGeometry().height()
         scr_area.setMaximumHeight(int(avail_h * 0.55))
 
         lay.addWidget(scr_area)
