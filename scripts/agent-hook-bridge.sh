@@ -66,6 +66,19 @@ handle_stop() {
   log "fired — label=$label"
   [ -z "${TAB_NAME:-}" ] && exit 0
 
+  # Guard: skip if a beacon is already active for this tab (rapid turn completions
+  # can fire multiple concurrent stop hooks — only the first should show a popup).
+  local existing_lock="/tmp/agent-stop-active-${TAB_NAME}"
+  [ ! -f "$existing_lock" ] && existing_lock="/tmp/claude-stop-active-${TAB_NAME}"
+  if [ -f "$existing_lock" ]; then
+    local existing_age
+    existing_age=$(( $(date +%s) - $(stat -c %Y "$existing_lock" 2>/dev/null || echo 0) ))
+    if [ "$existing_age" -lt 90 ]; then
+      log "skipping popup — another stop is active for ${TAB_NAME} (${existing_age}s old)"
+      exit 0
+    fi
+  fi
+
   rm -f "/tmp/agent-current-prompt-${TAB_NAME}" "/tmp/claude-current-prompt-${TAB_NAME}"
 
   sentinel="/tmp/agent-session-closed-${TAB_NAME}"
@@ -111,7 +124,7 @@ handle_stop() {
     [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
   fi
 
-  if should_skip_native_popup && curl -sf --max-time 1 "http://localhost:3000/api/control" >/dev/null 2>&1; then
+  if should_skip_native_popup && curl -sf --max-time 2 "http://localhost:3000/api/health" >/dev/null 2>&1; then
     log "Cockpit running — skipping native popup"
     exit 0
   fi

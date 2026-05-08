@@ -1109,7 +1109,7 @@ class ContinuePopup(BasePopup):
 
         def _cockpit_ready():
             try:
-                r = urllib.request.urlopen("http://localhost:3000/api/control", timeout=1)
+                r = urllib.request.urlopen("http://localhost:3000/api/health", timeout=2)
                 return r.status == 200
             except Exception:
                 return False
@@ -1137,10 +1137,11 @@ class ContinuePopup(BasePopup):
             _launch_browser()
             return
 
-        # Not running — start it, poll until /api/control responds, then open browser
+        # Not running — start it, poll until /api/health responds, then open browser
         subprocess.Popen(
             ["bash", "-lc", "cd ~/dev/cockpit && npm run dev"],
             env=env, start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         self._cockpit_poll(0, url, env, _launch_browser)
 
@@ -1149,7 +1150,7 @@ class ContinuePopup(BasePopup):
         if attempt > 20:   # give up after 40s — never open a broken URL
             return
         try:
-            r = urllib.request.urlopen("http://localhost:3000/api/control", timeout=1)
+            r = urllib.request.urlopen("http://localhost:3000/api/health", timeout=2)
             if r.status == 200:
                 launch_browser()
                 return
@@ -1341,16 +1342,20 @@ def _web_stop(label: str, session_file: str) -> None:
 
     def _cockpit_ready() -> bool:
         try:
-            r = urllib.request.urlopen(f"{COCKPIT}/api/control", timeout=2)
+            # Use /api/health (instant response) not /api/control (slow DB+git endpoint)
+            r = urllib.request.urlopen(f"{COCKPIT}/api/health", timeout=5)
             return r.status == 200
         except Exception:
             return False
 
     def _start_cockpit():
         env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
+        # Redirect stdout/stderr to DEVNULL — otherwise npm run dev inherits the bash
+        # command substitution pipe and its startup output pollutes the captured choice.
         subprocess.Popen(
             ["bash", "-lc", "cd ~/dev/cockpit && npm run dev"],
             env=env, start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
 
     def _open_browser(url: str):
@@ -1393,7 +1398,8 @@ def _web_stop(label: str, session_file: str) -> None:
         url = f"{COCKPIT}/api/beacon/{session_id}"
         while time.time() < deadline:
             try:
-                resp = urllib.request.urlopen(url, timeout=3)
+                # 8s timeout: 3s was too tight for cold Next.js route compilation
+                resp = urllib.request.urlopen(url, timeout=8)
                 data = _json.loads(resp.read())
                 if data.get("choice"):
                     return data["choice"]
