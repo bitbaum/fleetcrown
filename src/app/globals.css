@@ -747,6 +747,24 @@
   .ui-btn-confirm:hover {
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
+  .ui-btn-confirm-sm {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40;
+    color: var(--status-positive);
+    background-color: var(--status-positive-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
+  }
+  .ui-btn-confirm-sm:hover {
+    background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
+  }
+  .ui-btn-confirm-icon {
+    @apply inline-flex items-center justify-center rounded-lg p-1.5 transition-colors disabled:opacity-40;
+    color: var(--status-positive);
+    background-color: var(--status-positive-subtle);
+    border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
+  }
+  .ui-btn-confirm-icon:hover {
+    background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
+  }
   .ui-btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
     color: var(--status-negative);

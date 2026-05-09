@@ -191,7 +191,7 @@ export function AddMilestoneInline({
       <button
         onClick={save}
         disabled={!value.trim() || saving}
-        className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 transition-colors shrink-0"
+        className="ui-btn-confirm-icon shrink-0"
       >
         {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
       </button>

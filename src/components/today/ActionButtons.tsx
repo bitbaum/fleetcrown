@@ -83,7 +83,7 @@ export function ActionButtons({
         <button
           onClick={onApprove}
           disabled={busy}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md ui-btn-confirm transition-colors disabled:opacity-50"
+          className="ui-btn-confirm-sm"
         >
           <Check className="h-3 w-3" />
           Done

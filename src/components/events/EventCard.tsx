@@ -131,7 +131,7 @@ export function EventCard({
           <button
             onClick={handleSave}
             disabled={saving || !draftName.trim()}
-            className="flex items-center gap-1 px-2.5 py-1 rounded text-xs ui-btn-confirm transition-colors disabled:opacity-40"
+            className="ui-btn-confirm-sm"
           >
             {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
             Save

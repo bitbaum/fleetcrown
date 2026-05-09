@@ -158,7 +158,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 />
                 <div className="flex flex-col gap-1 shrink-0">
                   <button onClick={commitDesc} disabled={descEdit.saving}
-                    className="p-1.5 rounded ui-btn-confirm disabled:opacity-30">
+                    className="ui-btn-confirm-icon">
                     {descEdit.saving ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
                   </button>
                   <button onClick={descEdit.cancel}
@@ -266,7 +266,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   className="flex-1 text-sm ui-input-tight"
                 />
                 <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
-                  className="p-1.5 rounded ui-btn-confirm disabled:opacity-30 shrink-0">
+                  className="ui-btn-confirm-icon shrink-0">
                   {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
                 </button>
                 <button onClick={() => { setAddingChild(false); setChildTitle(""); setChildError(null); }}

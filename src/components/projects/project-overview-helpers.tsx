@@ -61,7 +61,7 @@ export function AddAttrInline({
       <button
         onClick={save}
         disabled={!key.trim() || !value.trim() || saving}
-        className="ui-btn-confirm p-1.5 rounded disabled:opacity-30 shrink-0 transition-colors"
+        className="ui-btn-confirm-icon shrink-0"
       >
         {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
       </button>

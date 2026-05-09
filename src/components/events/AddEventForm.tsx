@@ -113,7 +113,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
         <button
           onClick={submit}
           disabled={saving || !name.trim() || !type.trim()}
-          className="ui-btn-confirm flex items-center gap-1.5 px-3 py-1.5 rounded disabled:opacity-30 text-xs font-medium transition-colors"
+          className="ui-btn-confirm-sm"
         >
           {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
           Add

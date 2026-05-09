@@ -71,7 +71,7 @@ export function HabitRow({
         <button
           onClick={commitEdit}
           disabled={!ie.draft.title.trim() || ie.saving}
-          className="ui-btn-confirm p-1 rounded disabled:opacity-30 transition-colors shrink-0"
+          className="ui-btn-confirm-icon shrink-0"
         >
           {ie.saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
         </button>

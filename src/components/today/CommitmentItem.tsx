@@ -88,7 +88,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             <button
               onClick={save}
               disabled={saving || !desc.trim()}
-              className="ui-btn-confirm flex items-center gap-1 px-2.5 py-1 rounded disabled:opacity-30 text-xs font-medium transition-colors"
+              className="ui-btn-confirm-sm"
             >
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save

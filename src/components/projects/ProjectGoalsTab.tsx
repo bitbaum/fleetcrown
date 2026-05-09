@@ -167,7 +167,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
           <button
             onClick={handleLink}
             disabled={!selectedId || saving}
-            className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors"
+            className="ui-btn-confirm-sm"
           >
             {saving ? <Loader2 className="ui-spinner-xs" /> : "Link"}
           </button>
@@ -200,7 +200,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
             <button
               onClick={handleCreate}
               disabled={!newTitle.trim() || saving}
-              className="px-2.5 py-1.5 rounded-lg ui-btn-confirm disabled:opacity-30 text-xs font-medium transition-colors flex items-center gap-1"
+              className="ui-btn-confirm-sm"
             >
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
               Create
