@@ -106,7 +106,9 @@ export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter:
     sections.push(`Additional instructions:\n${request.customInstructions.trim()}`);
   }
 
-  if (intent.requiresSessionHandoff) {
+  // Claude and Codex receive the specific session-file path via buildPromptWithSession,
+  // so the generic block would be a duplicate. OpenClaw uses this render output directly.
+  if (intent.requiresSessionHandoff && adapter === "openclaw") {
     sections.push(renderSharedHandoffBlock());
   }
 
