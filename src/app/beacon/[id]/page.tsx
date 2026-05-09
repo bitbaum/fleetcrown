@@ -94,7 +94,11 @@ function BeaconBody({
   onSubmitted: (label: string) => void;
 }) {
   const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project.toLowerCase());
-  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
+  // Always reset auto-continue to ON when the beacon opens — it's a fresh one-shot popup.
+  // The beacon may open before the control panel has had a chance to reset a stale "off"
+  // state, causing the countdown to start paused and beacon.py to time out without injecting.
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(session.project);
+  useEffect(() => { enableAutoContinue(); }, [enableAutoContinue]);
   const [custom, setCustom] = useState("");
   const [moreOpen, setMoreOpen] = useState(false);
   const [countdown, setCountdown] = useState(() => {
