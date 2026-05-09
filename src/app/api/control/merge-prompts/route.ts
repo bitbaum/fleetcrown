@@ -7,6 +7,30 @@ const Body = z.object({
   prompts: z.array(z.string().trim().min(1)).min(2),
 });
 
+// ── Groq (fast path — seconds, free tier) ──────────────────────────────────
+// Set GROQ_API_KEY in .env.local to enable. Falls back to openclaw (Codex, 4+ min).
+async function mergeViaGroq(message: string): Promise<string> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("no key");
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: message }],
+      max_tokens: 500,
+      temperature: 0.3,
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (!res.ok) throw new Error(`groq ${res.status}`);
+  const data = await res.json();
+  return (data?.choices?.[0]?.message?.content ?? "").trim();
+}
+
+// ── openclaw fallback (slow — local Codex model, 3-5 min) ──────────────────
 const TOOL_PATH = [
   `${homedir()}/.nvm/versions/node/v22.22.0/bin`,
   "/home/linuxbrew/.linuxbrew/bin",
@@ -17,11 +41,10 @@ const TOOL_PATH = [
   "/bin",
 ].join(":");
 
-// Runs openclaw in a detached process group so we can kill the whole tree on timeout.
-// Node exec only kills the direct child (the shell); this ensures grandchildren die too.
-function runMerge(prompt: string, timeoutMs: number): Promise<string> {
+function mergeViaOpenclaw(prompt: string, timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     const safe = prompt.replace(/'/g, "'\\''");
+    // Detached process group so SIGKILL reaches openclaw's children (openclaw-infer).
     const child = spawn(
       "bash",
       ["-c", `openclaw capability model run --prompt '${safe}' --json </dev/null 2>/dev/null`],
@@ -42,13 +65,15 @@ function runMerge(prompt: string, timeoutMs: number): Promise<string> {
 
     child.on("close", () => {
       clearTimeout(timer);
-      resolve(stdout);
+      try {
+        const data = JSON.parse(stdout);
+        resolve((data?.outputs?.[0]?.text ?? "").trim());
+      } catch {
+        reject(new Error("parse error"));
+      }
     });
 
-    child.on("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
+    child.on("error", (err) => { clearTimeout(timer); reject(err); });
   });
 }
 
@@ -60,19 +85,18 @@ export async function POST(req: NextRequest) {
   const numbered = prompts.map((p, i) => `${i + 1}. ${p}`).join("\n");
   const message = `I have ${prompts.length} tasks to send to an AI coding agent. Merge them into one concise, coherent prompt that covers all the work naturally. Output ONLY the merged prompt — no preamble, no explanation, no quotes.\n\nTasks:\n${numbered}`;
 
-  // Local model inference takes 3-5 min; 360s ceiling ensures it completes or times out cleanly.
-  let raw: string;
+  // Try Groq first (fast). Fall back to local openclaw (slow, ~4 min).
   try {
-    raw = await runMerge(message, 360000);
+    const merged = await mergeViaGroq(message);
+    if (merged) return NextResponse.json({ ok: true, merged });
   } catch {
-    return NextResponse.json({ error: "AI unavailable — please try again." }, { status: 500 });
+    // Groq unavailable or no key — fall through to openclaw
   }
 
   try {
-    const data = JSON.parse(raw);
-    const merged = (data?.outputs?.[0]?.text ?? "").trim();
-    if (!merged) return NextResponse.json({ error: "Empty response — please try again." }, { status: 500 });
-    return NextResponse.json({ ok: true, merged });
+    const merged = await mergeViaOpenclaw(message, 360000);
+    if (merged) return NextResponse.json({ ok: true, merged });
+    return NextResponse.json({ error: "Empty response — please try again." }, { status: 500 });
   } catch {
     return NextResponse.json({ error: "AI unavailable — please try again." }, { status: 500 });
   }
