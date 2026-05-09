@@ -40,7 +40,7 @@ export function CockpitMark({
       {showWordmark && !compact && (
         <div className="min-w-0">
           <p className={inverted ? "ui-kicker text-white/38" : "ui-kicker"}>{APP_KICKER}</p>
-          <span className={inverted ? "mt-1 block text-2xl font-medium tracking-[-0.03em] text-white" : "mt-1 block text-2xl font-medium tracking-[-0.03em] text-text-primary"}>{APP_NAME}</span>
+          <span className={inverted ? "mt-1 block text-2xl font-medium tracking-display text-white" : "mt-1 block text-2xl font-medium tracking-display text-text-primary"}>{APP_NAME}</span>
         </div>
       )}
     </div>
