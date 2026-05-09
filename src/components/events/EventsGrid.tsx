@@ -63,7 +63,7 @@ export function EventsGrid({
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-subtle bg-surface-base pl-10 pr-14 py-2.5 text-sm md:text-base focus:outline-none focus:border-border-strong placeholder:text-text-muted"
+            className="ui-input pl-10 pr-14"
           />
           <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
             {q || typeFilter ? `${filtered.length} / ${items.length}` : items.length}
@@ -78,11 +78,7 @@ export function EventsGrid({
             <button
               key={t}
               onClick={() => setTypeFilter(typeFilter === t ? null : t)}
-              className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
-                typeFilter === t
-                  ? "border-border-strong bg-surface-overlay text-text-secondary"
-                  : "border-border-subtle bg-transparent text-text-muted hover:text-text-secondary hover:border-border-strong"
-              }`}
+              className={typeFilter === t ? "ui-chip-filter-active" : "ui-chip-filter"}
             >
               {t}
             </button>
@@ -90,7 +86,7 @@ export function EventsGrid({
           {typeFilter && (
             <button
               onClick={() => setTypeFilter(null)}
-              className="px-2.5 py-1 rounded-full text-xs border border-border-subtle text-text-muted hover:text-text-secondary transition-colors"
+              className="ui-chip-filter"
             >
               Clear
             </button>

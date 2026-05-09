@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search, BookOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { ThoughtMeta } from "@/lib/thoughts-content";
 
 type ThoughtArticle = ThoughtMeta & { body: string };
@@ -64,12 +63,7 @@ export function ThoughtsLibrary({
           <button
             type="button"
             onClick={() => setActiveTag("all")}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-sm transition-colors",
-              activeTag === "all"
-                ? "border border-border-default bg-surface-raised text-text-primary"
-                : "text-text-tertiary hover:bg-surface-raised hover:text-text-primary",
-            )}
+            className={activeTag === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}
           >
             All
           </button>
@@ -78,12 +72,7 @@ export function ThoughtsLibrary({
               key={tag}
               type="button"
               onClick={() => setActiveTag(tag)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-sm transition-colors",
-                activeTag === tag
-                  ? "border border-border-default bg-surface-raised text-text-primary"
-                  : "text-text-tertiary hover:bg-surface-raised hover:text-text-primary",
-              )}
+              className={activeTag === tag ? "ui-chip-filter-active" : "ui-chip-filter"}
             >
               {tag}
             </button>
