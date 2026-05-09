@@ -142,8 +142,8 @@ export function PeopleGrid({
               onClick={() => toggleHealth(value)}
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? "ui-chip-filter-active"
-                  : "ui-chip-filter border-border-default bg-surface-base"
+                  ? "border-accent-primary/40 bg-accent-muted text-text-primary"
+                  : "border-border-default bg-surface-base text-text-secondary hover:border-border-strong hover:text-text-primary"
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT_COLOR[value]}`} />
@@ -154,7 +154,7 @@ export function PeopleGrid({
         {healthFilter.length > 0 && (
           <button
             onClick={() => setHealthFilter([])}
-            className="ui-chip-filter rounded-full px-3 py-1.5 text-sm"
+            className="ui-chip-filter"
           >
             Clear
           </button>
