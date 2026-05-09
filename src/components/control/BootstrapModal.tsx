@@ -206,7 +206,7 @@ export function BootstrapModal({
               className="ui-btn-primary flex-1 gap-1.5"
             >
               {generating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="ui-spinner-sm" />
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
@@ -444,7 +444,7 @@ export function BootstrapModal({
               className="ui-btn-primary flex-1 gap-1.5"
             >
               {launching ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="ui-spinner-sm" />
               ) : (
                 <Rocket className="h-3.5 w-3.5" />
               )}

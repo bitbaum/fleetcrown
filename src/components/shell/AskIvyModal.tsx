@@ -210,7 +210,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                   : "text-text-muted hover:text-text-primary hover:bg-surface-raised"
               }`}
             >
-              {listening ? <MicOff className="h-4 w-4" /> : micProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+              {listening ? <MicOff className="h-4 w-4" /> : micProcessing ? <Loader2 className="ui-spinner" /> : <Mic className="h-4 w-4" />}
             </button>
             <button
               onClick={() => send()}

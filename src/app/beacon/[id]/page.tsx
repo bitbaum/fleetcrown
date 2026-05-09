@@ -353,7 +353,7 @@ function BeaconBody({
             )}
           >
             {processing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="ui-spinner" />
             ) : listening ? (
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
                 <rect x="6" y="6" width="12" height="12" rx="2" />

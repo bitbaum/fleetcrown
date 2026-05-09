@@ -84,7 +84,7 @@ export function PromptInput({
             )}
           >
             {processing
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ? <Loader2 className="ui-spinner-sm" />
               : listening
               ? <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth={2}><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
               : <Mic className="h-3.5 w-3.5" />}
@@ -186,7 +186,7 @@ export function QueueList({
             title="Merge all items into one coherent prompt with AI"
             className="flex items-center gap-1 text-[10px] text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
           >
-            {merging ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {merging ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3 w-3" />}
             {merging ? "Merging…" : "AI merge"}
           </button>
         )}
