@@ -14,6 +14,7 @@ import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState } from "@/db/queries/project-states";
+import { getUserProjects } from "@/db/queries/user-projects";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
@@ -29,10 +30,24 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt } = dataOrResp;
 
+  const userId = await getCurrentUserId();
+
+  // Resolve canonical tab name: conf file first, DB fallback (DB-only projects
+  // added via Settings would fail the conf-file lookup without this fallback).
   const projectsMap = readProjectsMap();
-  const canonical = projectsMap.get(tab.toLowerCase());
+  let canonical = projectsMap.get(tab.toLowerCase());
+  let projectPath: string | null = parseProjectsConf().find(
+    (p) => p.tab.toLowerCase() === tab.toLowerCase(),
+  )?.dir ?? null;
+
   if (!canonical) {
-    return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
+    const dbProjects = await getUserProjects(userId).catch(() => []);
+    const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase() && p.dirPath);
+    if (!dbMatch) {
+      return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
+    }
+    canonical = dbMatch.name;
+    projectPath = dbMatch.dirPath!;
   }
 
   // Resolve the live Zellij tab name (canonical may be an alias of the running tab).
@@ -67,14 +82,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "promptKey or customPrompt required" }, { status: 400 });
   }
 
-  const userId = await getCurrentUserId();
   const eventIntent: OrchestrationTaskIntentId | undefined = promptKey && ORCHESTRATION_TASK_INTENT_IDS.includes(promptKey as OrchestrationTaskIntentId)
     ? (promptKey as OrchestrationTaskIntentId)
     : customPrompt ? "custom" : undefined;
 
-  const projectPath = parseProjectsConf().find(
-    (p) => p.tab.toLowerCase() === canonical.toLowerCase(),
-  )?.dir ?? canonical;
+  // Use resolved projectPath, falling back to canonical name if neither source has it.
+  const resolvedProjectPath = projectPath ?? canonical;
 
   try {
     injectIntoTab(effectiveTab, prompt);
@@ -86,7 +99,7 @@ export async function POST(req: NextRequest) {
     // recent-custom-prompts autocomplete have real data.
     insertPromptHistory(userId, {
       projectKey: canonical,
-      projectPath,
+      projectPath: resolvedProjectPath,
       adapter: "claude",
       intent: eventIntent ?? "custom",
       customPrompt: customPrompt ?? null,
