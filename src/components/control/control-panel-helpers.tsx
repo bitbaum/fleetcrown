@@ -109,12 +109,7 @@ export function BrainConfigPanel({
             key={entry.id}
             type="button"
             onClick={() => onAgentSelect(entry.id, entry.defaultModel)}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-sm transition-colors",
-              selectedAgent === entry.id
-                ? "border-accent-primary bg-accent-muted text-text-primary"
-                : "border-border-subtle text-text-secondary hover:text-text-primary",
-            )}
+            className={selectedAgent === entry.id ? "ui-chip-toggle-active" : "ui-chip-toggle"}
           >
             {entry.label}
           </button>
@@ -306,13 +301,7 @@ export function LaunchTabModal({
               type="button"
               onClick={() => onAgentChange(agent.id)}
               disabled={!agent.available}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-sm transition-colors",
-                selectedAgentId === agent.id
-                  ? "border-accent-primary bg-accent-muted text-text-primary"
-                  : "border-border-subtle text-text-secondary hover:text-text-primary",
-                !agent.available && "cursor-not-allowed opacity-40",
-              )}
+              className={selectedAgentId === agent.id ? "ui-chip-toggle-active" : "ui-chip-toggle"}
               title={agent.available ? `${agent.label}` : (agent.availabilityReason ?? `${agent.label} unavailable`)}
             >
               {agent.label}

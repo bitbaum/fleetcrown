@@ -598,6 +598,13 @@
   .ui-chip-filter-active {
     @apply rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
   }
+  /* Rounded-pill toggle — agent/health/category selector chips */
+  .ui-chip-toggle {
+    @apply rounded-full border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .ui-chip-toggle-active {
+    @apply rounded-full border border-accent-primary/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-text-primary transition-colors;
+  }
   /* Inline category/scope chip — shape only; caller adds color classes */
   .ui-chip {
     @apply inline-flex items-center rounded-xl border px-3 py-1 text-sm font-medium;

@@ -140,11 +140,7 @@ export function PeopleGrid({
             <button
               key={value}
               onClick={() => toggleHealth(value)}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                active
-                  ? "border-accent-primary/40 bg-accent-muted text-text-primary"
-                  : "border-border-default bg-surface-base text-text-secondary hover:border-border-strong hover:text-text-primary"
-              }`}
+              className={`inline-flex items-center gap-2 ${active ? "ui-chip-toggle-active" : "ui-chip-toggle"}`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${HEALTH_DOT_COLOR[value]}`} />
               {label}
