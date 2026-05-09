@@ -11,7 +11,8 @@ import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
-import { QueueList } from "@/components/control/project-card-sections";
+import { QueueList } from "@/components/control/project-composer";
+import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
@@ -271,45 +272,41 @@ function BeaconBody({
         </div>
       )}
 
-      {/* Action buttons */}
-      {actionPrompts.length > 0 && (
-        <div className="space-y-1.5">
+      {/* Action chips + More toggle — one wrapping row, no stacking */}
+      {(actionPrompts.length > 0 || morePrompts.length > 0) && (
+        <div className="flex flex-wrap gap-2">
           {actionPrompts.map((p) => (
             <button
               key={p.key}
               onClick={() => submit(String(p.slot ?? p.key))}
-              className="ui-btn-secondary w-full justify-start gap-3 px-4 py-2.5 text-left"
+              className={PROMPT_STYLE.action}
             >
-              <span className="text-sm leading-none">{p.icon}</span>
-              <span className="text-sm">{p.label}</span>
+              {p.icon} {p.label}
             </button>
           ))}
+          {morePrompts.length > 0 && (
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              className={PROMPT_STYLE.more}
+            >
+              {moreOpen ? "↑ Less" : `More (${morePrompts.length})`}
+            </button>
+          )}
         </div>
       )}
 
-      {/* More */}
-      {morePrompts.length > 0 && (
-        <div>
-          <button
-            onClick={() => setMoreOpen((v) => !v)}
-            className="flex items-center gap-2 py-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
-          >
-            <span>{moreOpen ? "▾" : "▸"}</span>
-            More prompts ({morePrompts.length})
-          </button>
-          {moreOpen && (
-            <div className="mt-1.5 space-y-1">
-              {morePrompts.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => submit(String(p.slot ?? p.key))}
-                  className="w-full rounded-xl px-4 py-2 text-left text-sm text-text-tertiary hover:bg-surface-raised hover:text-text-primary transition-colors"
-                >
-                  {p.icon} {p.label}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* More prompts — revealed on toggle, same chip style */}
+      {moreOpen && morePrompts.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {morePrompts.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => submit(String(p.slot ?? p.key))}
+              className={PROMPT_STYLE.more}
+            >
+              {p.icon} {p.label}
+            </button>
+          ))}
         </div>
       )}
 

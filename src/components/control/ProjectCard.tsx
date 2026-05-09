@@ -11,8 +11,9 @@ import { getProjectDisplayState } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
-  ProjectCardHeader, SessionSummary, ProjectBanners, IntentButtonPanel,
+  ProjectCardHeader, SessionSummary, ProjectBanners,
 } from "./project-card-sections";
+import { IntentButtonPanel } from "./project-intent-panel";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { isAutoContinueEnabledSync, readyAtKey } from "@/lib/control-storage";

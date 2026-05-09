@@ -30,6 +30,11 @@ export const HEALTH_COLOR: Record<string, string> = {
   excellent: "text-status-positive",
 };
 
+// Maps the AgentPrompt.style field → Tailwind class for consistent chip rendering.
+// Used by ReadyBanner (control panel) and the beacon popup — single SSOT for chip appearance.
+// Note: the beacon's action chips and the control panel's orchestration buttons (control-intents.ts)
+// are intentionally separate systems: beacon injects text into Claude; orchestration dispatches
+// a workflow via API. Their keys overlap but their execution paths differ.
 export const PROMPT_STYLE: Record<string, string> = {
   primary: "ui-btn-ready-primary",
   action:  "ui-btn-ready-action",
