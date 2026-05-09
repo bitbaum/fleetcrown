@@ -9,7 +9,7 @@ export function Field({
 }) {
   return (
     <div>
-      <label className="text-[11px] uppercase tracking-wider text-text-tertiary font-medium mb-1.5 block">
+      <label className="ui-kicker mb-1.5 block">
         {label}
         {required && <span className="text-status-negative"> *</span>}
       </label>
