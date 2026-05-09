@@ -1,6 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, ilike, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { userProjects, type NewUserProject, type UserProject } from "@/db/schema";
+import type { DevLogEntry } from "@/db/schema/user-projects";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -43,4 +44,28 @@ export async function deleteUserProject(id: string, userId: string): Promise<voi
   await db
     .delete(userProjects)
     .where(and(eq(userProjects.id, id), eq(userProjects.userId, userId)));
+}
+
+/**
+ * Append a dev log entry to a user project identified by name.
+ * No-ops when the project is not found in the DB (e.g. conf-file-only projects).
+ * Caller is responsible for deduplication — append only when content actually changed.
+ */
+export async function appendProjectDevLog(
+  userId: string,
+  projectName: string,
+  entry: DevLogEntry,
+): Promise<void> {
+  const project = await db.query.userProjects.findFirst({
+    where: and(eq(userProjects.userId, userId), ilike(userProjects.name, projectName)),
+    columns: { id: true },
+  });
+  if (!project) return;
+  await db
+    .update(userProjects)
+    .set({
+      devLog: sql`coalesce(${userProjects.devLog}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
+      updatedAt: new Date(),
+    })
+    .where(eq(userProjects.id, project.id));
 }

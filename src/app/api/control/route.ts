@@ -9,7 +9,7 @@ import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
-import { getUserProjects } from "@/db/queries/user-projects";
+import { getUserProjects, appendProjectDevLog } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import {
@@ -241,6 +241,21 @@ export async function GET() {
           sessionHealth: session.health,
           sessionUpdatedAt: new Date(sessionMtimeMs),
         }).catch(() => {});
+
+        // Capture agent progress to dev log when the "done" section actually changes.
+        // Creates a natural timeline of what each agent accomplished without requiring
+        // the beacon popup — covers auto-continue, direct injections, and all flows.
+        const doneTrimmed = session.done?.trim();
+        if (doneTrimmed && doneTrimmed !== dbState.sessionDone?.trim()) {
+          appendProjectDevLog(userId, tab, {
+            date: new Date(sessionMtimeMs).toISOString(),
+            done: doneTrimmed,
+            next: session.next?.trim() ?? "",
+            tests: session.tests?.trim() ?? "",
+            todos: session.todos?.trim() ?? "",
+            health: session.health?.trim() || "good",
+          }).catch(() => {});
+        }
       }
     } else if (session && !dbState) {
       // First time we're seeing this project's session — bootstrap the DB row
