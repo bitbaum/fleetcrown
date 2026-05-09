@@ -40,6 +40,7 @@ export const stateFile = {
   sentinel: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-session-closed-${tab}`),
   prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
   lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
+  queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab}`),
   
   // Legacy names — kept for cleanup unlinkSync calls in inject + orchestration routes.
   // No new files are written with these names; only used to delete stale on-disk files.

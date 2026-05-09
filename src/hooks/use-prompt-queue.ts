@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { queueKey } from "@/lib/control-storage";
 import { useLocalStorageState } from "./use-local-storage-state";
+
+function syncQueueToFile(tab: string, queue: string[]): void {
+  fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ queue }),
+  }).catch(() => {/* best-effort */});
+}
 
 const EMPTY: string[] = [];
 const serialize = (v: string[]) => JSON.stringify(v);
@@ -15,6 +23,38 @@ export function usePromptQueue(tab: string) {
     serialize,
     deserialize,
   );
+
+  // fromPollRef: true while setQueue is being called from the file poll.
+  // The sync-to-file effect checks this so poll-driven updates don't echo back to the file
+  // (which would reset lastWriteRef and blind the poll for another 2 s).
+  const fromPollRef = useRef(false);
+  const lastWriteRef = useRef(0);
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
+    if (fromPollRef.current) { fromPollRef.current = false; return; }
+    lastWriteRef.current = Date.now();
+    syncQueueToFile(tab, queue);
+  }, [queue, tab]);
+
+  // Poll the file every 2 s so PyQt changes (shift/enqueue) propagate back to the web app.
+  // Skips the 2 s window after our own writes to avoid a read-back loop.
+  useEffect(() => {
+    const t = setInterval(async () => {
+      if (Date.now() - lastWriteRef.current < 2000) return;
+      try {
+        const res = await fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`);
+        if (!res.ok) return;
+        const { queue: fileQueue } = await res.json() as { queue: string[] };
+        setQueue((current) => {
+          if (JSON.stringify(fileQueue) === JSON.stringify(current)) return current;
+          fromPollRef.current = true;
+          return fileQueue;
+        });
+      } catch { /* best-effort */ }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [tab, setQueue]);
 
   const enqueue = useCallback((prompt: string) => {
     const trimmed = prompt.trim();
@@ -34,6 +74,7 @@ export function usePromptQueue(tab: string) {
       const next = q.slice(1);
       localStorage.setItem(queueKey(tab), JSON.stringify(next));
       setQueue(next);
+      syncQueueToFile(tab, next);
       return item;
     } catch {
       return null;
@@ -41,8 +82,15 @@ export function usePromptQueue(tab: string) {
   }, [tab, setQueue]);
 
   const remove = useCallback((index: number) => {
+    // Sync to file immediately so the PUT fetch starts before the next render cycle.
+    // Without this, pages that close shortly after remove() (e.g. beacon auto-fire) can
+    // close before the React effect-based sync ever fires.
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (raw) syncQueueToFile(tab, (JSON.parse(raw) as string[]).filter((_, i) => i !== index));
+    } catch { /* ignore */ }
     setQueue((q) => q.filter((_, i) => i !== index));
-  }, [setQueue]);
+  }, [setQueue, tab]);
 
   const reorder = useCallback((from: number, to: number) => {
     setQueue((q) => {

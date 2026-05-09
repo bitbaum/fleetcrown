@@ -93,7 +93,7 @@ function BeaconBody({
   prompts: AgentPrompt[];
   onSubmitted: (label: string) => void;
 }) {
-  const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project.toLowerCase());
+  const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project);
   // Always reset auto-continue to ON when the beacon opens — it's a fresh one-shot popup.
   // The beacon may open before the control panel has had a chance to reset a stale "off"
   // state, causing the countdown to start paused and beacon.py to time out without injecting.
@@ -120,10 +120,19 @@ function BeaconBody({
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
-  // Countdown — pauses when auto-continue is off, user is composing, or prompts haven't loaded.
-  // Pausing while prompts are absent prevents the timer from expiring during a slow page load,
-  // so the user always sees the full remaining window once the UI is interactive.
-  const isComposing = custom.trim().length > 0;
+  // useMicComposer must be declared before isComposing so listening/processing are available.
+  const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
+    custom,
+    onAppend: (newText) => { setCustom(newText); inputRef.current?.focus(); },
+    onSendAfterRecording: (text) => submitRef.current(`${CUSTOM_CHOICE_PREFIX}${text}`),
+    onEnqueueAfterRecording: enqueue,
+  });
+
+  // Countdown pauses when auto-continue is off, user is typing/composing, mic is active, or
+  // prompts haven't loaded yet. Mic states (listening + processing) are explicitly included so
+  // the countdown never fires while the user is speaking — the transcript isn't in the textarea
+  // yet and isComposing would be false without them.
+  const isComposing = custom.trim().length > 0 || listening || processing;
   useEffect(() => {
     if (!autoContinueEnabled || isComposing || countdown <= 0 || prompts.length === 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
@@ -132,8 +141,8 @@ function BeaconBody({
   }, [autoContinueEnabled, isComposing, prompts.length]);
 
   useEffect(() => {
-    // Guard: don't fire before prompts are loaded — would close the popup with nothing injected.
-    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0) return;
+    // Guard: don't fire before prompts are loaded or while mic is active.
+    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0 || listening || processing) return;
     autoFiredRef.current = true;
     const primary = prompts.find((p) => p.style === "primary");
     const choice = queue.length > 0
@@ -141,7 +150,7 @@ function BeaconBody({
       : primary ? String(primary.slot ?? primary.key) : "1";
     if (queue.length > 0) remove(0);
     submitRef.current(choice);
-  }, [countdown, autoContinueEnabled, prompts, queue, remove]);
+  }, [countdown, autoContinueEnabled, prompts, queue, remove, listening, processing]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {
@@ -157,13 +166,6 @@ function BeaconBody({
     }, 120);
     return () => clearTimeout(t);
   }, [prompts.length, queue.length]);
-
-  const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
-    custom,
-    onAppend: (newText) => { setCustom(newText); inputRef.current?.focus(); },
-    onSendAfterRecording: (text) => submitRef.current(`${CUSTOM_CHOICE_PREFIX}${text}`),
-    onEnqueueAfterRecording: enqueue,
-  });
 
   const submit = useCallback(async (choice: string) => {
     const all = promptsRef.current;
@@ -308,7 +310,11 @@ function BeaconBody({
       {/* Status line — shows exactly what the countdown will fire */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-text-tertiary">
-          {custom.trim()
+          {listening
+            ? "Recording — auto-continue paused"
+            : processing
+            ? "Transcribing — auto-continue paused"
+            : custom.trim()
             ? "Enter to send · Alt+Enter to queue"
             : !autoContinueEnabled
             ? "Auto-continue paused"
