@@ -146,11 +146,11 @@ export function EventCard({
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-wide">
+            <span className="ui-micro-badge bg-surface-raised border-border-subtle text-text-secondary uppercase tracking-caps">
               {event.type}
             </span>
             {event.category && (
-              <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-wide">
+              <span className="ui-micro-badge bg-status-positive-subtle border-status-positive/20 text-status-positive/70 uppercase tracking-caps">
                 {event.category}
               </span>
             )}

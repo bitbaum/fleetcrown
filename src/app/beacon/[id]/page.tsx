@@ -28,7 +28,7 @@ function SessionSummary({ content }: { content: string }) {
     <div className="ui-panel rounded-2xl p-5 space-y-4">
       {s.next.length > 0 && (
         <div className="space-y-2">
-          <p className="ui-kicker text-micro tracking-widest">Agent&apos;s plan</p>
+          <p className="ui-kicker text-micro">Agent&apos;s plan</p>
           {s.next.map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
               <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-text" />
@@ -39,7 +39,7 @@ function SessionSummary({ content }: { content: string }) {
       )}
       {s.in_progress.length > 0 && (
         <div className="space-y-2">
-          <p className="ui-kicker text-micro tracking-widest text-status-warning">In Progress</p>
+          <p className="ui-kicker text-micro text-status-warning">In Progress</p>
           {s.in_progress.map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
               <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-status-warning" />
@@ -54,7 +54,7 @@ function SessionSummary({ content }: { content: string }) {
             onClick={() => setDoneOpen((v) => !v)}
             className="flex w-full items-center gap-2 py-1"
           >
-            <p className="ui-kicker text-micro tracking-widest text-text-muted">
+            <p className="ui-kicker text-micro text-text-muted">
               Done · {s.done.length} completed
             </p>
             <span className="ml-auto text-xs text-text-muted">{doneOpen ? "▾" : "▸"}</span>
@@ -526,7 +526,7 @@ export default function BeaconPage() {
               <Check className="h-5 w-5 text-status-positive" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-widest text-status-positive">Dispatched</p>
+              <p className="text-xs font-medium uppercase tracking-caps text-status-positive">Dispatched</p>
               <p className="mt-0.5 text-base font-semibold text-text-primary">
                 {submittedLabel || "Agent running…"}
               </p>
@@ -558,7 +558,7 @@ export default function BeaconPage() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <p className="ui-kicker text-micro tracking-widest">Session complete</p>
+            <p className="ui-kicker text-micro">Session complete</p>
             <h1 className="mt-1 text-xl font-bold text-text-primary">{session.project}</h1>
           </div>
           <div className="flex items-center gap-2">

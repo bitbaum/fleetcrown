@@ -74,7 +74,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
             </span>
           )}
           {session?.health && (
-            <span className={cn("font-medium uppercase tracking-wide", healthColor ?? "text-text-muted")}>
+            <span className={cn("font-medium uppercase tracking-caps", healthColor ?? "text-text-muted")}>
               {getHealthShort(session.health)}
             </span>
           )}
