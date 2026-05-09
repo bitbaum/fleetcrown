@@ -2,6 +2,23 @@
 
 import { useEffect, useId, useRef } from "react";
 
+// Resolves a CSS custom property to a concrete rgb() value by temporarily
+// applying it to a hidden element and reading the browser-computed color.
+// This keeps Mermaid colours in sync with the design token SSOT (globals.css)
+// without hardcoding hex values that would drift from the theme.
+function resolveColorVar(cssVar: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  const el = document.createElement("span");
+  el.style.position = "absolute";
+  el.style.visibility = "hidden";
+  el.style.backgroundColor = `var(${cssVar})`;
+  document.documentElement.appendChild(el);
+  const value = getComputedStyle(el).backgroundColor;
+  el.remove();
+  // If the browser couldn't resolve it (returns "" or "transparent"), use fallback.
+  return value && value !== "rgba(0, 0, 0, 0)" ? value : fallback;
+}
+
 export function MermaidDiagram({ chart }: { chart: string }) {
   const id = useId().replace(/:/g, "");
   const ref = useRef<HTMLDivElement>(null);
@@ -14,12 +31,12 @@ export function MermaidDiagram({ chart }: { chart: string }) {
         startOnLoad: false,
         theme: "dark",
         themeVariables: {
-          background: "transparent",
-          primaryColor: "#1e293b",
-          primaryTextColor: "#e2e8f0",
-          lineColor: "#64748b",
-          edgeLabelBackground: "#0f172a",
-          clusterBkg: "#1e293b",
+          background:          "transparent",
+          primaryColor:        resolveColorVar("--surface-raised",  "#1e1e1e"),
+          primaryTextColor:    resolveColorVar("--text-primary",    "#e8e8e8"),
+          lineColor:           resolveColorVar("--text-tertiary",   "#666666"),
+          edgeLabelBackground: resolveColorVar("--surface-base",    "#0d0d0d"),
+          clusterBkg:          resolveColorVar("--surface-raised",  "#1e1e1e"),
         },
         fontFamily: "inherit",
       });
