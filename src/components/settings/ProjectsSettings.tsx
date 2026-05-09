@@ -98,7 +98,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
             placeholder="GitHub URL — optional"
             className="ui-input"
           />
-          {error && <p className="text-sm text-status-negative">{error}</p>}
+          {error && <p className="ui-error">{error}</p>}
           <div className="flex gap-2">
             <button onClick={() => setAdding(false)} className="ui-btn-ghost">
               Cancel
@@ -115,7 +115,7 @@ export function ProjectsSettings({ projects: initial }: Props) {
         </div>
       )}
 
-      {error && !adding && <p className="text-sm text-status-negative">{error}</p>}
+      {error && !adding && <p className="ui-error">{error}</p>}
 
       {projects.length === 0 ? (
         <p className="text-sm text-text-secondary">No projects yet.</p>

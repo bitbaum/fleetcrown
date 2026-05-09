@@ -70,7 +70,7 @@ function SignInForm() {
               autoComplete="current-password"
             />
           </AuthField>
-          {error && <p className="text-sm text-status-negative">{error}</p>}
+          {error && <p className="ui-error">{error}</p>}
           <AuthSubmitButton
             loading={loading}
             disabled={!password}

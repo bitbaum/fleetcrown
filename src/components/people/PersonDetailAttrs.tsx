@@ -179,7 +179,7 @@ export function DetailAttrs({
               <X className="h-3 w-3" />
             </button>
           </div>
-          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
+          {saveError && <p className="ui-error-xs">{saveError}</p>}
         </div>
       ) : (
         <button

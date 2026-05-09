@@ -72,7 +72,7 @@ export function AddCommitmentButton() {
           className="flex-1 ui-input-compact"
         />
       </div>
-      {error && <p className="text-xs text-status-negative">{error}</p>}
+      {error && <p className="ui-error-xs">{error}</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={submit}

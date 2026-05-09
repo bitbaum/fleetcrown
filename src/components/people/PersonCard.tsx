@@ -215,7 +215,7 @@ export function PersonCard({
                 autoFocus
                 className="w-full ui-input-compact"
               />
-              {logError && <p className="text-xs text-status-negative">{logError}</p>}
+              {logError && <p className="ui-error-xs">{logError}</p>}
               <div className="flex items-center gap-2">
                 <button
                   onClick={submitLog}

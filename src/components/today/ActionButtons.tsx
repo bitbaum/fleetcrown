@@ -78,7 +78,7 @@ export function ActionButtons({
 
   return (
     <div className="flex flex-col gap-1 mt-3">
-      {error && <p className="text-xs text-status-negative">{error}</p>}
+      {error && <p className="ui-error-xs">{error}</p>}
       <div className="flex gap-2">
         <button
           onClick={onApprove}

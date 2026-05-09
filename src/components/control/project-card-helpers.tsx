@@ -300,7 +300,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
       )}
 
       {run.payload?.error && (
-        <p className="text-sm text-status-negative">{run.payload.error}</p>
+        <p className="ui-error">{run.payload.error}</p>
       )}
     </div>
   );

@@ -237,7 +237,7 @@ export function OverviewTab({
               autoFocus
               className="w-full ui-input-tight"
             />
-            {actError && <p className="text-xs text-status-negative">{actError}</p>}
+            {actError && <p className="ui-error-xs">{actError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={handleLogActivity}

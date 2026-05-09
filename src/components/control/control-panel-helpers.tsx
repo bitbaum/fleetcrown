@@ -235,7 +235,7 @@ export function NewProjectModal({
           className="ui-input w-full"
         />
       </div>
-      {error && <p className="text-sm text-status-negative">{error}</p>}
+      {error && <p className="ui-error">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button
           onClick={onCreate}
@@ -348,7 +348,7 @@ export function LaunchTabModal({
         )}
       </div>
 
-      {error && <p className="text-sm text-status-negative">{error}</p>}
+      {error && <p className="ui-error">{error}</p>}
       <div className="flex gap-2 pt-1">
         <button
           onClick={onLaunch}

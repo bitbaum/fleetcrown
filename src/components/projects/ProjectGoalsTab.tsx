@@ -195,7 +195,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
               className="ui-input-tight"
             />
           </div>
-          {error && <p className="text-xs text-status-negative">{error}</p>}
+          {error && <p className="ui-error-xs">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={handleCreate}

@@ -104,7 +104,7 @@ export function InteractionsSection({
             autoFocus
             className="w-full ui-input-tight"
           />
-          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
+          {saveError && <p className="ui-error-xs">{saveError}</p>}
           <div className="flex items-center gap-2">
             <input
               type="date"

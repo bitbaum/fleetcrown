@@ -274,7 +274,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                   <X className="h-3 w-3" />
                 </button>
               </div>
-              {childError && <p className="text-xs text-status-negative ml-1">{childError}</p>}
+              {childError && <p className="ui-error-xs ml-1">{childError}</p>}
             </div>
           )}
         </div>

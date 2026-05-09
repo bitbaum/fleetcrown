@@ -83,7 +83,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               className="flex-1 ui-input-tight"
             />
           </div>
-          {error && <p className="text-xs text-status-negative">{error}</p>}
+          {error && <p className="ui-error-xs">{error}</p>}
           <div className="flex gap-1.5">
             <button
               onClick={save}

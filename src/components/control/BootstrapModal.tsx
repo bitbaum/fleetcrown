@@ -198,7 +198,7 @@ export function BootstrapModal({
             }
             className="ui-input w-full resize-none leading-relaxed"
           />
-          {genError && <p className="text-sm text-status-negative">{genError}</p>}
+          {genError && <p className="ui-error">{genError}</p>}
           <div className="flex gap-2 pt-1">
             <button
               onClick={generateBrief}
@@ -370,7 +370,7 @@ export function BootstrapModal({
             </div>
           </div>
 
-          {createError && <p className="text-sm text-status-negative">{createError}</p>}
+          {createError && <p className="ui-error">{createError}</p>}
           <div className="flex gap-2 pt-1">
             <button
               onClick={createProject}
@@ -436,7 +436,7 @@ export function BootstrapModal({
             </p>
           </div>
 
-          {launchError && <p className="text-sm text-status-negative">{launchError}</p>}
+          {launchError && <p className="ui-error">{launchError}</p>}
           <div className="flex gap-2 pt-1">
             <button
               onClick={launchClaudeCode}

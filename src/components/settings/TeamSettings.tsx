@@ -66,7 +66,7 @@ export function TeamSettings({ invitations: initial }: Props) {
         </button>
       </div>
 
-      {error && <p className="text-sm text-status-negative">{error}</p>}
+      {error && <p className="ui-error">{error}</p>}
 
       {invites.length > 0 && (
         <div className="space-y-2">

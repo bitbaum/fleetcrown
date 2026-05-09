@@ -120,7 +120,7 @@ export function EventCard({
           placeholder="Description (optional)"
           className="ui-input-compact w-full"
         />
-        {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
+        {saveError && <p className="ui-error-xs">{saveError}</p>}
         <div className="flex items-center justify-end gap-1.5">
           <button
             onClick={cancelEdit}

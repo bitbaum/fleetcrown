@@ -108,7 +108,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
         placeholder="Description (optional)"
         className="w-full ui-input-compact"
       />
-      {error && <p className="text-xs text-status-negative">{error}</p>}
+      {error && <p className="ui-error-xs">{error}</p>}
       <div className="flex items-center gap-2 pt-0.5">
         <button
           onClick={submit}

@@ -146,7 +146,7 @@ export function SubscriptionActions({
         </button>
       )}
       {paid && <span className="text-xs text-status-positive/50">Next due updated</span>}
-      {paidError && <span className="text-xs text-status-negative">{paidError}</span>}
+      {paidError && <span className="ui-error-xs">{paidError}</span>}
 
       {/* Inline edit for amount/currency/notes */}
       {!isCancelled && (
@@ -274,7 +274,7 @@ export function SubscriptionActions({
             </button>
             <button onClick={() => { setEditing(false); setEditError(null); }} className="ui-btn-text-cancel">Cancel</button>
           </div>
-          {editError && <p className="text-xs text-status-negative">{editError}</p>}
+          {editError && <p className="ui-error-xs">{editError}</p>}
         </div>
       )}
 

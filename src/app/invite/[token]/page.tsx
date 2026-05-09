@@ -131,7 +131,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
               />
             </AuthField>
 
-            {error && <p className="text-sm text-status-negative">{error}</p>}
+            {error && <p className="ui-error">{error}</p>}
 
             <AuthSubmitButton
               loading={submitting}

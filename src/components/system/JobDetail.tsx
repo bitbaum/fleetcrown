@@ -121,7 +121,7 @@ export function JobDetail({
               {!status || status === "never" ? (
                 <div className="text-xs text-text-tertiary">Never run</div>
               ) : hasError ? (
-                <div className="flex items-center gap-1 text-xs text-status-negative">
+                <div className="flex items-center gap-1 ui-error-xs">
                   <AlertTriangle className="h-3 w-3" />
                   {job.state?.consecutiveErrors} err
                 </div>

@@ -110,7 +110,7 @@ export function PersonDetail({
                 />
                 {nameSaving && <Loader2 className="ui-spinner-sm shrink-0 text-text-tertiary" />}
               </div>
-              {nameError && <p className="text-xs text-status-negative">{nameError}</p>}
+              {nameError && <p className="ui-error-xs">{nameError}</p>}
             </div>
           ) : (
             <h2
@@ -174,7 +174,7 @@ export function PersonDetail({
                 placeholder="Add a note about this person…"
                 className="min-h-28 w-full resize-none ui-input-compact leading-relaxed"
               />
-              {descError && <p className="text-xs text-status-negative">{descError}</p>}
+              {descError && <p className="ui-error-xs">{descError}</p>}
               <div className="flex items-center gap-2">
                 <button
                   onClick={commitDescription}

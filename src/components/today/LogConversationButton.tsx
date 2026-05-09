@@ -140,7 +140,7 @@ export function LogConversationButton() {
               className="flex-1 ui-input-tight"
             />
           </div>
-          {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
+          {saveError && <p className="ui-error-xs">{saveError}</p>}
           <div className="flex gap-2">
             <button
               onClick={save}

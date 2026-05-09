@@ -51,7 +51,7 @@ export function NameEditor({
           />
           {saving && <Loader2 className="ui-spinner-sm text-text-tertiary shrink-0" />}
         </div>
-        {saveError && <p className="text-xs text-status-negative">{saveError}</p>}
+        {saveError && <p className="ui-error-xs">{saveError}</p>}
       </div>
     );
   }
