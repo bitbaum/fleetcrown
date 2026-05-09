@@ -100,7 +100,7 @@ function NewJobForm({
   return (
     <div className="rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <div className="text-[10px] text-status-positive/70 uppercase tracking-wider">New Autopilot Job</div>
+        <div className="ui-micro-label text-status-positive/70">New Autopilot Job</div>
         <button onClick={() => setOpen(false)} className="text-text-muted hover:text-text-secondary"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input placeholder="Job name" value={name} onChange={(e) => setName(e.target.value)}

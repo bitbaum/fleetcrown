@@ -87,7 +87,7 @@ export function OverviewTab({
         <div className="space-y-2">
           {ISSUE_DISPLAY.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, label, border, bg, text, body }) => (
             <div key={key} className={`ui-card-shell ${border} ${bg} p-3`}>
-              <div className={`flex items-center gap-1.5 ${text} text-[10px] uppercase tracking-wider font-semibold mb-1.5`}>
+              <div className={`flex items-center gap-1.5 ui-micro-label font-semibold ${text} mb-1.5`}>
                 <Icon className="h-3.5 w-3.5" /> {label}
               </div>
               <p className={`text-xs ${body} leading-relaxed`}>{attrs[key]}</p>
