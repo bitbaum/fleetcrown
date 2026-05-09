@@ -53,6 +53,7 @@ export type ProjectState = {
   closingAt: number | null;
   closedAt: number | null;
   recentCustomPrompts: RecentCustomPrompt[];
+  recentInjections: import("@/db/queries/prompt-history").ActivityItem[];
   latestOrchestrationRun: {
     adapter: string;
     intent: string;

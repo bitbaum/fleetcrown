@@ -6,11 +6,13 @@ import {
   SlidersHorizontal, ChevronsDown, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { compactRelativeDate } from "@/lib/dates";
+import { compactRelativeDate, timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import { getHealthShort } from "@/lib/constants/control";
+import { getIntentLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
+import type { ActivityItem } from "@/db/queries/prompt-history";
 import type { PromptMeta } from "@/lib/agent-config";
 import {
   SessionBadge, ClosedBanner, ClosingBanner, RunningBanner, ReadyBanner,
@@ -353,5 +355,38 @@ export function ProjectBanners({
         </div>
       )}
     </>
+  );
+}
+
+export function InjectionHistorySection({ injections }: { injections: ActivityItem[] }) {
+  const [open, setOpen] = useState(false);
+  if (injections.length === 0) return null;
+  return (
+    <div className="border-t border-border-subtle px-4 py-2.5 sm:px-5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+      >
+        <span className="font-medium">Sent today</span>
+        <span className="text-text-muted/60">({injections.length})</span>
+        <span className="ml-auto">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1.5">
+          {injections.map((item) => (
+            <li key={item.id} className="flex items-start gap-2 text-xs">
+              <span className="shrink-0 text-text-muted tabular-nums">
+                {timeAgo(new Date(item.dispatchedAt).getTime())}
+              </span>
+              <span className="text-text-tertiary truncate" title={item.customPrompt ?? getIntentLabel(item.intent)}>
+                {item.customPrompt
+                  ? item.customPrompt.length > 60 ? item.customPrompt.slice(0, 60) + "…" : item.customPrompt
+                  : getIntentLabel(item.intent)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

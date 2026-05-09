@@ -208,6 +208,14 @@ export async function GET() {
   ]);
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
 
+  // Group recent activity by project key so each card gets its own slice (no extra query).
+  const activityByProject = new Map<string, typeof recentActivity>();
+  for (const item of recentActivity) {
+    const arr = activityByProject.get(item.projectKey) ?? [];
+    if (arr.length < 5) arr.push(item);
+    activityByProject.set(item.projectKey, arr);
+  }
+
   const states: ProjectState[] = projects.map(({ id, tab, dir, agentPref, modelPref }) => {
     const latestRun = latestRuns.get(dir);
     const dbState = dbStateMap.get(tab.toLowerCase());
@@ -305,6 +313,7 @@ export async function GET() {
     closingAt: derivedLifecycle.closingAt,
     closedAt:  derivedLifecycle.closedAt,
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
+    recentInjections: activityByProject.get(tab) ?? [],
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
       intent: latestRun.intent,

@@ -11,7 +11,7 @@ import { getProjectDisplayState } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
-  ProjectCardHeader, SessionSummary, ProjectBanners,
+  ProjectCardHeader, SessionSummary, ProjectBanners, InjectionHistorySection,
 } from "./project-card-sections";
 import { IntentButtonPanel } from "./project-intent-panel";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
@@ -260,6 +260,7 @@ export function ProjectCard({
       ) : (
         <>
           <SessionSummary session={project.session} isClosed={display.isClosed} />
+          <InjectionHistorySection injections={project.recentInjections} />
           <ProjectBanners
             tab={project.tab}
             isClosed={display.isClosed}
