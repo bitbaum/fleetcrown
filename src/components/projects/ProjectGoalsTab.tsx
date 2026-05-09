@@ -159,7 +159,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
             autoFocus
-            className="flex-1 bg-surface-raised border border-border-subtle rounded-lg px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-border-strong"
+            className="flex-1 ui-input-tight"
           >
             <option value="">— Select a goal —</option>
             {allGoals.map((g) => <option key={g.id} value={g.id}>{g.title}</option>)}
