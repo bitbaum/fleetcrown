@@ -12,11 +12,6 @@ export type RecentCustomPrompt = {
   lastUsedAt: string;
 };
 
-export type IntentFrequency = {
-  intent: string;
-  adapter: string;
-  count: number;
-};
 
 // Per-project: deduplicated custom prompts sorted by recency and frequency
 export async function getRecentCustomPromptsByProjectKey(
@@ -127,19 +122,3 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
   }));
 }
 
-// Top intents across all projects — for analytics/self-learning
-export async function getTopIntentFrequencies(userId: string, limit = 20): Promise<IntentFrequency[]> {
-  const rows = await db
-    .select({
-      intent: promptHistory.intent,
-      adapter: promptHistory.adapter,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(promptHistory)
-    .where(eq(promptHistory.userId, userId))
-    .groupBy(promptHistory.intent, promptHistory.adapter)
-    .orderBy(desc(sql`count(*)`))
-    .limit(limit);
-
-  return rows.map((r) => ({ intent: r.intent, adapter: r.adapter, count: r.count }));
-}

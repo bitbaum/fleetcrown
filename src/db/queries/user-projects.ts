@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, sql } from "drizzle-orm";
+import { and, asc, eq, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -46,10 +46,12 @@ export async function deleteUserProject(id: string, userId: string): Promise<voi
     .where(and(eq(userProjects.id, id), eq(userProjects.userId, userId)));
 }
 
+const DEV_LOG_MAX = 50;
+
 /**
- * Append a dev log entry to a user project identified by name.
- * No-ops when the project is not found in the DB (e.g. conf-file-only projects).
- * Caller is responsible for deduplication — append only when content actually changed.
+ * Append a dev log entry to a user project identified by name, capping at
+ * DEV_LOG_MAX entries (oldest removed first). No-ops for projects not in DB.
+ * Caller is responsible for deduplication — append only when content changed.
  */
 export async function appendProjectDevLog(
   userId: string,
@@ -58,14 +60,13 @@ export async function appendProjectDevLog(
 ): Promise<void> {
   const project = await db.query.userProjects.findFirst({
     where: and(eq(userProjects.userId, userId), ilike(userProjects.name, projectName)),
-    columns: { id: true },
+    columns: { id: true, devLog: true },
   });
   if (!project) return;
+  const existing = (project.devLog ?? []) as DevLogEntry[];
+  const updated = [...existing, entry].slice(-DEV_LOG_MAX);
   await db
     .update(userProjects)
-    .set({
-      devLog: sql`coalesce(${userProjects.devLog}, '[]'::jsonb) || ${JSON.stringify([entry])}::jsonb`,
-      updatedAt: new Date(),
-    })
+    .set({ devLog: updated, updatedAt: new Date() })
     .where(eq(userProjects.id, project.id));
 }

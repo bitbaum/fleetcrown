@@ -14,12 +14,13 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
       {entries.map((entry, i) => {
         const d = new Date(entry.date);
         const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        const timeStr = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
         const healthKey = (entry.health ?? "").toLowerCase();
         const healthCls = HEALTH_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
         return (
           <div key={i} className="rounded-xl border border-border-subtle bg-surface-base p-3 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-text-muted">{dateStr}</span>
+              <span className="text-xs text-text-muted">{dateStr} <span className="text-text-muted/60">{timeStr}</span></span>
               {entry.health && <span className={healthCls}>{entry.health}</span>}
             </div>
             {entry.done && (
