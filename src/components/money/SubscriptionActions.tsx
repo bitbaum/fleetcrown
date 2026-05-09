@@ -236,7 +236,7 @@ export function SubscriptionActions({
             </select>
           </div>
           <div className="flex gap-2 items-center">
-            <label className="text-[11px] text-text-tertiary shrink-0">Next due</label>
+            <label className="text-xs text-text-tertiary shrink-0">Next due</label>
             <input
               type="date"
               value={editNextDue}

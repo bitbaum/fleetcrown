@@ -111,7 +111,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                   </button>
                 </div>
                 {goal.description && (
-                  <p className="text-[11px] text-text-tertiary mt-0.5">{goal.description}</p>
+                  <p className="text-xs text-text-tertiary mt-0.5">{goal.description}</p>
                 )}
                 {!isCompleted && (
                   <div className="mt-2">
@@ -134,7 +134,7 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
                 {milestones.length > 0 && (
                   <div className="mt-2.5 space-y-1">
                     {milestones.map((m, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-[11px]">
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
                         {m.done
                           ? <CheckCircle className="h-3 w-3 text-status-positive/60 shrink-0" />
                           : <div className="h-3 w-3 rounded-full border border-border-strong shrink-0" />}

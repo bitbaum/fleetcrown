@@ -34,7 +34,7 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
               </p>
             )}
             {(entry.tests || entry.todos) && (
-              <p className="text-[11px] text-text-muted">
+              <p className="text-xs text-text-muted">
                 {[entry.tests, entry.todos ? `${entry.todos} TODOs` : ""].filter(Boolean).join(" · ")}
               </p>
             )}

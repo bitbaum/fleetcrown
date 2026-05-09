@@ -85,7 +85,7 @@ export function IntentButtonPanel({
         <PromptInput {...inputProps} placeholder="Send interrupt…" />
         {/* Auto-continue toggle — separated from action buttons; controls post-turn behaviour */}
         <div className="flex items-center justify-between px-0.5">
-          <p className="text-[11px] text-text-muted">
+          <p className="text-xs text-text-muted">
             {autoContinueEnabled ? "Auto-continues when done" : "Auto-continue paused"}
           </p>
           <button
@@ -213,7 +213,7 @@ export function IntentButtonPanel({
 
       {/* Auto-continue toggle — always visible, separated from action buttons */}
       <div className="flex items-center justify-between px-0.5">
-        <p className="text-[11px] text-text-muted">
+        <p className="text-xs text-text-muted">
           {autoContinueEnabled ? "Auto-continue on" : "Auto-continue paused"}
         </p>
         <button
