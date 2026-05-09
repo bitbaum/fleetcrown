@@ -3,6 +3,7 @@ import fs from "fs";
 import { stateFile, readProjectsMap } from "@/lib/agent-config";
 import { injectIntoTab } from "@/lib/zellij";
 import { auth } from "@/auth";
+import { getUserProjects } from "@/db/queries/user-projects";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const ClearBody = z.object({
@@ -18,9 +19,15 @@ export async function POST(req: NextRequest) {
   const { tab } = dataOrResp;
 
   const projects = readProjectsMap();
-  const canonical = projects.get(tab.toLowerCase());
+  let canonical = projects.get(tab.toLowerCase());
+
   if (!canonical) {
-    return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
+    const dbProjects = await getUserProjects(session.user.id).catch(() => []);
+    const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+    if (!dbMatch) {
+      return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
+    }
+    canonical = dbMatch.name;
   }
 
   try {
