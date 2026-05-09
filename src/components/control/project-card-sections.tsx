@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
-  Pause, Play, SlidersHorizontal, ChevronsDown, Loader2,
+  SlidersHorizontal, ChevronsDown, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
