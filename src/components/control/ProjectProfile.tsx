@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { ExternalLink, ChevronRight, Loader2, Globe, History } from "lucide-react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson } from "@/lib/api/fetch";
@@ -197,6 +197,70 @@ function DimensionSection({
   );
 }
 
+function NotesSection({ projectId }: { projectId: string }) {
+  const [open, setOpen] = useState(false);
+  const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
+  const [draft, setDraft] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const value = draft ?? project?.notes ?? "";
+
+  const persist = useCallback(async (text: string) => {
+    setSaving(true);
+    try {
+      await patchJson(`/api/user-projects/${projectId}`, { notes: text || undefined });
+    } catch { /* ignore */ } finally {
+      setSaving(false);
+    }
+  }, [projectId]);
+
+  const handleChange = (text: string) => {
+    setDraft(text);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => persist(text), 900);
+  };
+
+  const handleBlur = () => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+    if (draft !== null) persist(draft);
+  };
+
+  if (!project) return null;
+
+  return (
+    <div className="border-t border-border-subtle">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
+      >
+        <span className="flex items-center gap-2.5">
+          <StickyNote className="h-3.5 w-3.5 text-text-muted" />
+          <span className="text-sm font-medium text-text-secondary">Notes</span>
+          {project.notes && <span className="h-1.5 w-1.5 rounded-full bg-accent-text/50" />}
+        </span>
+        <span className="flex items-center gap-2">
+          {saving && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
+          <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 pt-1 sm:px-5">
+          <textarea
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
+            placeholder="Free-form notes, context, or reminders for this project…"
+            rows={5}
+            className="w-full resize-y rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/20"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DevLogSection({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
@@ -338,6 +402,9 @@ export function ProjectProfile({
           onRun={handleRun}
         />
       ))}
+
+      {/* Per-project notes / scratchpad */}
+      {project.id && <NotesSection projectId={project.id} />}
 
       {/* Dev log — appended automatically when beacon sessions end */}
       {project.id && <DevLogSection projectId={project.id} />}

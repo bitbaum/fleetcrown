@@ -22,6 +22,7 @@ export const userProjects = pgTable("user_projects", {
   modelPref:   text("model_pref"),              // per-project model override
   position:    integer("position").default(0),  // user-defined sort order
   isActive:    boolean("is_active").default(true).notNull(),
+  notes:       text("notes"),                    // free-form scratchpad visible in the profile panel
   devLog:      jsonb("dev_log").$type<DevLogEntry[]>().default([]).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
