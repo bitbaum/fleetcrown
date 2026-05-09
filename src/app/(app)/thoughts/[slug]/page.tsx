@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { PageLayout } from "@/components/ui/page-layout";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
@@ -8,6 +9,17 @@ import { getAdjacentThoughts, getRelatedThoughts, getThought, listThoughts, pars
 
 export function generateStaticParams() {
   return listThoughts().map((a) => ({ slug: a.slug }));
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const article = getThought(slug);
+  if (!article) return { title: "Not Found" };
+  return { title: article.title, description: article.summary };
 }
 
 export default async function ThoughtArticlePage({
