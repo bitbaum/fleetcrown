@@ -25,29 +25,51 @@ export async function POST(req: NextRequest) {
   const audio = form.get("audio") as File | null;
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
-  const [model, tmpPath] = await Promise.all([
+  const [model, webmPath] = await Promise.all([
     whisperModel(),
     Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
   ]);
+  // Whisper receives a wav converted from the webm — avoids ffmpeg codec failures on
+  // incomplete MediaRecorder output (Chrome sometimes produces webm without an EBML
+  // EndOfFile tag, which makes Whisper's internal ffmpeg exit with status 254).
+  const wavPath = webmPath.replace(".webm", ".wav");
 
   try {
     const buf = Buffer.from(await audio.arrayBuffer());
     if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
-    await writeFile(tmpPath, buf);
-    const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, tmpPath, model], {
+    await writeFile(webmPath, buf);
+
+    // Pre-convert to wav with lenient error detection. Fails fast with a clear message
+    // instead of a cryptic Python traceback from inside Whisper's ffmpeg subprocess.
+    try {
+      await execFileAsync("ffmpeg", [
+        "-nostdin", "-threads", "0",
+        "-err_detect", "ignore_err",
+        "-i", webmPath,
+        "-f", "wav", "-ac", "1", "-ar", "16000", "-y", wavPath,
+      ], { timeout: 15_000, encoding: "utf-8" });
+    } catch {
+      return NextResponse.json({ error: "Audio decode failed — recording may be too short or corrupt" }, { status: 422 });
+    }
+
+    // execFile returns strings when encoding is specified — stderr is usable in catch.
+    const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, wavPath, model], {
       timeout: 60_000,
       maxBuffer: 1024 * 1024,
+      encoding: "utf-8",
     });
     const text = stdout.trim();
     if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
     return NextResponse.json({ text });
   } catch (err) {
-    // execFile errors include stderr in err.stderr — surface it so the UI shows the real problem
     type ExecError = Error & { stderr?: string };
     const e = err as ExecError;
     const detail = e.stderr?.trim() || e.message;
     return NextResponse.json({ error: detail }, { status: 500 });
   } finally {
-    await unlink(tmpPath).catch(() => {});
+    await Promise.all([
+      unlink(webmPath).catch(() => {}),
+      unlink(wavPath).catch(() => {}),
+    ]);
   }
 }
