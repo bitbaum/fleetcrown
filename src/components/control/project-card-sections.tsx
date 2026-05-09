@@ -358,12 +358,12 @@ export function ProjectBanners({
             ) : null}
           </div>
           {session?.next && (
-            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">
+            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-2" title={session.next}>
               Next: {session.next}
             </p>
           )}
           {!session?.next && session?.done && (
-            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-1">
+            <p className="mt-1.5 text-xs text-text-tertiary leading-relaxed line-clamp-1" title={session.done}>
               Last: {session.done}
             </p>
           )}

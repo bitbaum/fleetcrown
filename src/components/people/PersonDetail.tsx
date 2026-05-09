@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { formatDistanceToNow } from "date-fns";
-import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL } from "@/lib/utils";
+import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL } from "@/lib/constants/people";
 import { InteractionsSection } from "./PersonInteractionsSection";
 import { DetailAttrs } from "./PersonDetailAttrs";
 import { ChannelsSection } from "./PersonChannelsSection";

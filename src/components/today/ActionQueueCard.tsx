@@ -6,7 +6,7 @@ import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
 import { ApproveGroupButton } from "./ApproveGroupButton";
-import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
+import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
 import { compactRelativeDate } from "@/lib/dates";
 
 const TYPE_ICONS: Record<ActionType, typeof Send> = {

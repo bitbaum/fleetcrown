@@ -8,7 +8,7 @@ import { NewPersonButton } from "./NewPersonButton";
 import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, type SortMode } from "@/lib/constants/statuses";
-import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/utils";
+import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/constants/people";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 

@@ -125,7 +125,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
         <div className="min-w-0 flex-1">
           <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">Running</p>
           {isCustom
-            ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary">{label}</p>
+            ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary" title={label}>{label}</p>
             : <p className="truncate text-sm font-medium text-text-primary" title={label}>{label}</p>
           }
         </div>

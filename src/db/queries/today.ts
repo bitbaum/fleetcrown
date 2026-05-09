@@ -8,7 +8,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
-import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
+import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
 import { z } from "zod";
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchPeople, createPerson, SORT_MODE, type SortMode, CreatePersonBody } from "@/db/queries/people";
 import { getCurrentUserId } from "@/lib/session";
-import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/utils";
+import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/constants/people";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 
 const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);

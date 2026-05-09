@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
 import { eq, and, sql, desc, type SQL } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
-import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/utils";
+import { deriveRelationshipHealth, type RelationshipHealth, HEALTH_ACTIVE_DAYS, HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { z } from "zod";
 
 function escapeLike(s: string): string {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channels";
-import { HEALTH_DOT_COLOR } from "@/lib/utils";
+import { HEALTH_DOT_COLOR } from "@/lib/constants/people";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { postJson, throwApiError } from "@/lib/api/fetch";
