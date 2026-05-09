@@ -431,10 +431,6 @@
   }
   /* Compact list item row — no shadow, tighter padding */
   .ui-list-row { @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm; }
-  .ui-panel-raised {
-    @apply rounded-xl border border-border-subtle bg-surface-raised;
-    box-shadow: var(--shadow-panel);
-  }
   .ui-panel-interactive { @apply transition-colors hover:bg-surface-raised; }
   .ui-card-shell {
     @apply rounded-2xl border border-border-subtle bg-surface-base;
@@ -577,9 +573,6 @@
   .ui-btn-lg {
     @apply rounded-xl bg-accent-primary px-4 py-3 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-50;
   }
-  .ui-btn-lg-outline {
-    @apply rounded-xl border border-border-subtle bg-surface-base px-4 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
-  }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
     @apply rounded-lg bg-accent-primary px-3 py-2 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
@@ -633,13 +626,8 @@
   .ui-cat-research     { @apply bg-teal-500/15 text-teal-400 border-teal-500/20; }
   .ui-cat-personal     { @apply bg-rose-500/15 text-rose-400 border-rose-500/20; }
 
-  /* Stats */
   /* Horizontal label+value row (e.g. "RAM — 4/16 GiB") above a progress bar */
   .ui-label-row  { @apply mb-2 flex justify-between text-sm text-text-tertiary; }
-  .ui-stat-grid  { @apply grid gap-2 sm:grid-cols-3; }
-  .ui-stat-card  { @apply rounded-xl border border-border-subtle bg-surface-base px-4 py-3; }
-  .ui-stat-label { @apply text-xs text-text-tertiary; }
-  .ui-stat-value { @apply mt-0.5 text-2xl font-semibold text-text-primary; }
   .ui-data-cell  { @apply rounded-md border border-border-subtle bg-surface-base p-2.5; }
 
   /* Card section divider — content block within a card, beneath a border */
@@ -691,14 +679,11 @@
   }
 
   /* Misc */
-  .ui-hairline { @apply border-border-subtle; }
-
   /* Status dots — used inline with text for agent/project state */
   .ui-dot          { @apply inline-block h-1.5 w-1.5 rounded-full shrink-0; }
   .ui-dot-positive { background-color: var(--status-positive); }
   .ui-dot-warning  { background-color: var(--status-warning); }
   .ui-dot-negative { background-color: var(--status-negative); }
-  .ui-dot-neutral  { background-color: var(--status-neutral); }
 
   /* Micro badge — shape only; caller adds color/bg/border-color classes */
   .ui-micro-badge {
@@ -737,12 +722,6 @@
     color: var(--status-negative);
     background-color: var(--status-negative-subtle);
     border: 1px solid color-mix(in oklch, var(--status-negative) 20%, transparent);
-  }
-  .ui-box-warning {
-    @apply rounded-lg px-3 py-2.5 text-sm;
-    color: var(--status-warning);
-    background-color: var(--status-warning-subtle);
-    border: 1px solid color-mix(in oklch, var(--status-warning) 20%, transparent);
   }
   .ui-box-success {
     @apply rounded-lg px-3 py-2.5 text-sm;
