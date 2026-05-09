@@ -315,6 +315,7 @@ export function ProjectBanners({
         <ReadyBanner
           tab={tab}
           prompts={prompts}
+          git={git}
           onSend={onSend}
           onDismiss={onDismiss}
           onAutoInject={onAutoInject}
@@ -330,6 +331,7 @@ export function ProjectBanners({
         <ReadyBanner
           tab={tab}
           prompts={prompts}
+          git={git}
           onSend={(key) => {
             const intent = mapClaudePromptToIntent(key);
             if (!intent) return;

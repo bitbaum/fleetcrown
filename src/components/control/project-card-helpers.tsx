@@ -174,6 +174,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
 export function ReadyBanner({
   tab,
   prompts,
+  git,
   onSend,
   onDismiss,
   onAutoInject,
@@ -186,6 +187,7 @@ export function ReadyBanner({
 }: {
   tab?: string;
   prompts: PromptMeta[];
+  git?: import("@/lib/control-types").GitState | null;
   onSend: (key: string) => void;
   onDismiss: () => void;
   onAutoInject?: () => void;
@@ -262,6 +264,12 @@ export function ReadyBanner({
         <span className="mr-1 text-text-muted">→</span>
         {nextLabel}
       </p>
+
+      {git?.recentCommits && git.recentCommits.length > 0 && (
+        <div className="mb-3">
+          <RecentCommitsRow commits={git.recentCommits} />
+        </div>
+      )}
 
       <div className="ui-control-intent-grid">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (
