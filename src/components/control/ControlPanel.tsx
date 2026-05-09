@@ -153,7 +153,10 @@ export function ControlPanel() {
     zellijTabs: data!.zellijTabs,
     currentAdapter: selectedAgent,
     availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
-    onInject: inject,
+    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
+      try { await inject(tab, promptKey, customPrompt); }
+      catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
+    },
     onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
       try { await runWithBrain(projectState, intent); }
       catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }

@@ -18,14 +18,24 @@ export async function getZellijTabs(): Promise<string[]> {
   }
 }
 
+const DUMP_CMD = `zellij action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
+
+/** Return the name of the currently focused Zellij tab, or null if unavailable. */
+function getCurrentTab(): string | null {
+  try {
+    const result = execFileSync("bash", ["-c", DUMP_CMD], { timeout: 2000 }).toString().trim();
+    return result || null;
+  } catch {
+    return null;
+  }
+}
+
 /** Poll dump-layout until the named tab has focus, up to maxWaitMs. */
 function waitForTabFocus(tab: string, maxWaitMs = 1000): void {
   const deadline = Date.now() + maxWaitMs;
-  // execFileSync avoids shell escaping for the outer call; the pipeline runs inside bash -c.
-  const dumpCmd = `zellij action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
   while (Date.now() < deadline) {
     try {
-      const active = execFileSync("bash", ["-c", dumpCmd], { timeout: 2000 }).toString().trim();
+      const active = execFileSync("bash", ["-c", DUMP_CMD], { timeout: 2000 }).toString().trim();
       if (active === tab) return;
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
     execSync("sleep 0.05");
@@ -33,6 +43,11 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000): void {
 }
 
 export function injectIntoTab(tab: string, prompt: string): void {
+  // Capture where the user currently is so we can restore it after injection.
+  // Zellij has no "write to unfocused pane" command — we must switch tabs to inject.
+  // Switching back immediately keeps the disruption to a sub-200ms flash.
+  const originalTab = getCurrentTab();
+
   // go-to-tab-name is fire-and-forget; confirm the switch landed before
   // sending characters so write-chars never types into the wrong pane.
   execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
@@ -40,4 +55,9 @@ export function injectIntoTab(tab: string, prompt: string): void {
   execSync(`zellij action write-chars ${shellEscape(prompt)}`);
   execSync("sleep 0.1");
   execSync("zellij action write 13");
+
+  // Restore original tab so the user's terminal view doesn't permanently change.
+  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
+    try { execSync(`zellij action go-to-tab-name ${shellEscape(originalTab)}`); } catch { /* best effort */ }
+  }
 }
