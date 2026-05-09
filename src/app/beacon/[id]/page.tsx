@@ -4,13 +4,14 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
   Loader2, Check, ArrowRight, ExternalLink,
-  Pause, Play,
+  Pause, Play, Mic, ListPlus, Send,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
-import { QueueList, PromptInput } from "@/components/control/project-card-sections";
+import { QueueList } from "@/components/control/project-card-sections";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
@@ -231,9 +232,6 @@ function BeaconBody({
   const actionPrompts = prompts.filter((p) => p.style === "action");
   const morePrompts = prompts.filter((p) => p.style === "more");
 
-  const wordCount = custom.trim() ? custom.trim().split(/\s+/).length : 0;
-  const charCount = custom.length;
-
   return (
     <div className="space-y-4">
       {/* Session summary */}
@@ -315,62 +313,168 @@ function BeaconBody({
         </div>
       )}
 
-      {/* Status line — shows exactly what the countdown will fire */}
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] text-text-tertiary">
-          {listening
-            ? "Recording — auto-continue paused"
-            : processing
-            ? "Transcribing — auto-continue paused"
-            : custom.trim()
-            ? "Enter to send · Alt+Enter to queue"
-            : !autoContinueEnabled
-            ? "Auto-continue paused"
-            : countdown <= 0
-            ? "Dispatching…"
-            : queue.length > 0
-            ? `→ "${queue[0].length > 40 ? queue[0].slice(0, 38) + "…" : queue[0]}" in ${countdown}s${queue.length > 1 ? ` · +${queue.length - 1} more` : ""}`
-            : `AI continues based on plan above in ${countdown}s`}
-        </p>
-        <button
-          onClick={toggleAutoContinue}
-          title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-          className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
-        >
-          {autoContinueEnabled
-            ? <Pause className="h-3.5 w-3.5" />
-            : <Play className="h-3.5 w-3.5 text-accent-text" />}
-        </button>
-      </div>
-
-      {/* Custom input — shared PromptInput component, same as control panel */}
-      <PromptInput
-        custom={custom}
-        listening={listening}
-        processing={processing}
-        micError={micError}
-        sending={null}
-        placeholder="Custom prompt…"
-        showQueue
-        waveformBars={waveformBars}
-        recordingSeconds={recordingSeconds}
-        maxRecordingSeconds={maxRecordingSeconds}
-        textareaRef={inputRef}
-        onCustomChange={setCustom}
-        onSendCustom={handleSendCustom}
-        onEnqueue={handleEnqueue}
-        toggleMic={toggleMic}
-      />
-      {!listening && custom && (
-        <div className="flex justify-end px-0.5">
-          <p className="text-[11px] tabular-nums text-text-muted">{wordCount}w · {charCount}c</p>
+      {/* Composer — single unified surface */}
+      <div className="overflow-hidden rounded-2xl border border-border-default bg-surface-raised">
+        {/* Textarea */}
+        <div className="relative">
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && (custom.trim() || listening)) {
+                e.preventDefault();
+                if (e.altKey) handleEnqueue();
+                else handleSendCustom();
+              }
+            }}
+            placeholder={
+              listening ? "Recording…"
+              : processing ? "Transcribing…"
+              : "Custom prompt…"
+            }
+            className={cn(
+              "w-full resize-none bg-transparent px-4 pt-3.5 pb-3 pr-11 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none",
+              listening && "placeholder:text-status-negative/60",
+            )}
+            style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
+          />
+          {/* Mic button — top-right corner of textarea */}
+          <button
+            type="button"
+            onClick={toggleMic}
+            disabled={processing}
+            title={listening ? "Stop recording" : "Voice input"}
+            className={cn(
+              "absolute right-2.5 top-2.5 rounded-lg p-1.5 transition-colors",
+              listening
+                ? "text-status-negative hover:bg-status-negative/10"
+                : processing
+                ? "text-text-muted opacity-40 cursor-not-allowed"
+                : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
+            )}
+          >
+            {processing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : listening ? (
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </button>
         </div>
-      )}
+
+        {/* Waveform strip — only while recording */}
+        {listening && (
+          <div className="flex items-center gap-3 px-4 pb-2">
+            {waveformBars && waveformBars.length > 0 && (
+              <div className="flex items-end gap-[2px]" style={{ height: 14 }}>
+                {waveformBars.map((h, i) => (
+                  <div
+                    key={i}
+                    className="rounded-full bg-status-negative"
+                    style={{ width: 2, height: Math.max(2, Math.round(h * 12)), transition: "height 75ms ease" }}
+                  />
+                ))}
+              </div>
+            )}
+            <span className="text-[11px] tabular-nums text-status-negative">
+              {(() => {
+                const secs = recordingSeconds ?? 0;
+                const max = maxRecordingSeconds ?? 60;
+                const flat = secs >= 2 && (waveformBars ?? []).every((b) => b < 0.02);
+                return flat ? "No audio — speak closer" : `${secs}s / ${max}s`;
+              })()}
+            </span>
+          </div>
+        )}
+
+        {/* Action bar — one row, vertically centred, uniform height */}
+        <div className="flex items-center gap-1.5 border-t border-border-subtle px-3 py-2">
+          {/* Pause / resume toggle */}
+          <button
+            onClick={toggleAutoContinue}
+            disabled={listening || processing}
+            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+            className={cn(
+              "shrink-0 rounded-md p-1 transition-colors",
+              listening || processing
+                ? "text-text-muted opacity-30 cursor-default"
+                : !autoContinueEnabled
+                ? "text-accent-text hover:bg-surface-overlay"
+                : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
+            )}
+          >
+            {autoContinueEnabled
+              ? <Pause className="h-3.5 w-3.5" />
+              : <Play className="h-3.5 w-3.5" />}
+          </button>
+
+          {/* Status — fills remaining space, truncates gracefully */}
+          <span className={cn(
+            "min-w-0 flex-1 truncate text-[11px]",
+            micError
+              ? "text-status-negative"
+              : listening
+              ? "text-status-negative"
+              : processing
+              ? "animate-pulse text-text-muted"
+              : !autoContinueEnabled && !custom.trim()
+              ? "text-accent-text/70"
+              : "text-text-muted",
+          )}>
+            {micError
+              ? micError
+              : listening
+              ? "Recording — auto-continue paused"
+              : processing
+              ? "Transcribing…"
+              : custom.trim()
+              ? "↵ send · ⌥↵ queue"
+              : !autoContinueEnabled
+              ? "Paused — click ▶ to resume"
+              : countdown <= 0
+              ? "Dispatching…"
+              : queue.length > 0
+              ? `"${queue[0].length > 30 ? queue[0].slice(0, 28) + "…" : queue[0]}" in ${countdown}s`
+              : `AI continues in ${countdown}s`}
+          </span>
+
+          {/* Queue */}
+          <button
+            onClick={handleEnqueue}
+            disabled={!custom.trim() && !listening}
+            title={listening ? "Stop and add to queue" : "Add to queue · ⌥↵"}
+            className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
+          >
+            <ListPlus className="h-3.5 w-3.5" />
+          </button>
+
+          {/* Send */}
+          <button
+            onClick={handleSendCustom}
+            disabled={!custom.trim() && !listening}
+            title={listening ? "Stop and send" : "Send · ↵"}
+            className={cn(
+              "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+              custom.trim() || listening
+                ? "bg-text-primary text-text-inverted hover:opacity-90 active:opacity-80"
+                : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
+            )}
+          >
+            Send
+            <Send className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
 
       {/* Dismiss */}
       <button
         onClick={() => window.close()}
-        className="w-full py-2 text-center text-xs text-text-muted hover:text-text-secondary transition-colors"
+        className="w-full py-1.5 text-center text-xs text-text-muted transition-colors hover:text-text-secondary"
       >
         Dismiss · Esc
       </button>
