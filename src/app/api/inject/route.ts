@@ -7,10 +7,12 @@ import {
   readPrompts,
   readPromptMeta,
   buildPromptWithSession,
+  parseProjectsConf,
 } from "@/lib/agent-config";
 import { injectIntoTab, getZellijTabs } from "@/lib/zellij";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
+import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
@@ -70,11 +72,25 @@ export async function POST(req: NextRequest) {
     ? (promptKey as OrchestrationTaskIntentId)
     : customPrompt ? "custom" : undefined;
 
+  const projectPath = parseProjectsConf().find(
+    (p) => p.tab.toLowerCase() === canonical.toLowerCase(),
+  )?.dir ?? canonical;
+
   try {
     injectIntoTab(effectiveTab, prompt);
     cancelActiveBeaconSessions(effectiveTab);
 
     const nowS = Math.floor(Date.now() / 1000);
+
+    // Record injection in prompt history so the activity log and
+    // recent-custom-prompts autocomplete have real data.
+    insertPromptHistory(userId, {
+      projectKey: canonical,
+      projectPath,
+      adapter: "claude",
+      intent: eventIntent ?? "custom",
+      customPrompt: customPrompt ?? null,
+    }).catch(() => {});
 
     // Track which prompt is currently running (stop.sh clears this using the live tab name)
     fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
