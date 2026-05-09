@@ -400,7 +400,8 @@ export function PromptInput({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      {/* Textarea row — items-end pins buttons to the bottom so they don't stretch as the textarea grows */}
+      <div className="flex items-end gap-2">
         <div className="relative min-w-0 flex-1">
           <textarea
             ref={textareaRef}
@@ -451,7 +452,7 @@ export function PromptInput({
               onClick={onEnqueue}
               disabled={(!custom.trim() && !listening) || sending !== null}
               title={listening ? "Stop recording and add to queue" : "Add to queue · Alt+Enter"}
-              className="ui-icon-action min-h-11 rounded-xl border border-border-default px-3 disabled:opacity-40"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border-default text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40"
             >
               <ListPlus className="h-4 w-4" />
             </button>
@@ -460,7 +461,7 @@ export function PromptInput({
             onClick={onSendCustom}
             disabled={(!custom.trim() && !listening) || sending !== null}
             title={listening ? "Stop recording and send" : undefined}
-            className="ui-btn-lg inline-flex min-h-11 items-center justify-center py-3.5 sm:px-5"
+            className="ui-btn-lg inline-flex h-10 items-center justify-center px-4"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -733,20 +734,22 @@ export function IntentButtonPanel({
 
   const recentPrompts = project.recentCustomPrompts.slice(0, project.agentRunning ? 3 : undefined);
 
-  // Running: interrupt input + pause toggle + recent prompts
+  // Running: interrupt input + auto-continue toggle (below, not adjacent) + queue + recent prompts
   if (project.agentRunning) {
     return (
       <div className="ui-card-section space-y-2">
-        <div className="flex gap-2">
-          <div className="min-w-0 flex-1">
-            <PromptInput {...inputProps} placeholder="Send interrupt…" />
-          </div>
+        <PromptInput {...inputProps} placeholder="Send interrupt…" />
+        {/* Auto-continue toggle — separated from action buttons; controls post-turn behaviour */}
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-[11px] text-text-muted">
+            {autoContinueEnabled ? "Auto-continues when done" : "Auto-continue paused"}
+          </p>
           <button
             onClick={onToggleAutoContinue}
             title={autoContinueEnabled ? "Pause auto-continue when done" : "Resume auto-continue"}
-            className="ui-icon-action shrink-0 self-start rounded-xl border border-border-default px-3 py-[0.65rem]"
+            className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
           >
-            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-accent-text" />}
           </button>
         </div>
         {queue.length > 0 && (
@@ -784,22 +787,13 @@ export function IntentButtonPanel({
       {!bannerActive && primary && (
         <div className="space-y-2">
           {/* Primary CTA: Next best — full width, visually elevated */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => onSendIntent(primary.id)}
-              disabled={sending !== null}
-              className="flex-1 rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
-            >
-              {sending === primary.id ? "…" : `${primary.label} →`}
-            </button>
-            <button
-              onClick={onToggleAutoContinue}
-              title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-              className="ui-icon-action shrink-0 rounded-xl border border-border-default px-3"
-            >
-              {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-            </button>
-          </div>
+          <button
+            onClick={() => onSendIntent(primary.id)}
+            disabled={sending !== null}
+            className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
+          >
+            {sending === primary.id ? "…" : `${primary.label} →`}
+          </button>
 
           {/* Secondary intents: compact chips + More toggle */}
           <div className="flex flex-wrap gap-1.5">
@@ -873,17 +867,19 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      {bannerActive && (
-        <div className="flex justify-end">
-          <button
-            onClick={onToggleAutoContinue}
-            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-            className="text-text-muted transition-colors hover:text-text-secondary"
-          >
-            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </button>
-        </div>
-      )}
+      {/* Auto-continue toggle — always visible, separated from action buttons */}
+      <div className="flex items-center justify-between px-0.5">
+        <p className="text-[11px] text-text-muted">
+          {autoContinueEnabled ? "Auto-continue on" : "Auto-continue paused"}
+        </p>
+        <button
+          onClick={onToggleAutoContinue}
+          title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+          className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
+        >
+          {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-accent-text" />}
+        </button>
+      </div>
     </div>
   );
 }

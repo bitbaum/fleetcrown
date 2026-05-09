@@ -128,16 +128,16 @@ function BeaconBody({
   }, [autoContinueEnabled, isComposing]);
 
   useEffect(() => {
-    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current) return;
+    // Guard: don't fire before prompts are loaded — would close the popup with nothing injected.
+    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0) return;
     autoFiredRef.current = true;
-    const all = promptsRef.current;
-    const primary = all.find((p) => p.style === "primary");
+    const primary = prompts.find((p) => p.style === "primary");
     const choice = queue.length > 0
       ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
       : primary ? String(primary.slot ?? primary.key) : "1";
+    if (queue.length > 0) remove(0);
     submitRef.current(choice);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [countdown, autoContinueEnabled]);
+  }, [countdown, autoContinueEnabled, prompts, queue, remove]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {

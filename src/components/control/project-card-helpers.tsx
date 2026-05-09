@@ -124,12 +124,10 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
         <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent-text/60">Running</p>
-          <p className="truncate text-sm font-medium text-text-primary" title={label}>
-            {isCustom ? "Custom prompt" : label}
-          </p>
-          {isCustom && label && (
-            <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-text-tertiary">{label}</p>
-          )}
+          {isCustom
+            ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary">{label}</p>
+            : <p className="truncate text-sm font-medium text-text-primary" title={label}>{label}</p>
+          }
         </div>
         <span className={cn("shrink-0 pt-[3px] text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>

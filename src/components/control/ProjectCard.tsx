@@ -44,7 +44,7 @@ export function ProjectCard({
   const [customFocused, setCustomFocused] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const { enabled: autoContinueEnabled, toggle: toggleAutoContinueHook } = useAutoContinue(project.tab);
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinueHook, enable: enableAutoContinue } = useAutoContinue(project.tab);
 
   const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue } = usePromptQueue(project.tab);
   const [merging, setMerging] = useState(false);
@@ -63,16 +63,19 @@ export function ProjectCard({
 
   // Write/clear readyAt timestamp so the beacon popup can initialise its countdown
   // from the same origin — both views show the same remaining seconds.
+  // Also re-enable auto-continue on each new ready cycle — persisted "off" from a
+  // previous session shouldn't carry over and leave the countdown permanently paused.
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   const prevIsReadyRef = useRef(false);
   useEffect(() => {
     if (isReadyNow && !prevIsReadyRef.current) {
       try { localStorage.setItem(readyAtKey(project.tab), Date.now().toString()); } catch {}
+      enableAutoContinue();
     } else if (!isReadyNow && prevIsReadyRef.current) {
       try { localStorage.removeItem(readyAtKey(project.tab)); } catch {}
     }
     prevIsReadyRef.current = isReadyNow;
-  }, [isReadyNow, project.tab]);
+  }, [isReadyNow, project.tab, enableAutoContinue]);
   const latestOrchRun = project.latestOrchestrationRun;
 
   const sendCustom = async () => {
@@ -100,6 +103,17 @@ export function ProjectCard({
   }, [project.tab, onInject]);
 
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
+    // Drain queue first when next_best is requested — queue takes priority over AI-generated plan.
+    if (intent === "next_best") {
+      const queued = shiftQueue();
+      if (queued) {
+        setSending("custom");
+        setDismissed(true);
+        try { await onInject(project.tab, undefined, queued); }
+        finally { setSending(null); }
+        return;
+      }
+    }
     setSending(intent);
     setDismissed(true);
     try {
@@ -119,7 +133,17 @@ export function ProjectCard({
       } else if (promptKey) {
         const intent = mapClaudePromptToIntent(promptKey);
         if (intent) {
-          await onRunWithBrain(project, intent);
+          // Drain queue first when next_best is requested (same logic as sendIntent).
+          if (intent === "next_best") {
+            const queued = shiftQueue();
+            if (queued) {
+              await onInject(project.tab, undefined, queued);
+            } else {
+              await onRunWithBrain(project, intent);
+            }
+          } else {
+            await onRunWithBrain(project, intent);
+          }
         } else {
           await onInject(project.tab, promptKey);
         }

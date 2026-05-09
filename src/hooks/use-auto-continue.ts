@@ -16,6 +16,7 @@ export function useAutoContinue(tab: string) {
   );
 
   const toggle = useCallback(() => setEnabled((v) => !v), [setEnabled]);
+  const enable = useCallback(() => setEnabled(true), [setEnabled]);
 
-  return { enabled, toggle };
+  return { enabled, toggle, enable };
 }
