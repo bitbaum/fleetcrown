@@ -185,9 +185,9 @@ inject_prompt() {
     sleep 0.05
   done
 
-  zellij action write-chars -- "$prompt" 2>/dev/null
-  sleep 0.1
-  zellij action write 13 2>/dev/null
+  zellij action write-chars -- "$prompt" 2>/dev/null || true
+  sleep 0.2
+  zellij action write 13 2>/dev/null || true
 }
 
 # Call after every injection to keep the Control panel and web beacon in sync.
