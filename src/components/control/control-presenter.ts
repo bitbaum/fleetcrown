@@ -3,6 +3,7 @@ import {
   CLOSING_WINDOW_S,
   READY_WINDOW_S,
   withinWindow,
+  getHealthShort,
 } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
@@ -35,6 +36,7 @@ export type ControlDashboardState = {
   idleCount: number;
   expandedCount: number;
   commitsToday: number;
+  healthIssueCount: number;
 };
 
 export type ControlPageState = {
@@ -193,6 +195,11 @@ export function buildControlPageState(
   const idleCount = idleProjects.length;
   const expandedCount = expandedTabs.size;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
+  const healthIssueCount = data.projects.filter((p) => {
+    if (!p.session?.health) return false;
+    const short = getHealthShort(p.session.health);
+    return short === "degraded" || short === "critical";
+  }).length;
 
   return {
     activeProjects,
@@ -206,6 +213,7 @@ export function buildControlPageState(
       idleCount,
       expandedCount,
       commitsToday,
+      healthIssueCount,
     },
   };
 }

@@ -213,7 +213,12 @@ export function ControlPanel() {
                       Projects in control
                     </div>
                     <div className="ui-control-metric-value">{dashboard.controlProjectCount}</div>
-                    <p className="ui-control-metric-note">{dashboard.idleCount} currently idle</p>
+                    <p className="ui-control-metric-note">
+                      {dashboard.idleCount} idle
+                      {dashboard.healthIssueCount > 0 && (
+                        <span className="ml-1 text-status-warning">· {dashboard.healthIssueCount} degraded</span>
+                      )}
+                    </p>
                   </div>
                   <div className="ui-control-metric-card">
                     <div className="ui-control-metric-label">
