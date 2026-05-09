@@ -82,7 +82,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               </span>
               <button
                 onClick={() => setShowAllPrompts(!showAllPrompts)}
-                className="flex items-center gap-1 text-[10px] uppercase tracking-[0.16em] text-text-muted transition-colors hover:text-text-secondary"
+                className="flex items-center gap-1 text-[10px] uppercase tracking-caps text-text-muted transition-colors hover:text-text-secondary"
               >
                 {showAllPrompts ? (
                   <><ChevronUp className="h-3 w-3" /> show less</>

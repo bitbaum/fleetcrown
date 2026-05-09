@@ -78,6 +78,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --tracking-display: var(--tracking-display);
   --tracking-label: var(--tracking-label);
+  --tracking-caps: var(--tracking-caps);
   --shadow-panel: var(--shadow-panel);
   --shadow-panel-strong: var(--shadow-panel-strong);
   --shell-max: var(--shell-max);
@@ -126,6 +127,7 @@
   --font-mono: var(--font-ibm-plex-mono);
   --tracking-display: -0.03em;
   --tracking-label: 0.10em;
+  --tracking-caps: 0.16em;
   --shadow-panel: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
   --shadow-panel-strong: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
   --shell-max: 90rem;
