@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike } from "drizzle-orm";
+import { and, asc, eq, ilike, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -8,6 +8,14 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
     .select()
     .from(userProjects)
     .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
+    .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
+}
+
+export async function getPublicProjects(userId: string): Promise<UserProject[]> {
+  return db
+    .select()
+    .from(userProjects)
+    .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true), isNotNull(userProjects.gitUrl)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
