@@ -180,7 +180,7 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
         </div>
         <button
           onClick={() => setShowRaw((v) => !v)}
-          className="text-xs text-text-muted transition-colors hover:text-text-secondary"
+          className="ui-link-muted"
         >
           {showRaw ? "Structured" : "Raw"}
         </button>

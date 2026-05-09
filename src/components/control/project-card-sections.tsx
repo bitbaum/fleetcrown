@@ -365,7 +365,7 @@ export function InjectionHistorySection({ injections }: { injections: ActivityIt
     <div className="border-t border-border-subtle px-4 py-2.5 sm:px-5">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+        className="flex w-full items-center gap-1.5 ui-link-muted"
       >
         <span className="font-medium">Sent today</span>
         <span className="text-text-muted/60">({injections.length})</span>

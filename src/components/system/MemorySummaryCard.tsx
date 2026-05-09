@@ -14,7 +14,7 @@ export async function MemorySummaryCard() {
         icon={Brain}
         title="Memory"
         right={
-          <Link href="/memory" className="text-xs text-text-muted hover:text-text-secondary transition-colors">
+          <Link href="/memory" className="ui-link-muted">
             View details →
           </Link>
         }

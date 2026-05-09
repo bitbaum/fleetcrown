@@ -93,7 +93,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
               {saving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
               Save
             </button>
-            <button onClick={cancel} className="flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary">
+            <button onClick={cancel} className="flex items-center gap-1 ui-link-muted">
               <X className="h-3 w-3" /> Cancel
             </button>
           </div>

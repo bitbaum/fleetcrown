@@ -133,7 +133,7 @@ export function EventsGrid({
         <div>
           <button
             onClick={() => setShowArchived((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-secondary transition-colors"
+            className="flex items-center gap-1.5 ui-link-muted"
           >
             {showArchived ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             <Archive className="h-3 w-3" />

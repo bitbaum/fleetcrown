@@ -118,7 +118,7 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
           {saving ? <Loader2 className="ui-spinner-xs" /> : <Plus className="h-3 w-3" />}
           Add
         </button>
-        <button onClick={() => { setOpen(false); reset(); }} className="text-xs text-text-muted hover:text-text-secondary">
+        <button onClick={() => { setOpen(false); reset(); }} className="ui-link-muted">
           Cancel
         </button>
       </div>

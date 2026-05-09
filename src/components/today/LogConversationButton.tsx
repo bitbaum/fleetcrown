@@ -115,7 +115,7 @@ export function LogConversationButton() {
             <span className="text-xs text-text-secondary font-medium">{selected.name}</span>
             <button
               onClick={() => { setSelected(null); setQuery(""); }}
-              className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+              className="ui-link-muted"
             >
               change
             </button>

@@ -282,7 +282,7 @@ export function BootstrapModal({
                   <button
                     type="button"
                     onClick={() => setBrief((b) => ({ ...b, coreFeatures: [...b.coreFeatures, ""] }))}
-                    className="ml-6 text-xs text-text-muted transition-colors hover:text-text-secondary"
+                    className="ml-6 ui-link-muted"
                   >
                     + Add feature
                   </button>

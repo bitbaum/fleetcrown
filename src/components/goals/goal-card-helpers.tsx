@@ -128,7 +128,7 @@ export function DateInput({
   return (
     <button
       onClick={() => ie.start("")}
-      className="text-xs text-text-muted hover:text-text-secondary transition-colors ui-hover-reveal"
+      className="ui-link-muted ui-hover-reveal"
       title="Set deadline"
     >
       Set deadline

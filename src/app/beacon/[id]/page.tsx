@@ -471,7 +471,7 @@ function BeaconBody({
       {/* Dismiss */}
       <button
         onClick={() => window.close()}
-        className="w-full py-1.5 text-center text-xs text-text-muted transition-colors hover:text-text-secondary"
+        className="w-full py-1.5 text-center ui-link-muted"
       >
         Dismiss · Esc
       </button>

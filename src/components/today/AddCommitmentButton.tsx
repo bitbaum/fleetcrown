@@ -84,7 +84,7 @@ export function AddCommitmentButton() {
         </button>
         <button
           onClick={() => { setOpen(false); reset(); }}
-          className="text-xs text-text-muted hover:text-text-secondary flex items-center gap-1"
+          className="flex items-center gap-1 ui-link-muted"
         >
           <X className="h-3 w-3" /> Cancel
         </button>

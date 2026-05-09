@@ -135,7 +135,7 @@ export function OverviewTab({
                   ) : (
                     <button
                       onClick={() => setAddingKey(key)}
-                    className="flex min-h-9 w-full items-center gap-1.5 py-1.5 text-left text-xs text-text-muted transition-colors hover:text-text-secondary"
+                    className="flex min-h-9 w-full items-center gap-1.5 py-1.5 text-left ui-link-muted"
                     >
                       <Plus className="h-3 w-3 shrink-0" />
                       <span className="font-medium text-text-tertiary">{label}</span>

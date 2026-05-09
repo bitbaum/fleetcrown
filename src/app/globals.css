@@ -489,6 +489,10 @@
   .ui-link-subtle-button {
     @apply px-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
+  /* Muted variant — more faded secondary/cancel actions */
+  .ui-link-muted {
+    @apply text-xs text-text-muted transition-colors hover:text-text-secondary;
+  }
 
   /* Navigation */
   .ui-nav-item {
