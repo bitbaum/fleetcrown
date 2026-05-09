@@ -547,6 +547,10 @@
   .ui-btn-row-action {
     @apply p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
   }
+  /* Compact xs outlined action button — tight rows (subscription actions, inline toolbars) */
+  .ui-btn-xs {
+    @apply inline-flex items-center gap-1 rounded border border-border-subtle px-2 py-1 text-xs text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
+  }
   /* Accent icon button — caller adds padding (p-1 or p-1.5) */
   .ui-btn-icon-accent {
     @apply shrink-0 rounded-lg bg-accent-primary text-text-inverted transition-colors hover:bg-accent-hover disabled:opacity-30;

@@ -139,7 +139,7 @@ export function SubscriptionActions({
         <button
           onClick={onMarkPaid}
           disabled={markingPaid}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5 transition-colors disabled:opacity-50"
+          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
         >
           {markingPaid ? <Loader2 className="ui-spinner-2xs" /> : <CheckCheck className="h-2.5 w-2.5" />}
           Mark paid
@@ -152,7 +152,7 @@ export function SubscriptionActions({
       {!isCancelled && (
         <button
           onClick={() => setEditing((v) => !v)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors"
+          className="ui-btn-xs"
           title="Edit amount, currency, notes"
         >
           <Pencil className="h-2.5 w-2.5" />
@@ -166,7 +166,7 @@ export function SubscriptionActions({
           href={meta.cancelUrl}
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-negative/20 text-status-negative/70 hover:text-status-negative hover:bg-status-negative/5 transition-colors"
+          className="ui-btn-xs border-status-negative/20 text-status-negative/70 hover:text-status-negative hover:bg-status-negative/5"
         >
           <ExternalLink className="h-2.5 w-2.5" />
           Cancel at {new URL(meta.cancelUrl).hostname.replace("www.", "")}
@@ -188,7 +188,7 @@ export function SubscriptionActions({
         </div>
       ) : (
         <button onClick={() => setConfirmCancel(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-colors">
+          className="ui-btn-xs">
           <X className="h-2.5 w-2.5" />
           Mark cancelled
         </button>
@@ -199,7 +199,7 @@ export function SubscriptionActions({
         onDelete={onDeleteRecord}
         label="Delete record?"
         triggerTitle="Delete subscription record"
-        triggerClassName="flex items-center gap-1 px-2 py-1 text-xs rounded border border-border-subtle text-text-muted hover:text-status-negative hover:bg-status-negative/5 transition-colors"
+        triggerClassName="ui-btn-xs hover:text-status-negative hover:bg-status-negative/5"
       />
 
       {editing && (
@@ -282,7 +282,7 @@ export function SubscriptionActions({
       {meta && !meta.essential && meta.alternatives.length > 0 && (
         <button
           onClick={() => setShowAlternatives(!showAlternatives)}
-          className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5 transition-colors"
+          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5"
         >
           <Lightbulb className="h-2.5 w-2.5" />
           Free alternatives
