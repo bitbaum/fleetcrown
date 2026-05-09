@@ -28,6 +28,7 @@ export function ProjectCard({
   onRunWithBrain,
   onRunCustomPrompt,
   onCollapse,
+  onFocus,
   isOnlyReady = false,
 }: {
   project: ProjectState;
@@ -39,6 +40,7 @@ export function ProjectCard({
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
+  onFocus?: () => void;
   isOnlyReady?: boolean;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -276,6 +278,7 @@ export function ProjectCard({
         profileOpen={profileOpen}
         onProfileToggle={() => setProfileOpen((v) => !v)}
         onCollapse={onCollapse}
+        onFocus={onFocus}
       />
 
       {profileOpen ? (

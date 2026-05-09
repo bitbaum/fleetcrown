@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, GitBranch, Play, Terminal } from "lucide-react";
+import { Loader2, GitBranch, Play, Terminal, Focus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HEALTH_COLOR, getHealthShort } from "@/lib/constants/control";
 import type { ProjectState } from "@/lib/control-types";
@@ -12,9 +12,10 @@ type Props = {
   zellijTabs: string[];
   onExpand: () => void;
   onLaunch: () => void;
+  onFocus: () => void;
 };
 
-export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch }: Props) {
+export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch, onFocus }: Props) {
   const { tab, git, session, agentRunning, dir } = project;
   const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? tab).toLowerCase());
   const healthColor = session?.health ? (HEALTH_COLOR[getHealthShort(session.health)] ?? "text-text-muted") : null;
@@ -80,19 +81,28 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
           )}
         </div>
 
-        {canLaunch && !agentRunning && (
+        <div className="flex items-center gap-1.5">
           <button
-            onClick={handleLaunch}
-            disabled={launching}
-            title={project.agentPref
-              ? `Launch ${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""} in ${tab}`
-              : `Launch ${currentAdapter} in ${tab}`}
-            className="ui-chip-action-compact inline-flex items-center gap-1.5"
+            onClick={(e) => { e.stopPropagation(); onFocus(); }}
+            title="Focus on this project"
+            className="ui-icon-action"
           >
-            {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
-            {project.agentPref ? `${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""}` : "Launch"}
+            <Focus className="h-3.5 w-3.5" />
           </button>
-        )}
+          {canLaunch && !agentRunning && (
+            <button
+              onClick={handleLaunch}
+              disabled={launching}
+              title={project.agentPref
+                ? `Launch ${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""} in ${tab}`
+                : `Launch ${currentAdapter} in ${tab}`}
+              className="ui-chip-action-compact inline-flex items-center gap-1.5"
+            >
+              {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
+              {project.agentPref ? `${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""}` : "Launch"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

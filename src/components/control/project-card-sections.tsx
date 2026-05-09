@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   GitBranch, Circle, Terminal, ExternalLink,
-  SlidersHorizontal, ChevronsDown, Loader2,
+  SlidersHorizontal, ChevronsDown, Loader2, Focus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate, timeAgo } from "@/lib/dates";
@@ -28,6 +28,7 @@ export function ProjectCardHeader({
   profileOpen,
   onProfileToggle,
   onCollapse,
+  onFocus,
 }: {
   project: ProjectState;
   tabOpen: boolean;
@@ -37,6 +38,7 @@ export function ProjectCardHeader({
   profileOpen: boolean;
   onProfileToggle: () => void;
   onCollapse?: () => void;
+  onFocus?: () => void;
 }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -147,6 +149,15 @@ export function ProjectCardHeader({
           >
             <SlidersHorizontal className="h-4 w-4" />
           </button>
+          {onFocus && (
+            <button
+              onClick={onFocus}
+              title="Focus on this project"
+              className="ui-icon-action"
+            >
+              <Focus className="h-4 w-4" />
+            </button>
+          )}
           {onCollapse && (
             <button
               onClick={onCollapse}

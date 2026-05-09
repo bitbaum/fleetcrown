@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft } from "lucide-react";
+import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
@@ -32,6 +32,7 @@ export function ControlPanel() {
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
+  const [focusedTab, setFocusedTab] = useState<string | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const [newProjectOpen, setNewProjectOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -311,16 +312,32 @@ export function ControlPanel() {
       {sorted ? (
         sorted.length > 0 ? (
           <div className="space-y-4">
-            {activeProjects.map((project) => (
+            {focusedTab && (
+              <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm">
+                <Focus className="h-3.5 w-3.5 shrink-0 text-accent-text" />
+                <span className="font-medium text-accent-text">{focusedTab}</span>
+                <span className="text-text-tertiary">— focus mode</span>
+                <button
+                  onClick={() => setFocusedTab(null)}
+                  className="ml-auto flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
+                >
+                  <X className="h-3 w-3" />
+                  Exit focus
+                </button>
+              </div>
+            )}
+
+            {(focusedTab ? activeProjects.filter((p) => p.tab === focusedTab) : activeProjects).map((project) => (
               <ProjectCard
                 key={project.tab}
                 {...cardProps(project)}
                 onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
+                onFocus={focusedTab === project.tab ? undefined : () => setFocusedTab(project.tab)}
                 isOnlyReady={soloReadyTab === project.tab}
               />
             ))}
 
-            {idleProjects.length > 0 && (
+            {!focusedTab && idleProjects.length > 0 && (
               <div className="ui-control-idle-section">
                 <button
                   onClick={() => setIdleOpen((v) => !v)}
@@ -340,10 +357,27 @@ export function ControlPanel() {
                         zellijTabs={data!.zellijTabs}
                         onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
                         onLaunch={() => openLaunchModal(project)}
+                        onFocus={() => { setExpandedTabs((tabs) => new Set([...tabs, project.tab])); setFocusedTab(project.tab); }}
                       />
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {focusedTab && idleProjects.some((p) => p.tab === focusedTab) && (
+              <div className="grid grid-cols-1 gap-3">
+                {idleProjects.filter((p) => p.tab === focusedTab).map((project) => (
+                  <ProjectTile
+                    key={project.tab}
+                    project={project}
+                    currentAdapter={selectedAgent}
+                    zellijTabs={data!.zellijTabs}
+                    onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
+                    onLaunch={() => openLaunchModal(project)}
+                    onFocus={() => { setExpandedTabs((tabs) => new Set([...tabs, project.tab])); setFocusedTab(project.tab); }}
+                  />
+                ))}
               </div>
             )}
           </div>
