@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  CheckCircle2, Loader2, Zap,
+  CheckCircle2, Loader2, Zap, GitCommitHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
@@ -28,6 +28,38 @@ export function SessionBadge({ health }: { health: string }) {
   );
 }
 
+
+function RecentCommitsRow({ commits }: { commits: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
+      >
+        <GitCommitHorizontal className="h-3.5 w-3.5" />
+        <span>{commits.length} recent commit{commits.length !== 1 ? "s" : ""}</span>
+        <span className="ml-0.5">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1">
+          {commits.map((c, i) => {
+            // Format: "abc1234 2 hours ago: fix something"
+            const colonIdx = c.indexOf(": ");
+            const meta = colonIdx > 0 ? c.slice(0, colonIdx) : c;
+            const msg = colonIdx > 0 ? c.slice(colonIdx + 2) : "";
+            return (
+              <li key={i} className="flex items-start gap-2 text-xs">
+                <span className="shrink-0 font-mono text-text-muted/60 tabular-nums">{meta}</span>
+                <span className="text-text-tertiary">{msg}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function ClosedBanner({
   session,
@@ -65,6 +97,10 @@ export function ClosedBanner({
             </div>
           )}
         </div>
+      )}
+
+      {git?.recentCommits && git.recentCommits.length > 0 && (
+        <RecentCommitsRow commits={git.recentCommits} />
       )}
 
       <div className="flex gap-2 pt-1">
