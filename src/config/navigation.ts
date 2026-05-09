@@ -11,6 +11,7 @@ import {
   Terminal,
   BookOpen,
   Settings,
+  Brain,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,6 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "money",    label: "Money",    description: "Subscriptions & monthly burn",      href: "/money",    icon: Wallet,       active: true,  mobile: false },
   { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler", href: "/prompts",  icon: Zap,          active: true,  mobile: false },
   { id: "system",   label: "System",   description: "Runtime health & autopilot jobs",  href: "/system",   icon: Server,       active: true,  mobile: false },
+  { id: "memory",   label: "Memory",   description: "Knowledge graph & entity activity", href: "/memory",   icon: Brain,        active: true,  mobile: false },
   { id: "thoughts", label: "Thoughts", description: "Essays on architecture & systems", href: "/thoughts", icon: BookOpen,     active: true,  mobile: false },
   { id: "settings", label: "Settings", description: "Profile & team management",        href: "/settings", icon: Settings,     active: true,  mobile: false },
 ];
