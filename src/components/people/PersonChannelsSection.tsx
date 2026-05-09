@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Plus, Save, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
+import { throwApiError } from "@/lib/api/fetch";
 import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix } from "@/config/channels";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
@@ -33,10 +34,7 @@ export function ChannelsSection({
     const key = withChannelPrefix(channelType);
     try {
       const res = await setAttr(`/api/people/${personId}`, key, channelValue.trim());
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       onUpdate({ ...attrs, [key]: channelValue.trim() });
       setChannelValue("");
       setAdding(false);

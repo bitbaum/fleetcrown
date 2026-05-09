@@ -5,7 +5,7 @@ import { ExternalLink, Loader2, Archive, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import type { EventRow } from "@/db/queries/events";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
 
@@ -205,7 +205,7 @@ export function EventCard({
           <DeleteButton
             onDelete={async () => {
               const res = await deleteJson(`/api/events/${event.id}`);
-              if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+              if (!res.ok) await throwApiError(res, "Failed to delete");
               onDelete(event.id);
             }}
             label=""

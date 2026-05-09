@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
-import { postJson, patchJson } from "@/lib/api/fetch";
+import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -24,10 +24,7 @@ export default function OnboardingPage() {
     setError("");
     try {
       const res = await patchJson("/api/me", { username: normalizeUsername(username) });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to save username");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save username");
       await update(); // refresh JWT so proxy sees the new username
       setStep("project");
     } catch (e) {

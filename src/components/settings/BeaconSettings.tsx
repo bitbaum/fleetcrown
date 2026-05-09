@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { getJson, patchJson } from "@/lib/api/fetch";
+import { getJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
 import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 
@@ -48,10 +48,7 @@ export function BeaconSettings() {
         whisper_model: model,
         prefer_browser_ready_ui: browserUi,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(body.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       setData({ countdown_seconds: countdown, whisper_model: model, prefer_browser_ready_ui: browserUi });
       setSaved(true);
     } catch (e) {

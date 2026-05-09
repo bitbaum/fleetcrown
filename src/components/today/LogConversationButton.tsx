@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, X, Check, Loader2, Search } from "lucide-react";
 import { CHANNEL_NAMES } from "@/config/channels";
-import { getJson, postJson } from "@/lib/api/fetch";
+import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { INTERACTION_DIRECTION, SORT_MODE } from "@/lib/constants/statuses";
 
@@ -72,10 +72,7 @@ export function LogConversationButton() {
         summary: note || undefined,
         occurredAt: toLocalDateStr(new Date()),
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       setDone(true);
       setTimeout(() => { reset(); router.refresh(); }, 1200);
     } catch (e) {

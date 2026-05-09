@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { postJson, patchJson } from "@/lib/api/fetch";
+import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
@@ -90,10 +90,7 @@ export function ControlPanel() {
         dirPath: newDir.trim() || undefined,
         gitUrl: newGitUrl.trim() || undefined,
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? "Failed to create project");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to create project");
       const newProject = await res.json().catch(() => null);
       setNewProjectOpen(false);
       if (newDir.trim()) {

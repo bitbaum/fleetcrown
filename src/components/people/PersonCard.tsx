@@ -6,7 +6,7 @@ import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channe
 import { HEALTH_DOT_COLOR } from "@/lib/utils";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { postJson } from "@/lib/api/fetch";
+import { postJson, throwApiError } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 
 export function PersonCard({
@@ -63,10 +63,7 @@ export function PersonCard({
         direction,
         summary: summary.trim() || undefined,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to log");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to log");
       setDone(true);
       setSummary("");
       onLogged?.(person.id, occurredAt);

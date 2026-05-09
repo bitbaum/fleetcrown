@@ -6,7 +6,7 @@ import { AlertCircle, Pencil, X, Check, Loader2 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
 import { DeleteButton } from "@/components/ui/delete-button";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 
 type CommitmentItemProps = {
   id: string;
@@ -133,7 +133,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <DeleteButton
           onDelete={async () => {
             const res = await deleteJson(`/api/commitments/${id}`);
-            if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+            if (!res.ok) await throwApiError(res, "Failed to delete");
             router.refresh();
           }}
           triggerTitle="Remove commitment"

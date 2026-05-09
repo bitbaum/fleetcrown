@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
+import { throwApiError } from "@/lib/api/fetch";
 import { isChannelAttrKey } from "@/config/channels";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section } from "./PersonDetailHelpers";
@@ -37,10 +38,7 @@ export function DetailAttrs({
     setSaveError(null);
     try {
       const res = await setAttr(`/api/people/${personId}`, key, editValue.trim());
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       onUpdate({ ...attrs, [key]: editValue.trim() });
       setEditingKey(null);
     } catch (e) {
@@ -56,10 +54,7 @@ export function DetailAttrs({
     setSaveError(null);
     try {
       const res = await setAttr(`/api/people/${personId}`, newKey.trim(), newValue.trim());
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       const normalizedKey = newKey.trim().toLowerCase().replace(/\s+/g, "_");
       onUpdate({ ...attrs, [normalizedKey]: newValue.trim() });
       setNewKey("");
@@ -77,10 +72,7 @@ export function DetailAttrs({
     setDeleteError(null);
     try {
       const res = await removeAttr(`/api/people/${personId}`, key);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to delete");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to delete");
       const next = { ...attrs };
       delete next[key];
       onUpdate(next);

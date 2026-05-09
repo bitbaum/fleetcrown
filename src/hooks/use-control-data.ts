@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
-import { getJson, postJson } from "@/lib/api/fetch";
+import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 
 type Agent = "codex" | "claude";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
@@ -156,10 +156,7 @@ export function useControlData(): ControlDataHook {
 
   const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
     const res = await postJson("/api/inject", { tab, promptKey, customPrompt });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error ?? `HTTP ${res.status}`);
-    }
+    if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     setTimeout(refresh, 500);
   };
 
@@ -181,8 +178,7 @@ export function useControlData(): ControlDataHook {
       adapter: data?.agentConfig.agent ?? "claude",
       intent,
     });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     await refresh(true);
   };
 
@@ -198,8 +194,7 @@ export function useControlData(): ControlDataHook {
       intent: "custom",
       customInstructions: prompt,
     });
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+    if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     await refresh(true);
   };
 

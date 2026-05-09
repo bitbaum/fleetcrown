@@ -12,7 +12,7 @@ import { Section } from "./PersonDetailHelpers";
 import { parseAliases, type PersonDetailData } from "./person-detail-types";
 import { Drawer } from "@/components/ui/modal";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { getJson, patchJson, deleteJson } from "@/lib/api/fetch";
+import { getJson, patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 
 export function PersonDetail({
   personId,
@@ -140,7 +140,7 @@ export function PersonDetail({
             <DeleteButton
               onDelete={async () => {
                 const res = await deleteJson(`/api/people/${personId}`);
-                if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+                if (!res.ok) await throwApiError(res, "Failed to delete");
                 onDeleted?.(personId);
                 onClose();
               }}

@@ -7,7 +7,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { advanceDueDate } from "@/lib/dates";
 
 export function SubscriptionActions({
@@ -60,7 +60,7 @@ export function SubscriptionActions({
 
   async function onDeleteRecord() {
     const res = await deleteJson(`/api/subscriptions/${subId}`);
-    if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+    if (!res.ok) await throwApiError(res, "Failed to delete");
     setDeleted(true);
     router.refresh();
   }
@@ -77,10 +77,7 @@ export function SubscriptionActions({
     try {
       const newDue = advanceDueDate(nextDue, frequency);
       const res = await patchJson(`/api/subscriptions/${subId}`, { nextDue: newDue });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to mark paid");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to mark paid");
       setPaid(true);
       router.refresh();
     } catch (e) {
@@ -104,10 +101,7 @@ export function SubscriptionActions({
         notes: editNotes || null,
         paymentMethod: editPaymentMethod || null,
       });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
+      if (!res.ok) await throwApiError(res, "Failed to save");
       setEditing(false);
       router.refresh();
     } catch (e) {

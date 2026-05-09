@@ -14,7 +14,7 @@ import {
   MaturityEditor,
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 
 export function ProjectDetailHeader({
   data,
@@ -117,7 +117,7 @@ export function ProjectDetailHeader({
             <DeleteButton
               onDelete={async () => {
                 const res = await deleteJson(`/api/projects/${projectId}`);
-                if (!res.ok) { const d = await res.json().catch(() => ({})) as { error?: string }; throw new Error(d.error ?? "Failed to delete"); }
+                if (!res.ok) await throwApiError(res, "Failed to delete");
                 onDeleteSuccess();
                 router.refresh();
               }}

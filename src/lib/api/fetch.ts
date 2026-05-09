@@ -29,3 +29,9 @@ export function deleteJson(url: string, body?: unknown) {
   if (body === undefined) return fetch(url, { method: "DELETE" });
   return fetch(url, { method: "DELETE", headers: JSON_HEADERS, body: JSON.stringify(body) });
 }
+
+/** Read `{ error?: string }` from a non-ok API response and throw. Call inside an `if (!res.ok)` guard. */
+export async function throwApiError(res: Response, fallback: string): Promise<never> {
+  const data = await res.json().catch(() => ({})) as { error?: string };
+  throw new Error(data.error ?? fallback);
+}
