@@ -200,7 +200,7 @@ export async function GET() {
   const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
-    getRecentActivity(userId, 24, 30).catch((): ActivityItem[] => []),
+    getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
     getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
       .catch(() => new Map()),
