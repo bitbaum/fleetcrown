@@ -54,7 +54,7 @@ export function DeleteButton({
             No
           </button>
         </div>
-        {deleteError && <p className="text-[10px] text-status-negative">{deleteError}</p>}
+        {deleteError && <p className="ui-error-xs">{deleteError}</p>}
       </div>
     );
   }

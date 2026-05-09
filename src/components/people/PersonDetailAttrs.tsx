@@ -121,8 +121,8 @@ export function DetailAttrs({
                   {deletingKey === key ? <Loader2 className="ui-spinner-2xs" /> : <Trash2 className="h-2.5 w-2.5" />}
                 </button>
               </div>
-              {saveError && <p className="text-[10px] text-status-negative">{saveError}</p>}
-              {deleteError && <p className="text-[10px] text-status-negative">{deleteError}</p>}
+              {saveError && <p className="ui-error-xs">{saveError}</p>}
+              {deleteError && <p className="ui-error-xs">{deleteError}</p>}
             </div>
           ) : (
             <div className="flex min-w-0 items-center gap-1">

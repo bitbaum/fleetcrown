@@ -55,7 +55,7 @@ export function ActionButtons({
   if (compact) {
     return (
       <div className="flex items-center gap-1 shrink-0">
-        {error && <span className="text-[10px] text-status-negative mr-1">{error}</span>}
+        {error && <span className="ui-error-xs mr-1">{error}</span>}
         <button
           onClick={onApprove}
           disabled={busy}

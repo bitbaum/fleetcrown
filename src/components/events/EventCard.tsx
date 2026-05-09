@@ -215,7 +215,7 @@ export function EventCard({
         </div>
       </div>
       {archiveError && (
-        <p className="mt-1 text-[11px] text-status-negative">{archiveError}</p>
+        <p className="mt-1 ui-error-xs">{archiveError}</p>
       )}
     </div>
   );

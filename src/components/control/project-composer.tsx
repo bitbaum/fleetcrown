@@ -115,7 +115,7 @@ export function PromptInput({
       {(micError || listening || processing) && (
         <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center">
-            {micError && <p className="text-[11px] text-status-negative">{micError}</p>}
+            {micError && <p className="ui-error-xs">{micError}</p>}
             {listening && !micError && (() => {
               const flat = (recordingSeconds ?? 0) >= 2 && (waveformBars ?? []).every((b) => b < 0.02);
               const secs = recordingSeconds ?? 0;
