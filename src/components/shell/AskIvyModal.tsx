@@ -120,7 +120,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                     <p className="text-micro text-text-secondary leading-snug line-clamp-2" title={t.description}>
                       {t.description}
                     </p>
-                    <span className={`self-start mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
+                    <span className={`self-start mt-0.5 text-micro px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
                       {meta.label}
                     </span>
                   </button>

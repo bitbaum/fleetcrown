@@ -256,7 +256,7 @@ function BeaconBody({
             <button
               key={p.key}
               onClick={() => submit(String(p.slot ?? p.key))}
-              className="ui-btn-primary w-full justify-start gap-3 px-4 py-3 text-left text-[0.9375rem]"
+              className="ui-btn-primary w-full justify-start gap-3 px-4 py-3 text-left text-base"
             >
               <span className="text-base leading-none">{p.icon}</span>
               <span className="flex-1">{p.label}</span>
@@ -378,7 +378,7 @@ function BeaconBody({
                 ))}
               </div>
             )}
-            <span className="text-[11px] tabular-nums text-status-negative">
+            <span className="text-xs tabular-nums text-status-negative">
               {(() => {
                 const secs = recordingSeconds ?? 0;
                 const max = maxRecordingSeconds ?? 60;
@@ -412,7 +412,7 @@ function BeaconBody({
 
           {/* Status — fills remaining space, truncates gracefully */}
           <span className={cn(
-            "min-w-0 flex-1 truncate text-[11px]",
+            "min-w-0 flex-1 truncate text-xs",
             micError
               ? "text-status-negative"
               : listening
@@ -526,7 +526,7 @@ export default function BeaconPage() {
               <Check className="h-5 w-5 text-status-positive" />
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-widest text-status-positive">Dispatched</p>
+              <p className="text-xs font-medium uppercase tracking-widest text-status-positive">Dispatched</p>
               <p className="mt-0.5 text-base font-semibold text-text-primary">
                 {submittedLabel || "Agent running…"}
               </p>

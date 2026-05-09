@@ -38,11 +38,11 @@ export async function EventsDueCard() {
             return (
               <div key={event.id} className="flex items-start gap-3">
                 <div className="shrink-0 flex flex-col items-center gap-1 w-14 pt-0.5">
-                  <span className={`text-[11px] font-mono font-medium ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
+                  <span className={`text-xs font-mono font-medium ${overdue ? "text-status-negative" : "text-text-tertiary"}`}>
                     {format(deadline, "d MMM")}
                   </span>
                   {event.category && (
-                    <span className="text-[11px] uppercase tracking-wide text-status-positive/60 font-medium">
+                    <span className="text-xs uppercase tracking-wide text-status-positive/60 font-medium">
                       {event.category}
                     </span>
                   )}
@@ -68,7 +68,7 @@ export async function EventsDueCard() {
                     {deadlineText}
                   </div>
                   {event.type && (
-                    <span className="text-[11px] text-text-tertiary uppercase tracking-wide">{event.type}</span>
+                    <span className="text-xs text-text-tertiary uppercase tracking-wide">{event.type}</span>
                   )}
                 </div>
               </div>

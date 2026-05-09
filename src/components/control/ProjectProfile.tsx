@@ -86,7 +86,7 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
   return (
     <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
       {profile.description && (
-        <p className="text-[0.9375rem] leading-[1.65] text-text-secondary">{profile.description}</p>
+        <p className="text-base leading-relaxed text-text-secondary">{profile.description}</p>
       )}
       {profile.mission && (
         <div className="border-l-2 border-accent-primary/40 pl-4">

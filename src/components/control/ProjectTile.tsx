@@ -66,7 +66,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-text-tertiary">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-tertiary">
           {git?.branch && (
             <span className="flex items-center gap-1">
               <GitBranch className="h-3 w-3" />

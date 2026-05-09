@@ -122,10 +122,10 @@ export function PromptInput({
               const max = maxRecordingSeconds ?? 60;
               const label = `${secs}s / ${max}s`;
               return flat
-                ? <p className="text-[11px] text-status-warning">No audio — speak closer or raise mic volume</p>
-                : <p className="text-[11px] text-status-negative">Recording · {label}</p>;
+                ? <p className="text-xs text-status-warning">No audio — speak closer or raise mic volume</p>
+                : <p className="text-xs text-status-negative">Recording · {label}</p>;
             })()}
-            {processing && !micError && <p className="text-[11px] text-text-tertiary animate-pulse">Transcribing…</p>}
+            {processing && !micError && <p className="text-xs text-text-tertiary animate-pulse">Transcribing…</p>}
           </div>
           {listening && !micError && waveformBars && (
             <div className="flex items-end gap-[2px]" style={{ height: 16 }}>

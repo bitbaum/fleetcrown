@@ -37,7 +37,7 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
       {expanded && (
         <div className="px-3 pb-3 border-t border-border-subtle">
           <div className="ui-micro-label mt-2.5 mb-1.5">Prompt</div>
-          <pre className="text-[11px] text-text-secondary whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded p-2.5 max-h-48 overflow-y-auto">
+          <pre className="text-xs text-text-secondary whitespace-pre-wrap leading-relaxed font-mono bg-black/20 rounded p-2.5 max-h-48 overflow-y-auto">
             {job.message}
           </pre>
           {hasError && (
