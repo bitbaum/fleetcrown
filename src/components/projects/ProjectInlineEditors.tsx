@@ -161,7 +161,7 @@ export function StatusEditor({
     <button onClick={() => ie.start(value ?? "")} title="Click to edit status" className="flex items-center">
       {value
         ? <StatusBadge value={value} />
-        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ status</span>}
+        : <span className="text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ status</span>}
     </button>
   );
 }
@@ -192,15 +192,15 @@ export function MaturityEditor({
           onChange={(e) => ie.setDraft(Number(e.target.value))}
           className="w-24 accent-[var(--status-positive)]"
         />
-        <span className="text-[10px] text-text-secondary w-8">{ie.draft}/10</span>
+        <span className="text-micro text-text-secondary w-8">{ie.draft}/10</span>
         <button
           onClick={() => ie.commit(() => onSave(`${ie.draft}/10`))}
           disabled={ie.saving}
-          className="px-2 py-0.5 rounded ui-btn-confirm disabled:opacity-40 text-[10px] transition-colors"
+          className="px-2 py-0.5 rounded ui-btn-confirm disabled:opacity-40 text-micro transition-colors"
         >
           {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
         </button>
-        <button onClick={ie.cancel} className="text-[10px] text-text-muted hover:text-text-secondary">✕</button>
+        <button onClick={ie.cancel} className="text-micro text-text-muted hover:text-text-secondary">✕</button>
       </div>
     );
   }
@@ -209,7 +209,7 @@ export function MaturityEditor({
     <button onClick={start} title="Click to edit maturity" className="flex items-center">
       {value
         ? <MaturityBar value={value} />
-        : <span className="text-[10px] text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ maturity</span>}
+        : <span className="text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ maturity</span>}
     </button>
   );
 }

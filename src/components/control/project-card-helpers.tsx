@@ -123,7 +123,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
       <div className="flex items-start gap-2.5">
         <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-caps text-accent-text/60">Running</p>
+          <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">Running</p>
           {isCustom
             ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary">{label}</p>
             : <p className="truncate text-sm font-medium text-text-primary" title={label}>{label}</p>

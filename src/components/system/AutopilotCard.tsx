@@ -52,13 +52,13 @@ function JobRow({
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-text-tertiary">{humanCronSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
-            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate" title={job.state.lastError}>
+            <span className="flex items-center gap-1 text-micro text-status-negative/70 truncate" title={job.state.lastError}>
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
               {job.state.lastError}
             </span>
           )}
           {!hasError && nextRun && (
-            <span className="flex items-center gap-1 text-[10px] text-text-tertiary shrink-0">
+            <span className="flex items-center gap-1 text-micro text-text-tertiary shrink-0">
               <Clock className="h-2.5 w-2.5" />
               {formatDistanceToNow(new Date(nextRun), { addSuffix: true })}
             </span>

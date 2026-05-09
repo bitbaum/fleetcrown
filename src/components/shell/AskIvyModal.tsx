@@ -82,7 +82,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               </span>
               <button
                 onClick={() => setShowAllPrompts(!showAllPrompts)}
-                className="flex items-center gap-1 text-[10px] uppercase tracking-caps text-text-muted transition-colors hover:text-text-secondary"
+                className="flex items-center gap-1 text-micro uppercase tracking-caps text-text-muted transition-colors hover:text-text-secondary"
               >
                 {showAllPrompts ? (
                   <><ChevronUp className="h-3 w-3" /> show less</>
@@ -117,7 +117,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                         : <FolderOpen className="h-3 w-3 text-text-muted shrink-0" />
                       }
                     </div>
-                    <p className="text-[10px] text-text-secondary leading-snug line-clamp-2" title={t.description}>
+                    <p className="text-micro text-text-secondary leading-snug line-clamp-2" title={t.description}>
                       {t.description}
                     </p>
                     <span className={`self-start mt-0.5 text-[9px] px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
@@ -151,7 +151,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
               }`}>
                 <div className="whitespace-pre-wrap">{msg.text}</div>
                 {msg.role === "ivy" && !msg.error && msg.durationMs && (
-                  <div className="mt-1.5 text-[10px] text-text-tertiary">
+                  <div className="mt-1.5 text-micro text-text-tertiary">
                     {(msg.durationMs / 1000).toFixed(1)}s{msg.model ? ` · ${msg.model}` : ""}
                   </div>
                 )}
@@ -170,7 +170,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
                      elapsed < 25 ? "Composing a response…" :
                      "Almost there…"}
                   </span>
-                  <span className="ml-2 text-[10px] text-text-tertiary">{elapsed}s</span>
+                  <span className="ml-2 text-micro text-text-tertiary">{elapsed}s</span>
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
           {micError && (
             <p className="mt-1.5 text-center ui-error-xs">{micError}</p>
           )}
-          <div className="mt-1.5 text-center text-[10px] text-text-tertiary">
+          <div className="mt-1.5 text-center text-micro text-text-tertiary">
             Enter to send · Shift+Enter for new line · Esc to close · 🎤 Whisper
           </div>
         </div>

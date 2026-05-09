@@ -76,6 +76,7 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --text-micro: var(--text-micro);
   --tracking-display: var(--tracking-display);
   --tracking-label: var(--tracking-label);
   --tracking-caps: var(--tracking-caps);
@@ -125,6 +126,7 @@
   --font-sans: var(--font-space-grotesk);
   --font-heading: var(--font-space-display);
   --font-mono: var(--font-ibm-plex-mono);
+  --text-micro: 0.625rem; /* 10px — compact widget/metadata text */
   --tracking-display: -0.03em;
   --tracking-label: 0.10em;
   --tracking-caps: 0.16em;
@@ -418,7 +420,7 @@
     letter-spacing: var(--tracking-label);
   }
   /* Micro-kicker for compact data cells — 10px caps */
-  .ui-micro-label { @apply text-[10px] uppercase tracking-wider text-text-muted; }
+  .ui-micro-label { @apply text-micro uppercase tracking-wider text-text-muted; }
   /* Inline error messages — use ui-error for form-level, ui-error-xs for tight row contexts */
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
@@ -693,7 +695,7 @@
 
   /* Micro badge — shape only; caller adds color/bg/border-color classes */
   .ui-micro-badge {
-    @apply inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium;
+    @apply inline-flex items-center rounded border px-1.5 py-0.5 text-micro font-medium;
   }
 
   /* Status tags — small pill labels */

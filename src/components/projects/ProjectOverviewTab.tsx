@@ -144,7 +144,7 @@ export function OverviewTab({
                   )}
                 </div>
               ))}
-              <button onClick={() => setShowEmpty(false)} className="text-[10px] text-text-muted hover:text-text-secondary transition-colors mt-1">
+              <button onClick={() => setShowEmpty(false)} className="text-micro text-text-muted hover:text-text-secondary transition-colors mt-1">
                 Collapse
               </button>
             </div>

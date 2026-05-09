@@ -20,7 +20,7 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
         <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasError ? "bg-status-negative" : job.enabled ? "bg-status-positive" : "bg-status-neutral"}`} />
         <div className="flex-1 min-w-0">
           <div className="text-xs text-text-primary truncate" title={job.name}>{job.name}</div>
-          <div className="text-[10px] text-text-tertiary font-mono mt-0.5">{job.schedule}</div>
+          <div className="text-micro text-text-tertiary font-mono mt-0.5">{job.schedule}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -41,7 +41,7 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
             {job.message}
           </pre>
           {hasError && (
-            <div className="mt-2 text-[10px] text-status-negative/70 flex items-center gap-1">
+            <div className="mt-2 text-micro text-status-negative/70 flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
               {job.consecutiveErrors} consecutive error{(job.consecutiveErrors ?? 0) > 1 ? "s" : ""}
             </div>

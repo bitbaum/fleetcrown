@@ -140,7 +140,7 @@ export function ProjectDetailHeader({
           <StatusEditor value={effectiveStatus} onSave={saveStatus} />
           <MaturityEditor value={effectiveMaturity} onSave={saveMaturity} />
           {hasIssues && (
-            <span className="flex items-center gap-1 text-[10px] text-status-negative/70 ml-auto">
+            <span className="flex items-center gap-1 text-micro text-status-negative/70 ml-auto">
               <AlertTriangle className="h-3 w-3" /> Issues detected
             </span>
           )}

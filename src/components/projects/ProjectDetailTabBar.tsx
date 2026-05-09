@@ -36,7 +36,7 @@ export function ProjectDetailTabBar({
           >
             {label}
             {badge !== undefined && badge > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              <span className={`text-micro px-1.5 py-0.5 rounded-full ${
                 isActive ? "bg-status-positive-subtle text-status-positive" : "bg-surface-overlay text-text-muted"
               }`}>
                 {badge}

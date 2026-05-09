@@ -36,8 +36,8 @@ export async function MemorySummaryCard() {
         <div className="space-y-1.5 pt-0.5">
           {stats.entityTypes.slice(0, 4).map((row) => (
             <div key={row.type} className="flex items-center justify-between gap-2">
-              <span className="text-[10px] text-text-tertiary capitalize">{row.type}</span>
-              <span className="text-[10px] text-text-tertiary font-mono">{Number(row.count).toLocaleString()}</span>
+              <span className="text-micro text-text-tertiary capitalize">{row.type}</span>
+              <span className="text-micro text-text-tertiary font-mono">{Number(row.count).toLocaleString()}</span>
             </div>
           ))}
         </div>

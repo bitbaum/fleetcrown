@@ -184,7 +184,7 @@ export function QueueList({
             onClick={onMerge}
             disabled={merging}
             title="Merge all items into one coherent prompt with AI"
-            className="flex items-center gap-1 text-[10px] text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
+            className="flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
           >
             {merging ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3 w-3" />}
             {merging ? "Merging…" : "AI merge"}
@@ -218,7 +218,7 @@ export function QueueList({
             </div>
           )}
           <span className={cn(
-            "mt-[3px] shrink-0 text-[10px] font-bold tabular-nums",
+            "mt-[3px] shrink-0 text-micro font-bold tabular-nums",
             i === 0 ? "text-accent-text" : "text-text-muted",
           )}>
             {i + 1}
