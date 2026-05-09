@@ -116,21 +116,30 @@ function ProjectCard({
 export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+
+  const statuses = useMemo(
+    () => [...new Set(projects.map((p) => p.attrs["status"]).filter(Boolean))].sort() as string[],
+    [projects],
+  );
 
   const filtered = useMemo(() => {
-    if (!query) return projects;
     const q = query.toLowerCase();
-    return projects.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      (p.description ?? "").toLowerCase().includes(q) ||
-      Object.values(p.attrs).some((v) => v.toLowerCase().includes(q)),
-    );
-  }, [projects, query]);
+    return projects.filter((p) => {
+      if (statusFilter && p.attrs["status"] !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.description ?? "").toLowerCase().includes(q) ||
+        Object.values(p.attrs).some((v) => v.toLowerCase().includes(q))
+      );
+    });
+  }, [projects, query, statusFilter]);
 
   const withIssues = projects.filter((p) => getHealthSignals(p.attrs).length > 0);
-  const securityRisks = projects.filter((p) =>
-    p.attrs["security_vulnerability"],
-  ).length;
+  const securityRisks = projects.filter((p) => p.attrs["security_vulnerability"]).length;
+
+  const isFiltered = !!query || !!statusFilter;
 
   return (
     <>
@@ -144,9 +153,28 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           className="ui-search-input"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
-          {filtered.length}
+          {isFiltered ? `${filtered.length} / ${projects.length}` : projects.length}
         </span>
       </div>
+
+      {statuses.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {statuses.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+              className={statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}
+            >
+              {s}
+            </button>
+          ))}
+          {statusFilter && (
+            <button onClick={() => setStatusFilter(null)} className="ui-chip-filter">
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {withIssues.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-1 text-xs">
@@ -175,7 +203,9 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           />
         ))}
         {filtered.length === 0 && (
-          <p className="col-span-2 py-4 text-center text-sm text-text-tertiary">No projects match &ldquo;{query}&rdquo;</p>
+          <p className="col-span-2 py-4 text-center text-sm text-text-tertiary">
+            No projects match{query ? ` "${query}"` : ""}{statusFilter ? ` with status "${statusFilter}"` : ""}
+          </p>
         )}
       </div>
 
