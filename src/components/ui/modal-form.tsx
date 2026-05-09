@@ -62,7 +62,7 @@ export function ModalForm({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="ui-btn-confirm flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+        className="ui-btn-confirm"
       >
         <Plus className="h-4 w-4" />
         {triggerLabel}
@@ -85,7 +85,7 @@ export function ModalForm({
             <div className="space-y-3">{children}</div>
 
             {error && (
-              <div className="ui-box-error rounded-lg px-3 py-2 text-xs">
+              <div className="ui-box-error">
                 {error}
               </div>
             )}

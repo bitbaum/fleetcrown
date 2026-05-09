@@ -300,7 +300,7 @@ export function ControlPanel() {
         />
       )}
 
-      {error && <p className="ui-box-error rounded-2xl px-4 py-3 text-sm">{error}</p>}
+      {error && <p className="ui-box-error">{error}</p>}
 
       {sorted ? (
         sorted.length > 0 ? (

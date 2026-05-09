@@ -146,7 +146,7 @@ export function JobDetail({
 
           {/* Error detail */}
           {hasError && job.state?.lastError && (
-            <div className="ui-box-error rounded-md p-3">
+            <div className="ui-box-error">
               <div className="flex items-center gap-2 text-xs font-medium mb-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Last Error
@@ -182,7 +182,7 @@ export function JobDetail({
 
           {/* Run output */}
           {runOutput && (
-            <div className={`rounded-md border p-3 ${runOutput.ok ? "ui-box-success" : "ui-box-error"}`}>
+            <div className={runOutput.ok ? "ui-box-success" : "ui-box-error"}>
               <div className="flex items-center gap-2 text-xs font-medium mb-1.5">
                 {runOutput.ok ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
                 {runOutput.ok ? "Job triggered" : "Run failed"}
@@ -201,7 +201,7 @@ export function JobDetail({
                 <button
                   onClick={handleSave}
                   disabled={saving}
-                  className="ui-btn-confirm flex items-center gap-1.5 px-2.5 py-1 rounded text-xs disabled:opacity-50 transition-colors"
+                  className="ui-btn-confirm"
                 >
                   <Send className="h-3 w-3" />
                   {saving ? "Saving..." : saved ? "Saved!" : "Save"}

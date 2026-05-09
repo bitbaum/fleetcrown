@@ -137,7 +137,7 @@ export function RunModal({
                 </div>
               )}
               {error && (
-                <div className="ui-box-error rounded-2xl p-4 text-base">
+                <div className="ui-box-error">
                   {error}
                 </div>
               )}
