@@ -224,7 +224,7 @@ export function AskIvyModal({ onClose }: { onClose: () => void }) {
             <p className="mt-1.5 text-center ui-error-xs">{micError}</p>
           )}
           <div className="mt-1.5 text-center text-micro text-text-tertiary">
-            Enter to send · Shift+Enter for new line · Esc to close · 🎤 Whisper
+            Enter to send · Shift+Enter for new line · Esc to close · ? to reopen · 🎤 Whisper
           </div>
         </div>
     </Modal>
