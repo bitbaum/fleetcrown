@@ -4,7 +4,7 @@ import { CHANNEL_CONFIG } from "@/config/channels";
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-text-tertiary">{title}</h3>
+      <h3 className="ui-kicker">{title}</h3>
       <div className="space-y-2">{children}</div>
     </div>
   );

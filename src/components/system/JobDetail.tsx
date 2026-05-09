@@ -196,7 +196,7 @@ export function JobDetail({
           {/* Prompt editor */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-text-secondary uppercase tracking-wider">Prompt</span>
+              <span className="ui-kicker text-text-secondary">Prompt</span>
               {isDirty && (
                 <button
                   onClick={handleSave}
