@@ -5,6 +5,8 @@ import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import { buildAgentLaunchCommand } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
+import { getUserProjects } from "@/db/queries/user-projects";
+import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
 const AGENT_IDS = ["codex", "claude"] as const;
@@ -34,7 +36,7 @@ export async function GET() {
   return NextResponse.json({ registry, config });
 }
 
-function applyToOpenTabs(agent: "codex" | "claude", model: string): SwitchTabResult[] {
+function applyToOpenTabs(agent: "codex" | "claude", model: string, allProjects: { tab: string; dir: string }[]): SwitchTabResult[] {
   try {
     execSync("command -v zellij >/dev/null 2>&1");
   } catch {
@@ -49,13 +51,12 @@ function applyToOpenTabs(agent: "codex" | "claude", model: string): SwitchTabRes
     return [{ status: "failed", error: "Failed to read open zellij tabs." }];
   }
 
-  const projects = parseProjectsConf();
-  if (projects.length === 0) {
-    return [{ status: "skipped", reason: "No configured projects in ~/.config/claude-projects.conf." }];
+  if (allProjects.length === 0) {
+    return [{ status: "skipped", reason: "No configured projects found." }];
   }
 
   const openSet = new Set(openTabs);
-  return projects.map(({ tab, dir }) => {
+  return allProjects.map(({ tab, dir }) => {
     const command = buildAgentLaunchCommand({ agent, model }, dir);
     if (!openSet.has(tab.toLowerCase())) return { tab, dir, command, status: "skipped" as const };
     try {
@@ -88,11 +89,24 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    let tabResults: SwitchTabResult[] = [];
+    if (dataOrResp.applyToOpenTabs) {
+      // Merge conf-file projects with DB projects so DB-only projects are restarted too.
+      const confProjects = parseProjectsConf();
+      const confTabs = new Set(confProjects.map((p) => p.tab.toLowerCase()));
+      const userId = await getCurrentUserId();
+      const dbProjects = await getUserProjects(userId).catch(() => []);
+      const dbOnlyProjects = dbProjects
+        .filter((p) => p.dirPath && !confTabs.has(p.name.toLowerCase()))
+        .map((p) => ({ tab: p.name, dir: p.dirPath! }));
+      tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, [...confProjects, ...dbOnlyProjects]);
+    }
+
     return NextResponse.json({
       ok: true,
       config: resolveAgentConfig(next),
       preferences: next,
-      tabResults: dataOrResp.applyToOpenTabs ? applyToOpenTabs(dataOrResp.agent, dataOrResp.model) : [],
+      tabResults,
     });
   } catch (error) {
     return NextResponse.json({
