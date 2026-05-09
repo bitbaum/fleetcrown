@@ -120,15 +120,16 @@ function BeaconBody({
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
-  // Countdown — pauses when auto-continue is off or user is composing a prompt.
-  // Fires real injection at T=0 (queue first, then primary prompt).
+  // Countdown — pauses when auto-continue is off, user is composing, or prompts haven't loaded.
+  // Pausing while prompts are absent prevents the timer from expiring during a slow page load,
+  // so the user always sees the full remaining window once the UI is interactive.
   const isComposing = custom.trim().length > 0;
   useEffect(() => {
-    if (!autoContinueEnabled || isComposing || countdown <= 0) return;
+    if (!autoContinueEnabled || isComposing || countdown <= 0 || prompts.length === 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoContinueEnabled, isComposing]);
+  }, [autoContinueEnabled, isComposing, prompts.length]);
 
   useEffect(() => {
     // Guard: don't fire before prompts are loaded — would close the popup with nothing injected.
