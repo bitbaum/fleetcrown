@@ -184,7 +184,7 @@ export function buildControlPageState(
   const runningCount = data.projects.filter((project) => project.agentRunning).length;
   const waitingCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
-    return state.isReady;
+    return state.isReady || state.isOrchestrationReady;
   }).length;
   const openTabCount = data.projects.filter((project) =>
     data.zellijTabs.some(
