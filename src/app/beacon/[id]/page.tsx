@@ -7,7 +7,7 @@ import {
   Pause, Play,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
-import { useWhisperMic } from "@/hooks/use-whisper-mic";
+import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { QueueList, PromptInput } from "@/components/control/project-card-sections";
@@ -110,7 +110,6 @@ function BeaconBody({
     return readCountdownParam();
   });
   const autoFiredRef = useRef(false);
-  const pendingMicActionRef = useRef<"send" | "queue" | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
@@ -154,20 +153,12 @@ function BeaconBody({
     return () => clearTimeout(t);
   }, [prompts.length, queue.length]);
 
-  const appendTranscript = useCallback((text: string) => {
-    const newText = (custom ? `${custom} ${text}` : text).trim();
-    setCustom(newText);
-    inputRef.current?.focus();
-    const pending = pendingMicActionRef.current;
-    if (pending && newText) {
-      pendingMicActionRef.current = null;
-      if (pending === "send") submitRef.current(`${CUSTOM_CHOICE_PREFIX}${newText}`);
-      else enqueue(newText);
-    }
-  }, [custom, enqueue]);
-
-  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds, maxSeconds: maxRecordingSeconds } =
-    useWhisperMic(appendTranscript);
+  const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
+    custom,
+    onAppend: (newText) => { setCustom(newText); inputRef.current?.focus(); },
+    onSendAfterRecording: (text) => submitRef.current(`${CUSTOM_CHOICE_PREFIX}${text}`),
+    onEnqueueAfterRecording: enqueue,
+  });
 
   const submit = useCallback(async (choice: string) => {
     const all = promptsRef.current;
@@ -209,27 +200,17 @@ function BeaconBody({
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const handleSendCustom = () => {
-    if (listening) {
-      pendingMicActionRef.current = "send";
-      toggleMic();
-      return;
-    }
+  const handleSendCustom = () => wrapSend(() => {
     if (!custom.trim()) return;
     submit(`${CUSTOM_CHOICE_PREFIX}${custom.trim()}`);
     setCustom("");
-  };
+  });
 
-  const handleEnqueue = () => {
-    if (listening) {
-      pendingMicActionRef.current = "queue";
-      toggleMic();
-      return;
-    }
+  const handleEnqueue = () => wrapEnqueue(() => {
     if (!custom.trim()) return;
     enqueue(custom.trim());
     setCustom("");
-  };
+  });
 
   const primaryPrompts = prompts.filter((p) => p.style === "primary");
   const actionPrompts = prompts.filter((p) => p.style === "action");

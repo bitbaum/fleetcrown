@@ -21,16 +21,24 @@ export function usePromptQueue(tab: string) {
     if (trimmed) setQueue((q) => [...q, trimmed]);
   }, [setQueue]);
 
-  // Removes and returns the first item. Returns null if empty.
+  // Removes and returns the first item synchronously.
+  // Reads localStorage directly because React state updater closures run during the
+  // next render phase — assigning out of setQueue(fn) always yields null at the call site.
   const shift = useCallback((): string | null => {
-    let item: string | null = null;
-    setQueue((q) => {
-      if (q.length === 0) return q;
-      item = q[0];
-      return q.slice(1);
-    });
-    return item;
-  }, [setQueue]);
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (!raw) return null;
+      const q = JSON.parse(raw) as string[];
+      if (!q.length) return null;
+      const item = q[0];
+      const next = q.slice(1);
+      localStorage.setItem(queueKey(tab), JSON.stringify(next));
+      setQueue(next);
+      return item;
+    } catch {
+      return null;
+    }
+  }, [tab, setQueue]);
 
   const remove = useCallback((index: number) => {
     setQueue((q) => q.filter((_, i) => i !== index));

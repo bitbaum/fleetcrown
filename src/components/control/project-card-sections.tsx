@@ -7,7 +7,7 @@ import {
   SlidersHorizontal, ChevronsDown, ListPlus, X,
   GripVertical, Sparkles,
 } from "lucide-react";
-import { useWhisperMic } from "@/hooks/use-whisper-mic";
+import { useMicComposer } from "@/hooks/use-mic-composer";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
@@ -682,47 +682,18 @@ export function IntentButtonPanel({
 }) {
   const [showMore, setShowMore] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
-  const pendingMicActionRef = useRef<"send" | "queue" | null>(null);
 
-  const appendTranscript = useCallback((text: string) => {
-    const newText = (custom ? `${custom} ${text}` : text).trim();
-    onCustomChange(newText);
-    const pending = pendingMicActionRef.current;
-    if (pending) {
-      pendingMicActionRef.current = null;
-      if (pending === "send" && onSendText && newText) {
-        onSendText(newText);
-        onCustomChange("");
-      } else if (pending === "queue" && onEnqueueCustom && newText) {
-        onEnqueueCustom(newText);
-        onCustomChange("");
-      }
-    }
-  }, [custom, onCustomChange, onSendText, onEnqueueCustom]);
+  const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
+    custom,
+    onAppend: onCustomChange,
+    onSendAfterRecording: (text) => { if (onSendText && text) { onSendText(text); onCustomChange(""); } },
+    onEnqueueAfterRecording: (text) => { if (onEnqueueCustom) { onEnqueueCustom(text); onCustomChange(""); } },
+  });
 
-  const { listening, processing, error: micError, toggle: toggleMic, waveformBars, recordingSeconds, maxSeconds: maxRecordingSeconds } = useWhisperMic(appendTranscript);
-
-  // When recording is active, Send/Queue stop the mic and queue the action for post-transcription.
-  const handleSendCustom = useCallback(() => {
-    if (listening) {
-      pendingMicActionRef.current = "send";
-      toggleMic();
-      return;
-    }
-    onSendCustom();
-  }, [listening, toggleMic, onSendCustom]);
-
-  const handleEnqueue = useCallback(() => {
-    if (listening) {
-      pendingMicActionRef.current = "queue";
-      toggleMic();
-      return;
-    }
-    if (custom.trim() && onEnqueueCustom) {
-      onEnqueueCustom(custom.trim());
-      onCustomChange("");
-    }
-  }, [listening, toggleMic, custom, onEnqueueCustom, onCustomChange]);
+  const handleSendCustom = useCallback(() => wrapSend(onSendCustom), [wrapSend, onSendCustom]);
+  const handleEnqueue = useCallback(() => wrapEnqueue(() => {
+    if (custom.trim() && onEnqueueCustom) { onEnqueueCustom(custom.trim()); onCustomChange(""); }
+  }), [wrapEnqueue, custom, onEnqueueCustom, onCustomChange]);
 
   const inputProps = {
     custom, listening, processing, micError, sending, waveformBars, recordingSeconds, maxRecordingSeconds,
