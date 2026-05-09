@@ -3,6 +3,8 @@ import { getEvents, getArchivedEvents } from "@/db/queries/events";
 import { getCurrentUserId } from "@/lib/session";
 import { EventsGrid } from "@/components/events/EventsGrid";
 
+export const metadata = { title: "Events" };
+
 export default async function EventsPage() {
   const userId = await getCurrentUserId();
   const [items, archived] = await Promise.all([getEvents(userId), getArchivedEvents(userId)]);

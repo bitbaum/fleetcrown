@@ -11,7 +11,7 @@ import { TeamSettings } from "@/components/settings/TeamSettings";
 import { BeaconSettings } from "@/components/settings/BeaconSettings";
 import { PageLayout } from "@/components/ui/page-layout";
 
-export const metadata = { title: "Settings — Cockpit" };
+export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const session = await auth();

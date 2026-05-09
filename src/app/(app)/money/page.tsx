@@ -14,6 +14,8 @@ import {
 import { getCurrentUserId } from "@/lib/session";
 import { format, isPast } from "date-fns";
 
+export const metadata = { title: "Money" };
+
 const STATUS_STYLE: Record<SubStatus, string> = {
   [SUB_STATUS.ACTIVE]:     "text-status-positive bg-status-positive-subtle",
   [SUB_STATUS.UNVERIFIED]: "text-status-warning bg-status-warning-subtle",

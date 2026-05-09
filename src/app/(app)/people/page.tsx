@@ -4,6 +4,8 @@ import { PeopleGrid } from "@/components/people/PeopleGrid";
 import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/utils";
 import { getCurrentUserId } from "@/lib/session";
 
+export const metadata = { title: "People" };
+
 export default async function PeoplePage({
   searchParams,
 }: {

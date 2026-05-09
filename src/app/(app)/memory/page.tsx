@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
 import { ProgressBar } from "@/components/ui/progress-bar";
 
+export const metadata = { title: "Memory" };
+
 // Record<EntityType,…> makes TS fail the build if a new ENTITY_TYPE
 // member is added without a colour here — no silent fallback.
 // All entity types use the same monochrome accent badge — this app is intentionally achromatic.

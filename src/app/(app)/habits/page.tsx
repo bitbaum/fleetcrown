@@ -7,6 +7,8 @@ import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
+export const metadata = { title: "Habits" };
+
 export default async function HabitsPage() {
   const userId = await getCurrentUserId();
   const habits = await getAllHabitsWithHistory(userId, HABIT_HISTORY_DAYS);

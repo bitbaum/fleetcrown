@@ -6,6 +6,8 @@ import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { CardSkeleton } from "@/components/ui/card";
 import { readCronJobs } from "@/lib/crons";
 
+export const metadata = { title: "System" };
+
 export default function SystemPage() {
   const jobs = readCronJobs();
 

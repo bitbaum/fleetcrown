@@ -2,6 +2,8 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { ThoughtsLibrary } from "@/components/thoughts/ThoughtsLibrary";
 import { listThoughtTags, listThoughts } from "@/lib/thoughts-content";
 
+export const metadata = { title: "Thoughts" };
+
 export default function ThoughtsPage() {
   const articles = listThoughts();
   const tags = listThoughtTags();

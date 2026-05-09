@@ -14,6 +14,8 @@ import { LogConversationButton } from "@/components/today/LogConversationButton"
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { getCurrentUserName } from "@/lib/session";
 
+export const metadata = { title: "Today" };
+
 export default async function TodayPage() {
   const name = await getCurrentUserName();
   return (

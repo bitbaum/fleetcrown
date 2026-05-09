@@ -7,6 +7,8 @@ import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
 import { getCurrentUserId } from "@/lib/session";
 
+export const metadata = { title: "Projects" };
+
 export default async function ProjectsPage() {
   const userId = await getCurrentUserId();
   const projects = await getProjects(userId);

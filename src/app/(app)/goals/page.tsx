@@ -7,6 +7,8 @@ import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 
+export const metadata = { title: "Goals" };
+
 export default async function GoalsPage() {
   const userId = await getCurrentUserId();
   const [goalTree, stats] = await Promise.all([getGoals(userId), getGoalStats(userId)]);

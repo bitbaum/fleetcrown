@@ -7,6 +7,8 @@ import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/session";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
+export const metadata = { title: "Prompts" };
+
 export default async function PromptsPage() {
   const userId = await getCurrentUserId();
   const projects = await db
