@@ -76,6 +76,8 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-modal: calc(var(--radius) * 4);   /* modal sheets: 2rem at default scale */
+  --radius-pill: calc(var(--radius) * 3.5);  /* floating nav pill: 1.75rem at default scale */
   --text-micro: var(--text-micro);
   --tracking-display: var(--tracking-display);
   --tracking-label: var(--tracking-label);

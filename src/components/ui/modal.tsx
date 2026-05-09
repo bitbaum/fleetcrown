@@ -58,7 +58,7 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative w-full ui-card-shell-raised rounded-[2rem] max-h-[calc(100vh-2rem)] overflow-y-auto",
+          "relative w-full ui-card-shell-raised rounded-modal max-h-[calc(100vh-2rem)] overflow-y-auto",
           SIZE_CLASSES[size],
           padded && "p-5 space-y-4",
           panelMargin,
