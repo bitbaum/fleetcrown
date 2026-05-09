@@ -72,6 +72,8 @@ export function ProjectCard({
     if (isReadyNow && !prevIsReadyRef.current) {
       try { localStorage.setItem(readyAtKey(project.tab), Date.now().toString()); } catch {}
       enableAutoContinue();
+      // Sync re-enable to /tmp sentinel so PyQt popup starts unpaused on new ready cycle.
+      postJson("/api/control/auto-continue", { tab: project.tab, enabled: true }).catch(() => {});
     } else if (!isReadyNow && prevIsReadyRef.current) {
       try { localStorage.removeItem(readyAtKey(project.tab)); } catch {}
     }
@@ -207,10 +209,13 @@ export function ProjectCard({
     }
   }, [queue, clearQueue]);
 
-  // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire
+  // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire.
+  // Sync state to /tmp sentinel so the PyQt popup respects pause even when Cockpit is down.
   const handleToggleAutoContinue = () => {
+    const nowEnabled = !autoContinueEnabled;
     toggleAutoContinueHook();
-    if (autoContinueEnabled) {
+    postJson("/api/control/auto-continue", { tab: project.tab, enabled: nowEnabled }).catch(() => {});
+    if (!nowEnabled) {
       postJson("/api/beacon/cancel", { tab: project.tab }).catch(() => {});
     }
   };

@@ -608,7 +608,9 @@ class ContinuePopup(BasePopup):
         self._auto_timer      = QTimer()
         self._action_btns     = []   # all prompt buttons for keyboard nav
         self._primary_btns    = []
-        self._auto_continue   = True   # always ON on open — matches web beacon behaviour
+        # Start paused if the web app wrote the sentinel while Cockpit was running.
+        _pause_file = f"/tmp/cockpit-auto-continue-{label.lower()}"
+        self._auto_continue   = not os.path.exists(_pause_file)
         self._queue           = []     # in-memory queue (synced from /tmp file)
         self._queue_prev      = None   # last polled snapshot for change detection
         self._queue_container = None   # QWidget shown/hidden based on queue size
@@ -624,7 +626,8 @@ class ContinuePopup(BasePopup):
         self._load_queue()
         self._start_queue_poll()
         self._position()
-        if mode == "stop":
+        self._update_pause_btn()
+        if mode == "stop" and self._auto_continue:
             self._start_countdown()
 
     # ── Queue ──────────────────────────────────────────────────────────────────
