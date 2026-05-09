@@ -4,24 +4,9 @@ import { useState } from "react";
 import { X, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
+import { humanCronSchedule } from "@/lib/crons";
 import { Drawer } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
-
-function humanSchedule(expr: string, tz: string): string {
-  const map: Record<string, string> = {
-    "0 6 * * *": "Daily at 6:00",
-    "0 20 * * 5": "Every Friday at 20:00",
-    "0 20 * * 0-4": "Sun–Thu at 20:00",
-    "30 3 * * *": "Daily at 3:30",
-    "0 9 * * 1": "Every Monday at 9:00",
-    "0 4 * * 0": "Every Sunday at 4:00",
-    "0 7,11,15,19 * * *": "4× daily (7, 11, 15, 19)",
-    "0 10 * * 4": "Every Thursday at 10:00",
-    "0 9 1 * *": "1st of every month at 9:00",
-  };
-  const human = map[expr] ?? expr;
-  return `${human} (${tz})`;
-}
 
 export function JobDetail({
   job,
@@ -86,7 +71,7 @@ export function JobDetail({
               <h2 className="text-base font-semibold truncate" title={job.name}>{job.name}</h2>
             </div>
             <div className="text-xs text-text-tertiary mt-0.5">
-              {humanSchedule(job.schedule.expr, job.schedule.tz)}
+              {humanCronSchedule(job.schedule.expr, job.schedule.tz)}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">

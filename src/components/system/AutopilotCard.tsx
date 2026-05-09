@@ -5,6 +5,7 @@ import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle, Folder } from "lucide
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons";
+import { humanCronSchedule } from "@/lib/crons";
 import { patchCronJob } from "@/lib/api/crons";
 import { JobDetail } from "./JobDetail";
 
@@ -16,21 +17,6 @@ function StatusDot({ status, errors }: { status?: string; errors?: number }) {
   if (errors && errors > 0)
     return <span className="ui-dot ui-dot-negative shrink-0" title={`${errors} errors`} />;
   return <span className="ui-dot ui-dot-warning shrink-0" title="Unknown" />;
-}
-
-function humanSchedule(expr: string): string {
-  const map: Record<string, string> = {
-    "0 6 * * *": "Daily 6:00",
-    "0 20 * * 5": "Fri 20:00",
-    "0 20 * * 0-4": "Sun–Thu 20:00",
-    "30 3 * * *": "Daily 3:30",
-    "0 9 * * 1": "Mon 9:00",
-    "0 4 * * 0": "Sun 4:00",
-    "0 7,11,15,19 * * *": "4× daily",
-    "0 10 * * 4": "Thu 10:00",
-    "0 9 1 * *": "Monthly 1st",
-  };
-  return map[expr] ?? expr;
 }
 
 function JobRow({
@@ -64,7 +50,7 @@ function JobRow({
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-text-tertiary">{humanSchedule(job.schedule.expr)}</span>
+          <span className="text-xs text-text-tertiary">{humanCronSchedule(job.schedule.expr)}</span>
           {hasError && job.state?.lastError && (
             <span className="flex items-center gap-1 text-[10px] text-status-negative/70 truncate" title={job.state.lastError}>
               <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
