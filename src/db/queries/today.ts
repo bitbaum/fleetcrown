@@ -6,7 +6,7 @@ import {
 } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events } from "@/db/schema";
+import { commitments, subscriptions, goals, alerts, actions, events, projectStates } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
@@ -225,4 +225,32 @@ export async function getTodaySummary(userId: string) {
     habitsTotal: Number(habitRow?.total ?? 0),
     habitsDone: Number(habitRow?.done ?? 0),
   };
+}
+
+/** Counts agents with an active prompt (running) or recently finished (ready/waiting).
+ *  Uses project_states DB only — no process scanning — so it's fast and safe for server components.
+ *  A project is "running" when it has a current prompt started within the last 4 hours.
+ *  A project is "waiting" when readyAt is within the last 10 minutes and no prompt is active. */
+export async function getFleetSummary(userId: string) {
+  const cutoff4h = new Date(Date.now() - 4 * 60 * 60 * 1000);
+  const cutoff10m = new Date(Date.now() - 10 * 60 * 1000);
+
+  const rows = await db
+    .select({
+      currentPromptStartedAt: projectStates.currentPromptStartedAt,
+      readyAt: projectStates.readyAt,
+    })
+    .from(projectStates)
+    .where(eq(projectStates.userId, userId));
+
+  let running = 0;
+  let waiting = 0;
+  for (const r of rows) {
+    if (r.currentPromptStartedAt && r.currentPromptStartedAt > cutoff4h) {
+      running++;
+    } else if (r.readyAt && r.readyAt > cutoff10m) {
+      waiting++;
+    }
+  }
+  return { running, waiting };
 }

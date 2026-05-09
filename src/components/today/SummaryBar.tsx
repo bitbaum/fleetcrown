@@ -1,11 +1,11 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2 } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot } from "lucide-react";
 import Link from "next/link";
-import { getTodaySummary } from "@/db/queries/today";
+import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
 
 export async function SummaryBar() {
   const userId = await getCurrentUserId();
-  const s = await getTodaySummary(userId);
+  const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -41,6 +41,12 @@ export async function SummaryBar() {
       {s.urgentAlerts > 0 && (
         <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" href="#alerts" />
       )}
+      {fleet.running > 0 && (
+        <Pill icon={Bot} value={`${fleet.running} running`} variant="accent" href="/control" />
+      )}
+      {fleet.waiting > 0 && (
+        <Pill icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href="/control" />
+      )}
     </div>
   );
 }
@@ -53,7 +59,7 @@ function Pill({
 }: {
   icon: typeof Target;
   value: string;
-  variant?: "amber" | "red" | "green";
+  variant?: "amber" | "red" | "green" | "accent";
   href?: string;
 }) {
   const colors = variant === "red"
@@ -62,7 +68,9 @@ function Pill({
       ? "border-status-warning/20 bg-status-warning-subtle text-status-warning"
       : variant === "green"
         ? "border-status-positive/20 bg-status-positive-subtle text-status-positive"
-        : "border-border-default bg-surface-base text-text-secondary";
+        : variant === "accent"
+          ? "border-accent-primary/20 bg-accent-muted text-accent-text"
+          : "border-border-default bg-surface-base text-text-secondary";
 
   const inner = (
     <>
