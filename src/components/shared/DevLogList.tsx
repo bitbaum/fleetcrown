@@ -1,6 +1,6 @@
 import type { DevLogEntry } from "@/db/schema/user-projects";
 
-const HEALTH_STYLE: Record<string, string> = {
+export const HEALTH_STYLE: Record<string, string> = {
   good:              "ui-tag ui-tag-positive",
   "needs attention": "ui-tag ui-tag-warning",
   critical:          "ui-tag ui-tag-negative",

@@ -9,6 +9,8 @@ import { notFound } from "next/navigation";
 import { CockpitMark } from "@/components/shell/CockpitMark";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { listThoughts } from "@/lib/thoughts-content";
+import { HEALTH_STYLE } from "@/components/shared/DevLogList";
+import type { DevLogEntry } from "@/db/schema/user-projects";
 
 export async function generateMetadata({
   params,
@@ -85,36 +87,45 @@ export default async function PublicProfilePage({
             <p className="text-sm text-text-tertiary">No public projects yet.</p>
           ) : (
             <div className="space-y-3">
-              {projects.map((project) => (
-                <a
-                  key={project.id}
-                  href={project.gitUrl!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ui-card-shell block p-4 transition-colors hover:bg-surface-raised"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-text-primary">{project.name}</span>
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+              {projects.map((project) => {
+                const log = project.devLog as DevLogEntry[];
+                const latest = log.length > 0 ? log[log.length - 1] : null;
+                const healthKey = (latest?.health ?? "").toLowerCase();
+                const healthCls = HEALTH_STYLE[healthKey];
+                return (
+                  <a
+                    key={project.id}
+                    href={project.gitUrl!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ui-card-shell block p-4 transition-colors hover:bg-surface-raised"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-text-primary">{project.name}</span>
+                          <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+                        </div>
+                        {project.description && (
+                          <p className="mt-1 text-sm text-text-secondary line-clamp-2">
+                            {project.description}
+                          </p>
+                        )}
                       </div>
-                      {project.description && (
-                        <p className="mt-1 text-sm text-text-secondary line-clamp-2">
-                          {project.description}
-                        </p>
+                      {healthCls && (
+                        <span className={`${healthCls} shrink-0`}>{latest!.health}</span>
                       )}
                     </div>
-                  </div>
-                  {project.stack && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {project.stack.split(/[,·\s]+/).filter(Boolean).map((tech) => (
-                        <span key={tech} className="ui-tag ui-tag-neutral">{tech}</span>
-                      ))}
-                    </div>
-                  )}
-                </a>
-              ))}
+                    {project.stack && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {project.stack.split(/[,·\s]+/).filter(Boolean).map((tech) => (
+                          <span key={tech} className="ui-tag ui-tag-neutral">{tech}</span>
+                        ))}
+                      </div>
+                    )}
+                  </a>
+                );
+              })}
             </div>
           )}
         </section>
