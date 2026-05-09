@@ -28,6 +28,7 @@ export function ProjectCard({
   onRunWithBrain,
   onRunCustomPrompt,
   onCollapse,
+  isOnlyReady = false,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -38,6 +39,7 @@ export function ProjectCard({
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   onCollapse?: () => void;
+  isOnlyReady?: boolean;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -222,6 +224,34 @@ export function ProjectCard({
 
   const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0;
 
+  // Keyboard: 1–9 dispatch prompt slots when this is the sole ready project on the page.
+  // Mirrors the beacon popup pattern. Guards inputs/textareas and in-progress sends.
+  const sendRef = useRef(send);
+  useEffect(() => { sendRef.current = send; });
+  const sendingRef = useRef(sending);
+  useEffect(() => { sendingRef.current = sending; }, [sending]);
+
+  useEffect(() => {
+    if (!isOnlyReady) return;
+    const handler = (e: KeyboardEvent) => {
+      if (sendingRef.current) return;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const n = parseInt(e.key);
+      if (!isNaN(n) && n >= 1 && n <= 9) {
+        const all = [
+          ...prompts.filter((p) => p.style === "primary"),
+          ...prompts.filter((p) => p.style === "action"),
+        ];
+        const pick = all.find((p) => p.slot === n) ?? all[n - 1];
+        if (pick) sendRef.current(pick.key);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOnlyReady, prompts]);
+
   return (
     <div
       className={cn(
@@ -281,6 +311,7 @@ export function ProjectCard({
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={handleAutoInject}
+            showKeyHints={isOnlyReady}
           />
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 

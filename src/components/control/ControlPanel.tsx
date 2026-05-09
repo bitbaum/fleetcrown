@@ -10,7 +10,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
-import { buildControlPageState } from "./control-presenter";
+import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
@@ -113,6 +113,15 @@ export function ControlPanel() {
   const activeProjects = pageState?.activeProjects ?? [];
   const idleProjects = pageState?.idleProjects ?? [];
   const dashboard = pageState?.dashboard ?? null;
+
+  // Keyboard shortcuts (1–9) activate only when exactly one project is ready.
+  const readyTabs = data
+    ? activeProjects.filter((p) => {
+        const s = getProjectDisplayState(p, data.zellijTabs, nowS);
+        return s.isReady || s.isOrchestrationReady;
+      }).map((p) => p.tab)
+    : [];
+  const soloReadyTab = readyTabs.length === 1 ? readyTabs[0] : null;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -307,6 +316,7 @@ export function ControlPanel() {
                 key={project.tab}
                 {...cardProps(project)}
                 onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
+                isOnlyReady={soloReadyTab === project.tab}
               />
             ))}
 

@@ -146,6 +146,7 @@ export function ReadyBanner({
   autoContinueEnabled = true,
   nextQueueItem,
   queueTotal = 0,
+  showKeyHints = false,
 }: {
   tab?: string;
   prompts: PromptMeta[];
@@ -157,6 +158,7 @@ export function ReadyBanner({
   autoContinueEnabled?: boolean;
   nextQueueItem?: string;
   queueTotal?: number;
+  showKeyHints?: boolean;
 }) {
   const [seconds, setSeconds] = useState(() => {
     if (tab) {
@@ -226,13 +228,16 @@ export function ReadyBanner({
       </p>
 
       <div className="ui-control-intent-grid">
-        {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p) => (
+        {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (
           <button
             key={p.key}
             onClick={() => onSend(p.key)}
             className={cn(PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action)}
           >
             {p.icon} {p.label}
+            {showKeyHints && (
+              <span className="font-mono text-micro opacity-50 tabular-nums">[{p.slot ?? i + 1}]</span>
+            )}
           </button>
         ))}
       </div>

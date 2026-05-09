@@ -264,6 +264,7 @@ export function ProjectBanners({
   onDismiss,
   onSend,
   onAutoInject,
+  showKeyHints = false,
 }: {
   tab: string;
   isClosed: boolean;
@@ -284,6 +285,7 @@ export function ProjectBanners({
   onDismiss: () => void;
   onSend: (key: string) => void;
   onAutoInject?: () => void;
+  showKeyHints?: boolean;
 }) {
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
@@ -310,6 +312,7 @@ export function ProjectBanners({
           autoContinueEnabled={autoContinueEnabled}
           nextQueueItem={nextQueueItem}
           queueTotal={queueTotal}
+          showKeyHints={showKeyHints}
         />
       )}
       {isOrchReady && (
@@ -328,6 +331,7 @@ export function ProjectBanners({
           autoContinueEnabled={autoContinueEnabled}
           nextQueueItem={nextQueueItem}
           queueTotal={queueTotal}
+          showKeyHints={showKeyHints}
         />
       )}
       {showRunning && currentPrompt && (
