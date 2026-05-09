@@ -21,7 +21,7 @@ export async function AlertsCard() {
   const urgentCount = items.filter((a) => a.severity === ALERT_SEVERITY.URGENT).length;
 
   return (
-    <div className="md:col-span-2">
+    <div id="alerts" className="md:col-span-2">
       <Card>
         <CardHeader
           icon={Bell}
