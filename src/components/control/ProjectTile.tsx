@@ -79,6 +79,11 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
               {getHealthShort(session.health)}
             </span>
           )}
+          {(git?.todayCount ?? 0) > 0 && (
+            <span className="text-status-positive/80" title={`${git!.todayCount} commit${git!.todayCount > 1 ? "s" : ""} today`}>
+              +{git!.todayCount}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
