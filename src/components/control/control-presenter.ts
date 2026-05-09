@@ -155,9 +155,7 @@ function compareProjects(
 
   const aActiveGit = (a.git?.todayCount ?? 0) > 0 ? 0 : 1;
   const bActiveGit = (b.git?.todayCount ?? 0) > 0 ? 0 : 1;
-  if (aActiveGit !== bActiveGit) return aActiveGit - bActiveGit;
-
-  return a.tab.localeCompare(b.tab);
+  return aActiveGit - bActiveGit;
 }
 
 export function buildControlPageState(
@@ -165,9 +163,12 @@ export function buildControlPageState(
   expandedTabs: Set<string>,
   nowS: number,
 ): ControlPageState {
-  const sortedProjects = [...data.projects].sort((a, b) =>
-    compareProjects(a, b, data.zellijTabs, nowS),
-  );
+  // Capture DB-order indices so user-defined position is the final tiebreaker.
+  // data.projects arrives ordered by user_projects.position from the API.
+  const withIndex = data.projects.map((p, i) => ({ p, i }));
+  const sortedProjects = withIndex
+    .sort((a, b) => compareProjects(a.p, b.p, data.zellijTabs, nowS) || (a.i - b.i))
+    .map(({ p }) => p);
 
   const activeProjects = sortedProjects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);

@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, Trash2, Plus } from "lucide-react";
-import { postJson, deleteJson } from "@/lib/api/fetch";
+import { useRef, useState } from "react";
+import { Loader2, Trash2, Plus, GripVertical } from "lucide-react";
+import { postJson, deleteJson, patchJson } from "@/lib/api/fetch";
 import type { UserProject } from "@/db/schema";
+import { cn } from "@/lib/utils";
 
 type Props = { projects: UserProject[] };
 
 export function ProjectsSettings({ projects: initial }: Props) {
   const [projects, setProjects] = useState(initial);
+  const dragIndex = useRef<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [dirPath, setDirPath] = useState("");
@@ -48,6 +51,20 @@ export function ProjectsSettings({ projects: initial }: Props) {
       return;
     }
     setProjects((p) => p.filter((x) => x.id !== id));
+  };
+
+  const reorder = (from: number, to: number) => {
+    if (from === to) return;
+    setProjects((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      // Persist new positions fire-and-forget
+      next.forEach((p, i) => {
+        patchJson(`/api/user-projects/${p.id}`, { position: i }).catch(() => {});
+      });
+      return next;
+    });
   };
 
   return (
@@ -104,12 +121,18 @@ export function ProjectsSettings({ projects: initial }: Props) {
         <p className="text-sm text-text-secondary">No projects yet.</p>
       ) : (
         <ul className="space-y-2">
-          {projects.map((p) => (
+          {projects.map((p, i) => (
             <li
               key={p.id}
-              className="ui-list-item"
+              draggable
+              onDragStart={() => { dragIndex.current = i; }}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+              onDrop={() => { if (dragIndex.current !== null && dragIndex.current !== i) reorder(dragIndex.current, i); dragIndex.current = null; setDragOver(null); }}
+              onDragEnd={() => { setDragOver(null); dragIndex.current = null; }}
+              className={cn("ui-list-item", dragOver === i && "bg-accent-primary/5")}
             >
-              <div className="min-w-0">
+              <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-text-muted/50 active:cursor-grabbing" />
+              <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>
                 {p.dirPath && (
                   <div className="text-xs text-text-tertiary truncate font-mono" title={p.dirPath}>{p.dirPath}</div>
