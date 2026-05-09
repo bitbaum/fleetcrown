@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
-import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
+import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S, getHealthShort } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
@@ -15,8 +15,8 @@ import type { PromptMeta } from "@/lib/agent-config";
 export function SessionBadge({ health }: { health: string }) {
   // Agents write verbose health like "GOOD — deployed; all tests pass" or
   // "LINT CLEAN, BUILD CLEAN, 0 TS ERRORS". Extract first segment as badge label.
-  const short = health.split(/\s*[,—–]\s*/)[0].trim();
-  const color = HEALTH_COLOR[short.toLowerCase()] ?? "text-text-tertiary";
+  const short = getHealthShort(health);
+  const color = HEALTH_COLOR[short] ?? "text-text-tertiary";
   const hasMore = short.length < health.trim().length;
   return (
     <span

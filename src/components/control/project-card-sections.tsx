@@ -14,6 +14,7 @@ import { postJson } from "@/lib/api/fetch";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
+import { getHealthShort } from "@/lib/constants/control";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import {
@@ -49,9 +50,7 @@ export function ProjectCardHeader({
   const lastActiveLabel = lastActiveMs
     ? compactRelativeDate(new Date(lastActiveMs))
     : git?.lastWhen ?? null;
-  const healthShort = session?.health
-    ? session.health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase()
-    : null;
+  const healthShort = session?.health ? getHealthShort(session.health) : null;
 
   const dotColor = project.agentRunning
     ? "text-accent-text animate-pulse"

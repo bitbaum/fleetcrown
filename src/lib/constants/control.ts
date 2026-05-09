@@ -18,6 +18,11 @@ export function withinWindow(ts: number | null, nowS: number, windowS: number): 
 /** Wire-format prefix used in beacon choice handshake: "custom:<prompt text>" */
 export const CUSTOM_CHOICE_PREFIX = "custom:";
 
+/** Extract the short health label from verbose agent output like "GOOD — deployed; all tests pass" */
+export function getHealthShort(health: string): string {
+  return health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase();
+}
+
 export const HEALTH_COLOR: Record<string, string> = {
   good:      "text-status-positive",
   degraded:  "text-status-warning",

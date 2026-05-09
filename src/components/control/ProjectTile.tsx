@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, GitBranch, Play, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { HEALTH_COLOR } from "@/lib/constants/control";
+import { HEALTH_COLOR, getHealthShort } from "@/lib/constants/control";
 import type { ProjectState } from "@/lib/control-types";
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch }: Props) {
   const { tab, git, session, agentRunning, dir } = project;
   const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? tab).toLowerCase());
-  const healthColor = session?.health ? (HEALTH_COLOR[session.health] ?? "text-text-muted") : null;
+  const healthColor = session?.health ? (HEALTH_COLOR[getHealthShort(session.health)] ?? "text-text-muted") : null;
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;
 
