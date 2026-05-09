@@ -12,6 +12,8 @@ function syncQueueToFile(tab: string, queue: string[]): void {
   }).catch(() => {/* best-effort */});
 }
 
+type QueueFileResult = { queue: string[]; exists: boolean };
+
 const EMPTY: string[] = [];
 const serialize = (v: string[]) => JSON.stringify(v);
 const deserialize = (raw: string) => JSON.parse(raw) as string[];
@@ -37,15 +39,46 @@ export function usePromptQueue(tab: string) {
     syncQueueToFile(tab, queue);
   }, [queue, tab]);
 
+  // On mount: bootstrap the file from localStorage if the file doesn't exist (e.g. after reboot).
+  // Without this, the first poll returns exists=false and the poll skips — but we also need to
+  // ensure the file is written so PyQt can see the queue on its next poll cycle.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`);
+        if (!res.ok) return;
+        const { queue: fileQueue, exists } = await res.json() as QueueFileResult;
+        if (exists) {
+          // File exists — treat it as authoritative (may have PyQt-written items).
+          setQueue((current) => {
+            if (JSON.stringify(fileQueue) === JSON.stringify(current)) return current;
+            fromPollRef.current = true;
+            return fileQueue;
+          });
+        } else {
+          // File missing (reboot / fresh /tmp). Write localStorage queue to file so PyQt sees it.
+          const raw = localStorage.getItem(queueKey(tab));
+          if (raw) {
+            const local = JSON.parse(raw) as string[];
+            if (local.length > 0) syncQueueToFile(tab, local);
+          }
+        }
+      } catch { /* best-effort */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
   // Poll the file every 2 s so PyQt changes (shift/enqueue) propagate back to the web app.
   // Skips the 2 s window after our own writes to avoid a read-back loop.
+  // Skips when file doesn't exist (exists=false) to avoid wiping localStorage after reboot.
   useEffect(() => {
     const t = setInterval(async () => {
       if (Date.now() - lastWriteRef.current < 2000) return;
       try {
         const res = await fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`);
         if (!res.ok) return;
-        const { queue: fileQueue } = await res.json() as { queue: string[] };
+        const { queue: fileQueue, exists } = await res.json() as QueueFileResult;
+        if (!exists) return; // file absent — don't overwrite localStorage with empty array
         setQueue((current) => {
           if (JSON.stringify(fileQueue) === JSON.stringify(current)) return current;
           fromPollRef.current = true;

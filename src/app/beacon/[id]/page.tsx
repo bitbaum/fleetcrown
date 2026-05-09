@@ -143,13 +143,21 @@ function BeaconBody({
   useEffect(() => {
     // Guard: don't fire before prompts are loaded or while mic is active.
     if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0 || listening || processing) return;
-    autoFiredRef.current = true;
-    const primary = prompts.find((p) => p.style === "primary");
-    const choice = queue.length > 0
-      ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
-      : primary ? String(primary.slot ?? primary.key) : "1";
-    if (queue.length > 0) remove(0);
-    submitRef.current(choice);
+    // 1s grace period before firing: the control panel's auto-inject fires at the same second
+    // and cancels this session via /api/inject → cancelActiveBeaconSessions. Waiting 1s gives
+    // the cancel time to propagate and the 500ms close-poll time to detect it and close this
+    // window before the auto-fire runs, eliminating the double-inject race.
+    const t = setTimeout(() => {
+      if (autoFiredRef.current) return;
+      autoFiredRef.current = true;
+      const primary = prompts.find((p) => p.style === "primary");
+      const choice = queue.length > 0
+        ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
+        : primary ? String(primary.slot ?? primary.key) : "1";
+      if (queue.length > 0) remove(0);
+      submitRef.current(choice);
+    }, 1000);
+    return () => clearTimeout(t);
   }, [countdown, autoContinueEnabled, prompts, queue, remove, listening, processing]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
@@ -385,6 +393,8 @@ export default function BeaconPage() {
   }, [id]);
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
+  // 500ms poll keeps the cancel-to-close latency short enough that the 1s auto-fire grace
+  // period in BeaconBody can reliably prevent a double-inject race.
   useEffect(() => {
     if (submitted) return;
     const interval = setInterval(async () => {
@@ -393,7 +403,7 @@ export default function BeaconPage() {
         const data = (await res.json()) as BeaconSession;
         if (data.choice !== null) window.close();
       } catch { /* network error — ignore */ }
-    }, 2000);
+    }, 500);
     return () => clearInterval(interval);
   }, [id, submitted]);
 

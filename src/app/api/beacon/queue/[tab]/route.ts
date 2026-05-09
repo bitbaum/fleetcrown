@@ -3,9 +3,13 @@ import fs from "fs";
 import { stateFile } from "@/lib/agent-config";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
-function readQueueFile(tab: string): string[] {
-  try { return JSON.parse(fs.readFileSync(stateFile.queue(tab), "utf-8")) as string[]; }
-  catch { return []; }
+function readQueueFile(tab: string): { queue: string[]; exists: boolean } {
+  const p = stateFile.queue(tab);
+  try {
+    return { queue: JSON.parse(fs.readFileSync(p, "utf-8")) as string[], exists: true };
+  } catch {
+    return { queue: [], exists: fs.existsSync(p) }; // exists=true means corrupt JSON, not missing
+  }
 }
 
 function writeQueueFile(tab: string, queue: string[]): void {
@@ -20,7 +24,7 @@ const PutBody = z.object({
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
   const { tab } = await params;
-  return NextResponse.json({ queue: readQueueFile(tab.toLowerCase()) });
+  return NextResponse.json(readQueueFile(tab.toLowerCase()));
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
