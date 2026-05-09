@@ -31,6 +31,26 @@ export async function handleApprove(id: string) {
   revalidatePath("/people");
 }
 
+export async function handleApproveAll(ids: string[]) {
+  const userId = await getCurrentUserId();
+  const results = await Promise.all(ids.map((id) => approveAction(id, userId)));
+  const approved = results.flat();
+  await Promise.all(
+    approved
+      .filter((a) => a.entityId && INTERACTION_ACTION_TYPES.has(a.type as ActionType))
+      .map((a) =>
+        createInteraction(userId, {
+          entityId: a.entityId!,
+          channel: String(a.payload?.channel ?? "other"),
+          direction: INTERACTION_DIRECTION.OUTBOUND,
+          summary: a.title,
+        }),
+      ),
+  );
+  revalidatePath("/today");
+  revalidatePath("/people");
+}
+
 export async function handleReject(id: string) {
   const userId = await getCurrentUserId();
   await rejectAction(id, userId);

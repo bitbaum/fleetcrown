@@ -5,6 +5,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
+import { ApproveGroupButton } from "./ApproveGroupButton";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 
@@ -117,8 +118,11 @@ export async function ActionQueueCard() {
               <div className="flex items-start gap-3">
                 <Users className="h-4 w-4 text-text-tertiary shrink-0 mt-1" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm md:text-base font-medium">
-                    Check in with {group.actions.length} people
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm md:text-base font-medium">
+                      Check in with {group.actions.length} people
+                    </div>
+                    <ApproveGroupButton ids={group.actions.map((a) => a.id)} />
                   </div>
                   <div className="mt-2 space-y-1.5">
                     {group.actions.map((a) => {
