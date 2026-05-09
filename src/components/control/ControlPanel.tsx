@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X } from "lucide-react";
+import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X, GitCommitHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
@@ -244,8 +244,11 @@ export function ControlPanel() {
                     </p>
                   </div>
                 </div>
-                {dashboard.inventoryNote && (
-                  <p className="text-sm leading-relaxed text-text-tertiary">{dashboard.inventoryNote}</p>
+                {dashboard.commitsToday > 0 && (
+                  <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
+                    <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
+                    <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits shipped today across the fleet</span>
+                  </div>
                 )}
               </div>
 

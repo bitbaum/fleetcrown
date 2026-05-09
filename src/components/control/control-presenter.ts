@@ -34,7 +34,7 @@ export type ControlDashboardState = {
   openTabCount: number;
   idleCount: number;
   expandedCount: number;
-  inventoryNote: string | null;
+  commitsToday: number;
 };
 
 export type ControlPageState = {
@@ -192,10 +192,7 @@ export function buildControlPageState(
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const idleCount = idleProjects.length;
   const expandedCount = expandedTabs.size;
-  const inventoryNote =
-    data.inventory.source === "user_projects"
-      ? `Source: Projects database · ${controlProjectCount} directory-backed projects available in Control`
-      : `Source: agent-projects.conf fallback · ${controlProjectCount} projects available in Control`;
+  const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
 
   return {
     activeProjects,
@@ -208,7 +205,7 @@ export function buildControlPageState(
       openTabCount,
       idleCount,
       expandedCount,
-      inventoryNote,
+      commitsToday,
     },
   };
 }
