@@ -11,7 +11,8 @@ import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
+import { GOAL_PROGRESS_THRESHOLDS } from "@/config/ui";
 
 export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
   const router = useRouter();
@@ -205,8 +206,11 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 <ProgressBar
                   value={progress}
                   minPercent={1}
+                  tone={getProgressTone(progress, {
+                    positiveAt: GOAL_PROGRESS_THRESHOLDS.healthyPct,
+                    warningAt: GOAL_PROGRESS_THRESHOLDS.cautionPct,
+                  })}
                   className="h-1.5 bg-surface-raised"
-                  indicatorClassName="bg-status-positive/60"
                 />
               </div>
             )}
