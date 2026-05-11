@@ -4,7 +4,7 @@ import { homedir } from "os";
 export const BEACON_SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
 
 export const WHISPER_MODEL_VALUES = ["tiny", "base", "small", "medium", "large"] as const;
-export type WhisperModel = (typeof WHISPER_MODEL_VALUES)[number];
+type WhisperModel = (typeof WHISPER_MODEL_VALUES)[number];
 
 export const WHISPER_MODELS: readonly { value: WhisperModel; label: string; note: string }[] = [
   { value: "tiny",   label: "Tiny",   note: "~39 MB · fastest, lower accuracy" },

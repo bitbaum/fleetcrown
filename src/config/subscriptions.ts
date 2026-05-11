@@ -18,7 +18,7 @@ export const FREQUENCY = {
 export const VALID_CURRENCIES = ["CHF", "USD", "EUR", "GBP"] as const;
 export type SubscriptionCurrency = typeof VALID_CURRENCIES[number];
 
-export type SubscriptionMeta = {
+type SubscriptionMeta = {
   verifyUrl: string;
   cancelUrl: string;
   alternatives: string[];

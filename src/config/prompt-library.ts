@@ -17,7 +17,7 @@ export type PromptCategory =
   | "research"
   | "personal";
 
-export type PromptScope = "global" | "project";
+type PromptScope = "global" | "project";
 
 export type PromptTemplate = {
   id: string;

@@ -2,9 +2,9 @@ import { MessageCircle, Mail, Send, Phone, Users, HelpCircle } from "lucide-reac
 import type { LucideIcon } from "lucide-react";
 
 /** Prefix used to mark a person attribute as a contact channel. */
-export const CHANNEL_ATTR_PREFIX = "channel:";
+const CHANNEL_ATTR_PREFIX = "channel:";
 
-export type ChannelConfig = {
+type ChannelConfig = {
   icon: LucideIcon;
   label: string;
   color: string;
