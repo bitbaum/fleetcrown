@@ -40,6 +40,19 @@ export function PeopleGrid({
   const LIMIT = 50;
   const skipInitialFetch = useRef(true);
 
+  // Keep URL bar in sync with health filter so the link is bookmarkable/shareable.
+  // Uses replaceState (not router.replace) to avoid triggering a server re-render.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (healthFilter.length > 0) {
+      params.set("health", healthFilter.join(","));
+    } else {
+      params.delete("health");
+    }
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [healthFilter]);
+
   const search = useCallback(
     async (q: string, s: SortMode, hf: RelationshipHealth[], newOffset: number, signal?: AbortSignal) => {
       setLoading(true);
