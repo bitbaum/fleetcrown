@@ -104,6 +104,7 @@ export function getProjectDisplayState(
   );
   const isActive =
     isRunning ||
+    isOrchestrationReady ||
     withinWindow(project.readyAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closingAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closedAt, nowS, ACTIVE_WINDOW_S) ||
