@@ -35,7 +35,7 @@ export async function SummaryBar() {
           icon={Users}
           value={`${s.staleContacts} contacts need attention`}
           variant="amber"
-          href="/people?health=fading%2Cstale"
+          href="/people?health=stale"
         />
       )}
       {s.urgentAlerts > 0 && (

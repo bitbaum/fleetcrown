@@ -8,7 +8,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
-import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
+import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S } from "@/lib/constants/control";
 import { z } from "zod";
@@ -205,7 +205,7 @@ export async function getTodaySummary(userId: string) {
         JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${userId}
         WHERE e.user_id = ${userId} AND e.type = ${ENTITY_TYPE.PERSON} AND (e.external_id IS NULL OR e.external_id != ${DEFAULT_USER_EXTERNAL_ID})
         GROUP BY e.id
-        HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})
+        HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})
       ) sub
     `),
   ]);

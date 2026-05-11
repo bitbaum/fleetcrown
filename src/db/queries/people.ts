@@ -44,7 +44,6 @@ export const PatchPersonBody = z
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
 // Build HAVING clause for health filtering — all health values are enum literals, not user input
-// Thresholds sourced from HEALTH_ACTIVE_DAYS / HEALTH_FADING_DAYS in lib/utils.ts
 function buildHealthHaving(health: RelationshipHealth[]): SQL {
   const clauses: SQL[] = [];
   if (health.includes("active"))  clauses.push(sql`max(i.occurred_at) >= now() - make_interval(days => ${HEALTH_ACTIVE_DAYS})`);
