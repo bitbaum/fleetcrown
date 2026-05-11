@@ -10,7 +10,7 @@ import { commitments, subscriptions, goals, alerts, actions, events, projectStat
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
-import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S } from "@/lib/constants/control";
+import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort } from "@/lib/constants/control";
 import { z } from "zod";
 
 export const CreateCommitmentBody = z.object({
@@ -239,18 +239,24 @@ export async function getFleetSummary(userId: string) {
     .select({
       currentPromptStartedAt: projectStates.currentPromptStartedAt,
       readyAt: projectStates.readyAt,
+      sessionHealth: projectStates.sessionHealth,
     })
     .from(projectStates)
     .where(eq(projectStates.userId, userId));
 
   let running = 0;
   let waiting = 0;
+  let degraded = 0;
   for (const r of rows) {
     if (r.currentPromptStartedAt && r.currentPromptStartedAt > cutoffRunning) {
       running++;
     } else if (r.readyAt && r.readyAt > cutoffWaiting) {
       waiting++;
     }
+    if (r.sessionHealth) {
+      const short = getHealthShort(r.sessionHealth);
+      if (short === "degraded" || short === "critical") degraded++;
+    }
   }
-  return { running, waiting };
+  return { running, waiting, degraded };
 }

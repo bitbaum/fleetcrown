@@ -1,4 +1,4 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity } from "lucide-react";
 import Link from "next/link";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
@@ -40,6 +40,9 @@ export async function SummaryBar() {
       )}
       {s.urgentAlerts > 0 && (
         <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" href="#alerts" />
+      )}
+      {fleet.degraded > 0 && (
+        <Pill icon={Activity} value={`${fleet.degraded} degraded`} variant="amber" href="/control" />
       )}
       {fleet.running > 0 && (
         <Pill icon={Bot} value={`${fleet.running} running`} variant="accent" href="/control" />
