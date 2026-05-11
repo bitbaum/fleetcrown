@@ -18,10 +18,12 @@ export const PatchHabitBody = z
     done: z.boolean().optional(),
     title: z.string().trim().min(1, "title cannot be empty").optional(),
     frequency: z.enum(HABIT_FREQUENCIES).optional(),
+    active: z.boolean().optional(),
   })
-  .refine((v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined, {
-    message: "done, title, or frequency is required",
-  });
+  .refine(
+    (v) => v.done !== undefined || v.title !== undefined || v.frequency !== undefined || v.active !== undefined,
+    { message: "done, title, frequency, or active is required" },
+  );
 
 const todayDate = () => toLocalDateStr(new Date());
 
@@ -214,12 +216,13 @@ export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTO
 
 export async function updateHabit(
   id: string,
-  fields: { title?: string; frequency?: HabitFrequency },
+  fields: { title?: string; frequency?: HabitFrequency; active?: boolean },
   userId: string,
 ): Promise<void> {
   const set: Partial<typeof habits.$inferInsert> = {};
-  if (fields.title)     set.title     = fields.title.trim();
-  if (fields.frequency) set.frequency = fields.frequency;
+  if (fields.title)              set.title     = fields.title.trim();
+  if (fields.frequency)          set.frequency = fields.frequency;
+  if (fields.active !== undefined) set.active  = fields.active;
   if (Object.keys(set).length === 0) return;
   await db
     .update(habits)

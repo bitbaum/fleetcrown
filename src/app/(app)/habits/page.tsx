@@ -1,9 +1,9 @@
-import { Repeat2, Flame } from "lucide-react";
+import { Repeat2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
-import { getAllHabitsWithHistory, scheduledDays } from "@/db/queries/habits";
+import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { getCurrentUserId } from "@/lib/session";
-import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
+import { HabitCard } from "@/components/habits/HabitCard";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
@@ -38,42 +38,9 @@ export default async function HabitsPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {habits.map((h) => {
-            const scheduled = scheduledDays(h.frequency, HABIT_HISTORY_DAYS);
-            const pct = Math.round((h.completionsInWindow / scheduled) * 100);
-
-            return (
-              <Card key={h.id} className={h.active ? "" : "opacity-50"}>
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-medium text-text-primary">{h.title}</span>
-                      {!h.active && (
-                        <span className="ui-tag ui-tag-neutral">inactive</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-sm text-text-secondary">{h.frequency}</span>
-                      {h.streak >= 2 && (
-                        <span className="flex items-center gap-1 text-sm text-status-warning">
-                          <Flame className="h-3 w-3" />
-                          {h.streak}-day streak
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-lg font-medium text-text-primary">{pct}%</div>
-                    <div className="text-sm text-text-tertiary">{h.completionsInWindow}/{scheduled}d</div>
-                  </div>
-                </div>
-                <HabitHeatmap
-                  completedDates={[...h.completedDates]}
-                  frequency={h.frequency}
-                />
-              </Card>
-            );
-          })}
+          {habits.map((h) => (
+            <HabitCard key={h.id} habit={h} />
+          ))}
           <AddHabitButton />
         </div>
       )}

@@ -21,7 +21,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
-  await updateHabit(id, { title: dataOrResp.title, frequency: dataOrResp.frequency }, userId);
+  await updateHabit(id, { title: dataOrResp.title, frequency: dataOrResp.frequency, active: dataOrResp.active }, userId);
   return NextResponse.json({ ok: true });
 }
 
