@@ -121,7 +121,7 @@ function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]
         </a>
       )}
       {(profile.stack || extraAttrs.length > 0) && (
-        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-base">
+        <div className="ui-panel overflow-hidden">
           {profile.stack && <MetaRow label="Stack">{profile.stack}</MetaRow>}
           {extraAttrs.map(([k, v]) => (
             <MetaRow key={k} label={k.replace(/_/g, " ")}>{v}</MetaRow>

@@ -163,7 +163,7 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
   const healthColor = HEALTH_COLOR[healthShort] ?? "text-text-secondary";
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface-base overflow-hidden">
+    <div className="ui-panel overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle/50">
         <div className="flex items-center gap-2 text-text-secondary">

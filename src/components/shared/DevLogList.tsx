@@ -13,7 +13,7 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
         const healthKey = (entry.health ?? "").toLowerCase();
         const healthCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
         return (
-          <div key={i} className="rounded-xl border border-border-subtle bg-surface-base p-3 space-y-1.5">
+          <div key={i} className="ui-panel p-3 space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-text-muted">{dateStr} <span className="text-text-muted/60">{timeStr}</span></span>
               {entry.health && <span className={healthCls}>{entry.health}</span>}
