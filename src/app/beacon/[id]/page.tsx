@@ -143,8 +143,10 @@ function BeaconBody({
   }, [autoContinueEnabled, isComposing, prompts.length]);
 
   useEffect(() => {
-    // Guard: don't fire before prompts are loaded or while mic is active.
-    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0 || listening || processing) return;
+    // Guard: don't fire before prompts are loaded or while user is composing (typing, recording, transcribing).
+    // isComposing already covers listening + processing — using it here keeps the guard consistent
+    // with the countdown-pause logic above and prevents auto-fire while the user is mid-sentence.
+    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0 || isComposing) return;
     // 1s grace period before firing: the control panel's auto-inject fires at the same second
     // and cancels this session via /api/inject → cancelActiveBeaconSessions. Waiting 1s gives
     // the cancel time to propagate and the 500ms close-poll time to detect it and close this
@@ -160,7 +162,7 @@ function BeaconBody({
       submitRef.current(choice);
     }, 1000);
     return () => clearTimeout(t);
-  }, [countdown, autoContinueEnabled, prompts, queue, remove, listening, processing]);
+  }, [countdown, autoContinueEnabled, prompts, queue, remove, isComposing]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {
