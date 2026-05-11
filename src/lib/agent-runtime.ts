@@ -1,6 +1,5 @@
 import { execSync } from "child_process";
-import fs from "fs";
-import { buildAgentOptionLaunchCommand, type Agent, type AgentOption, getAgentRegistryEntry } from "@/lib/agent-registry";
+import { buildAgentOptionLaunchCommand, type AgentOption } from "@/lib/agent-registry";
 import { parseProjectsConf } from "@/lib/agent-config";
 
 export type ProjectTab = {
@@ -81,32 +80,3 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
   restartTab(tab, command);
 }
 
-let cwdCache: { key: string; cwds: string[]; builtAt: number } | null = null;
-
-export function getAgentCwds(agent: Agent): string[] {
-  const now = Date.now();
-  if (cwdCache && cwdCache.key === agent && now - cwdCache.builtAt < 3000) {
-    return cwdCache.cwds;
-  }
-
-  const matchers = getAgentRegistryEntry(agent).processMatchers;
-  const cwds: string[] = [];
-
-  try {
-    for (const entry of fs.readdirSync("/proc")) {
-      if (!/^\d+$/.test(entry)) continue;
-      try {
-        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
-        if (!matchers.some((matcher) => cmdline.includes(matcher))) continue;
-        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
-      } catch {
-        // Ignore processes that disappeared mid-scan.
-      }
-    }
-  } catch {
-    // Ignore systems where /proc is unavailable.
-  }
-
-  cwdCache = { key: agent, cwds, builtAt: now };
-  return cwds;
-}
