@@ -5,14 +5,7 @@ import { Loader2 } from "lucide-react";
 import { getJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
 import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
-
-const WHISPER_MODELS = [
-  { value: "tiny",   label: "Tiny",   note: "~39 MB · fastest, lower accuracy" },
-  { value: "base",   label: "Base",   note: "~74 MB · good balance (default)" },
-  { value: "small",  label: "Small",  note: "~244 MB · better accuracy" },
-  { value: "medium", label: "Medium", note: "~769 MB · high accuracy" },
-  { value: "large",  label: "Large",  note: "~1.5 GB · best accuracy, slowest" },
-] as const;
+import { WHISPER_MODELS } from "@/config/beacon";
 
 export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);

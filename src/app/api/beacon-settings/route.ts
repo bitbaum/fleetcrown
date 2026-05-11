@@ -4,14 +4,13 @@ import { homedir } from "os";
 import { join, dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { WHISPER_MODEL_VALUES } from "@/config/beacon";
 
 const SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
 
-const VALID_MODELS = ["tiny", "base", "small", "medium", "large"] as const;
-
 const PatchBody = z.object({
   countdown_seconds: z.number().int().min(5).max(300).optional(),
-  whisper_model: z.enum(VALID_MODELS).optional(),
+  whisper_model: z.enum(WHISPER_MODEL_VALUES).optional(),
   prefer_browser_ready_ui: z.boolean().optional(),
 });
 

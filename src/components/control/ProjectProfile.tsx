@@ -24,8 +24,6 @@ const DIMENSION_META: Record<string, { label: string; icon: string }> = {
   deploy:      { label: "Deploy",       icon: "🚀" },
 };
 
-const DIMENSION_ORDER = ["engineering", "product", "ux", "marketing", "content", "business", "deploy"];
-
 function interpolate(
   template: string,
   ctx: { name: string; path: string; mission?: string; stack?: string; url?: string },
@@ -323,7 +321,7 @@ export function ProjectProfile({
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
 
-  // Group dimension prompts by dimensionId, ordered by DIMENSION_ORDER
+  // Group dimension prompts by dimensionId, ordered by DIMENSION_META insertion order
   const dimensionGroups = useMemo(() => {
     if (!allPrompts) return [];
     const byDim = new Map<string, AgentPrompt[]>();
@@ -332,7 +330,7 @@ export function ProjectProfile({
       if (!byDim.has(p.dimensionId)) byDim.set(p.dimensionId, []);
       byDim.get(p.dimensionId)!.push(p);
     }
-    return DIMENSION_ORDER.filter((id) => byDim.has(id)).map((id) => ({
+    return Object.keys(DIMENSION_META).filter((id) => byDim.has(id)).map((id) => ({
       id,
       prompts: byDim.get(id)!,
     }));
