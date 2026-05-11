@@ -198,40 +198,6 @@ export function sanitizeAgentId(value: string | undefined): Agent {
   return value === "claude" ? "claude" : "codex";
 }
 
-export function sanitizeAgentOption(value: string | undefined): AgentOption {
-  if (value === "claude" || value === "openclaw" || value === "gemini") return value;
-  return "codex";
-}
-
-function listSwitchableAgentRegistry(): Array<AgentRegistryEntry & { id: Agent }> {
-  return listAgentRegistry().filter((entry): entry is AgentRegistryEntry & { id: Agent } => entry.switchable);
-}
-
-export function getDefaultAgentId(): Agent {
-  return listSwitchableAgentRegistry()[0]?.id ?? "codex";
-}
-
-export function getAgentRegistryEntry(agent: AgentOption): AgentRegistryEntry {
-  const registry = listAgentRegistry();
-  return registry.find((entry) => entry.id === agent) ?? registry[0];
-}
-
-export function getDefaultAgentConfig(): { agent: Agent; model: string } {
-  const first = listSwitchableAgentRegistry()[0];
-  return { agent: first?.id ?? "codex", model: first?.defaultModel ?? "gpt-5.4" };
-}
-
-export function sanitizeAgentConfig(raw: Partial<{ agent: string; model: string }>): { agent: Agent; model: string } {
-  const fallback = getDefaultAgentConfig();
-  const agent = sanitizeAgentId(raw.agent) ?? fallback.agent;
-  const definition = getAgentRegistryEntry(agent);
-  const model = typeof raw.model === "string" && raw.model.trim()
-    ? raw.model.trim()
-    : definition.defaultModel;
-
-  return { agent, model };
-}
-
 export function syncAgentSettings(agent: Agent, model: string): void {
   if (agent !== "claude") return;
 

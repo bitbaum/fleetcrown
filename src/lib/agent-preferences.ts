@@ -9,7 +9,7 @@ const DEFAULT_MODELS: Record<Agent, string> = {
   claude: "sonnet",
 };
 
-export const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
+const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
 
 export type AgentPreferences = {
   defaultAgent: Agent;

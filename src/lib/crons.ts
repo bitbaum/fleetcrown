@@ -91,7 +91,7 @@ export function humanCronSchedule(expr: string, tz?: string): string {
 }
 
 /** Top-level shape of CRON_FILE — `version` is preserved on writes. */
-export type CronFileData = { version: number; jobs: CronJob[] };
+type CronFileData = { version: number; jobs: CronJob[] };
 
 /** Read the full cron file (jobs + version). Returns a default-shaped
  *  object if the file is missing; throws if the file is unreadable or

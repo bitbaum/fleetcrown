@@ -19,12 +19,12 @@
 import fs from "fs";
 import path from "path";
 
-export const CLAUDE_HOME = process.env.HOME ?? "/home/g";
-export const PROJECTS_CONF = process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "agent-projects.conf");
-export const CLAUDE_PROJECTS_CONF = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-projects.conf");
+const CLAUDE_HOME = process.env.HOME ?? "/home/g";
+const PROJECTS_CONF = process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "agent-projects.conf");
+const CLAUDE_PROJECTS_CONF = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-projects.conf");
 
 export const PROMPTS_FILE  = process.env.AGENT_PROMPTS_FILE ?? path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "agent-prompts.json");
-export const CLAUDE_PROMPTS_FILE  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts.json");
+const CLAUDE_PROMPTS_FILE  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts.json");
 
 export const SESSIONS_DIR  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".claude", "sessions");
 
@@ -59,7 +59,7 @@ export type PromptMeta = {
   category: string;
 };
 
-export type PromptConfig = PromptMeta & { prompt: string };
+type PromptConfig = PromptMeta & { prompt: string };
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
 /**
  * Read the unified claude-prompts.json (array format — SSOT for prompt text + metadata).
  */
-export function readPromptConfig(): PromptConfig[] {
+function readPromptConfig(): PromptConfig[] {
   try {
     let file = PROMPTS_FILE;
     if (!fs.existsSync(file)) {

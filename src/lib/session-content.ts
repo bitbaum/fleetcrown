@@ -18,7 +18,7 @@ export function splitSessionItems(text: string): string[] {
 
 // ── Beacon DB content parser ──────────────────────────────────────────────────
 
-export type ParsedSession = {
+type ParsedSession = {
   done: string[];
   next: string[];
   in_progress: string[];

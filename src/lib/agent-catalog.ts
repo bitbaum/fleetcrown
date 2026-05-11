@@ -2,7 +2,7 @@ import { listAgentRegistry, type AgentOption, type AgentRegistryEntry } from "@/
 
 export type SwitchableAgent = "codex" | "claude";
 
-export type AgentCatalogEntry = AgentRegistryEntry & {
+type AgentCatalogEntry = AgentRegistryEntry & {
   id: AgentOption;
 };
 
