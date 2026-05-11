@@ -59,20 +59,22 @@ export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] 
   return signals;
 }
 
+const HEALTH_BADGE_STYLE: Record<HealthSignal["kind"], string> = {
+  security:   "bg-status-negative-subtle text-status-negative border-status-negative/25",
+  broken:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  deployment: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+};
+
+const HEALTH_BADGE_ICON: Record<HealthSignal["kind"], string> = {
+  security:   "🔒",
+  broken:     "⚠",
+  deployment: "🔸",
+};
+
 export function HealthBadge({ signal }: { signal: HealthSignal }) {
-  const styles: Record<HealthSignal["kind"], string> = {
-    security:   "bg-status-negative-subtle text-status-negative border-status-negative/25",
-    broken:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
-    deployment: "bg-status-warning-subtle text-status-warning border-status-warning/25",
-  };
-  const icons: Record<HealthSignal["kind"], string> = {
-    security:   "🔒",
-    broken:     "⚠",
-    deployment: "🔸",
-  };
   return (
-    <span className={`ui-micro-badge gap-1 ${styles[signal.kind]}`}>
-      <span>{icons[signal.kind]}</span>
+    <span className={`ui-micro-badge gap-1 ${HEALTH_BADGE_STYLE[signal.kind]}`}>
+      <span>{HEALTH_BADGE_ICON[signal.kind]}</span>
       {signal.label}
     </span>
   );
