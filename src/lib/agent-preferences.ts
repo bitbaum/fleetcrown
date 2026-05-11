@@ -1,34 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { HOME } from "@/lib/constants";
-type Agent = "codex" | "claude";
+import { type Agent, sanitizeAgentId, syncAgentSettings } from "@/lib/agent-registry";
 
 const DEFAULT_AGENT: Agent = "claude";
 const DEFAULT_MODELS: Record<Agent, string> = {
   codex: "gpt-5.4",
   claude: "sonnet",
 };
-
-function sanitizeAgentId(value: string | undefined): Agent {
-  return value === "claude" ? "claude" : "codex";
-}
-
-function syncClaudeSettings(model: string): void {
-  const claudeSettingsFile = path.join(HOME, ".claude", "settings.json");
-  try {
-    let settings: Record<string, unknown> = {};
-    try {
-      settings = JSON.parse(fs.readFileSync(claudeSettingsFile, "utf-8")) as Record<string, unknown>;
-    } catch {
-      // keep empty object
-    }
-    settings.model = model.trim();
-    fs.mkdirSync(path.dirname(claudeSettingsFile), { recursive: true });
-    fs.writeFileSync(claudeSettingsFile, JSON.stringify(settings, null, 2));
-  } catch {
-    // do not fail preferences writes on claude sync issues
-  }
-}
 
 export const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
 
@@ -80,7 +59,7 @@ export function writeAgentPreferences(preferences: AgentPreferences): AgentPrefe
   fs.mkdirSync(path.dirname(AGENT_PREFERENCES_FILE), { recursive: true });
   fs.writeFileSync(AGENT_PREFERENCES_FILE, JSON.stringify(normalized, null, 2));
 
-  syncClaudeSettings(normalized.models.claude ?? DEFAULT_MODELS.claude);
+  syncAgentSettings("claude", normalized.models.claude ?? DEFAULT_MODELS.claude);
   return normalized;
 }
 
