@@ -5,8 +5,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { deadlineLabel } from "@/lib/dates";
 import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
-import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
-import { GOAL_PROGRESS_THRESHOLDS } from "@/config/ui";
+import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 
 export async function GoalsDueCard() {
   const userId = await getCurrentUserId();
@@ -36,14 +35,10 @@ export async function GoalsDueCard() {
                 {/* Progress ring (simple bar) */}
                 <div className="shrink-0 flex flex-col items-center gap-1 w-10">
                   <span className="text-xs font-mono text-text-secondary">{progress}%</span>
-                  <ProgressBar
+                  <GoalProgressBar
                     value={progress}
                     minPercent={2}
-                    tone={getProgressTone(progress, {
-                      positiveAt: GOAL_PROGRESS_THRESHOLDS.healthyPct,
-                      warningAt: GOAL_PROGRESS_THRESHOLDS.cautionPct,
-                      lowTone: "neutral",
-                    })}
+                    lowTone="neutral"
                     className="h-1 w-10"
                   />
                 </div>
