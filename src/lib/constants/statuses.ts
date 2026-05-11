@@ -101,4 +101,3 @@ export const ALERT_SEVERITY = {
   WARNING: "warning",
   URGENT: "urgent",
 } as const;
-export type AlertSeverity = (typeof ALERT_SEVERITY)[keyof typeof ALERT_SEVERITY];

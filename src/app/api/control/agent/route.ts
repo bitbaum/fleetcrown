@@ -3,13 +3,11 @@ import { execSync } from "child_process";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
 import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
-import { buildAgentLaunchCommand } from "@/lib/agent-registry";
+import { buildAgentLaunchCommand, AGENT_IDS } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-
-const AGENT_IDS = ["codex", "claude"] as const;
 
 const UpdateAgentBody = z.object({
   agent: z.enum(AGENT_IDS),
