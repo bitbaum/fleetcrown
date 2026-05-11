@@ -28,6 +28,11 @@ export function getHealthShort(health: string): string {
   return health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase();
 }
 
+/** Returns true for health short-labels that represent a problem needing attention. */
+export function isHealthPoor(short: string): boolean {
+  return short === "degraded" || short === "critical";
+}
+
 export const HEALTH_COLOR: Record<string, string> = {
   good:              "text-status-positive",
   excellent:         "text-status-positive",

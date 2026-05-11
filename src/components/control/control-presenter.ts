@@ -4,6 +4,7 @@ import {
   READY_WINDOW_S,
   withinWindow,
   getHealthShort,
+  isHealthPoor,
 } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
@@ -160,7 +161,7 @@ function compareProjects(
   const hasHealthIssue = (p: ProjectState) => {
     if (!p.session?.health) return false;
     const h = getHealthShort(p.session.health);
-    return h === "degraded" || h === "critical";
+    return isHealthPoor(h);
   };
   const healthDelta = (hasHealthIssue(a) ? 0 : 1) - (hasHealthIssue(b) ? 0 : 1);
   if (healthDelta !== 0) return healthDelta;

@@ -10,7 +10,7 @@ import { commitments, subscriptions, goals, alerts, actions, events, projectStat
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
-import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort } from "@/lib/constants/control";
+import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
 import { z } from "zod";
 
 export const CreateCommitmentBody = z.object({
@@ -255,7 +255,7 @@ export async function getFleetSummary(userId: string) {
     }
     if (r.sessionHealth) {
       const short = getHealthShort(r.sessionHealth);
-      if (short === "degraded" || short === "critical") degraded++;
+      if (isHealthPoor(short)) degraded++;
     }
   }
   return { running, waiting, degraded };
