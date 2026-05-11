@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
 import { ProjectDetail } from "./ProjectDetail";
 import {
@@ -114,7 +115,8 @@ function ProjectCard({
 }
 
 export function ProjectGrid({ projects }: { projects: Project[] }) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("open"));
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
@@ -212,7 +214,10 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       {selectedId && (
         <ProjectDetail
           projectId={selectedId}
-          onClose={() => setSelectedId(null)}
+          onClose={() => {
+            setSelectedId(null);
+            window.history.replaceState(null, "", window.location.pathname);
+          }}
         />
       )}
     </>

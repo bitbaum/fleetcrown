@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { FolderKanban } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -18,7 +19,9 @@ export default async function ProjectsPage() {
       <GitHubStatus />
       <Card>
         <CardHeader icon={FolderKanban} title="All Projects" />
-        <ProjectGrid projects={projects} />
+        <Suspense>
+          <ProjectGrid projects={projects} />
+        </Suspense>
       </Card>
     </PageLayout>
   );

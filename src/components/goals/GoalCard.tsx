@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Target, CheckCircle, Loader2, X, Check, FolderKanban, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
@@ -181,11 +182,15 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                 {description ?? "Add a description…"}
               </button>
             )}
-            {goal.entityName && (
-              <div className="flex items-center gap-1 mt-1">
+            {goal.entityName && goal.entityId && (
+              <Link
+                href={`/projects?open=${goal.entityId}`}
+                className="flex items-center gap-1 mt-1 w-fit hover:opacity-80 transition-opacity"
+                title="Open project"
+              >
                 <FolderKanban className="h-3 w-3 text-status-positive/50" />
                 <span className="text-xs text-status-positive/60">{goal.entityName}</span>
-              </div>
+              </Link>
             )}
 
             {/* Progress bar */}
