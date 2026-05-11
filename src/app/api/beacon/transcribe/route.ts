@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFile, unlink, readFile } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { tmpdir, homedir } from "os";
+import { tmpdir } from "os";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { BEACON_SETTINGS_PATH } from "@/config/beacon";
 
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
-const SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
 
 async function whisperModel(): Promise<string> {
   try {
-    const raw = await readFile(SETTINGS_PATH, "utf-8");
+    const raw = await readFile(BEACON_SETTINGS_PATH, "utf-8");
     const s = JSON.parse(raw) as Record<string, unknown>;
     const m = s["whisper_model"];
     if (typeof m === "string" && m.length > 0) return m;

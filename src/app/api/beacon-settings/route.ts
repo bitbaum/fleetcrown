@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
-import { homedir } from "os";
-import { join, dirname } from "path";
+import { dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
-import { WHISPER_MODEL_VALUES } from "@/config/beacon";
-
-const SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
+import { WHISPER_MODEL_VALUES, BEACON_SETTINGS_PATH } from "@/config/beacon";
 
 const PatchBody = z.object({
   countdown_seconds: z.number().int().min(5).max(300).optional(),
@@ -22,15 +19,15 @@ export type BeaconSettingsData = {
 
 async function readSettings(): Promise<Record<string, unknown>> {
   try {
-    return JSON.parse(await readFile(SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
+    return JSON.parse(await readFile(BEACON_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
   } catch {
     return {};
   }
 }
 
 async function writeSettings(data: Record<string, unknown>): Promise<void> {
-  await mkdir(dirname(SETTINGS_PATH), { recursive: true });
-  await writeFile(SETTINGS_PATH, JSON.stringify(data, null, 2) + "\n");
+  await mkdir(dirname(BEACON_SETTINGS_PATH), { recursive: true });
+  await writeFile(BEACON_SETTINGS_PATH, JSON.stringify(data, null, 2) + "\n");
 }
 
 export async function GET() {
