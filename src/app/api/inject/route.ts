@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import {
   stateFile,
+  clearHandshakeFiles,
   readProjectsMap,
   resolveEffectiveTab,
   readPrompts,
@@ -145,10 +146,7 @@ export async function POST(req: NextRequest) {
     }).catch(() => {});
 
     // Any injection means we're continuing — clear stale ready/closed state (both naming conventions)
-    try { fs.unlinkSync(stateFile.ready(effectiveTab)); } catch { /* gone */ }
-    try { fs.unlinkSync(stateFile.claudeReady(effectiveTab)); } catch { /* gone */ }
-    try { fs.unlinkSync(stateFile.closed(effectiveTab)); } catch { /* gone */ }
-    try { fs.unlinkSync(stateFile.claudeClosed(effectiveTab)); } catch { /* gone */ }
+    clearHandshakeFiles(effectiveTab);
 
     if (promptKey === "close_session") {
       // Suppress the next stop-hook popup — infrastructure-side, reliable

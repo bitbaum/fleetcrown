@@ -42,11 +42,17 @@ export const stateFile = {
   lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
   queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab}`),
   
-  // Legacy names — kept for cleanup unlinkSync calls in inject + orchestration routes.
-  // No new files are written with these names; only used to delete stale on-disk files.
+  // Legacy names — no new files are written with these names; only used to delete stale on-disk files.
   claudeReady:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
   claudeClosed: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),
 } as const;
+
+/** Delete all handshake state files for a tab, ignoring missing-file errors. */
+export function clearHandshakeFiles(tab: string): void {
+  for (const p of [stateFile.ready(tab), stateFile.claudeReady(tab), stateFile.closed(tab), stateFile.claudeClosed(tab)]) {
+    try { fs.unlinkSync(p); } catch { /* already gone */ }
+  }
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

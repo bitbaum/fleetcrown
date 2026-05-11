@@ -7,7 +7,7 @@ import path from "node:path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
-import { buildPromptWithSession, resolveEffectiveTab, stateFile } from "@/lib/agent-config";
+import { buildPromptWithSession, resolveEffectiveTab, stateFile, clearHandshakeFiles } from "@/lib/agent-config";
 import {
   ORCHESTRATION_ADAPTER_IDS,
   ORCHESTRATION_TASK_INTENT_IDS,
@@ -135,10 +135,7 @@ export async function POST(req: NextRequest) {
         happenedAt: new Date(nowS * 1000),
       }).catch(() => {});
 
-      try { fs.unlinkSync(stateFile.ready(effectiveKey)); } catch { /* gone */ }
-      try { fs.unlinkSync(stateFile.claudeReady(effectiveKey)); } catch { /* gone */ }
-      try { fs.unlinkSync(stateFile.closed(effectiveKey)); } catch { /* gone */ }
-      try { fs.unlinkSync(stateFile.claudeClosed(effectiveKey)); } catch { /* gone */ }
+      clearHandshakeFiles(effectiveKey);
 
       if (request.intent === "close_session") {
         fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
