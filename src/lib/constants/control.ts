@@ -29,10 +29,11 @@ export function getHealthShort(health: string): string {
 }
 
 export const HEALTH_COLOR: Record<string, string> = {
-  good:      "text-status-positive",
-  degraded:  "text-status-warning",
-  critical:  "text-status-negative",
-  excellent: "text-status-positive",
+  good:              "text-status-positive",
+  excellent:         "text-status-positive",
+  "needs attention": "text-status-warning",
+  degraded:          "text-status-warning",
+  critical:          "text-status-negative",
 };
 
 // Maps the AgentPrompt.style field → Tailwind class for consistent chip rendering.
