@@ -275,6 +275,7 @@ export function ProjectBanners({
   onDismiss,
   onSend,
   onAutoInject,
+  onToggleAutoContinue,
   showKeyHints = false,
 }: {
   tab: string;
@@ -296,6 +297,7 @@ export function ProjectBanners({
   onDismiss: () => void;
   onSend: (key: string) => void;
   onAutoInject?: () => void;
+  onToggleAutoContinue?: () => void;
   showKeyHints?: boolean;
 }) {
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
@@ -319,6 +321,7 @@ export function ProjectBanners({
           onSend={onSend}
           onDismiss={onDismiss}
           onAutoInject={onAutoInject}
+          onToggleAutoContinue={onToggleAutoContinue}
           paused={paused}
           title="Agent finished"
           autoContinueEnabled={autoContinueEnabled}
@@ -339,6 +342,7 @@ export function ProjectBanners({
           }}
           onDismiss={onDismiss}
           onAutoInject={onAutoInject}
+          onToggleAutoContinue={onToggleAutoContinue}
           paused={paused}
           title="Task finished"
           autoContinueEnabled={autoContinueEnabled}

@@ -314,6 +314,7 @@ export function ProjectCard({
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={handleAutoInject}
+            onToggleAutoContinue={handleToggleAutoContinue}
             showKeyHints={isOnlyReady}
           />
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}

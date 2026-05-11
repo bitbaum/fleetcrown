@@ -397,23 +397,30 @@ function BeaconBody({
 
         {/* Action bar — one row, vertically centred, uniform height */}
         <div className="flex items-center gap-1.5 border-t border-border-subtle px-3 py-2">
-          {/* Pause / resume toggle */}
+          {/* Pause / resume toggle — reflects effective paused state:
+              - explicitly off (autoContinueEnabled=false) → Play, accent colour
+              - composing (typing / focused / recording) → Play, dim (implicitly paused)
+              - running → Pause, dim (click to pause)
+              Only disabled while transcribing (processing) since that state clears momentarily. */}
           <button
             onClick={toggleAutoContinue}
-            disabled={listening || processing}
+            disabled={processing}
             title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
             className={cn(
               "shrink-0 rounded-md p-1 transition-colors",
-              listening || processing
-                ? "text-text-muted opacity-30 cursor-default"
+              processing
+                ? "cursor-default opacity-30 text-text-muted"
                 : !autoContinueEnabled
                 ? "text-accent-text hover:bg-surface-overlay"
+                : isComposing
+                ? "text-accent-text/60 hover:text-accent-text hover:bg-surface-overlay"
                 : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
             )}
           >
-            {autoContinueEnabled
-              ? <Pause className="h-3.5 w-3.5" />
-              : <Play className="h-3.5 w-3.5" />}
+            {/* Show Play (▶) whenever effectively paused: explicitly off OR composing */}
+            {!autoContinueEnabled || isComposing
+              ? <Play className="h-3.5 w-3.5" />
+              : <Pause className="h-3.5 w-3.5" />}
           </button>
 
           {/* Status — fills remaining space, truncates gracefully */}
@@ -425,18 +432,22 @@ function BeaconBody({
               ? "text-status-negative"
               : processing
               ? "animate-pulse text-text-muted"
-              : !autoContinueEnabled && !custom.trim()
+              : !autoContinueEnabled && !isComposing
               ? "text-accent-text/70"
+              : isComposing && !custom.trim() && !listening && !processing
+              ? "text-text-muted"
               : "text-text-muted",
           )}>
             {micError
               ? micError
               : listening
-              ? "Recording — auto-continue paused"
+              ? "Recording — paused"
               : processing
               ? "Transcribing…"
               : custom.trim()
               ? "↵ send · ⌥↵ queue"
+              : inputFocused
+              ? "Focused — paused"
               : !autoContinueEnabled
               ? "Paused — click ▶ to resume"
               : countdown <= 0

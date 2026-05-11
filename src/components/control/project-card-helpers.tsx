@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  CheckCircle2, Loader2, Zap, GitCommitHorizontal,
+  CheckCircle2, Loader2, Zap, GitCommitHorizontal, Pause, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
@@ -178,6 +178,7 @@ export function ReadyBanner({
   onSend,
   onDismiss,
   onAutoInject,
+  onToggleAutoContinue,
   paused = false,
   title = "Agent finished",
   autoContinueEnabled = true,
@@ -191,6 +192,7 @@ export function ReadyBanner({
   onSend: (key: string) => void;
   onDismiss: () => void;
   onAutoInject?: () => void;
+  onToggleAutoContinue?: () => void;
   paused?: boolean;
   title?: string;
   autoContinueEnabled?: boolean;
@@ -253,6 +255,22 @@ export function ReadyBanner({
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-text-muted tabular-nums">{timerLabel}</span>
+          {onToggleAutoContinue && (
+            <button
+              onClick={onToggleAutoContinue}
+              title={autoContinueEnabled && !paused ? "Pause auto-continue" : "Resume auto-continue"}
+              className={cn(
+                "rounded p-0.5 transition-colors",
+                paused || !autoContinueEnabled
+                  ? "text-accent-text hover:bg-surface-overlay"
+                  : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
+              )}
+            >
+              {autoContinueEnabled && !paused
+                ? <Pause className="h-3.5 w-3.5" />
+                : <Play className="h-3.5 w-3.5" />}
+            </button>
+          )}
           <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
