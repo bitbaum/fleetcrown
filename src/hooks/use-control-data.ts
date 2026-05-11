@@ -9,8 +9,6 @@ import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 type Agent = "codex" | "claude";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
-export type LaunchAgentOption = Pick<AgentEntry, "id" | "label" | "defaultModel" | "modelSuggestions" | "available" | "availabilityReason" | "capabilities">;
-
 export interface ControlDataHook {
   data: ControlData | null;
   lastUpdated: number | null;
