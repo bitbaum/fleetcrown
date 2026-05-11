@@ -5,6 +5,7 @@ import { Loader2, Pencil, Save, Trash2, Terminal, X } from "lucide-react";
 import { getJson } from "@/lib/api/fetch";
 import type { SessionData } from "@/app/api/sessions/route";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
+import { getHealthShort, HEALTH_COLOR } from "@/lib/constants/control";
 
 export function AddAttrInline({
   projectId,
@@ -158,12 +159,8 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
 
   if (!session || !session.found) return null;
 
-  const healthColor =
-    session.health.startsWith("green") || session.health.toLowerCase().startsWith("good")
-      ? "text-status-positive"
-      : session.health.startsWith("red") || session.health.toLowerCase().includes("fail")
-      ? "text-status-negative"
-      : "text-text-secondary";
+  const healthShort = getHealthShort(session.health);
+  const healthColor = HEALTH_COLOR[healthShort] ?? "text-text-secondary";
 
   return (
     <div className="rounded-xl border border-border-subtle bg-surface-base overflow-hidden">
@@ -174,7 +171,7 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
           <span className="text-sm font-medium">Session</span>
           {session.health && (
             <span className={`text-xs font-medium ${healthColor}`}>
-              · {session.health.split("—")[0].trim()}
+              · {healthShort}
             </span>
           )}
         </div>
