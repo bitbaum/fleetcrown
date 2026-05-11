@@ -10,6 +10,7 @@ export async function CommitmentsCard() {
   const items = await getActiveCommitments(userId);
 
   return (
+    <div id="commitments">
     <Card>
       <CardHeader
         icon={CheckCircle}
@@ -37,5 +38,6 @@ export async function CommitmentsCard() {
       )}
       <AddCommitmentButton />
     </Card>
+    </div>
   );
 }

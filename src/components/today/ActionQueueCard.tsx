@@ -68,7 +68,7 @@ export async function ActionQueueCard() {
 
   if (pending.length === 0) {
     return (
-      <div className="md:col-span-2">
+      <div id="actions" className="md:col-span-2">
         <Card>
           <CardHeader icon={Inbox} title="Action Queue" />
           <div className="space-y-1.5">
@@ -97,7 +97,7 @@ export async function ActionQueueCard() {
   const { groups, standalone } = groupSimilarActions(pending);
 
   return (
-    <div className="md:col-span-2">
+    <div id="actions" className="md:col-span-2">
       <Card>
         <CardHeader
           icon={Inbox}
