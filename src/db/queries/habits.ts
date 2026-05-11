@@ -34,6 +34,15 @@ function isDueToday(frequency: HabitFrequency): boolean {
   return true;
 }
 
+function groupCompletionsByHabit(completions: { habitId: string; completedDate: string }[]): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>();
+  for (const c of completions) {
+    if (!map.has(c.habitId)) map.set(c.habitId, new Set());
+    map.get(c.habitId)!.add(c.completedDate);
+  }
+  return map;
+}
+
 function computeStreak(dates: Set<string>, maxDays: number): number {
   let streak = 0;
   for (let i = 0; i < maxDays; i++) {
@@ -96,11 +105,7 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
       ),
     );
 
-  const byHabit = new Map<string, Set<string>>();
-  for (const c of completions) {
-    if (!byHabit.has(c.habitId)) byHabit.set(c.habitId, new Set());
-    byHabit.get(c.habitId)!.add(c.completedDate);
-  }
+  const byHabit = groupCompletionsByHabit(completions);
 
   return dueHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
@@ -190,11 +195,7 @@ export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTO
       ),
     );
 
-  const byHabit = new Map<string, Set<string>>();
-  for (const c of completions) {
-    if (!byHabit.has(c.habitId)) byHabit.set(c.habitId, new Set());
-    byHabit.get(c.habitId)!.add(c.completedDate);
-  }
+  const byHabit = groupCompletionsByHabit(completions);
 
   return allHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
