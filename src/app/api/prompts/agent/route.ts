@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { readFileSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { PROMPTS_FILE } from "@/lib/agent-config";
 
 export type AgentPrompt = {
   key: string;
@@ -13,8 +12,6 @@ export type AgentPrompt = {
   dimensionId: string | null;
   prompt: string;
 };
-
-const PROMPTS_FILE = join(homedir(), ".config", "agent-prompts.json");
 
 export async function GET() {
   try {
