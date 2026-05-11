@@ -161,7 +161,7 @@ export function StatusEditor({
     <button onClick={() => ie.start(value ?? "")} title="Click to edit status" className="flex items-center">
       {value
         ? <StatusBadge value={value} />
-        : <span className="text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ status</span>}
+        : <span className="ui-add-chip">+ status</span>}
     </button>
   );
 }
@@ -209,7 +209,7 @@ export function MaturityEditor({
     <button onClick={start} title="Click to edit maturity" className="flex items-center">
       {value
         ? <MaturityBar value={value} />
-        : <span className="text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5">+ maturity</span>}
+        : <span className="ui-add-chip">+ maturity</span>}
     </button>
   );
 }

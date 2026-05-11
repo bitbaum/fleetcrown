@@ -624,6 +624,10 @@
   .ui-chip {
     @apply inline-flex items-center rounded-xl border px-3 py-1 text-sm font-medium;
   }
+  /* Dashed-border "add" placeholder chip — click-to-add inline affordance */
+  .ui-add-chip {
+    @apply text-micro text-text-muted hover:text-text-secondary transition-colors border border-dashed border-border-default rounded px-1.5 py-0.5;
+  }
   /* Small meta badge pill (scope, schedule indicator, etc.) */
   .ui-badge {
     @apply inline-flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary;
