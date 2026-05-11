@@ -102,6 +102,7 @@ function BeaconBody({
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(session.project);
   useEffect(() => { enableAutoContinue(); }, [enableAutoContinue]);
   const [custom, setCustom] = useState("");
+  const [inputFocused, setInputFocused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [countdown, setCountdown] = useState(() => {
     // Initialise from the shared readyAt timestamp written by the control panel
@@ -130,11 +131,12 @@ function BeaconBody({
     onEnqueueAfterRecording: enqueue,
   });
 
-  // Countdown pauses when auto-continue is off, user is typing/composing, mic is active, or
-  // prompts haven't loaded yet. Mic states (listening + processing) are explicitly included so
-  // the countdown never fires while the user is speaking — the transcript isn't in the textarea
-  // yet and isComposing would be false without them.
-  const isComposing = custom.trim().length > 0 || listening || processing;
+  // Countdown pauses when auto-continue is off, user is typing/focused/composing, mic is active,
+  // or prompts haven't loaded yet. inputFocused mirrors the control panel's customFocused pattern
+  // so that clicking the textarea (before typing) already pauses — matching user intent.
+  // Mic states (listening + processing) are explicitly included so the countdown never fires while
+  // the user is speaking — the transcript isn't in the textarea yet and isComposing would be false.
+  const isComposing = custom.trim().length > 0 || inputFocused || listening || processing;
   useEffect(() => {
     if (!autoContinueEnabled || isComposing || countdown <= 0 || prompts.length === 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
@@ -321,6 +323,8 @@ function BeaconBody({
             rows={1}
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && (custom.trim() || listening)) {
                 e.preventDefault();
