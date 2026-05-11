@@ -195,9 +195,8 @@ function DimensionSection({
   );
 }
 
-function NotesSection({ projectId }: { projectId: string }) {
+function NotesSection({ projectId, project }: { projectId: string; project: UserProject | null }) {
   const [open, setOpen] = useState(false);
-  const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -259,16 +258,9 @@ function NotesSection({ projectId }: { projectId: string }) {
   );
 }
 
-function DevLogSection({ projectId }: { projectId: string }) {
+function DevLogSection({ entries }: { entries: DevLogEntry[] }) {
   const [open, setOpen] = useState(false);
-  const { data: project } = useFetch<UserProject>(`/api/user-projects/${projectId}`);
 
-  const entries: DevLogEntry[] = useMemo(() => {
-    if (!project?.devLog) return [];
-    return [...project.devLog].reverse().slice(0, 12);
-  }, [project]);
-
-  if (!project) return null;
   if (entries.length === 0) return null;
 
   return (
@@ -320,6 +312,11 @@ export function ProjectProfile({
   };
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
+  const { data: userProject } = useFetch<UserProject>(project.id ? `/api/user-projects/${project.id}` : null);
+  const devLogEntries = useMemo<DevLogEntry[]>(() => {
+    if (!userProject?.devLog) return [];
+    return [...userProject.devLog].reverse().slice(0, 12);
+  }, [userProject]);
 
   // Group dimension prompts by dimensionId, ordered by DIMENSION_META insertion order
   const dimensionGroups = useMemo(() => {
@@ -402,10 +399,10 @@ export function ProjectProfile({
       ))}
 
       {/* Per-project notes / scratchpad */}
-      {project.id && <NotesSection projectId={project.id} />}
+      {project.id && <NotesSection projectId={project.id} project={userProject} />}
 
       {/* Dev log — appended automatically when beacon sessions end */}
-      {project.id && <DevLogSection projectId={project.id} />}
+      {project.id && <DevLogSection entries={devLogEntries} />}
     </div>
   );
 }
