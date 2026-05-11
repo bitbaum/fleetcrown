@@ -478,3 +478,7 @@ Be specific. No more than 150 words.`,
 export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
 
 export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global");
+
+export const QUICK_PROMPTS = PROMPT_TEMPLATES
+  .filter((t) => t.featured && t.scope === "global")
+  .concat(PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4));

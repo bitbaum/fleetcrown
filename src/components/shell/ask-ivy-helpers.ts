@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PROMPT_TEMPLATES, GLOBAL_PROMPTS } from "@/config/prompt-library";
+export { GLOBAL_PROMPTS, QUICK_PROMPTS } from "@/config/prompt-library";
 
 export type Message = {
   role: "user" | "ivy";
@@ -8,12 +8,6 @@ export type Message = {
   model?: string;
   error?: boolean;
 };
-
-export const QUICK_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "global").concat(
-  PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4)
-);
-
-export { GLOBAL_PROMPTS };
 
 export function useElapsedTimer(active: boolean) {
   const [elapsed, setElapsed] = useState(0);
