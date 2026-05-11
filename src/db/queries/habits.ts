@@ -34,6 +34,17 @@ function isDueToday(frequency: HabitFrequency): boolean {
   return true;
 }
 
+function computeStreak(dates: Set<string>, maxDays: number): number {
+  let streak = 0;
+  for (let i = 0; i < maxDays; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    if (dates.has(toLocalDateStr(d))) streak++;
+    else break;
+  }
+  return streak;
+}
+
 export function scheduledDays(frequency: HabitFrequency, days: number): number {
   let count = 0;
   for (let i = 0; i < days; i++) {
@@ -94,13 +105,7 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
   return dueHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
     const doneToday = dates.has(today);
-    let streak = 0;
-    for (let i = 0; i < HABIT_HISTORY_DAYS; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      if (dates.has(toLocalDateStr(d))) streak++;
-      else break;
-    }
+    const streak = computeStreak(dates, HABIT_HISTORY_DAYS);
     return { id: h.id, title: h.title, frequency: h.frequency, sortOrder: h.sortOrder, doneToday, streak };
   });
 }
@@ -193,13 +198,7 @@ export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTO
 
   return allHabits.map((h) => {
     const dates = byHabit.get(h.id) ?? new Set<string>();
-    let streak = 0;
-    for (let i = 0; i < days; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      if (dates.has(toLocalDateStr(d))) streak++;
-      else break;
-    }
+    const streak = computeStreak(dates, days);
     return {
       id: h.id,
       title: h.title,
