@@ -66,7 +66,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
             onChange={(e) => setDesc(e.target.value)}
             autoFocus
             onKeyDown={(e) => { if (e.key === "Escape") cancel(); }}
-            className="w-full bg-surface-raised border border-border-default rounded px-2 py-1 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
+            className="ui-input-inline w-full px-2 py-1 text-sm text-text-primary placeholder:text-text-muted"
           />
           <div className="flex gap-1.5">
             <input

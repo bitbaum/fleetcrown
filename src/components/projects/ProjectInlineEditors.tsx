@@ -47,7 +47,7 @@ export function NameEditor({
               if (e.key === "Escape") { ie.cancel(); setSaveError(null); }
             }}
             autoFocus
-            className={`text-base font-semibold bg-surface-raised border rounded px-2 py-0.5 focus:outline-none w-48 transition-colors ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-border-strong focus:border-border-strong"}`}
+            className={`ui-input-inline px-2 py-0.5 text-base font-semibold w-48 ${saveError ? "border-status-negative/60 focus:border-status-negative" : "border-border-strong"}`}
           />
           {saving && <Loader2 className="ui-spinner-sm text-text-tertiary shrink-0" />}
         </div>
@@ -92,7 +92,7 @@ export function DescriptionEditor({
           autoFocus
           rows={2}
           placeholder="Add a description…"
-          className="w-full bg-surface-raised border border-border-default rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong resize-none transition-colors"
+          className="ui-input-inline w-full px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted resize-none"
         />
         <div className="flex items-center gap-2">
           <button
@@ -150,7 +150,7 @@ export function StatusEditor({
           onBlur={commit}
           autoFocus
           placeholder="e.g. Production"
-          className="bg-surface-raised border border-border-strong rounded px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong w-36"
+          className="ui-input-inline border-border-strong px-2 py-0.5 text-xs text-text-primary placeholder:text-text-muted w-36"
         />
         {ie.saving && <Loader2 className="ui-spinner-xs text-text-muted shrink-0" />}
       </div>

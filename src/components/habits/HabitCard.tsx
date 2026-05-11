@@ -91,7 +91,7 @@ export function HabitCard({ habit }: { habit: HabitWithHistory }) {
                       if (e.key === "Escape") titleEdit.cancel();
                     }}
                     autoFocus
-                    className="text-base font-medium bg-surface-raised border border-border-strong rounded px-2 py-0.5 focus:outline-none flex-1"
+                    className="ui-input-inline border-border-strong px-2 py-0.5 text-base font-medium text-text-primary flex-1"
                   />
                   <button onClick={commitTitle} className="ui-btn-confirm-icon shrink-0">
                     <Check className="h-2.5 w-2.5" />

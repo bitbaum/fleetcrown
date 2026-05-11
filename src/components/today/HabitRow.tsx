@@ -57,12 +57,12 @@ export function HabitRow({
             if (e.key === "Escape") ie.cancel();
           }}
           autoFocus
-          className="flex-1 bg-surface-raised border border-border-default rounded px-2 py-0.5 text-sm text-text-primary focus:outline-none focus:border-border-strong"
+          className="ui-input-inline flex-1 px-2 py-0.5 text-sm text-text-primary"
         />
         <select
           value={ie.draft.frequency}
           onChange={(e) => ie.setDraft({ ...ie.draft, frequency: e.target.value as HabitFrequency })}
-          className="bg-surface-raised border border-border-subtle rounded px-1.5 py-0.5 text-xs text-text-secondary focus:outline-none focus:border-border-strong"
+          className="ui-input-inline border-border-subtle px-1.5 py-0.5 text-xs text-text-secondary"
         >
           {Object.values(HABIT_FREQUENCY).map((f) => (
             <option key={f} value={f}>{f}</option>

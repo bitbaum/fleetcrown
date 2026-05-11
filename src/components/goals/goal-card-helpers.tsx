@@ -44,7 +44,7 @@ export function ProgressInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="w-12 bg-surface-raised border border-border-strong rounded px-1.5 py-0.5 text-xs text-text-primary text-right focus:outline-none"
+        className="ui-input-inline border-border-strong w-12 px-1.5 py-0.5 text-xs text-text-primary text-right"
       />
     );
   }
@@ -99,7 +99,7 @@ export function DateInput({
           if (e.key === "Escape") ie.cancel();
         }}
         autoFocus
-        className="text-xs bg-surface-raised border border-border-strong rounded px-1.5 py-0.5 text-text-secondary focus:outline-none focus:border-border-strong"
+        className="ui-input-inline border-border-strong px-1.5 py-0.5 text-xs text-text-secondary"
       />
     );
   }

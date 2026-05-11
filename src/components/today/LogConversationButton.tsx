@@ -163,7 +163,7 @@ export function LogConversationButton() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") reset(); }}
               placeholder="Search person…"
-              className="w-full pl-6 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
+              className="ui-input-inline border-border-subtle w-full pl-6 pr-2 py-1.5 text-xs text-text-primary placeholder:text-text-muted"
             />
             {searching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 ui-spinner-xs text-text-muted" />}
           </div>

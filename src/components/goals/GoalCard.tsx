@@ -123,7 +123,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     onBlur={commitTitle}
                     onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") titleEdit.cancel(); }}
                     autoFocus
-                    className={`bg-surface-raised border border-border-strong rounded px-2 py-0.5 focus:outline-none focus:border-border-strong ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
+                    className={`ui-input-inline border-border-strong px-2 py-0.5 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
                   />
                 )
               ) : (

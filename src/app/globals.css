@@ -525,6 +525,11 @@
     @apply rounded-lg border border-border-default bg-surface-overlay px-2.5 py-1.5 text-xs text-text-primary placeholder:text-text-muted outline-none transition-colors;
   }
   .ui-input-tight:focus { @apply border-accent-primary; }
+  /* Inline-edit inputs — click-to-edit on raised surfaces. Caller adds px/py/text-size/width. */
+  .ui-input-inline {
+    @apply bg-surface-raised border border-border-default rounded outline-none transition-colors;
+  }
+  .ui-input-inline:focus { @apply border-border-strong; }
 
   /* Buttons */
   .ui-btn-primary {

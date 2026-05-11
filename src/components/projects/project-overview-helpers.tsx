@@ -43,7 +43,7 @@ export function AddAttrInline({
           placeholder="key"
           value={key}
           onChange={(e) => setKey(e.target.value)}
-          className="w-24 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
+          className="ui-input-inline border-border-subtle w-24 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
         />
       )}
       <input
@@ -52,7 +52,7 @@ export function AddAttrInline({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
         autoFocus
-        className="flex-1 bg-surface-raised border border-border-subtle rounded px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted focus:outline-none focus:border-border-strong"
+        className="ui-input-inline border-border-subtle flex-1 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
       />
       {onCancel && (
         <button onClick={onCancel} className="ui-btn-inline-cancel">
