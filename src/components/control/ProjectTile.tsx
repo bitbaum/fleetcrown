@@ -60,9 +60,11 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
               </span>
             )}
           </div>
-          {session?.next && (
+          {session?.next ? (
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={session.next}>{session.next}</p>
-          )}
+          ) : session?.done ? (
+            <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-text-muted" title={session.done}>Last: {session.done}</p>
+          ) : null}
         </div>
       </div>
 
@@ -82,6 +84,14 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
           {(git?.todayCount ?? 0) > 0 && (
             <span className="text-status-positive/80" title={`${git!.todayCount} commit${git!.todayCount > 1 ? "s" : ""} today`}>
               +{git!.todayCount}
+            </span>
+          )}
+          {git?.dirty && (
+            <span className="text-status-warning" title="Uncommitted changes">✎</span>
+          )}
+          {(git?.behindRemote ?? 0) > 0 && (
+            <span className="text-status-warning" title={`${git!.behindRemote} commit${git!.behindRemote > 1 ? "s" : ""} behind remote`}>
+              ↓{git!.behindRemote}
             </span>
           )}
         </div>
