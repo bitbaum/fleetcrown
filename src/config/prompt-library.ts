@@ -482,3 +482,13 @@ export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global
 export const QUICK_PROMPTS = PROMPT_TEMPLATES
   .filter((t) => t.featured && t.scope === "global")
   .concat(PROMPT_TEMPLATES.filter((t) => t.featured && t.scope === "project").slice(0, 4));
+
+/** Featured prompts scoped to a specific project — shown in the control panel for one-click inject. */
+export const FEATURED_PROJECT_PROMPTS = PROMPT_TEMPLATES.filter(
+  (t) => t.featured && t.scope === "project",
+);
+
+/** Replace {{project_name}} placeholders in a template with the actual project name. */
+export function substituteProjectName(template: string, projectName: string): string {
+  return template.replace(/\{\{project_name\}\}/g, projectName);
+}

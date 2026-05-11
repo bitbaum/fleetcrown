@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Pause, Play, Eraser, Loader2 } from "lucide-react";
+import { Pause, Play, Eraser, Loader2, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
+import { FEATURED_PROJECT_PROMPTS, CATEGORY_META, substituteProjectName } from "@/config/prompt-library";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput, QueueList } from "./project-composer";
@@ -54,6 +55,7 @@ export function IntentButtonPanel({
   onCustomFocusChange: (focused: boolean) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
+  const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
 
   const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
@@ -208,6 +210,51 @@ export function IntentButtonPanel({
               {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Library prompts — featured project prompts from config/prompt-library, substituted with project name */}
+      {FEATURED_PROJECT_PROMPTS.length > 0 && (
+        <div className="border-t border-border-subtle pt-2">
+          <button
+            onClick={() => setShowLibraryPrompts((v) => !v)}
+            className="flex w-full items-center justify-between text-xs text-text-muted transition-colors hover:text-text-secondary mb-1.5"
+          >
+            <span className="flex items-center gap-1.5">
+              <BookOpen className="h-3 w-3" />
+              <span className="font-medium">Library prompts</span>
+            </span>
+            {showLibraryPrompts ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+          {showLibraryPrompts && (
+            <div className="grid grid-cols-2 gap-1.5">
+              {FEATURED_PROJECT_PROMPTS.map((t) => {
+                const meta = CATEGORY_META[t.category];
+                const text = substituteProjectName(t.template, project.tab);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      if (bannerActive && onSendText) {
+                        onSendText(text); // agent ready: inject directly
+                      } else {
+                        onCustomChange(text); // agent idle: load into input for review
+                      }
+                    }}
+                    disabled={sending !== null}
+                    title={t.description}
+                    className="flex flex-col gap-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 text-left transition-all hover:border-border-default hover:bg-surface-raised disabled:opacity-40"
+                  >
+                    <span className="text-xs font-medium text-text-primary leading-tight">{t.name}</span>
+                    <span className="text-micro text-text-muted leading-snug line-clamp-2">{t.description}</span>
+                    <span className={`self-start mt-0.5 text-micro px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
+                      {meta.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
