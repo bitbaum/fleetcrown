@@ -12,12 +12,6 @@ import { scheduledDays } from "@/db/queries/habits";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
-const FREQ_LABELS: Record<HabitFrequency, string> = {
-  [HABIT_FREQUENCY.DAILY]:    "daily",
-  [HABIT_FREQUENCY.WEEKDAYS]: "weekdays",
-  [HABIT_FREQUENCY.WEEKLY]:   "weekly",
-};
-
 export function HabitCard({ habit }: { habit: HabitWithHistory }) {
   const router = useRouter();
   const [active, setActive] = useState(habit.active);
@@ -131,7 +125,7 @@ export function HabitCard({ habit }: { habit: HabitWithHistory }) {
 
           {/* Frequency selector */}
           <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {(Object.keys(FREQ_LABELS) as HabitFrequency[]).map((f) => (
+            {(Object.values(HABIT_FREQUENCY) as HabitFrequency[]).map((f) => (
               <button
                 key={f}
                 onClick={() => handleFrequencyChange(f)}
@@ -142,7 +136,7 @@ export function HabitCard({ habit }: { habit: HabitWithHistory }) {
                     : "ui-chip-filter text-xs px-2 py-0.5 disabled:opacity-50"
                 }
               >
-                {FREQ_LABELS[f]}
+                {f}
               </button>
             ))}
             {savingFreq && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}

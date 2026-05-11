@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Search, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { GoalCard } from "./GoalCard";
@@ -23,6 +23,11 @@ function filterTree(goals: GoalWithChildren[], q: string): GoalWithChildren[] {
     .map((g) => ({ ...g, children: filterTree(g.children, q) }));
 }
 
+/** Filter tree to goals linked to a specific project (entityName match) */
+function filterByProject(goals: GoalWithChildren[], project: string): GoalWithChildren[] {
+  return goals.filter((g) => g.entityName === project);
+}
+
 export function GoalsGrid({
   activeGoals,
   completedGoals,
@@ -31,12 +36,20 @@ export function GoalsGrid({
   completedGoals: GoalWithChildren[];
 }) {
   const [query, setQuery] = useState("");
+  const [projectFilter, setProjectFilter] = useState<string | null>(null);
+
+  const projects = useMemo(() => {
+    const names = activeGoals.map((g) => g.entityName).filter((n): n is string => !!n);
+    return [...new Set(names)].sort();
+  }, [activeGoals]);
 
   const q = query.trim();
-  const filteredActive = filterTree(activeGoals, q);
+  const byProject = projectFilter ? filterByProject(activeGoals, projectFilter) : activeGoals;
+  const filteredActive = filterTree(byProject, q);
   const filteredCompleted = filterTree(completedGoals, q);
   const totalActive = activeGoals.length;
   const matchCount = filteredActive.length;
+  const isFiltered = !!q || !!projectFilter;
 
   return (
     <>
@@ -51,9 +64,29 @@ export function GoalsGrid({
           className="ui-input pl-10 pr-14"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
-          {q ? `${matchCount} / ${totalActive}` : totalActive}
+          {isFiltered ? `${matchCount} / ${totalActive}` : totalActive}
         </span>
       </div>
+
+      {/* Project filter chips */}
+      {projects.length > 1 && (
+        <div className="flex flex-wrap gap-1.5">
+          {projects.map((name) => (
+            <button
+              key={name}
+              onClick={() => setProjectFilter(projectFilter === name ? null : name)}
+              className={projectFilter === name ? "ui-chip-filter-active" : "ui-chip-filter"}
+            >
+              {name}
+            </button>
+          ))}
+          {projectFilter && (
+            <button onClick={() => setProjectFilter(null)} className="ui-chip-filter">
+              Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Active goals */}
       {filteredActive.length > 0 ? (
@@ -62,11 +95,11 @@ export function GoalsGrid({
             <GoalCard key={goal.id} goal={goal} depth={0} />
           ))}
         </div>
-      ) : q && activeGoals.length > 0 ? (
+      ) : isFiltered && activeGoals.length > 0 ? (
         <Card>
           <div className="flex flex-col items-center gap-2 py-6">
             <Target className="h-8 w-8 text-text-tertiary" />
-            <div className="text-sm text-text-secondary">No active goals match &ldquo;{q}&rdquo;</div>
+            <div className="text-sm text-text-secondary">No active goals match the current filter</div>
           </div>
         </Card>
       ) : activeGoals.length === 0 && completedGoals.length > 0 ? (
