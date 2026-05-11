@@ -475,4 +475,6 @@ Be specific. No more than 150 words.`,
   },
 ];
 
+export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
+
 export const GLOBAL_PROMPTS = PROMPT_TEMPLATES.filter((t) => t.scope === "global");

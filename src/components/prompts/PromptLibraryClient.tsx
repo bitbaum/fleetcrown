@@ -5,7 +5,8 @@ import { Search, Star } from "lucide-react";
 import { CATEGORY_META, type PromptTemplate, type PromptCategory } from "@/config/prompt-library";
 import { PromptRow } from "./PromptRow";
 import { FeaturedCard } from "./FeaturedCard";
-import { CategoryBar, ALL_CATEGORIES } from "./CategoryBar";
+import { CategoryBar } from "./CategoryBar";
+import { ALL_CATEGORIES } from "@/config/prompt-library";
 import type { Project } from "./types";
 
 export function PromptLibraryClient({

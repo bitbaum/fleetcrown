@@ -1,9 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { CATEGORY_META, type PromptCategory, type PromptTemplate } from "@/config/prompt-library";
-
-export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];
+import { ALL_CATEGORIES, CATEGORY_META, type PromptCategory, type PromptTemplate } from "@/config/prompt-library";
 
 /** Filter chips: "All (n)" + one chip per category that has at least one template. */
 export function CategoryBar({
