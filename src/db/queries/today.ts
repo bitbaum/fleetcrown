@@ -26,7 +26,7 @@ export const PatchCommitmentBody = z.object({
 });
 
 export type CreateCommitmentInput = z.infer<typeof CreateCommitmentBody>;
-export type PatchCommitmentInput = z.infer<typeof PatchCommitmentBody>;
+type PatchCommitmentInput = z.infer<typeof PatchCommitmentBody>;
 
 export async function createCommitment(userId: string, data: CreateCommitmentInput, source?: string) {
   const [created] = await db

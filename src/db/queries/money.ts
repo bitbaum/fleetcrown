@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
 
-export type SubscriptionRow = typeof subscriptions.$inferSelect;
+type SubscriptionRow = typeof subscriptions.$inferSelect;
 import { eq, and, sql } from "drizzle-orm";
 import { SUB_STATUS, COMMITMENT_STATUS, type SubStatus } from "@/lib/constants/statuses";
 import {
@@ -42,7 +42,7 @@ export const PatchSubscriptionBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-export type PatchSubscriptionInput = z.infer<typeof PatchSubscriptionBody>;
+type PatchSubscriptionInput = z.infer<typeof PatchSubscriptionBody>;
 
 export async function createSubscription(userId: string, data: CreateSubscriptionInput) {
   const [created] = await db

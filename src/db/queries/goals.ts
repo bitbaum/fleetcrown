@@ -4,7 +4,7 @@ import { goals, entities, type Milestone } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
-export const MilestoneSchema = z.object({
+const MilestoneSchema = z.object({
   title: z.string(),
   done: z.boolean(),
   date: z.string().optional(),

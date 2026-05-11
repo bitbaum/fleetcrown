@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { orchestrationEvents, type NewOrchestrationEvent } from "@/db/schema/orchestration-events";
 import type { OrchestrationEventType } from "@/lib/orchestration";
 
-export type LatestLifecycleEvents = Partial<Record<OrchestrationEventType, Date>>;
+type LatestLifecycleEvents = Partial<Record<OrchestrationEventType, Date>>;
 
 export async function createOrchestrationEvent(event: NewOrchestrationEvent) {
   const [created] = await db.insert(orchestrationEvents).values(event).returning();

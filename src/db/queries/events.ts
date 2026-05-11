@@ -28,8 +28,8 @@ export const PatchEventBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-export type CreateEventInput = z.infer<typeof CreateEventBody>;
-export type PatchEventInput = z.infer<typeof PatchEventBody>;
+type CreateEventInput = z.infer<typeof CreateEventBody>;
+type PatchEventInput = z.infer<typeof PatchEventBody>;
 
 export async function createEvent(userId: string, data: CreateEventInput, source?: string) {
   const [created] = await db

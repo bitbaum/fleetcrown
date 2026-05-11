@@ -19,7 +19,7 @@ export const PatchProjectBody = z
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
-export type PatchProjectInput = z.infer<typeof PatchProjectBody>;
+type PatchProjectInput = z.infer<typeof PatchProjectBody>;
 
 export async function createProject(userId: string, data: CreateProjectInput, source?: string) {
   const [created] = await db
