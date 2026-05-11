@@ -8,8 +8,7 @@ import { HabitHeatmap } from "./HabitHeatmap";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import type { HabitWithHistory } from "@/db/queries/habits";
-import { scheduledDays } from "@/db/queries/habits";
-import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency, scheduledDays } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 export function HabitCard({ habit }: { habit: HabitWithHistory }) {

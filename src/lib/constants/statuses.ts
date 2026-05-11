@@ -79,6 +79,16 @@ export function isHabitScheduled(frequency: HabitFrequency, dow: number): boolea
   return true;
 }
 
+/** Count how many days in the last `days` calendar days a habit of the given frequency was scheduled. */
+export function scheduledDays(frequency: HabitFrequency, days: number): number {
+  let count = 0;
+  for (let i = 0; i < days; i++) {
+    const dow = new Date(Date.now() - i * 86_400_000).getDay();
+    if (isHabitScheduled(frequency, dow)) count++;
+  }
+  return Math.max(1, count);
+}
+
 /** Interaction direction — inbound = they reached out, outbound = we did */
 export const INTERACTION_DIRECTION = {
   INBOUND: "inbound",
