@@ -5,6 +5,7 @@ import { Search, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { GoalCard } from "./GoalCard";
 import { CompletedGoals } from "./CompletedGoals";
+import { AbandonedGoals } from "./AbandonedGoals";
 import type { GoalWithChildren } from "@/db/queries/goals";
 
 /** True if goal title/description matches query, OR any descendant does */
@@ -31,9 +32,11 @@ function filterByProject(goals: GoalWithChildren[], project: string): GoalWithCh
 export function GoalsGrid({
   activeGoals,
   completedGoals,
+  abandonedGoals,
 }: {
   activeGoals: GoalWithChildren[];
   completedGoals: GoalWithChildren[];
+  abandonedGoals: GoalWithChildren[];
 }) {
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
@@ -112,6 +115,7 @@ export function GoalsGrid({
       ) : null}
 
       <CompletedGoals goals={filteredCompleted} />
+      <AbandonedGoals goals={filterTree(abandonedGoals, q)} />
     </>
   );
 }

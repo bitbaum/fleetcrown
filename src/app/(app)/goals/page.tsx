@@ -13,8 +13,9 @@ export default async function GoalsPage() {
   const userId = await getCurrentUserId();
   const [goalTree, stats] = await Promise.all([getGoals(userId), getGoalStats(userId)]);
 
-  const activeGoals = goalTree.filter((g) => g.status !== GOAL_STATUS.COMPLETED);
+  const activeGoals = goalTree.filter((g) => g.status === GOAL_STATUS.ACTIVE || !g.status);
   const completedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.COMPLETED);
+  const abandonedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.ABANDONED);
 
   return (
     <PageLayout
@@ -41,7 +42,7 @@ export default async function GoalsPage() {
           </div>
         </Card>
       ) : (
-        <GoalsGrid activeGoals={activeGoals} completedGoals={completedGoals} />
+        <GoalsGrid activeGoals={activeGoals} completedGoals={completedGoals} abandonedGoals={abandonedGoals} />
       )}
     </PageLayout>
   );

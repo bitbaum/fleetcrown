@@ -82,7 +82,7 @@ export async function patchGoal(userId: string, id: string, data: z.infer<typeof
   if (data.targetDate !== undefined) patch.targetDate = data.targetDate ? new Date(data.targetDate) : null;
   if (data.entityId !== undefined) patch.entityId = data.entityId || null;
   if (patch.status === GOAL_STATUS.COMPLETED) patch.completedAt = new Date();
-  else if (patch.status === GOAL_STATUS.ACTIVE) patch.completedAt = null;
+  else if (patch.status === GOAL_STATUS.ACTIVE || patch.status === GOAL_STATUS.ABANDONED) patch.completedAt = null;
   const [updated] = await db
     .update(goals)
     .set(patch)

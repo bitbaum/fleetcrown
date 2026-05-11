@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Target, CheckCircle, Loader2, X, Check, FolderKanban, Plus } from "lucide-react";
+import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
@@ -21,6 +21,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   const [milestones, setMilestones] = useState<Milestone[]>(goal.milestones ?? []);
   const [targetDate, setTargetDate] = useState<Date | null>(goal.targetDate);
   const [togglingStatus, setTogglingStatus] = useState(false);
+  const [abandoningStatus, setAbandoningStatus] = useState(false);
   const [displayTitle, setDisplayTitle] = useState(goal.title);
   const [description, setDescription] = useState(goal.description);
   const [addingChild, setAddingChild] = useState(false);
@@ -70,6 +71,8 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
   };
 
   const isCompleted = status === GOAL_STATUS.COMPLETED;
+  const isAbandoned = status === GOAL_STATUS.ABANDONED;
+  const isClosed = isCompleted || isAbandoned;
   const milestoneDone = milestones.filter((m) => m.done).length;
   const milestoneTotal = milestones.length;
   const hasMilestones = milestoneTotal > 0;
@@ -88,16 +91,28 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     }
   };
 
+  const toggleAbandon = async () => {
+    if (abandoningStatus) return;
+    setAbandoningStatus(true);
+    const newStatus = isAbandoned ? GOAL_STATUS.ACTIVE : GOAL_STATUS.ABANDONED;
+    try {
+      await patchGoal(goal.id, { status: newStatus });
+      setStatus(newStatus);
+    } finally {
+      setAbandoningStatus(false);
+    }
+  };
+
   return (
     <div>
-      <Card className={`group ${isCompleted ? "opacity-60" : ""}`}>
+      <Card className={`group ${isClosed ? "opacity-60" : ""}`}>
         <div className="flex items-start gap-3">
           {/* Status toggle */}
           <button
             onClick={toggleComplete}
-            disabled={togglingStatus}
+            disabled={togglingStatus || isAbandoned}
             className="shrink-0 mt-0.5 p-1.5 -m-1.5 rounded hover:bg-surface-raised transition-colors disabled:opacity-50"
-            title={isCompleted ? "Mark active" : "Mark completed"}
+            title={isCompleted ? "Mark active" : isAbandoned ? "Restore to mark completed" : "Mark completed"}
           >
             {togglingStatus ? (
               <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
@@ -128,18 +143,39 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               ) : (
                 <div
                   className={`cursor-text hover:text-text-primary transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
-                  onClick={() => !isCompleted && titleEdit.start(displayTitle)}
-                  title={isCompleted ? undefined : "Click to edit title"}
+                  onClick={() => !isClosed && titleEdit.start(displayTitle)}
+                  title={isClosed ? undefined : "Click to edit title"}
                 >
                   {displayTitle}
                 </div>
               )}
-              {status && status !== GOAL_STATUS.ACTIVE && (
+              {isAbandoned && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
-                  {status}
+                  abandoned
                 </span>
               )}
-              <div className="ml-auto">
+              {isCompleted && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
+                  completed
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-0.5">
+                {/* Abandon / restore button */}
+                <button
+                  onClick={toggleAbandon}
+                  disabled={abandoningStatus || isCompleted}
+                  title={isAbandoned ? "Restore goal" : "Mark abandoned"}
+                  className={`ui-hover-reveal p-1 rounded transition-all shrink-0 disabled:opacity-30 ${
+                    isAbandoned
+                      ? "text-text-muted hover:text-text-secondary opacity-100"
+                      : "text-text-muted hover:text-status-warning"
+                  }`}
+                >
+                  {abandoningStatus
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Archive className="h-3.5 w-3.5" />
+                  }
+                </button>
                 <DeleteGoalButton goalId={goal.id} />
               </div>
             </div>
@@ -170,13 +206,13 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               </div>
             ) : (
               <button
-                onClick={() => !isCompleted && descEdit.start(description ?? "")}
+                onClick={() => !isClosed && descEdit.start(description ?? "")}
                 className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
-                  isCompleted ? "cursor-default" :
+                  isClosed ? "cursor-default" :
                   description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
                 }`}
-                disabled={isCompleted}
-                title={isCompleted ? undefined : "Click to edit description"}
+                disabled={isClosed}
+                title={isClosed ? undefined : "Click to edit description"}
               >
                 {description ?? "Add a description…"}
               </button>
@@ -193,7 +229,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             )}
 
             {/* Progress bar */}
-            {!isCompleted && (
+            {!isClosed && (
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
                   {hasMilestones ? (
@@ -216,7 +252,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
             )}
 
             {/* Milestones */}
-            {(milestoneTotal > 0 || !isCompleted) && (
+            {(milestoneTotal > 0 || !isClosed) && (
               <div className="mt-2 space-y-1.5">
                 {milestones.map((m, i) => (
                   <MilestoneRow
@@ -236,7 +272,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
                     {milestoneDone}/{milestoneTotal} milestones
                   </div>
                 )}
-                {!isCompleted && (
+                {!isClosed && (
                   <AddMilestoneInline
                     goalId={goal.id}
                     milestones={milestones}
@@ -253,7 +289,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
       </Card>
 
       {/* Children + inline add-sub-goal */}
-      {(goal.children.length > 0 || (!isCompleted && addingChild)) && (
+      {(goal.children.length > 0 || (!isClosed && addingChild)) && (
         <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
           {goal.children.map((child) => (
             <GoalCard key={child.id} goal={child} depth={depth + 1} />
@@ -283,7 +319,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
           )}
         </div>
       )}
-      {!isCompleted && !addingChild && (
+      {!isClosed && !addingChild && (
         <button
           onClick={() => setAddingChild(true)}
           className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-secondary hover:text-status-positive transition-colors"
