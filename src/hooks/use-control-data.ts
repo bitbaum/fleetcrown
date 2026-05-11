@@ -5,8 +5,7 @@ import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
-
-type Agent = "codex" | "claude";
+import type { Agent } from "@/lib/agent-registry";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 export interface ControlDataHook {
