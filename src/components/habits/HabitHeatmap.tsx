@@ -1,6 +1,6 @@
 "use client";
 
-import { HABIT_FREQUENCY } from "@/lib/constants/statuses";
+import { type HabitFrequency, isHabitScheduled } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { toLocalDateStr } from "@/lib/dates";
 
@@ -15,21 +15,12 @@ function lastNDates(n: number): string[] {
   return dates;
 }
 
-/** Whether a date (YYYY-MM-DD) is a day the habit is due */
-function isDue(dateStr: string, frequency: string): boolean {
-  const d = new Date(dateStr + "T12:00:00"); // noon avoids DST edge cases
-  const dow = d.getDay();
-  if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
-  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1;
-  return true;
-}
-
 export function HabitHeatmap({
   completedDates,
   frequency,
 }: {
   completedDates: string[];
-  frequency: string;
+  frequency: HabitFrequency;
 }) {
   const done = new Set(completedDates);
   const dates = lastNDates(HABIT_HISTORY_DAYS);
@@ -37,7 +28,7 @@ export function HabitHeatmap({
   return (
     <div className="flex gap-0.5 flex-wrap">
       {dates.map((date) => {
-        const due = isDue(date, frequency);
+        const due = isHabitScheduled(frequency, new Date(date + "T12:00:00").getDay());
         const completed = done.has(date);
         const isToday = date === dates[dates.length - 1];
 

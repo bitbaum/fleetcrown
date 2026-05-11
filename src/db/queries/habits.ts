@@ -2,7 +2,7 @@ import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
-import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
+import { HABIT_FREQUENCY, type HabitFrequency, isHabitScheduled } from "@/lib/constants/statuses";
 import { toLocalDateStr } from "@/lib/dates";
 import { z } from "zod";
 
@@ -36,18 +36,12 @@ function groupCompletionsByHabit(completions: { habitId: string; completedDate: 
   return map;
 }
 
-function isScheduled(frequency: HabitFrequency, dow: number): boolean {
-  if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
-  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1;
-  return true;
-}
-
 function computeStreak(dates: Set<string>, maxDays: number, frequency: HabitFrequency): number {
   let streak = 0;
   for (let i = 0; i < maxDays; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    if (!isScheduled(frequency, d.getDay())) continue; // skip unscheduled days
+    if (!isHabitScheduled(frequency, d.getDay())) continue; // skip unscheduled days
     if (dates.has(toLocalDateStr(d))) streak++;
     else break;
   }
@@ -85,7 +79,7 @@ export async function getTodayHabits(userId: string): Promise<HabitWithStatus[]>
 
   if (activeHabits.length === 0) return [];
 
-  const dueHabits = activeHabits.filter((h) => isScheduled(h.frequency, new Date().getDay()));
+  const dueHabits = activeHabits.filter((h) => isHabitScheduled(h.frequency, new Date().getDay()));
   if (dueHabits.length === 0) return [];
 
   const habitIds = dueHabits.map((h) => h.id);

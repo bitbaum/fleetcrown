@@ -72,6 +72,13 @@ export const HABIT_FREQUENCY = {
 } as const;
 export type HabitFrequency = (typeof HABIT_FREQUENCY)[keyof typeof HABIT_FREQUENCY];
 
+/** Returns true if a habit with the given frequency is due on the given day-of-week (0=Sun…6=Sat). */
+export function isHabitScheduled(frequency: HabitFrequency, dow: number): boolean {
+  if (frequency === HABIT_FREQUENCY.WEEKDAYS) return dow >= 1 && dow <= 5;
+  if (frequency === HABIT_FREQUENCY.WEEKLY)   return dow === 1;
+  return true;
+}
+
 /** Interaction direction — inbound = they reached out, outbound = we did */
 export const INTERACTION_DIRECTION = {
   INBOUND: "inbound",
