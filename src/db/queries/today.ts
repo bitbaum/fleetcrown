@@ -10,6 +10,7 @@ import { commitments, subscriptions, goals, alerts, actions, events, projectStat
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_ACTIVE_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
+import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S } from "@/lib/constants/control";
 import { z } from "zod";
 
 export const CreateCommitmentBody = z.object({
@@ -229,11 +230,10 @@ export async function getTodaySummary(userId: string) {
 
 /** Counts agents with an active prompt (running) or recently finished (ready/waiting).
  *  Uses project_states DB only — no process scanning — so it's fast and safe for server components.
- *  A project is "running" when it has a current prompt started within the last 4 hours.
- *  A project is "waiting" when readyAt is within the last 10 minutes and no prompt is active. */
+ *  Cutoffs are sourced from lib/constants/control so DB counts stay in sync with UI banner windows. */
 export async function getFleetSummary(userId: string) {
-  const cutoff4h = new Date(Date.now() - 4 * 60 * 60 * 1000);
-  const cutoff10m = new Date(Date.now() - 10 * 60 * 1000);
+  const cutoffRunning = new Date(Date.now() - PROMPT_RUNNING_WINDOW_S * 1000);
+  const cutoffWaiting = new Date(Date.now() - READY_WINDOW_S * 1000);
 
   const rows = await db
     .select({
@@ -246,9 +246,9 @@ export async function getFleetSummary(userId: string) {
   let running = 0;
   let waiting = 0;
   for (const r of rows) {
-    if (r.currentPromptStartedAt && r.currentPromptStartedAt > cutoff4h) {
+    if (r.currentPromptStartedAt && r.currentPromptStartedAt > cutoffRunning) {
       running++;
-    } else if (r.readyAt && r.readyAt > cutoff10m) {
+    } else if (r.readyAt && r.readyAt > cutoffWaiting) {
       waiting++;
     }
   }

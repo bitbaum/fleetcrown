@@ -6,6 +6,11 @@ export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banne
 export const AUTO_INJECT_S             = 12;  // countdown before auto-inject in control panel
 export const DEFAULT_BEACON_COUNTDOWN_S = 30;  // default countdown in beacon popup (user-configurable)
 
+// Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
+// PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).
+// Uses READY_WINDOW_S for the "waiting" cutoff so both the UI banner and the summary pill agree.
+export const PROMPT_RUNNING_WINDOW_S = 14400; // 4 hours
+
 // How long a sentinel file or DB event remains valid as a source of lifecycle state.
 // Intentionally much larger than the UI display windows so DB state can survive a banner dismiss.
 export const SENTINEL_VALIDITY_S = 86400; // 24 hours
