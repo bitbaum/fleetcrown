@@ -155,6 +155,15 @@ function compareProjects(
   const rankDelta = rank(aState) - rank(bState);
   if (rankDelta !== 0) return rankDelta;
 
+  // Within the same rank, surface degraded/critical health first, then git activity.
+  const hasHealthIssue = (p: ProjectState) => {
+    if (!p.session?.health) return false;
+    const h = getHealthShort(p.session.health);
+    return h === "degraded" || h === "critical";
+  };
+  const healthDelta = (hasHealthIssue(a) ? 0 : 1) - (hasHealthIssue(b) ? 0 : 1);
+  if (healthDelta !== 0) return healthDelta;
+
   const aActiveGit = (a.git?.todayCount ?? 0) > 0 ? 0 : 1;
   const bActiveGit = (b.git?.todayCount ?? 0) > 0 ? 0 : 1;
   return aActiveGit - bActiveGit;
