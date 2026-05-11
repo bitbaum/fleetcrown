@@ -1,10 +1,5 @@
 import type { DevLogEntry } from "@/db/schema/user-projects";
-
-export const HEALTH_STYLE: Record<string, string> = {
-  good:              "ui-tag ui-tag-positive",
-  "needs attention": "ui-tag ui-tag-warning",
-  critical:          "ui-tag ui-tag-negative",
-};
+import { HEALTH_TAG_STYLE } from "@/config/ui";
 
 export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
   if (entries.length === 0) return null;
@@ -16,7 +11,7 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
         const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
         const timeStr = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
         const healthKey = (entry.health ?? "").toLowerCase();
-        const healthCls = HEALTH_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
+        const healthCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
         return (
           <div key={i} className="rounded-xl border border-border-subtle bg-surface-base p-3 space-y-1.5">
             <div className="flex items-center justify-between gap-2">

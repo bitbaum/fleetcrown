@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 import { CockpitMark } from "@/components/shell/CockpitMark";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { listThoughts } from "@/lib/thoughts-content";
-import { HEALTH_STYLE } from "@/components/shared/DevLogList";
+import { HEALTH_TAG_STYLE } from "@/config/ui";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 
 export async function generateMetadata({
@@ -91,7 +91,7 @@ export default async function PublicProfilePage({
                 const log = project.devLog as DevLogEntry[];
                 const latest = log.length > 0 ? log[log.length - 1] : null;
                 const healthKey = (latest?.health ?? "").toLowerCase();
-                const healthCls = HEALTH_STYLE[healthKey];
+                const healthCls = HEALTH_TAG_STYLE[healthKey];
                 return (
                   <a
                     key={project.id}
