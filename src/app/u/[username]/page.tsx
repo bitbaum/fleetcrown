@@ -35,10 +35,8 @@ export default async function PublicProfilePage({
   const user = await db.query.users.findFirst({ where: eq(users.username, username) });
   if (!user) notFound();
 
-  const [projects, thoughts] = await Promise.all([
-    getPublicProjects(user.id),
-    Promise.resolve(listThoughts()),
-  ]);
+  const projects = await getPublicProjects(user.id);
+  const thoughts = listThoughts();
 
   const recentThoughts = thoughts
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
