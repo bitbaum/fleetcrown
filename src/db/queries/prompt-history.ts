@@ -81,6 +81,41 @@ export async function getRecentCustomPromptsByProjectKeys(
   return result;
 }
 
+// All dispatches — for the dedicated history page
+export type HistoryItem = {
+  id: string;
+  projectKey: string;
+  adapter: string;
+  intent: string;
+  customPrompt: string | null;
+  dispatchedAt: Date;
+};
+
+export async function getPromptHistory(userId: string, limit = 200): Promise<HistoryItem[]> {
+  const rows = await db
+    .select({
+      id: promptHistory.id,
+      projectKey: promptHistory.projectKey,
+      adapter: promptHistory.adapter,
+      intent: promptHistory.intent,
+      customPrompt: promptHistory.customPrompt,
+      dispatchedAt: promptHistory.dispatchedAt,
+    })
+    .from(promptHistory)
+    .where(eq(promptHistory.userId, userId))
+    .orderBy(desc(promptHistory.dispatchedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    projectKey: r.projectKey,
+    adapter: r.adapter,
+    intent: r.intent,
+    customPrompt: r.customPrompt ?? null,
+    dispatchedAt: r.dispatchedAt,
+  }));
+}
+
 // Last N dispatches across all projects — for the live activity feed
 export type ActivityItem = {
   id: string;

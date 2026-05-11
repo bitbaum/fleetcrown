@@ -12,6 +12,7 @@ import {
   BookOpen,
   Settings,
   Brain,
+  History,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "habits",   label: "Habits",   description: "Daily streaks & 30-day heatmap",   href: "/habits",   icon: Repeat2,      active: true,  mobile: false },
   { id: "events",   label: "Events",   description: "Deadlines & opportunities",         href: "/events",   icon: Calendar,     active: true,  mobile: false },
   { id: "money",    label: "Money",    description: "Subscriptions & monthly burn",      href: "/money",    icon: Wallet,       active: true,  mobile: false },
+  { id: "history",  label: "History",  description: "Full log of every agent dispatch",  href: "/history",  icon: History,      active: true,  mobile: false },
   { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler", href: "/prompts",  icon: Zap,          active: true,  mobile: false },
   { id: "system",   label: "System",   description: "Runtime health & autopilot jobs",  href: "/system",   icon: Server,       active: true,  mobile: false },
   { id: "memory",   label: "Memory",   description: "Knowledge graph & entity activity", href: "/memory",   icon: Brain,        active: true,  mobile: false },
