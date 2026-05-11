@@ -7,16 +7,10 @@ import { PersonDetail } from "./PersonDetail";
 import { NewPersonButton } from "./NewPersonButton";
 import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
-import { SORT_MODE, type SortMode } from "@/lib/constants/statuses";
+import { SORT_MODE, SORT_LABELS, type SortMode } from "@/lib/constants/statuses";
 import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/constants/people";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
-
-const SORT_LABELS: Record<SortMode, string> = {
-  [SORT_MODE.RECENT]: "Recent",
-  [SORT_MODE.NAME]: "A–Z",
-  [SORT_MODE.HEALTH]: "Needs attention",
-};
 
 const SORT_ORDER: SortMode[] = Object.values(SORT_MODE);
 

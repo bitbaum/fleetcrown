@@ -89,6 +89,11 @@ export const SORT_MODE = {
   HEALTH: "health",
 } as const;
 export type SortMode = (typeof SORT_MODE)[keyof typeof SORT_MODE];
+export const SORT_LABELS: Record<SortMode, string> = {
+  [SORT_MODE.RECENT]: "Recent",
+  [SORT_MODE.NAME]:   "A–Z",
+  [SORT_MODE.HEALTH]: "Needs attention",
+};
 
 /** Alert severity values */
 export const ALERT_SEVERITY = {
