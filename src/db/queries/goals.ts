@@ -162,6 +162,7 @@ export async function getGoalStats(userId: string) {
       total: sql<number>`count(*)`,
       active: sql<number>`count(*) filter (where ${goals.status} = ${GOAL_STATUS.ACTIVE})`,
       completed: sql<number>`count(*) filter (where ${goals.status} = ${GOAL_STATUS.COMPLETED})`,
+      abandoned: sql<number>`count(*) filter (where ${goals.status} = ${GOAL_STATUS.ABANDONED})`,
       avgProgress: sql<number>`coalesce(avg(${goals.progress}) filter (where ${goals.status} = ${GOAL_STATUS.ACTIVE}), 0)`,
     })
     .from(goals)
@@ -171,6 +172,7 @@ export async function getGoalStats(userId: string) {
     total: Number(result.total),
     active: Number(result.active),
     completed: Number(result.completed),
+    abandoned: Number(result.abandoned),
     avgProgress: Math.round(Number(result.avgProgress)),
   };
 }

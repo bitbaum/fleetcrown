@@ -24,7 +24,14 @@ export default async function GoalsPage() {
       right={<NewGoalButton goals={activeGoals} />}
     >
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Active Goals" value={String(stats.active)} sub={`${stats.completed} completed`} />
+        <StatCard
+          label="Active Goals"
+          value={String(stats.active)}
+          sub={[
+            stats.completed > 0 && `${stats.completed} completed`,
+            stats.abandoned > 0 && `${stats.abandoned} abandoned`,
+          ].filter(Boolean).join(" · ") || "none closed yet"}
+        />
         <StatCard label="Avg Progress" value={`${stats.avgProgress}%`} sub="across active goals" />
         <StatCard label="Total" value={String(stats.total)} sub="goals tracked" />
       </div>
