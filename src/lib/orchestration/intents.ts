@@ -64,6 +64,13 @@ export const ORCHESTRATION_INTENTS: Record<OrchestrationTaskIntentId, Orchestrat
     requiresVerification: true,
     requiresSessionHandoff: true,
   },
+  hard_stop: {
+    id: "hard_stop",
+    name: "Hard Stop",
+    objective: "Stop all activity immediately — no further tool calls, no code changes, no commits. Auto-continue is blocked.",
+    requiresVerification: false,
+    requiresSessionHandoff: false,
+  },
   continue: {
     id: "continue",
     name: "Continue",

@@ -51,6 +51,7 @@ export const ORCHESTRATION_TASK_INTENT_IDS = [
   "deploy_check",
   "commit_push",
   "close_session",
+  "hard_stop",
   "continue",
   "custom",
 ] as const;

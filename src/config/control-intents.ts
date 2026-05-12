@@ -15,6 +15,7 @@ const INTENT_UI: Partial<Record<OrchestrationTaskIntentId, { label: string; grou
   ux_review:    { label: "UX review",      group: "more" },
   deploy_check: { label: "Deploy check",   group: "more" },
   close_session:{ label: "Close session",  group: "more" },
+  hard_stop:    { label: "Hard stop",      group: "more" },
 };
 
 type IntentButton = { id: OrchestrationTaskIntentId; label: string };

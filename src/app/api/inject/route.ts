@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     createOrchestrationEvent({
       userId,
       projectKey: canonical,
-      eventType: promptKey === "close_session" ? "close_requested" : "continue_requested",
+      eventType: (promptKey === "close_session" || promptKey === "hard_stop") ? "close_requested" : "continue_requested",
       source: "api-inject",
       adapter: "claude",
       intent: eventIntent,
@@ -148,7 +148,14 @@ export async function POST(req: NextRequest) {
     // Any injection means we're continuing — clear stale ready/closed state (both naming conventions)
     clearHandshakeFiles(effectiveTab);
 
-    if (promptKey === "close_session") {
+    if (promptKey === "hard_stop") {
+      // Hard stop: block auto-continue immediately and mark the session as closed.
+      // Claude will finish its current tool call, see the STOP prompt, and go idle.
+      // stop.sh won't re-open because the sentinel and closed files are already present.
+      fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
+      fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
+      fs.writeFileSync(stateFile.closed(effectiveTab), String(nowS));
+    } else if (promptKey === "close_session") {
       // Suppress the next stop-hook popup — infrastructure-side, reliable
       fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
       // Signal "closing in progress" — NOT "closed" yet (Claude is still running the close prompt).

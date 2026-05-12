@@ -76,9 +76,21 @@ export async function POST(req: NextRequest) {
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
     try {
-      const prompt = buildPromptWithSession(renderTaskForAdapter(request), request.projectKey);
-      injectIntoTab(effectiveKey, prompt);
+      const nowS = Math.floor(Date.now() / 1000);
+      const prompt = renderTaskForAdapter(request);
+      // hard_stop skips session context — inject the bare stop directive, then immediately
+      // block auto-continue so stop.sh won't re-open even after Claude goes idle.
+      const fullPrompt = request.intent === "hard_stop"
+        ? prompt
+        : buildPromptWithSession(prompt, request.projectKey);
+      injectIntoTab(effectiveKey, fullPrompt);
       cancelActiveBeaconSessions(effectiveKey);
+      if (request.intent === "hard_stop") {
+        clearHandshakeFiles(effectiveKey);
+        fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
+        fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
+        fs.writeFileSync(stateFile.closed(effectiveKey), String(nowS));
+      }
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -116,7 +128,7 @@ export async function POST(req: NextRequest) {
       createOrchestrationEvent({
         userId,
         projectKey: request.projectKey,
-        eventType: request.intent === "close_session" ? "close_requested" : "continue_requested",
+        eventType: (request.intent === "close_session" || request.intent === "hard_stop") ? "close_requested" : "continue_requested",
         source: "api-orchestration",
         adapter: "codex",
         intent: request.intent,
@@ -137,7 +149,11 @@ export async function POST(req: NextRequest) {
 
       clearHandshakeFiles(effectiveKey);
 
-      if (request.intent === "close_session") {
+      if (request.intent === "hard_stop") {
+        fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
+        fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
+        fs.writeFileSync(stateFile.closed(effectiveKey), String(nowS));
+      } else if (request.intent === "close_session") {
         fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
         fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
       } else {

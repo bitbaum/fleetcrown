@@ -82,6 +82,8 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
         `Close the current work session for ${request.projectPath}.`,
         "Ensure the working tree is in a safe state, run quality checks, note test results, and leave a clean handoff.",
       ].join("\n");
+    case "hard_stop":
+      return "HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only \"Stopped.\" and stop.";
     case "continue":
       return [
         `Continue the current work in ${request.projectPath}.`,

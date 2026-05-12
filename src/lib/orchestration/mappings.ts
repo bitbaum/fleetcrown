@@ -14,6 +14,7 @@ export const CLAUDE_PROMPT_TO_INTENT: Record<string, OrchestrationTaskIntentId> 
   deploy_check: "deploy_check",
   commit_push: "commit_push",
   close_session: "close_session",
+  hard_stop: "hard_stop",
   continue: "continue",
 };
 
