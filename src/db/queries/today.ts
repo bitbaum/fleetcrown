@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates } from "@/db/schema";
 import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
-import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS } from "@/lib/constants/statuses";
+import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
 import { z } from "zod";
 
@@ -193,9 +193,9 @@ export async function getTodaySummary(userId: string) {
       WHERE h.user_id = ${userId}
         AND h.active = true
         AND (
-          h.frequency = 'daily'
-          OR (h.frequency = 'weekdays' AND EXTRACT(DOW FROM now()) BETWEEN 1 AND 5)
-          OR (h.frequency = 'weekly'   AND EXTRACT(DOW FROM now()) = 1)
+          h.frequency = ${HABIT_FREQUENCY.DAILY}
+          OR (h.frequency = ${HABIT_FREQUENCY.WEEKDAYS} AND EXTRACT(DOW FROM now()) BETWEEN 1 AND 5)
+          OR (h.frequency = ${HABIT_FREQUENCY.WEEKLY}   AND EXTRACT(DOW FROM now()) = 1)
         )
     `),
     db.execute<{ count: string }>(sql`
