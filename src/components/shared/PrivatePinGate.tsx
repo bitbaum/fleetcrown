@@ -67,7 +67,7 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
             autoComplete="current-password"
           />
           {error && (
-            <p className="text-center text-sm text-red-400">{error}</p>
+            <p className="ui-error text-center">{error}</p>
           )}
           <button
             type="submit"
