@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/", "/sign-in", "/setup"]);
+const PUBLIC_PATHS = new Set(["/", "/sign-in", "/sign-out", "/setup"]);
 
 export default auth((req) => {
   const { pathname, search } = req.nextUrl;
@@ -15,8 +15,8 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  // Public pages, invite registration, and beacon popup — always accessible
-  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/invite/") || pathname.startsWith("/beacon/")) {
+  // Public pages, invite registration, beacon popup, and public essays — always accessible
+  if (PUBLIC_PATHS.has(pathname) || pathname.startsWith("/invite/") || pathname.startsWith("/beacon/") || pathname.startsWith("/thoughts")) {
     return NextResponse.next();
   }
 
