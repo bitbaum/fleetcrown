@@ -1,9 +1,10 @@
 "use client";
 
-import { PanelLeftOpen, LogOut } from "lucide-react";
+import { PanelLeftOpen, LogOut, Lock } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { ThemeToggle } from "../ThemeToggle";
 import { cn } from "@/lib/utils";
+import { usePrivateZone } from "@/hooks/use-private-zone";
 
 export function SidebarFooter({
   collapsed,
@@ -12,6 +13,8 @@ export function SidebarFooter({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
+  const { unlocked, lock } = usePrivateZone();
+
   return (
     <div className="ui-sidebar-section space-y-2 border-t border-border-subtle">
       <ThemeToggle compact={collapsed} />
@@ -24,6 +27,19 @@ export function SidebarFooter({
           aria-label="Expand sidebar"
         >
           <PanelLeftOpen className="h-4 w-4" />
+        </button>
+      )}
+      {unlocked && (
+        <button
+          onClick={lock}
+          className={cn(
+            "ui-sidebar-utility w-full",
+            collapsed && "justify-center px-2",
+          )}
+          title={collapsed ? "Lock private zone" : undefined}
+        >
+          <Lock className="h-4 w-4 shrink-0" />
+          {!collapsed && "Lock private zone"}
         </button>
       )}
       <button
