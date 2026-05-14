@@ -5,7 +5,7 @@
 #   COCKPIT_DAEMON_TOKEN=<secret> ./scripts/cockpit-daemon.sh
 #
 # Optional env vars:
-#   COCKPIT_BASE_URL      — defaults to https://cockpit-lmr3cq7mx-orangecat.vercel.app
+#   COCKPIT_BASE_URL      — defaults to https://cockpit-orangecat.vercel.app
 #   COCKPIT_POLL_INTERVAL — seconds between polls, default 5
 #   COCKPIT_DRY_RUN       — set to "1" to log commands without executing them
 #
@@ -23,7 +23,7 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
   exit 1
 }
 
-BASE_URL="${COCKPIT_BASE_URL:-https://cockpit-lmr3cq7mx-orangecat.vercel.app}"
+BASE_URL="${COCKPIT_BASE_URL:-https://cockpit-orangecat.vercel.app}"
 POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-5}"
 DRY_RUN="${COCKPIT_DRY_RUN:-0}"
 TOKEN="${COCKPIT_DAEMON_TOKEN:-}"
