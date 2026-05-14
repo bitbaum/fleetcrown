@@ -2,13 +2,9 @@
  * POST /api/control/dispatch
  *
  * Strategist layer: decides whether to drain the queue or run next_best
- * given the current session handoff, pending queue items, and project context.
- *
- * Returns quickly (< 300ms on Groq free tier). Falls back to QUEUE if Groq
- * is unavailable, preserving the existing behaviour without breaking callers.
- *
- * This is Step 2 of the dispatch intelligence path. Step 3 will wire it into
- * handleAutoInject in ProjectCard.
+ * given the current session handoff, pending queue items, git context, and
+ * recent commit history. Returns quickly (< 300ms on Groq free tier).
+ * Falls back to QUEUE when Groq is unavailable.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -23,10 +19,11 @@ const HandoffSchema = z.object({
 });
 
 const DispatchBody = z.object({
-  handoff:     HandoffSchema,
-  queue:       z.array(z.string().trim().min(1)).max(20),
-  projectName: z.string().optional(),
-  gitBranch:   z.string().optional(),
+  handoff:       HandoffSchema,
+  queue:         z.array(z.string().trim().min(1)).max(20),
+  projectName:   z.string().optional(),
+  gitBranch:     z.string().optional(),
+  recentCommits: z.array(z.string()).max(5).optional(),
 });
 
 export type DispatchAction = "queue" | "nextbest";
@@ -45,11 +42,18 @@ function buildPrompt(
   queue: string[],
   projectName?: string,
   gitBranch?: string,
+  recentCommits?: string[],
 ): string {
   const projectCtx = [
     projectName ? `Project: ${projectName}` : "",
     gitBranch   ? `Branch: ${gitBranch}`    : "",
   ].filter(Boolean).join("  |  ");
+
+  // Strip leading hash so the model focuses on message content, not SHAs.
+  // Raw format from GitState: "abc1234 2025-05-14: feat(x): add thing"
+  const commitsSection = recentCommits && recentCommits.length > 0
+    ? `\nRecent commits (newest first):\n${recentCommits.slice(0, 3).map((c) => `  • ${c.replace(/^[0-9a-f]+ /, "")}`).join("\n")}\n`
+    : "";
 
   const queueList = queue
     .slice(0, 5)
@@ -58,7 +62,7 @@ function buildPrompt(
   const queueOverflow = queue.length > 5 ? `\n(+${queue.length - 5} more items)` : "";
 
   return `You are a dispatch strategist for an AI coding agent workflow.
-${projectCtx ? `\n${projectCtx}\n` : ""}
+${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}
 The agent just finished a work session. Handoff summary:
   done:   ${handoff.done || "(none)"}
   next:   ${handoff.next || "(none)"}
@@ -71,8 +75,8 @@ ${queueList}${queueOverflow}
 Decide: should the agent next run queue item 1, or follow its own suggested next step?
 
 Rules:
-- Prefer QUEUE when: the first queue item is contextually related to what was just done, OR health is good and there is no strong continuity signal.
-- Prefer NEXTBEST when: the agent's "next" field describes an obvious direct follow-up to "done", OR health is "needs attention" and the queue item is unrelated.
+- Prefer QUEUE when: the first queue item is contextually related to what was just done or the recent commits, OR health is good and there is no strong continuity signal.
+- Prefer NEXTBEST when: the agent's "next" field describes an obvious direct follow-up to "done", OR health is "needs attention" and the queue item is unrelated to recent commit history.
 - NEXTBEST is already required (caller enforces it) when health is "critical" or tests contain "fail" — do not factor those in; focus on the subtler cases.
 
 Respond in exactly this format (two lines, nothing else):
@@ -136,7 +140,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, projectName, gitBranch } = dataOrResp;
+  const { handoff, queue, projectName, gitBranch, recentCommits } = dataOrResp;
 
   // No queue items — trivially run next_best.
   if (queue.length === 0) {
@@ -159,7 +163,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Groq classification.
-  const prompt = buildPrompt(handoff, queue, projectName, gitBranch);
+  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits);
 
   try {
     const { action, reason } = await callGroq(prompt);

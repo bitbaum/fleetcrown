@@ -124,8 +124,9 @@ export function ProjectCard({
     postJson("/api/control/dispatch", {
       handoff,
       queue,
-      projectName: project.tab,
-      gitBranch:   project.git?.branch,
+      projectName:   project.tab,
+      gitBranch:     project.git?.branch,
+      recentCommits: project.git?.recentCommits,
     }).then(async (res) => {
       if (!cancelled && res.ok) setPreloadedDispatch(await res.json() as DispatchResult);
     }).catch(() => {});
