@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Bot, CheckCircle2, XCircle, Clock, AlertTriangle, Folder } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
-import type { CronJob } from "@/lib/crons";
-import { humanCronSchedule } from "@/lib/crons";
+import type { CronJob } from "@/lib/crons-shared";
+import { humanCronSchedule } from "@/lib/crons-shared";
 import { patchCronJob } from "@/lib/api/crons";
 import { JobDetail } from "./JobDetail";
 

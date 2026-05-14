@@ -277,6 +277,80 @@ Look for:
 List violations by page/component.`,
     tags: ["design-system", "consistency"],
   },
+  {
+    id: "design-debt-architecture-audit",
+    name: "Design Debt Architecture Audit",
+    featured: true,
+    description: "Find hardcoded UI debt, token sprawl, weak primitives, and redesign blockers",
+    category: "design",
+    scope: "project",
+    template: `Audit {{project_name}} for design-related architecture debt and redesign readiness.
+
+Goal:
+Determine whether the product's UI can be systematically redesigned through a clean design layer, or whether visual decisions are scattered across pages and components.
+
+Inspect the codebase before answering. Be concrete: use counts, file paths, examples, and a prioritized remediation plan.
+
+Audit areas:
+1. Single source of truth
+   - Find all places defining design tokens, theme values, colors, typography, spacing, radius, shadows, breakpoints, density, or component variants.
+   - Identify overlapping or conflicting token systems.
+   - State which file or module should become the SSOT, and which ones should be merged, deprecated, or converted.
+
+2. Separation of concerns
+   - Find pages, routes, domain configs, or business components that directly encode visual language.
+   - Look for hardcoded Tailwind utilities, hex colors, color-family references, one-off gradients, shadows, radius choices, text sizes, spacing, and layout patterns.
+   - Call out places where product/domain logic stores presentation classes instead of semantic states.
+
+3. DRY and component coverage
+   - Identify repeated UI patterns that should be primitives or composed components: buttons, cards, badges, forms, tables, page shells, sections, headers, empty states, alerts, tabs, filters, detail panes, dashboards, hero blocks, and admin list/detail layouts.
+   - Find multiple implementations of the same visual pattern.
+   - Identify primitives that exist but are inconsistently used.
+
+4. Redesign readiness
+   - Answer this directly: if we decided today to adapt an x.ai-like visual direction, and next month to adapt an OpenAI-like visual direction, how much would need to change?
+   - Separate what should be token/component-level work from what would still require page-level UX/product work.
+   - Rate the current redesign readiness as Green / Yellow / Red, with reasons.
+
+5. Public vs admin UX debt
+   - Evaluate public-facing pages separately from admin/operator screens.
+   - Public pages should have coherent brand, content hierarchy, responsive composition, and reusable marketing/content sections.
+   - Admin screens should be dense, calm, readable, consistent, and optimized for repeated operational use.
+
+Suggested searches:
+- className=, style=, bg-, text-, border-, rounded-, shadow-, ring-, p-, px-, py-, m-, gap-, grid, flex
+- hardcoded hex colors and arbitrary Tailwind values
+- color families such as slate, blue, purple, emerald, orange, rose, teal, cyan, indigo, violet
+- text-xs, text-sm, text-lg, font-, leading-
+- token/config/style files under src/lib, src/config, src/components, src/app
+
+Output format:
+1. Executive verdict
+   - One paragraph on whether design is centralized or scattered.
+   - Redesign readiness: Green / Yellow / Red.
+
+2. Evidence
+   - Quantified findings where possible.
+   - Important files and examples.
+   - Distinguish "good foundations already present" from "debt to fix".
+
+3. Main risks
+   - List the top design-architecture risks in priority order.
+
+4. Refactor plan
+   - Phase 1: consolidate tokens and theme SSOT.
+   - Phase 2: define core primitives and variants.
+   - Phase 3: migrate admin UI patterns.
+   - Phase 4: migrate public UI patterns.
+   - Phase 5: add theme presets or adapters only after the foundation is stable.
+
+5. First implementation slice
+   - Recommend the smallest high-leverage code change to start with.
+   - Include exact files/modules to touch and what not to touch yet.
+
+Be direct. Do not repaint the UI yet unless explicitly asked. The first goal is to expose and reduce design debt so future redesigns are cheaper and less repetitive.`,
+    tags: ["design-system", "debt", "architecture", "redesign", "tokens"],
+  },
 
   // ─── Business ──────────────────────────────────────────────────────────────
   {

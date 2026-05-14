@@ -10,6 +10,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Wire-format prefix for custom prompts — must match CUSTOM_CHOICE_PREFIX in src/lib/constants/control.ts
 readonly CUSTOM_CHOICE_PREFIX="custom:"
+readonly SWITCH_CHOICE_PREFIX="switch:"
 # Override via COCKPIT_URL env var for non-default ports or remote deployments.
 readonly COCKPIT_URL="${COCKPIT_URL:-http://localhost:3000}"
 python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
@@ -55,6 +56,52 @@ emit_or_inject_prompt() {
   else
     inject_prompt "$tab_name" "$prompt"
   fi
+}
+
+agent_command() {
+  local agent="$1" dir="$2"
+  case "$agent" in
+    claude) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && claude" "$dir" ;;
+    codex) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && codex --model gpt-5.4 --no-alt-screen" "$dir" ;;
+    gemini) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && gemini" "$dir" ;;
+    *) return 1 ;;
+  esac
+}
+
+switch_agent_and_continue() {
+  local tab_name="$1" project_dir="$2" agent="$3" prompt="$4"
+  local command prompt_file runner
+
+  case "$agent" in
+    codex|gemini)
+      prompt_file="/tmp/cockpit-${agent}-prompt-$(date +%s)-$$.txt"
+      printf '%s' "$prompt" > "$prompt_file"
+      runner="$SCRIPT_DIR/run-${agent}-task.sh"
+      command=$(printf "bash %q %q %q %q %q" "$runner" "$tab_name" "$project_dir" "$prompt_file" "$([ "$agent" = "gemini" ] && echo auto || echo gpt-5.4)")
+      zellij action go-to-tab-name "$tab_name" 2>/dev/null || true
+      sleep 0.2
+      zellij action write 3 2>/dev/null || true
+      sleep 0.1
+      zellij action write-chars -- "$command" 2>/dev/null || true
+      sleep 0.1
+      zellij action write 13 2>/dev/null || true
+      ;;
+    claude)
+      command=$(agent_command "$agent" "$project_dir") || return 1
+      zellij action go-to-tab-name "$tab_name" 2>/dev/null || true
+      sleep 0.2
+      zellij action write 3 2>/dev/null || true
+      sleep 0.1
+      zellij action write-chars -- "$command" 2>/dev/null || true
+      sleep 0.1
+      zellij action write 13 2>/dev/null || true
+      sleep 3
+      inject_prompt "$tab_name" "$prompt"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 handle_stop() {
@@ -140,8 +187,74 @@ handle_stop() {
   log "popup choice=$choice"
   [ -z "$choice" ] && exit 0
 
-  local inject_key inject_label
-  if [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]]; then
+  local inject_key inject_label queue_file
+  queue_file="/tmp/agent-queue-${TAB_NAME,,}"
+
+  # If choice is '1' (Next Best Task), check if there's a queue item and fire that instead.
+  # This matches the web beacon logic and handles the race where PyQt hits 0s first.
+  if [ "$choice" = "1" ] && [ -f "$queue_file" ]; then
+    local first_item
+    first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
+    if [ -n "$first_item" ]; then
+      log "prioritizing queue item over slot 1 choice"
+      choice="${CUSTOM_CHOICE_PREFIX}${first_item}"
+      # Remove it from the file to avoid double-firing from the web app
+      local tmp_q="${queue_file}.tmp"
+      jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+    fi
+  fi
+
+  if [[ "$choice" == "${SWITCH_CHOICE_PREFIX}"* ]]; then
+    local target_agent switch_prompt switch_label first_item tmp_q session_update_block session
+    target_agent="${choice#"${SWITCH_CHOICE_PREFIX}"}"
+    case "$target_agent" in
+      claude|codex|gemini) ;;
+      *) log "unknown switch target=$target_agent" && exit 0 ;;
+    esac
+
+    switch_label="Switch to ${target_agent}"
+    if [ -f "$queue_file" ]; then
+      first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
+      if [ -n "$first_item" ]; then
+        switch_prompt="$first_item"
+        tmp_q="${queue_file}.tmp"
+        jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+        switch_label="Switch to ${target_agent} · queued prompt"
+      fi
+    fi
+
+    if [ -z "${switch_prompt:-}" ]; then
+      base=$(get_prompt "next_best")
+      [ -z "$base" ] && log "prompt not found for key=next_best" && exit 0
+
+      session_update_block="When done, update ${session_file} with exactly these lines:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count> TODOs
+health: <good | needs attention | critical>"
+
+      if [ -f "$session_file" ]; then
+        session=$(cat "$session_file")
+        switch_prompt="${base}
+
+Session state from last run:
+${session}
+
+${session_update_block}"
+      else
+        switch_prompt="${base}
+
+Before stopping, create ${session_file}.
+${session_update_block}"
+      fi
+    fi
+
+    switch_agent_and_continue "$TAB_NAME" "$cwd" "$target_agent" "$switch_prompt"
+    write_inject_state "$TAB_NAME" "switch_agent" "$switch_label"
+    log "switched target=$target_agent"
+    exit 0
+  elif [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]]; then
     prompt="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
     inject_key="custom"
     inject_label="${choice#"${CUSTOM_CHOICE_PREFIX}"}"

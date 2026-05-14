@@ -1,5 +1,5 @@
 import { postJson, patchJson } from "./fetch";
-import type { CreateCronJobBody, PatchCronJobBody } from "@/lib/crons";
+import type { CreateCronJobBody, PatchCronJobBody } from "@/lib/crons-shared";
 
 export type { CreateCronJobBody, PatchCronJobBody };
 

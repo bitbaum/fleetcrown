@@ -89,7 +89,7 @@ export function BrainConfigPanel({
     <div className="space-y-5">
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="ui-kicker">Active brain</p>
+          <p className="ui-kicker">Default launch agent</p>
           <div className="flex items-center gap-2 text-text-primary">
             <Bot className="h-4 w-4 shrink-0 text-accent-text" />
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -97,7 +97,7 @@ export function BrainConfigPanel({
             </h2>
           </div>
           <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
-            Choose the default interactive agent and model for Control-driven launches and orchestrated continuation.
+            Saved preference for new Control launches and continuation prompts. Live execution is shown per project below.
           </p>
         </div>
         {headerRight && <div className="shrink-0">{headerRight}</div>}

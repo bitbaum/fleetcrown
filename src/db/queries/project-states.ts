@@ -32,6 +32,15 @@ export async function getProjectState(projectKey: string) {
   return row ?? null;
 }
 
+export async function getProjectStateByProjectId(projectId: string) {
+  const [row] = await db
+    .select()
+    .from(projectStates)
+    .where(eq(projectStates.projectId, projectId))
+    .limit(1);
+  return row ?? null;
+}
+
 export async function getProjectStatesByUserId(userId: string): Promise<(typeof projectStates.$inferSelect)[]> {
   return db.select().from(projectStates).where(eq(projectStates.userId, userId));
 }

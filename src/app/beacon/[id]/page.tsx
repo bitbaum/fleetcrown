@@ -3,15 +3,15 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import {
-  Loader2, Check, ArrowRight, ExternalLink,
-  Pause, Play, Mic, ListPlus, Send,
+  Loader2, Check, ExternalLink, Repeat2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
-import { QueueList } from "@/components/control/project-composer";
+import { PromptInput, QueueList } from "@/components/control/project-composer";
+import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary";
+import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
@@ -19,59 +19,23 @@ import { readyAtKey } from "@/lib/control-storage";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 
-function SessionSummary({ content }: { content: string }) {
-  const s = parseSessionText(content);
-  const [doneOpen, setDoneOpen] = useState(false);
-  if (!content.trim()) return null;
+const SWITCH_CHOICE_PREFIX = "switch:";
 
+function agentLabel(agent: string | null | undefined): string {
+  if (agent === "claude") return "Claude";
+  if (agent === "codex") return "Codex";
+  if (agent === "gemini") return "Gemini";
+  return "agent";
+}
+
+function SessionSummary({ content }: { content: string }) {
+  if (!content.trim()) return null;
   return (
-    <div className="ui-panel rounded-2xl p-5 space-y-4">
-      {s.next.length > 0 && (
-        <div className="space-y-2">
-          <p className="ui-kicker text-micro">Agent&apos;s plan</p>
-          {s.next.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-text" />
-              <span className="text-sm leading-relaxed text-text-primary">{item}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {s.in_progress.length > 0 && (
-        <div className="space-y-2">
-          <p className="ui-kicker text-micro text-status-warning">In Progress</p>
-          {s.in_progress.map((item, i) => (
-            <div key={i} className="flex items-start gap-2.5">
-              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-status-warning" />
-              <span className="text-sm leading-relaxed text-text-secondary">{item}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      {s.done.length > 0 && (
-        <div className="space-y-1">
-          <button
-            onClick={() => setDoneOpen((v) => !v)}
-            className="flex w-full items-center gap-2 py-1"
-          >
-            <p className="ui-kicker text-micro text-text-muted">
-              Done · {s.done.length} completed
-            </p>
-            <span className="ml-auto text-xs text-text-muted">{doneOpen ? "▾" : "▸"}</span>
-          </button>
-          {doneOpen && (
-            <div className="space-y-1.5 pt-1">
-              {s.done.map((item, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-positive" />
-                  <span className="text-xs leading-relaxed text-text-tertiary">{item}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    <SessionHandoff
+      data={buildSessionHandoffFromBeaconSession(parseSessionText(content))}
+      surface="panel"
+      microLabels
+    />
   );
 }
 
@@ -104,6 +68,7 @@ function BeaconBody({
   const [custom, setCustom] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [countdown, setCountdown] = useState(() => {
     // Initialise from the shared readyAt timestamp written by the control panel
     // so both views count down from the same origin and show the same number.
@@ -157,14 +122,16 @@ function BeaconBody({
       if (autoFiredRef.current) return;
       autoFiredRef.current = true;
       const primary = prompts.find((p) => p.style === "primary");
-      const choice = queue.length > 0
+      const choice = session.capacityIssue && session.nextAgent
+        ? `${SWITCH_CHOICE_PREFIX}${session.nextAgent}`
+        : queue.length > 0
         ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
         : primary ? String(primary.slot ?? primary.key) : "1";
-      if (queue.length > 0) remove(0);
+      if (!session.capacityIssue && queue.length > 0) remove(0);
       submitRef.current(choice);
     }, 1000);
     return () => clearTimeout(t);
-  }, [countdown, autoContinueEnabled, prompts, queue, remove, isComposing]);
+  }, [countdown, autoContinueEnabled, prompts, queue, remove, isComposing, session.capacityIssue, session.nextAgent]);
 
   // Re-fit window whenever content height changes (prompts load, queue grows/shrinks).
   useEffect(() => {
@@ -186,6 +153,8 @@ function BeaconBody({
     let label = "";
     if (choice.startsWith(CUSTOM_CHOICE_PREFIX)) {
       label = choice.slice(CUSTOM_CHOICE_PREFIX.length).trim();
+    } else if (choice.startsWith(SWITCH_CHOICE_PREFIX)) {
+      label = `Switch to ${agentLabel(choice.slice(SWITCH_CHOICE_PREFIX.length))}`;
     } else {
       const slot = parseInt(choice);
       const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
@@ -253,6 +222,30 @@ function BeaconBody({
         />
       )}
 
+      {session.nextAgent && (
+        <div className={session.capacityIssue ? "ui-panel rounded-xl border-status-warning/40 p-3" : "ui-panel rounded-xl p-3"}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={session.capacityIssue ? "ui-tag ui-tag-warning" : "ui-tag ui-tag-neutral"}>
+              {session.capacityIssue ? "capacity issue" : "fallback ready"}
+            </span>
+            <span className="text-sm text-text-secondary">
+              {agentLabel(session.currentAgent)} → {agentLabel(session.nextAgent)}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => submit(`${SWITCH_CHOICE_PREFIX}${session.nextAgent}`)}
+            className="ui-btn-secondary mt-3 w-full justify-start gap-2"
+          >
+            <Repeat2 className="h-4 w-4" />
+            Switch to {agentLabel(session.nextAgent)} and continue
+            {session.capacityIssue && autoContinueEnabled && countdown > 0 && (
+              <span className="ml-auto font-mono text-xs tabular-nums">{countdown}s</span>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* Primary action */}
       {primaryPrompts.length > 0 && (
         <div className="space-y-2">
@@ -314,176 +307,55 @@ function BeaconBody({
         </div>
       )}
 
-      {/* Composer — single unified surface */}
-      <div className="overflow-hidden rounded-2xl border border-border-default bg-surface-raised">
-        {/* Textarea */}
-        <div className="relative">
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && (custom.trim() || listening)) {
-                e.preventDefault();
-                if (e.altKey) handleEnqueue();
-                else handleSendCustom();
-              }
-            }}
-            placeholder={
-              listening ? "Recording…"
-              : processing ? "Transcribing…"
-              : "Custom prompt…"
-            }
-            className={cn(
-              "w-full resize-none bg-transparent px-4 pt-3.5 pb-3 pr-11 text-sm leading-relaxed text-text-primary placeholder:text-text-muted outline-none",
-              listening && "placeholder:text-status-negative/60",
-            )}
-            style={{ fieldSizing: "content", maxHeight: "8rem" } as React.CSSProperties}
-          />
-          {/* Mic button — top-right corner of textarea */}
-          <button
-            type="button"
-            onClick={toggleMic}
-            disabled={processing}
-            title={listening ? "Stop recording" : "Voice input"}
-            className={cn(
-              "absolute right-2.5 top-2.5 rounded-lg p-1.5 transition-colors",
-              listening
-                ? "text-status-negative hover:bg-status-negative/10"
-                : processing
-                ? "text-text-muted opacity-40 cursor-not-allowed"
-                : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
-            )}
-          >
-            {processing ? (
-              <Loader2 className="ui-spinner" />
-            ) : listening ? (
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth={2}>
-                <rect x="6" y="6" width="12" height="12" rx="2" />
-              </svg>
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
-          </button>
-        </div>
+      <PromptInput
+        custom={custom}
+        listening={listening}
+        processing={processing}
+        micError={micError}
+        sending={null}
+        placeholder="Custom prompt..."
+        showQueue
+        waveformBars={waveformBars}
+        recordingSeconds={recordingSeconds}
+        maxRecordingSeconds={maxRecordingSeconds}
+        autoContinueEnabled={autoContinueEnabled}
+        statusLabel={
+          micError
+            ? micError
+            : listening
+            ? "Recording - paused"
+            : processing
+            ? "Transcribing..."
+            : custom.trim()
+            ? "Enter sends - Alt+Enter queues"
+            : inputFocused
+            ? "Focused - paused"
+            : !autoContinueEnabled
+            ? "Paused - click play to resume"
+            : countdown <= 0
+            ? "Dispatching..."
+            : session.capacityIssue && session.nextAgent
+            ? `Switching to ${agentLabel(session.nextAgent)} in ${countdown}s`
+            : queue.length > 0
+            ? `"${queue[0].length > 30 ? queue[0].slice(0, 28) + "..." : queue[0]}" in ${countdown}s`
+            : `AI continues in ${countdown}s`
+        }
+        textareaRef={inputRef}
+        onCustomChange={setCustom}
+        onCustomFocusChange={setInputFocused}
+        onSendCustom={handleSendCustom}
+        onEnqueue={handleEnqueue}
+        onToggleAutoContinue={toggleAutoContinue}
+        toggleMic={toggleMic}
+      />
 
-        {/* Waveform strip — only while recording */}
-        {listening && (
-          <div className="flex items-center gap-3 px-4 pb-2">
-            {waveformBars && waveformBars.length > 0 && (
-              <div className="flex items-end gap-[2px]" style={{ height: 14 }}>
-                {waveformBars.map((h, i) => (
-                  <div
-                    key={i}
-                    className="rounded-full bg-status-negative"
-                    style={{ width: 2, height: Math.max(2, Math.round(h * 12)), transition: "height 75ms ease" }}
-                  />
-                ))}
-              </div>
-            )}
-            <span className="text-xs tabular-nums text-status-negative">
-              {(() => {
-                const secs = recordingSeconds ?? 0;
-                const max = maxRecordingSeconds ?? 60;
-                const flat = secs >= 2 && (waveformBars ?? []).every((b) => b < 0.02);
-                return flat ? "No audio — speak closer" : `${secs}s / ${max}s`;
-              })()}
-            </span>
-          </div>
-        )}
-
-        {/* Action bar — one row, vertically centred, uniform height */}
-        <div className="flex items-center gap-1.5 border-t border-border-subtle px-3 py-2">
-          {/* Pause / resume toggle — reflects effective paused state:
-              - explicitly off (autoContinueEnabled=false) → Play, accent colour
-              - composing (typing / focused / recording) → Play, dim (implicitly paused)
-              - running → Pause, dim (click to pause)
-              Only disabled while transcribing (processing) since that state clears momentarily. */}
-          <button
-            onClick={toggleAutoContinue}
-            disabled={processing}
-            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-            className={cn(
-              "shrink-0 rounded-md p-1 transition-colors",
-              processing
-                ? "cursor-default opacity-30 text-text-muted"
-                : !autoContinueEnabled
-                ? "text-accent-text hover:bg-surface-overlay"
-                : isComposing
-                ? "text-accent-text/60 hover:text-accent-text hover:bg-surface-overlay"
-                : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
-            )}
-          >
-            {/* Show Play (▶) whenever effectively paused: explicitly off OR composing */}
-            {!autoContinueEnabled || isComposing
-              ? <Play className="h-3.5 w-3.5" />
-              : <Pause className="h-3.5 w-3.5" />}
-          </button>
-
-          {/* Status — fills remaining space, truncates gracefully */}
-          <span className={cn(
-            "min-w-0 flex-1 truncate text-xs",
-            micError
-              ? "text-status-negative"
-              : listening
-              ? "text-status-negative"
-              : processing
-              ? "animate-pulse text-text-muted"
-              : !autoContinueEnabled && !isComposing
-              ? "text-accent-text/70"
-              : isComposing && !custom.trim() && !listening && !processing
-              ? "text-text-muted"
-              : "text-text-muted",
-          )}>
-            {micError
-              ? micError
-              : listening
-              ? "Recording — paused"
-              : processing
-              ? "Transcribing…"
-              : custom.trim()
-              ? "↵ send · ⌥↵ queue"
-              : inputFocused
-              ? "Focused — paused"
-              : !autoContinueEnabled
-              ? "Paused — click ▶ to resume"
-              : countdown <= 0
-              ? "Dispatching…"
-              : queue.length > 0
-              ? `"${queue[0].length > 30 ? queue[0].slice(0, 28) + "…" : queue[0]}" in ${countdown}s`
-              : `AI continues in ${countdown}s`}
-          </span>
-
-          {/* Queue */}
-          <button
-            onClick={handleEnqueue}
-            disabled={!custom.trim() && !listening}
-            title={listening ? "Stop and add to queue" : "Add to queue · ⌥↵"}
-            className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
-          >
-            <ListPlus className="h-3.5 w-3.5" />
-          </button>
-
-          {/* Send */}
-          <button
-            onClick={handleSendCustom}
-            disabled={!custom.trim() && !listening}
-            title={listening ? "Stop and send" : "Send · ↵"}
-            className={cn(
-              "shrink-0 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-              custom.trim() || listening
-                ? "bg-text-primary text-text-inverted hover:opacity-90 active:opacity-80"
-                : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
-            )}
-          >
-            Send
-            <Send className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
+      <ProjectPromptLibrary
+        projectName={session.project}
+        open={libraryOpen}
+        onOpenChange={setLibraryOpen}
+        onSelect={(prompt) => submit(`${CUSTOM_CHOICE_PREFIX}${prompt}`)}
+        compact
+      />
 
       {/* Dismiss */}
       <button
@@ -551,7 +423,7 @@ export default function BeaconPage() {
           </div>
           <div className="ui-panel rounded-xl p-4 space-y-2">
             <p className="text-sm text-text-secondary">
-              Claude is now executing this task for <span className="font-medium text-text-primary">{session.project}</span>.
+              Agent task dispatched for <span className="font-medium text-text-primary">{session.project}</span>.
             </p>
             <p className="text-xs text-text-tertiary">
               Watch progress in the Control panel — this window will close automatically.

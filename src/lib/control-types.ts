@@ -14,6 +14,8 @@ export type CurrentPrompt = {
   key: string;
   label: string;
   startedAt: number;
+  source?: "inject" | "runner" | "hook" | "unknown";
+  adapter?: string;
 };
 
 export type SessionState = {
@@ -30,6 +32,7 @@ export type GitState = {
   lastMsg: string;
   lastWhen: string;
   dirty: boolean;
+  dirtyCount: number;
   todayCount: number;
   /** Commits the remote is ahead of local HEAD (0 = in sync, requires fetch) */
   behindRemote: number;
@@ -39,6 +42,7 @@ export type GitState = {
 
 export type ProjectState = {
   id: string | null;
+  projectId: string | null;
   tab: string;
   liveTab: string;
   dir: string;
@@ -46,10 +50,13 @@ export type ProjectState = {
   modelPref: string | null;
   session: SessionState | null;
   git: GitState | null;
+  sessionLifecycleSignals: boolean;
   agentRunning: boolean;
+  activeAgents: string[];
   profile: ProjectProfile | null;
   currentPrompt: CurrentPrompt | null;
   readyAt: number | null;
+  lockAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
   recentCustomPrompts: RecentCustomPrompt[];

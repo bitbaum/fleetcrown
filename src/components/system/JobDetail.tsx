@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { X, Bot, Send, AlertTriangle, CheckCircle2, Play } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import type { CronJob } from "@/lib/crons";
-import { humanCronSchedule } from "@/lib/crons";
+import type { CronJob } from "@/lib/crons-shared";
+import { humanCronSchedule } from "@/lib/crons-shared";
 import { Drawer } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 

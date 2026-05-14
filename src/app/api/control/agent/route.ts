@@ -3,7 +3,7 @@ import { execSync } from "child_process";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
 import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
-import { buildAgentLaunchCommand, AGENT_IDS } from "@/lib/agent-registry";
+import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getCurrentUserId } from "@/lib/session";
@@ -34,7 +34,7 @@ export async function GET() {
   return NextResponse.json({ registry, config });
 }
 
-function applyToOpenTabs(agent: "codex" | "claude", model: string, allProjects: { tab: string; dir: string }[]): SwitchTabResult[] {
+function applyToOpenTabs(agent: Agent, model: string, allProjects: { tab: string; dir: string }[]): SwitchTabResult[] {
   try {
     execSync("command -v zellij >/dev/null 2>&1");
   } catch {

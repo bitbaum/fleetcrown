@@ -41,7 +41,27 @@ export function readCurrentPrompt(tab: string): CurrentPrompt | null {
 }
 
 export function getAgentCwds(processMatchers: string[]): string[] {
-  const cwds: string[] = [];
+  return getAgentProcesses(processMatchers.map((matcher) => ({
+    id: matcher,
+    processMatchers: [matcher],
+    capabilities: { sessionLifecycleSignals: true },
+  }))).map((process) => process.cwd);
+}
+
+export type AgentProcess = {
+  agentId: string;
+  cwd: string;
+  sessionLifecycleSignals: boolean;
+};
+
+export function getAgentProcesses(
+  agents: Array<{
+    id: string;
+    processMatchers: string[];
+    capabilities: { sessionLifecycleSignals: boolean };
+  }>
+): AgentProcess[] {
+  const processes: AgentProcess[] = [];
   try {
     for (const entry of fs.readdirSync("/proc")) {
       if (!/^\d+$/.test(entry)) continue;
@@ -53,10 +73,18 @@ export function getAgentCwds(processMatchers: string[]): string[] {
         // contains "claude" but the process is just a bash helper, not the agent).
         const argv0 = cmdline.split("\0")[0] ?? "";
         const basename = argv0.includes("/") ? argv0.split("/").pop()! : argv0;
-        if (!processMatchers.some(
-          (m) => basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`),
-        )) continue;
-        cwds.push(fs.readlinkSync(`/proc/${entry}/cwd`));
+        const agent = agents.find((candidate) =>
+          candidate.processMatchers.some(
+            (m) => basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`),
+          )
+        );
+        if (!agent) continue;
+        const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);
+        processes.push({
+          agentId: agent.id,
+          cwd,
+          sessionLifecycleSignals: agent.capabilities.sessionLifecycleSignals,
+        });
       } catch {
         // process disappeared mid-scan
       }
@@ -64,35 +92,45 @@ export function getAgentCwds(processMatchers: string[]): string[] {
   } catch {
     // /proc unavailable
   }
-  return cwds;
+  return processes;
 }
 
 export type FastProjectState = {
   tab: string;
   agentRunning: boolean;
+  activeAgents: string[];
   session: SessionState | null;
   currentPrompt: CurrentPrompt | null;
   readyAt: number | null;
+  lockAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
 };
 
 export function readFastState(
-  projects: Array<{ tab: string; dir: string }>,
+  projects: Array<{ tab: string; dir: string; sessionLifecycleSignals?: boolean; activeAgents?: string[] }>,
   agentCwds: string[]
 ): FastProjectState[] {
   const nowS = Math.floor(Date.now() / 1000);
-  return projects.map(({ tab, dir }) => {
+  return projects.map(({ tab, dir, sessionLifecycleSignals = true, activeAgents = [] }) => {
     const tmpReady   = readTmpTs(stateFile.ready(tab));
+    const tmpLock    = readTmpTs(stateFile.lock(tab));
     const tmpClosing = readTmpTs(stateFile.closing(tab));
     const tmpClosed  = readTmpTs(stateFile.closed(tab));
+
+    const rawCurrentPrompt = readCurrentPrompt(tab);
+    const currentPrompt = sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
+      ? rawCurrentPrompt
+      : null;
 
     return {
       tab,
       agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+      activeAgents,
       session: parseSession(tab),
-      currentPrompt: readCurrentPrompt(tab),
+      currentPrompt,
       readyAt:   tmpReady   !== null && (nowS - tmpReady)   < SENTINEL_VALIDITY_S ? tmpReady   : null,
+      lockAt:    tmpLock    !== null && (nowS - tmpLock)    < SENTINEL_VALIDITY_S ? tmpLock    : null,
       closingAt: tmpClosing !== null && (nowS - tmpClosing) < SENTINEL_VALIDITY_S ? tmpClosing : null,
       closedAt:  tmpClosed  !== null && (nowS - tmpClosed)  < SENTINEL_VALIDITY_S ? tmpClosed  : null,
     };

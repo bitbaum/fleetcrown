@@ -88,8 +88,18 @@ def _web_stop(label: str, session_file: str) -> None:
             except FileNotFoundError:
                 continue
 
+    def _current_agent() -> str:
+        raw = os.environ.get("AGENT_CURRENT_AGENT", "").strip().lower()
+        if raw in ("claude", "codex", "gemini"):
+            return raw
+        return "claude"
+
     def _create_session() -> str | None:
-        data = _json.dumps({"project": label, "sessionContent": session_content}).encode()
+        data = _json.dumps({
+            "project": label,
+            "sessionContent": session_content,
+            "currentAgent": _current_agent(),
+        }).encode()
         req  = urllib.request.Request(
             f"{COCKPIT_URL}/api/beacon",
             data=data,
@@ -135,20 +145,35 @@ def _web_stop(label: str, session_file: str) -> None:
         _pyqt_stop(label, session_file)
         return
 
+    # Standard path: Open browser for Web Beacon, BUT ALSO keep PyQt popup as a fallback/overlay.
+    # This allows coordinated closing when either UI is used.
     _s = load_settings()
     countdown = int(_s.get("countdown_seconds", _s.get("countdown_secs", COUNTDOWN_SECONDS)))
     _open_browser(f"{COCKPIT_URL}/beacon/{session_id}?countdown={countdown}")
 
+    # Launch PyQt in the background so it doesn't block polling, but can still
+    # update the web session if the user clicks it.
+    pyqt_proc = subprocess.Popen(
+        ["python3", str(Path(__file__).resolve()), "pyqt-stop", label, session_file, session_id],
+        stdout=subprocess.PIPE, text=True,
+    )
+
+    # Poll web session for choice (from browser or PyQt)
     choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
+    
+    # Clean up PyQt proc if choice came from browser
+    if pyqt_proc.poll() is None:
+        pyqt_proc.terminate()
+
     if choice is not None:
-        print(choice)  # may be "" (cancellation) — bash handles with [ -z "$choice" ] && exit 0
+        print(choice)
         sys.exit(0)
     sys.exit(1)
 
 
 # ── PyQt fallback (when Cockpit is unavailable) ────────────────────────────────
 
-def _pyqt_stop(label: str, session_file: str) -> None:
+def _pyqt_stop(label: str, session_file: str, session_id: str = None) -> None:
     os.environ.setdefault("DISPLAY", ":0")
     app = QApplication(sys.argv)
     app.setApplicationName("Beacon")
@@ -159,6 +184,22 @@ def _pyqt_stop(label: str, session_file: str) -> None:
     QTimer.singleShot(0, popup._position)
     app.exec()
     if popup.result:
+        # If we have a web session ID, sync the choice back to Cockpit so
+        # other views (like a stray browser popup) can close/cancel.
+        if session_id:
+            import urllib.request, json as _json
+            try:
+                data = _json.dumps({"choice": popup.result}).encode()
+                req  = urllib.request.Request(
+                    f"{COCKPIT_URL}/api/beacon/{session_id}",
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                    method="PATCH",
+                )
+                urllib.request.urlopen(req, timeout=2)
+            except Exception:
+                pass
+
         print(popup.result)
         sys.exit(0)
     sys.exit(1)
@@ -188,9 +229,14 @@ def main():
             print(popup.result)
             sys.exit(0)
         sys.exit(1)
-    else:
+    elif mode == "pyqt-stop":
         label = sys.argv[2]
         sf    = sys.argv[3] if len(sys.argv) > 3 else ""
+        sid   = sys.argv[4] if len(sys.argv) > 4 else None
+        _pyqt_stop(label, sf, sid)
+    else:
+        label = sys.argv[2]
+        sf    = sys.argv[3] if len(sys.argv) > 4 else ""
         _web_stop(label, sf)
 
 

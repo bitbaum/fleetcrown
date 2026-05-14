@@ -84,6 +84,7 @@ export async function getRecentCustomPromptsByProjectKeys(
 // All dispatches — for the dedicated history page
 export type HistoryItem = {
   id: string;
+  projectId: string | null;
   projectKey: string;
   adapter: string;
   intent: string;
@@ -95,6 +96,7 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
   const rows = await db
     .select({
       id: promptHistory.id,
+      projectId: promptHistory.projectId,
       projectKey: promptHistory.projectKey,
       adapter: promptHistory.adapter,
       intent: promptHistory.intent,
@@ -108,6 +110,7 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
 
   return rows.map((r) => ({
     id: r.id,
+    projectId: r.projectId ?? null,
     projectKey: r.projectKey,
     adapter: r.adapter,
     intent: r.intent,
@@ -119,6 +122,7 @@ export async function getPromptHistory(userId: string, limit = 200): Promise<His
 // Last N dispatches across all projects — for the live activity feed
 export type ActivityItem = {
   id: string;
+  projectId: string | null;
   projectKey: string;
   adapter: string;
   intent: string;
@@ -131,6 +135,7 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
   const rows = await db
     .select({
       id: promptHistory.id,
+      projectId: promptHistory.projectId,
       projectKey: promptHistory.projectKey,
       adapter: promptHistory.adapter,
       intent: promptHistory.intent,
@@ -149,6 +154,7 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
 
   return rows.map((r) => ({
     id: r.id,
+    projectId: r.projectId ?? null,
     projectKey: r.projectKey,
     adapter: r.adapter,
     intent: r.intent,
@@ -157,3 +163,29 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
   }));
 }
 
+export async function getProjectPromptActivity(userId: string, projectId: string, limit = 50): Promise<ActivityItem[]> {
+  const rows = await db
+    .select({
+      id: promptHistory.id,
+      projectId: promptHistory.projectId,
+      projectKey: promptHistory.projectKey,
+      adapter: promptHistory.adapter,
+      intent: promptHistory.intent,
+      customPrompt: promptHistory.customPrompt,
+      dispatchedAt: promptHistory.dispatchedAt,
+    })
+    .from(promptHistory)
+    .where(and(eq(promptHistory.userId, userId), eq(promptHistory.projectId, projectId)))
+    .orderBy(desc(promptHistory.dispatchedAt))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    projectId: r.projectId ?? null,
+    projectKey: r.projectKey,
+    adapter: r.adapter,
+    intent: r.intent,
+    customPrompt: r.customPrompt ?? null,
+    dispatchedAt: r.dispatchedAt.toISOString(),
+  }));
+}

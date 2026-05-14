@@ -68,3 +68,12 @@ export async function getLatestRunsByProjectPaths(userId: string, projectPaths: 
   }
   return latest;
 }
+
+export async function getProjectOrchestrationRuns(userId: string, projectId: string, limit = 20) {
+  return db
+    .select()
+    .from(orchestrationRuns)
+    .where(and(eq(orchestrationRuns.userId, userId), eq(orchestrationRuns.projectId, projectId)))
+    .orderBy(desc(orchestrationRuns.startedAt))
+    .limit(limit);
+}

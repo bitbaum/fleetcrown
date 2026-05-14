@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
-import { getUserProjects, createUserProject } from "@/db/queries/user-projects";
+import { createUserProject, ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
 
 const CreateBody = z.object({
   name: z.string().trim().min(1).max(120),
@@ -14,7 +14,7 @@ const CreateBody = z.object({
 
 export async function GET() {
   const userId = await getCurrentUserId();
-  const projects = await getUserProjects(userId);
+  const projects = await ensureUserProjectEntityLinks(userId);
   return NextResponse.json(projects);
 }
 

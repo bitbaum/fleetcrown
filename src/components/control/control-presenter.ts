@@ -3,8 +3,6 @@ import {
   CLOSING_WINDOW_S,
   READY_WINDOW_S,
   withinWindow,
-  getHealthShort,
-  isHealthPoor,
 } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
@@ -15,13 +13,16 @@ export type ProjectDisplayState = {
   isClosing: boolean;
   isReady: boolean;
   isOrchestrationReady: boolean;
+  isBeaconActive: boolean;
   isRunning: boolean;
+  isSessionOpen: boolean;
   isActive: boolean;
   showRunningBanner: boolean;
   showLatestOrchestration: boolean;
   tabOpen: boolean;
   tone:
     | "running"
+    | "session-open"
     | "ready"
     | "orchestration-ready"
     | "closing"
@@ -37,7 +38,6 @@ export type ControlDashboardState = {
   idleCount: number;
   expandedCount: number;
   commitsToday: number;
-  healthIssueCount: number;
 };
 
 export type ControlPageState = {
@@ -47,16 +47,23 @@ export type ControlPageState = {
   dashboard: ControlDashboardState;
 };
 
+export function formatAgentRuntimeLabel(project: ProjectState): string {
+  return project.activeAgents
+    .map((name) => name[0]?.toUpperCase() + name.slice(1))
+    .join(", ");
+}
+
 export function getProjectDisplayState(
   project: ProjectState,
   zellijTabs: string[],
   nowS: number,
   dismissed = false,
 ): ProjectDisplayState {
-  // If the agent process is gone but the currentPrompt file wasn't cleaned up (process
-  // crashed before the stop hook ran), treat the file as absent so the UI doesn't get
-  // stuck on "Running: <stale task>" indefinitely.
+  // "agentRunning" means an agent process/session exists. It does not prove
+  // active work: Claude/Codex can sit open at an input prompt after a task.
   const currentPrompt = project.agentRunning ? project.currentPrompt : null;
+  const promptRunning = Boolean(currentPrompt);
+  const isSessionOpen = project.agentRunning;
 
   const isClosed =
     !dismissed &&
@@ -76,6 +83,8 @@ export function getProjectDisplayState(
     !currentPrompt &&
     withinWindow(project.readyAt, nowS, READY_WINDOW_S);
 
+  const isBeaconActive = withinWindow(project.lockAt, nowS, READY_WINDOW_S);
+
   const latestFinishedAtS = project.latestOrchestrationRun?.finishedAt
     ? Math.floor(new Date(project.latestOrchestrationRun.finishedAt).getTime() / 1000)
     : null;
@@ -88,12 +97,13 @@ export function getProjectDisplayState(
     project.latestOrchestrationRun?.state === "done" &&
     withinWindow(latestFinishedAtS, nowS, READY_WINDOW_S);
 
-  const isRunning = project.agentRunning;
+  const isRunning = promptRunning;
   // Show the running banner whenever a prompt is actively tracked — don't require
   // isRunning because the process may not yet appear in /proc on the current tick.
   const showRunningBanner = !isClosing && !isReady && Boolean(currentPrompt);
   const showLatestOrchestration =
     Boolean(project.latestOrchestrationRun) &&
+    project.latestOrchestrationRun?.state !== "error" &&
     !isRunning &&
     !showRunningBanner &&
     !isReady &&
@@ -109,6 +119,7 @@ export function getProjectDisplayState(
     withinWindow(project.readyAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closingAt, nowS, ACTIVE_WINDOW_S) ||
     withinWindow(project.closedAt, nowS, ACTIVE_WINDOW_S) ||
+    isSessionOpen ||
     currentPrompt !== null;
 
   const tone: ProjectDisplayState["tone"] = isClosed
@@ -121,6 +132,8 @@ export function getProjectDisplayState(
     ? "orchestration-ready"
     : isRunning
     ? "running"
+    : isSessionOpen
+    ? "session-open"
     : "idle";
 
   return {
@@ -128,7 +141,9 @@ export function getProjectDisplayState(
     isClosing,
     isReady,
     isOrchestrationReady,
+    isBeaconActive,
     isRunning,
+    isSessionOpen,
     isActive,
     showRunningBanner,
     showLatestOrchestration,
@@ -157,15 +172,6 @@ function compareProjects(
   const rankDelta = rank(aState) - rank(bState);
   if (rankDelta !== 0) return rankDelta;
 
-  // Within the same rank, surface degraded/critical health first, then git activity.
-  const hasHealthIssue = (p: ProjectState) => {
-    if (!p.session?.health) return false;
-    const h = getHealthShort(p.session.health);
-    return isHealthPoor(h);
-  };
-  const healthDelta = (hasHealthIssue(a) ? 0 : 1) - (hasHealthIssue(b) ? 0 : 1);
-  if (healthDelta !== 0) return healthDelta;
-
   const aActiveGit = (a.git?.todayCount ?? 0) > 0 ? 0 : 1;
   const bActiveGit = (b.git?.todayCount ?? 0) > 0 ? 0 : 1;
   return aActiveGit - bActiveGit;
@@ -192,7 +198,10 @@ export function buildControlPageState(
     return !state.isActive && !expandedTabs.has(project.tab);
   });
 
-  const runningCount = data.projects.filter((project) => project.agentRunning).length;
+  const runningCount = data.projects.filter((project) => {
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS);
+    return state.isRunning;
+  }).length;
   const waitingCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
     return state.isReady || state.isOrchestrationReady;
@@ -206,12 +215,6 @@ export function buildControlPageState(
   const idleCount = idleProjects.length;
   const expandedCount = expandedTabs.size;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
-  const healthIssueCount = data.projects.filter((p) => {
-    if (!p.session?.health) return false;
-    const short = getHealthShort(p.session.health);
-    return short === "degraded" || short === "critical";
-  }).length;
-
   return {
     activeProjects,
     idleProjects,
@@ -224,7 +227,6 @@ export function buildControlPageState(
       idleCount,
       expandedCount,
       commitsToday,
-      healthIssueCount,
     },
   };
 }

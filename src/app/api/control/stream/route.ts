@@ -1,8 +1,8 @@
-import { getUserProjects } from "@/db/queries/user-projects";
+import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
 import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
-import { getAgentCwds, readFastState } from "@/lib/control-fast-state";
+import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
 import { getCurrentUserId } from "@/lib/session";
 import type { FastProjectState } from "@/lib/control-fast-state";
@@ -21,12 +21,22 @@ export async function GET() {
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
-  const allMatchers = agentRegistry.agents.flatMap((e) => e.processMatchers);
 
-  const dbUserProjects = await getUserProjects(userId).catch(() => []);
+  const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
   const confProjects = dbUserProjects.length > 0
-    ? dbUserProjects.filter((p) => p.dirPath).map((p) => ({ tab: p.name, dir: p.dirPath! }))
-    : parseProjectsConf();
+    ? dbUserProjects.filter((p) => p.dirPath).map((p) => {
+        const agentId = p.agentPref ?? agentConfig.agent;
+        const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
+        return {
+          tab: p.name,
+          dir: p.dirPath!,
+          sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
+        };
+      })
+    : parseProjectsConf().map((p) => ({
+        ...p,
+        sessionLifecycleSignals: agentRegistry.agents.find((entry) => entry.id === agentConfig.agent)?.capabilities.sessionLifecycleSignals ?? false,
+      }));
 
   // Resolve each project's canonical tab name to its exact zellij casing.
   // The cache is refreshed every 10s in the background so new Claude sessions
@@ -55,11 +65,19 @@ export async function GET() {
 
       const tick = () => {
         refreshTabsCacheIfStale();
-        const projects = confProjects.map(({ tab, dir }) => ({
-          tab: resolveEffectiveTab(tab, zellijTabCache),
-          dir,
-        }));
-        const agentCwds = getAgentCwds(allMatchers);
+        const agentProcesses = getAgentProcesses(agentRegistry.agents);
+        const projects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
+          const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
+          return {
+            tab: resolveEffectiveTab(tab, zellijTabCache),
+            dir,
+            activeAgents: [...new Set(projectProcesses.map((process) => process.agentId))],
+            sessionLifecycleSignals: projectProcesses.length > 0
+              ? projectProcesses.some((process) => process.sessionLifecycleSignals)
+              : sessionLifecycleSignals,
+          };
+        });
+        const agentCwds = agentProcesses.map((process) => process.cwd);
         const current = readFastState(projects, agentCwds);
 
         const changed = current.filter((proj, i) => {
@@ -92,11 +110,19 @@ export async function GET() {
       };
 
       // Initial snapshot
-      const initialProjects = confProjects.map(({ tab, dir }) => ({
-        tab: resolveEffectiveTab(tab, zellijTabCache),
-        dir,
-      }));
-      const agentCwds = getAgentCwds(allMatchers);
+      const agentProcesses = getAgentProcesses(agentRegistry.agents);
+      const initialProjects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
+        const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
+        return {
+          tab: resolveEffectiveTab(tab, zellijTabCache),
+          dir,
+          activeAgents: [...new Set(projectProcesses.map((process) => process.agentId))],
+          sessionLifecycleSignals: projectProcesses.length > 0
+            ? projectProcesses.some((process) => process.sessionLifecycleSignals)
+            : sessionLifecycleSignals,
+        };
+      });
+      const agentCwds = agentProcesses.map((process) => process.cwd);
       lastSent = readFastState(initialProjects, agentCwds);
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();

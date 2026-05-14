@@ -51,8 +51,11 @@ export const ADAPTER_DEFINITIONS: Record<AdapterId, AdapterDefinition> = {
     label: "Gemini",
     capabilities: createCapabilities({
       launchSession: true,
+      injectTask: true,
+      detectRunning: true,
+      sessionHandoff: true,
     }),
-    notes: "Detected locally but not meaningfully integrated into the orchestration workflow yet.",
+    notes: "Local Gemini CLI integration for launched tabs and one-shot Control tasks.",
   },
 };
 

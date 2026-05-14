@@ -63,6 +63,7 @@ export type PromptMeta = {
   label: string;
   style: string;
   category: string;
+  prompt?: string;
 };
 
 type PromptConfig = PromptMeta & { prompt: string };

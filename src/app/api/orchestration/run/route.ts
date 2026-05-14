@@ -23,6 +23,7 @@ import { upsertProjectState } from "@/db/queries/project-states";
 import { getCurrentUserId } from "@/lib/session";
 
 const RunOrchestrationBody = z.object({
+  projectId: z.string().uuid().nullable().optional(),
   projectKey: z.string().trim().min(1).max(120),
   projectPath: z.string().trim().min(1).max(500),
   adapter: z.enum(ORCHESTRATION_ADAPTER_IDS).default("openclaw"),
@@ -56,22 +57,42 @@ export async function POST(req: NextRequest) {
   const userId = await getCurrentUserId();
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);
-  const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
-
-  // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
-  insertPromptHistory(userId, {
-    projectKey: request.projectKey,
-    projectPath: request.projectPath,
-    adapter: request.adapter as AdapterId,
-    intent: request.intent as OrchestrationTaskIntentId,
-    customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
-  }).catch(() => {});
+  let intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
 
   // Resolve zellij alias once — "Cockpit" may run as "Cockpit Claude" in this session.
   const activeTabs = await getZellijTabs();
   const effectiveKey = activeTabs.length > 0
     ? resolveEffectiveTab(request.projectKey, activeTabs)
     : request.projectKey;
+
+  // For interactive agents in a live tab: prioritize the prompt queue for next_best intent.
+  // This matches the stop-hook behavior and prevents AI-generated plans from superseding
+  // user-defined queue items during auto-fire or manual 'Next best' clicks.
+  if (["claude", "codex", "gemini"].includes(request.adapter) && request.intent === "next_best") {
+    const queueFile = stateFile.queue(effectiveKey);
+    try {
+      if (fs.existsSync(queueFile)) {
+        const queue = JSON.parse(fs.readFileSync(queueFile, "utf-8")) as string[];
+        if (queue.length > 0) {
+          const first = queue.shift()!;
+          fs.writeFileSync(queueFile, JSON.stringify(queue));
+          request.intent = "custom";
+          request.customInstructions = first;
+          intent = getOrchestrationIntent("custom");
+        }
+      }
+    } catch { /* fall through to default intent */ }
+  }
+
+  // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
+  insertPromptHistory(userId, {
+    projectId: request.projectId ?? null,
+    projectKey: request.projectKey,
+    projectPath: request.projectPath,
+    adapter: request.adapter as AdapterId,
+    intent: request.intent as OrchestrationTaskIntentId,
+    customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
+  }).catch(() => {});
 
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
@@ -98,15 +119,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Codex has no native stop hook in this environment, so run the task as a
+  // Codex and Gemini have no native stop hook in this environment, so run the task as a
   // one-shot command in the project tab and hand completion back to the same
   // stop-hook bridge Beacon already uses for Claude.
-  if (request.adapter === "codex") {
+  if (request.adapter === "codex" || request.adapter === "gemini") {
     try {
       const basePrompt = renderTaskForAdapter(request);
 
       const prompt = buildPromptWithSession(basePrompt, effectiveKey);
-      const promptFile = path.join("/tmp", `cockpit-codex-prompt-${randomUUID()}.txt`);
+      const promptFile = path.join("/tmp", `cockpit-${request.adapter}-prompt-${randomUUID()}.txt`);
       fs.writeFileSync(promptFile, prompt);
 
       const nowS = Math.floor(Date.now() / 1000);
@@ -114,10 +135,13 @@ export async function POST(req: NextRequest) {
         key: request.intent,
         label: intent.name,
         startedAt: nowS,
+        source: "runner",
+        adapter: request.adapter,
       }));
 
       upsertProjectState({
         projectKey: request.projectKey,
+        projectId: request.projectId ?? null,
         userId,
         tabName: effectiveKey,
         currentPromptKey: request.intent,
@@ -127,10 +151,11 @@ export async function POST(req: NextRequest) {
 
       createOrchestrationEvent({
         userId,
+        projectId: request.projectId ?? null,
         projectKey: request.projectKey,
         eventType: (request.intent === "close_session" || request.intent === "hard_stop") ? "close_requested" : "continue_requested",
         source: "api-orchestration",
-        adapter: "codex",
+        adapter: request.adapter,
         intent: request.intent,
         detail: intent.name,
         happenedAt: new Date(nowS * 1000),
@@ -138,10 +163,11 @@ export async function POST(req: NextRequest) {
 
       createOrchestrationEvent({
         userId,
+        projectId: request.projectId ?? null,
         projectKey: request.projectKey,
         eventType: "task_started",
         source: "api-orchestration",
-        adapter: "codex",
+        adapter: request.adapter,
         intent: request.intent,
         detail: intent.name,
         happenedAt: new Date(nowS * 1000),
@@ -160,14 +186,14 @@ export async function POST(req: NextRequest) {
         try { fs.unlinkSync(stateFile.closing(effectiveKey)); } catch { /* gone */ }
       }
 
-      const runner = path.join(process.cwd(), "scripts", "run-codex-task.sh");
+      const runner = path.join(process.cwd(), "scripts", request.adapter === "gemini" ? "run-gemini-task.sh" : "run-codex-task.sh");
       const command = [
         "bash",
         shellEscape(runner),
         shellEscape(effectiveKey),
         shellEscape(request.projectPath),
         shellEscape(promptFile),
-        shellEscape(request.model?.trim() || "gpt-5.4"),
+        shellEscape(request.model?.trim() || (request.adapter === "gemini" ? "auto" : "gpt-5.4")),
       ].join(" ");
 
       injectIntoTab(effectiveKey, command);
@@ -188,12 +214,14 @@ export async function POST(req: NextRequest) {
 
   const run = await createOrchestrationRun({
     userId,
+    projectId: request.projectId ?? null,
     adapter: request.adapter,
     intent: request.intent,
     state: "running",
     projectKey: request.projectKey,
     projectPath: request.projectPath,
     payload: {
+      projectId: request.projectId ?? null,
       projectKey: request.projectKey,
       projectPath: request.projectPath,
       model: request.model,
@@ -207,6 +235,7 @@ export async function POST(req: NextRequest) {
       state: "error",
       finishedAt: new Date(),
       payload: {
+        projectId: request.projectId ?? null,
         projectKey: request.projectKey,
         projectPath: request.projectPath,
         error: `Failed to start worker: ${err instanceof Error ? err.message : String(err)}`,

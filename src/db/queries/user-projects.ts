@@ -1,7 +1,8 @@
 import { and, asc, eq, ilike, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
-import { userProjects, type NewUserProject, type UserProject } from "@/db/schema";
+import { entities, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
+import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -9,6 +10,52 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
     .from(userProjects)
     .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
+}
+
+async function findOrCreateProjectEntity(userId: string, name: string, description?: string | null): Promise<string> {
+  const [existing] = await db
+    .select({ id: entities.id })
+    .from(entities)
+    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT), eq(entities.name, name)))
+    .limit(1);
+
+  if (existing) return existing.id;
+
+  const [created] = await db
+    .insert(entities)
+    .values({
+      userId,
+      name,
+      type: ENTITY_TYPE.PROJECT,
+      description: description?.trim() || null,
+      source: "control",
+    })
+    .returning({ id: entities.id });
+
+  return created.id;
+}
+
+export async function ensureUserProjectEntityLinks(userId: string): Promise<UserProject[]> {
+  const projects = await getUserProjects(userId);
+  const linked: UserProject[] = [];
+
+  for (const project of projects) {
+    if (project.entityProjectId) {
+      linked.push(project);
+      continue;
+    }
+
+    const entityProjectId = await findOrCreateProjectEntity(userId, project.name, project.description);
+    const [updated] = await db
+      .update(userProjects)
+      .set({ entityProjectId, updatedAt: new Date() })
+      .where(and(eq(userProjects.id, project.id), eq(userProjects.userId, userId)))
+      .returning();
+
+    linked.push(updated ?? { ...project, entityProjectId });
+  }
+
+  return linked;
 }
 
 export async function getPublicProjects(userId: string): Promise<UserProject[]> {
@@ -31,7 +78,8 @@ export async function getUserProject(id: string, userId: string): Promise<UserPr
 export async function createUserProject(
   data: Omit<NewUserProject, "id" | "createdAt" | "updatedAt">,
 ): Promise<UserProject> {
-  const [row] = await db.insert(userProjects).values(data).returning();
+  const entityProjectId = data.entityProjectId ?? await findOrCreateProjectEntity(data.userId, data.name, data.description);
+  const [row] = await db.insert(userProjects).values({ ...data, entityProjectId }).returning();
   return row;
 }
 
@@ -68,6 +116,24 @@ export async function appendProjectDevLog(
 ): Promise<void> {
   const project = await db.query.userProjects.findFirst({
     where: and(eq(userProjects.userId, userId), ilike(userProjects.name, projectName)),
+    columns: { id: true, devLog: true },
+  });
+  if (!project) return;
+  const existing = (project.devLog ?? []) as DevLogEntry[];
+  const updated = [...existing, entry].slice(-DEV_LOG_MAX);
+  await db
+    .update(userProjects)
+    .set({ devLog: updated, updatedAt: new Date() })
+    .where(eq(userProjects.id, project.id));
+}
+
+export async function appendProjectDevLogByEntityProjectId(
+  userId: string,
+  entityProjectId: string,
+  entry: DevLogEntry,
+): Promise<void> {
+  const project = await db.query.userProjects.findFirst({
+    where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)),
     columns: { id: true, devLog: true },
   });
   if (!project) return;

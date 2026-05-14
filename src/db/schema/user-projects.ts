@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { entities } from "./entities";
 
 export type DevLogEntry = {
   date: string;
@@ -13,6 +14,7 @@ export type DevLogEntry = {
 export const userProjects = pgTable("user_projects", {
   id:          uuid("id").primaryKey().defaultRandom(),
   userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  entityProjectId: uuid("entity_project_id").references(() => entities.id, { onDelete: "set null" }),
   name:        text("name").notNull(),          // display name + zellij tab identifier
   dirPath:     text("dir_path"),                // absolute local path (null = cloud-only)
   gitUrl:      text("git_url"),                 // GitHub / GitLab URL
@@ -29,6 +31,7 @@ export const userProjects = pgTable("user_projects", {
 }, (t) => [
   index("idx_user_projects_user_id").on(t.userId),
   index("idx_user_projects_user_active").on(t.userId, t.isActive),
+  index("idx_user_projects_entity_project_id").on(t.entityProjectId),
 ]);
 
 export type UserProject = typeof userProjects.$inferSelect;

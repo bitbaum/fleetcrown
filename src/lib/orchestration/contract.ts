@@ -66,6 +66,7 @@ export type OrchestrationTaskIntent = {
 };
 
 export type OrchestrationTaskRequest = {
+  projectId?: string | null;
   projectKey: string;
   projectPath: string;
   adapter: AdapterId;

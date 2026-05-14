@@ -105,6 +105,7 @@ export function useControlData(): ControlDataHook {
         return {
           ...p,
           agentRunning: patch.agentRunning,
+          activeAgents: patch.activeAgents,
           session: patch.session,
           currentPrompt: patch.currentPrompt,
           readyAt: patch.readyAt,
@@ -152,7 +153,7 @@ export function useControlData(): ControlDataHook {
   }, [lastTabResultsAt]);
 
   const inject = async (tab: string, promptKey?: string, customPrompt?: string) => {
-    const res = await postJson("/api/inject", { tab, promptKey, customPrompt });
+    const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     setTimeout(refresh, 500);
   };
@@ -170,6 +171,7 @@ export function useControlData(): ControlDataHook {
   const runWithBrain = async (project: ProjectState, intent: OrchestrationTaskIntentId) => {
     setError(null);
     const res = await postJson("/api/orchestration/run", {
+      projectId: project.projectId,
       projectKey: project.tab,
       projectPath: project.dir,
       adapter: data?.agentConfig.agent ?? "claude",
@@ -185,6 +187,7 @@ export function useControlData(): ControlDataHook {
       await new Promise((r) => setTimeout(r, 3000));
     }
     const res = await postJson("/api/orchestration/run", {
+      projectId: project.projectId,
       projectKey: project.tab,
       projectPath: project.dir,
       adapter: ag,

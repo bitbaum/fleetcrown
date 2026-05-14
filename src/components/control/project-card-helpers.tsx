@@ -2,73 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import {
-  CheckCircle2, Loader2, Zap, GitCommitHorizontal, Pause, Play,
+  CheckCircle2, Loader2, Zap, Pause, Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
-import { HEALTH_COLOR, PROMPT_STYLE, AUTO_INJECT_S, getHealthShort } from "@/lib/constants/control";
+import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 
-export function SessionBadge({ health }: { health: string }) {
-  // Agents write verbose health like "GOOD — deployed; all tests pass" or
-  // "LINT CLEAN, BUILD CLEAN, 0 TS ERRORS". Extract first segment as badge label.
-  const short = getHealthShort(health);
-  const color = HEALTH_COLOR[short] ?? "text-text-tertiary";
-  const hasMore = short.length < health.trim().length;
-  return (
-    <span
-      title={hasMore ? health : undefined}
-      className={cn("max-w-[16rem] truncate rounded-full border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium uppercase tracking-caps", color)}
-    >
-      {short}
-    </span>
-  );
-}
-
-
-function RecentCommitsRow({ commits }: { commits: string[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-secondary"
-      >
-        <GitCommitHorizontal className="h-3.5 w-3.5" />
-        <span>{commits.length} recent commit{commits.length !== 1 ? "s" : ""}</span>
-        <span className="ml-0.5">{open ? "▴" : "▾"}</span>
-      </button>
-      {open && (
-        <ul className="mt-2 space-y-1">
-          {commits.map((c, i) => {
-            // Format: "abc1234 2 hours ago: fix something"
-            const colonIdx = c.indexOf(": ");
-            const meta = colonIdx > 0 ? c.slice(0, colonIdx) : c;
-            const msg = colonIdx > 0 ? c.slice(colonIdx + 2) : "";
-            return (
-              <li key={i} className="flex items-start gap-2 text-xs">
-                <span className="shrink-0 font-mono text-text-muted/60 tabular-nums">{meta}</span>
-                <span className="text-text-tertiary">{msg}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 export function ClosedBanner({
   session,
-  git,
   onContinue,
   onDismiss,
 }: {
   session: ProjectState["session"];
-  git: ProjectState["git"];
   onContinue: () => void;
   onDismiss: () => void;
 }) {
@@ -77,30 +26,23 @@ export function ClosedBanner({
       <div className="flex flex-wrap items-center gap-2">
         <CheckCircle2 className="h-4 w-4 text-status-positive shrink-0" />
         <span className="text-base font-medium text-status-positive">Session closed</span>
-        {git?.todayCount ? (
-          <span className="ml-auto text-sm text-text-secondary">+{git.todayCount} commits today</span>
-        ) : null}
       </div>
 
       {session && (
         <div className="grid gap-3 md:grid-cols-2">
           {session.done && (
             <div className="ui-control-summary-card bg-status-positive/[0.06]">
-              <p className="ui-kicker">Shipped</p>
+              <p className="ui-kicker">Agent-reported completed</p>
               <p className="text-base text-text-primary leading-relaxed">{session.done}</p>
             </div>
           )}
           {session.next && (
             <div className="ui-control-summary-card bg-status-positive/[0.03]">
-              <p className="ui-kicker">Agent&apos;s plan</p>
+              <p className="ui-kicker">Agent-reported next</p>
               <p className="text-base text-text-secondary leading-relaxed">{session.next}</p>
             </div>
           )}
         </div>
-      )}
-
-      {git?.recentCommits && git.recentCommits.length > 0 && (
-        <RecentCommitsRow commits={git.recentCommits} />
       )}
 
       <div className="flex gap-2 pt-1">
@@ -159,7 +101,7 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
       <div className="flex items-start gap-2.5">
         <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">Running</p>
+          <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">Working</p>
           {isCustom
             ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary" title={label}>{label}</p>
             : <p className="truncate text-sm font-medium text-text-primary" title={label}>{label}</p>
@@ -174,7 +116,6 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
 export function ReadyBanner({
   tab,
   prompts,
-  git,
   onSend,
   onDismiss,
   onAutoInject,
@@ -188,7 +129,6 @@ export function ReadyBanner({
 }: {
   tab?: string;
   prompts: PromptMeta[];
-  git?: import("@/lib/control-types").GitState | null;
   onSend: (key: string) => void;
   onDismiss: () => void;
   onAutoInject?: () => void;
@@ -283,12 +223,6 @@ export function ReadyBanner({
         {nextLabel}
       </p>
 
-      {git?.recentCommits && git.recentCommits.length > 0 && (
-        <div className="mb-3">
-          <RecentCommitsRow commits={git.recentCommits} />
-        </div>
-      )}
-
       <div className="ui-control-intent-grid">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (
           <button
@@ -331,7 +265,9 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="ui-kicker">last run</span>
+        <span className="ui-kicker" title="Result from a background agent run. Live terminal state is shown in the project header.">
+          Background run result
+        </span>
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{run.state}</span>
       </div>
@@ -345,7 +281,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
 
       {summaryDone && (
         <div className="space-y-1">
-          <p className="ui-kicker">done</p>
+          <p className="ui-kicker">completed</p>
           <p className="text-sm leading-relaxed text-text-secondary">{summaryDone}</p>
         </div>
       )}

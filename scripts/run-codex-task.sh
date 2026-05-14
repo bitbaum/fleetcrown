@@ -33,6 +33,6 @@ rm -f "$PROMPT_FILE"
 
 printf '%s' "$PROJECT_DIR" \
   | jq -Rs '{cwd:.}' \
-  | AGENT_TAB_NAME="$TAB_NAME" "$ROOT/scripts/agent-hook-bridge.sh" stop || true
+  | AGENT_TAB_NAME="$TAB_NAME" AGENT_CURRENT_AGENT="codex" "$ROOT/scripts/agent-hook-bridge.sh" stop || true
 
 exit "$status"

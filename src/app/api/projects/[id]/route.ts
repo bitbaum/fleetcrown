@@ -7,6 +7,10 @@ import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 import { patchProject, deleteProject, PatchProjectBody } from "@/db/queries/projects";
+import { getProjectPromptActivity } from "@/db/queries/prompt-history";
+import { getProjectOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getProjectStateByProjectId } from "@/db/queries/project-states";
+import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   const nameLower = projectName.toLowerCase();
@@ -84,7 +88,7 @@ export async function GET(
   if (!project) return NextResponse.json(null, { status: 404 });
 
   // Parallel: attrs, relations, interactions, linked goals, and devLog are independent
-  const [attrMap, relations, recentInteractions, linkedGoals, userProject] = await Promise.all([
+  const [attrMap, relations, recentInteractions, linkedGoals, userProject, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
     fetchAttributesByEntityIds([id]),
     db
       .select()
@@ -110,9 +114,15 @@ export async function GET(
       .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
       .orderBy(desc(goals.progress)),
     db.query.userProjects.findFirst({
+      where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, project.id)),
+      columns: { devLog: true },
+    }).then((linked) => linked ?? db.query.userProjects.findFirst({
       where: and(eq(userProjects.userId, userId), ilike(userProjects.name, project.name)),
       columns: { devLog: true },
-    }),
+    })),
+    getProjectPromptActivity(userId, project.id, 40).catch(() => []),
+    getProjectOrchestrationRuns(userId, project.id, 20).catch(() => []),
+    getProjectStateByProjectId(project.id).catch(() => null),
   ]);
 
   const attrs = attrMap.get(id) ?? {};
@@ -136,6 +146,23 @@ export async function GET(
   }));
 
   const linkedJobs = getLinkedJobs(project.id, project.name);
+  const activity = [
+    ...promptActivity.map((item) => ({
+      id: `prompt:${item.id}`,
+      kind: "user_prompt" as const,
+      occurredAt: item.dispatchedAt,
+      title: "Sent prompt",
+      body: item.customPrompt ?? getIntentLabel(item.intent),
+    })),
+    ...orchestrationRuns.map((run) => ({
+      id: `run:${run.id}`,
+      kind: "orchestrated_run" as const,
+      occurredAt: run.startedAt.toISOString(),
+      title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)}`,
+      body: run.summary?.next || run.summary?.done || run.payload?.resultText || run.payload?.error || "",
+      state: run.state,
+    })),
+  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 50);
 
   return NextResponse.json({
     id: project.id,
@@ -154,5 +181,15 @@ export async function GET(
     linkedJobs,
     linkedGoals,
     devLog: [...(userProject?.devLog ?? [])].reverse().slice(0, 20),
+    activity,
+    runtimeState: runtimeState ? {
+      tabName: runtimeState.tabName,
+      readyAt: runtimeState.readyAt?.toISOString() ?? null,
+      closingAt: runtimeState.closingAt?.toISOString() ?? null,
+      closedAt: runtimeState.closedAt?.toISOString() ?? null,
+      currentPromptLabel: runtimeState.currentPromptLabel,
+      currentPromptStartedAt: runtimeState.currentPromptStartedAt?.toISOString() ?? null,
+      sessionUpdatedAt: runtimeState.sessionUpdatedAt?.toISOString() ?? null,
+    } : null,
   });
 }

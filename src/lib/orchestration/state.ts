@@ -6,6 +6,7 @@ export type LifecycleEventSnapshot = Partial<Record<OrchestrationEventType, Date
 
 export type RuntimeLifecycleFacts = {
   readyAt: number | null;
+  lockAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
   currentPromptStartedAt: number | null;
@@ -13,6 +14,7 @@ export type RuntimeLifecycleFacts = {
 
 export type DerivedLifecycleState = {
   readyAt: number | null;
+  lockAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
 };
@@ -53,6 +55,7 @@ export function deriveLifecycleState(args: {
 
   return {
     readyAt: resolveTs(runtime.readyAt, events?.input_requested, dbState?.readyAt, nowS),
+    lockAt: runtime.lockAt,
     closingAt: resolveTs(runtime.closingAt, events?.close_requested, dbState?.closingAt, nowS),
     closedAt: resolveTs(runtime.closedAt, events?.session_closed, dbState?.closedAt, nowS),
   };

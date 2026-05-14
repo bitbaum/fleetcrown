@@ -34,6 +34,35 @@ export type ProjectData = {
   linkedJobs: LinkedJob[];
   linkedGoals: LinkedGoal[];
   devLog: DevLogEntry[];
+  activity: ProjectActivityEvent[];
+  runtimeState: ProjectRuntimeState | null;
+};
+
+export type ProjectActivityEvent =
+  | {
+      id: string;
+      kind: "user_prompt";
+      occurredAt: string;
+      title: string;
+      body: string;
+    }
+  | {
+      id: string;
+      kind: "orchestrated_run";
+      occurredAt: string;
+      title: string;
+      body: string;
+      state: string;
+    };
+
+export type ProjectRuntimeState = {
+  tabName: string;
+  readyAt: string | null;
+  closingAt: string | null;
+  closedAt: string | null;
+  currentPromptLabel: string | null;
+  currentPromptStartedAt: string | null;
+  sessionUpdatedAt: string | null;
 };
 
 export type Tab = "overview" | "prompts" | "goals";

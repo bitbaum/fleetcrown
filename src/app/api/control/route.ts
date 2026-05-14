@@ -9,7 +9,7 @@ import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
-import { getUserProjects, appendProjectDevLog } from "@/db/queries/user-projects";
+import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import {
@@ -23,7 +23,7 @@ import {
   parseSession,
   readTmpTs,
   readCurrentPrompt,
-  getAgentCwds,
+  getAgentProcesses,
 } from "@/lib/control-fast-state";
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
@@ -129,6 +129,7 @@ wait
         lastMsg: msg.slice(0, 80),
         lastWhen: when.trim(),
         dirty: parseInt(dirtyStr ?? "0", 10) > 0,
+        dirtyCount: parseInt(dirtyStr ?? "0", 10),
         todayCount: parseInt(todayStr ?? "0", 10),
         behindRemote: parseInt(behindStr ?? "0", 10),
         recentCommits,
@@ -172,6 +173,25 @@ function matchProfile(
   };
 }
 
+function matchProfileById(
+  entityProjectId: string | null,
+  dbProjects: ProjectRow[],
+): ProjectProfile | null {
+  if (!entityProjectId) return null;
+  const match = dbProjects.find((p) => p.id === entityProjectId);
+  if (!match) return null;
+  const a = match.attrs as Record<string, string>;
+  return {
+    description: match.description ?? a.description ?? "",
+    status: a.status ?? "",
+    maturity: a.maturity ?? "",
+    stack: a.stack ?? a.stack_layer ?? "",
+    url: a.url ?? "",
+    mission: a.mission ?? "",
+    attrs: a,
+  };
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
@@ -182,20 +202,19 @@ export async function GET() {
   const prompts = readPromptMeta();
 
   // DB projects for this user; fall back to conf file for backward compat
-  const dbUserProjects = await getUserProjects(userId).catch(() => []);
+  const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
   const usingUserProjects = dbUserProjects.length > 0;
   const projects = usingUserProjects
     ? dbUserProjects
         .filter((p) => p.dirPath)
-        .map((p) => ({ id: p.id, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }))
-    : parseProjectsConf().map((p) => ({ id: null, agentPref: null, modelPref: null, ...p }));
+        .map((p) => ({ id: p.id, projectId: p.entityProjectId ?? null, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }))
+    : parseProjectsConf().map((p) => ({ id: null, projectId: null, agentPref: null, modelPref: null, ...p }));
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
   const { gitMap, dbProjects, zellijTabs } = await getSlowData(userId, dirs);
   // Detect any known agent running in a project dir — not just the configured default
-  const allMatchers = agentRegistry.agents.flatMap((entry) => entry.processMatchers);
-  const agentCwds = getAgentCwds(allMatchers);
+  const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
   const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
@@ -216,7 +235,7 @@ export async function GET() {
     activityByProject.set(item.projectKey, arr);
   }
 
-  const states: ProjectState[] = projects.map(({ id, tab, dir, agentPref, modelPref }) => {
+  const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref }) => {
     const latestRun = latestRuns.get(dir);
     const dbState = dbStateMap.get(tab.toLowerCase());
 
@@ -232,6 +251,7 @@ export async function GET() {
       if (sessionMtimeMs > dbSessionMs) {
         upsertProjectState({
           projectKey: tab,
+          projectId,
           userId,
           tabName: liveTab,
           sessionDone:   session.done,
@@ -247,20 +267,23 @@ export async function GET() {
         // the beacon popup — covers auto-continue, direct injections, and all flows.
         const doneTrimmed = session.done?.trim();
         if (doneTrimmed && doneTrimmed !== dbState.sessionDone?.trim()) {
-          appendProjectDevLog(userId, tab, {
+          const entry = {
             date: new Date(sessionMtimeMs).toISOString(),
             done: doneTrimmed,
             next: session.next?.trim() ?? "",
             tests: session.tests?.trim() ?? "",
             todos: session.todos?.trim() ?? "",
             health: session.health?.trim() || "good",
-          }).catch(() => {});
+          };
+          if (projectId) appendProjectDevLogByEntityProjectId(userId, projectId, entry).catch(() => {});
+          else appendProjectDevLog(userId, tab, entry).catch(() => {});
         }
       }
     } else if (session && !dbState) {
       // First time we're seeing this project's session — bootstrap the DB row
       upsertProjectState({
         projectKey: tab,
+        projectId,
         userId,
         tabName: liveTab,
         sessionDone:   session.done,
@@ -274,18 +297,38 @@ export async function GET() {
 
     const nowS = Math.floor(Date.now() / 1000);
     const tmpReady   = readTmpTs(stateFile.ready(liveTab));
+    const tmpLock    = readTmpTs(stateFile.lock(liveTab));
     const tmpClosing = readTmpTs(stateFile.closing(liveTab));
     const tmpClosed  = readTmpTs(stateFile.closed(liveTab));
+
+    const projectAgentId = agentPref ?? agentConfig.agent;
+    const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
+    const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
+    const agentRunning = projectProcesses.length > 0;
+    const activeAgents = [...new Set(projectProcesses.map((process) => process.agentId))];
+    const sessionLifecycleSignals = projectProcesses.length > 0
+      ? projectProcesses.some((process) => process.sessionLifecycleSignals)
+      : projectAgent?.capabilities.sessionLifecycleSignals ?? false;
 
     // currentPrompt is transient runtime state — only the /tmp file is authoritative.
     // DB fallback would cause "Running: <stale task>" after a system reboot (no processes,
     // no /tmp files, but DB still has the old currentPromptKey).
-    const currentPrompt: CurrentPrompt | null = readCurrentPrompt(liveTab);
+    const rawCurrentPrompt: CurrentPrompt | null = readCurrentPrompt(liveTab);
+    // Agents without lifecycle callbacks, notably an interactive Codex TUI, can stay
+    // alive after returning to the prompt. Direct injections into those sessions have
+    // no reliable completion signal, so do not render their last injected text as an
+    // active task forever. One-shot runners set source:"runner" and are cleared by
+    // agent-hook-bridge.sh when they finish.
+    const currentPrompt: CurrentPrompt | null =
+      sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
+        ? rawCurrentPrompt
+        : null;
 
     const lifecycleEvents = latestLifecycleEvents.get(tab);
     const derivedLifecycle = deriveLifecycleState({
       runtime: {
         readyAt: tmpReady,
+        lockAt: tmpLock,
         closingAt: tmpClosing,
         closedAt: tmpClosed,
         currentPromptStartedAt: currentPrompt?.startedAt ?? null,
@@ -297,6 +340,7 @@ export async function GET() {
 
     for (const event of collectRuntimeLifecycleEvents({
       readyAt: tmpReady,
+      lockAt: tmpLock,
       closingAt: tmpClosing,
       closedAt: tmpClosed,
       currentPromptStartedAt: currentPrompt?.startedAt ?? null,
@@ -314,6 +358,7 @@ export async function GET() {
 
     return ({
     id,
+    projectId,
     tab,
     liveTab,
     dir,
@@ -321,10 +366,13 @@ export async function GET() {
     modelPref,
     session,
     git: gitMap.get(dir) ?? null,
-    agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
-    profile: matchProfile(tab, dir, dbProjects),
+    sessionLifecycleSignals,
+    agentRunning,
+    activeAgents,
+    profile: matchProfileById(projectId, dbProjects) ?? matchProfile(tab, dir, dbProjects),
     currentPrompt,
     readyAt:   derivedLifecycle.readyAt,
+    lockAt:    derivedLifecycle.lockAt,
     closingAt: derivedLifecycle.closingAt,
     closedAt:  derivedLifecycle.closedAt,
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],

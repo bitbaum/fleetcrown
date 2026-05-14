@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, GitBranch, Play, Terminal, Focus } from "lucide-react";
+import { Loader2, Play, Focus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { HEALTH_COLOR, getHealthShort } from "@/lib/constants/control";
 import type { ProjectState } from "@/lib/control-types";
+import { getProjectDisplayState } from "./control-presenter";
+import { APP_LOCALE } from "@/lib/constants";
+import { ProjectStatusChips } from "./ProjectStatusChips";
 
 type Props = {
   project: ProjectState;
@@ -16,9 +18,32 @@ type Props = {
 };
 
 export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onLaunch, onFocus }: Props) {
-  const { tab, git, session, agentRunning, dir } = project;
+  const { tab, session, agentRunning, dir } = project;
+  const display = getProjectDisplayState(project, zellijTabs, Math.floor(Date.now() / 1000));
   const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? tab).toLowerCase());
-  const healthColor = session?.health ? (HEALTH_COLOR[getHealthShort(session.health)] ?? "text-text-muted") : null;
+  const stateLabel = display.isClosed
+    ? "Closed"
+    : display.isReady || display.isOrchestrationReady
+    ? "Waiting"
+    : display.isRunning
+    ? "Working"
+    : display.isSessionOpen
+    ? "Ready"
+    : "Idle";
+  const stateClass = display.isRunning
+    ? "ui-tag ui-tag-warning"
+    : display.isClosed || display.isReady || display.isOrchestrationReady
+    ? "ui-tag ui-tag-positive"
+    : "ui-tag ui-tag-neutral";
+  const summary = project.currentPrompt && display.isRunning
+    ? project.currentPrompt.label
+    : display.isReady || display.isOrchestrationReady
+    ? "Ready for the next prompt"
+    : display.isSessionOpen
+    ? "Send a prompt when you want work to start"
+    : session?.mtime
+    ? `Last agent handoff: ${new Date(session.mtime).toLocaleString(APP_LOCALE)}`
+    : null;
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;
 
@@ -39,13 +64,16 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
     >
       <div className="flex items-start gap-3">
         <div className="mt-0.5 shrink-0">
-          {agentRunning ? (
+          {display.isRunning ? (
             <Loader2 className="ui-spinner-sm text-accent-text" />
           ) : (
             <span className={cn(
-              "block h-2.5 w-2.5 rounded-full border",
-              healthColor ? "border-transparent bg-current" : "border-border-default bg-transparent",
-              healthColor ?? "text-border-default",
+              "block h-2.5 w-2.5 rounded-full border bg-current",
+              display.isReady || display.isOrchestrationReady || display.isClosed
+                ? "border-status-positive text-status-positive"
+                : display.isSessionOpen
+                ? "border-text-secondary text-text-secondary"
+                : "border-border-default text-border-default",
             )} />
           )}
         </div>
@@ -53,48 +81,16 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold text-text-primary">{tab}</span>
-            {tabOpen && (
-              <span title="Terminal open" className="ui-tag ui-tag-neutral gap-1">
-                <Terminal className="h-3 w-3" />
-                Open
-              </span>
-            )}
+            <span className={stateClass}>{stateLabel}</span>
           </div>
-          {session?.next ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={session.next}>{session.next}</p>
-          ) : session?.done ? (
-            <p className="mt-1 line-clamp-1 text-xs leading-relaxed text-text-muted" title={session.done}>Last: {session.done}</p>
+          {summary ? (
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={summary}>{summary}</p>
           ) : null}
         </div>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-text-tertiary">
-          {git?.branch && (
-            <span className="flex items-center gap-1">
-              <GitBranch className="h-3 w-3" />
-              <span className="max-w-[10rem] truncate">{git.branch}</span>
-            </span>
-          )}
-          {session?.health && (
-            <span className={cn("font-medium uppercase tracking-caps", healthColor ?? "text-text-muted")}>
-              {getHealthShort(session.health)}
-            </span>
-          )}
-          {(git?.todayCount ?? 0) > 0 && (
-            <span className="text-status-positive/80" title={`${git!.todayCount} commit${git!.todayCount > 1 ? "s" : ""} today`}>
-              +{git!.todayCount}
-            </span>
-          )}
-          {git?.dirty && (
-            <span className="text-status-warning" title="Uncommitted changes">✎</span>
-          )}
-          {(git?.behindRemote ?? 0) > 0 && (
-            <span className="text-status-warning" title={`${git!.behindRemote} commit${git!.behindRemote > 1 ? "s" : ""} behind remote`}>
-              ↓{git!.behindRemote}
-            </span>
-          )}
-        </div>
+        <ProjectStatusChips project={project} tabOpen={tabOpen} compact />
 
         <div className="flex items-center gap-1.5">
           <button

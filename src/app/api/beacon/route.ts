@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
 
 const BEACON_DIR = "/tmp/cockpit-beacon";
 
@@ -12,11 +13,15 @@ export type BeaconSession = {
   sessionContent: string;
   createdAt: number;
   choice: string | null;
+  currentAgent: Agent | null;
+  nextAgent: Agent | null;
+  capacityIssue: boolean;
 };
 
 const CreateBody = z.object({
   project: z.string().max(200),
   sessionContent: z.string().max(20_000).default(""),
+  currentAgent: z.string().max(40).optional(),
 });
 
 export function beaconPath(id: string): string {
@@ -64,6 +69,9 @@ export async function POST(req: NextRequest) {
     sessionContent: dataOrResp.sessionContent,
     createdAt: Date.now(),
     choice: null,
+    currentAgent: isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude",
+    nextAgent: resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude"),
+    capacityIssue: looksLikeAgentCapacityIssue(dataOrResp.sessionContent),
   };
   fs.writeFileSync(beaconPath(session.id), JSON.stringify(session));
   return NextResponse.json({ id: session.id });

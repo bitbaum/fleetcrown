@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Pause, Play, Eraser, Loader2, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { Eraser, Loader2 } from "lucide-react";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
-import { FEATURED_PROJECT_PROMPTS, CATEGORY_META, substituteProjectName } from "@/config/prompt-library";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput, QueueList } from "./project-composer";
+import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 
 export function IntentButtonPanel({
   project,
   currentAdapter,
+  isRunning,
   autoContinueEnabled,
   sending,
   custom,
@@ -34,6 +35,7 @@ export function IntentButtonPanel({
 }: {
   project: ProjectState;
   currentAdapter: string;
+  isRunning: boolean;
   autoContinueEnabled: boolean;
   sending: string | null;
   custom: string;
@@ -76,45 +78,40 @@ export function IntentButtonPanel({
     showQueue: !!onEnqueueCustom,
     onSendCustom: handleSendCustom,
     onEnqueue: handleEnqueue,
+    autoContinueEnabled,
+    onToggleAutoContinue,
+    statusLabel: autoContinueEnabled
+      ? "Auto-continue ready: Cockpit can send the next queued prompt when the agent waits."
+      : "Auto-continue paused: Cockpit will wait for you before sending more work.",
   };
 
-  const recentPrompts = project.recentCustomPrompts.slice(0, project.agentRunning ? 3 : undefined);
+  const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : undefined);
 
   // Running: interrupt input + auto-continue toggle (below, not adjacent) + queue + recent prompts
-  if (project.agentRunning) {
+  if (isRunning) {
     return (
-      <div className="ui-card-section space-y-2">
+      <div className="ui-card-section space-y-3">
         <PromptInput {...inputProps} placeholder="Send interrupt…" />
-        {/* Auto-continue toggle — separated from action buttons; controls post-turn behaviour */}
-        <div className="flex items-center justify-between px-0.5">
-          <p className="text-xs text-text-muted">
-            {autoContinueEnabled ? "Auto-continues when done" : "Auto-continue paused"}
-          </p>
-          <button
-            onClick={onToggleAutoContinue}
-            title={autoContinueEnabled ? "Pause auto-continue when done" : "Resume auto-continue"}
-            className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
-          >
-            {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-accent-text" />}
-          </button>
-        </div>
         {queue.length > 0 && (
           <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
         )}
-        {recentPrompts.length > 0 && (
+      {recentPrompts.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="ui-kicker">Reuse recent prompts</p>
           <div className="flex flex-wrap gap-1.5">
             {recentPrompts.map((r) => (
               <button
                 key={r.customPrompt}
                 onClick={() => onCustomChange(r.customPrompt)}
-                title={r.customPrompt}
+                title={`Reuse this prompt: ${r.customPrompt}`}
                 className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
               >
                 {r.customPrompt.length > 50 ? r.customPrompt.slice(0, 50) + "…" : r.customPrompt}
               </button>
             ))}
           </div>
-        )}
+        </div>
+      )}
       </div>
     );
   }
@@ -123,7 +120,7 @@ export function IntentButtonPanel({
   const [primary] = PRIMARY_INTENTS; // next_best is always first
 
   return (
-    <div className="space-y-2.5 ui-card-section">
+    <div className="space-y-3 ui-card-section">
       <PromptInput {...inputProps} placeholder="Custom prompt…" />
       {queue.length > 0 && (
         <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
@@ -131,7 +128,7 @@ export function IntentButtonPanel({
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
       {!bannerActive && primary && (
-        <div className="space-y-2">
+        <div className="space-y-2 border-t border-border-subtle pt-3">
           {/* Primary CTA: Next best — full width, visually elevated */}
           <button
             onClick={() => onSendIntent(primary.id)}
@@ -198,79 +195,33 @@ export function IntentButtonPanel({
       )}
 
       {recentPrompts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {recentPrompts.map((r) => (
-            <button
-              key={r.customPrompt}
-              onClick={() => onCustomChange(r.customPrompt)}
-              title={r.customPrompt}
-              className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
-            >
-              {r.count > 1 && <span className="mr-1.5">×{r.count}</span>}
-              {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
-            </button>
-          ))}
+        <div className="space-y-1.5">
+          <p className="ui-kicker">Reuse recent prompts</p>
+          <div className="flex flex-wrap gap-1.5">
+            {recentPrompts.map((r) => (
+              <button
+                key={r.customPrompt}
+                onClick={() => onCustomChange(r.customPrompt)}
+                title={`Reuse this prompt: ${r.customPrompt}`}
+                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+              >
+                {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
+                {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* Library prompts — featured project prompts from config/prompt-library, substituted with project name */}
-      {FEATURED_PROJECT_PROMPTS.length > 0 && (
-        <div className="border-t border-border-subtle pt-2">
-          <button
-            onClick={() => setShowLibraryPrompts((v) => !v)}
-            className="flex w-full items-center justify-between text-xs text-text-muted transition-colors hover:text-text-secondary mb-1.5"
-          >
-            <span className="flex items-center gap-1.5">
-              <BookOpen className="h-3 w-3" />
-              <span className="font-medium">Library prompts</span>
-            </span>
-            {showLibraryPrompts ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
-          {showLibraryPrompts && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {FEATURED_PROJECT_PROMPTS.map((t) => {
-                const meta = CATEGORY_META[t.category];
-                const text = substituteProjectName(t.template, project.tab);
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      if (bannerActive && onSendText) {
-                        onSendText(text); // agent ready: inject directly
-                      } else {
-                        onCustomChange(text); // agent idle: load into input for review
-                      }
-                    }}
-                    disabled={sending !== null}
-                    title={t.description}
-                    className="flex flex-col gap-1 rounded-xl border border-border-subtle bg-surface-base px-3 py-2.5 text-left transition-all hover:border-border-default hover:bg-surface-raised disabled:opacity-40"
-                  >
-                    <span className="text-xs font-medium text-text-primary leading-tight">{t.name}</span>
-                    <span className="text-micro text-text-muted leading-snug line-clamp-2">{t.description}</span>
-                    <span className={`self-start mt-0.5 text-micro px-1.5 py-0.5 rounded-full border font-medium ${meta.color}`}>
-                      {meta.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Auto-continue toggle — always visible, separated from action buttons */}
-      <div className="flex items-center justify-between px-0.5">
-        <p className="text-xs text-text-muted">
-          {autoContinueEnabled ? "Auto-continue on" : "Auto-continue paused"}
-        </p>
-        <button
-          onClick={onToggleAutoContinue}
-          title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
-          className="rounded p-1 text-text-muted transition-colors hover:text-text-secondary"
-        >
-          {autoContinueEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-accent-text" />}
-        </button>
-      </div>
+      <ProjectPromptLibrary
+        projectName={project.tab}
+        open={showLibraryPrompts}
+        onOpenChange={setShowLibraryPrompts}
+        onSelect={(text) => {
+          if (bannerActive && onSendText) onSendText(text);
+          else onCustomChange(text);
+        }}
+      />
     </div>
   );
 }

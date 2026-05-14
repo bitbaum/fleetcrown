@@ -1,5 +1,5 @@
 """Beacon — Qt widget classes: stylesheet, helpers, BasePopup, ContinuePopup, ConfirmPopup."""
-import os, json, subprocess, sys
+import os, json, subprocess, sys, shutil, re
 from pathlib import Path
 
 # Ensure vendor packages are on the path before importing PyQt6.
@@ -22,8 +22,48 @@ from _beacon_config import (
 )
 from _beacon_audio import WhisperThread
 
+SWITCH_CHOICE_PREFIX = "switch:"
+AGENT_FALLBACK_ORDER = ["claude", "codex", "gemini"]
+
+
+def _agent_label(agent: str) -> str:
+    return {"claude": "Claude", "codex": "Codex", "gemini": "Gemini"}.get(agent, "agent")
+
+
+def _looks_like_capacity_issue(text: str) -> bool:
+    return bool(re.search(
+        r"rate\s*limit|quota|credit|usage\s*limit|token\s*limit|out\s+of\s+tokens|"
+        r"context\s*(window|length|limit)|maximum\s+context|insufficient\s+quota",
+        text or "",
+        re.IGNORECASE,
+    ))
+
+
+def _next_available_agent(current: str) -> str | None:
+    available = [agent for agent in AGENT_FALLBACK_ORDER if shutil.which(agent)]
+    if current in AGENT_FALLBACK_ORDER:
+        for agent in AGENT_FALLBACK_ORDER[AGENT_FALLBACK_ORDER.index(current) + 1:]:
+            if agent in available:
+                return agent
+    for agent in AGENT_FALLBACK_ORDER:
+        if agent != current and agent in available:
+            return agent
+    return None
+
 # Build color dict + stylesheet once at import time.
 C = load_theme()
+_COPY_PATH = Path(__file__).resolve().parent.parent / "src" / "config" / "session-handoff-copy.json"
+try:
+    HANDOFF_COPY = json.loads(_COPY_PATH.read_text(encoding="utf-8"))
+except Exception:
+    HANDOFF_COPY = {
+        "title": "Latest agent handoff",
+        "next": "Next",
+        "inProgress": "In progress",
+        "completed": "Completed",
+        "facts": "Agent-reported run facts",
+        "factLabels": {"tests": "Tests", "todos": "Todos", "health": "Health"},
+    }
 
 SS = """
 /* ── Card ── */
@@ -608,6 +648,12 @@ class ContinuePopup(BasePopup):
         self._auto_timer      = QTimer()
         self._action_btns     = []   # all prompt buttons for keyboard nav
         self._primary_btns    = []
+        self._switch_btn      = None
+        self._current_agent   = os.environ.get("AGENT_CURRENT_AGENT", "claude").strip().lower()
+        if self._current_agent not in AGENT_FALLBACK_ORDER:
+            self._current_agent = "claude"
+        self._capacity_issue  = False
+        self._next_agent      = None
         # Start paused if the web app wrote the sentinel while Cockpit was running.
         _pause_file = f"/tmp/cockpit-auto-continue-{label.lower()}"
         self._auto_continue   = not os.path.exists(_pause_file)
@@ -622,6 +668,8 @@ class ContinuePopup(BasePopup):
                 self.session = open(session_file).read().strip()
             except OSError:
                 pass
+        self._capacity_issue = _looks_like_capacity_issue(self.session)
+        self._next_agent = _next_available_agent(self._current_agent)
         self._build()
         self._load_queue()
         self._start_queue_poll()
@@ -785,8 +833,10 @@ class ContinuePopup(BasePopup):
         self._secs -= 1
         if self._secs <= 0:
             self._timer.stop()
-            # Fire first queue item if present, otherwise primary slot
-            if self._queue:
+            # Capacity exhaustion means the current CLI cannot continue; switch first.
+            if self._capacity_issue and self._next_agent:
+                self._choose(f"{SWITCH_CHOICE_PREFIX}{self._next_agent}")
+            elif self._queue:
                 item = self._queue.pop(0)
                 self._save_queue()
                 self._queue_prev = list(self._queue)
@@ -799,7 +849,11 @@ class ContinuePopup(BasePopup):
             self._update_status_label()
 
     def _choose(self, key):
-        if not key.startswith(CUSTOM_CHOICE_PREFIX) and self._custom_input_text().strip():
+        if (
+            not key.startswith(CUSTOM_CHOICE_PREFIX)
+            and not key.startswith(SWITCH_CHOICE_PREFIX)
+            and self._custom_input_text().strip()
+        ):
             self._cancel_countdown()
             return
         if self._timer and self._timer.isActive():
@@ -871,6 +925,9 @@ class ContinuePopup(BasePopup):
             self._status_label.setText("Auto-continue paused")
         elif self._secs <= 0:
             self._status_label.setText("Dispatching…")
+        elif self._capacity_issue and self._next_agent:
+            self._status_label.setText(
+                f"Switching to {_agent_label(self._next_agent)} in {self._secs}s")
         elif self._queue:
             preview = self._queue[0]
             if len(preview) > 40:
@@ -923,8 +980,13 @@ class ContinuePopup(BasePopup):
             row.addWidget(v, 1)
             return row
 
+        has_structured_summary = any(k in parsed for k in ('next', 'in_progress', 'done', 'tests', 'todos', 'health'))
+        if has_structured_summary:
+            box_lay.addWidget(_section_label(HANDOFF_COPY["title"].upper(), C['label_next']))
+            box_lay.addSpacing(6)
+
         if 'next' in parsed:
-            box_lay.addWidget(_section_label("AGENT'S PLAN", C['label_next']))
+            box_lay.addWidget(_section_label(HANDOFF_COPY["next"].upper(), C['label_next']))
             box_lay.addSpacing(4)
             for itm in [s.strip() for s in parsed['next'].split('; ') if s.strip()]:
                 box_lay.addLayout(_make_bullet(itm, "→", C['label_next']))
@@ -932,7 +994,7 @@ class ContinuePopup(BasePopup):
         if 'in_progress' in parsed:
             if 'next' in parsed:
                 box_lay.addSpacing(8)
-            box_lay.addWidget(_section_label("IN PROGRESS", C['label_progress']))
+            box_lay.addWidget(_section_label(HANDOFF_COPY["inProgress"].upper(), C['label_progress']))
             box_lay.addSpacing(4)
             for itm in [s.strip() for s in parsed['in_progress'].split('; ') if s.strip()]:
                 box_lay.addLayout(_make_bullet(itm, "◉", C['label_progress']))
@@ -944,7 +1006,7 @@ class ContinuePopup(BasePopup):
 
             done_row = QHBoxLayout()
             done_row.setSpacing(6)
-            done_lbl = QLabel(f"DONE  ·  {len(done_items)} completed")
+            done_lbl = QLabel(f"{HANDOFF_COPY['completed'].upper()}  ·  {len(done_items)}")
             done_lbl.setStyleSheet(
                 f"color:{C['text3']};font-size:10px;font-weight:700;letter-spacing:1.2px;background:transparent;")
             done_row.addWidget(done_lbl)
@@ -977,7 +1039,30 @@ class ContinuePopup(BasePopup):
             toggle_btn.clicked.connect(_toggle_done)
             box_lay.addWidget(done_body)
 
-        if not any(k in parsed for k in ('next', 'in_progress', 'done')):
+        facts = []
+        fact_labels = HANDOFF_COPY.get("factLabels", {})
+        for key, fallback in (('tests', 'Tests'), ('todos', 'Todos'), ('health', 'Health')):
+            if key in parsed and str(parsed[key]).strip():
+                label = fact_labels.get(key, fallback)
+                facts.append(f"{label}: {parsed[key].strip()}")
+
+        if facts:
+            if any(k in parsed for k in ('next', 'in_progress', 'done')):
+                box_lay.addSpacing(10)
+            box_lay.addWidget(_section_label(HANDOFF_COPY["facts"].upper(), C['text3']))
+            box_lay.addSpacing(4)
+            for fact in facts:
+                lbl = QLabel(fact)
+                lbl.setWordWrap(True)
+                lbl.setMaximumWidth(W)
+                lbl.setStyleSheet(
+                    f"color:{C['text3']};font-size:12px;line-height:18px;"
+                    f"background:{C['input_bg']};border:1px solid {C['border']};"
+                    f"border-radius:8px;padding:7px 9px;")
+                lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                box_lay.addWidget(lbl)
+
+        if not has_structured_summary:
             v = QLabel(self.session)
             v.setWordWrap(True)
             v.setMaximumWidth(W)
@@ -1212,6 +1297,25 @@ class ContinuePopup(BasePopup):
         self._queue_container.setVisible(False)
         lay.addWidget(self._queue_container)
         lay.addSpacing(6)
+
+        # ── Agent fallback switch ──
+        if self._next_agent:
+            switch_hint = QLabel(
+                f"{_agent_label(self._current_agent)} → {_agent_label(self._next_agent)}"
+                + ("  ·  capacity issue" if self._capacity_issue else "  ·  fallback ready")
+            )
+            switch_hint.setObjectName("status_line")
+            lay.addWidget(switch_hint)
+            lay.addSpacing(3)
+
+            self._switch_btn = SafeButton(f"  ↔   Switch to {_agent_label(self._next_agent)} and continue")
+            self._switch_btn.setObjectName("ship_primary" if self._capacity_issue else "action")
+            self._switch_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self._switch_btn.clicked.connect(lambda _, a=self._next_agent: self._choose(f"{SWITCH_CHOICE_PREFIX}{a}"))
+            self._switch_btn.pressed.connect(self._cancel_countdown)
+            lay.addWidget(self._switch_btn)
+            lay.addSpacing(8)
+            self._action_btns.append(self._switch_btn)
 
         # ── Primary action button ──
         for key, icon, lbl_text in self.PRIMARY_ACTIONS:

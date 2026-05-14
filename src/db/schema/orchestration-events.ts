@@ -1,10 +1,12 @@
 import { pgTable, uuid, text, timestamp, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { entities } from "./entities";
 import type { AdapterId, OrchestrationEventType, OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 export const orchestrationEvents = pgTable("orchestration_events", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
   projectKey: text("project_key").notNull(),
   eventType: text("event_type").$type<OrchestrationEventType>().notNull(),
   source: text("source").notNull(),
@@ -16,6 +18,7 @@ export const orchestrationEvents = pgTable("orchestration_events", {
 }, (table) => [
   index("idx_orch_events_user_project_time").on(table.userId, table.projectKey, table.happenedAt),
   index("idx_orch_events_user_project_type_time").on(table.userId, table.projectKey, table.eventType, table.happenedAt),
+  index("idx_orch_events_project_id_time").on(table.projectId, table.happenedAt),
 ]);
 
 export type OrchestrationEvent = typeof orchestrationEvents.$inferSelect;

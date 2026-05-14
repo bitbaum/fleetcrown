@@ -1,0 +1,40 @@
+import { useEffect, useRef } from "react";
+import { postJson } from "@/lib/api/fetch";
+import { readyAtKey } from "@/lib/control-storage";
+
+/**
+ * Syncs project ready state to local storage and /tmp sentinels.
+ * Ensures the beacon popup and web dashboard stay in sync.
+ */
+export function useProjectLifecycleSync(
+  tab: string,
+  isReady: boolean,
+  enableAutoContinue: () => void,
+) {
+  const prevIsReadyRef = useRef(false);
+
+  useEffect(() => {
+    if (isReady && !prevIsReadyRef.current) {
+      // New ready cycle: mark the start time for the countdown
+      try {
+        localStorage.setItem(readyAtKey(tab), Date.now().toString());
+      } catch {
+        // Ignore storage errors
+      }
+
+      // Re-enable auto-continue on each new ready cycle
+      enableAutoContinue();
+
+      // Sync re-enable to /tmp sentinel so PyQt popup starts unpaused
+      postJson("/api/control/auto-continue", { tab, enabled: true }).catch(() => {});
+    } else if (!isReady && prevIsReadyRef.current) {
+      // Session resumed or closed: clear the ready timestamp
+      try {
+        localStorage.removeItem(readyAtKey(tab));
+      } catch {
+        // Ignore storage errors
+      }
+    }
+    prevIsReadyRef.current = isReady;
+  }, [isReady, tab, enableAutoContinue]);
+}

@@ -7,6 +7,7 @@ const DEFAULT_AGENT: Agent = "claude";
 const DEFAULT_MODELS: Record<Agent, string> = {
   codex: "gpt-5.4",
   claude: "sonnet",
+  gemini: "auto",
 };
 
 const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
@@ -35,6 +36,7 @@ function normalizePreferences(raw: Partial<AgentPreferences & LegacyAgentConfig>
   const models: Partial<Record<Agent, string>> = {
     claude: sanitizeModel("claude", currentModels.claude),
     codex: sanitizeModel("codex", currentModels.codex),
+    gemini: sanitizeModel("gemini", currentModels.gemini),
   };
 
   if (!currentModels[defaultAgent] && raw.model) {

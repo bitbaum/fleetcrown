@@ -1,8 +1,10 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { entities } from "./entities";
 import type { AdapterId, OrchestrationState, OrchestrationTaskIntentId, OrchestrationTaskSummary } from "@/lib/orchestration";
 
 export type OrchestrationRunPayload = {
+  projectId?: string | null;
   projectKey: string;
   projectPath: string;
   model?: string;
@@ -15,6 +17,7 @@ export type OrchestrationRunPayload = {
 export const orchestrationRuns = pgTable("orchestration_runs", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
+  projectId: uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
   adapter: text("adapter").$type<AdapterId>().notNull(),
   intent: text("intent").$type<OrchestrationTaskIntentId>().notNull(),
   state: text("state").$type<OrchestrationState>().notNull(),
@@ -27,6 +30,7 @@ export const orchestrationRuns = pgTable("orchestration_runs", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("idx_orchestration_runs_user_id").on(table.userId),
+  index("idx_orchestration_runs_project_id").on(table.projectId),
   index("idx_orchestration_runs_project_path").on(table.projectPath),
   index("idx_orchestration_runs_started_at").on(table.startedAt),
 ]);

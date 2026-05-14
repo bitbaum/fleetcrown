@@ -1,5 +1,6 @@
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
+import { APP_LOCALE } from "@/lib/constants";
 
 export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
   if (entries.length === 0) return null;
@@ -8,8 +9,8 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
     <div className="space-y-3">
       {entries.map((entry, i) => {
         const d = new Date(entry.date);
-        const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-        const timeStr = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+        const dateStr = d.toLocaleDateString(APP_LOCALE, { month: "short", day: "numeric" });
+        const timeStr = d.toLocaleTimeString(APP_LOCALE, { hour: "2-digit", minute: "2-digit" });
         const healthKey = (entry.health ?? "").toLowerCase();
         const healthCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-neutral";
         return (

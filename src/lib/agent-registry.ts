@@ -7,9 +7,10 @@ import { shellEscape } from "@/lib/zellij";
 const CLAUDE_SETTINGS_FILE = path.join(HOME, ".claude", "settings.json");
 const DOTFILES_CLAUDE_SETTINGS_FILE = path.join(HOME, "dev", "dotfiles", ".claude", "settings.json");
 
-export const AGENT_IDS = ["codex", "claude"] as const;
+export const AGENT_IDS = ["codex", "claude", "gemini"] as const;
+export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "codex", "gemini"];
 export type Agent = (typeof AGENT_IDS)[number];
-export type AgentOption = Agent | "openclaw" | "gemini";
+export type AgentOption = Agent | "openclaw";
 
 export type AgentRegistryEntry = {
   id: AgentOption;
@@ -132,21 +133,6 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
 
   return [
     {
-      id: "codex",
-      label: "Codex",
-      defaultModel: codexDefaultModel,
-      modelSuggestions: dedupeStrings([codexDefaultModel, "codex-4", "gpt-5.4"]),
-      processMatchers: ["codex"],
-      switchable: true,
-      available: true,
-      capabilities: {
-        tabSwitching: true,
-        manualPromptInjection: true,
-        autonomousPromptLoop: false,
-        sessionLifecycleSignals: false,
-      },
-    },
-    {
       id: "claude",
       label: "Claude",
       defaultModel: claudeDefaultModel,
@@ -159,6 +145,21 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
         manualPromptInjection: true,
         autonomousPromptLoop: true,
         sessionLifecycleSignals: true,
+      },
+    },
+    {
+      id: "codex",
+      label: "Codex",
+      defaultModel: codexDefaultModel,
+      modelSuggestions: dedupeStrings([codexDefaultModel, "codex-4", "gpt-5.4"]),
+      processMatchers: ["codex"],
+      switchable: true,
+      available: true,
+      capabilities: {
+        tabSwitching: true,
+        manualPromptInjection: true,
+        autonomousPromptLoop: false,
+        sessionLifecycleSignals: false,
       },
     },
     {
@@ -182,11 +183,11 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       defaultModel: "auto",
       modelSuggestions: ["auto", "pro", "flash", "flash-lite"],
       processMatchers: ["gemini"],
-      switchable: false,
+      switchable: true,
       ...geminiAvailability,
       capabilities: {
         tabSwitching: true,
-        manualPromptInjection: false,
+        manualPromptInjection: true,
         autonomousPromptLoop: false,
         sessionLifecycleSignals: false,
       },
@@ -195,7 +196,41 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
 }
 
 export function sanitizeAgentId(value: string | undefined): Agent {
-  return value === "claude" ? "claude" : "codex";
+  if (value === "claude") return "claude";
+  if (value === "gemini") return "gemini";
+  return "codex";
+}
+
+export function isAgentId(value: string | undefined | null): value is Agent {
+  return value === "claude" || value === "codex" || value === "gemini";
+}
+
+export function looksLikeAgentCapacityIssue(text: string): boolean {
+  return /rate\s*limit|quota|credit|usage\s*limit|token\s*limit|out\s+of\s+tokens|context\s*(window|length|limit)|maximum\s+context|insufficient\s+quota/i.test(text);
+}
+
+export function resolveNextAvailableAgent(currentAgent?: string | null): Agent | null {
+  const current = isAgentId(currentAgent) ? currentAgent : null;
+  const registry = listAgentRegistry();
+  const available = new Set(
+    registry
+      .filter((entry) => entry.switchable && entry.available && entry.capabilities.tabSwitching && isAgentId(entry.id))
+      .map((entry) => entry.id as Agent),
+  );
+
+  if (current) {
+    const currentIndex = AGENT_FALLBACK_ORDER.indexOf(current);
+    const afterCurrent = AGENT_FALLBACK_ORDER.slice(currentIndex + 1);
+    for (const candidate of afterCurrent) {
+      if (available.has(candidate)) return candidate;
+    }
+  }
+
+  for (const candidate of AGENT_FALLBACK_ORDER) {
+    if (candidate !== current && available.has(candidate)) return candidate;
+  }
+
+  return null;
 }
 
 export function syncAgentSettings(agent: Agent, model: string): void {
@@ -218,13 +253,7 @@ export function syncAgentSettings(agent: Agent, model: string): void {
 }
 
 export function buildAgentLaunchCommand(config: { agent: Agent; model: string }, dir: string): string {
-  const escapedDir = shellEscape(dir);
-  if (config.agent === "claude") {
-    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
-  }
-
-  const escapedModel = shellEscape(config.model);
-  return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
+  return buildAgentOptionLaunchCommand(config, dir);
 }
 
 export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; model?: string }, dir: string): string {

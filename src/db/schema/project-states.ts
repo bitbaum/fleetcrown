@@ -1,9 +1,11 @@
 import { pgTable, text, timestamp, uuid, index } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { entities } from "./entities";
 
 export const projectStates = pgTable("project_states", {
   projectKey:             text("project_key").primaryKey(),
   userId:                 uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
+  projectId:              uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
   tabName:                text("tab_name").notNull(),
   readyAt:                timestamp("ready_at",   { withTimezone: true }),
   closingAt:              timestamp("closing_at", { withTimezone: true }),
@@ -20,6 +22,7 @@ export const projectStates = pgTable("project_states", {
   updatedAt:              timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("idx_project_states_user_id").on(table.userId),
+  index("idx_project_states_project_id").on(table.projectId),
 ]);
 
 export type ProjectState    = typeof projectStates.$inferSelect;
