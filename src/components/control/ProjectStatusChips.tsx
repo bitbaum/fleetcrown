@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { GitBranch, Terminal, ChevronDown, Check } from "lucide-react";
+import { GitBranch, Terminal, ChevronDown, Check, Loader2, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
@@ -88,6 +88,7 @@ export function ProjectStatusChips({
   clickableWorkspace = true,
   availableAgents,
   localAgentId,
+  switchingAgent = false,
   onSwitchAgent,
 }: {
   project: ProjectState;
@@ -96,11 +97,14 @@ export function ProjectStatusChips({
   clickableWorkspace?: boolean;
   availableAgents?: AgentEntry[];
   localAgentId?: string | null;
+  switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
 }) {
   const [gitHelpOpen, setGitHelpOpen] = useState(false);
   const [agentPopoverOpen, setAgentPopoverOpen] = useState(false);
   const [workspaceState, setWorkspaceState] = useState<"idle" | "loading" | "done">("idle");
+  const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
+  const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
   const runtimeLabel = formatAgentRuntimeLabel(project);
   const git = project.git;
   const workspaceTab = project.liveTab ?? project.tab;
@@ -126,6 +130,30 @@ export function ProjectStatusChips({
     }
   };
 
+  const quickCommit = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!project.dir || commitState === "committing") return;
+    setCommitState("committing");
+    setCommitResult(null);
+    try {
+      const res = await postJson("/api/project/commit", { dir: project.dir, push: true });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setCommitResult({ sha: body.sha });
+        setCommitState("done");
+        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 4000);
+      } else {
+        setCommitResult({ error: body.error ?? "Commit failed" });
+        setCommitState("error");
+        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 6000);
+      }
+    } catch {
+      setCommitState("error");
+      setCommitResult({ error: "Network error" });
+      setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 4000);
+    }
+  };
+
   if (!runtimeLabel && !git && !tabOpen) return null;
 
   const chips = (
@@ -135,14 +163,18 @@ export function ProjectStatusChips({
           <div className="relative">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setAgentPopoverOpen((v) => !v); }}
-              title={`${runtimeLabel} — click to switch agent for this project`}
+              onClick={(e) => { e.stopPropagation(); if (!switchingAgent) setAgentPopoverOpen((v) => !v); }}
+              title={switchingAgent ? "Switching agent…" : `${runtimeLabel} — click to switch agent for this project`}
+              disabled={switchingAgent}
               className={compact
-                ? "flex items-center gap-1 text-text-secondary transition-colors hover:text-text-primary"
-                : cn(statusChipClass(project.currentPrompt ? "warning" : "neutral", true), "cursor-pointer")}
+                ? "flex items-center gap-1 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-60"
+                : cn(statusChipClass(switchingAgent ? "neutral" : project.currentPrompt ? "warning" : "neutral", !switchingAgent), "cursor-pointer disabled:cursor-default disabled:opacity-70")}
             >
-              <span>{project.currentPrompt ? `${runtimeLabel} working` : `${runtimeLabel} ready`}</span>
-              <ChevronDown className={cn("h-3 w-3 shrink-0 opacity-50 transition-transform", agentPopoverOpen && "rotate-180")} />
+              {switchingAgent
+                ? <><Loader2 className="h-3 w-3 shrink-0 animate-spin" /><span>Switching…</span></>
+                : <><span>{project.currentPrompt ? `${runtimeLabel} working` : `${runtimeLabel} ready`}</span>
+                   <ChevronDown className={cn("h-3 w-3 shrink-0 opacity-50 transition-transform", agentPopoverOpen && "rotate-180")} /></>
+              }
             </button>
             {agentPopoverOpen && (
               <AgentSwitcherPopover
@@ -225,15 +257,45 @@ export function ProjectStatusChips({
       <div className="max-w-xl rounded-xl border border-border-subtle bg-surface-raised px-3.5 py-3 text-xs leading-relaxed text-text-tertiary">
         {git.dirty ? (
           <>
-            <p className="font-medium text-text-secondary">{changesLabel} are waiting to be saved into Git history.</p>
-            <p className="mt-1">
-              This means files changed on this computer. A commit is the checkpoint that records those changes so they can be reviewed, shared, or pushed later.
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium text-text-secondary">{changesLabel} on <span className="font-mono">{git.branch}</span></p>
+                <p className="mt-1 text-text-muted">Uncommitted edits — not yet saved into Git history.</p>
+              </div>
+              {project.dir && (
+                <button
+                  type="button"
+                  onClick={quickCommit}
+                  disabled={commitState === "committing"}
+                  className={cn(
+                    "shrink-0 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    commitState === "done"
+                      ? "border-status-positive/40 bg-status-positive/10 text-status-positive"
+                      : commitState === "error"
+                      ? "border-red-500/40 bg-red-500/10 text-red-400"
+                      : "border-border-default bg-surface-overlay text-text-secondary hover:border-border-strong hover:text-text-primary disabled:opacity-50",
+                  )}
+                  title="Stage all changes, commit with a checkpoint message, and push to origin"
+                >
+                  {commitState === "committing" && <Loader2 className="h-3 w-3 animate-spin" />}
+                  {commitState === "done" && <Check className="h-3 w-3" />}
+                  {commitState === "error" && <span>!</span>}
+                  {(commitState === "idle" || commitState === "committing") && (
+                    <UploadCloud className={cn("h-3 w-3", commitState !== "committing" && "block")} />
+                  )}
+                  <span>
+                    {commitState === "committing" ? "Committing…" :
+                     commitState === "done" ? (commitResult?.sha ? `Pushed ${commitResult.sha}` : "Pushed ✓") :
+                     commitState === "error" ? (commitResult?.error ?? "Failed") :
+                     "Commit & push"}
+                  </span>
+                </button>
+              )}
+            </div>
           </>
         ) : (
-          <p>No local file changes are waiting. This workspace is clean on branch <span className="font-medium text-text-secondary">{git.branch}</span>.</p>
+          <p>Clean on <span className="font-medium text-text-secondary font-mono">{git.branch}</span> — no pending changes.</p>
         )}
-        <p className="mt-2 text-text-muted">Branch: <span className="font-medium text-text-secondary">{git.branch}</span></p>
       </div>
     </div>
   );

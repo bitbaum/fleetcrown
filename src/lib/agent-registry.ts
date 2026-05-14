@@ -21,6 +21,8 @@ export type AgentRegistryEntry = {
   switchable: boolean;
   available: boolean;
   availabilityReason?: string;
+  /** Command to type into the terminal to gracefully exit this agent's CLI. */
+  quitCommand: string;
   capabilities: {
     tabSwitching: boolean;
     manualPromptInjection: boolean;
@@ -140,6 +142,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       processMatchers: ["claude"],
       switchable: true,
       available: true,
+      quitCommand: "/exit",
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,
@@ -155,6 +158,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       processMatchers: ["codex"],
       switchable: true,
       available: true,
+      quitCommand: "q",
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,
@@ -169,6 +173,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       modelSuggestions: ["gateway-default"],
       processMatchers: ["openclaw"],
       switchable: false,
+      quitCommand: "q",
       ...openclawAvailability,
       capabilities: {
         tabSwitching: false,
@@ -184,6 +189,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       modelSuggestions: ["auto", "pro", "flash", "flash-lite"],
       processMatchers: ["gemini"],
       switchable: true,
+      quitCommand: "q",
       ...geminiAvailability,
       capabilities: {
         tabSwitching: true,

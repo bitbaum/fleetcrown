@@ -33,6 +33,7 @@ export function ProjectCardHeader({
   onFocus,
   availableAgents,
   localAgentId,
+  switchingAgent,
   onSwitchAgent,
 }: {
   project: ProjectState;
@@ -47,6 +48,7 @@ export function ProjectCardHeader({
   onFocus?: () => void;
   availableAgents?: { id: string; label: string }[];
   localAgentId?: string | null;
+  switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
 }) {
   const [syncing, setSyncing] = useState(false);
@@ -111,6 +113,7 @@ export function ProjectCardHeader({
             tabOpen={tabOpen}
             availableAgents={availableAgents}
             localAgentId={localAgentId}
+            switchingAgent={switchingAgent}
             onSwitchAgent={onSwitchAgent}
           />
           {git && git.behindRemote > 0 && (

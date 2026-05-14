@@ -46,11 +46,34 @@ export function ProjectCard({
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
+  const [switchingAgent, setSwitchingAgent] = useState(false);
 
   const handleSwitchAgent = async (agentId: string | null) => {
+    // Determine current agent: what's actively detected in the process list, or saved pref.
+    const currentAgent = project.activeAgents[0] ?? localAgent ?? project.agentPref ?? null;
+
     setLocalAgent(agentId);
+
+    // Always persist the preference.
     if (project.id) {
       patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
+    }
+
+    // If the tab is open and we're switching to a real different agent, inject the switch.
+    const workspaceTab = project.liveTab ?? project.tab;
+    const tabIsOpen = zellijTabs.some((t) => t.toLowerCase() === workspaceTab.toLowerCase());
+    if (agentId && agentId !== currentAgent && tabIsOpen && project.dir) {
+      setSwitchingAgent(true);
+      try {
+        await postJson("/api/control/switch-agent", {
+          tab: workspaceTab,
+          dir: project.dir,
+          toAgent: agentId,
+          fromAgent: currentAgent ?? undefined,
+        });
+      } catch { /* best effort */ } finally {
+        setSwitchingAgent(false);
+      }
     }
   };
   const [custom, setCustom] = useState("");
@@ -280,6 +303,7 @@ export function ProjectCard({
         onFocus={onFocus}
         availableAgents={availableAgents}
         localAgentId={localAgent}
+        switchingAgent={switchingAgent}
         onSwitchAgent={handleSwitchAgent}
       />
 
