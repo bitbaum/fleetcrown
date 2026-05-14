@@ -4,6 +4,7 @@ import { promisify } from "util";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { auth } from "@/auth";
 import { createUserProject } from "@/db/queries/user-projects";
+import { isRuntimeAvailable } from "@/lib/runtime";
 import os from "os";
 import path from "path";
 import fs from "fs";
@@ -37,6 +38,9 @@ function slug(name: string): string {
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "Project bootstrap requires local runtime — not available in cloud mode" }, { status: 503 });
+  }
 
   const dataOrResp = await readJsonBody(req, BootstrapBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;

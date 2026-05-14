@@ -8,6 +8,7 @@ import { shellEscape } from "@/lib/zellij";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 const UpdateAgentBody = z.object({
   agent: z.enum(AGENT_IDS),
@@ -89,15 +90,19 @@ export async function POST(req: NextRequest) {
 
     let tabResults: SwitchTabResult[] = [];
     if (dataOrResp.applyToOpenTabs) {
-      // Merge conf-file projects with DB projects so DB-only projects are restarted too.
-      const confProjects = parseProjectsConf();
-      const confTabs = new Set(confProjects.map((p) => p.tab.toLowerCase()));
-      const userId = await getCurrentUserId();
-      const dbProjects = await getUserProjects(userId).catch(() => []);
-      const dbOnlyProjects = dbProjects
-        .filter((p) => p.dirPath && !confTabs.has(p.name.toLowerCase()))
-        .map((p) => ({ tab: p.name, dir: p.dirPath! }));
-      tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, [...confProjects, ...dbOnlyProjects]);
+      if (!isRuntimeAvailable()) {
+        tabResults = [{ status: "skipped", reason: "Local runtime not available — cannot restart zellij tabs remotely." }];
+      } else {
+        // Merge conf-file projects with DB projects so DB-only projects are restarted too.
+        const confProjects = parseProjectsConf();
+        const confTabs = new Set(confProjects.map((p) => p.tab.toLowerCase()));
+        const userId = await getCurrentUserId();
+        const dbProjects = await getUserProjects(userId).catch(() => []);
+        const dbOnlyProjects = dbProjects
+          .filter((p) => p.dirPath && !confTabs.has(p.name.toLowerCase()))
+          .map((p) => ({ tab: p.name, dir: p.dirPath! }));
+        tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, [...confProjects, ...dbOnlyProjects]);
+      }
     }
 
     return NextResponse.json({

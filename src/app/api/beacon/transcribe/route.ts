@@ -6,6 +6,7 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { BEACON_SETTINGS_PATH } from "@/config/beacon";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
@@ -22,6 +23,10 @@ async function whisperModel(): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "Transcription not available in cloud mode" }, { status: 503 });
+  }
+
   const audio = form.get("audio") as File | null;
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
