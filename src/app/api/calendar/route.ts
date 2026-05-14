@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 export async function GET() {
+  if (!isRuntimeAvailable()) return NextResponse.json({ events: [] });
+
   const result = await runTool(
     'gog calendar list --json --days 2 2>/dev/null || echo "[]"',
     20000,

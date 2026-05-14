@@ -95,7 +95,7 @@ export function ControlPanel() {
       const newProject = await res.json().catch(() => null);
       setNewProjectOpen(false);
       if (newDir.trim()) {
-        openLaunchModal({ id: newProject?.id ?? null, tab: newName.trim(), dir: newDir.trim(), agentPref: null, modelPref: null } as ProjectState);
+        openLaunchModal({ id: newProject?.id ?? null, projectId: newProject?.entityProjectId ?? null, tab: newName.trim(), dir: newDir.trim(), agentPref: null, modelPref: null } as ProjectState);
       }
       setNewName("");
       setNewDir("");
@@ -183,8 +183,8 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
-        <section className="ui-control-hero">
+      <div className="grid gap-4 xl:items-start xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
+        <section className="ui-control-hero xl:sticky xl:top-6">
           <BrainConfigPanel
             selectedAgent={selectedAgent}
             switchableRegistry={switchableRegistry}
@@ -215,9 +215,6 @@ export function ControlPanel() {
                     <div className="ui-control-metric-value">{dashboard.controlProjectCount}</div>
                     <p className="ui-control-metric-note">
                       {dashboard.idleCount} idle
-                      {dashboard.healthIssueCount > 0 && (
-                        <span className="ml-1 text-status-warning">· {dashboard.healthIssueCount} degraded</span>
-                      )}
                     </p>
                   </div>
                   <div className="ui-control-metric-card">
@@ -252,7 +249,7 @@ export function ControlPanel() {
                 {dashboard.commitsToday > 0 && (
                   <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
                     <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
-                    <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits shipped today across the fleet</span>
+                    <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits today across the fleet</span>
                   </div>
                 )}
               </div>

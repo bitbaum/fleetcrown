@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Globe, GitBranch, AlertTriangle } from "lucide-react";
+import { X, Globe, GitBranch, AlertTriangle, Activity } from "lucide-react";
+import Link from "next/link";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { setAttr } from "@/lib/api/attrs";
 import type { ProjectData, Tab } from "./project-detail-types";
@@ -112,6 +113,15 @@ export function ProjectDetailHeader({
             >
               <GitBranch className="h-4 w-4" />
             </a>
+          )}
+          {data?.runtimeState && (
+            <Link
+              href="/control"
+              className="ui-icon-action"
+              title={`Agent active — go to Control (${data.runtimeState.tabName})`}
+            >
+              <Activity className="h-4 w-4 text-accent-text" />
+            </Link>
           )}
           {data && (
             <DeleteButton

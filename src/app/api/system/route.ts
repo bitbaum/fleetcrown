@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { OPENCLAW_GATEWAY_URL } from "@/lib/constants";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 export async function GET() {
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({
+      mem: null, swap: null, disk: null, uptime: null, gateway: null, runtime: false,
+    });
+  }
   // Use LC_ALL=C to force English column headers for reliable parsing
   const [memRaw, diskRaw, uptime, gateway] = await Promise.all([
     runTool("LC_ALL=C free -m | awk 'NR==2{print $2,$3,$7} NR==3{print $2,$3}'", 5000),

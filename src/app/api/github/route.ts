@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { TOOLS_DIR } from "@/lib/constants";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 export async function GET() {
+  if (!isRuntimeAvailable()) return NextResponse.json({ repos: [] });
+
   const result = await runTool(`bash ${TOOLS_DIR}/github-status.sh --json`, 30000);
 
   if (!result.ok) {

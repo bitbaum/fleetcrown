@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { postJson } from "@/lib/api/fetch";
+import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
@@ -11,11 +11,12 @@ import { getProjectDisplayState } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import {
-  ProjectCardHeader, SessionSummary, ProjectBanners, InjectionHistorySection,
+  ProjectCardHeader, SessionSummary, ProjectBanners, ProjectActivitySection,
 } from "./project-card-sections";
 import { IntentButtonPanel } from "./project-intent-panel";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
+import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
 import { isAutoContinueEnabledSync, readyAtKey } from "@/lib/control-storage";
 
 export function ProjectCard({
@@ -45,6 +46,13 @@ export function ProjectCard({
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
+
+  const handleSwitchAgent = async (agentId: string | null) => {
+    setLocalAgent(agentId);
+    if (project.id) {
+      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
+    }
+  };
   const [custom, setCustom] = useState("");
   const [customFocused, setCustomFocused] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
@@ -71,18 +79,8 @@ export function ProjectCard({
   // Also re-enable auto-continue on each new ready cycle — persisted "off" from a
   // previous session shouldn't carry over and leave the countdown permanently paused.
   const isReadyNow = display.isReady || display.isOrchestrationReady;
-  const prevIsReadyRef = useRef(false);
-  useEffect(() => {
-    if (isReadyNow && !prevIsReadyRef.current) {
-      try { localStorage.setItem(readyAtKey(project.tab), Date.now().toString()); } catch {}
-      enableAutoContinue();
-      // Sync re-enable to /tmp sentinel so PyQt popup starts unpaused on new ready cycle.
-      postJson("/api/control/auto-continue", { tab: project.tab, enabled: true }).catch(() => {});
-    } else if (!isReadyNow && prevIsReadyRef.current) {
-      try { localStorage.removeItem(readyAtKey(project.tab)); } catch {}
-    }
-    prevIsReadyRef.current = isReadyNow;
-  }, [isReadyNow, project.tab, enableAutoContinue]);
+  useProjectLifecycleSync(project.tab, isReadyNow, enableAutoContinue);
+
   const latestOrchRun = project.latestOrchestrationRun;
 
   const sendCustom = async () => {
@@ -224,7 +222,7 @@ export function ProjectCard({
     }
   };
 
-  const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0;
+  const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
 
   // Keyboard: 1–9 dispatch prompt slots when this is the sole ready project on the page.
   // Mirrors the beacon popup pattern. Guards inputs/textareas and in-progress sends.
@@ -275,10 +273,14 @@ export function ProjectCard({
         isClosed={display.isClosed}
         isReady={display.isReady}
         isOrchReady={display.isOrchestrationReady}
+        isRunning={display.isRunning}
         profileOpen={profileOpen}
         onProfileToggle={() => setProfileOpen((v) => !v)}
         onCollapse={onCollapse}
         onFocus={onFocus}
+        availableAgents={availableAgents}
+        localAgentId={localAgent}
+        onSwitchAgent={handleSwitchAgent}
       />
 
       {profileOpen ? (
@@ -292,18 +294,15 @@ export function ProjectCard({
         />
       ) : (
         <>
-          <SessionSummary session={project.session} isClosed={display.isClosed} />
-          <InjectionHistorySection injections={project.recentInjections} />
           <ProjectBanners
             tab={project.tab}
             isClosed={display.isClosed}
             isClosing={display.isClosing}
             isReady={display.isReady}
             isOrchReady={display.isOrchestrationReady}
-            isRunning={display.isRunning}
+            isSessionOpen={display.isSessionOpen}
             showRunning={display.showRunningBanner}
             session={project.session}
-            git={project.git}
             closingAt={project.closingAt}
             currentPrompt={project.currentPrompt}
             prompts={prompts}
@@ -317,11 +316,15 @@ export function ProjectCard({
             onToggleAutoContinue={handleToggleAutoContinue}
             showKeyHints={isOnlyReady}
           />
+          {(display.isReady || display.isOrchestrationReady) && (
+            <SessionSummary session={project.session} isClosed={display.isClosed} />
+          )}
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 
           <IntentButtonPanel
             project={project}
             currentAdapter={currentAdapter}
+            isRunning={display.isRunning}
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}
             custom={custom}
@@ -341,6 +344,7 @@ export function ProjectCard({
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
           />
+          <ProjectActivitySection injections={project.recentInjections} git={project.git} />
         </>
       )}
     </div>

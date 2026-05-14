@@ -5,7 +5,7 @@ import { Loader2, Pencil, Save, Trash2, Terminal, X } from "lucide-react";
 import { getJson } from "@/lib/api/fetch";
 import type { SessionData } from "@/app/api/sessions/route";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
-import { getHealthShort, HEALTH_COLOR } from "@/lib/constants/control";
+import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 
 export function AddAttrInline({
   projectId,
@@ -147,20 +147,17 @@ export function AttrRow({
   );
 }
 
-export function ClaudeSession({ projectName }: { projectName: string }) {
+export function ClaudeSession({ tabName }: { tabName: string }) {
   const [session, setSession] = useState<SessionData | null>(null);
   const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
-    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(projectName)}`)
+    getJson<SessionData>(`/api/sessions?project=${encodeURIComponent(tabName)}`)
       .then((d) => setSession(d))
       .catch(() => {});
-  }, [projectName]);
+  }, [tabName]);
 
   if (!session || !session.found) return null;
-
-  const healthShort = getHealthShort(session.health);
-  const healthColor = HEALTH_COLOR[healthShort] ?? "text-text-secondary";
 
   return (
     <div className="ui-panel overflow-hidden">
@@ -168,12 +165,7 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle/50">
         <div className="flex items-center gap-2 text-text-secondary">
           <Terminal className="h-3.5 w-3.5" />
-          <span className="text-sm font-medium">Session</span>
-          {session.health && (
-            <span className={`text-xs font-medium ${healthColor}`}>
-              · {healthShort}
-            </span>
-          )}
+          <span className="text-sm font-medium">Latest agent handoff</span>
         </div>
         <button
           onClick={() => setShowRaw((v) => !v)}
@@ -188,29 +180,19 @@ export function ClaudeSession({ projectName }: { projectName: string }) {
           {session.raw}
         </pre>
       ) : (
-        <div className="divide-y divide-border-subtle/40">
-          {session.next && (
-            <div className="px-4 py-3 space-y-1">
-              <p className="ui-kicker">up next</p>
-              <p className="text-sm text-text-primary leading-relaxed">{session.next}</p>
-            </div>
-          )}
-          {session.done && (
-            <div className="px-4 py-3 space-y-1">
-              <p className="ui-kicker">done</p>
-              <p className="text-sm text-text-secondary leading-relaxed">{session.done}</p>
-            </div>
-          )}
-          {(session.tests || session.todos || session.health) && (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5">
-              {session.tests && (
-                <span className="text-xs text-text-tertiary">{session.tests}</span>
-              )}
-              {session.todos && parseInt(session.todos.match(/^(\d+)/)?.[1] ?? "0", 10) > 0 && (
-                <span className="text-xs text-status-warning/80">{session.todos}</span>
-              )}
-            </div>
-          )}
+        <div className="p-4">
+          <SessionHandoff
+            data={buildSessionHandoffFromBeaconSession({
+              next: session.next ? [session.next] : [],
+              in_progress: [],
+              done: session.done ? [session.done] : [],
+              tests: session.tests,
+              todos: session.todos,
+              health: session.health,
+            })}
+            surface="plain"
+            microLabels
+          />
         </div>
       )}
     </div>

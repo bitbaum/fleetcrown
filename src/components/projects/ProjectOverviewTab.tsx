@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, History } from "lucide-react";
+import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, History, Bot } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
@@ -12,6 +12,7 @@ import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helper
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
+import { APP_LOCALE } from "@/lib/constants";
 import type { LucideProps } from "lucide-react";
 
 type IssueConfig = {
@@ -81,7 +82,7 @@ export function OverviewTab({
 
   return (
     <div className="space-y-5">
-      <ClaudeSession projectName={data.name} />
+      <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
 
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
@@ -202,7 +203,7 @@ export function OverviewTab({
           {activityList.map((i, idx) => (
             <div key={idx} className="text-xs">
               <div className="text-text-tertiary mb-0.5">
-                {i.channel} · {new Date(i.occurredAt).toLocaleDateString()}
+                {i.channel} · {new Date(i.occurredAt).toLocaleDateString(APP_LOCALE)}
               </div>
               {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}
             </div>
@@ -264,6 +265,44 @@ export function OverviewTab({
       {data.devLog.length > 0 && (
         <DevLogSection entries={data.devLog} />
       )}
+
+      {data.activity.length > 0 && (
+        <ProjectHistorySection events={data.activity} />
+      )}
+    </div>
+  );
+}
+
+function ProjectHistorySection({ events }: { events: ProjectData["activity"] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 ui-link-muted py-1"
+      >
+        <Bot className="h-3.5 w-3.5" />
+        Agent History ({events.length})
+        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {events.map((event) => (
+            <div key={event.id} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium text-text-secondary">{event.title}</span>
+                {"state" in event && <span className="ui-tag ui-tag-neutral">{event.state}</span>}
+                <span className="ml-auto text-text-muted">{new Date(event.occurredAt).toLocaleString(APP_LOCALE)}</span>
+              </div>
+              {event.body && (
+                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-text-tertiary" title={event.body}>
+                  {event.body}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -274,7 +313,7 @@ function DevLogSection({ entries }: { entries: import("./project-detail-types").
     <div>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-text-secondary transition-colors py-1"
+        className="flex items-center gap-1.5 ui-link-muted py-1"
       >
         <History className="h-3.5 w-3.5" />
         Session Log ({entries.length})
