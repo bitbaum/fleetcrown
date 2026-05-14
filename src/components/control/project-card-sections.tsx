@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   Circle, ExternalLink,
-  SlidersHorizontal, ChevronsDown, Loader2, Focus, Copy, Check, Activity, FolderKanban,
+  SlidersHorizontal, ChevronsDown, Focus, Copy, Check, Activity, FolderKanban,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -210,7 +210,6 @@ export function ProjectBanners({
   isClosing,
   isReady,
   isOrchReady,
-  isSessionOpen,
   showRunning,
   session,
   closingAt,
@@ -231,7 +230,6 @@ export function ProjectBanners({
   isClosing: boolean;
   isReady: boolean;
   isOrchReady: boolean;
-  isSessionOpen: boolean;
   showRunning: boolean;
   session: ProjectState["session"];
   closingAt: number | null;

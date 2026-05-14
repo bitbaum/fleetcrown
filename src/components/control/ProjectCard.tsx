@@ -17,7 +17,7 @@ import { IntentButtonPanel } from "./project-intent-panel";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
-import { isAutoContinueEnabledSync, readyAtKey } from "@/lib/control-storage";
+import { isAutoContinueEnabledSync } from "@/lib/control-storage";
 
 export function ProjectCard({
   project,
@@ -300,7 +300,7 @@ export function ProjectCard({
             isClosing={display.isClosing}
             isReady={display.isReady}
             isOrchReady={display.isOrchestrationReady}
-            isSessionOpen={display.isSessionOpen}
+
             showRunning={display.showRunningBanner}
             session={project.session}
             closingAt={project.closingAt}
