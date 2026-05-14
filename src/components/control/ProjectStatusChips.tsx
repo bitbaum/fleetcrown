@@ -272,7 +272,7 @@ export function ProjectStatusChips({
                     commitState === "done"
                       ? "border-status-positive/40 bg-status-positive/10 text-status-positive"
                       : commitState === "error"
-                      ? "border-red-500/40 bg-red-500/10 text-red-400"
+                      ? "border-status-negative/40 bg-status-negative-subtle text-status-negative"
                       : "border-border-default bg-surface-overlay text-text-secondary hover:border-border-strong hover:text-text-primary disabled:opacity-50",
                   )}
                   title="Stage all changes, commit with a checkpoint message, and push to origin"
