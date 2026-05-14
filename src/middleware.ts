@@ -6,5 +6,7 @@ import { authConfig } from "./auth.config";
 export const { auth: middleware } = NextAuth(authConfig);
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|auth).*)"],
+  // Exclude public routes and Next.js internals from middleware.
+  // sign-in must be excluded to avoid an infinite redirect loop for logged-out users.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sign-in).*)"],
 };
