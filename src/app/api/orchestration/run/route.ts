@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
@@ -51,6 +52,10 @@ async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskR
 }
 
 export async function POST(req: NextRequest) {
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "Orchestration requires local runtime — not available in cloud mode" }, { status: 503 });
+  }
+
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
