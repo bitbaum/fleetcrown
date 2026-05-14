@@ -2,15 +2,15 @@
 # cockpit-daemon.sh — polls the cloud control plane for pending commands and executes them locally.
 #
 # Usage:
-#   COCKPIT_DAEMON_TOKEN=<secret> COCKPIT_DAEMON_USER_ID=<uuid> ./scripts/cockpit-daemon.sh
+#   COCKPIT_DAEMON_TOKEN=<secret> ./scripts/cockpit-daemon.sh
 #
 # Optional env vars:
 #   COCKPIT_BASE_URL      — defaults to https://cockpit-lmr3cq7mx-orangecat.vercel.app
 #   COCKPIT_POLL_INTERVAL — seconds between polls, default 5
 #   COCKPIT_DRY_RUN       — set to "1" to log commands without executing them
 #
-# The daemon authenticates to the remote API using the bearer token, claims the next
-# pending command, executes it via zellij (inject_prompt / focus-tab), and marks it done.
+# The daemon authenticates via bearer token; the server finds the default user automatically.
+# No user ID needed — the cloud determines which user's queue to drain.
 
 set -euo pipefail
 

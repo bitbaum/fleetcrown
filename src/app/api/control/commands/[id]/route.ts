@@ -5,8 +5,7 @@ import { getCurrentUserId } from "@/lib/session";
 function isDaemonAuthed(req: NextRequest): boolean {
   const token = process.env.COCKPIT_DAEMON_TOKEN;
   if (!token) return false;
-  const auth = req.headers.get("authorization") ?? "";
-  return auth === `Bearer ${token}`;
+  return (req.headers.get("authorization") ?? "") === `Bearer ${token}`;
 }
 
 // Daemon calls this to mark a command as executed.
