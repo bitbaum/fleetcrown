@@ -126,6 +126,7 @@ export function ReadyBanner({
   nextQueueItem,
   queueTotal = 0,
   healthBypass,
+  dispatchReason,
   showKeyHints = false,
 }: {
   tab?: string;
@@ -140,6 +141,7 @@ export function ReadyBanner({
   nextQueueItem?: string;
   queueTotal?: number;
   healthBypass?: string;
+  dispatchReason?: string;
   showKeyHints?: boolean;
 }) {
   const [seconds, setSeconds] = useState(() => {
@@ -227,6 +229,11 @@ export function ReadyBanner({
         <span className="mr-1 text-text-muted">→</span>
         {nextLabel}
       </p>
+      {dispatchReason && (
+        <p className="mb-2 truncate font-mono text-[10px] text-text-muted/60">
+          <span className="mr-1">AI:</span>{dispatchReason}
+        </p>
+      )}
 
       <div className="ui-control-intent-grid">
         {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (

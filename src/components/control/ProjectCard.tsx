@@ -18,6 +18,7 @@ import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
 import { isAutoContinueEnabledSync } from "@/lib/control-storage";
+import type { DispatchResult } from "@/app/api/control/dispatch/route";
 
 export function ProjectCard({
   project,
@@ -84,6 +85,7 @@ export function ProjectCard({
 
   const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue } = usePromptQueue(project.tab);
   const [merging, setMerging] = useState(false);
+  const [preloadedDispatch, setPreloadedDispatch] = useState<DispatchResult | null>(null);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -103,6 +105,34 @@ export function ProjectCard({
   // previous session shouldn't carry over and leave the countdown permanently paused.
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow, enableAutoContinue);
+
+  // Pre-fetch dispatch decision as soon as the ready banner appears so the
+  // banner can show the AI's reasoning before the countdown fires.
+  useEffect(() => {
+    if (!isReadyNow || queue.length === 0) {
+      setPreloadedDispatch(null);
+      return;
+    }
+    const handoff = {
+      done:   project.session?.done   ?? "",
+      next:   project.session?.next   ?? "",
+      health: project.session?.health ?? "",
+      tests:  project.session?.tests  ?? "",
+      todos:  project.session?.todos  ?? "",
+    };
+    let cancelled = false;
+    postJson("/api/control/dispatch", {
+      handoff,
+      queue,
+      projectName: project.tab,
+      gitBranch:   project.git?.branch,
+    }).then(async (res) => {
+      if (!cancelled && res.ok) setPreloadedDispatch(await res.json() as DispatchResult);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  // Re-fetch when queue length or ready state changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReadyNow, queue.length]);
 
   const latestOrchRun = project.latestOrchestrationRun;
 
@@ -193,14 +223,24 @@ export function ProjectCard({
     }
   };
 
-  // When auto-continue countdown fires: drain the queue first (unless health is critical
-  // or tests are failing — then stay focused and let next_best handle recovery), fall back
-  // to next_best. Re-read localStorage synchronously so cross-window beacon Pause events
-  // are respected even if React state hasn't caught up yet.
+  // When auto-continue countdown fires: ask the dispatch route (Groq) whether to drain
+  // the queue or run next_best. Uses the preloaded decision when available; otherwise
+  // fetches inline. Re-reads localStorage synchronously so cross-window beacon Pause
+  // events are respected even if React state hasn't caught up yet.
   const handleAutoInject = useCallback(async () => {
     if (!isAutoContinueEnabledSync(project.tab)) return;
 
-    if (!sessionHealthBlocksQueue()) {
+    // Hard gate: critical health / failing tests always stay in recovery mode.
+    if (sessionHealthBlocksQueue()) {
+      await sendIntent("next_best");
+      return;
+    }
+
+    // Use the already-fetched dispatch decision, or fall back to queue-first.
+    const decision = preloadedDispatch;
+    const action = decision?.action ?? (queue.length > 0 ? "queue" : "nextbest");
+
+    if (action === "queue") {
       const queued = shiftQueue();
       if (queued) {
         setSending("custom");
@@ -216,7 +256,7 @@ export function ProjectCard({
 
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shiftQueue, project.tab, onInject, project.session?.health, project.session?.tests]);
+  }, [preloadedDispatch, shiftQueue, queue.length, project.tab, onInject, project.session?.health, project.session?.tests]);
 
   // Send a specific queue item immediately (remove it + inject)
   const handleSendFromQueue = useCallback(async (index: number) => {
@@ -349,6 +389,7 @@ export function ProjectCard({
             nextQueueItem={sessionHealthBlocksQueue() ? undefined : queue[0]}
             queueTotal={sessionHealthBlocksQueue() ? 0 : queue.length}
             healthBypass={sessionHealthBlocksQueue() && queue.length > 0 ? (project.session?.health?.toLowerCase().includes("critical") ? "Health critical" : "Tests failing") : undefined}
+            dispatchReason={!sessionHealthBlocksQueue() && preloadedDispatch?.source === "groq" ? preloadedDispatch.reason : undefined}
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={handleAutoInject}
