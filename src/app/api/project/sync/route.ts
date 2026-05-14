@@ -3,6 +3,7 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { auth } from "@/auth";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 const execAsync = promisify(exec);
 
@@ -13,6 +14,9 @@ const SyncBody = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "Git sync requires local runtime" }, { status: 503 });
+  }
 
   const dataOrResp = await readJsonBody(req, SyncBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;

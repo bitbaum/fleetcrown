@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "child_process";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { auth } from "@/auth";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 export const maxDuration = 90;
 
@@ -47,6 +48,9 @@ Extract the brief. Be opinionated: pick Next.js + TypeScript + Tailwind + Drizzl
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "AI brief requires local claude CLI — not available in cloud mode" }, { status: 503 });
+  }
 
   const dataOrResp = await readJsonBody(req, AiBriefBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
