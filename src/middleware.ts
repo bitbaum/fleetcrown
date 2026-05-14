@@ -3,7 +3,9 @@ import { authConfig } from "./auth.config";
 
 // Thin edge-safe middleware using the JWT-only config.
 // Full auth (DB adapter + crypto) stays in src/auth.ts for server components.
-export const { auth: middleware } = NextAuth(authConfig);
+const { auth } = NextAuth(authConfig);
+
+export default auth;
 
 export const config = {
   // Exclude public routes and Next.js internals from the auth middleware.
