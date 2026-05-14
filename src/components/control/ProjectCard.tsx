@@ -130,9 +130,20 @@ export function ProjectCard({
     }
   }, [project.tab, onInject]);
 
+  // Returns true when the session's handoff signals the project is broken — queue drain
+  // would pivot the agent away from the current broken thread, compounding the damage.
+  // Only "critical" health or explicitly failing tests trigger the gate; "needs attention"
+  // is a softer signal that does not prevent queue drain.
+  const sessionHealthBlocksQueue = (): boolean => {
+    const health = (project.session?.health ?? "").toLowerCase();
+    const tests  = (project.session?.tests  ?? "").toLowerCase();
+    return health.includes("critical") || tests.includes("fail");
+  };
+
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
-    // Drain queue first when next_best is requested — queue takes priority over AI-generated plan.
-    if (intent === "next_best") {
+    // Drain queue first when next_best is requested — unless the session health
+    // signals a broken state, in which case next_best must stay focused on recovery.
+    if (intent === "next_best" && !sessionHealthBlocksQueue()) {
       const queued = shiftQueue();
       if (queued) {
         setSending("custom");
@@ -182,27 +193,30 @@ export function ProjectCard({
     }
   };
 
-  // When auto-continue countdown fires: drain the queue first, fall back to next_best.
-  // Re-read localStorage synchronously before injecting — cross-window storage events
-  // (from beacon popup Pause button) can arrive after the React countdown effect has
-  // already scheduled this call, so React state may not reflect the latest pause state.
+  // When auto-continue countdown fires: drain the queue first (unless health is critical
+  // or tests are failing — then stay focused and let next_best handle recovery), fall back
+  // to next_best. Re-read localStorage synchronously so cross-window beacon Pause events
+  // are respected even if React state hasn't caught up yet.
   const handleAutoInject = useCallback(async () => {
     if (!isAutoContinueEnabledSync(project.tab)) return;
 
-    const queued = shiftQueue();
-    if (queued) {
-      setSending("custom");
-      setDismissed(true);
-      try {
-        await onInject(project.tab, undefined, queued);
-      } finally {
-        setSending(null);
+    if (!sessionHealthBlocksQueue()) {
+      const queued = shiftQueue();
+      if (queued) {
+        setSending("custom");
+        setDismissed(true);
+        try {
+          await onInject(project.tab, undefined, queued);
+        } finally {
+          setSending(null);
+        }
+        return;
       }
-    } else {
-      await sendIntent("next_best");
     }
+
+    await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shiftQueue, project.tab, onInject]);
+  }, [shiftQueue, project.tab, onInject, project.session?.health, project.session?.tests]);
 
   // Send a specific queue item immediately (remove it + inject)
   const handleSendFromQueue = useCallback(async (index: number) => {
@@ -332,8 +346,9 @@ export function ProjectCard({
             prompts={prompts}
             autoContinueEnabled={autoContinueEnabled}
             paused={paused}
-            nextQueueItem={queue[0]}
-            queueTotal={queue.length}
+            nextQueueItem={sessionHealthBlocksQueue() ? undefined : queue[0]}
+            queueTotal={sessionHealthBlocksQueue() ? 0 : queue.length}
+            healthBypass={sessionHealthBlocksQueue() && queue.length > 0 ? (project.session?.health?.toLowerCase().includes("critical") ? "Health critical" : "Tests failing") : undefined}
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={handleAutoInject}

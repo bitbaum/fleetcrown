@@ -125,6 +125,7 @@ export function ReadyBanner({
   autoContinueEnabled = true,
   nextQueueItem,
   queueTotal = 0,
+  healthBypass,
   showKeyHints = false,
 }: {
   tab?: string;
@@ -138,6 +139,7 @@ export function ReadyBanner({
   autoContinueEnabled?: boolean;
   nextQueueItem?: string;
   queueTotal?: number;
+  healthBypass?: string;
   showKeyHints?: boolean;
 }) {
   const [seconds, setSeconds] = useState(() => {
@@ -181,8 +183,11 @@ export function ReadyBanner({
 
   const timerLabel = !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
 
-  // What actually fires when the countdown hits zero
-  const nextLabel = nextQueueItem
+  // What actually fires when the countdown hits zero.
+  // healthBypass means queue items exist but are being held back — show the reason.
+  const nextLabel = healthBypass
+    ? `AI picks recovery task — ${healthBypass.toLowerCase()}, queue paused`
+    : nextQueueItem
     ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
     : "AI picks next task";
 

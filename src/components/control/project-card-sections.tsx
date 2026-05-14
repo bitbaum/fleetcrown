@@ -222,6 +222,7 @@ export function ProjectBanners({
   paused,
   nextQueueItem,
   queueTotal = 0,
+  healthBypass,
   onDismiss,
   onSend,
   onAutoInject,
@@ -242,6 +243,7 @@ export function ProjectBanners({
   paused: boolean;
   nextQueueItem?: string;
   queueTotal?: number;
+  healthBypass?: string;
   onDismiss: () => void;
   onSend: (key: string) => void;
   onAutoInject?: () => void;
@@ -273,6 +275,7 @@ export function ProjectBanners({
           autoContinueEnabled={autoContinueEnabled}
           nextQueueItem={nextQueueItem}
           queueTotal={queueTotal}
+          healthBypass={healthBypass}
           showKeyHints={showKeyHints}
         />
       )}
@@ -293,6 +296,7 @@ export function ProjectBanners({
           autoContinueEnabled={autoContinueEnabled}
           nextQueueItem={nextQueueItem}
           queueTotal={queueTotal}
+          healthBypass={healthBypass}
           showKeyHints={showKeyHints}
         />
       )}
