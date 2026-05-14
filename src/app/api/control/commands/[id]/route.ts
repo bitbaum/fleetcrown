@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { markCommandExecuted } from "@/db/queries/pending-commands";
-import { getCurrentUserId } from "@/lib/session";
 
 function isDaemonAuthed(req: NextRequest): boolean {
   const token = process.env.COCKPIT_DAEMON_TOKEN;
-  if (!token) return false;
-  return (req.headers.get("authorization") ?? "") === `Bearer ${token}`;
+  return Boolean(token && (req.headers.get("authorization") ?? "") === `Bearer ${token}`);
 }
 
 // Daemon calls this to mark a command as executed.
@@ -17,9 +16,8 @@ export async function PATCH(
   const { id } = await params;
 
   if (!isDaemonAuthed(req)) {
-    try {
-      await getCurrentUserId();
-    } catch {
+    const session = await auth();
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   }
