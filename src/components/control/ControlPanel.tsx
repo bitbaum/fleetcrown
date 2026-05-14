@@ -28,6 +28,7 @@ export function ControlPanel() {
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
+  const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
@@ -161,8 +162,13 @@ export function ControlPanel() {
     currentAdapter: selectedAgent,
     availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
     onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
-      try { await inject(tab, promptKey, customPrompt); }
-      catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
+      try {
+        const { mode } = await inject(tab, promptKey, customPrompt);
+        if (mode === "queued") {
+          setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
+          setTimeout(() => setQueuedNotice(null), 6000);
+        }
+      } catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
     },
     onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
       try { await runWithBrain(projectState, intent); }
@@ -313,6 +319,12 @@ export function ControlPanel() {
       )}
 
       {error && <p className="ui-box-error">{error}</p>}
+      {queuedNotice && (
+        <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm text-accent-text">
+          <Sparkles className="h-3.5 w-3.5 shrink-0" />
+          {queuedNotice}
+        </div>
+      )}
 
       {sorted ? (
         sorted.length > 0 ? (

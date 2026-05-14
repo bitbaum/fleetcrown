@@ -16,7 +16,7 @@ function GithubIcon() {
   );
 }
 
-function SignInForm() {
+function SignInForm({ githubEnabled }: { githubEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
@@ -79,17 +79,20 @@ function SignInForm() {
           />
         </form>
 
-        <AuthDivider label="or continue with" />
-
-        <AuthSecondaryButton
-          type="button"
-          onClick={handleGithub}
-          disabled={githubLoading}
-          className="ui-auth-secondary-btn-strong gap-2.5"
-        >
-          <GithubIcon />
-          {githubLoading ? "Redirecting…" : "Continue with GitHub"}
-        </AuthSecondaryButton>
+        {githubEnabled && (
+          <>
+            <AuthDivider label="or continue with" />
+            <AuthSecondaryButton
+              type="button"
+              onClick={handleGithub}
+              disabled={githubLoading}
+              className="ui-auth-secondary-btn-strong gap-2.5"
+            >
+              <GithubIcon />
+              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
+            </AuthSecondaryButton>
+          </>
+        )}
       </AuthCard>
 
       <AuthFooterLink href="/">← Back to home</AuthFooterLink>
@@ -98,9 +101,10 @@ function SignInForm() {
 }
 
 export default function SignInPage() {
+  const githubEnabled = Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET);
   return (
     <Suspense>
-      <SignInForm />
+      <SignInForm githubEnabled={githubEnabled} />
     </Suspense>
   );
 }
