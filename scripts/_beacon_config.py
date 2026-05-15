@@ -1,8 +1,9 @@
 """Beacon — runtime constants and config-file helpers.  No PyQt dependency."""
 import os, json
 
-# Wire-format prefix — must match CUSTOM_CHOICE_PREFIX in src/lib/constants/control.ts
+# Wire-format prefixes — must match constants in src/lib/constants/control.ts
 CUSTOM_CHOICE_PREFIX = "custom:"
+SWITCH_CHOICE_PREFIX = "switch:"
 
 # Override via COCKPIT_URL env var for non-default ports or remote deployments.
 COCKPIT_URL = os.environ.get("COCKPIT_URL", "http://localhost:3000").rstrip("/")

@@ -17,12 +17,10 @@ from PyQt6.QtGui import QColor, QCursor, QPalette
 
 from _beacon_theme import load_theme
 from _beacon_config import (
-    COUNTDOWN_SECONDS, CUSTOM_CHOICE_PREFIX, COCKPIT_URL,
+    COUNTDOWN_SECONDS, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, COCKPIT_URL,
     load_settings, load_prompt_meta,
 )
 from _beacon_audio import WhisperThread
-
-SWITCH_CHOICE_PREFIX = "switch:"
 AGENT_FALLBACK_ORDER = ["claude", "codex", "gemini"]
 
 

@@ -8,7 +8,7 @@ if [ -z "$MODE" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Wire-format prefix for custom prompts — must match CUSTOM_CHOICE_PREFIX in src/lib/constants/control.ts
+# Wire-format prefixes — must match CUSTOM_CHOICE_PREFIX / SWITCH_CHOICE_PREFIX in src/lib/constants/control.ts
 readonly CUSTOM_CHOICE_PREFIX="custom:"
 readonly SWITCH_CHOICE_PREFIX="switch:"
 # Override via COCKPIT_URL env var for non-default ports or remote deployments.

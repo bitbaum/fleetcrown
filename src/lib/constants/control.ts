@@ -25,6 +25,9 @@ export function withinWindow(ts: number | null, nowS: number, windowS: number): 
 /** Wire-format prefix used in beacon choice handshake: "custom:<prompt text>" */
 export const CUSTOM_CHOICE_PREFIX = "custom:";
 
+/** Wire-format prefix used to request an agent switch: "switch:<agent-id>" */
+export const SWITCH_CHOICE_PREFIX = "switch:";
+
 /** Extract the short health label from verbose agent output like "GOOD — deployed; all tests pass" */
 export function getHealthShort(health: string): string {
   return health.split(/\s*[,—–]\s*/)[0].trim().toLowerCase();

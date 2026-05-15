@@ -14,12 +14,10 @@ import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary"
 import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
-import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
-
-const SWITCH_CHOICE_PREFIX = "switch:";
 
 function agentLabel(agent: string | null | undefined): string {
   if (agent === "claude") return "Claude";
