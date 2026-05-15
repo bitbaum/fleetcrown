@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
-import { getZellijTabs } from "@/lib/zellij";
+import { getZellijTabs, shellEscape } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
@@ -94,7 +94,7 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
 async function fetchAllGitStates(dirs: string[]): Promise<Map<string, GitState>> {
   if (dirs.length === 0) return new Map();
 
-  const dirArgs = dirs.map((d) => `'${d}'`).join(" ");
+  const dirArgs = dirs.map(shellEscape).join(" ");
   const script = `
 _git_row() {
   local d="$1"
