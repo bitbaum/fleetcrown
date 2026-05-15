@@ -543,7 +543,7 @@
   }
   /* Small overlay button — card action chips (e.g. PersonCard quick-log) */
   .ui-btn-chip {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
   }
   /* Inline-edit cancel/close — rounded (no radius), text-only hover */
   .ui-btn-inline-cancel {
