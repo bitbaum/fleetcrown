@@ -121,6 +121,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
           <div className="text-xs md:text-sm text-status-warning/70">{financialImpact}</div>
         )}
       </div>
+      <FulfillCommitmentButton commitmentId={id} />
       <div className="flex gap-0.5 shrink-0 ui-hover-reveal transition-opacity">
         <button
           onClick={() => setEditing(true)}
@@ -129,7 +130,6 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
-        <FulfillCommitmentButton commitmentId={id} />
         <DeleteButton
           onDelete={async () => {
             const res = await deleteJson(`/api/commitments/${id}`);
