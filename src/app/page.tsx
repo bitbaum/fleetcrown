@@ -79,10 +79,7 @@ export default async function LandingPage() {
         {/* Pricing */}
         <div className="mt-28 w-full max-w-4xl">
           <div className="mb-12">
-            <h2
-              className="text-2xl font-bold text-white/90"
-              style={{ letterSpacing: "-0.03em" }}
-            >
+            <h2 className="text-2xl font-bold tracking-tight text-white/90">
               Simple, honest pricing
             </h2>
             <p className="mt-2 text-sm text-white/30">
@@ -109,7 +106,7 @@ export default async function LandingPage() {
                   </span>
                   <span className="text-sm text-white/30">/mo</span>
                 </div>
-                <p className="mb-1 text-xs text-white/20">
+                <p className="mb-1 text-xs text-white/40">
                   ${tier.annual}/yr billed annually
                 </p>
                 <p className="mb-6 mt-3 text-sm leading-relaxed text-white/40">
