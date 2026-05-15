@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { callGroqText } from "@/lib/groq";
 
 const HandoffSchema = z.object({
   done:   z.string().default(""),
@@ -93,25 +94,7 @@ REASON: one sentence explaining why the agent's continuation is better right now
 // ── Groq call ─────────────────────────────────────────────────────────────
 
 async function callGroq(prompt: string): Promise<{ action: DispatchAction; reason: string }> {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error("no key");
-
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 100,
-      temperature: 0.2,
-    }),
-    signal: AbortSignal.timeout(10_000),
-  });
-
-  if (!res.ok) throw new Error(`groq ${res.status}`);
-  const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
-  const text = (data?.choices?.[0]?.message?.content ?? "").trim();
-
+  const text = await callGroqText(prompt, { maxTokens: 100, temperature: 0.2, timeoutMs: 10_000 });
   return parseGroqResponse(text);
 }
 

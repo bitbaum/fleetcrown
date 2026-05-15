@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { callGroqText } from "@/lib/groq";
 
 const Body = z.object({
   prompts: z.array(z.string().trim().min(1)).min(2),
@@ -15,24 +16,7 @@ type AgentResult = {
 // ── Groq (fast path — seconds, free tier) ──────────────────────────────────
 // Set GROQ_API_KEY in .env.local to enable. Falls back to openclaw agent.
 async function mergeViaGroq(message: string): Promise<string> {
-  const key = process.env.GROQ_API_KEY;
-  if (!key) throw new Error("no key");
-
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: message }],
-      max_tokens: 500,
-      temperature: 0.3,
-    }),
-    signal: AbortSignal.timeout(30000),
-  });
-
-  if (!res.ok) throw new Error(`groq ${res.status}`);
-  const data = await res.json();
-  return (data?.choices?.[0]?.message?.content ?? "").trim();
+  return callGroqText(message, { maxTokens: 500, temperature: 0.3, timeoutMs: 30_000 });
 }
 
 // ── openclaw fallback (Claude via gateway, ~20-30s) ────────────────────────
