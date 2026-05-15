@@ -1,4 +1,5 @@
 import type { RecentCustomPrompt } from "@/db/queries/prompt-history";
+import type { OrchestrationTaskSummary } from "@/lib/orchestration";
 
 export type ProjectProfile = {
   description: string;
@@ -67,13 +68,7 @@ export type ProjectState = {
     state: string;
     startedAt: string;
     finishedAt: string | null;
-    summary: {
-      done: string;
-      next: string;
-      tests: string;
-      todos: string;
-      health: string;
-    } | null;
+    summary: OrchestrationTaskSummary | null;
     payload: {
       resultText?: string;
       error?: string;
