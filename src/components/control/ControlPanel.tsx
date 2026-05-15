@@ -340,16 +340,19 @@ export function ControlPanel() {
           viewMode === "commander" ? (
             // Commander view: single scrollable list of compact cards for all projects
             <div className="space-y-2">
-              {sorted.map((project) => (
-                <ProjectCommanderCard
-                  key={project.tab}
-                  project={project}
-                  zellijTabs={data!.zellijTabs}
-                  onInject={cardProps(project).onInject}
-                  onRunWithBrain={cardProps(project).onRunWithBrain}
-                  onLaunch={() => openLaunchModal(project)}
-                />
-              ))}
+              {sorted.map((project) => {
+                const { onInject, onRunWithBrain } = cardProps(project);
+                return (
+                  <ProjectCommanderCard
+                    key={project.tab}
+                    project={project}
+                    zellijTabs={data!.zellijTabs}
+                    onInject={onInject}
+                    onRunWithBrain={onRunWithBrain}
+                    onLaunch={() => openLaunchModal(project)}
+                  />
+                );
+              })}
             </div>
           ) : (
           <div className="space-y-4">

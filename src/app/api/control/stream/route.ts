@@ -55,6 +55,23 @@ export async function GET() {
   let lastSent: FastProjectState[] = [];
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
+  const scanProjects = () => {
+    const agentProcesses = getAgentProcesses(agentRegistry.agents);
+    const projects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
+      const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(dir + "/"));
+      return {
+        tab: resolveEffectiveTab(tab, zellijTabCache),
+        dir,
+        activeAgents: [...new Set(projectProcesses.map((p) => p.agentId))],
+        sessionLifecycleSignals: projectProcesses.length > 0
+          ? projectProcesses.some((p) => p.sessionLifecycleSignals)
+          : sessionLifecycleSignals,
+      };
+    });
+    const agentCwds = agentProcesses.map((p) => p.cwd);
+    return readFastState(projects, agentCwds);
+  };
+
   const stream = new ReadableStream({
     start(controller) {
       const enc = new TextEncoder();
@@ -65,20 +82,7 @@ export async function GET() {
 
       const tick = () => {
         refreshTabsCacheIfStale();
-        const agentProcesses = getAgentProcesses(agentRegistry.agents);
-        const projects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
-          const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
-          return {
-            tab: resolveEffectiveTab(tab, zellijTabCache),
-            dir,
-            activeAgents: [...new Set(projectProcesses.map((process) => process.agentId))],
-            sessionLifecycleSignals: projectProcesses.length > 0
-              ? projectProcesses.some((process) => process.sessionLifecycleSignals)
-              : sessionLifecycleSignals,
-          };
-        });
-        const agentCwds = agentProcesses.map((process) => process.cwd);
-        const current = readFastState(projects, agentCwds);
+        const current = scanProjects();
 
         const changed = current.filter((proj, i) => {
           const prev = lastSent[i];
@@ -110,20 +114,7 @@ export async function GET() {
       };
 
       // Initial snapshot
-      const agentProcesses = getAgentProcesses(agentRegistry.agents);
-      const initialProjects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
-        const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
-        return {
-          tab: resolveEffectiveTab(tab, zellijTabCache),
-          dir,
-          activeAgents: [...new Set(projectProcesses.map((process) => process.agentId))],
-          sessionLifecycleSignals: projectProcesses.length > 0
-            ? projectProcesses.some((process) => process.sessionLifecycleSignals)
-            : sessionLifecycleSignals,
-        };
-      });
-      const agentCwds = agentProcesses.map((process) => process.cwd);
-      lastSent = readFastState(initialProjects, agentCwds);
+      lastSent = scanProjects();
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();
 

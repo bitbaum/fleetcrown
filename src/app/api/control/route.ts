@@ -143,24 +143,7 @@ wait
 
 // ── Profile matching ──────────────────────────────────────────────────────────
 
-function matchProfile(
-  tab: string,
-  dir: string,
-  dbProjects: ProjectRow[]
-): ProjectProfile | null {
-  const tabLower = tab.toLowerCase().replace(/[-_]/g, "");
-  const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
-
-  const match = dbProjects.find((p) => {
-    const n = p.name.toLowerCase().replace(/[-_]/g, "");
-    return (
-      n === tabLower || n === dirBaseLower ||
-      n.includes(tabLower) || tabLower.includes(n) ||
-      n.includes(dirBaseLower) || dirBaseLower.includes(n)
-    );
-  });
-
-  if (!match) return null;
+function rowToProfile(match: ProjectRow): ProjectProfile {
   const a = match.attrs as Record<string, string>;
   return {
     description: match.description ?? a.description ?? "",
@@ -173,23 +156,31 @@ function matchProfile(
   };
 }
 
+function matchProfile(
+  tab: string,
+  dir: string,
+  dbProjects: ProjectRow[]
+): ProjectProfile | null {
+  const tabLower = tab.toLowerCase().replace(/[-_]/g, "");
+  const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
+  const match = dbProjects.find((p) => {
+    const n = p.name.toLowerCase().replace(/[-_]/g, "");
+    return (
+      n === tabLower || n === dirBaseLower ||
+      n.includes(tabLower) || tabLower.includes(n) ||
+      n.includes(dirBaseLower) || dirBaseLower.includes(n)
+    );
+  });
+  return match ? rowToProfile(match) : null;
+}
+
 function matchProfileById(
   entityProjectId: string | null,
   dbProjects: ProjectRow[],
 ): ProjectProfile | null {
   if (!entityProjectId) return null;
   const match = dbProjects.find((p) => p.id === entityProjectId);
-  if (!match) return null;
-  const a = match.attrs as Record<string, string>;
-  return {
-    description: match.description ?? a.description ?? "",
-    status: a.status ?? "",
-    maturity: a.maturity ?? "",
-    stack: a.stack ?? a.stack_layer ?? "",
-    url: a.url ?? "",
-    mission: a.mission ?? "",
-    attrs: a,
-  };
+  return match ? rowToProfile(match) : null;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
