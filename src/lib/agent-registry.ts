@@ -12,6 +12,12 @@ export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "codex", "gemin
 export type Agent = (typeof AGENT_IDS)[number];
 export type AgentOption = Agent | "openclaw";
 
+export const AGENT_DEFAULT_MODELS: Record<Agent, string> = {
+  claude: "sonnet",
+  codex:  "gpt-5.4",
+  gemini: "auto",
+};
+
 export type AgentRegistryEntry = {
   id: AgentOption;
   label: string;
@@ -128,8 +134,8 @@ function getGeminiAvailability(): Pick<AgentRegistryEntry, "available" | "availa
 }
 
 export function listAgentRegistry(): AgentRegistryEntry[] {
-  const codexDefaultModel = readConfiguredCodexModel() ?? "gpt-5.4";
-  const claudeDefaultModel = readClaudeSettingsModel() ?? "sonnet";
+  const codexDefaultModel = readConfiguredCodexModel() ?? AGENT_DEFAULT_MODELS.codex;
+  const claudeDefaultModel = readClaudeSettingsModel() ?? AGENT_DEFAULT_MODELS.claude;
   const openclawAvailability = getOpenClawAvailability();
   const geminiAvailability = getGeminiAvailability();
 
@@ -185,8 +191,8 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
     {
       id: "gemini",
       label: "Gemini",
-      defaultModel: "auto",
-      modelSuggestions: ["auto", "pro", "flash", "flash-lite"],
+      defaultModel: AGENT_DEFAULT_MODELS.gemini,
+      modelSuggestions: [AGENT_DEFAULT_MODELS.gemini, "pro", "flash", "flash-lite"],
       processMatchers: ["gemini"],
       switchable: true,
       quitCommand: "q",
@@ -277,7 +283,7 @@ export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; mode
       return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && openclaw tui`;
     case "codex":
     default: {
-      const escapedModel = shellEscape(model || "gpt-5.4");
+      const escapedModel = shellEscape(model || AGENT_DEFAULT_MODELS.codex);
       return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && codex --model ${escapedModel} --no-alt-screen`;
     }
   }

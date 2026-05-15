@@ -1,14 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { HOME } from "@/lib/constants";
-import { type Agent, sanitizeAgentId, syncAgentSettings } from "@/lib/agent-registry";
+import { AGENT_DEFAULT_MODELS, type Agent, sanitizeAgentId, syncAgentSettings } from "@/lib/agent-registry";
 
 const DEFAULT_AGENT: Agent = "claude";
-const DEFAULT_MODELS: Record<Agent, string> = {
-  codex: "gpt-5.4",
-  claude: "sonnet",
-  gemini: "auto",
-};
 
 const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
 
@@ -26,7 +21,7 @@ function sanitizeModel(agent: Agent, model: string | undefined): string {
   if (typeof model === "string" && model.trim()) {
     return model.trim();
   }
-  return DEFAULT_MODELS[agent];
+  return AGENT_DEFAULT_MODELS[agent];
 }
 
 function normalizePreferences(raw: Partial<AgentPreferences & LegacyAgentConfig>): AgentPreferences {
@@ -61,7 +56,7 @@ export function writeAgentPreferences(preferences: AgentPreferences): AgentPrefe
   fs.mkdirSync(path.dirname(AGENT_PREFERENCES_FILE), { recursive: true });
   fs.writeFileSync(AGENT_PREFERENCES_FILE, JSON.stringify(normalized, null, 2));
 
-  syncAgentSettings("claude", normalized.models.claude ?? DEFAULT_MODELS.claude);
+  syncAgentSettings("claude", normalized.models.claude ?? AGENT_DEFAULT_MODELS.claude);
   return normalized;
 }
 
@@ -69,6 +64,6 @@ export function resolveAgentConfig(preferences = readAgentPreferences()): { agen
   const agent = preferences.defaultAgent;
   return {
     agent,
-    model: preferences.models[agent] ?? DEFAULT_MODELS[agent],
+    model: preferences.models[agent] ?? AGENT_DEFAULT_MODELS[agent],
   };
 }
