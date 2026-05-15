@@ -354,11 +354,12 @@ function QuickProfileForm({ projectId, onSaved }: { projectId: string; onSaved: 
     setError(null);
     try {
       const base = `/api/projects/${projectId}`;
-      await Promise.all([
+      const results = await Promise.all([
         mission.trim() ? setAttr(base, "mission", mission.trim()) : null,
         stack.trim() ? setAttr(base, "stack", stack.trim()) : null,
         url.trim() ? setAttr(base, "url", url.trim()) : null,
       ]);
+      if (results.some((r) => r !== null && !r.ok)) throw new Error("Save failed");
       onSaved();
     } catch {
       setError("Failed to save — try again");
