@@ -219,6 +219,10 @@ export function MilestoneRow({
   onUpdate: (milestones: Milestone[], progress: number) => void;
 }) {
   const [toggling, setToggling] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(milestone.title);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const toggle = async () => {
     if (toggling) return;
@@ -236,8 +240,43 @@ export function MilestoneRow({
     }
   };
 
+  const saveRename = async () => {
+    const trimmed = editTitle.trim();
+    if (!trimmed || trimmed === milestone.title) {
+      setEditing(false);
+      setEditTitle(milestone.title);
+      return;
+    }
+    setSavingEdit(true);
+    const updated = allMilestones.map((m, i) =>
+      i === index ? { ...m, title: trimmed } : m,
+    );
+    const doneCount = updated.filter((m) => m.done).length;
+    const progress = updated.length > 0 ? Math.round((doneCount / updated.length) * 100) : 0;
+    try {
+      await patchGoal(goalId, { milestones: updated, progress });
+      onUpdate(updated, progress);
+      setEditing(false);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const deleteMilestone = async () => {
+    setDeleting(true);
+    const updated = allMilestones.filter((_, i) => i !== index);
+    const doneCount = updated.filter((m) => m.done).length;
+    const progress = updated.length > 0 ? Math.round((doneCount / updated.length) * 100) : 0;
+    try {
+      await patchGoal(goalId, { milestones: updated, progress });
+      onUpdate(updated, progress);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 text-xs md:text-sm">
+    <div className="flex items-center gap-2 text-xs md:text-sm group">
       <button
         onClick={toggle}
         disabled={toggling}
@@ -251,9 +290,40 @@ export function MilestoneRow({
           <div className="h-4 w-4 rounded-full border border-border-strong hover:border-border-interactive transition-colors" />
         )}
       </button>
-      <span className={milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}>
-        {milestone.title}
-      </span>
+      {editing ? (
+        <div className="flex flex-1 items-center gap-1">
+          <input
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={saveRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveRename();
+              if (e.key === "Escape") { setEditing(false); setEditTitle(milestone.title); }
+            }}
+            autoFocus
+            className="flex-1 ui-input-tight text-xs"
+          />
+          {savingEdit && <Loader2 className="ui-spinner-xs shrink-0 text-text-muted" />}
+        </div>
+      ) : (
+        <>
+          <span
+            onClick={() => setEditing(true)}
+            className={`flex-1 cursor-text ${milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}`}
+            title="Click to rename"
+          >
+            {milestone.title}
+          </span>
+          <button
+            onClick={deleteMilestone}
+            disabled={deleting}
+            className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:text-status-negative text-text-muted disabled:opacity-50"
+            title="Remove milestone"
+          >
+            {deleting ? <Loader2 className="h-3 w-3" /> : <X className="h-3 w-3" />}
+          </button>
+        </>
+      )}
     </div>
   );
 }
