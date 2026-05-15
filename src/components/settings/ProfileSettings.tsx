@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ExternalLink } from "lucide-react";
 import { patchJson, throwApiError } from "@/lib/api/fetch";
 import { normalizeUsername } from "@/lib/username";
 
@@ -63,6 +64,16 @@ export function ProfileSettings({ user }: Props) {
               placeholder="yourname"
             />
           </div>
+          {username && (
+            <Link
+              href={`/u/${normalizeUsername(username)}`}
+              target="_blank"
+              className="inline-flex items-center gap-1 text-xs text-accent-text hover:text-accent-hover transition-colors"
+            >
+              <ExternalLink className="h-3 w-3" />
+              View public profile
+            </Link>
+          )}
         </div>
       </div>
 
