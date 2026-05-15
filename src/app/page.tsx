@@ -9,6 +9,7 @@ import {
   LANDING_FOOTER,
   LANDING_HEADLINE,
   LANDING_SUBTITLE,
+  LANDING_WHITEPAPER_LABEL,
 } from "@/config/marketing";
 import { PUBLIC_SURFACE } from "@/config/ui";
 
@@ -48,21 +49,19 @@ export default async function LandingPage() {
           {LANDING_SUBTITLE}
         </p>
 
-        <div className="mt-10 flex items-center gap-3">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link
             href="/sign-in"
             className="ui-public-primary-action"
           >
             Get started →
           </Link>
-          <a
-            href="https://github.com/g-but/cockpit"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/whitepaper"
             className="ui-public-nav-action px-8 py-3"
           >
-            View source
-          </a>
+            {LANDING_WHITEPAPER_LABEL}
+          </Link>
         </div>
 
         <div className="mt-24 grid w-full max-w-3xl gap-4 sm:grid-cols-3">

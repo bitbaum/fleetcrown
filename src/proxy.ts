@@ -9,8 +9,8 @@ export default auth;
 
 export const config = {
   // Exclude public routes and Next.js internals from the auth middleware.
-  // sign-in/sign-out/beacon/thoughts/invite are public — no auth required.
+  // sign-in/sign-out/beacon/thoughts/invite/whitepaper are public — no auth required.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-out|beacon|thoughts|invite).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-out|beacon|thoughts|invite|whitepaper).*)",
   ],
 };

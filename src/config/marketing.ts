@@ -2,6 +2,7 @@ export const LANDING_BADGE = "Personal AI workspace";
 export const LANDING_HEADLINE = ["Command your", "AI fleet."] as const;
 export const LANDING_SUBTITLE = "Add projects. Launch agents. Track progress. Keep the work visible in one place.";
 export const LANDING_FOOTER = "PROJECTS · AGENTS · HABITS · GOALS · SYSTEMS";
+export const LANDING_WHITEPAPER_LABEL = "Read the whitepaper";
 
 export const LANDING_FEATURES = [
   {
