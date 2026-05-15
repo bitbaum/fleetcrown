@@ -25,47 +25,58 @@ export function AddAttrInline({
   const [key, setKey] = useState(presetKey ?? "");
   const [value, setValue] = useState(initialValue ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
     if (!key.trim() || !value.trim() || saving) return;
     setSaving(true);
-    await setAttr(`/api/projects/${projectId}`, key, value);
-    setSaving(false);
-    setValue("");
-    if (!presetKey) setKey("");
-    onSaved();
+    setError(null);
+    try {
+      const res = await setAttr(`/api/projects/${projectId}`, key, value);
+      if (!res.ok) throw new Error("Save failed");
+      setValue("");
+      if (!presetKey) setKey("");
+      onSaved();
+    } catch {
+      setError("Failed to save — try again");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="flex gap-2 items-center">
-      {!presetKey && (
+    <div className="space-y-1.5">
+      {error && <p className="ui-error-xs">{error}</p>}
+      <div className="flex gap-2 items-center">
+        {!presetKey && (
+          <input
+            placeholder="key"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            className="ui-input-inline border-border-subtle w-24 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
+          />
+        )}
         <input
-          placeholder="key"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          className="ui-input-inline border-border-subtle w-24 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
+          placeholder={presetPlaceholder ?? "value"}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
+          autoFocus
+          className="ui-input-inline border-border-subtle flex-1 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
         />
-      )}
-      <input
-        placeholder={presetPlaceholder ?? "value"}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onCancel?.(); }}
-        autoFocus
-        className="ui-input-inline border-border-subtle flex-1 px-2 py-1.5 text-xs text-text-secondary placeholder:text-text-muted"
-      />
-      {onCancel && (
-        <button onClick={onCancel} className="ui-btn-inline-cancel">
-          <X className="h-3 w-3" />
+        {onCancel && (
+          <button onClick={onCancel} className="ui-btn-inline-cancel">
+            <X className="h-3 w-3" />
+          </button>
+        )}
+        <button
+          onClick={save}
+          disabled={!key.trim() || !value.trim() || saving}
+          className="ui-btn-confirm-icon shrink-0"
+        >
+          {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
         </button>
-      )}
-      <button
-        onClick={save}
-        disabled={!key.trim() || !value.trim() || saving}
-        className="ui-btn-confirm-icon shrink-0"
-      >
-        {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
-      </button>
+      </div>
     </div>
   );
 }
@@ -91,8 +102,8 @@ export function AttrRow({
   const deleteAttr = async () => {
     setDeleting(true);
     try {
-      await removeAttr(`/api/projects/${projectId}`, attrKey);
-      onReload();
+      const res = await removeAttr(`/api/projects/${projectId}`, attrKey);
+      if (res.ok) onReload();
     } finally {
       setDeleting(false);
     }
