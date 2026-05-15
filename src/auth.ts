@@ -4,9 +4,11 @@ import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import type { AdapterAccountType } from "next-auth/adapters";
 import { eq, and } from "drizzle-orm";
+// db required here for DrizzleAdapter — not avoidable
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
+import { getDefaultUser, getUserById, updateUser } from "@/db/queries/users";
 
 declare module "next-auth" {
   interface Session {
@@ -46,11 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const supplied = credentials.password as string | undefined;
         if (!supplied) return null;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.isDefault, true))
-          .limit(1);
+        const user = await getDefaultUser();
         if (!user) return null;
 
         // Env var takes priority (quick local dev). Falls back to DB hash (packaged installs).
@@ -83,19 +81,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .limit(1);
 
         if (!existing) {
-          const [defaultUser] = await db
-            .select()
-            .from(users)
-            .where(eq(users.isDefault, true))
-            .limit(1);
+          const defaultUser = await getDefaultUser();
 
           if (defaultUser) {
-            await db.update(users).set({
-              email: user.email ?? defaultUser.email,
-              name: user.name ?? defaultUser.name,
+            await updateUser(defaultUser.id, {
+              email: user.email ?? defaultUser.email ?? undefined,
+              name: (user.name ?? defaultUser.name) ?? undefined,
               image: (user as { image?: string | null }).image ?? defaultUser.image,
-              updatedAt: new Date(),
-            }).where(eq(users.id, defaultUser.id));
+            });
 
             await db.insert(accounts).values({
               userId: defaultUser.id,
@@ -119,11 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const userId = user?.id ?? (token.id as string | undefined);
       if (userId && (user?.id || trigger === "update")) {
         token.id = userId;
-        const [dbUser] = await db
-          .select({ username: users.username, onboardedAt: users.onboardedAt })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
+        const dbUser = await getUserById(userId);
         if (dbUser) {
           token.username = dbUser.username ?? null;
           token.onboardedAt = dbUser.onboardedAt ?? null;

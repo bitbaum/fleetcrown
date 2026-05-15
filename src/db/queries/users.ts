@@ -11,12 +11,7 @@ export async function getUserByUsername(username: string) {
 }
 
 export async function getDefaultUser() {
-  const [user] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.isDefault, true))
-    .limit(1);
-  return user ?? null;
+  return db.query.users.findFirst({ where: eq(users.isDefault, true) }) ?? null;
 }
 
 export async function getUserCount(): Promise<number> {
@@ -40,6 +35,8 @@ export async function createInitialUser(data: CreateInitialUserInput) {
 export interface UpdateUserInput {
   username?: string;
   name?: string;
+  email?: string | null;
+  image?: string | null;
   onboardedAt?: Date;
 }
 
@@ -49,6 +46,8 @@ export async function updateUser(id: string, patch: UpdateUserInput) {
     .set({
       ...(patch.username !== undefined && { username: patch.username }),
       ...(patch.name !== undefined && { name: patch.name }),
+      ...(patch.email !== undefined && { email: patch.email }),
+      ...(patch.image !== undefined && { image: patch.image }),
       ...(patch.onboardedAt !== undefined && { onboardedAt: patch.onboardedAt }),
       updatedAt: new Date(),
     })
