@@ -1,21 +1,14 @@
 import { PageLayout } from "@/components/ui/page-layout";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 import { PromptLibraryClient } from "@/components/prompts/PromptLibraryClient";
-import { db } from "@/db";
-import { entities } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 import { getCurrentUserId } from "@/lib/session";
-import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { getProjects } from "@/db/queries/projects";
 
 export const metadata = { title: "Prompts" };
 
 export default async function PromptsPage() {
   const userId = await getCurrentUserId();
-  const projects = await db
-    .select({ id: entities.id, name: entities.name })
-    .from(entities)
-    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)))
-    .orderBy(entities.name);
+  const projects = await getProjects(userId);
 
   return (
     <PageLayout

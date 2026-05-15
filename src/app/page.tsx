@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { count } from "drizzle-orm";
+import { getUserCount } from "@/db/queries/users";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import {
   LANDING_BADGE,
@@ -15,8 +13,7 @@ import {
 import { PUBLIC_SURFACE } from "@/config/ui";
 
 export default async function LandingPage() {
-  const [{ value }] = await db.select({ value: count() }).from(users);
-  if (value === 0) redirect("/setup");
+  if ((await getUserCount()) === 0) redirect("/setup");
 
   const session = await auth();
   if (session?.user) redirect("/today");

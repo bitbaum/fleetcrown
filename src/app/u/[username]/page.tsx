@@ -1,6 +1,4 @@
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { getUserByUsername } from "@/db/queries/users";
 import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, BookOpen, Folder } from "lucide-react";
@@ -18,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  const user = await db.query.users.findFirst({ where: eq(users.username, username) });
+  const user = await getUserByUsername(username);
   if (!user) return { title: "Not Found — Cockpit" };
   return {
     title: `${user.name ?? username} — Cockpit`,
@@ -32,7 +30,7 @@ export default async function PublicProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const user = await db.query.users.findFirst({ where: eq(users.username, username) });
+  const user = await getUserByUsername(username);
   if (!user) notFound();
 
   const projects = await getPublicProjects(user.id);
