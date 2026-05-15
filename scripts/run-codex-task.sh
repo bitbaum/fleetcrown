@@ -9,7 +9,7 @@ fi
 TAB_NAME="$1"
 PROJECT_DIR="$2"
 PROMPT_FILE="$3"
-MODEL="${4:-gpt-5.4}"
+MODEL="${4:-gpt-5.4}"  # must match AGENT_DEFAULT_MODELS.codex in src/lib/agent-registry.ts
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 SESSION_DIR="${AGENT_SESSIONS_DIR:-$HOME/.claude/sessions}"

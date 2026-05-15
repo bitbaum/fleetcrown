@@ -9,7 +9,7 @@ fi
 TAB_NAME="$1"
 PROJECT_DIR="$2"
 PROMPT_FILE="$3"
-MODEL="${4:-auto}"
+MODEL="${4:-auto}"  # must match AGENT_DEFAULT_MODELS.gemini in src/lib/agent-registry.ts
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 
