@@ -14,7 +14,7 @@ import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary"
 import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
-import { DEFAULT_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
@@ -43,7 +43,7 @@ function readCountdownParam(): number {
   if (typeof window === "undefined") return DEFAULT_BEACON_COUNTDOWN_S;
   const raw = new URLSearchParams(window.location.search).get("countdown");
   const n = raw ? parseInt(raw, 10) : NaN;
-  return Number.isFinite(n) && n > 0 && n <= 300 ? n : DEFAULT_BEACON_COUNTDOWN_S;
+  return Number.isFinite(n) && n >= MIN_BEACON_COUNTDOWN_S && n <= MAX_BEACON_COUNTDOWN_S ? n : DEFAULT_BEACON_COUNTDOWN_S;
 }
 
 // ─── BeaconBody ─────────────────────────────────────────────────────────────

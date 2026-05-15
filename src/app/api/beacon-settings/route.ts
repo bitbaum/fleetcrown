@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 import { WHISPER_MODEL_VALUES, BEACON_SETTINGS_PATH } from "@/config/beacon";
 
 const PatchBody = z.object({
-  countdown_seconds: z.number().int().min(5).max(300).optional(),
+  countdown_seconds: z.number().int().min(MIN_BEACON_COUNTDOWN_S).max(MAX_BEACON_COUNTDOWN_S).optional(),
   whisper_model: z.enum(WHISPER_MODEL_VALUES).optional(),
   prefer_browser_ready_ui: z.boolean().optional(),
 });

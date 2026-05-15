@@ -3,8 +3,10 @@
 export const READY_WINDOW_S   = 600;    // 10 min — "Agent finished" banner
 export const CLOSED_WINDOW_S  = 3600;   // 1 hour — "Session closed" banner
 export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banner
-export const AUTO_INJECT_S             = 12;  // countdown before auto-inject in control panel
+export const AUTO_INJECT_S              = 12;  // countdown before auto-inject in control panel
 export const DEFAULT_BEACON_COUNTDOWN_S = 30;  // default countdown in beacon popup (user-configurable)
+export const MIN_BEACON_COUNTDOWN_S     = 5;   // shortest allowed beacon countdown
+export const MAX_BEACON_COUNTDOWN_S     = 300; // longest allowed beacon countdown (5 minutes)
 
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).

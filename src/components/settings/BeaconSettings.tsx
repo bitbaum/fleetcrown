@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
-import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 import { WHISPER_MODELS } from "@/config/beacon";
 
 export function BeaconSettings() {
@@ -94,10 +94,10 @@ export function BeaconSettings() {
             <div className="flex items-center gap-3">
               <input
                 type="number"
-                min={5}
-                max={300}
+                min={MIN_BEACON_COUNTDOWN_S}
+                max={MAX_BEACON_COUNTDOWN_S}
                 value={countdown}
-                onChange={(e) => setCountdown(Math.max(5, Math.min(300, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
+                onChange={(e) => setCountdown(Math.max(MIN_BEACON_COUNTDOWN_S, Math.min(MAX_BEACON_COUNTDOWN_S, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
                 className="ui-input w-24 tabular-nums"
               />
               <span className="text-sm text-text-tertiary">seconds</span>
