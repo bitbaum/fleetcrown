@@ -7,7 +7,6 @@ import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectDisplayState } from "./control-presenter";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
-import { postJson } from "@/lib/api/fetch";
 
 export function ProjectCommanderCard({
   project,
@@ -80,14 +79,7 @@ export function ProjectCommanderCard({
     }
   };
 
-  const handleToggleAutoContinue = () => {
-    const nowEnabled = !autoContinueEnabled;
-    toggleAutoContinue();
-    postJson("/api/control/auto-continue", { tab: project.tab, enabled: nowEnabled }).catch(() => {});
-    if (!nowEnabled) {
-      postJson("/api/beacon/cancel", { tab: project.tab }).catch(() => {});
-    }
-  };
+  const handleToggleAutoContinue = toggleAutoContinue;
 
   return (
     <div className={cn(

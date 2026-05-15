@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { postJson } from "@/lib/api/fetch";
 import { readyAtKey } from "@/lib/control-storage";
 
 /**
@@ -22,11 +21,8 @@ export function useProjectLifecycleSync(
         // Ignore storage errors
       }
 
-      // Re-enable auto-continue on each new ready cycle
+      // Re-enable auto-continue on each new ready cycle (also syncs /tmp sentinel)
       enableAutoContinue();
-
-      // Sync re-enable to /tmp sentinel so PyQt popup starts unpaused
-      postJson("/api/control/auto-continue", { tab, enabled: true }).catch(() => {});
     } else if (!isReady && prevIsReadyRef.current) {
       // Session resumed or closed: clear the ready timestamp
       try {

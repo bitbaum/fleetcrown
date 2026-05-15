@@ -289,16 +289,7 @@ export function ProjectCard({
     }
   }, [queue, clearQueue]);
 
-  // Pausing: also cancel any open beacon popup so its independent countdown doesn't fire.
-  // Sync state to /tmp sentinel so the PyQt popup respects pause even when Cockpit is down.
-  const handleToggleAutoContinue = () => {
-    const nowEnabled = !autoContinueEnabled;
-    toggleAutoContinueHook();
-    postJson("/api/control/auto-continue", { tab: project.tab, enabled: nowEnabled }).catch(() => {});
-    if (!nowEnabled) {
-      postJson("/api/beacon/cancel", { tab: project.tab }).catch(() => {});
-    }
-  };
+  const handleToggleAutoContinue = toggleAutoContinueHook;
 
   const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
 
