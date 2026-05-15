@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X, GitCommitHorizontal } from "lucide-react";
+import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X, GitCommitHorizontal, LayoutList, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
@@ -10,6 +10,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
+import { ProjectCommanderCard } from "./ProjectCommanderCard";
 import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
 import {
   ActivityLogPanel,
@@ -29,6 +30,7 @@ export function ControlPanel() {
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"full" | "commander">("full");
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
@@ -136,6 +138,13 @@ export function ControlPanel() {
       ) : (
         <span>Loading…</span>
       )}
+      <button
+        onClick={() => setViewMode((v) => v === "full" ? "commander" : "full")}
+        title={viewMode === "full" ? "Switch to commander view" : "Switch to full view"}
+        className={cn("rounded p-0.5 transition-colors hover:text-text-primary", viewMode === "commander" && "text-accent-text")}
+      >
+        {viewMode === "full" ? <LayoutList className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+      </button>
       <button
         onClick={() => refresh(true)}
         disabled={refreshing}
@@ -328,6 +337,21 @@ export function ControlPanel() {
 
       {sorted ? (
         sorted.length > 0 ? (
+          viewMode === "commander" ? (
+            // Commander view: single scrollable list of compact cards for all projects
+            <div className="space-y-2">
+              {sorted.map((project) => (
+                <ProjectCommanderCard
+                  key={project.tab}
+                  project={project}
+                  zellijTabs={data!.zellijTabs}
+                  onInject={cardProps(project).onInject}
+                  onRunWithBrain={cardProps(project).onRunWithBrain}
+                  onLaunch={() => openLaunchModal(project)}
+                />
+              ))}
+            </div>
+          ) : (
           <div className="space-y-4">
             {focusedTab && (
               <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm">
@@ -398,6 +422,7 @@ export function ControlPanel() {
               </div>
             )}
           </div>
+          )
         ) : (
           <p className="ui-empty-panel py-8 text-sm">
             No projects configured for the control panel

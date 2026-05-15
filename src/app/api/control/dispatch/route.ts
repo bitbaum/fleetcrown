@@ -68,6 +68,7 @@ The agent just finished a work session. Handoff summary:
   next:   ${handoff.next || "(none)"}
   health: ${handoff.health || "unknown"}
   tests:  ${handoff.tests || "unknown"}
+  todos:  ${handoff.todos || "(none)"}
 
 The queue has ${queue.length} pending task${queue.length === 1 ? "" : "s"}:
 ${queueList}${queueOverflow}
