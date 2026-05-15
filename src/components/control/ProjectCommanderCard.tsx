@@ -118,7 +118,7 @@ export function ProjectCommanderCard({
           {isRunning && (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-text/70" />
           )}
-          {isReady && (
+          {(isReady || display.isClosed) && (
             <>
               <button
                 onClick={advance}
@@ -193,8 +193,8 @@ export function ProjectCommanderCard({
         </div>
       )}
 
-      {/* Auto-roll footer — only when ready */}
-      {isReady && (
+      {/* Auto-roll footer — when ready or closed (both have a Continue action) */}
+      {(isReady || display.isClosed) && (
         <div className="flex items-center justify-between border-t border-border-subtle px-4 py-2">
           <button
             onClick={handleToggleAutoContinue}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X, GitCommitHorizontal, LayoutList, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
@@ -30,7 +31,12 @@ export function ControlPanel() {
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"full" | "commander">("full");
+  const [viewMode, setViewMode] = useLocalStorageState<"full" | "commander">(
+    "control:view-mode",
+    "full",
+    (v) => v,
+    (raw) => raw === "commander" ? "commander" : "full",
+  );
 
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
