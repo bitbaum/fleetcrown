@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, index, boolean } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
 
@@ -7,7 +7,10 @@ export const projectStates = pgTable("project_states", {
   userId:                 uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
   projectId:              uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
   tabName:                text("tab_name").notNull(),
+  agentRunning:           boolean("agent_running").notNull().default(false),
+  activeAgents:           text("active_agents").array().notNull().default([]),
   readyAt:                timestamp("ready_at",   { withTimezone: true }),
+  lockAt:                 timestamp("lock_at",    { withTimezone: true }),
   closingAt:              timestamp("closing_at", { withTimezone: true }),
   closedAt:               timestamp("closed_at",  { withTimezone: true }),
   sessionDone:            text("session_done"),

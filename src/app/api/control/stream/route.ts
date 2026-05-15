@@ -1,16 +1,47 @@
 import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
+import { getProjectStatesByUserId } from "@/db/queries/project-states";
+import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
 import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
 import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
 import { getCurrentUserId } from "@/lib/session";
+import { isRuntimeAvailable } from "@/lib/runtime";
 import type { FastProjectState } from "@/lib/control-fast-state";
 
 export const dynamic = "force-dynamic";
 
 const TICK_MS = 2_000;
 const KEEPALIVE_MS = 15_000;
+
+// Map DB state rows to the FastProjectState shape the SSE client expects.
+// Used on Vercel where /proc and /tmp are unavailable — daemon keeps DB current.
+function dbToFastState(
+  confProjects: Array<{ tab: string }>,
+  dbRows: DbProjectState[]
+): FastProjectState[] {
+  const byKey = new Map(dbRows.map((r) => [r.projectKey.toLowerCase(), r]));
+  return confProjects.map(({ tab }) => {
+    const r = byKey.get(tab.toLowerCase());
+    if (!r) return { tab, agentRunning: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
+    return {
+      tab,
+      agentRunning: r.agentRunning,
+      activeAgents: r.activeAgents,
+      session: r.sessionDone || r.sessionNext
+        ? { done: r.sessionDone ?? "", next: r.sessionNext ?? "", tests: r.sessionTests ?? "", todos: r.sessionTodos ?? "", health: r.sessionHealth ?? "", mtime: r.sessionUpdatedAt?.getTime() ?? 0 }
+        : null,
+      currentPrompt: r.currentPromptKey
+        ? { key: r.currentPromptKey, label: r.currentPromptLabel ?? r.currentPromptKey, startedAt: r.currentPromptStartedAt ? Math.floor(r.currentPromptStartedAt.getTime() / 1000) : 0, source: "inject" as const }
+        : null,
+      readyAt:   r.readyAt   ? Math.floor(r.readyAt.getTime()   / 1000) : null,
+      lockAt:    r.lockAt    ? Math.floor(r.lockAt.getTime()    / 1000) : null,
+      closingAt: r.closingAt ? Math.floor(r.closingAt.getTime() / 1000) : null,
+      closedAt:  r.closedAt  ? Math.floor(r.closedAt.getTime()  / 1000) : null,
+    };
+  });
+}
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -73,16 +104,18 @@ export async function GET() {
   };
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const enc = new TextEncoder();
 
       const send = (text: string) => {
         try { controller.enqueue(enc.encode(text)); } catch { /* client disconnected */ }
       };
 
-      const tick = () => {
+      const tick = async () => {
         refreshTabsCacheIfStale();
-        const current = scanProjects();
+        const current = isRuntimeAvailable()
+          ? scanProjects()
+          : dbToFastState(confProjects, await getProjectStatesByUserId(userId).catch((): DbProjectState[] => []));
 
         const changed = current.filter((proj, i) => {
           const prev = lastSent[i];
@@ -114,12 +147,15 @@ export async function GET() {
       };
 
       // Initial snapshot
-      lastSent = scanProjects();
+      const initialProjects = isRuntimeAvailable()
+        ? scanProjects()
+        : dbToFastState(confProjects, await getProjectStatesByUserId(userId).catch((): DbProjectState[] => []));
+      lastSent = initialProjects;
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();
 
       // Tick loop
-      const interval = setInterval(tick, TICK_MS);
+      const interval = setInterval(() => { tick().catch(() => {}); }, TICK_MS);
 
       // Cleanup when stream is cancelled
       return () => {

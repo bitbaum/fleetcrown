@@ -25,8 +25,10 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
 
 BASE_URL="${COCKPIT_BASE_URL:-https://cockpitapp.vercel.app}"
 POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-5}"
+PUSH_INTERVAL="${COCKPIT_PUSH_INTERVAL:-2}"
 DRY_RUN="${COCKPIT_DRY_RUN:-0}"
 TOKEN="${COCKPIT_DAEMON_TOKEN:-}"
+CONF_FILE="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
 
 if [ -z "$TOKEN" ]; then
   echo "[daemon] ERROR: COCKPIT_DAEMON_TOKEN is not set" >&2
@@ -92,7 +94,136 @@ execute_focus_tab() {
   fi
 }
 
-log "starting — polling $BASE_URL every ${POLL_INTERVAL}s"
+# ── Runtime state push ────────────────────────────────────────────────────────
+# Reads /proc + /tmp every PUSH_INTERVAL seconds and POSTs to /api/control/runtime-state
+# so the Vercel control plane sees live agent status without needing local access.
+
+# Read a /tmp sentinel file; output an integer or the JSON literal null.
+_sentinel() {
+  local f="$1"
+  if [ -f "$f" ]; then
+    local v
+    v=$(cat "$f" 2>/dev/null)
+    [[ "$v" =~ ^[0-9]+$ ]] && echo "$v" && return
+  fi
+  echo "null"
+}
+
+# Scan /proc once; output lines of "<cwd> <agent_basename>" for all running agents.
+_scan_agents() {
+  for pd in /proc/[0-9]*/; do
+    pd="${pd%/}"
+    [ -f "$pd/cmdline" ] || continue
+    local argv0 basename
+    argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
+    basename="${argv0##*/}"
+    case "$basename" in
+      claude|codex|gemini|openclaw) ;;
+      *) continue ;;
+    esac
+    local cwd
+    cwd=$(readlink "$pd/cwd" 2>/dev/null) || continue
+    echo "$cwd $basename"
+  done
+}
+
+push_runtime_state() {
+  [ -f "$CONF_FILE" ] || return
+
+  local agent_lines
+  agent_lines=$(_scan_agents 2>/dev/null || true)
+
+  local projects_arr="[]"
+
+  while IFS='|' read -r tab dir || [ -n "$tab" ]; do
+    # Skip comments and blank lines
+    [[ "$tab" =~ ^[[:space:]]*# ]] && continue
+    tab=$(echo "$tab" | xargs 2>/dev/null)
+    dir=$(echo "$dir" | xargs 2>/dev/null)
+    [ -z "$tab" ] || [ -z "$dir" ] && continue
+
+    # Determine agent running + active agent names for this dir
+    local running="false" agents_json="[]"
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      local cwd agent_name
+      # line format: "<cwd> <agent_basename>"
+      cwd="${line% *}"
+      agent_name="${line##* }"
+      if [ "$cwd" = "$dir" ] || [[ "$cwd" == "$dir/"* ]]; then
+        running="true"
+        agents_json=$(echo "$agents_json" | jq --arg a "$agent_name" '. + [$a] | unique' 2>/dev/null || echo "$agents_json")
+      fi
+    done <<< "$agent_lines"
+
+    # Sentinel timestamps
+    local ready_at closing_at closed_at lock_at
+    ready_at=$(_sentinel "/tmp/agent-ready-${tab}")
+    closing_at=$(_sentinel "/tmp/agent-closing-${tab}")
+    closed_at=$(_sentinel "/tmp/agent-closed-${tab}")
+    lock_at=$(_sentinel "/tmp/agent-stop-active-${tab}")
+
+    # Current prompt JSON
+    local cpk="" cpl="" cpsat="null"
+    local pf="/tmp/agent-current-prompt-${tab}"
+    if [ -f "$pf" ]; then
+      local pj
+      pj=$(cat "$pf" 2>/dev/null)
+      if [ -n "$pj" ]; then
+        cpk=$(echo "$pj" | jq -r '.key // empty' 2>/dev/null || true)
+        cpl=$(echo "$pj" | jq -r '.label // empty' 2>/dev/null || true)
+        local sat
+        sat=$(echo "$pj" | jq -r '.startedAt // empty' 2>/dev/null || true)
+        [[ "$sat" =~ ^[0-9]+$ ]] && cpsat="$sat"
+      fi
+    fi
+
+    local proj
+    proj=$(jq -n \
+      --arg      tab     "$tab" \
+      --argjson  running "$running" \
+      --argjson  agents  "$agents_json" \
+      --arg      cpk     "$cpk" \
+      --arg      cpl     "$cpl" \
+      --argjson  cpsat   "$cpsat" \
+      --argjson  ready   "$ready_at" \
+      --argjson  lock    "$lock_at" \
+      --argjson  closing "$closing_at" \
+      --argjson  closed  "$closed_at" \
+      '{
+        tab:                    $tab,
+        agentRunning:           $running,
+        activeAgents:           $agents,
+        currentPromptKey:       (if $cpk   == "" then null else $cpk   end),
+        currentPromptLabel:     (if $cpl   == "" then null else $cpl   end),
+        currentPromptStartedAt: (if $cpsat == null then null else ($cpsat | tonumber) end),
+        readyAt:                (if $ready   == null then null else ($ready   | tonumber) end),
+        lockAt:                 (if $lock    == null then null else ($lock    | tonumber) end),
+        closingAt:              (if $closing == null then null else ($closing | tonumber) end),
+        closedAt:               (if $closed  == null then null else ($closed  | tonumber) end)
+      }' 2>/dev/null) || continue
+    projects_arr=$(echo "$projects_arr" | jq ". + [$proj]" 2>/dev/null || echo "$projects_arr")
+
+  done < "$CONF_FILE"
+
+  curl -sf -X POST \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"projects\":$projects_arr}" \
+    "$BASE_URL/api/control/runtime-state" >/dev/null 2>&1 || true
+}
+
+_push_loop() {
+  while true; do
+    push_runtime_state
+    sleep "$PUSH_INTERVAL"
+  done
+}
+
+log "starting — polling $BASE_URL every ${POLL_INTERVAL}s, pushing state every ${PUSH_INTERVAL}s"
+_push_loop &
+_PUSH_PID=$!
+trap 'kill "$_PUSH_PID" 2>/dev/null; exit' INT TERM
 
 while true; do
   response=$(claim_next) || { sleep "$POLL_INTERVAL"; continue; }

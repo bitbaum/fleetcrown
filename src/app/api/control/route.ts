@@ -27,6 +27,7 @@ import {
 } from "@/lib/control-fast-state";
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getCurrentUserId } from "@/lib/session";
+import { isRuntimeAvailable } from "@/lib/runtime";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData } from "@/lib/control-types";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData };
@@ -295,16 +296,31 @@ export async function GET() {
     const projectAgentId = agentPref ?? agentConfig.agent;
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
     const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
-    const agentRunning = projectProcesses.length > 0;
-    const activeAgents = [...new Set(projectProcesses.map((process) => process.agentId))];
+    // On Vercel (no /proc access) fall back to daemon-pushed DB state so the control
+    // panel reflects live agent activity on the home machine.
+    const runtimeAvailable = isRuntimeAvailable();
+    const agentRunning = runtimeAvailable
+      ? projectProcesses.length > 0
+      : (dbState?.agentRunning ?? false);
+    const activeAgents = runtimeAvailable
+      ? [...new Set(projectProcesses.map((process) => process.agentId))]
+      : (dbState?.activeAgents ?? []);
     const sessionLifecycleSignals = projectProcesses.length > 0
       ? projectProcesses.some((process) => process.sessionLifecycleSignals)
       : projectAgent?.capabilities.sessionLifecycleSignals ?? false;
 
-    // currentPrompt is transient runtime state — only the /tmp file is authoritative.
-    // DB fallback would cause "Running: <stale task>" after a system reboot (no processes,
-    // no /tmp files, but DB still has the old currentPromptKey).
-    const rawCurrentPrompt: CurrentPrompt | null = readCurrentPrompt(liveTab);
+    // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
+    // show stale tasks after reboot). On Vercel, daemon keeps DB current so use DB.
+    const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
+      ? readCurrentPrompt(liveTab)
+      : (dbState?.currentPromptKey && dbState?.currentPromptLabel && dbState?.currentPromptStartedAt)
+        ? {
+            key: dbState.currentPromptKey,
+            label: dbState.currentPromptLabel,
+            startedAt: Math.floor(dbState.currentPromptStartedAt.getTime() / 1000),
+            source: "inject" as const,
+          }
+        : null;
     // Agents without lifecycle callbacks, notably an interactive Codex TUI, can stay
     // alive after returning to the prompt. Direct injections into those sessions have
     // no reliable completion signal, so do not render their last injected text as an

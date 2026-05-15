@@ -52,7 +52,7 @@ export async function PATCH(
   );
 
   try {
-    const row = await upsertProjectState(patch as Parameters<typeof upsertProjectState>[0]);
+    const row = await upsertProjectState(patch as unknown as Parameters<typeof upsertProjectState>[0]);
     return NextResponse.json({ success: true, data: row });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
