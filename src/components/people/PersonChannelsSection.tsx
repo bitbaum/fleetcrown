@@ -48,10 +48,12 @@ export function ChannelsSection({
   const deleteChannel = async (key: string) => {
     setDeletingKey(key);
     try {
-      await removeAttr(`/api/people/${personId}`, key);
-      const next = { ...attrs };
-      delete next[key];
-      onUpdate(next);
+      const res = await removeAttr(`/api/people/${personId}`, key);
+      if (res.ok) {
+        const next = { ...attrs };
+        delete next[key];
+        onUpdate(next);
+      }
     } finally {
       setDeletingKey(null);
     }

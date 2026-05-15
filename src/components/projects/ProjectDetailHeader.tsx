@@ -69,12 +69,14 @@ export function ProjectDetailHeader({
   };
 
   const saveStatus = async (next: string) => {
-    await setAttr(`/api/projects/${projectId}`, "status", next);
+    const res = await setAttr(`/api/projects/${projectId}`, "status", next);
+    if (!res.ok) throw new Error("Failed to save");
     setStatusOverride(next);
   };
 
   const saveMaturity = async (next: string) => {
-    await setAttr(`/api/projects/${projectId}`, "maturity", next);
+    const res = await setAttr(`/api/projects/${projectId}`, "maturity", next);
+    if (!res.ok) throw new Error("Failed to save");
     setMaturityOverride(next);
   };
 
