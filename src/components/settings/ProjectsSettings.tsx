@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, Trash2, Plus, GripVertical } from "lucide-react";
+import { Loader2, Trash2, Plus, GripVertical, Pencil, Check, X } from "lucide-react";
 import { postJson, deleteJson, patchJson } from "@/lib/api/fetch";
 import type { UserProject } from "@/db/schema";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,13 @@ export function ProjectsSettings({ projects: initial }: Props) {
   const [gitUrl, setGitUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDirPath, setEditDirPath] = useState("");
+  const [editGitUrl, setEditGitUrl] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const add = async () => {
     if (!name.trim()) return;
@@ -43,6 +50,40 @@ export function ProjectsSettings({ projects: initial }: Props) {
     }
   };
 
+  const startEdit = (p: UserProject) => {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditDirPath(p.dirPath ?? "");
+    setEditGitUrl(p.gitUrl ?? "");
+    setEditError("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditError("");
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editName.trim()) return;
+    setEditSaving(true);
+    setEditError("");
+    try {
+      const res = await patchJson(`/api/user-projects/${id}`, {
+        name: editName.trim(),
+        dirPath: editDirPath.trim() || undefined,
+        gitUrl: editGitUrl.trim() || undefined,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? "Failed to save");
+      setProjects((prev) => prev.map((p) => p.id === id ? { ...p, name: editName.trim(), dirPath: editDirPath.trim() || null, gitUrl: editGitUrl.trim() || null } : p));
+      setEditingId(null);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const remove = async (id: string) => {
     const res = await deleteJson(`/api/user-projects/${id}`);
     if (!res.ok) {
@@ -59,7 +100,6 @@ export function ProjectsSettings({ projects: initial }: Props) {
       const next = [...prev];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
-      // Persist new positions fire-and-forget
       next.forEach((p, i) => {
         patchJson(`/api/user-projects/${p.id}`, { position: i }).catch(() => {});
       });
@@ -124,29 +164,89 @@ export function ProjectsSettings({ projects: initial }: Props) {
           {projects.map((p, i) => (
             <li
               key={p.id}
-              draggable
+              draggable={editingId !== p.id}
               onDragStart={() => { dragIndex.current = i; }}
               onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
               onDrop={() => { if (dragIndex.current !== null && dragIndex.current !== i) reorder(dragIndex.current, i); dragIndex.current = null; setDragOver(null); }}
               onDragEnd={() => { setDragOver(null); dragIndex.current = null; }}
-              className={cn("ui-list-item", dragOver === i && "bg-accent-primary/5")}
+              className={cn("ui-list-item group", dragOver === i && "bg-accent-primary/5")}
             >
-              <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-text-muted/50 active:cursor-grabbing" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>
-                {p.dirPath && (
-                  <div className="text-xs text-text-tertiary truncate font-mono" title={p.dirPath}>{p.dirPath}</div>
-                )}
-                {p.gitUrl && (
-                  <div className="text-xs text-text-tertiary truncate" title={p.gitUrl}>{p.gitUrl}</div>
-                )}
-              </div>
-              <button
-                onClick={() => remove(p.id)}
-                className="ui-btn-ghost shrink-0 p-1.5 hover:text-status-negative"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <GripVertical className={cn("h-4 w-4 shrink-0 text-text-muted/50", editingId === p.id ? "invisible" : "cursor-grab active:cursor-grabbing")} />
+
+              {editingId === p.id ? (
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(p.id); if (e.key === "Escape") cancelEdit(); }}
+                    placeholder="Project name"
+                    className="ui-input-tight"
+                  />
+                  <input
+                    value={editDirPath}
+                    onChange={(e) => setEditDirPath(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") cancelEdit(); }}
+                    placeholder="Local path"
+                    className="ui-input-tight font-mono text-xs"
+                  />
+                  <input
+                    value={editGitUrl}
+                    onChange={(e) => setEditGitUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") saveEdit(p.id); if (e.key === "Escape") cancelEdit(); }}
+                    placeholder="GitHub URL"
+                    className="ui-input-tight"
+                  />
+                  {editError && <p className="ui-error-xs">{editError}</p>}
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => saveEdit(p.id)}
+                      disabled={editSaving || !editName.trim()}
+                      className="ui-btn-confirm-sm"
+                    >
+                      {editSaving ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
+                      Save
+                    </button>
+                    <button onClick={cancelEdit} className="ui-link-muted text-xs">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-text-primary truncate" title={p.name}>{p.name}</div>
+                  {p.dirPath && (
+                    <div className="text-xs text-text-tertiary truncate font-mono" title={p.dirPath}>{p.dirPath}</div>
+                  )}
+                  {p.gitUrl && (
+                    <div className="text-xs text-text-tertiary truncate" title={p.gitUrl}>{p.gitUrl}</div>
+                  )}
+                </div>
+              )}
+
+              {editingId !== p.id && (
+                <div className="flex shrink-0 items-center gap-0.5">
+                  <button
+                    onClick={() => startEdit(p)}
+                    className="ui-hover-reveal ui-btn-row-action"
+                    title="Edit project"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => remove(p.id)}
+                    className="ui-hover-reveal ui-btn-ghost shrink-0 p-1.5 hover:text-status-negative"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {editingId === p.id && (
+                <button onClick={cancelEdit} className="shrink-0 ui-btn-row-action self-start mt-0.5">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </li>
           ))}
         </ul>
