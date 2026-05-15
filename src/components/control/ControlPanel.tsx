@@ -13,6 +13,7 @@ import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
 import { ProjectCommanderCard } from "./ProjectCommanderCard";
 import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
+import { AttentionBar } from "./AttentionBar";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
@@ -123,6 +124,7 @@ export function ControlPanel() {
   const activeProjects = pageState?.activeProjects ?? [];
   const idleProjects = pageState?.idleProjects ?? [];
   const dashboard = pageState?.dashboard ?? null;
+  const attention = pageState?.attention ?? [];
 
   // Keyboard shortcuts (1–9) activate only when exactly one project is ready.
   const readyTabs = data
@@ -340,6 +342,8 @@ export function ControlPanel() {
           {queuedNotice}
         </div>
       )}
+
+      <AttentionBar items={attention} />
 
       {sorted ? (
         sorted.length > 0 ? (

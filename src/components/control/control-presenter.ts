@@ -40,12 +40,36 @@ export type ControlDashboardState = {
   commitsToday: number;
 };
 
+export type AttentionItem = {
+  project: ProjectState;
+  score: number;
+  reason: string;
+};
+
 export type ControlPageState = {
   activeProjects: ProjectState[];
   idleProjects: ProjectState[];
   sortedProjects: ProjectState[];
   dashboard: ControlDashboardState;
+  attention: AttentionItem[];
 };
+
+function attentionScore(project: ProjectState): { score: number; reason: string } {
+  let score = 0;
+  const reasons: string[] = [];
+
+  const sessionHealth = project.session?.health?.toLowerCase() ?? "";
+  if (sessionHealth === "critical") { score += 4; reasons.push("critical"); }
+  else if (sessionHealth.includes("attention")) { score += 2; reasons.push("needs attention"); }
+
+  const runHealth = project.latestOrchestrationRun?.summary?.health?.toLowerCase() ?? "";
+  if (runHealth === "critical" && score < 4) { score += 3; reasons.push("last run: critical"); }
+  else if (runHealth.includes("attention") && score < 2) { score += 2; reasons.push("last run: needs attention"); }
+
+  if (project.git?.dirty) { score += 1; reasons.push(`${project.git.dirtyCount} uncommitted`); }
+
+  return { score, reason: reasons[0] ?? "" };
+}
 
 export function formatAgentRuntimeLabel(project: ProjectState): string {
   return project.activeAgents
@@ -215,10 +239,18 @@ export function buildControlPageState(
   const idleCount = idleProjects.length;
   const expandedCount = expandedTabs.size;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
+
+  const attention = data.projects
+    .map((project) => ({ project, ...attentionScore(project) }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+
   return {
     activeProjects,
     idleProjects,
     sortedProjects,
+    attention,
     dashboard: {
       runningCount,
       waitingCount,
