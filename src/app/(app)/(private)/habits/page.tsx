@@ -2,6 +2,8 @@ import { Repeat2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
+import { listActiveGoals } from "@/db/queries/goals";
+import { getGoalsByHabitIds } from "@/db/queries/habit-goals";
 import { getCurrentUserId } from "@/lib/session";
 import { HabitCard } from "@/components/habits/HabitCard";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
@@ -11,10 +13,19 @@ export const metadata = { title: "Habits" };
 
 export default async function HabitsPage() {
   const userId = await getCurrentUserId();
-  const habits = await getAllHabitsWithHistory(userId, HABIT_HISTORY_DAYS);
+  const [habits, activeGoals] = await Promise.all([
+    getAllHabitsWithHistory(userId, HABIT_HISTORY_DAYS),
+    listActiveGoals(userId),
+  ]);
+
+  const habitIds = habits.map((h) => h.id);
+  const linkedGoalsByHabit = await getGoalsByHabitIds(userId, habitIds);
+
   const active = habits.filter((h) => h.active);
   const totalCompletions = habits.reduce((s, h) => s + h.completionsInWindow, 0);
   const bestStreak = habits.reduce((max, h) => Math.max(max, h.streak), 0);
+
+  const goalOptions = activeGoals.map((g) => ({ id: g.id, title: g.title }));
 
   return (
     <PageLayout
@@ -39,7 +50,12 @@ export default async function HabitsPage() {
       ) : (
         <div className="space-y-3">
           {habits.map((h) => (
-            <HabitCard key={h.id} habit={h} />
+            <HabitCard
+              key={h.id}
+              habit={h}
+              linkedGoals={linkedGoalsByHabit.get(h.id) ?? []}
+              activeGoals={goalOptions}
+            />
           ))}
           <AddHabitButton />
         </div>

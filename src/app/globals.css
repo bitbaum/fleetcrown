@@ -734,6 +734,11 @@
   .ui-tag-neutral {
     @apply text-text-muted border-border-subtle bg-surface-overlay;
   }
+  .ui-tag-accent {
+    color: var(--accent-text);
+    background-color: var(--accent-muted);
+    border-color: color-mix(in oklch, var(--accent-primary) 20%, transparent);
+  }
 
   /* Error / notice boxes */
   .ui-box-error {

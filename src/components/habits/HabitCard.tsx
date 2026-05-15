@@ -2,16 +2,127 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, Loader2, Check, X, Trash2 } from "lucide-react";
+import { Flame, Loader2, Check, X, Trash2, Target, Plus, XCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { HabitHeatmap } from "./HabitHeatmap";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, postJson } from "@/lib/api/fetch";
 import type { HabitWithHistory } from "@/db/queries/habits";
+import type { LinkedGoal } from "@/db/queries/habit-goals";
 import { HABIT_FREQUENCY, type HabitFrequency, scheduledDays } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
-export function HabitCard({ habit }: { habit: HabitWithHistory }) {
+function HabitGoalLinks({
+  habitId,
+  linked,
+  allGoals,
+}: {
+  habitId: string;
+  linked: LinkedGoal[];
+  allGoals: LinkedGoal[];
+}) {
+  const router = useRouter();
+  const [items, setItems] = useState<LinkedGoal[]>(linked);
+  const [picking, setPicking] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const unlinked = allGoals.filter((g) => !items.some((l) => l.id === g.id));
+
+  const handleLink = async (goal: LinkedGoal) => {
+    setSaving(goal.id);
+    setPicking(false);
+    try {
+      await postJson(`/api/habits/${habitId}/goals`, { goalId: goal.id });
+      setItems((prev) => [...prev, goal]);
+      router.refresh();
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleUnlink = async (goalId: string) => {
+    setSaving(goalId);
+    try {
+      await deleteJson(`/api/habits/${habitId}/goals`, { goalId });
+      setItems((prev) => prev.filter((g) => g.id !== goalId));
+      router.refresh();
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+      <Target className="h-3 w-3 text-text-muted shrink-0" />
+
+      {items.length === 0 && !picking && (
+        <span className="text-xs text-text-muted">no goal linked</span>
+      )}
+
+      {items.map((goal) => (
+        <span key={goal.id} className="flex items-center gap-0.5 ui-tag ui-tag-accent group">
+          <span>{goal.title}</span>
+          <button
+            onClick={() => handleUnlink(goal.id)}
+            disabled={saving === goal.id}
+            className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+            title="Unlink"
+          >
+            {saving === goal.id
+              ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              : <XCircle className="h-2.5 w-2.5" />
+            }
+          </button>
+        </span>
+      ))}
+
+      {saving && !items.some((g) => g.id === saving) && (
+        <Loader2 className="h-3 w-3 animate-spin text-text-muted" />
+      )}
+
+      {unlinked.length > 0 && !picking && (
+        <button
+          onClick={() => setPicking(true)}
+          className="flex items-center gap-0.5 text-xs text-text-muted hover:text-accent-text transition-colors"
+          title="Link to a goal"
+        >
+          <Plus className="h-3 w-3" />
+          <span>link goal</span>
+        </button>
+      )}
+
+      {picking && (
+        <div className="flex items-center gap-1 flex-wrap">
+          {unlinked.map((goal) => (
+            <button
+              key={goal.id}
+              onClick={() => handleLink(goal)}
+              className="text-xs px-2 py-0.5 rounded bg-surface-raised hover:bg-accent-muted text-text-secondary hover:text-accent-text border border-border-subtle transition-colors"
+            >
+              {goal.title}
+            </button>
+          ))}
+          <button
+            onClick={() => setPicking(false)}
+            className="p-1 text-text-muted hover:text-text-secondary transition-colors"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function HabitCard({
+  habit,
+  linkedGoals = [],
+  activeGoals = [],
+}: {
+  habit: HabitWithHistory;
+  linkedGoals?: LinkedGoal[];
+  activeGoals?: LinkedGoal[];
+}) {
   const router = useRouter();
   const [active, setActive] = useState(habit.active);
   const [frequency, setFrequency] = useState<HabitFrequency>(habit.frequency);
@@ -53,7 +164,7 @@ export function HabitCard({ habit }: { habit: HabitWithHistory }) {
     try {
       await patchJson(`/api/habits/${habit.id}`, { active: next });
     } catch {
-      setActive(!next); // revert on error
+      setActive(!next);
     } finally {
       setTogglingActive(false);
     }
@@ -140,6 +251,13 @@ export function HabitCard({ habit }: { habit: HabitWithHistory }) {
             ))}
             {savingFreq && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
           </div>
+
+          {/* Goal links */}
+          <HabitGoalLinks
+            habitId={habit.id}
+            linked={linkedGoals}
+            allGoals={activeGoals}
+          />
         </div>
 
         {/* Stats + actions */}
