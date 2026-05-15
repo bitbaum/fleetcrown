@@ -372,6 +372,7 @@ function QuickProfileForm({ projectId, onSaved }: { projectId: string; onSaved: 
         <div>
           <p className="ui-kicker mb-1.5">Mission</p>
           <input
+            autoFocus
             value={mission}
             onChange={(e) => setMission(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}

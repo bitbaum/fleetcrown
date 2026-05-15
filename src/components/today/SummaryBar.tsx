@@ -9,7 +9,9 @@ export async function SummaryBar() {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
+      {s.activeGoals > 0 && (
+        <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
+      )}
       {s.habitsTotal > 0 && (
         <Pill
           icon={Repeat2}
