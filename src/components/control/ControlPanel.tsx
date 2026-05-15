@@ -177,7 +177,7 @@ export function ControlPanel() {
     prompts: data!.prompts,
     zellijTabs: data!.zellijTabs,
     currentAdapter: selectedAgent,
-    availableAgents: switchableRegistry.map(({ id, label }) => ({ id, label })),
+    availableAgents: switchableRegistry.map(({ id, label, modelSuggestions }) => ({ id, label, modelSuggestions })),
     onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
       try {
         const { mode } = await inject(tab, promptKey, customPrompt);

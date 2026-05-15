@@ -38,7 +38,7 @@ export function ProjectCard({
   prompts: PromptMeta[];
   zellijTabs: string[];
   currentAdapter: string;
-  availableAgents: { id: string; label: string }[];
+  availableAgents: { id: string; label: string; modelSuggestions: string[] }[];
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onRunCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;

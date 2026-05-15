@@ -10,7 +10,7 @@ import type { ProjectState } from "@/lib/control-types";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 
-type AgentEntry = { id: string; label: string };
+type AgentEntry = { id: string; label: string; modelSuggestions: string[] };
 type AgentId = string;
 
 // Dimension display metadata — the order and icons live here in the UI layer
@@ -355,6 +355,7 @@ export function ProjectProfile({
   onDeleted?: () => void;
 }) {
   const [sending, setSending] = useState(false);
+  const [localModel, setLocalModel] = useState<string | null>(project.modelPref ?? null);
   const activeAgent = localAgent ?? (project.agentPref as AgentId | null) ?? (globalAdapter as AgentId);
 
   const persistAgentPref = (agentId: AgentId | null) => {
@@ -362,6 +363,13 @@ export function ProjectProfile({
       patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
     }
     onSetAgent(agentId);
+  };
+
+  const persistModelPref = (model: string | null) => {
+    setLocalModel(model);
+    if (project.id) {
+      patchJson(`/api/user-projects/${project.id}`, { modelPref: model ?? undefined }).catch(() => {});
+    }
   };
 
   const { data: allPrompts } = useFetch<AgentPrompt[]>("/api/prompts/agent");
@@ -426,6 +434,36 @@ export function ProjectProfile({
         </div>
         {sending && <Loader2 className="ml-auto ui-spinner-sm text-text-muted" />}
       </div>
+
+      {/* Model selector — shows suggestions for the active agent */}
+      {(() => {
+        const agentEntry = availableAgents.find((a) => a.id === activeAgent);
+        const suggestions = agentEntry?.modelSuggestions ?? [];
+        if (suggestions.length === 0) return null;
+        const activeModel = localModel ?? suggestions[0];
+        return (
+          <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+            <span className="ui-kicker shrink-0">Model</span>
+            <div className="flex flex-wrap gap-1.5">
+              {suggestions.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => persistModelPref(m === suggestions[0] ? null : m)}
+                  className={cn(
+                    "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+                    activeModel === m
+                      ? "border-accent-primary/50 bg-accent-primary/10 text-accent-text"
+                      : "border-border-subtle bg-surface-base text-text-tertiary hover:text-text-secondary hover:border-border-default"
+                  )}
+                >
+                  {m}
+                  {m === suggestions[0] && <span className="ml-1.5 opacity-40">default</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Project metadata */}
       {project.profile ? (

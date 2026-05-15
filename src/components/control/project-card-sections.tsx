@@ -46,7 +46,7 @@ export function ProjectCardHeader({
   onProfileToggle: () => void;
   onCollapse?: () => void;
   onFocus?: () => void;
-  availableAgents?: { id: string; label: string }[];
+  availableAgents?: { id: string; label: string; modelSuggestions: string[] }[];
   localAgentId?: string | null;
   switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
