@@ -11,7 +11,7 @@ type AgentEntry = { id: string; label: string };
 
 function statusChipClass(tone: "neutral" | "positive" | "warning" = "neutral", clickable = false) {
   return cn(
-    "inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs leading-none transition-colors",
+    "inline-flex min-h-11 sm:min-h-7 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs leading-none transition-colors",
     tone === "positive"
       ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
       : tone === "warning"

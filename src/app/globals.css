@@ -459,10 +459,10 @@
     @apply flex flex-wrap items-center gap-1.5;
   }
   .ui-icon-action {
-    @apply inline-flex min-h-9 min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary;
+    @apply inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary;
   }
   .ui-chip-action-compact {
-    @apply rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
   }
   .ui-empty-panel {
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
@@ -555,7 +555,7 @@
   }
   /* Icon-only square button */
   .ui-btn-icon {
-    @apply inline-flex items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-surface-overlay hover:text-text-primary disabled:opacity-40;
   }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
