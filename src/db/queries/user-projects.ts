@@ -104,10 +104,14 @@ export async function deleteUserProject(id: string, userId: string): Promise<voi
 
 const DEV_LOG_MAX = 50;
 
+async function writeDevLog(id: string, existing: DevLogEntry[], entry: DevLogEntry): Promise<void> {
+  const updated = [...existing, entry].slice(-DEV_LOG_MAX);
+  await db.update(userProjects).set({ devLog: updated, updatedAt: new Date() }).where(eq(userProjects.id, id));
+}
+
 /**
- * Append a dev log entry to a user project identified by name, capping at
- * DEV_LOG_MAX entries (oldest removed first). No-ops for projects not in DB.
- * Caller is responsible for deduplication — append only when content changed.
+ * Append a dev log entry identified by project name, capping at DEV_LOG_MAX.
+ * No-ops for projects not in DB. Caller is responsible for deduplication.
  */
 export async function appendProjectDevLog(
   userId: string,
@@ -119,12 +123,7 @@ export async function appendProjectDevLog(
     columns: { id: true, devLog: true },
   });
   if (!project) return;
-  const existing = (project.devLog ?? []) as DevLogEntry[];
-  const updated = [...existing, entry].slice(-DEV_LOG_MAX);
-  await db
-    .update(userProjects)
-    .set({ devLog: updated, updatedAt: new Date() })
-    .where(eq(userProjects.id, project.id));
+  await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
 }
 
 export async function appendProjectDevLogByEntityProjectId(
@@ -137,10 +136,5 @@ export async function appendProjectDevLogByEntityProjectId(
     columns: { id: true, devLog: true },
   });
   if (!project) return;
-  const existing = (project.devLog ?? []) as DevLogEntry[];
-  const updated = [...existing, entry].slice(-DEV_LOG_MAX);
-  await db
-    .update(userProjects)
-    .set({ devLog: updated, updatedAt: new Date() })
-    .where(eq(userProjects.id, project.id));
+  await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
 }
