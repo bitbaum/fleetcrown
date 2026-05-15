@@ -1,3 +1,4 @@
+import fs from "fs";
 import { exec, execSync, execFileSync } from "child_process";
 import { promisify } from "util";
 
@@ -40,6 +41,28 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000): void {
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
     execSync("sleep 0.05");
   }
+}
+
+/**
+ * Check whether a user is actively at the interactive ZSH prompt in a given
+ * Zellij tab.  ZSH hooks write /tmp/cockpit-typing-<PANE_ID> (content:
+ * "<tab>\n<unix-seconds>") at zle-line-init and remove it at zle-line-finish.
+ * Files older than 60 s are ignored to handle unclean exits.
+ */
+export function isUserTypingInTab(tab: string): boolean {
+  try {
+    const files = (fs.readdirSync("/tmp") as string[]).filter((f) => f.startsWith("cockpit-typing-"));
+    const now = Math.floor(Date.now() / 1000);
+    for (const file of files) {
+      try {
+        const lines = fs.readFileSync(`/tmp/${file}`, "utf8").trim().split("\n");
+        const tabName = lines[0]?.trim() ?? "";
+        const ts = parseInt(lines[1]?.trim() ?? "0", 10);
+        if (tabName.toLowerCase() === tab.toLowerCase() && now - ts < 60) return true;
+      } catch { /* file deleted between readdir and readFile */ }
+    }
+  } catch { /* /tmp unavailable */ }
+  return false;
 }
 
 export function injectIntoTab(tab: string, prompt: string): void {

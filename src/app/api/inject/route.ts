@@ -153,6 +153,16 @@ export async function POST(req: NextRequest) {
       }
     : null;
 
+  // If the user is actively at the ZSH prompt in this tab, skip injection to
+  // avoid garbling whatever they're typing.  Requires the cockpit-typing hooks
+  // in ~/.zshrc (see scripts/install-cockpit-hooks.sh).
+  if (isRuntimeAvailable()) {
+    const { isUserTypingInTab } = await import("@/lib/zellij");
+    if (isUserTypingInTab(effectiveTab)) {
+      return NextResponse.json({ ok: true, blocked: true, reason: "user-typing", tab: effectiveTab });
+    }
+  }
+
   const result = await executeInject(
     { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, projectId, projectKey: canonical },
     userId,
