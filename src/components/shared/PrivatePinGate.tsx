@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { usePrivateZone } from "@/hooks/use-private-zone";
+import { postJson } from "@/lib/api/fetch";
 
 export function PrivatePinGate({ children }: { children: React.ReactNode }) {
   const { unlocked, checking, unlock } = usePrivateZone();
@@ -25,11 +26,7 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/pin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin }),
-      });
+      const res = await postJson("/api/auth/pin", { pin });
       const data = await res.json() as { ok: boolean; error?: string; unconfigured?: boolean };
       if (data.ok) {
         unlock();
