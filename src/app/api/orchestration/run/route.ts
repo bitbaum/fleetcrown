@@ -70,10 +70,11 @@ export async function POST(req: NextRequest) {
     ? resolveEffectiveTab(request.projectKey, activeTabs)
     : request.projectKey;
 
-  // For interactive agents in a live tab: prioritize the prompt queue for next_best intent.
+  // For tab-injected adapters: prioritize the prompt queue for next_best intent.
+  // openclaw uses a worker process, not tab injection, so it does not participate in the queue.
   // This matches the stop-hook behavior and prevents AI-generated plans from superseding
   // user-defined queue items during auto-fire or manual 'Next best' clicks.
-  if (["claude", "codex", "gemini"].includes(request.adapter) && request.intent === "next_best") {
+  if (request.adapter !== "openclaw" && request.intent === "next_best") {
     const queueFile = stateFile.queue(effectiveKey);
     try {
       if (fs.existsSync(queueFile)) {

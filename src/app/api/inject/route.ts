@@ -4,7 +4,7 @@ import {
   parseProjectsConf,
 } from "@/lib/agent-config";
 import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
-import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { AgentOption } from "@/lib/agent-registry";
 import { getCurrentUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
@@ -18,7 +18,7 @@ const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
   promptKey:    z.string().optional(),
   customPrompt: z.string().max(4000).optional(),
-  adapter:      z.enum(["codex", "claude", "openclaw", "gemini"]).optional(),
+  adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
 }).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
 
 export async function POST(req: NextRequest) {
