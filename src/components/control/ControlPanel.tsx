@@ -195,6 +195,7 @@ export function ControlPanel() {
       try { await runCustomPrompt(projectState, prompt, ag); }
       catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
     },
+    onDeleted: () => { refresh(true); },
   });
 
   const collapseTab = (tab: string) =>

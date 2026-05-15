@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
-import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote } from "lucide-react";
+import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
-import { patchJson } from "@/lib/api/fetch";
+import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
@@ -286,6 +286,57 @@ function DevLogSection({ entries }: { entries: DevLogEntry[] }) {
   );
 }
 
+function RemoveSection({ projectId, onRemoved }: { projectId: string; onRemoved: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    setError(null);
+    try {
+      const res = await deleteJson(`/api/user-projects/${projectId}`);
+      if (!res.ok) await throwApiError(res, "Failed to remove");
+      onRemoved();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove");
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-border-subtle px-4 py-3 sm:px-5">
+      {confirming ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-text-tertiary">Remove from control panel?</span>
+          <button
+            onClick={handleRemove}
+            disabled={removing}
+            className="text-status-negative transition-colors hover:opacity-80 disabled:opacity-50"
+          >
+            {removing ? <Loader2 className="ui-spinner-xs" /> : "Remove"}
+          </button>
+          <button
+            onClick={() => { setConfirming(false); setError(null); }}
+            className="text-text-muted transition-colors hover:text-text-secondary"
+          >
+            Cancel
+          </button>
+          {error && <p className="ui-error-xs w-full">{error}</p>}
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          className="flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-status-negative"
+        >
+          <Trash2 className="h-3 w-3" />
+          Remove from control panel
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function ProjectProfile({
   project,
   globalAdapter,
@@ -293,6 +344,7 @@ export function ProjectProfile({
   availableAgents,
   onSetAgent,
   onRunPrompt,
+  onDeleted,
 }: {
   project: ProjectState;
   globalAdapter: string;
@@ -300,6 +352,7 @@ export function ProjectProfile({
   availableAgents: AgentEntry[];
   onSetAgent: (agent: AgentId | null) => void;
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
+  onDeleted?: () => void;
 }) {
   const [sending, setSending] = useState(false);
   const activeAgent = localAgent ?? (project.agentPref as AgentId | null) ?? (globalAdapter as AgentId);
@@ -403,6 +456,10 @@ export function ProjectProfile({
 
       {/* Dev log — appended automatically when beacon sessions end */}
       {project.id && <DevLogSection entries={devLogEntries} />}
+
+      {project.id && onDeleted && (
+        <RemoveSection projectId={project.id} onRemoved={onDeleted} />
+      )}
     </div>
   );
 }
