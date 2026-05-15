@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { count } from "drizzle-orm";
 import { hashPassword } from "@/lib/password";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { getUserCount, createInitialUser } from "@/db/queries/users";
 
 const SetupBody = z.object({
   name:     z.string().trim().min(2, "Name must be at least 2 characters."),
@@ -12,8 +10,7 @@ const SetupBody = z.object({
 
 export async function POST(req: NextRequest) {
   // Only allowed when no users exist — prevents takeover after setup
-  const [{ value }] = await db.select({ value: count() }).from(users);
-  if (value > 0) {
+  if ((await getUserCount()) > 0) {
     return NextResponse.json({ error: "Setup already complete." }, { status: 409 });
   }
 
@@ -22,22 +19,13 @@ export async function POST(req: NextRequest) {
   const { name, password } = dataOrResp;
 
   const passwordHash = await hashPassword(password);
-
-  const [user] = await db
-    .insert(users)
-    .values({
-      name,
-      passwordHash,
-      isDefault: true,
-      onboardedAt: new Date(),
-    })
-    .returning({ id: users.id });
+  const user = await createInitialUser({ name, passwordHash });
 
   return NextResponse.json({ ok: true, userId: user.id });
 }
 
 // HEAD — lets middleware quickly check whether setup is needed
 export async function GET() {
-  const [{ value }] = await db.select({ value: count() }).from(users);
-  return NextResponse.json({ setupDone: value > 0 });
+  const setupDone = (await getUserCount()) > 0;
+  return NextResponse.json({ setupDone });
 }

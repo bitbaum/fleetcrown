@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { getCurrentUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { getUserById, getUserByUsername, updateUser } from "@/db/queries/users";
 
 const PatchBody = z.object({
   username: z.preprocess(
@@ -17,7 +15,7 @@ const PatchBody = z.object({
 
 export async function GET() {
   const userId = await getCurrentUserId();
-  const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  const user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(user);
 }
@@ -28,24 +26,18 @@ export async function PATCH(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { username, name, onboardedAt } = dataOrResp;
 
-  // Check username uniqueness
   if (username) {
-    const existing = await db.query.users.findFirst({ where: eq(users.username, username) });
+    const existing = await getUserByUsername(username);
     if (existing && existing.id !== userId) {
       return NextResponse.json({ error: "Username already taken" }, { status: 409 });
     }
   }
 
-  const [updated] = await db
-    .update(users)
-    .set({
-      ...(username !== undefined && { username }),
-      ...(name !== undefined && { name }),
-      ...(onboardedAt !== undefined && { onboardedAt: new Date(onboardedAt) }),
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning();
+  const updated = await updateUser(userId, {
+    username,
+    name,
+    onboardedAt: onboardedAt ? new Date(onboardedAt) : undefined,
+  });
 
   return NextResponse.json(updated);
 }
