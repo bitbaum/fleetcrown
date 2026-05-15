@@ -8,9 +8,9 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 export const config = {
-  // Exclude public routes and Next.js internals from the auth middleware.
-  // sign-in/sign-out/beacon/thoughts/invite/whitepaper are public — no auth required.
+  // Protect only app routes. Root "/" and all listed prefixes are public.
+  // Use (.+) instead of (.*) so the root "/" (zero chars after slash) is never caught.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-out|beacon|thoughts|invite|whitepaper).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-out|beacon|thoughts|invite|whitepaper|setup|u/).+)",
   ],
 };

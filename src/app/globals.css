@@ -359,6 +359,12 @@
   .ui-public-footer {
     @apply mt-16 text-xs tracking-[0.04em] text-white/[0.18];
   }
+  .ui-public-pricing-card {
+    @apply rounded-2xl border border-white/[0.07] bg-white/[0.03] p-7 text-left;
+  }
+  .ui-public-pricing-card-highlighted {
+    @apply border-white/[0.18] bg-white/[0.06];
+  }
   .ui-auth-label {
     @apply block text-sm font-medium text-white/[0.55];
   }
