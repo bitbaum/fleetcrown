@@ -87,7 +87,7 @@ export function HabitRow({
       <button
         onClick={handleToggle}
         disabled={toggling}
-        className="shrink-0 p-1 flex items-center justify-center disabled:opacity-50 rounded"
+        className="shrink-0 h-11 w-11 flex items-center justify-center disabled:opacity-50 rounded"
         title={habit.doneToday ? "Mark undone" : "Mark done"}
       >
         {toggling ? (
