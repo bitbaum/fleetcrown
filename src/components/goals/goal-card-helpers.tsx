@@ -317,7 +317,7 @@ export function MilestoneRow({
           <button
             onClick={deleteMilestone}
             disabled={deleting}
-            className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1 rounded hover:text-status-negative text-text-muted disabled:opacity-50"
+            className="sm:opacity-0 sm:group-hover:opacity-100 inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center transition-opacity shrink-0 p-1 rounded hover:text-status-negative text-text-muted disabled:opacity-50"
             title="Remove milestone"
           >
             {deleting ? <Loader2 className="h-3 w-3" /> : <X className="h-3 w-3" />}

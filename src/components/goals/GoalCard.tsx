@@ -176,7 +176,7 @@ export function GoalCard({
                   onClick={toggleAbandon}
                   disabled={abandoningStatus || isCompleted}
                   title={isAbandoned ? "Restore goal" : "Mark abandoned"}
-                  className={`ui-hover-reveal p-1 rounded transition-all shrink-0 disabled:opacity-30 ${
+                  className={`ui-hover-reveal inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1 rounded transition-all shrink-0 disabled:opacity-30 ${
                     isAbandoned
                       ? "text-text-muted hover:text-text-secondary opacity-100"
                       : "text-text-muted hover:text-status-warning"
