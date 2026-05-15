@@ -7,6 +7,7 @@ import { getGoalsByHabitIds } from "@/db/queries/habit-goals";
 import { getCurrentUserId } from "@/lib/session";
 import { HabitCard } from "@/components/habits/HabitCard";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
+import { NewHabitButton } from "@/components/habits/NewHabitButton";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 
 export const metadata = { title: "Habits" };
@@ -31,6 +32,7 @@ export default async function HabitsPage() {
     <PageLayout
       title="Habits"
       subtitle={`${HABIT_HISTORY_DAYS}-day history — consistency compounds`}
+      right={<NewHabitButton />}
     >
       {/* Summary stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
