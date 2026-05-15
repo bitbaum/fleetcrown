@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
-import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote, Trash2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
@@ -469,10 +470,19 @@ export function ProjectProfile({
       {project.profile ? (
         <MetaSection profile={project.profile} />
       ) : (
-        <div className="px-4 py-6 text-center sm:px-5">
+        <div className="flex flex-col items-center gap-3 px-4 py-6 text-center sm:px-5">
           <p className="text-sm text-text-secondary">
-            No profile — add metadata in the Projects view to enable full awareness.
+            No profile yet — add mission, stack, and URL so agents have full context.
           </p>
+          {project.projectId && (
+            <Link
+              href={`/projects?open=${project.projectId}`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity"
+            >
+              Set up profile in Projects
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
         </div>
       )}
 
