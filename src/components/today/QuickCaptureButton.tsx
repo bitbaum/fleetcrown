@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, X, Check, Loader2, Trash2 } from "lucide-react";
-import { getJson, postJson } from "@/lib/api/fetch";
+import { getJson, postJson, deleteJson } from "@/lib/api/fetch";
 import type { Capture } from "@/db/schema";
 
 type CaptureItem = Pick<Capture, "id" | "body" | "createdAt">;
@@ -56,7 +56,7 @@ export function QuickCaptureButton() {
   };
 
   const remove = async (id: string) => {
-    const res = await fetch(`/api/captures/${id}`, { method: "DELETE" });
+    const res = await deleteJson(`/api/captures/${id}`);
     if (res.ok) setRecent((prev) => prev.filter((c) => c.id !== id));
   };
 

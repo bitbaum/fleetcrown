@@ -1,15 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { getJson, putJson } from "@/lib/api/fetch";
 import { queueKey } from "@/lib/control-storage";
 import { useLocalStorageState } from "./use-local-storage-state";
 
 function syncQueueToFile(tab: string, queue: string[]): void {
-  fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ queue }),
-  }).catch(() => {/* best-effort */});
+  putJson(`/api/beacon/queue/${encodeURIComponent(tab)}`, { queue }).catch(() => {/* best-effort */});
 }
 
 type QueueFileResult = { queue: string[]; exists: boolean };
@@ -45,9 +42,7 @@ export function usePromptQueue(tab: string) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`);
-        if (!res.ok) return;
-        const { queue: fileQueue, exists } = await res.json() as QueueFileResult;
+        const { queue: fileQueue, exists } = await getJson<QueueFileResult>(`/api/beacon/queue/${encodeURIComponent(tab)}`);
         if (exists) {
           // File exists — treat it as authoritative (may have PyQt-written items).
           setQueue((current) => {
@@ -75,9 +70,7 @@ export function usePromptQueue(tab: string) {
     const t = setInterval(async () => {
       if (Date.now() - lastWriteRef.current < 2000) return;
       try {
-        const res = await fetch(`/api/beacon/queue/${encodeURIComponent(tab)}`);
-        if (!res.ok) return;
-        const { queue: fileQueue, exists } = await res.json() as QueueFileResult;
+        const { queue: fileQueue, exists } = await getJson<QueueFileResult>(`/api/beacon/queue/${encodeURIComponent(tab)}`);
         if (!exists) return; // file absent — don't overwrite localStorage with empty array
         setQueue((current) => {
           if (JSON.stringify(fileQueue) === JSON.stringify(current)) return current;

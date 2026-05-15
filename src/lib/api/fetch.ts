@@ -21,6 +21,10 @@ export function postJson(url: string, body: unknown) {
   return fetch(url, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) });
 }
 
+export function putJson(url: string, body: unknown) {
+  return fetch(url, { method: "PUT", headers: JSON_HEADERS, body: JSON.stringify(body) });
+}
+
 export function patchJson(url: string, body: unknown) {
   return fetch(url, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify(body) });
 }

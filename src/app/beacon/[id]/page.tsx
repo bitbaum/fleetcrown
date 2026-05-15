@@ -12,6 +12,7 @@ import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { PromptInput, QueueList } from "@/components/control/project-composer";
 import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary";
 import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
+import { getJson, patchJson } from "@/lib/api/fetch";
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
@@ -174,11 +175,7 @@ function BeaconBody({
       label = matched ? `${matched.icon} ${matched.label}` : choice;
     }
     onSubmitted(label);
-    await fetch(`/api/beacon/${session.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ choice }),
-    }).catch(() => {});
+    await patchJson(`/api/beacon/${session.id}`, { choice }).catch(() => {});
     setTimeout(() => window.close(), 400);
   }, [session.id, onSubmitted]);
 
@@ -391,8 +388,8 @@ export default function BeaconPage() {
   const [submittedLabel, setSubmittedLabel] = useState("");
 
   useEffect(() => {
-    fetch(`/api/beacon/${id}`).then((r) => r.json()).then(setSession).catch(() => {});
-    fetch("/api/prompts/agent").then((r) => r.json()).then(setPrompts).catch(() => {});
+    getJson<BeaconSession>(`/api/beacon/${id}`).then(setSession).catch(() => {});
+    getJson<typeof prompts>("/api/prompts/agent").then(setPrompts).catch(() => {});
   }, [id]);
 
   // Close automatically if the Control panel injected a prompt and cancelled this session.
@@ -402,8 +399,7 @@ export default function BeaconPage() {
     if (submitted) return;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/beacon/${id}`);
-        const data = (await res.json()) as BeaconSession;
+        const data = await getJson<BeaconSession>(`/api/beacon/${id}`);
         if (data.choice !== null) window.close();
       } catch { /* network error — ignore */ }
     }, 500);
