@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { upsertProjectState } from "@/db/queries/project-states";
-
-async function resolveUserId(req: NextRequest): Promise<string | null> {
-  const token = process.env.COCKPIT_DAEMON_TOKEN;
-  if (token && (req.headers.get("authorization") ?? "") === `Bearer ${token}`) {
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.isDefault, true)).limit(1);
-    return user?.id ?? null;
-  }
-  return null;
-}
+import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
 
 interface ProjectRuntimePatch {
   tab: string;
@@ -34,7 +23,8 @@ function tsOrNull(epochS: number | null | undefined): Date | null {
 // Daemon-only: accepts Bearer COCKPIT_DAEMON_TOKEN.
 // Pushes local agent runtime state into the DB so the cloud control plane can read it.
 export async function POST(req: NextRequest) {
-  const userId = await resolveUserId(req);
+  if (!isDaemonRequest(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getDaemonUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: { projects?: unknown };

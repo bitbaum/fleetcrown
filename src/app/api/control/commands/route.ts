@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/db";
-import { users } from "@/db/schema";
 import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
+import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
 
 async function resolveUserId(req: NextRequest): Promise<string | null> {
-  // Machine-to-machine: daemon bearer token → look up default user in DB.
-  const token = process.env.COCKPIT_DAEMON_TOKEN;
-  if (token && (req.headers.get("authorization") ?? "") === `Bearer ${token}`) {
-    const [user] = await db.select({ id: users.id }).from(users).where(eq(users.isDefault, true)).limit(1);
-    return user?.id ?? null;
-  }
-
+  if (isDaemonRequest(req)) return getDaemonUserId();
   // Browser session: require an authenticated user (no DEFAULT_USER_ID fallback here).
   const session = await auth();
   return session?.user?.id ?? null;
