@@ -100,7 +100,7 @@ export function useControlData(): ControlDataHook {
     setData((prev) => {
       if (!prev) return prev;
       const updated = prev.projects.map((p) => {
-        const patch = patches.find((pp) => pp.tab === p.tab);
+        const patch = patches.find((pp) => pp.tab === p.liveTab || pp.tab === p.tab);
         if (!patch) return p;
         return {
           ...p,
