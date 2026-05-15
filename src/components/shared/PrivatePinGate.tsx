@@ -54,8 +54,6 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
           <input
             ref={inputRef}
             type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
             placeholder="PIN"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
