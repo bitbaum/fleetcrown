@@ -26,9 +26,11 @@ export function HabitGoalLinks({
     setSaving(goal.id);
     setPicking(false);
     try {
-      await postJson(`/api/habits/${habitId}/goals`, { goalId: goal.id });
-      setItems((prev) => [...prev, goal]);
-      router.refresh();
+      const res = await postJson(`/api/habits/${habitId}/goals`, { goalId: goal.id });
+      if (res.ok) {
+        setItems((prev) => [...prev, goal]);
+        router.refresh();
+      }
     } finally {
       setSaving(null);
     }
@@ -37,9 +39,11 @@ export function HabitGoalLinks({
   const handleUnlink = async (goalId: string) => {
     setSaving(goalId);
     try {
-      await deleteJson(`/api/habits/${habitId}/goals`, { goalId });
-      setItems((prev) => prev.filter((g) => g.id !== goalId));
-      router.refresh();
+      const res = await deleteJson(`/api/habits/${habitId}/goals`, { goalId });
+      if (res.ok) {
+        setItems((prev) => prev.filter((g) => g.id !== goalId));
+        router.refresh();
+      }
     } finally {
       setSaving(null);
     }

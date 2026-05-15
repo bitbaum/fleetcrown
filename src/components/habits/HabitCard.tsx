@@ -42,7 +42,8 @@ export function HabitCard({
     const trimmed = titleEdit.draft.trim();
     if (!trimmed || trimmed === displayTitle) { titleEdit.cancel(); return; }
     titleEdit.commit(async () => {
-      await patchJson(`/api/habits/${habit.id}`, { title: trimmed });
+      const res = await patchJson(`/api/habits/${habit.id}`, { title: trimmed });
+      if (!res.ok) throw new Error("Failed to save");
       setDisplayTitle(trimmed);
     });
   };
@@ -50,9 +51,13 @@ export function HabitCard({
   const handleFrequencyChange = async (next: HabitFrequency) => {
     if (next === frequency || savingFreq) return;
     setSavingFreq(true);
+    const prev = frequency;
     setFrequency(next);
     try {
-      await patchJson(`/api/habits/${habit.id}`, { frequency: next });
+      const res = await patchJson(`/api/habits/${habit.id}`, { frequency: next });
+      if (!res.ok) throw new Error("Failed");
+    } catch {
+      setFrequency(prev);
     } finally {
       setSavingFreq(false);
     }
@@ -64,7 +69,8 @@ export function HabitCard({
     const next = !active;
     setActive(next);
     try {
-      await patchJson(`/api/habits/${habit.id}`, { active: next });
+      const res = await patchJson(`/api/habits/${habit.id}`, { active: next });
+      if (!res.ok) throw new Error("Failed");
     } catch {
       setActive(!next);
     } finally {
@@ -78,7 +84,8 @@ export function HabitCard({
     const next = !doneToday;
     setDoneToday(next);
     try {
-      await patchJson(`/api/habits/${habit.id}`, { done: next });
+      const res = await patchJson(`/api/habits/${habit.id}`, { done: next });
+      if (!res.ok) throw new Error("Failed");
     } catch {
       setDoneToday(!next);
     } finally {
@@ -90,7 +97,8 @@ export function HabitCard({
     if (deleting) return;
     setDeleting(true);
     try {
-      await deleteJson(`/api/habits/${habit.id}`);
+      const res = await deleteJson(`/api/habits/${habit.id}`);
+      if (!res.ok) throw new Error("Failed");
       router.refresh();
     } catch {
       setDeleting(false);
