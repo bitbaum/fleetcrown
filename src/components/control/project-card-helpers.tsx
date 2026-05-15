@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
 import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
-import { readyAtKey } from "@/lib/control-storage";
+import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
@@ -175,13 +175,19 @@ export function ReadyBanner({
   useEffect(() => {
     if (paused || !autoContinueEnabled) return;
     if (seconds <= 0) {
+      // Cross-window guard: don't fire if the beacon popup is mid-composition.
+      // The popup writes to localStorage when isComposing is true, which survives
+      // the window boundary — this panel reads it synchronously before injecting.
+      try {
+        if (tab && localStorage.getItem(beaconComposingKey(tab))) return;
+      } catch {}
       if (onAutoInjectRef.current) onAutoInjectRef.current();
       else onSendRef.current(primaryKey);
       return;
     }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [seconds, paused, autoContinueEnabled, primaryKey]);
+  }, [seconds, paused, autoContinueEnabled, primaryKey, tab]);
 
   const timerLabel = !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
 

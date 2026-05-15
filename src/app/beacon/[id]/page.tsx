@@ -15,7 +15,7 @@ import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/componen
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
-import { readyAtKey } from "@/lib/control-storage";
+import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import { getAdapterLabel } from "@/config/control-intents";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
@@ -98,6 +98,23 @@ function BeaconBody({
   // Mic states (listening + processing) are explicitly included so the countdown never fires while
   // the user is speaking — the transcript isn't in the textarea yet and isComposing would be false.
   const isComposing = custom.trim().length > 0 || inputFocused || listening || processing;
+
+  // Cross-window guard: signal the control panel (different browser window) that the
+  // user is composing here, so its ReadyBanner doesn't auto-inject while we're mid-sentence.
+  // Uses a dedicated localStorage key so it doesn't touch the auto-continue toggle state.
+  useEffect(() => {
+    try {
+      if (isComposing) {
+        localStorage.setItem(beaconComposingKey(session.project), "1");
+      } else {
+        localStorage.removeItem(beaconComposingKey(session.project));
+      }
+    } catch {}
+    return () => {
+      try { localStorage.removeItem(beaconComposingKey(session.project)); } catch {}
+    };
+  }, [isComposing, session.project]);
+
   useEffect(() => {
     if (!autoContinueEnabled || isComposing || countdown <= 0 || prompts.length === 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);

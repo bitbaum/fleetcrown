@@ -88,11 +88,16 @@ export function useWhisperMic(onResult: (text: string) => void) {
 
     setError("");
     chunksRef.current = [];
+    // Mark listening immediately — before the async permission request — so any
+    // countdown effects see isComposing=true right away, even while the browser
+    // is showing the mic-permission dialog (which can take arbitrarily long).
+    setListening(true);
 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
+      setListening(false);
       const name = err instanceof Error ? (err as DOMException).name : "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError") {
         setError("Mic blocked — allow microphone in Chrome settings for localhost");
@@ -157,7 +162,6 @@ export function useWhisperMic(onResult: (text: string) => void) {
     };
 
     recorder.start(100);
-    setListening(true);
     setRecordingSeconds(0);
     timerRef.current = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
 
