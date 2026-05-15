@@ -213,7 +213,7 @@ export function ReadyBanner({
               onClick={onToggleAutoContinue}
               title={autoContinueEnabled && !paused ? "Pause auto-continue" : "Resume auto-continue"}
               className={cn(
-                "rounded p-0.5 transition-colors",
+                "inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded p-0.5 transition-colors",
                 paused || !autoContinueEnabled
                   ? "text-accent-text hover:bg-surface-overlay"
                   : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
@@ -224,7 +224,7 @@ export function ReadyBanner({
                 : <Play className="h-3.5 w-3.5" />}
             </button>
           )}
-          <button onClick={onDismiss} className="text-sm text-text-secondary transition-colors hover:text-text-primary">
+          <button onClick={onDismiss} className="inline-flex min-h-11 sm:min-h-0 items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary">
             dismiss
           </button>
         </div>

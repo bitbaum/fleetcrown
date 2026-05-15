@@ -590,13 +590,13 @@
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
-    @apply rounded-lg bg-accent-primary px-3 py-2 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
+    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg bg-accent-primary px-3 py-2 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
   }
   .ui-btn-ready-action {
-    @apply rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
   }
   .ui-btn-ready-more {
-    @apply rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
+    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-md border border-border-subtle bg-surface-overlay px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
   }
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
