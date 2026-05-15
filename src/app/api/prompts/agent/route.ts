@@ -15,7 +15,7 @@ export type AgentPrompt = {
 
 export async function GET() {
   try {
-    const raw = readFileSync(PROMPTS_FILE, "utf-8");
+    const raw = readFileSync(PROMPTS_FILE(), "utf-8");
     const prompts: AgentPrompt[] = JSON.parse(raw);
     return NextResponse.json(prompts);
   } catch {

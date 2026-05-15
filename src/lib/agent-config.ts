@@ -19,14 +19,19 @@
 import fs from "fs";
 import path from "path";
 
-const CLAUDE_HOME = process.env.HOME ?? "/home/g";
-const PROJECTS_CONF = process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "agent-projects.conf");
-const CLAUDE_PROJECTS_CONF = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-projects.conf");
+// Lazy accessors — evaluated at request time, not module load time.
+// Module-level path.join(process.env.HOME, …) causes Turbopack's NFT tracer
+// to walk from HOME (the parent of the project root) and accidentally include
+// next.config.ts in the route bundle.
+const home = () => process.env.HOME ?? "/home/g";
 
-export const PROMPTS_FILE  = process.env.AGENT_PROMPTS_FILE ?? path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "agent-prompts.json");
-const CLAUDE_PROMPTS_FILE  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".config", "claude-prompts.json");
+const PROJECTS_CONF = () => process.env.AGENT_PROJECTS_CONF ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-projects.conf");
+const CLAUDE_PROJECTS_CONF = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-projects.conf");
 
-export const SESSIONS_DIR  = path.join(/*turbopackIgnore: true*/ CLAUDE_HOME, ".claude", "sessions");
+export const PROMPTS_FILE = () => process.env.AGENT_PROMPTS_FILE ?? path.join(/*turbopackIgnore: true*/ home(), ".config", "agent-prompts.json");
+const CLAUDE_PROMPTS_FILE = () => path.join(/*turbopackIgnore: true*/ home(), ".config", "claude-prompts.json");
+
+export const SESSIONS_DIR = () => path.join(/*turbopackIgnore: true*/ home(), ".claude", "sessions");
 
 // ── State file helpers ────────────────────────────────────────────────────────
 // Single place where the /tmp/<name>-<tab> file names are defined for TypeScript.
@@ -75,9 +80,9 @@ type PromptConfig = PromptMeta & { prompt: string };
  * Deduplicates by tab name (case-insensitive, first occurrence wins).
  */
 export function parseProjectsConf(): { tab: string; dir: string }[] {
-  let file = PROJECTS_CONF;
+  let file = PROJECTS_CONF();
   if (!fs.existsSync(file)) {
-    file = CLAUDE_PROJECTS_CONF;
+    file = CLAUDE_PROJECTS_CONF();
   }
   if (!fs.existsSync(file)) return [];
   const seen = new Set<string>();
@@ -137,9 +142,9 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
  */
 function readPromptConfig(): PromptConfig[] {
   try {
-    let file = PROMPTS_FILE;
+    let file = PROMPTS_FILE();
     if (!fs.existsSync(file)) {
-      file = CLAUDE_PROMPTS_FILE;
+      file = CLAUDE_PROMPTS_FILE();
     }
     return JSON.parse(fs.readFileSync(file, "utf-8")) as PromptConfig[];
   } catch {
@@ -163,7 +168,7 @@ export function readPrompts(): Record<string, string> {
  * If not, asks Claude to create it with the standard fields.
  */
 export function buildPromptWithSession(base: string, tab: string): string {
-  const sessionFile = path.join(SESSIONS_DIR, `${tab}.md`);
+  const sessionFile = path.join(SESSIONS_DIR(), `${tab}.md`);
   const sessionUpdateBlock = [
     `When done, update ${sessionFile} with exactly these lines:`,
     "done: <one sentence what you completed>",

@@ -6,7 +6,7 @@ import { parseSessionFile } from "@/lib/session-content";
 import type { CurrentPrompt, SessionState } from "@/lib/control-types";
 
 export function parseSession(tab: string): SessionState | null {
-  const file = path.join(SESSIONS_DIR, `${tab}.md`);
+  const file = path.join(SESSIONS_DIR(), `${tab}.md`);
   if (!fs.existsSync(file)) return null;
   try {
     const raw = fs.readFileSync(file, "utf-8");

@@ -18,17 +18,18 @@ export type SessionData = {
 
 /** Find a session file matching the project name (case-insensitive, dash-tolerant). */
 function findSessionFile(projectName: string): string | null {
-  if (!fs.existsSync(SESSIONS_DIR)) return null;
+  const sessionsDir = SESSIONS_DIR();
+  if (!fs.existsSync(sessionsDir)) return null;
 
   const normalize = (s: string) => s.toLowerCase().replace(/[-_\s]/g, "");
   const target = normalize(projectName);
 
   try {
-    const files = fs.readdirSync(SESSIONS_DIR);
+    const files = fs.readdirSync(sessionsDir);
     for (const file of files) {
       if (!file.endsWith(".md")) continue;
       const stem = path.basename(file, ".md");
-      if (normalize(stem) === target) return path.join(SESSIONS_DIR, file);
+      if (normalize(stem) === target) return path.join(sessionsDir, file);
     }
   } catch {
     return null;
