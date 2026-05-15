@@ -31,7 +31,7 @@ export function DevLogList({ entries }: { entries: DevLogEntry[] }) {
             )}
             {(entry.tests || entry.todos) && (
               <p className="text-xs text-text-muted">
-                {[entry.tests, entry.todos ? `${entry.todos} TODOs` : ""].filter(Boolean).join(" · ")}
+                {[entry.tests, entry.todos ? `${String(entry.todos).replace(/\s*TODOs?\s*$/i, "").trim()} TODOs` : ""].filter(Boolean).join(" · ")}
               </p>
             )}
           </div>
