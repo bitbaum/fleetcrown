@@ -29,6 +29,11 @@ function filterByProject(goals: GoalWithChildren[], project: string): GoalWithCh
   return goals.filter((g) => g.entityName === project);
 }
 
+/** Count all goals recursively (root + all sub-goals) */
+function countGoals(goals: GoalWithChildren[]): number {
+  return goals.reduce((sum, g) => sum + 1 + countGoals(g.children), 0);
+}
+
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
 
 export function GoalsGrid({
@@ -54,8 +59,8 @@ export function GoalsGrid({
   const byProject = projectFilter ? filterByProject(activeGoals, projectFilter) : activeGoals;
   const filteredActive = filterTree(byProject, q);
   const filteredCompleted = filterTree(completedGoals, q);
-  const totalActive = activeGoals.length;
-  const matchCount = filteredActive.length;
+  const totalActive = countGoals(activeGoals);
+  const matchCount = countGoals(filteredActive);
   const isFiltered = !!q || !!projectFilter;
 
   return (
