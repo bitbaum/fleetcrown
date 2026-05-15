@@ -102,6 +102,7 @@ export async function GET(
       title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)}`,
       body: run.summary?.next || run.summary?.done || run.payload?.resultText || run.payload?.error || "",
       state: run.state,
+      health: run.summary?.health,
     })),
   ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 50);
 

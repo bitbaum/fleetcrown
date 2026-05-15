@@ -53,6 +53,7 @@ export type ProjectActivityEvent =
       title: string;
       body: string;
       state: string;
+      health?: string;
     };
 
 export type ProjectRuntimeState = {

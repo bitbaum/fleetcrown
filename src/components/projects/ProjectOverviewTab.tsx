@@ -13,6 +13,7 @@ import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { APP_LOCALE } from "@/lib/constants";
+import { HEALTH_TAG_STYLE } from "@/config/ui";
 import type { LucideProps } from "lucide-react";
 
 type IssueConfig = {
@@ -287,20 +288,29 @@ function ProjectHistorySection({ events }: { events: ProjectData["activity"] }) 
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          {events.map((event) => (
-            <div key={event.id} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2">
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-medium text-text-secondary">{event.title}</span>
-                {"state" in event && <span className="ui-tag ui-tag-neutral">{event.state}</span>}
-                <span className="ml-auto text-text-muted">{new Date(event.occurredAt).toLocaleString(APP_LOCALE)}</span>
+          {events.map((event) => {
+            const healthLabel = event.kind === "orchestrated_run" ? event.health : undefined;
+            const healthCls = healthLabel ? HEALTH_TAG_STYLE[healthLabel.toLowerCase()] : undefined;
+            return (
+              <div key={event.id} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2">
+                <div className="flex items-center gap-2 text-xs flex-wrap">
+                  <span className="font-medium text-text-secondary">{event.title}</span>
+                  {"state" in event && event.state !== "done" && (
+                    <span className="ui-tag ui-tag-neutral">{event.state}</span>
+                  )}
+                  {healthCls && healthLabel && (
+                    <span className={healthCls}>{healthLabel}</span>
+                  )}
+                  <span className="ml-auto text-text-muted shrink-0">{new Date(event.occurredAt).toLocaleString(APP_LOCALE)}</span>
+                </div>
+                {event.body && (
+                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={event.body}>
+                    {event.body}
+                  </p>
+                )}
               </div>
-              {event.body && (
-                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-text-tertiary" title={event.body}>
-                  {event.body}
-                </p>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
