@@ -55,28 +55,6 @@ export function InteractionsSection({
 
   return (
     <Section title="Recent Activity">
-      {list.length === 0 && !logging && (
-        <EmptyState>No interactions recorded</EmptyState>
-      )}
-      {list.map((ix, i) => (
-        <div key={i} className="ui-list-row space-y-0.5">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
-                {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
-              </span>
-              <span className="text-text-secondary">{ix.channel}</span>
-            </div>
-            <span className="shrink-0 text-xs text-text-tertiary">
-              {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
-            </span>
-          </div>
-          {ix.summary && (
-            <p className="text-xs text-text-tertiary leading-relaxed">{ix.summary}</p>
-          )}
-        </div>
-      ))}
-
       {logging ? (
         <div className="mt-2 space-y-2 border-t border-border-subtle pt-3">
           <div className="flex gap-2">
@@ -132,6 +110,28 @@ export function InteractionsSection({
           <Plus className="h-3.5 w-3.5" /> Log interaction
         </button>
       )}
+
+      {list.length === 0 && !logging && (
+        <EmptyState>No interactions recorded</EmptyState>
+      )}
+      {list.map((ix, i) => (
+        <div key={i} className="ui-list-row space-y-0.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${ix.direction === INTERACTION_DIRECTION.INBOUND ? "text-text-tertiary" : "text-status-positive/60"}`}>
+                {ix.direction === INTERACTION_DIRECTION.INBOUND ? "←" : "→"}
+              </span>
+              <span className="text-text-secondary">{ix.channel}</span>
+            </div>
+            <span className="shrink-0 text-xs text-text-tertiary">
+              {new Date(ix.occurredAt).toLocaleDateString(APP_LOCALE)}
+            </span>
+          </div>
+          {ix.summary && (
+            <p className="text-xs text-text-tertiary leading-relaxed">{ix.summary}</p>
+          )}
+        </div>
+      ))}
     </Section>
   );
 }

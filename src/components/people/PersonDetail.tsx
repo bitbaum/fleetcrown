@@ -201,6 +201,15 @@ export function PersonDetail({
             </button>
           )}
 
+          <InteractionsSection
+            personId={data.id}
+            interactions={interactions}
+            onAdd={(ix) => {
+              setInteractions((prev) => [ix, ...prev]);
+              onInteractionLogged?.(personId, new Date(ix.occurredAt));
+            }}
+          />
+
           <ChannelsSection personId={data.id} attrs={attrs} onUpdate={setAttrs} />
           <DetailAttrs personId={data.id} attrs={attrs} onUpdate={setAttrs} />
 
@@ -215,15 +224,6 @@ export function PersonDetail({
               </div>
             </Section>
           )}
-
-          <InteractionsSection
-            personId={data.id}
-            interactions={interactions}
-            onAdd={(ix) => {
-              setInteractions((prev) => [ix, ...prev]);
-              onInteractionLogged?.(personId, new Date(ix.occurredAt));
-            }}
-          />
 
           {data.relations.length > 0 && (
             <Section title="Connections">
