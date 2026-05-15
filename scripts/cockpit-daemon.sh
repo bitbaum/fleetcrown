@@ -58,11 +58,40 @@ mark_done() {
     "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
 }
 
+# Returns 0 if user is actively typing in the given tab (marker file exists and is <60s old).
+_is_user_typing_in_tab() {
+  local tab="$1" now
+  now=$(date +%s)
+  for f in /tmp/cockpit-typing-*; do
+    [ -f "$f" ] || continue
+    local ftab fts
+    ftab=$(sed -n '1p' "$f" 2>/dev/null | xargs 2>/dev/null)
+    fts=$(sed -n '2p' "$f" 2>/dev/null | xargs 2>/dev/null)
+    [ "${ftab,,}" = "${tab,,}" ] || continue
+    [[ "$fts" =~ ^[0-9]+$ ]] || continue
+    (( now - fts < 60 )) && return 0
+  done
+  return 1
+}
+
 execute_inject() {
   local id="$1" tab="$2" prompt="$3"
   if [ "$DRY_RUN" = "1" ]; then
     log "DRY RUN inject → tab=$tab prompt=${prompt:0:60}"
     mark_done "$id" "true"
+    return 0
+  fi
+
+  # Wait up to 30 s for the user to finish typing — same guard as the API route.
+  local waited=0
+  while _is_user_typing_in_tab "$tab" && (( waited < 30 )); do
+    log "inject deferred — user typing in $tab (${waited}s)"
+    sleep 2
+    (( waited += 2 ))
+  done
+  if _is_user_typing_in_tab "$tab"; then
+    mark_done "$id" "false" "user still typing after 30s — inject skipped"
+    log "inject skipped — user typing in $tab after 30s ✗"
     return 0
   fi
 
