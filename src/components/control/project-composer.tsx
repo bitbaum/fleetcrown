@@ -301,7 +301,7 @@ export function QueueList({
               {onSend && (
                 <button
                   onClick={() => onSend(i)}
-                  className="rounded p-0.5 text-text-muted transition-colors hover:text-accent-text"
+                  className="inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-accent-text"
                   title="Send now"
                 >
                   <Send className="h-3 w-3" />
@@ -310,7 +310,7 @@ export function QueueList({
               {onRemove && (
                 <button
                   onClick={() => onRemove(i)}
-                  className="rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                  className="inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
                   title="Remove from queue"
                 >
                   <X className="h-3 w-3" />
