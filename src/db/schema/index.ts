@@ -18,3 +18,4 @@ export * from "./user-projects";
 export * from "./project-states";
 export * from "./invitations";
 export * from "./pending-commands";
+export * from "./captures";

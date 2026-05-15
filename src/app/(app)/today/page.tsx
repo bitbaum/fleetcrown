@@ -11,6 +11,7 @@ import { WeatherCard } from "@/components/today/WeatherCard";
 import { CommitmentsCard } from "@/components/today/CommitmentsCard";
 import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
 import { LogConversationButton } from "@/components/today/LogConversationButton";
+import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { getCurrentUserName } from "@/lib/session";
 
@@ -27,8 +28,9 @@ export default async function TodayPage() {
             <SummaryBar />
           </div>
         </Suspense>
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <LogConversationButton />
+          <QuickCaptureButton />
         </div>
       </div>
 
