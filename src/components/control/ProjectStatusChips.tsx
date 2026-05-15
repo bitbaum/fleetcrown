@@ -122,9 +122,13 @@ export function ProjectStatusChips({
     if (workspaceState === "loading") return;
     setWorkspaceState("loading");
     try {
-      await postJson("/api/control/focus-tab", { tab: workspaceTab });
-      setWorkspaceState("done");
-      setTimeout(() => setWorkspaceState("idle"), 2000);
+      const res = await postJson("/api/control/focus-tab", { tab: workspaceTab });
+      if (res.ok) {
+        setWorkspaceState("done");
+        setTimeout(() => setWorkspaceState("idle"), 2000);
+      } else {
+        setWorkspaceState("idle");
+      }
     } catch {
       setWorkspaceState("idle");
     }
