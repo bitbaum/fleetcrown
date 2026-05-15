@@ -7,6 +7,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
+import { AGENT_DEFAULT_MODELS } from "@/lib/agent-registry";
 import { cancelActiveBeaconSessions } from "@/app/api/beacon/route";
 import { buildPromptWithSession, resolveEffectiveTab, stateFile, clearHandshakeFiles } from "@/lib/agent-config";
 import {
@@ -199,7 +200,7 @@ export async function POST(req: NextRequest) {
         shellEscape(effectiveKey),
         shellEscape(request.projectPath),
         shellEscape(promptFile),
-        shellEscape(request.model?.trim() || (request.adapter === "gemini" ? "auto" : "gpt-5.4")),
+        shellEscape(request.model?.trim() || (request.adapter === "gemini" ? AGENT_DEFAULT_MODELS.gemini : AGENT_DEFAULT_MODELS.codex)),
       ].join(" ");
 
       injectIntoTab(effectiveKey, command);
