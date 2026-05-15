@@ -128,7 +128,7 @@ export function DateInput({
   return (
     <button
       onClick={() => ie.start("")}
-      className="ui-link-muted ui-hover-reveal"
+      className="ui-link-muted"
       title="Set deadline"
     >
       Set deadline
@@ -241,14 +241,14 @@ export function MilestoneRow({
       <button
         onClick={toggle}
         disabled={toggling}
-        className="shrink-0 flex items-center justify-center disabled:opacity-50"
+        className="shrink-0 h-11 w-11 flex items-center justify-center disabled:opacity-50 rounded"
       >
         {toggling ? (
           <Loader2 className="ui-spinner-sm text-text-muted" />
         ) : milestone.done ? (
-          <CheckCircle className="h-3.5 w-3.5 text-status-positive/70 hover:text-status-positive transition-colors" />
+          <CheckCircle className="h-4 w-4 text-status-positive/70 hover:text-status-positive transition-colors" />
         ) : (
-          <div className="h-3.5 w-3.5 rounded-full border border-border-strong hover:border-border-interactive transition-colors" />
+          <div className="h-4 w-4 rounded-full border border-border-strong hover:border-border-interactive transition-colors" />
         )}
       </button>
       <span className={milestone.done ? "text-text-tertiary line-through" : "text-text-secondary"}>
