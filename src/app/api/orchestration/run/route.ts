@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
         : buildPromptWithSession(prompt, request.projectKey);
       injectIntoTab(effectiveKey, fullPrompt);
       cancelActiveBeaconSessions(effectiveKey);
+      clearHandshakeFiles(effectiveKey);
       if (request.intent === "hard_stop") {
-        clearHandshakeFiles(effectiveKey);
         fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
         fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
         fs.writeFileSync(stateFile.closed(effectiveKey), String(nowS));

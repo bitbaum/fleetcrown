@@ -96,6 +96,19 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
 
 export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter: AdapterId = request.adapter): string {
   const intent = getOrchestrationIntent(request.intent);
+
+  // Claude adapter: CLAUDE.md is always loaded in the session and already contains
+  // execution rules and project context. Emit only the intent body — no redundant
+  // header or rules. buildPromptWithSession appends the session file + update instruction.
+  if (adapter === "claude") {
+    const sections: string[] = [renderIntentBody(request)];
+    // For "custom" intent the body IS customInstructions — don't append it again
+    if (request.intent !== "custom" && request.customInstructions?.trim()) {
+      sections.push(`Additional instructions:\n${request.customInstructions.trim()}`);
+    }
+    return sections.join("\n\n");
+  }
+
   const sections = [
     `Intent: ${intent.name}`,
     `Project: ${request.projectKey}`,
