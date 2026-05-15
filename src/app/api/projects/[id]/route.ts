@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
-import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects } from "@/db/schema";
-import { eq, and, desc, inArray, ilike } from "drizzle-orm";
-import { fetchAttributesByEntityIds } from "@/db/queries/utils";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-import { patchProject, deleteProject, PatchProjectBody } from "@/db/queries/projects";
+import { patchProject, deleteProject, PatchProjectBody, getProjectDetail } from "@/db/queries/projects";
 import { getProjectPromptActivity } from "@/db/queries/prompt-history";
 import { getProjectOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
@@ -80,70 +76,15 @@ export async function GET(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const [project] = await db
-    .select()
-    .from(entities)
-    .where(and(eq(entities.id, id), eq(entities.userId, userId)));
-
-  if (!project) return NextResponse.json(null, { status: 404 });
-
-  // Parallel: attrs, relations, interactions, linked goals, and devLog are independent
-  const [attrMap, relations, recentInteractions, linkedGoals, userProject, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
-    fetchAttributesByEntityIds([id]),
-    db
-      .select()
-      .from(entityRelations)
-      .where(and(eq(entityRelations.fromEntityId, id), eq(entityRelations.userId, userId))),
-    db
-      .select()
-      .from(interactions)
-      .where(and(eq(interactions.entityId, id), eq(interactions.userId, userId)))
-      .orderBy(desc(interactions.occurredAt))
-      .limit(5),
-    db
-      .select({
-        id: goals.id,
-        title: goals.title,
-        description: goals.description,
-        status: goals.status,
-        progress: goals.progress,
-        targetDate: goals.targetDate,
-        milestones: goals.milestones,
-      })
-      .from(goals)
-      .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
-      .orderBy(desc(goals.progress)),
-    db.query.userProjects.findFirst({
-      where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, project.id)),
-      columns: { devLog: true },
-    }).then((linked) => linked ?? db.query.userProjects.findFirst({
-      where: and(eq(userProjects.userId, userId), ilike(userProjects.name, project.name)),
-      columns: { devLog: true },
-    })),
-    getProjectPromptActivity(userId, project.id, 40).catch(() => []),
-    getProjectOrchestrationRuns(userId, project.id, 20).catch(() => []),
-    getProjectStateByProjectId(project.id).catch(() => null),
+  const [detail, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
+    getProjectDetail(userId, id),
+    getProjectPromptActivity(userId, id, 40).catch(() => []),
+    getProjectOrchestrationRuns(userId, id, 20).catch(() => []),
+    getProjectStateByProjectId(id).catch(() => null),
   ]);
 
-  const attrs = attrMap.get(id) ?? {};
-
-  // Related entity names require relation IDs from above
-  const relatedIds = relations.map((r) => r.toEntityId);
-  let relatedEntities: Array<{ id: string; name: string; type: string }> = [];
-  if (relatedIds.length > 0) {
-    relatedEntities = await db
-      .select({ id: entities.id, name: entities.name, type: entities.type })
-      .from(entities)
-      .where(and(eq(entities.userId, userId), inArray(entities.id, relatedIds)));
-  }
-
-  const relationsWithNames = relations.map((r) => ({
-    type: r.type,
-    strength: r.strength,
-    targetId: r.toEntityId,
-    targetName: relatedEntities.find((e) => e.id === r.toEntityId)?.name ?? r.toEntityId,
-    targetType: relatedEntities.find((e) => e.id === r.toEntityId)?.type ?? "unknown",
-  }));
+  if (!detail) return NextResponse.json(null, { status: 404 });
+  const { project, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
 
   const linkedJobs = getLinkedJobs(project.id, project.name);
   const activity = [
@@ -171,16 +112,11 @@ export async function GET(
     description: project.description,
     source: project.source,
     attrs,
-    relations: relationsWithNames,
-    interactions: recentInteractions.map((i) => ({
-      channel: i.channel,
-      direction: i.direction,
-      summary: i.summary,
-      occurredAt: i.occurredAt,
-    })),
+    relations,
+    interactions: recentInteractions,
     linkedJobs,
     linkedGoals,
-    devLog: [...(userProject?.devLog ?? [])].reverse().slice(0, 20),
+    devLog: [...(devLog ?? [])].reverse().slice(0, 20),
     activity,
     runtimeState: runtimeState ? {
       tabName: runtimeState.tabName,
