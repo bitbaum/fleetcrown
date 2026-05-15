@@ -42,6 +42,28 @@ export async function getHabitsForGoal(userId: string, goalId: string): Promise<
   return rows;
 }
 
+/** Returns a map of goalId → linked habits, for the given goal IDs. */
+export async function getHabitsByGoalIds(
+  userId: string,
+  goalIds: string[],
+): Promise<Map<string, LinkedHabit[]>> {
+  if (goalIds.length === 0) return new Map();
+  const rows = await db
+    .select({ goalId: habitGoals.goalId, habitId: habits.id, habitTitle: habits.title })
+    .from(habitGoals)
+    .innerJoin(habits, eq(habitGoals.habitId, habits.id))
+    .where(eq(habitGoals.userId, userId));
+
+  const map = new Map<string, LinkedHabit[]>();
+  for (const row of rows) {
+    if (!goalIds.includes(row.goalId)) continue;
+    const existing = map.get(row.goalId) ?? [];
+    existing.push({ id: row.habitId, title: row.habitTitle });
+    map.set(row.goalId, existing);
+  }
+  return map;
+}
+
 /** Returns a map of habitId → linked goal titles, for the given habit IDs. */
 export async function getGoalsByHabitIds(
   userId: string,

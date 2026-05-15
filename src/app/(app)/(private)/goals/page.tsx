@@ -2,16 +2,26 @@ import { Target } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
+import { getHabitsByGoalIds } from "@/db/queries/habit-goals";
 import { getCurrentUserId } from "@/lib/session";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
+import type { GoalWithChildren } from "@/db/queries/goals";
 
 export const metadata = { title: "Goals" };
+
+function collectGoalIds(goals: GoalWithChildren[]): string[] {
+  return goals.flatMap((g) => [g.id, ...collectGoalIds(g.children)]);
+}
 
 export default async function GoalsPage() {
   const userId = await getCurrentUserId();
   const [goalTree, stats] = await Promise.all([getGoals(userId), getGoalStats(userId)]);
+
+  const allGoalIds = collectGoalIds(goalTree);
+  const habitsByGoalIdMap = await getHabitsByGoalIds(userId, allGoalIds);
+  const habitsByGoalId = Object.fromEntries(habitsByGoalIdMap);
 
   const activeGoals = goalTree.filter((g) => g.status === GOAL_STATUS.ACTIVE || !g.status);
   const completedGoals = goalTree.filter((g) => g.status === GOAL_STATUS.COMPLETED);
@@ -49,7 +59,12 @@ export default async function GoalsPage() {
           </div>
         </Card>
       ) : (
-        <GoalsGrid activeGoals={activeGoals} completedGoals={completedGoals} abandonedGoals={abandonedGoals} />
+        <GoalsGrid
+          activeGoals={activeGoals}
+          completedGoals={completedGoals}
+          abandonedGoals={abandonedGoals}
+          habitsByGoalId={habitsByGoalId}
+        />
       )}
     </PageLayout>
   );

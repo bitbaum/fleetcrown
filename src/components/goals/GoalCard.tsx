@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus } from "lucide-react";
+import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
@@ -14,7 +14,17 @@ import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 
-export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: number }) {
+type SupportingHabits = Record<string, { id: string; title: string }[]>;
+
+export function GoalCard({
+  goal,
+  depth,
+  habitsByGoalId = {},
+}: {
+  goal: GoalWithChildren;
+  depth: number;
+  habitsByGoalId?: SupportingHabits;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState(goal.status ?? GOAL_STATUS.ACTIVE);
   const [progress, setProgress] = useState(goal.progress ?? 0);
@@ -70,6 +80,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
     });
   };
 
+  const supportingHabits = habitsByGoalId[goal.id] ?? [];
   const isCompleted = status === GOAL_STATUS.COMPLETED;
   const isAbandoned = status === GOAL_STATUS.ABANDONED;
   const isClosed = isCompleted || isAbandoned;
@@ -228,6 +239,16 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
               </Link>
             )}
 
+            {/* Supporting habits */}
+            {supportingHabits.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                <Repeat2 className="h-3 w-3 text-text-muted shrink-0" />
+                {supportingHabits.map((h) => (
+                  <span key={h.id} className="ui-tag ui-tag-neutral">{h.title}</span>
+                ))}
+              </div>
+            )}
+
             {/* Progress bar */}
             {!isClosed && (
               <div className="mt-2">
@@ -292,7 +313,7 @@ export function GoalCard({ goal, depth }: { goal: GoalWithChildren; depth: numbe
       {(goal.children.length > 0 || (!isClosed && addingChild)) && (
         <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
           {goal.children.map((child) => (
-            <GoalCard key={child.id} goal={child} depth={depth + 1} />
+            <GoalCard key={child.id} goal={child} depth={depth + 1} habitsByGoalId={habitsByGoalId} />
           ))}
           {addingChild && (
             <div className="space-y-1">

@@ -29,14 +29,18 @@ function filterByProject(goals: GoalWithChildren[], project: string): GoalWithCh
   return goals.filter((g) => g.entityName === project);
 }
 
+type SupportingHabits = Record<string, { id: string; title: string }[]>;
+
 export function GoalsGrid({
   activeGoals,
   completedGoals,
   abandonedGoals,
+  habitsByGoalId = {},
 }: {
   activeGoals: GoalWithChildren[];
   completedGoals: GoalWithChildren[];
   abandonedGoals: GoalWithChildren[];
+  habitsByGoalId?: SupportingHabits;
 }) {
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
@@ -95,7 +99,7 @@ export function GoalsGrid({
       {filteredActive.length > 0 ? (
         <div className="space-y-3">
           {filteredActive.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} depth={0} />
+            <GoalCard key={goal.id} goal={goal} depth={0} habitsByGoalId={habitsByGoalId} />
           ))}
         </div>
       ) : isFiltered && activeGoals.length > 0 ? (
