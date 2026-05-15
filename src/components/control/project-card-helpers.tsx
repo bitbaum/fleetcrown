@@ -213,7 +213,7 @@ export function ReadyBanner({
               onClick={onToggleAutoContinue}
               title={autoContinueEnabled && !paused ? "Pause auto-continue" : "Resume auto-continue"}
               className={cn(
-                "inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center rounded p-0.5 transition-colors",
+                "ui-icon-btn rounded p-0.5 transition-colors",
                 paused || !autoContinueEnabled
                   ? "text-accent-text hover:bg-surface-overlay"
                   : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",

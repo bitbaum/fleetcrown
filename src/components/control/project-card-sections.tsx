@@ -376,7 +376,7 @@ export function ProjectActivitySection({
                       {canCopy && (
                         <button
                           onClick={() => copyPrompt(event.id, fullText)}
-                          className="inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 shrink-0 items-center justify-center rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                          className="ui-icon-btn shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
                           title="Copy full prompt"
                         >
                           {copiedId === event.id ? <Check className="h-3 w-3 text-status-positive" /> : <Copy className="h-3 w-3" />}

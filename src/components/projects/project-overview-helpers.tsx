@@ -129,7 +129,7 @@ export function AttrRow({
         )}
         <button
           onClick={() => setEditing(true)}
-          className="ui-hover-reveal inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
+          className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
           title="Edit"
         >
           <Pencil className="h-3 w-3" />
@@ -137,7 +137,7 @@ export function AttrRow({
         <button
           onClick={deleteAttr}
           disabled={deleting}
-          className="ui-hover-reveal inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
+          className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
           title="Delete attribute"
         >
           {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
