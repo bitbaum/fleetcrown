@@ -438,9 +438,31 @@ export function ControlPanel() {
           </div>
           )
         ) : (
-          <p className="ui-empty-panel py-8 text-sm">
-            No projects configured for the control panel
-          </p>
+          <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border-default px-8 py-16 text-center">
+            <span className="text-4xl text-text-muted">⊞</span>
+            <div>
+              <h3 className="text-lg font-semibold text-text-primary">Add your first project</h3>
+              <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
+                The control panel is your fleet view — register a project to track its agent sessions, git state, and next actions from one place.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                onClick={() => setBootstrapOpen(true)}
+                className="ui-btn-primary gap-2"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Bootstrap new project →
+              </button>
+              <button
+                onClick={() => setNewProjectOpen(true)}
+                className="ui-btn-secondary gap-1.5"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Register existing project
+              </button>
+            </div>
+          </div>
         )
       ) : (
         <div className="space-y-3">
