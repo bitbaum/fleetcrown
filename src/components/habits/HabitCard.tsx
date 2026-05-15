@@ -12,6 +12,7 @@ import type { HabitWithHistory } from "@/db/queries/habits";
 import type { LinkedGoal } from "@/db/queries/habit-goals";
 import { HABIT_FREQUENCY, type HabitFrequency, scheduledDays } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
+import { toLocalDateStr } from "@/lib/dates";
 
 export function HabitCard({
   habit,
@@ -32,6 +33,8 @@ export function HabitCard({
   const [displayTitle, setDisplayTitle] = useState(habit.title);
 
   const completedDatesArr = [...habit.completedDates];
+  const [doneToday, setDoneToday] = useState(() => completedDatesArr.includes(toLocalDateStr(new Date())));
+  const [togglingDone, setTogglingDone] = useState(false);
   const scheduled = scheduledDays(frequency, HABIT_HISTORY_DAYS);
   const pct = Math.round((habit.completionsInWindow / scheduled) * 100);
 
@@ -66,6 +69,20 @@ export function HabitCard({
       setActive(!next);
     } finally {
       setTogglingActive(false);
+    }
+  };
+
+  const handleToggleDone = async () => {
+    if (togglingDone) return;
+    setTogglingDone(true);
+    const next = !doneToday;
+    setDoneToday(next);
+    try {
+      await patchJson(`/api/habits/${habit.id}`, { done: next });
+    } catch {
+      setDoneToday(!next);
+    } finally {
+      setTogglingDone(false);
     }
   };
 
@@ -153,6 +170,23 @@ export function HabitCard({
         </div>
 
         <div className="flex items-start gap-3 shrink-0">
+          <button
+            onClick={handleToggleDone}
+            disabled={togglingDone || !active}
+            title={doneToday ? "Unmark done today" : "Mark done today"}
+            className="mt-0.5 h-9 w-9 flex items-center justify-center rounded transition-colors hover:bg-surface-raised disabled:opacity-50"
+          >
+            {togglingDone ? (
+              <Loader2 className="h-4 w-4 animate-spin text-text-muted" />
+            ) : doneToday ? (
+              <div className="h-5 w-5 rounded-full bg-status-positive/50 flex items-center justify-center">
+                <Check className="h-3 w-3 text-text-inverted" />
+              </div>
+            ) : (
+              <div className="h-5 w-5 rounded-full border-2 border-border-strong hover:border-status-positive/60 transition-colors" />
+            )}
+          </button>
+
           <div className="text-right">
             <div className="text-base font-medium text-text-primary">{pct}%</div>
             <div className="text-xs text-text-tertiary">{habit.completionsInWindow}/{scheduled}d</div>
