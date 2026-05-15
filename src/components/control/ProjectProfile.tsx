@@ -2,10 +2,11 @@
 
 import { useState, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
-import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote, Trash2, ArrowRight } from "lucide-react";
+import { ExternalLink, ChevronRight, Loader2, Globe, History, StickyNote, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { setAttr } from "@/lib/api/attrs";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { ProjectState } from "@/lib/control-types";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
@@ -338,6 +339,88 @@ function RemoveSection({ projectId, onRemoved }: { projectId: string; onRemoved:
   );
 }
 
+function QuickProfileForm({ projectId, onSaved }: { projectId: string; onSaved: () => void }) {
+  const [mission, setMission] = useState("");
+  const [stack, setStack] = useState("");
+  const [url, setUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasAny = mission.trim() || stack.trim() || url.trim();
+
+  const handleSave = async () => {
+    if (!hasAny || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const base = `/api/projects/${projectId}`;
+      await Promise.all([
+        mission.trim() ? setAttr(base, "mission", mission.trim()) : null,
+        stack.trim() ? setAttr(base, "stack", stack.trim()) : null,
+        url.trim() ? setAttr(base, "url", url.trim()) : null,
+      ]);
+      onSaved();
+    } catch {
+      setError("Failed to save — try again");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 px-4 pb-5 pt-3 sm:px-5">
+      <div className="space-y-2.5">
+        <div>
+          <p className="ui-kicker mb-1.5">Mission</p>
+          <input
+            value={mission}
+            onChange={(e) => setMission(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            placeholder="One sentence: what this project does and for whom"
+            className="ui-input w-full"
+          />
+        </div>
+        <div>
+          <p className="ui-kicker mb-1.5">Stack</p>
+          <input
+            value={stack}
+            onChange={(e) => setStack(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            placeholder="e.g. Next.js · TypeScript · PostgreSQL"
+            className="ui-input w-full"
+          />
+        </div>
+        <div>
+          <p className="ui-kicker mb-1.5">URL</p>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSave()}
+            placeholder="https://…"
+            className="ui-input w-full"
+          />
+        </div>
+      </div>
+      {error && <p className="ui-error-xs">{error}</p>}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving || !hasAny}
+          className="ui-btn-primary gap-1.5"
+        >
+          {saving ? <Loader2 className="ui-spinner-sm" /> : null}
+          {saving ? "Saving…" : "Save profile"}
+        </button>
+        <Link
+          href={`/projects?open=${projectId}`}
+          className="text-xs text-text-muted hover:text-text-secondary transition-colors"
+        >
+          Full editor in Projects →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export function ProjectProfile({
   project,
   globalAdapter,
@@ -346,6 +429,7 @@ export function ProjectProfile({
   onSetAgent,
   onRunPrompt,
   onDeleted,
+  onProfileSaved,
 }: {
   project: ProjectState;
   globalAdapter: string;
@@ -354,6 +438,7 @@ export function ProjectProfile({
   onSetAgent: (agent: AgentId | null) => void;
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
   onDeleted?: () => void;
+  onProfileSaved?: () => void;
 }) {
   const [sending, setSending] = useState(false);
   const [localModel, setLocalModel] = useState<string | null>(project.modelPref ?? null);
@@ -469,20 +554,23 @@ export function ProjectProfile({
       {/* Project metadata */}
       {project.profile ? (
         <MetaSection profile={project.profile} />
+      ) : project.projectId ? (
+        <div className="border-t border-border-subtle">
+          <div className="px-4 pt-3 sm:px-5">
+            <p className="text-xs text-text-tertiary">
+              No profile yet — add context so agents know what this project is about.
+            </p>
+          </div>
+          <QuickProfileForm
+            projectId={project.projectId}
+            onSaved={() => onProfileSaved?.()}
+          />
+        </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 px-4 py-6 text-center sm:px-5">
+        <div className="px-4 py-6 text-center sm:px-5">
           <p className="text-sm text-text-secondary">
-            No profile yet — add mission, stack, and URL so agents have full context.
+            No profile — add metadata in the Projects view to enable full awareness.
           </p>
-          {project.projectId && (
-            <Link
-              href={`/projects?open=${project.projectId}`}
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity"
-            >
-              Set up profile in Projects
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          )}
         </div>
       )}
 

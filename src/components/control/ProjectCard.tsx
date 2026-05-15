@@ -32,6 +32,7 @@ export function ProjectCard({
   onCollapse,
   onFocus,
   onDeleted,
+  onProfileSaved,
   isOnlyReady = false,
 }: {
   project: ProjectState;
@@ -45,6 +46,7 @@ export function ProjectCard({
   onCollapse?: () => void;
   onFocus?: () => void;
   onDeleted?: () => void;
+  onProfileSaved?: () => void;
   isOnlyReady?: boolean;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
@@ -364,6 +366,7 @@ export function ProjectCard({
           onSetAgent={setLocalAgent}
           onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
           onDeleted={onDeleted}
+          onProfileSaved={onProfileSaved}
         />
       ) : (
         <>

@@ -196,6 +196,7 @@ export function ControlPanel() {
       catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
     },
     onDeleted: () => { refresh(true); },
+    onProfileSaved: () => { refresh(true); },
   });
 
   const collapseTab = (tab: string) =>
