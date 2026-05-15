@@ -54,9 +54,30 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
         </Link>
       )}
     >
-      <AuthHeading title="Welcome back" description="Sign in to your Cockpit." />
+      <AuthHeading
+        title="Welcome to Cockpit"
+        description="Sign in or create your account to get started."
+      />
 
       <AuthCard>
+        {githubEnabled && (
+          <>
+            <AuthSecondaryButton
+              type="button"
+              onClick={handleGithub}
+              disabled={githubLoading}
+              className="ui-auth-secondary-btn-strong gap-2.5"
+            >
+              <GithubIcon />
+              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
+            </AuthSecondaryButton>
+            <p className="text-center text-xs text-white/[0.25]">
+              New accounts are created automatically
+            </p>
+            <AuthDivider label="or sign in with password" />
+          </>
+        )}
+
         <form onSubmit={handleLocal} className="space-y-3">
           <AuthField label="Local password">
             <AuthInput
@@ -76,21 +97,6 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
             loadingLabel="Signing in…"
           />
         </form>
-
-        {githubEnabled && (
-          <>
-            <AuthDivider label="or continue with" />
-            <AuthSecondaryButton
-              type="button"
-              onClick={handleGithub}
-              disabled={githubLoading}
-              className="ui-auth-secondary-btn-strong gap-2.5"
-            >
-              <GithubIcon />
-              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
-            </AuthSecondaryButton>
-          </>
-        )}
       </AuthCard>
 
       <AuthFooterLink href="/">← Back to home</AuthFooterLink>
