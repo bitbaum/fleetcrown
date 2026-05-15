@@ -16,14 +16,12 @@ import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey } from "@/lib/control-storage";
+import { getAdapterLabel } from "@/config/control-intents";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 
 function agentLabel(agent: string | null | undefined): string {
-  if (agent === "claude") return "Claude";
-  if (agent === "codex") return "Codex";
-  if (agent === "gemini") return "Gemini";
-  return "agent";
+  return agent ? getAdapterLabel(agent) : "agent";
 }
 
 function SessionSummary({ content }: { content: string }) {
