@@ -15,7 +15,7 @@ export async function SummaryBar() {
           icon={Repeat2}
           value={`${s.habitsDone}/${s.habitsTotal} habits`}
           variant={s.habitsDone === s.habitsTotal ? "green" : undefined}
-          href="/habits"
+          href="#habits"
         />
       )}
       {s.goalsDueSoon > 0 && (

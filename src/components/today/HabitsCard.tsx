@@ -9,7 +9,7 @@ export async function HabitsCard() {
   const habits = await getTodayHabits(userId);
 
   return (
-    <Card>
+    <Card id="habits">
       <CardHeader
         icon={Repeat2}
         title="Habits"

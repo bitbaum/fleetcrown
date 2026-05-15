@@ -4,15 +4,18 @@ import { cn } from "@/lib/utils";
 export function Card({
   children,
   className,
+  id,
   onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  id?: string;
   onClick?: () => void;
 }) {
   const Comp = onClick ? "button" : "div";
   return (
     <Comp
+      id={id}
       className={cn(
         "ui-card-shell ui-card-padding text-left",
         onClick && "ui-panel-interactive cursor-pointer",
