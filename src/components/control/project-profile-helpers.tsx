@@ -11,6 +11,47 @@ import type { ProjectState } from "@/lib/control-types";
 import type { DevLogEntry, UserProject } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 
+function CollapsibleSection({
+  title,
+  icon,
+  badge,
+  trailing,
+  contentClassName,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  badge?: React.ReactNode;
+  trailing?: React.ReactNode;
+  contentClassName?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-t border-border-subtle">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
+      >
+        <span className="flex items-center gap-2.5">
+          {icon}
+          <span className="text-sm font-medium text-text-secondary">{title}</span>
+          {badge}
+        </span>
+        <span className="flex items-center gap-2">
+          {trailing}
+          <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
+        </span>
+      </button>
+      {open && (
+        <div className={cn("px-4 pb-4 pt-1 sm:px-5", contentClassName)}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Dimension display metadata — order and icons live here in the UI layer
 export const DIMENSION_META: Record<string, { label: string; icon: string }> = {
   engineering: { label: "Engineering",  icon: "⚙" },
@@ -145,7 +186,6 @@ export function DimensionSection({
   isSending: boolean;
   onRun: (prompt: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const meta = DIMENSION_META[dimensionId];
   if (!meta || prompts.length === 0) return null;
 
@@ -158,43 +198,31 @@ export function DimensionSection({
   };
 
   return (
-    <div className="border-t border-border-subtle">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
-      >
-        <span className="flex items-center gap-2.5">
-          <span className="text-base leading-none">{meta.icon}</span>
-          <span className="text-sm font-medium text-text-secondary">{meta.label}</span>
-        </span>
-        <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
-      </button>
-
-      {open && (
-        <div className="flex flex-wrap gap-2 px-4 pb-4 pt-1 sm:px-5">
-          {prompts.map((p) => {
-            const rendered = interpolate(p.prompt, ctx);
-            const uses = usageCounts.get(rendered) ?? 0;
-            return (
-              <button
-                key={p.key}
-                onClick={() => onRun(rendered)}
-                disabled={isSending}
-                className="min-h-10 rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
-              >
-                {p.icon} {p.label}
-                {uses > 0 && <span className="ml-2 text-micro text-text-tertiary">×{uses}</span>}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <CollapsibleSection
+      title={meta.label}
+      icon={<span className="text-base leading-none">{meta.icon}</span>}
+      contentClassName="flex flex-wrap gap-2"
+    >
+      {prompts.map((p) => {
+        const rendered = interpolate(p.prompt, ctx);
+        const uses = usageCounts.get(rendered) ?? 0;
+        return (
+          <button
+            key={p.key}
+            onClick={() => onRun(rendered)}
+            disabled={isSending}
+            className="min-h-10 rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
+          >
+            {p.icon} {p.label}
+            {uses > 0 && <span className="ml-2 text-micro text-text-tertiary">×{uses}</span>}
+          </button>
+        );
+      })}
+    </CollapsibleSection>
   );
 }
 
 export function NotesSection({ projectId, project }: { projectId: string; project: UserProject | null }) {
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,63 +252,35 @@ export function NotesSection({ projectId, project }: { projectId: string; projec
   if (!project) return null;
 
   return (
-    <div className="border-t border-border-subtle">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
-      >
-        <span className="flex items-center gap-2.5">
-          <StickyNote className="h-3.5 w-3.5 text-text-muted" />
-          <span className="text-sm font-medium text-text-secondary">Notes</span>
-          {project.notes && <span className="h-1.5 w-1.5 rounded-full bg-accent-text/50" />}
-        </span>
-        <span className="flex items-center gap-2">
-          {saving && <Loader2 className="h-3 w-3 animate-spin text-text-muted" />}
-          <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
-        </span>
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 pt-1 sm:px-5">
-          <textarea
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            onBlur={handleBlur}
-            placeholder="Free-form notes, context, or reminders for this project…"
-            rows={5}
-            className="w-full resize-y rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/20"
-          />
-        </div>
-      )}
-    </div>
+    <CollapsibleSection
+      title="Notes"
+      icon={<StickyNote className="h-3.5 w-3.5 text-text-muted" />}
+      badge={project.notes ? <span className="h-1.5 w-1.5 rounded-full bg-accent-text/50" /> : undefined}
+      trailing={saving ? <Loader2 className="h-3 w-3 animate-spin text-text-muted" /> : undefined}
+    >
+      <textarea
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        placeholder="Free-form notes, context, or reminders for this project…"
+        rows={5}
+        className="w-full resize-y rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2.5 text-sm leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent-primary/50 focus:outline-none focus:ring-1 focus:ring-accent-primary/20"
+      />
+    </CollapsibleSection>
   );
 }
 
 export function DevLogSection({ entries }: { entries: DevLogEntry[] }) {
-  const [open, setOpen] = useState(false);
-
   if (entries.length === 0) return null;
 
   return (
-    <div className="border-t border-border-subtle">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-surface-raised/40 sm:px-5"
-      >
-        <span className="flex items-center gap-2.5">
-          <History className="h-3.5 w-3.5 text-text-muted" />
-          <span className="text-sm font-medium text-text-secondary">Dev Log</span>
-          <span className="ml-1 text-xs text-text-muted">({entries.length})</span>
-        </span>
-        <ChevronRight className={cn("h-3.5 w-3.5 text-text-muted transition-transform duration-150", open && "rotate-90")} />
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 pt-1 sm:px-5">
-          <DevLogList entries={entries} />
-        </div>
-      )}
-    </div>
+    <CollapsibleSection
+      title="Dev Log"
+      icon={<History className="h-3.5 w-3.5 text-text-muted" />}
+      badge={<span className="ml-1 text-xs text-text-muted">({entries.length})</span>}
+    >
+      <DevLogList entries={entries} />
+    </CollapsibleSection>
   );
 }
 
