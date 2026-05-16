@@ -9,9 +9,9 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectDisplayState } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
-import {
-  ProjectCardHeader, SessionSummary, ProjectBanners, ProjectActivitySection,
-} from "./project-card-sections";
+import { ProjectCardHeader, SessionSummary } from "./project-card-sections";
+import { ProjectBanners } from "./project-card-banners";
+import { ProjectActivitySection } from "./project-card-activity";
 import { IntentButtonPanel } from "./project-intent-panel";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
