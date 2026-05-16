@@ -29,6 +29,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
+  // Allow localhost and any host when AUTH_TRUST_HOST=true (local production server).
+  // Vercel sets VERCEL=1 which Auth.js already trusts automatically.
+  trustHost: process.env.AUTH_TRUST_HOST === "true" || process.env.VERCEL === "1",
   // JWT strategy required for Credentials provider to work alongside DB adapter
   session: { strategy: "jwt" },
   providers: [
