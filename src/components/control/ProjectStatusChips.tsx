@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { GitBranch, Terminal, ChevronDown, Check, Loader2, UploadCloud } from "lucide-react";
+import { useState } from "react";
+import { GitBranch, Terminal, ChevronDown, Loader2, UploadCloud, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import { formatAgentRuntimeLabel } from "./control-presenter";
-
-type AgentEntry = { id: string; label: string };
+import { AgentSwitcherPopover } from "./agent-switcher-popover";
+import type { AgentEntry } from "./agent-switcher-popover";
 
 function statusChipClass(tone: "neutral" | "positive" | "warning" = "neutral", clickable = false) {
   return cn(
@@ -26,59 +26,6 @@ function pendingChangesLabel(project: ProjectState): string | null {
   if (!project.git?.dirty) return null;
   if (dirtyCount <= 0) return "Changes pending";
   return `${dirtyCount} pending change${dirtyCount === 1 ? "" : "s"}`;
-}
-
-function AgentSwitcherPopover({
-  agents,
-  activeAgentId,
-  onSwitch,
-  onClose,
-}: {
-  agents: AgentEntry[];
-  activeAgentId: string;
-  onSwitch: (agentId: string | null) => void;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    const escHandler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", escHandler);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", escHandler);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      className="absolute left-0 top-full z-50 mt-1.5 min-w-[130px] rounded-xl border border-border-default bg-surface-overlay py-1.5 shadow-card"
-    >
-      <p className="px-3 pb-1 pt-0.5 text-micro uppercase tracking-wide text-text-muted">Switch agent</p>
-      {agents.map((agent) => {
-        const isActive = agent.id === activeAgentId;
-        return (
-          <button
-            key={agent.id}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onSwitch(isActive ? null : agent.id); onClose(); }}
-            className={cn(
-              "flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-surface-raised",
-              isActive ? "text-accent-text" : "text-text-secondary",
-            )}
-          >
-            {isActive && <Check className="h-3 w-3 shrink-0" />}
-            <span className={isActive ? "font-medium" : "pl-5"}>{agent.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 export function ProjectStatusChips({

@@ -7,8 +7,7 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { BEACON_SETTINGS_PATH } from "@/config/beacon";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { enqueuePendingCommand } from "@/db/queries/pending-commands";
-import { getCurrentUserId } from "@/lib/session";
+import { callGroqTranscribe } from "@/lib/groq";
 
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
@@ -29,18 +28,18 @@ export async function POST(req: NextRequest) {
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
   if (!isRuntimeAvailable()) {
-    // Remote path: relay to local daemon via pending_commands queue.
-    // Daemon picks up the 'transcribe' command, runs local Whisper, stores result.
+    // Remote path: cloud transcription via Groq Whisper — no daemon round-trip needed.
     const buf = Buffer.from(await audio.arrayBuffer());
     if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
-
-    const userId = await getCurrentUserId();
-    const transcriptionId = await enqueuePendingCommand({
-      userId,
-      type: "transcribe",
-      payload: { audio_b64: buf.toString("base64"), mime_type: audio.type || "audio/webm" },
-    });
-    return NextResponse.json({ transcriptionId });
+    try {
+      const blob = new Blob([buf], { type: audio.type || "audio/webm" });
+      const text = await callGroqTranscribe(blob, audio.type || "audio/webm");
+      if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
+      return NextResponse.json({ text });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
   }
 
   // Local path: run Whisper directly.

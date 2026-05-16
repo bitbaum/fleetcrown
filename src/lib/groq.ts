@@ -4,7 +4,9 @@
  */
 
 export const GROQ_FAST_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_WHISPER_MODEL = "whisper-large-v3-turbo";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_AUDIO_URL = "https://api.groq.com/openai/v1/audio/transcriptions";
 
 type GroqOptions = {
   maxTokens?: number;
@@ -37,4 +39,32 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
   if (!res.ok) throw new Error(`groq ${res.status}`);
   const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> };
   return (data?.choices?.[0]?.message?.content ?? "").trim();
+}
+
+/**
+ * Transcribe audio via Groq's Whisper API.
+ * Used as the cloud fallback when local Whisper is unavailable (Vercel/remote).
+ * Returns the transcribed text. Throws on failure.
+ */
+export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): Promise<string> {
+  const key = process.env.GROQ_API_KEY;
+  if (!key) throw new Error("GROQ_API_KEY not set");
+
+  const form = new FormData();
+  form.append("file", audio, `audio.${mimeType.split("/")[1] ?? "webm"}`);
+  form.append("model", GROQ_WHISPER_MODEL);
+
+  const res = await fetch(GROQ_AUDIO_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}` },
+    body: form,
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`groq transcribe ${res.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await res.json() as { text?: string };
+  return (data.text ?? "").trim();
 }
