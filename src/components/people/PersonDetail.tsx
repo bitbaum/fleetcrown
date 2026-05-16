@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL } from "@/lib/constants/people";
@@ -136,6 +137,30 @@ export function PersonDetail({
           })()}
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {data && (() => {
+            const profession = attrs["profession"] ?? attrs["role"];
+            const location = attrs["location"] ?? attrs["home_location"];
+            const lastInt = interactions[0] ? new Date(interactions[0].occurredAt) : null;
+            const prompt = [
+              `Person: ${name}`,
+              profession && `Role: ${profession}`,
+              location && `Location: ${location}`,
+              description && `Notes: ${description}`,
+              lastInt
+                ? `Last contact: ${formatDistanceToNow(lastInt, { addSuffix: true })} (${interactions.length} total interactions)`
+                : "No recorded interactions",
+              interactions.length > 0 && `Recent interactions: ${interactions.slice(0, 3).map((i) => `${i.channel} ${i.direction}`).join(", ")}`,
+              "",
+              "What do you know about this person from my knowledge graph? What would be a good next step with them?",
+            ].filter(Boolean).join("\n");
+            return (
+              <IvyDispatchButton
+                prompt={prompt}
+                title="Ask Ivy about this person"
+                className="ui-btn-icon text-text-muted hover:text-status-positive"
+              />
+            );
+          })()}
           {data && (
             <DeleteButton
               onDelete={async () => {
