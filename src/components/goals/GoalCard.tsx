@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
+import { Target, CheckCircle, Archive, Bot, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
@@ -250,14 +250,32 @@ export function GoalCard({
               </button>
             )}
             {goal.entityName && goal.entityId && (
-              <Link
-                href={`/projects?open=${goal.entityId}`}
-                className="flex items-center gap-1 mt-1 w-fit hover:opacity-80 transition-opacity"
-                title="Open project"
-              >
-                <FolderKanban className="h-3 w-3 text-status-positive/50" />
-                <span className="text-xs text-status-positive/60">{goal.entityName}</span>
-              </Link>
+              <div className="flex items-center gap-2 mt-1">
+                <Link
+                  href={`/projects?open=${goal.entityId}`}
+                  className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                  title="Open project"
+                >
+                  <FolderKanban className="h-3 w-3 text-status-positive/50" />
+                  <span className="text-xs text-status-positive/60">{goal.entityName}</span>
+                </Link>
+                {!isClosed && (
+                  <button
+                    onClick={() => {
+                      const lines = [`Goal: ${displayTitle}`];
+                      if (description?.trim()) lines.push(`Description: ${description.trim()}`);
+                      lines.push(`Progress: ${progress}%`, `Project: ${goal.entityName}`, "", "Please advance this goal in the codebase. Identify what needs to be done next, implement the concrete next step, and report back.");
+                      localStorage.setItem("control:prefill", JSON.stringify({ tab: goal.entityName, prompt: lines.join("\n") }));
+                      router.push("/control");
+                    }}
+                    className="flex items-center gap-1 text-text-muted hover:text-accent-text transition-colors"
+                    title="Send to Control agent"
+                  >
+                    <Bot className="h-3 w-3" />
+                    <span className="text-xs">Agent</span>
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Supporting habits */}

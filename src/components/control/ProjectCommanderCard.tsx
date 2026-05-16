@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Play, MessageSquare, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectState } from "@/lib/control-types";
@@ -28,6 +28,21 @@ export function ProjectCommanderCard({
   const [sending, setSending] = useState(false);
   const [talkOpen, setTalkOpen] = useState(false);
   const [custom, setCustom] = useState("");
+
+  // On mount: consume any goal→control prefill for this project
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("control:prefill");
+      if (!raw) return;
+      const { tab, prompt } = JSON.parse(raw) as { tab: string; prompt: string };
+      if (tab === project.tab) {
+        localStorage.removeItem("control:prefill");
+        setCustom(prompt);
+        setTalkOpen(true);
+      }
+    } catch { /* ignore malformed */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isReady = display.isReady || display.isOrchestrationReady;
   const isRunning = display.isRunning;
