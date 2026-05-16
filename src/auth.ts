@@ -2,8 +2,6 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import type { AdapterAccountType } from "next-auth/adapters";
-import { eq, and } from "drizzle-orm";
 // db required here for DrizzleAdapter — not avoidable
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
@@ -37,6 +35,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID ?? "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      // GitHub verifies email addresses, so linking by email is safe.
+      // This lets existing users (e.g. the owner with email+password) link
+      // their GitHub account on first OAuth sign-in without a duplicate account.
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       id: "local",
@@ -112,42 +114,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider === "github" && account.providerAccountId) {
-        const [existing] = await db
-          .select({ userId: accounts.userId })
-          .from(accounts)
-          .where(and(
-            eq(accounts.provider, account.provider),
-            eq(accounts.providerAccountId, account.providerAccountId),
-          ))
-          .limit(1);
+      if (account?.provider !== "github") return true;
 
-        if (!existing) {
-          const defaultUser = await getDefaultUser();
-
-          if (defaultUser) {
-            await updateUser(defaultUser.id, {
-              email: user.email ?? defaultUser.email ?? undefined,
-              name: (user.name ?? defaultUser.name) ?? undefined,
-              image: (user as { image?: string | null }).image ?? defaultUser.image,
-            });
-
-            await db.insert(accounts).values({
-              userId: defaultUser.id,
-              type: account.type as AdapterAccountType,
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-              refresh_token: (account.refresh_token as string | undefined) ?? null,
-              access_token: (account.access_token as string | undefined) ?? null,
-              expires_at: (account.expires_at as number | undefined) ?? null,
-              token_type: account.token_type ?? null,
-              scope: account.scope ?? null,
-              id_token: (account.id_token as string | undefined) ?? null,
-              session_state: (account.session_state as string | undefined) ?? null,
-            });
+      // Update profile fields (name, avatar) when a GitHub account is linked
+      // to an existing Cockpit user for the first time. The adapter with
+      // allowDangerousEmailAccountLinking handles the actual account linking;
+      // we only handle the profile refresh here.
+      if (user.email) {
+        const existingUser = await getUserByEmail(user.email);
+        if (existingUser) {
+          const patch: Record<string, string | null | undefined> = {};
+          const githubImage = (user as { image?: string | null }).image;
+          if (!existingUser.image && githubImage) patch.image = githubImage;
+          if (!existingUser.name && user.name)   patch.name  = user.name;
+          if (Object.keys(patch).length > 0) {
+            await updateUser(existingUser.id, patch);
           }
         }
       }
+
       return true;
     },
     async jwt({ token, user, trigger }) {
