@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
-import { stateFile, readProjectsMap } from "@/lib/agent-config";
+import { stateFile } from "@/lib/agent-config";
 import { injectIntoTab } from "@/lib/zellij";
 import { auth } from "@/auth";
 import { getUserProjects } from "@/db/queries/user-projects";
@@ -18,17 +18,12 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab } = dataOrResp;
 
-  const projects = readProjectsMap();
-  let canonical = projects.get(tab.toLowerCase());
-
-  if (!canonical) {
-    const dbProjects = await getUserProjects(session.user.id).catch(() => []);
-    const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
-    if (!dbMatch) {
-      return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
-    }
-    canonical = dbMatch.name;
+  const dbProjects = await getUserProjects(session.user.id).catch(() => []);
+  const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+  if (!dbMatch) {
+    return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
+  const canonical = dbMatch.name;
 
   try {
     injectIntoTab(canonical, "/clear");
