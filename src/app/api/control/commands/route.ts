@@ -5,7 +5,6 @@ import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
 
 async function resolveUserId(req: NextRequest): Promise<string | null> {
   if (isDaemonRequest(req)) return getDaemonUserId();
-  // Browser session: require an authenticated user (no DEFAULT_USER_ID fallback here).
   const session = await auth();
   return session?.user?.id ?? null;
 }
