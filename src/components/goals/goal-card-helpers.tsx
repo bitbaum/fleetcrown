@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Clipboard, Loader2, Plus, X } from "lucide-react";
+import { CheckCircle, Clipboard, Loader2, Plus, Send, X } from "lucide-react";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
@@ -328,41 +328,39 @@ export function MilestoneRow({
   );
 }
 
-export function CopyGoalPromptButton({
-  title,
-  description,
-  progress,
-  milestones,
-  targetDate,
-  entityName,
-}: {
+type GoalPromptProps = {
   title: string;
   description: string | null;
   progress: number;
   milestones: Milestone[];
   targetDate: Date | null;
   entityName: string | null;
-}) {
+};
+
+function buildGoalPrompt({ title, description, progress, milestones, targetDate, entityName }: GoalPromptProps): string {
+  const lines: string[] = [`Goal: ${title}`];
+  if (description?.trim()) lines.push(`Description: ${description.trim()}`);
+  lines.push(`Progress: ${progress}%`);
+  if (milestones.length > 0) {
+    const done = milestones.filter((m) => m.done).length;
+    lines.push(`Milestones: ${done}/${milestones.length} done`);
+    const next = milestones.find((m) => !m.done);
+    if (next) lines.push(`Next milestone: ${next.title}`);
+  }
+  if (targetDate) {
+    const { label } = deadlineLabel(targetDate);
+    lines.push(`Target: ${label}`);
+  }
+  if (entityName) lines.push(`Project: ${entityName}`);
+  lines.push("", "Please advance this goal. What concrete next steps can you take right now?");
+  return lines.join("\n");
+}
+
+export function CopyGoalPromptButton(props: GoalPromptProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const lines: string[] = [`Goal: ${title}`];
-    if (description?.trim()) lines.push(`Description: ${description.trim()}`);
-    lines.push(`Progress: ${progress}%`);
-    if (milestones.length > 0) {
-      const done = milestones.filter((m) => m.done).length;
-      lines.push(`Milestones: ${done}/${milestones.length} done`);
-      const next = milestones.find((m) => !m.done);
-      if (next) lines.push(`Next milestone: ${next.title}`);
-    }
-    if (targetDate) {
-      const { label } = deadlineLabel(targetDate);
-      lines.push(`Target: ${label}`);
-    }
-    if (entityName) lines.push(`Project: ${entityName}`);
-    lines.push("", "Please advance this goal. What concrete next steps can you take right now?");
-
-    await navigator.clipboard.writeText(lines.join("\n"));
+    await navigator.clipboard.writeText(buildGoalPrompt(props));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
@@ -374,6 +372,26 @@ export function CopyGoalPromptButton({
       title="Copy goal as agent prompt"
     >
       {copied ? <CheckCircle className="h-3.5 w-3.5 text-status-positive" /> : <Clipboard className="h-3.5 w-3.5" />}
+    </button>
+  );
+}
+
+export function SendToIvyButton(props: GoalPromptProps) {
+  const [sent, setSent] = useState(false);
+
+  const handleSend = () => {
+    window.dispatchEvent(new CustomEvent("ivy:open", { detail: { prompt: buildGoalPrompt(props) } }));
+    setSent(true);
+    setTimeout(() => setSent(false), 1500);
+  };
+
+  return (
+    <button
+      onClick={handleSend}
+      className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
+      title="Ask Ivy about this goal"
+    >
+      {sent ? <CheckCircle className="h-3.5 w-3.5 text-status-positive" /> : <Send className="h-3.5 w-3.5" />}
     </button>
   );
 }

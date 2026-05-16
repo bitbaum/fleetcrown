@@ -8,9 +8,9 @@ import { postJson } from "@/lib/api/fetch";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
 import { type Message, QUICK_PROMPTS, GLOBAL_PROMPTS, useElapsedTimer } from "./ask-ivy-helpers";
 
-export function AskIvyModal({ onClose }: { onClose: () => void }) {
+export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => void; initialInput?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialInput);
   const [loading, setLoading] = useState(false);
   const [showAllPrompts, setShowAllPrompts] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
