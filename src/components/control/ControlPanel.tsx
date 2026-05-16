@@ -16,9 +16,8 @@ import {
   ActivityLogPanel,
   BrainConfigPanel,
   ControlMetricCard,
-  LaunchTabModal,
-  NewProjectModal,
 } from "./control-panel-helpers";
+import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
 import { ProjectFleetView } from "./ProjectFleetView";
 
