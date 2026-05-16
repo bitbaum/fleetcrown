@@ -12,6 +12,8 @@ import {
   DIMENSION_META,
   MetaSection,
   DimensionSection,
+} from "./project-profile-sections";
+import {
   NotesSection,
   DevLogSection,
   RemoveSection,
