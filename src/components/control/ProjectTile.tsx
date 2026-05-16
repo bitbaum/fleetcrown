@@ -110,7 +110,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
               className="ui-chip-action-compact inline-flex items-center gap-1.5"
             >
               {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
-              {project.agentPref ? `${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""}` : "Launch"}
+              {project.agentPref ?? "Launch"}
             </button>
           )}
         </div>

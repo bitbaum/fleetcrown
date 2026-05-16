@@ -65,8 +65,6 @@ function attentionScore(project: ProjectState): { score: number; reason: string 
   if (runHealth === "critical" && score < 4) { score += 3; reasons.push("last run: critical"); }
   else if (runHealth.includes("attention") && score < 2) { score += 2; reasons.push("last run: needs attention"); }
 
-  if (project.git?.dirty) { score += 1; reasons.push(`${project.git.dirtyCount} uncommitted`); }
-
   return { score, reason: reasons[0] ?? "" };
 }
 
