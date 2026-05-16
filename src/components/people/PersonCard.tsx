@@ -5,6 +5,7 @@ import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channels";
 import { HEALTH_DOT_COLOR } from "@/lib/constants/people";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { formatDistanceToNow } from "date-fns";
 import { postJson, throwApiError } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
@@ -23,6 +24,18 @@ export function PersonCard({
   const location = person.attrs["location"] ?? person.attrs["home_location"];
 
   const quickChannel = channels[0] ?? CHANNEL_NAMES[0] ?? "other";
+
+  const ivyPrompt = [
+    `Person: ${person.name}`,
+    profession && `Role: ${profession}`,
+    location && `Location: ${location}`,
+    person.description && `Notes: ${person.description}`,
+    person.lastInteraction
+      ? `Last contact: ${formatDistanceToNow(person.lastInteraction, { addSuffix: true })} (${person.interactionCount} interactions)`
+      : "No recorded interactions",
+    "",
+    "What do you know about this person from my knowledge graph? What would be a good next step with them?",
+  ].filter(Boolean).join("\n");
 
   const [logOpen, setLogOpen] = useState(false);
   const [channel, setChannel] = useState(CHANNEL_NAMES[0] ?? "whatsapp");
@@ -154,13 +167,20 @@ export function PersonCard({
               <>→ Reached out</>
             )}
           </button>
-          <button
-            onClick={openLog}
-            className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip"
-            title="Log with details"
-          >
-            <Plus className="h-3 w-3" /> Details
-          </button>
+          <div className="flex items-center gap-1.5">
+            <IvyDispatchButton
+              prompt={ivyPrompt}
+              title="Ask Ivy about this person"
+              className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+            />
+            <button
+              onClick={openLog}
+              className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 ui-btn-chip"
+              title="Log with details"
+            >
+              <Plus className="h-3 w-3" /> Details
+            </button>
+          </div>
         </div>
       )}
 
