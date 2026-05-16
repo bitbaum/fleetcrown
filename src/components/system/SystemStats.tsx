@@ -2,6 +2,7 @@
 
 import { Cpu, HardDrive, Clock, Radio } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
 import { HEALTH_THRESHOLDS } from "@/config/ui";
@@ -41,13 +42,18 @@ function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) 
 }
 
 export function SystemStats() {
-  const { data, loading } = useFetch<SystemData>("/api/system");
+  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: 30_000 });
 
   if (loading) {
     return <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>;
   }
-  if (!data) {
-    return <div className="text-base text-text-secondary">Could not fetch system data</div>;
+  if (error || !data) {
+    return (
+      <Card>
+        <CardHeader icon={Cpu} title="System" />
+        <FetchErrorState message="Couldn't load system stats" onRetry={refetch} />
+      </Card>
+    );
   }
 
   const { mem, swap, disk, uptime, gatewayStatus } = data;
