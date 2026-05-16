@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Clipboard, Loader2, Plus, Send, X } from "lucide-react";
+import { CheckCircle, Clipboard, Loader2, Plus, X } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
@@ -377,21 +378,11 @@ export function CopyGoalPromptButton(props: GoalPromptProps) {
 }
 
 export function SendToIvyButton(props: GoalPromptProps) {
-  const [sent, setSent] = useState(false);
-
-  const handleSend = () => {
-    window.dispatchEvent(new CustomEvent("ivy:open", { detail: { prompt: buildGoalPrompt(props) } }));
-    setSent(true);
-    setTimeout(() => setSent(false), 1500);
-  };
-
   return (
-    <button
-      onClick={handleSend}
-      className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
+    <IvyDispatchButton
+      prompt={buildGoalPrompt(props)}
       title="Ask Ivy about this goal"
-    >
-      {sent ? <CheckCircle className="h-3.5 w-3.5 text-status-positive" /> : <Send className="h-3.5 w-3.5" />}
-    </button>
+      className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
+    />
   );
 }

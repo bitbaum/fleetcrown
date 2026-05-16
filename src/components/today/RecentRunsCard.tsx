@@ -6,7 +6,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
-import { SendNextToIvyButton } from "./SendNextToIvyButton";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 
 export async function RecentRunsCard() {
   const userId = await getCurrentUserId();
@@ -53,7 +53,10 @@ export async function RecentRunsCard() {
                     <div className="mt-1 flex items-start gap-1">
                       <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-accent-text/80" />
                       <p className="flex-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">{next}</p>
-                      <SendNextToIvyButton projectKey={run.projectKey} next={next} />
+                      <IvyDispatchButton
+                        prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
+                        title="Ask Ivy to execute this next step"
+                      />
                     </div>
                   )}
                 </div>
