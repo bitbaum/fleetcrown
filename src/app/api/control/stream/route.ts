@@ -3,7 +3,7 @@ import { getProjectStatesByUserId } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
-import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
+import { resolveEffectiveTab } from "@/lib/agent-config";
 import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
@@ -56,20 +56,15 @@ export async function GET() {
   const agentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
 
   const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const confProjects = dbUserProjects.length > 0
-    ? dbUserProjects.filter((p) => p.dirPath).map((p) => {
-        const agentId = p.agentPref ?? agentConfig.agent;
-        const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
-        return {
-          tab: p.name,
-          dir: p.dirPath!,
-          sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
-        };
-      })
-    : parseProjectsConf().map((p) => ({
-        ...p,
-        sessionLifecycleSignals: agentRegistry.agents.find((entry) => entry.id === agentConfig.agent)?.capabilities.sessionLifecycleSignals ?? false,
-      }));
+  const confProjects = dbUserProjects.filter((p) => p.dirPath).map((p) => {
+    const agentId = p.agentPref ?? agentConfig.agent;
+    const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
+    return {
+      tab: p.name,
+      dir: p.dirPath!,
+      sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
+    };
+  });
 
   // Resolve each project's canonical tab name to its exact zellij casing.
   // The cache is refreshed every 10s in the background so new Claude sessions

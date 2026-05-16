@@ -14,7 +14,6 @@ import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preference
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import {
   stateFile,
-  parseProjectsConf,
   resolveEffectiveTab,
   readPromptMeta,
   type PromptMeta,
@@ -200,14 +199,13 @@ export async function GET() {
   const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
   const prompts = readPromptMeta();
 
-  // DB projects for this user; fall back to conf file for backward compat
+  // Each user sees only their own registered projects.
+  // The conf-file fallback that existed here was removed: it leaked the owner's
+  // projects to any authenticated user who had no projects yet.
   const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const usingUserProjects = dbUserProjects.length > 0;
-  const projects = usingUserProjects
-    ? dbUserProjects
-        .filter((p) => p.dirPath)
-        .map((p) => ({ id: p.id, projectId: p.entityProjectId ?? null, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }))
-    : parseProjectsConf().map((p) => ({ id: null, projectId: null, agentPref: null, modelPref: null, ...p }));
+  const projects = dbUserProjects
+    .filter((p) => p.dirPath)
+    .map((p) => ({ id: p.id, projectId: p.entityProjectId ?? null, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }));
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
@@ -417,12 +415,10 @@ export async function GET() {
       sessionLifecycleSignals: true,
     },
     inventory: {
-      source: usingUserProjects ? "user_projects" : "projects_conf_fallback",
-      trackedProjectCount: usingUserProjects ? dbUserProjects.length : projects.length,
+      source: "user_projects",
+      trackedProjectCount: dbUserProjects.length,
       controlProjectCount: projects.length,
-      linkedDirectoryCount: usingUserProjects
-        ? dbUserProjects.filter((project) => Boolean(project.dirPath)).length
-        : projects.length,
+      linkedDirectoryCount: dbUserProjects.filter((project) => Boolean(project.dirPath)).length,
     },
     projects: states,
     prompts,
