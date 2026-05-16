@@ -74,12 +74,12 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
             <p className="text-center text-xs text-white/[0.25]">
               New accounts are created automatically
             </p>
-            <AuthDivider label="or sign in with password" />
+            <AuthDivider label="or owner password" />
           </>
         )}
 
         <form onSubmit={handleLocal} className="space-y-3">
-          <AuthField label="Local password">
+          <AuthField label="Password">
             <AuthInput
               id="password"
               type="password"
