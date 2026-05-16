@@ -167,7 +167,7 @@ export function ControlPanel() {
                   <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={`${dashboard.idleCount} idle`} />
                   <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
                   <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
-                  <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note={dashboard.expandedCount > 0 ? `${dashboard.expandedCount} manually expanded` : "Zellij-backed project tabs"} />
+                  <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note="Zellij-backed project tabs" />
                 </div>
                 {dashboard.commitsToday > 0 && (
                   <div className="flex items-center gap-1.5 text-sm text-text-tertiary">

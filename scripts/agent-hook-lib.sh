@@ -167,27 +167,49 @@ get_prompt() {
   jq -r --arg k "$1" '.[] | select(.key == $k) | .prompt' "$_PROMPTS" 2>/dev/null
 }
 
+# Find the zellij session that has a tab with the given name.
+# Uses ZELLIJ_SESSION_NAME env var (required for zellij action outside a pane).
+_find_session_for_tab() {
+  local tab="$1"
+  zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
+    if ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null \
+        | grep -qF "$tab"; then
+      echo "$s"
+      return 0
+    fi
+  done
+}
+
 inject_prompt() {
   local tab="$1"
   local prompt="$2"
   [ -z "$tab" ] && return 1
 
+  # When called from outside a zellij session (e.g. systemd daemon), find which
+  # session contains this tab — zellij action without ZELLIJ_SESSION_NAME set
+  # lists sessions instead of acting, so write-chars goes nowhere.
+  local zellij_session="${ZELLIJ_SESSION_NAME:-}"
+  if [ -z "$zellij_session" ]; then
+    zellij_session=$(_find_session_for_tab "$tab")
+    [ -z "$zellij_session" ] && return 1
+  fi
+
   # go-to-tab-name is fire-and-forget — the switch completes asynchronously.
   # Poll dump-layout until the focused tab matches before sending characters,
   # so write-chars never lands in the previously focused pane.
-  zellij action go-to-tab-name "$tab" 2>/dev/null
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$tab" 2>/dev/null
   local i active
   for i in $(seq 1 20); do
-    active=$(zellij action dump-layout 2>/dev/null \
+    active=$(ZELLIJ_SESSION_NAME="$zellij_session" zellij action dump-layout 2>/dev/null \
       | grep 'focus=true' | grep 'tab name=' \
       | sed 's/.*tab name="\([^"]*\)".*/\1/' | head -1)
     [ "$active" = "$tab" ] && break
     sleep 0.05
   done
 
-  zellij action write-chars -- "$prompt" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write-chars -- "$prompt" 2>/dev/null || true
   sleep 0.2
-  zellij action write 13 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write 13 2>/dev/null || true
 }
 
 # Call after every injection to keep the Control panel and web beacon in sync.

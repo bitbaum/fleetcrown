@@ -36,7 +36,6 @@ export type ControlDashboardState = {
   controlProjectCount: number;
   openTabCount: number;
   idleCount: number;
-  expandedCount: number;
   commitsToday: number;
 };
 
@@ -237,7 +236,6 @@ export function buildControlPageState(
   ).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const idleCount = idleProjects.length;
-  const expandedCount = expandedTabs.size;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
 
   const attention = data.projects
@@ -257,7 +255,7 @@ export function buildControlPageState(
       controlProjectCount,
       openTabCount,
       idleCount,
-      expandedCount,
+
       commitsToday,
     },
   };
