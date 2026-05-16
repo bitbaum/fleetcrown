@@ -3,19 +3,84 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
+import { Target, CheckCircle, Loader2, FolderKanban, Plus, Repeat2, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
-import { DeleteGoalButton } from "./DeleteGoalButton";
 import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow, CopyGoalPromptButton, SendToIvyButton } from "./goal-card-helpers";
+import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
+import { GoalTitleRow, GoalDescriptionEdit } from "./goal-card-sections";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
+
+function GoalChildrenSection({
+  goal, depth, isClosed, habitsByGoalId,
+  addingChild, childTitle, childError, savingChild,
+  onAddChild, onSetAddingChild, onSetChildTitle,
+}: {
+  goal: GoalWithChildren;
+  depth: number;
+  isClosed: boolean;
+  habitsByGoalId: SupportingHabits;
+  addingChild: boolean;
+  childTitle: string;
+  childError: string | null;
+  savingChild: boolean;
+  onAddChild: () => void;
+  onSetAddingChild: (v: boolean) => void;
+  onSetChildTitle: (v: string) => void;
+}) {
+  const showSection = goal.children.length > 0 || (!isClosed && addingChild);
+  return (
+    <>
+      {showSection && (
+        <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
+          {goal.children.map((child) => (
+            <GoalCard key={child.id} goal={child} depth={depth + 1} habitsByGoalId={habitsByGoalId} />
+          ))}
+          {addingChild && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={childTitle}
+                  onChange={(e) => { onSetChildTitle(e.target.value); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onAddChild();
+                    if (e.key === "Escape") { onSetAddingChild(false); onSetChildTitle(""); }
+                  }}
+                  placeholder="Sub-goal title…"
+                  autoFocus
+                  className="flex-1 text-sm ui-input-tight"
+                />
+                <button onClick={onAddChild} disabled={!childTitle.trim() || savingChild}
+                  className="ui-btn-confirm-icon shrink-0">
+                  {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
+                </button>
+                <button onClick={() => { onSetAddingChild(false); onSetChildTitle(""); }}
+                  className="ui-btn-row-action shrink-0">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              {childError && <p className="ui-error-xs ml-1">{childError}</p>}
+            </div>
+          )}
+        </div>
+      )}
+      {!isClosed && !addingChild && (
+        <button
+          onClick={() => onSetAddingChild(true)}
+          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-secondary hover:text-status-positive transition-colors"
+        >
+          <Plus className="h-3 w-3" /> Add sub-goal
+        </button>
+      )}
+    </>
+  );
+}
 
 export function GoalCard({
   goal,
@@ -122,7 +187,6 @@ export function GoalCard({
     <div>
       <Card className={`group ${isClosed ? "opacity-60" : ""}`}>
         <div className="flex items-start gap-3">
-          {/* Status toggle */}
           <button
             onClick={toggleComplete}
             disabled={togglingStatus || isAbandoned}
@@ -141,118 +205,29 @@ export function GoalCard({
           </button>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              {titleEdit.editing ? (
-                titleEdit.saving ? (
-                  <Loader2 className="ui-spinner text-text-muted" />
-                ) : (
-                  <input
-                    value={titleEdit.draft}
-                    onChange={(e) => titleEdit.setDraft(e.target.value)}
-                    onBlur={commitTitle}
-                    onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") titleEdit.cancel(); }}
-                    autoFocus
-                    className={`ui-input-inline border-border-strong px-2 py-0.5 ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium"}`}
-                  />
-                )
-              ) : (
-                <div
-                  className={`cursor-text hover:text-text-primary transition-colors ${depth === 0 ? "text-base md:text-lg font-semibold" : "text-sm md:text-base font-medium text-text-primary"}`}
-                  onClick={() => !isClosed && titleEdit.start(displayTitle)}
-                  title={isClosed ? undefined : "Click to edit title"}
-                >
-                  {displayTitle}
-                </div>
-              )}
-              {isAbandoned && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
-                  abandoned
-                </span>
-              )}
-              {isCompleted && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-surface-overlay text-text-tertiary">
-                  completed
-                </span>
-              )}
-              <div className="ml-auto flex items-center gap-0.5">
-                {/* Goal→agent dispatch — only on active goals */}
-                {!isClosed && (
-                  <>
-                    <SendToIvyButton
-                      title={displayTitle}
-                      description={description}
-                      progress={progress}
-                      milestones={milestones}
-                      targetDate={targetDate}
-                      entityName={goal.entityName ?? null}
-                    />
-                    <CopyGoalPromptButton
-                      title={displayTitle}
-                      description={description}
-                      progress={progress}
-                      milestones={milestones}
-                      targetDate={targetDate}
-                      entityName={goal.entityName ?? null}
-                    />
-                  </>
-                )}
-                {/* Abandon / restore button */}
-                <button
-                  onClick={toggleAbandon}
-                  disabled={abandoningStatus || isCompleted}
-                  title={isAbandoned ? "Restore goal" : "Mark abandoned"}
-                  className={`ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 disabled:opacity-30 ${
-                    isAbandoned
-                      ? "text-text-muted hover:text-text-secondary opacity-100"
-                      : "text-text-muted hover:text-status-warning"
-                  }`}
-                >
-                  {abandoningStatus
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Archive className="h-3.5 w-3.5" />
-                  }
-                </button>
-                <DeleteGoalButton goalId={goal.id} />
-              </div>
-            </div>
-            {descEdit.editing ? (
-              <div className="mt-1 flex items-start gap-1.5">
-                <textarea
-                  value={descEdit.draft}
-                  onChange={(e) => descEdit.setDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") descEdit.cancel();
-                    if (e.key === "Enter" && e.metaKey) commitDesc();
-                  }}
-                  autoFocus
-                  rows={2}
-                  placeholder="Add a description…"
-                  className="flex-1 resize-none ui-input-tight"
-                />
-                <div className="flex flex-col gap-1 shrink-0">
-                  <button onClick={commitDesc} disabled={descEdit.saving}
-                    className="ui-btn-confirm-icon">
-                    {descEdit.saving ? <Loader2 className="ui-spinner-2xs" /> : <Check className="h-2.5 w-2.5" />}
-                  </button>
-                  <button onClick={descEdit.cancel}
-                    className="p-1.5 text-text-muted hover:text-text-secondary">
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => !isClosed && descEdit.start(description ?? "")}
-                className={`text-xs md:text-sm mt-1 text-left w-full transition-colors ${
-                  isClosed ? "cursor-default" :
-                  description ? "text-text-tertiary hover:text-text-secondary" : "text-text-muted hover:text-text-muted italic"
-                }`}
-                disabled={isClosed}
-                title={isClosed ? undefined : "Click to edit description"}
-              >
-                {description ?? "Add a description…"}
-              </button>
-            )}
+            <GoalTitleRow
+              depth={depth}
+              isClosed={isClosed}
+              isCompleted={isCompleted}
+              isAbandoned={isAbandoned}
+              displayTitle={displayTitle}
+              titleEdit={titleEdit}
+              onCommitTitle={commitTitle}
+              abandoningStatus={abandoningStatus}
+              onToggleAbandon={toggleAbandon}
+              description={description ?? null}
+              progress={progress}
+              milestones={milestones}
+              targetDate={targetDate}
+              entityName={goal.entityName ?? null}
+              goalId={goal.id}
+            />
+            <GoalDescriptionEdit
+              isClosed={isClosed}
+              description={description ?? null}
+              descEdit={descEdit}
+              onCommitDesc={commitDesc}
+            />
             {goal.entityName && goal.entityId && (
               <div className="flex items-center gap-2 mt-1">
                 <Link
@@ -269,7 +244,6 @@ export function GoalCard({
               </div>
             )}
 
-            {/* Supporting habits */}
             {supportingHabits.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                 <Repeat2 className="h-3 w-3 text-text-muted shrink-0" />
@@ -279,7 +253,6 @@ export function GoalCard({
               </div>
             )}
 
-            {/* Progress bar */}
             {!isClosed && (
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
@@ -288,21 +261,12 @@ export function GoalCard({
                   ) : (
                     <ProgressInput goalId={goal.id} initial={progress} onUpdate={setProgress} />
                   )}
-                  <DateInput
-                    goalId={goal.id}
-                    initial={targetDate}
-                    onUpdate={setTargetDate}
-                  />
+                  <DateInput goalId={goal.id} initial={targetDate} onUpdate={setTargetDate} />
                 </div>
-                <GoalProgressBar
-                  value={progress}
-                  minPercent={1}
-                  className="h-1.5 bg-surface-raised"
-                />
+                <GoalProgressBar value={progress} minPercent={1} className="h-1.5 bg-surface-raised" />
               </div>
             )}
 
-            {/* Milestones */}
             {(milestoneTotal > 0 || !isClosed) && (
               <div className="mt-2 space-y-1.5">
                 {milestones.map((m, i) => (
@@ -327,10 +291,7 @@ export function GoalCard({
                   <AddMilestoneInline
                     goalId={goal.id}
                     milestones={milestones}
-                    onAdded={(updated) => {
-                      setMilestones(updated);
-                      // If first milestone added, progress stays manual until milestones drive it
-                    }}
+                    onAdded={(updated) => setMilestones(updated)}
                   />
                 )}
               </div>
@@ -339,45 +300,19 @@ export function GoalCard({
         </div>
       </Card>
 
-      {/* Children + inline add-sub-goal */}
-      {(goal.children.length > 0 || (!isClosed && addingChild)) && (
-        <div className="mt-2 ml-6 pl-5 border-l-2 border-status-positive/20 space-y-2">
-          {goal.children.map((child) => (
-            <GoalCard key={child.id} goal={child} depth={depth + 1} habitsByGoalId={habitsByGoalId} />
-          ))}
-          {addingChild && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={childTitle}
-                  onChange={(e) => { setChildTitle(e.target.value); setChildError(null); }}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAddChild(); if (e.key === "Escape") { setAddingChild(false); setChildTitle(""); setChildError(null); } }}
-                  placeholder="Sub-goal title…"
-                  autoFocus
-                  className="flex-1 text-sm ui-input-tight"
-                />
-                <button onClick={handleAddChild} disabled={!childTitle.trim() || savingChild}
-                  className="ui-btn-confirm-icon shrink-0">
-                  {savingChild ? <Loader2 className="ui-spinner-xs" /> : <Check className="h-3 w-3" />}
-                </button>
-                <button onClick={() => { setAddingChild(false); setChildTitle(""); setChildError(null); }}
-                  className="ui-btn-row-action shrink-0">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-              {childError && <p className="ui-error-xs ml-1">{childError}</p>}
-            </div>
-          )}
-        </div>
-      )}
-      {!isClosed && !addingChild && (
-        <button
-          onClick={() => setAddingChild(true)}
-          className="mt-1 ml-6 flex items-center gap-1 text-xs text-text-secondary hover:text-status-positive transition-colors"
-        >
-          <Plus className="h-3 w-3" /> Add sub-goal
-        </button>
-      )}
+      <GoalChildrenSection
+        goal={goal}
+        depth={depth}
+        isClosed={isClosed}
+        habitsByGoalId={habitsByGoalId}
+        addingChild={addingChild}
+        childTitle={childTitle}
+        childError={childError}
+        savingChild={savingChild}
+        onAddChild={handleAddChild}
+        onSetAddingChild={(v) => { setAddingChild(v); if (!v) { setChildTitle(""); setChildError(null); } }}
+        onSetChildTitle={(v) => { setChildTitle(v); setChildError(null); }}
+      />
     </div>
   );
 }
