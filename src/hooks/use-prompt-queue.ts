@@ -104,20 +104,19 @@ export function usePromptQueue(tab: string) {
     } catch { return null; }
   }, [tab, setQueue]);
 
-  // Reads localStorage for the definitive state, writes the filtered result
-  // to file immediately (critical for beacon auto-fire where the tab may close
-  // before the React effect cycle runs), then updates state.
+  // Writes the filtered queue to file immediately (critical for beacon auto-fire where
+  // the tab may close before the React effect cycle runs), then updates React state.
+  // State updater is kept pure (no side effects) so React Strict Mode / concurrent mode
+  // double-invocation doesn't cause double file writes.
   const remove = useCallback((index: number) => {
-    // Compute next state from React state (authoritative — avoids stale localStorage reads
-    // when remove() is called before the useLocalStorageState effect has flushed a prior enqueue).
-    // Write file + update localStorage immediately so beacon auto-fire and PyQt see it
-    // before the next render cycle completes.
-    setQueue((q) => {
-      const next = q.filter((_, i) => i !== index);
-      try { localStorage.setItem(queueKey(tab), toJson(next)); } catch { /* ignore */ }
-      writeToFile(tab, next, lastWrittenRef);
-      return next;
-    });
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (raw) {
+        const next = (JSON.parse(raw) as string[]).filter((_, i) => i !== index);
+        writeToFile(tab, next, lastWrittenRef); // sets lastWrittenRef → sync effect skips
+      }
+    } catch { /* ignore */ }
+    setQueue((q) => q.filter((_, i) => i !== index));
   }, [setQueue, tab]);
 
   const reorder = useCallback((from: number, to: number) => {

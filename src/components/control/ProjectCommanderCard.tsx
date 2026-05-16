@@ -7,6 +7,7 @@ import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectDisplayState } from "./control-presenter";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
+import { usePromptQueue } from "@/hooks/use-prompt-queue";
 
 export function ProjectCommanderCard({
   project,
@@ -24,6 +25,7 @@ export function ProjectCommanderCard({
   const nowS = Math.floor(Date.now() / 1000);
   const display = getProjectDisplayState(project, zellijTabs, nowS);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(project.tab);
+  const { queue, shift: shiftQueue } = usePromptQueue(project.tab);
 
   const [sending, setSending] = useState(false);
   const [talkOpen, setTalkOpen] = useState(false);
@@ -50,6 +52,8 @@ export function ProjectCommanderCard({
 
   const contextLine = isRunning && project.currentPrompt
     ? project.currentPrompt.label
+    : queue.length > 0
+    ? queue[0]
     : project.session?.next
     ? project.session.next
     : project.session?.done ?? null;
@@ -75,7 +79,12 @@ export function ProjectCommanderCard({
   const advance = async () => {
     setSending(true);
     try {
-      await onRunWithBrain(project, "next_best");
+      const queued = shiftQueue();
+      if (queued) {
+        await onInject(project.tab, undefined, queued);
+      } else {
+        await onRunWithBrain(project, "next_best");
+      }
     } finally {
       setSending(false);
     }
@@ -130,10 +139,11 @@ export function ProjectCommanderCard({
               <button
                 onClick={advance}
                 disabled={sending}
+                title={queue.length > 0 ? `Send queued prompt (${queue.length} in queue)` : "Run next best task"}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-accent-primary/30 bg-accent-primary/[0.08] px-3 py-1.5 text-xs font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.14] disabled:opacity-50"
               >
                 {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowRight className="h-3 w-3" />}
-                Continue
+                {queue.length > 0 ? `Send (${queue.length})` : "Continue"}
               </button>
               <button
                 onClick={() => setTalkOpen((v) => !v)}
