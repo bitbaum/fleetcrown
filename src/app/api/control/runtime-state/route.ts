@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertProjectState } from "@/db/queries/project-states";
+import { getUserIdsByProjectNames } from "@/db/queries/user-projects";
 import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
 
 interface ProjectRuntimePatch {
@@ -25,8 +26,9 @@ function tsOrNull(epochS: number | null | undefined): Date | null {
 // Pushes local agent runtime state into the DB so the cloud control plane can read it.
 export async function POST(req: NextRequest) {
   if (!isDaemonRequest(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const userId = await getDaemonUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Resolve the daemon's fallback userId — used for projects not found in user_projects.
+  const daemonUserId = await getDaemonUserId();
+  if (!daemonUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: { projects?: unknown };
   try {
@@ -41,9 +43,16 @@ export async function POST(req: NextRequest) {
 
   const projects = body.projects as ProjectRuntimePatch[];
 
+  // Resolve the actual owning userId per project by looking up user_projects.
+  // This ensures state is stored under the right user even when the owner's
+  // session account differs from the daemon's default-user account (e.g. GitHub OAuth
+  // created a separate row from the initial local-password setup).
+  const ownerMap = await getUserIdsByProjectNames(projects.map((p) => p.tab)).catch(() => new Map<string, string>());
+
   await Promise.all(
-    projects.map((p) =>
-      upsertProjectState({
+    projects.map((p) => {
+      const userId = ownerMap.get(p.tab.toLowerCase()) ?? daemonUserId;
+      return upsertProjectState({
         projectKey:             p.tab,
         userId,
         tabName:                p.tab,
@@ -57,8 +66,8 @@ export async function POST(req: NextRequest) {
         lockAt:                 tsOrNull(p.lockAt),
         closingAt:              tsOrNull(p.closingAt),
         closedAt:               tsOrNull(p.closedAt),
-      }).catch(() => {})
-    )
+      }).catch(() => {});
+    })
   );
 
   return NextResponse.json({ ok: true, count: projects.length });
