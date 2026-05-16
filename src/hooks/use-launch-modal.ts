@@ -21,11 +21,12 @@ export function useLaunchModal({
   launchableAgents: AgentEntry[];
   selectedAgent: string;
   setError: (e: string) => void;
-  launchProject: (tab: string, dir: string, agent?: string, model?: string) => Promise<void>;
+  launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
 }) {
   const [launchTarget, setLaunchTarget] = useState<LaunchTarget | null>(null);
   const [launchAgentId, setLaunchAgentId] = useState("");
   const [launchModel, setLaunchModel] = useState("");
+  const [launchInitialPrompt, setLaunchInitialPrompt] = useState("");
   const [launchingProject, setLaunchingProject] = useState(false);
   const [launchError, setLaunchError] = useState("");
 
@@ -43,6 +44,7 @@ export function useLaunchModal({
     setLaunchTarget({ id: project.id, tab: project.tab, dir: project.dir });
     setLaunchAgentId(preferred.id);
     setLaunchModel(project.modelPref ?? preferred.defaultModel);
+    setLaunchInitialPrompt("");
     setLaunchError("");
   };
 
@@ -51,7 +53,11 @@ export function useLaunchModal({
     setLaunchingProject(true);
     setLaunchError("");
     try {
-      await launchProject(launchTarget.tab, launchTarget.dir, launchAgentId, launchModel.trim() || undefined);
+      await launchProject(
+        launchTarget.tab, launchTarget.dir, launchAgentId,
+        launchModel.trim() || undefined,
+        launchInitialPrompt.trim() || undefined,
+      );
       if (launchTarget.id) {
         patchJson(`/api/user-projects/${launchTarget.id}`, {
           agentPref: launchAgentId,
@@ -70,11 +76,13 @@ export function useLaunchModal({
     launchTarget,
     launchAgentId,
     launchModel,
+    launchInitialPrompt,
     launchingProject,
     launchError,
     setLaunchTarget,
     setLaunchAgentId,
     setLaunchModel,
+    setLaunchInitialPrompt,
     openLaunchModal,
     confirmLaunch,
   };

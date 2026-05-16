@@ -27,7 +27,7 @@ export interface ControlDataHook {
   daemonLastPushedAt: string | null;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
-  launchProject: (tab: string, dir: string, agent?: string, model?: string) => Promise<void>;
+  launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
   saveAgent: (applyToOpenTabs: boolean) => Promise<void>;
@@ -173,12 +173,13 @@ export function useControlData(): ControlDataHook {
     return { mode: body.mode === "queued" ? "queued" : "direct" };
   };
 
-  const launchProject = async (tab: string, dir: string, agent?: string, model?: string) => {
+  const launchProject = async (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => {
     const res = await postJson("/api/agent/launch", {
       tab,
       dir,
       agent: agent ?? selectedAgent,
       model,
+      initialPrompt: initialPrompt?.trim() || undefined,
     });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     setTimeout(() => refresh(true), 1500);

@@ -1,3 +1,4 @@
+import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { launchAgentInTab } from "@/lib/agent-runtime";
@@ -9,7 +10,50 @@ const LaunchAgentBody = z.object({
   dir: z.string().trim().min(1).max(500),
   agent: z.string().trim().min(1).max(40),
   model: z.string().trim().max(160).optional(),
+  initialPrompt: z.string().trim().max(4000).optional(),
 });
+
+const AGENT_BASENAMES = new Set(["claude", "codex", "gemini", "openclaw"]);
+
+function isAgentRunningIn(dir: string): boolean {
+  try {
+    for (const entry of fs.readdirSync("/proc")) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        const argv0 = fs.readFileSync(`/proc/${entry}/cmdline`, "utf8").split("\0")[0] ?? "";
+        if (!AGENT_BASENAMES.has(argv0.split("/").pop() ?? "")) continue;
+        if (fs.readlinkSync(`/proc/${entry}/cwd`) === dir) return true;
+      } catch { /* skip */ }
+    }
+  } catch { /* /proc unavailable */ }
+  return false;
+}
+
+function scheduleInjectAfterLaunch(tab: string, dir: string, prompt: string): void {
+  const queuePath = `/tmp/agent-queue-${tab.toLowerCase()}`;
+  // Write to queue file immediately as fallback (beacon auto-continue will pick it up)
+  try {
+    fs.writeFileSync(queuePath, JSON.stringify([prompt]));
+  } catch { /* best effort */ }
+
+  // Poll every 3s for the agent process to appear, then inject directly (up to 30s total)
+  let attempts = 0;
+  const tryInject = async () => {
+    attempts++;
+    if (isAgentRunningIn(dir)) {
+      try {
+        const { injectIntoTab } = await import("@/lib/zellij");
+        injectIntoTab(tab, prompt);
+        // Inject succeeded — clear queue so the same prompt isn't re-fired on next stop
+        try { fs.unlinkSync(queuePath); } catch { /* already gone */ }
+      } catch { /* inject failed — queue file remains for beacon pickup */ }
+      return;
+    }
+    if (attempts < 10) setTimeout(tryInject, 3000);
+    // After 10 attempts (~30s) give up; queue file is still there for beacon pickup
+  };
+  setTimeout(tryInject, 3000);
+}
 
 export async function POST(req: NextRequest) {
   if (!isRuntimeAvailable()) {
@@ -22,7 +66,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, LaunchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { tab, dir, agent, model } = dataOrResp;
+  const { tab, dir, agent, model, initialPrompt } = dataOrResp;
   const registry = listAgentRegistry();
   const exactEntry = registry.find((candidate) => candidate.id === agent);
   if (!exactEntry) {
@@ -37,6 +81,9 @@ export async function POST(req: NextRequest) {
 
   try {
     launchAgentInTab(tab, dir, exactEntry.id, model);
+    if (initialPrompt?.trim()) {
+      scheduleInjectAfterLaunch(tab, dir, initialPrompt.trim());
+    }
     return NextResponse.json({ ok: true, tab, agent: exactEntry.id });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

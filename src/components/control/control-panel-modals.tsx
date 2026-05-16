@@ -84,10 +84,12 @@ export function LaunchTabModal({
   agents,
   selectedAgentId,
   selectedModel,
+  initialPrompt,
   launching,
   error,
   onAgentChange,
   onModelChange,
+  onInitialPromptChange,
   onLaunch,
   onClose,
 }: {
@@ -96,15 +98,18 @@ export function LaunchTabModal({
   agents: AgentEntry[];
   selectedAgentId: string;
   selectedModel: string;
+  initialPrompt: string;
   launching: boolean;
   error: string;
   onAgentChange: (agentId: string) => void;
   onModelChange: (value: string) => void;
+  onInitialPromptChange: (value: string) => void;
   onLaunch: () => void;
   onClose: () => void;
 }) {
   const selected = agents.find((agent) => agent.id === selectedAgentId) ?? agents[0] ?? null;
   const supportsModel = !!selected && selected.modelSuggestions.length > 0;
+  const hasPrompt = initialPrompt.trim().length > 0;
 
   return (
     <Modal onClose={onClose} size="md">
@@ -171,6 +176,19 @@ export function LaunchTabModal({
             </div>
           </div>
         )}
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-text-tertiary uppercase tracking-caps">
+            Initial task <span className="font-normal normal-case text-text-muted">— optional</span>
+          </label>
+          <textarea
+            value={initialPrompt}
+            onChange={(e) => onInitialPromptChange(e.target.value)}
+            placeholder="What should the agent do first? Injected automatically once it starts."
+            rows={3}
+            className="ui-input w-full resize-none"
+          />
+        </div>
       </div>
 
       {error && <p className="ui-error">{error}</p>}
@@ -181,7 +199,7 @@ export function LaunchTabModal({
           className="ui-btn-primary flex-1 gap-1.5"
         >
           {launching ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}
-          Launch
+          {hasPrompt ? "Launch & run" : "Launch"}
         </button>
         <button onClick={onClose} className="ui-btn-secondary">
           Cancel
