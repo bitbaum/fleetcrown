@@ -98,6 +98,7 @@ export function getAgentProcesses(
 export type FastProjectState = {
   tab: string;
   agentRunning: boolean;
+  tabOpen: boolean;
   activeAgents: string[];
   session: SessionState | null;
   currentPrompt: CurrentPrompt | null;
@@ -108,11 +109,11 @@ export type FastProjectState = {
 };
 
 export function readFastState(
-  projects: Array<{ tab: string; dir: string; sessionLifecycleSignals?: boolean; activeAgents?: string[] }>,
+  projects: Array<{ tab: string; dir: string; sessionLifecycleSignals?: boolean; activeAgents?: string[]; tabOpen?: boolean }>,
   agentCwds: string[]
 ): FastProjectState[] {
   const nowS = Math.floor(Date.now() / 1000);
-  return projects.map(({ tab, dir, sessionLifecycleSignals = true, activeAgents = [] }) => {
+  return projects.map(({ tab, dir, sessionLifecycleSignals = true, activeAgents = [], tabOpen = false }) => {
     const tmpReady   = readTmpTs(stateFile.ready(tab));
     const tmpLock    = readTmpTs(stateFile.lock(tab));
     const tmpClosing = readTmpTs(stateFile.closing(tab));
@@ -126,6 +127,7 @@ export function readFastState(
     return {
       tab,
       agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
+      tabOpen,
       activeAgents,
       session: parseSession(tab),
       currentPrompt,

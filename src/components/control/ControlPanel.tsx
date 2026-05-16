@@ -27,7 +27,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable,
+    runtimeAvailable, daemonLastPushedAt,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -103,12 +103,25 @@ export function ControlPanel() {
     runtimeAvailable,
   });
 
+  const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
+  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
+  const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
+
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
       {data ? (
         <>
           {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums">● {dashboard.runningCount}</span>}
           {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
+          {daemonNeverSeen && (
+            <span className="hidden sm:inline text-status-warning" title="Start the cockpit-daemon on your local machine to see live agent state">daemon not connected</span>
+          )}
+          {daemonOffline && (
+            <span className="hidden sm:inline text-status-warning" title={`Daemon last seen ${timeAgo(new Date(daemonLastPushedAt!).getTime())} — restart cockpit-daemon on your local machine`}>daemon offline</span>
+          )}
+          {!daemonNeverSeen && !daemonOffline && daemonLastPushedAt && (
+            <span className="hidden sm:inline text-text-muted" title="Local daemon last sync">daemon {timeAgo(new Date(daemonLastPushedAt).getTime())}</span>
+          )}
           {lastUpdated && <span className="hidden sm:inline">{timeAgo(lastUpdated)}</span>}
         </>
       ) : (

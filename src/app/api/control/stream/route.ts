@@ -24,10 +24,11 @@ function dbToFastState(
   const byKey = new Map(dbRows.map((r) => [r.projectKey.toLowerCase(), r]));
   return confProjects.map(({ tab }) => {
     const r = byKey.get(tab.toLowerCase());
-    if (!r) return { tab, agentRunning: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
+    if (!r) return { tab, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
     return {
       tab,
       agentRunning: r.agentRunning,
+      tabOpen: r.tabOpen,
       activeAgents: r.activeAgents,
       session: r.sessionDone || r.sessionNext
         ? { done: r.sessionDone ?? "", next: r.sessionNext ?? "", tests: r.sessionTests ?? "", todos: r.sessionTodos ?? "", health: r.sessionHealth ?? "", mtime: r.sessionUpdatedAt?.getTime() ?? 0 }
@@ -89,14 +90,16 @@ export async function GET() {
   const scanProjects = () => {
     const agentProcesses = getAgentProcesses(agentRegistry.agents);
     const projects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
+      const resolvedTab = resolveEffectiveTab(tab, zellijTabCache);
       const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(dir + "/"));
       return {
-        tab: resolveEffectiveTab(tab, zellijTabCache),
+        tab: resolvedTab,
         dir,
         activeAgents: [...new Set(projectProcesses.map((p) => p.agentId))],
         sessionLifecycleSignals: projectProcesses.length > 0
           ? projectProcesses.some((p) => p.sessionLifecycleSignals)
           : sessionLifecycleSignals,
+        tabOpen: zellijTabCache.some((t) => t.toLowerCase() === resolvedTab.toLowerCase()),
       };
     });
     const agentCwds = agentProcesses.map((p) => p.cwd);
@@ -122,6 +125,7 @@ export async function GET() {
           if (!prev) return true;
           return (
             proj.agentRunning !== prev.agentRunning ||
+            proj.tabOpen !== prev.tabOpen ||
             proj.readyAt !== prev.readyAt ||
             proj.closingAt !== prev.closingAt ||
             proj.closedAt !== prev.closedAt ||

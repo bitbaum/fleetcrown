@@ -428,5 +428,8 @@ export async function GET() {
     zellijTabs,
     recentActivity: recentActivity ?? [],
     runtimeAvailable: isRuntimeAvailable(),
+    daemonLastPushedAt: !isRuntimeAvailable() && dbStatesArr.length > 0
+      ? dbStatesArr.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, dbStatesArr[0].updatedAt).toISOString()
+      : null,
   } satisfies ControlData);
 }

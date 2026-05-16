@@ -24,6 +24,7 @@ export interface ControlDataHook {
   lastTabResults: TabResult[];
   lastTabResultsAt: number | null;
   runtimeAvailable: boolean;
+  daemonLastPushedAt: string | null;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string) => Promise<void>;
@@ -114,7 +115,18 @@ export function useControlData(): ControlDataHook {
           closedAt: patch.closedAt,
         };
       });
-      return { ...prev, projects: updated };
+      // Sync zellijTabs from tabOpen patches so active/idle categorisation stays live
+      // without waiting for the next full poll (30 s).
+      let zellijTabs = prev.zellijTabs;
+      for (const patch of patches) {
+        const tab = patch.tab.toLowerCase();
+        if (patch.tabOpen && !zellijTabs.some((t) => t.toLowerCase() === tab)) {
+          zellijTabs = [...zellijTabs, patch.tab];
+        } else if (!patch.tabOpen && zellijTabs.some((t) => t.toLowerCase() === tab)) {
+          zellijTabs = zellijTabs.filter((t) => t.toLowerCase() !== tab);
+        }
+      }
+      return { ...prev, projects: updated, zellijTabs };
     });
     setLastUpdated(Date.now());
   }, []);
@@ -241,6 +253,7 @@ export function useControlData(): ControlDataHook {
     switchableRegistry, activeDefinition, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
     runtimeAvailable: data?.runtimeAvailable ?? true,
+    daemonLastPushedAt: data?.daemonLastPushedAt ?? null,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,
     handleAgentSelect, handleModelChange, setError,
