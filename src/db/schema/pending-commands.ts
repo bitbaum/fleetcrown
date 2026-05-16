@@ -6,7 +6,7 @@ import { users } from "./users";
 export const pendingCommands = pgTable("pending_commands", {
   id:          uuid("id").primaryKey().defaultRandom(),
   userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type:        text("type").notNull(),           // "inject" | "focus_tab" | "launch_agent"
+  type:        text("type").notNull(),           // "inject" | "focus_tab" | "launch_agent" | "switch_agent"
   payload:     jsonb("payload").notNull(),        // command-specific fields
   createdAt:   timestamp("created_at",  { withTimezone: true }).defaultNow().notNull(),
   claimedAt:   timestamp("claimed_at",  { withTimezone: true }),
@@ -28,4 +28,12 @@ export type InjectPayload = {
   adapter?: string;
   projectId?: string | null;
   projectKey?: string;
+};
+
+export type SwitchAgentPayload = {
+  tab: string;
+  dir: string;
+  toAgent: string;
+  fromAgent?: string;
+  model?: string;
 };

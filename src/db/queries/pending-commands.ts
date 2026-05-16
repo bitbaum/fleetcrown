@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pendingCommands, type NewPendingCommand, type InjectPayload } from "@/db/schema/pending-commands";
+import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload } from "@/db/schema/pending-commands";
 import { eq, isNull, and } from "drizzle-orm";
 
 export async function getCommandById(id: string) {
@@ -19,6 +19,13 @@ export async function enqueueInjectCommand(
   payload: InjectPayload,
 ): Promise<string> {
   return enqueuePendingCommand({ userId, type: "inject", payload });
+}
+
+export async function enqueueSwitchAgentCommand(
+  userId: string,
+  payload: SwitchAgentPayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "switch_agent", payload });
 }
 
 // Used by the local daemon: claims the next unclaimed command for this user.

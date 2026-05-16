@@ -123,6 +123,79 @@ execute_focus_tab() {
   fi
 }
 
+# Returns the quit command for an agent, or empty string if unknown.
+_agent_quit_cmd() {
+  case "$1" in
+    claude)        echo "/exit" ;;
+    codex|gemini)  echo "q" ;;
+    *)             echo "" ;;
+  esac
+}
+
+# Returns the shell command to launch an agent in a directory.
+_agent_launch_cmd() {
+  local agent="$1" dir="$2" model="$3"
+  local esc_dir
+  esc_dir=$(printf '%q' "$dir")
+  case "$agent" in
+    claude)
+      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && claude"
+      ;;
+    gemini)
+      local mflag=""
+      [ -n "$model" ] && mflag=" -m $(printf '%q' "$model")"
+      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && gemini${mflag}"
+      ;;
+    codex)
+      local esc_model
+      esc_model=$(printf '%q' "${model:-codex-4-5}")
+      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && codex --model ${esc_model} --no-alt-screen"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+execute_switch_agent() {
+  local id="$1" tab="$2" dir="$3" to_agent="$4" from_agent="${5:-}" model="${6:-}"
+
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN switch_agent → tab=$tab from=${from_agent:-?} to=$to_agent"
+    mark_done "$id" "true"
+    return 0
+  fi
+
+  local launch_cmd
+  launch_cmd=$(_agent_launch_cmd "$to_agent" "$dir" "$model")
+  if [ -z "$launch_cmd" ]; then
+    mark_done "$id" "false" "unknown agent: $to_agent"
+    log "switch_agent failed — unknown agent: $to_agent ✗"
+    return 0
+  fi
+
+  log "switch_agent → tab=$tab from=${from_agent:-?} to=$to_agent"
+
+  # Step 1: quit the current agent if known and different.
+  if [ -n "$from_agent" ] && [ "$from_agent" != "$to_agent" ]; then
+    local quit_cmd
+    quit_cmd=$(_agent_quit_cmd "$from_agent")
+    if [ -n "$quit_cmd" ]; then
+      inject_prompt "$tab" "$quit_cmd" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+
+  # Step 2: launch the new agent.
+  if inject_prompt "$tab" "$launch_cmd" 2>/dev/null; then
+    mark_done "$id" "true"
+    log "switch_agent done ✓ ($from_agent → $to_agent)"
+  else
+    mark_done "$id" "false" "inject launch command failed"
+    log "switch_agent failed ✗"
+  fi
+}
+
 execute_transcription() {
   local id="$1" audio_b64="$2" mime_type="$3"
   if [ "$DRY_RUN" = "1" ]; then
@@ -357,6 +430,14 @@ while true; do
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')
       execute_focus_tab "$id" "$tab"
+      ;;
+    switch_agent)
+      tab=$(echo "$payload" | jq -r '.tab')
+      dir=$(echo "$payload" | jq -r '.dir')
+      to_agent=$(echo "$payload" | jq -r '.toAgent')
+      from_agent=$(echo "$payload" | jq -r '.fromAgent // empty')
+      model=$(echo "$payload" | jq -r '.model // empty')
+      execute_switch_agent "$id" "$tab" "$dir" "$to_agent" "$from_agent" "$model"
       ;;
     transcribe)
       audio_b64=$(echo "$payload" | jq -r '.audio_b64')

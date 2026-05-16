@@ -3,6 +3,8 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand } from "@/lib/agent-registry";
 import { injectIntoTab } from "@/lib/zellij";
+import { getCurrentUserId } from "@/lib/session";
+import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 
 const SwitchAgentBody = z.object({
   tab:       z.string().trim().min(1).max(120),
@@ -17,10 +19,6 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ ok: false, reason: "runtime_offline" }, { status: 503 });
-  }
-
   const dataOrResp = await readJsonBody(req, SwitchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
@@ -28,6 +26,14 @@ export async function POST(req: NextRequest) {
 
   if (!isAgentId(toAgent)) {
     return NextResponse.json({ error: `Unknown agent: ${toAgent}` }, { status: 400 });
+  }
+
+  // Cloud mode: enqueue for the local daemon to execute.
+  if (!isRuntimeAvailable()) {
+    const userId = await getCurrentUserId();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const commandId = await enqueueSwitchAgentCommand(userId, { tab, dir, toAgent, fromAgent, model });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
   }
 
   const registry = listAgentRegistry();
