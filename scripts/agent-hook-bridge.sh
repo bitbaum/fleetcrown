@@ -50,12 +50,6 @@ patch_project_state() {
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
 
-should_skip_native_popup() {
-  [ "${AGENT_BRIDGE_FORCE_NATIVE_POPUP:-0}" = "1" ] && return 1
-  local settings="$HOME/.config/agent-dashboard-settings.json"
-  [ -f "$settings" ] || return 1
-  jq -e '.prefer_browser_ready_ui == true' "$settings" >/dev/null 2>&1
-}
 
 emit_or_inject_prompt() {
   local tab_name="$1"
@@ -183,10 +177,6 @@ handle_stop() {
     [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
   fi
 
-  if should_skip_native_popup && curl -sf --max-time 2 "${COCKPIT_URL}/api/health" >/dev/null 2>&1; then
-    log "Cockpit running — skipping native popup"
-    exit 0
-  fi
 
   session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
   if ! choice=$(beacon_python stop "$label" "$session_file" 2>>"$LOG"); then

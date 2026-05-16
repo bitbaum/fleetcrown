@@ -37,8 +37,11 @@ fi
 # they must be present alongside server.js for assets to be served.
 
 log "Copying static assets to standalone…"
-cp -r "$PROJECT_DIR/.next/static"  "$STANDALONE/.next/static"
-cp -r "$PROJECT_DIR/public"        "$STANDALONE/public"
+# Remove first so repeated installs don't nest directories (cp -r into an existing
+# dir copies the source as a subdirectory of the dest, not the contents into it).
+rm -rf "$STANDALONE/.next/static" "$STANDALONE/public"
+cp -r "$PROJECT_DIR/.next/static" "$STANDALONE/.next/static"
+cp -r "$PROJECT_DIR/public"       "$STANDALONE/public"
 log "Static assets copied."
 
 # ── 3. Write systemd user service ────────────────────────────────────────────
