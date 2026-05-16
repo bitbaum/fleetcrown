@@ -38,7 +38,7 @@ function WeatherIcon({ condition, className }: { condition: string; className?: 
 }
 
 export function WeatherCard() {
-  const { data, loading, error, refetch } = useFetch<{ weather: string | null; error?: string }>("/api/weather");
+  const { data, loading, error, refetch } = useFetch<{ weather: string | null; error?: string }>("/api/weather", { intervalMs: 10 * 60_000 });
 
   if (loading) {
     return (

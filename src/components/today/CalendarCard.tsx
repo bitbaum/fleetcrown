@@ -16,7 +16,7 @@ type CalendarEvent = {
 };
 
 export function CalendarCard() {
-  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar");
+  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar", { intervalMs: 5 * 60_000 });
   const events = data?.events ?? [];
 
   return (

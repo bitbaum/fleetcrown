@@ -22,7 +22,7 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
 };
 
 export function GitHubStatus() {
-  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github");
+  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github", { intervalMs: 2 * 60_000 });
   const repos = data?.repos ?? [];
 
   return (
