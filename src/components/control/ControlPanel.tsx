@@ -2,16 +2,14 @@
 
 import { useState } from "react";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { Plus, RefreshCw, ChevronUp, ChevronDown, Activity, FolderKanban, Sparkles, PanelsTopLeft, Focus, X, GitCommitHorizontal, LayoutList, LayoutGrid } from "lucide-react";
+import { RefreshCw, FolderKanban, Sparkles, PanelsTopLeft, Activity, GitCommitHorizontal, LayoutList, LayoutGrid, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
-import { ProjectCard } from "./ProjectCard";
-import { ProjectTile } from "./ProjectTile";
-import { ProjectCommanderCard } from "./ProjectCommanderCard";
+import { useLaunchModal } from "@/hooks/use-launch-modal";
+import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
 import { AttentionBar } from "./AttentionBar";
 import {
@@ -22,6 +20,7 @@ import {
   NewProjectModal,
 } from "./control-panel-helpers";
 import { BootstrapModal } from "./BootstrapModal";
+import { ProjectFleetView } from "./ProjectFleetView";
 
 export function ControlPanel() {
   const {
@@ -32,6 +31,7 @@ export function ControlPanel() {
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
+
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorageState<"full" | "commander">(
     "control:view-mode",
@@ -39,87 +39,27 @@ export function ControlPanel() {
     (v) => v,
     (raw) => raw === "commander" ? "commander" : "full",
   );
-
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
   const [focusedTab, setFocusedTab] = useState<string | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDir, setNewDir] = useState("");
-  const [newGitUrl, setNewGitUrl] = useState("");
-  const [creatingProject, setCreatingProject] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [launchingProject, setLaunchingProject] = useState(false);
-  const [launchError, setLaunchError] = useState("");
-  const [launchTarget, setLaunchTarget] = useState<{ id: string | null; tab: string; dir: string } | null>(null);
-  const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
-  const [launchAgentId, setLaunchAgentId] = useState("");
-  const [launchModel, setLaunchModel] = useState("");
-
-  const openLaunchModal = (project: ProjectState, preferredAgentId?: string) => {
-    const savedAgentId = project.agentPref ?? preferredAgentId;
-    const preferred = launchableAgents.find((entry) => entry.id === savedAgentId)
-      ?? launchableAgents.find((entry) => entry.id === selectedAgent)
-      ?? launchableAgents[0]
-      ?? null;
-    if (!preferred) {
-      setError("No launchable agents are configured.");
-      return;
-    }
-    setLaunchTarget({ id: project.id, tab: project.tab, dir: project.dir });
-    setLaunchAgentId(preferred.id);
-    setLaunchModel(project.modelPref ?? preferred.defaultModel);
-    setLaunchError("");
-  };
-
-  const confirmLaunch = async () => {
-    if (!launchTarget) return;
-    setLaunchingProject(true);
-    setLaunchError("");
-    try {
-      await launchProject(launchTarget.tab, launchTarget.dir, launchAgentId, launchModel.trim() || undefined);
-      // Persist the chosen agent + model so next launch pre-fills them
-      if (launchTarget.id) {
-        patchJson(`/api/user-projects/${launchTarget.id}`, { agentPref: launchAgentId, modelPref: launchModel.trim() || undefined }).catch(() => {});
-      }
-      setLaunchTarget(null);
-    } catch (e) {
-      setLaunchError(e instanceof Error ? e.message : "Failed to launch project");
-    } finally {
-      setLaunchingProject(false);
-    }
-  };
-
-  const createAndLaunch = async () => {
-    if (!newName.trim()) return;
-    setCreatingProject(true);
-    setCreateError("");
-    try {
-      const res = await postJson("/api/user-projects", {
-        name: newName.trim(),
-        dirPath: newDir.trim() || undefined,
-        gitUrl: newGitUrl.trim() || undefined,
-      });
-      if (!res.ok) await throwApiError(res, "Failed to create project");
-      const newProject = await res.json().catch(() => null);
-      setNewProjectOpen(false);
-      if (newDir.trim()) {
-        openLaunchModal({ id: newProject?.id ?? null, projectId: newProject?.entityProjectId ?? null, tab: newName.trim(), dir: newDir.trim(), agentPref: null, modelPref: null } as ProjectState);
-      }
-      setNewName("");
-      setNewDir("");
-      setNewGitUrl("");
-      await refresh(true);
-    } catch (e) {
-      setCreateError(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
-      setCreatingProject(false);
-    }
-  };
-
+  // eslint-disable-next-line react-hooks/purity
   const nowS = Math.floor(Date.now() / 1000);
+
+  const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
+
+  const {
+    launchTarget, launchAgentId, launchModel, launchingProject, launchError,
+    setLaunchTarget, setLaunchAgentId, setLaunchModel,
+    openLaunchModal, confirmLaunch,
+  } = useLaunchModal({ launchableAgents, selectedAgent, setError, launchProject });
+
+  const {
+    newProjectOpen, setNewProjectOpen,
+    newName, setNewName, newDir, setNewDir, newGitUrl, setNewGitUrl,
+    creatingProject, createError, createAndLaunch,
+  } = useCreateProject({ openLaunchModal, refresh });
   const pageState = data ? buildControlPageState(data, expandedTabs, nowS) : null;
   const sorted = pageState?.sortedProjects ?? null;
   const activeProjects = pageState?.activeProjects ?? [];
@@ -127,7 +67,6 @@ export function ControlPanel() {
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
 
-  // Keyboard shortcuts (1–9) activate only when exactly one project is ready.
   const readyTabs = data
     ? activeProjects.filter((p) => {
         const s = getProjectDisplayState(p, data.zellijTabs, nowS);
@@ -135,6 +74,33 @@ export function ControlPanel() {
       }).map((p) => p.tab)
     : [];
   const soloReadyTab = readyTabs.length === 1 ? readyTabs[0] : null;
+
+  const cardProps = (project: ProjectState) => ({
+    project,
+    prompts: data!.prompts,
+    zellijTabs: data!.zellijTabs,
+    currentAdapter: selectedAgent,
+    availableAgents: switchableRegistry.map(({ id, label, modelSuggestions }) => ({ id, label, modelSuggestions })),
+    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
+      try {
+        const { mode } = await inject(tab, promptKey, customPrompt);
+        if (mode === "queued") {
+          setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
+          setTimeout(() => setQueuedNotice(null), 6000);
+        }
+      } catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
+    },
+    onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
+      try { await runWithBrain(projectState, intent); }
+      catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
+    },
+    onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
+      try { await runCustomPrompt(projectState, prompt, ag); }
+      catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
+    },
+    onDeleted: () => { refresh(true); },
+    onProfileSaved: () => { refresh(true); },
+  });
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -172,40 +138,6 @@ export function ControlPanel() {
       </button>
     </div>
   );
-
-  const cardProps = (project: ProjectState) => ({
-    project,
-    prompts: data!.prompts,
-    zellijTabs: data!.zellijTabs,
-    currentAdapter: selectedAgent,
-    availableAgents: switchableRegistry.map(({ id, label, modelSuggestions }) => ({ id, label, modelSuggestions })),
-    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
-      try {
-        const { mode } = await inject(tab, promptKey, customPrompt);
-        if (mode === "queued") {
-          setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
-          setTimeout(() => setQueuedNotice(null), 6000);
-        }
-      } catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
-    },
-    onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
-      try { await runWithBrain(projectState, intent); }
-      catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
-    },
-    onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
-      try { await runCustomPrompt(projectState, prompt, ag); }
-      catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
-    },
-    onDeleted: () => { refresh(true); },
-    onProfileSaved: () => { refresh(true); },
-  });
-
-  const collapseTab = (tab: string) =>
-    setExpandedTabs((tabs) => {
-      const next = new Set(tabs);
-      next.delete(tab);
-      return next;
-    });
 
   return (
     <div className="space-y-6">
@@ -262,10 +194,7 @@ export function ControlPanel() {
         <BootstrapModal
           agentId={selectedAgent}
           agentModel={model}
-          onClose={async () => {
-            setBootstrapOpen(false);
-            await refresh(true);
-          }}
+          onClose={async () => { setBootstrapOpen(false); await refresh(true); }}
         />
       )}
 
@@ -314,131 +243,25 @@ export function ControlPanel() {
 
       <AttentionBar items={attention} />
 
-      {sorted ? (
-        sorted.length > 0 ? (
-          viewMode === "commander" ? (
-            // Commander view: single scrollable list of compact cards for all projects
-            <div className="space-y-2">
-              {sorted.map((project) => {
-                const { onInject, onRunWithBrain } = cardProps(project);
-                return (
-                  <ProjectCommanderCard
-                    key={project.tab}
-                    project={project}
-                    zellijTabs={data!.zellijTabs}
-                    onInject={onInject}
-                    onRunWithBrain={onRunWithBrain}
-                    onLaunch={() => openLaunchModal(project)}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-          <div className="space-y-4">
-            {focusedTab && (
-              <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm">
-                <Focus className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-                <span className="font-medium text-accent-text">{focusedTab}</span>
-                <span className="text-text-tertiary">— focus mode</span>
-                <button
-                  onClick={() => setFocusedTab(null)}
-                  className="ml-auto flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
-                >
-                  <X className="h-3 w-3" />
-                  Exit focus
-                </button>
-              </div>
-            )}
-
-            {(focusedTab ? activeProjects.filter((p) => p.tab === focusedTab) : activeProjects).map((project) => (
-              <ProjectCard
-                key={project.tab}
-                {...cardProps(project)}
-                onCollapse={expandedTabs.has(project.tab) ? () => collapseTab(project.tab) : undefined}
-                onFocus={focusedTab === project.tab ? undefined : () => setFocusedTab(project.tab)}
-                isOnlyReady={soloReadyTab === project.tab}
-              />
-            ))}
-
-            {!focusedTab && idleProjects.length > 0 && (
-              <div className="ui-control-idle-section">
-                <button
-                  onClick={() => setIdleOpen((v) => !v)}
-                  className="flex items-center gap-1 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
-                >
-                  <span className="font-medium text-text-secondary">Idle projects</span>
-                  <span className="text-text-muted">({idleProjects.length})</span>
-                  {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </button>
-                {idleOpen && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {idleProjects.map((project) => (
-                      <ProjectTile
-                        key={project.tab}
-                        project={project}
-                        currentAdapter={selectedAgent}
-                        zellijTabs={data!.zellijTabs}
-                        onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
-                        onLaunch={() => openLaunchModal(project)}
-                        onFocus={() => { setExpandedTabs((tabs) => new Set([...tabs, project.tab])); setFocusedTab(project.tab); }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {focusedTab && idleProjects.some((p) => p.tab === focusedTab) && (
-              <div className="grid grid-cols-1 gap-3">
-                {idleProjects.filter((p) => p.tab === focusedTab).map((project) => (
-                  <ProjectTile
-                    key={project.tab}
-                    project={project}
-                    currentAdapter={selectedAgent}
-                    zellijTabs={data!.zellijTabs}
-                    onExpand={() => setExpandedTabs((tabs) => new Set([...tabs, project.tab]))}
-                    onLaunch={() => openLaunchModal(project)}
-                    onFocus={() => { setExpandedTabs((tabs) => new Set([...tabs, project.tab])); setFocusedTab(project.tab); }}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-          )
-        ) : (
-          <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border-default px-8 py-16 text-center">
-            <span className="text-4xl text-text-muted">⊞</span>
-            <div>
-              <h3 className="text-lg font-semibold text-text-primary">Add your first project</h3>
-              <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
-                The control panel is your fleet view — register a project to track its agent sessions, git state, and next actions from one place.
-              </p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <button
-                onClick={() => setBootstrapOpen(true)}
-                className="ui-btn-primary gap-2"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Bootstrap new project →
-              </button>
-              <button
-                onClick={() => setNewProjectOpen(true)}
-                className="ui-btn-secondary gap-1.5"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Register existing project
-              </button>
-            </div>
-          </div>
-        )
-      ) : (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="ui-card-shell h-40 animate-pulse" />
-          ))}
-        </div>
-      )}
+      <ProjectFleetView
+        viewMode={viewMode}
+        sorted={sorted}
+        activeProjects={activeProjects}
+        idleProjects={idleProjects}
+        focusedTab={focusedTab}
+        setFocusedTab={setFocusedTab}
+        expandedTabs={expandedTabs}
+        setExpandedTabs={setExpandedTabs}
+        idleOpen={idleOpen}
+        setIdleOpen={setIdleOpen}
+        zellijTabs={data?.zellijTabs ?? []}
+        selectedAgent={selectedAgent}
+        soloReadyTab={soloReadyTab}
+        openLaunchModal={openLaunchModal}
+        cardProps={cardProps}
+        onBootstrap={() => setBootstrapOpen(true)}
+        onNewProject={() => setNewProjectOpen(true)}
+      />
     </div>
   );
 }
