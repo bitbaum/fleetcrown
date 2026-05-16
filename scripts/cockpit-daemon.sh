@@ -74,8 +74,42 @@ _is_user_typing_in_tab() {
   return 1
 }
 
+# Resolve a promptKey to full prompt text with session context, mirroring
+# buildPromptWithSession() in src/lib/agent-config.ts.
+_resolve_prompt() {
+  local key="$1" tab="$2"
+  local base
+  base=$(get_prompt "$key" 2>/dev/null)
+  [ -z "$base" ] && return 1
+
+  local session_file="$HOME/.claude/sessions/${tab}.md"
+  local update_block
+  update_block="When done, update ${session_file} with exactly these lines:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count>
+health: <good | needs attention | critical>"
+
+  if [ -f "$session_file" ]; then
+    printf '%s\n\nSession state from last run:\n%s\n\n%s' \
+      "$base" "$(cat "$session_file")" "$update_block"
+  else
+    printf '%s\n\nBefore stopping, create %s.\n%s' \
+      "$base" "$session_file" "$update_block"
+  fi
+}
+
 execute_inject() {
-  local id="$1" tab="$2" prompt="$3"
+  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}"
+
+  # If a promptKey was queued (cloud mode sends key string as prompt fallback),
+  # resolve it to the actual expanded prompt text with session context.
+  if [ -n "$prompt_key" ]; then
+    local resolved
+    resolved=$(_resolve_prompt "$prompt_key" "$tab" 2>/dev/null) || true
+    [ -n "$resolved" ] && prompt="$resolved"
+  fi
   if [ "$DRY_RUN" = "1" ]; then
     log "DRY RUN inject → tab=$tab prompt=${prompt:0:60}"
     mark_done "$id" "true"
@@ -425,7 +459,8 @@ while true; do
     inject)
       tab=$(echo "$payload" | jq -r '.tab')
       prompt=$(echo "$payload" | jq -r '.prompt')
-      execute_inject "$id" "$tab" "$prompt"
+      prompt_key=$(echo "$payload" | jq -r '.promptKey // empty')
+      execute_inject "$id" "$tab" "$prompt" "$prompt_key"
       ;;
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')
