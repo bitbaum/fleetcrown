@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
@@ -111,6 +112,16 @@ export function SubscriptionActions({
     }
   }
 
+  const ivyPrompt = [
+    `Subscription: ${subName}`,
+    vendor && `Vendor: ${vendor}`,
+    amount != null && `Cost: ${amount} ${currency ?? "CHF"} / ${frequency ?? "month"}`,
+    nextDue && `Next due: ${nextDue.slice(0, 10)}`,
+    notes && `Notes: ${notes}`,
+    "",
+    "Is this subscription worth keeping? Are there cheaper alternatives, or ways to consolidate or cut costs?",
+  ].filter(Boolean).join("\n");
+
   if (deleted) return null;
 
   if (cancelled) {
@@ -153,6 +164,12 @@ export function SubscriptionActions({
           Edit
         </button>
       )}
+
+      <IvyDispatchButton
+        prompt={ivyPrompt}
+        title="Ask Ivy about this subscription"
+        className="p-1 rounded text-text-muted hover:text-status-positive transition-colors"
+      />
 
       {/* Cancel at provider — only when meta is configured */}
       {meta && (
