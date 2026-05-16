@@ -6,8 +6,8 @@ import {
 } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events, projectStates } from "@/db/schema";
-import { eq, and, lte, isNotNull, sql } from "drizzle-orm";
+import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns } from "@/db/schema";
+import { eq, and, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
@@ -259,4 +259,26 @@ export async function getFleetSummary(userId: string) {
     }
   }
   return { running, waiting, degraded };
+}
+
+export async function getRecentOrchestrationRuns(userId: string, hours = 24, limit = 6) {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  return db
+    .select({
+      id: orchestrationRuns.id,
+      projectKey: orchestrationRuns.projectKey,
+      state: orchestrationRuns.state,
+      summary: orchestrationRuns.summary,
+      finishedAt: orchestrationRuns.finishedAt,
+    })
+    .from(orchestrationRuns)
+    .where(
+      and(
+        eq(orchestrationRuns.userId, userId),
+        isNotNull(orchestrationRuns.finishedAt),
+        gte(orchestrationRuns.finishedAt, since),
+      ),
+    )
+    .orderBy(desc(orchestrationRuns.finishedAt))
+    .limit(limit);
 }

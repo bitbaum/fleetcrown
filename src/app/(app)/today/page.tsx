@@ -14,6 +14,7 @@ import { SubscriptionsCard } from "@/components/today/SubscriptionsCard";
 import { LogConversationButton } from "@/components/today/LogConversationButton";
 import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
+import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { getCurrentUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 
@@ -51,6 +52,13 @@ export default async function TodayPage() {
           <QuickCaptureButton />
         </div>
       </div>
+
+      {/* Recent agent outcomes — what agents shipped since last visit */}
+      <Suspense fallback={null}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <RecentRunsCard />
+        </div>
+      </Suspense>
 
       {/* Actionable first — what needs your decision */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
