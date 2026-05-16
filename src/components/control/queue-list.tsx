@@ -205,6 +205,7 @@ export function QueueList({
     const { active, over } = e;
     if (over && active.id !== over.id) {
       onReorder?.(Number(active.id), Number(over.id));
+      setSelected(new Set()); // reorder shifts indices — stale selection would pick wrong items
     }
   };
 
