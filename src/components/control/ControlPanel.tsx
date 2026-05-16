@@ -153,54 +153,56 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 xl:items-start xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
-        <section className="ui-control-hero xl:sticky xl:top-6">
-          <BrainConfigPanel
-            selectedAgent={selectedAgent}
-            switchableRegistry={switchableRegistry}
-            model={model}
-            hasPendingChange={hasPendingChange}
-            savingAgent={savingAgent}
-            selectedDefinition={selectedDefinition}
-            lastTabResults={lastTabResults}
-            lastTabResultsAt={lastTabResultsAt}
-            onAgentSelect={handleAgentSelect}
-            onModelChange={handleModelChange}
-            onSave={saveAgent}
-            headerRight={headerRight}
-          />
-        </section>
+      {!focusedTab && (
+        <div className="grid gap-4 xl:items-start xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
+          <section className="ui-control-hero xl:sticky xl:top-6">
+            <BrainConfigPanel
+              selectedAgent={selectedAgent}
+              switchableRegistry={switchableRegistry}
+              model={model}
+              hasPendingChange={hasPendingChange}
+              savingAgent={savingAgent}
+              selectedDefinition={selectedDefinition}
+              lastTabResults={lastTabResults}
+              lastTabResultsAt={lastTabResultsAt}
+              onAgentSelect={handleAgentSelect}
+              onModelChange={handleModelChange}
+              onSave={saveAgent}
+              headerRight={headerRight}
+            />
+          </section>
 
-        <section className="ui-control-sidepanel">
-          {dashboard && (
-            <>
-              <div className="space-y-2">
-                <p className="ui-kicker">Control inventory</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={`${dashboard.idleCount} idle`} />
-                  <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
-                  <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
-                  <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note="Zellij-backed project tabs" />
-                </div>
-                {dashboard.commitsToday > 0 && (
-                  <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
-                    <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
-                    <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits today across the fleet</span>
+          <section className="ui-control-sidepanel">
+            {dashboard && (
+              <>
+                <div className="space-y-2">
+                  <p className="ui-kicker">Control inventory</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={`${dashboard.idleCount} idle`} />
+                    <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
+                    <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
+                    <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note="Zellij-backed project tabs" />
                   </div>
-                )}
-              </div>
+                  {dashboard.commitsToday > 0 && (
+                    <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
+                      <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
+                      <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits today across the fleet</span>
+                    </div>
+                  )}
+                </div>
 
-              {data && data.recentActivity.length > 0 && (
-                <ActivityLogPanel
-                  activities={data.recentActivity}
-                  open={activityOpen}
-                  onToggle={() => setActivityOpen((v) => !v)}
-                />
-              )}
-            </>
-          )}
-        </section>
-      </div>
+                {data && data.recentActivity.length > 0 && (
+                  <ActivityLogPanel
+                    activities={data.recentActivity}
+                    open={activityOpen}
+                    onToggle={() => setActivityOpen((v) => !v)}
+                  />
+                )}
+              </>
+            )}
+          </section>
+        </div>
+      )}
 
       {bootstrapOpen && (
         <BootstrapModal
@@ -275,6 +277,7 @@ export function ControlPanel() {
         idleOpen={idleOpen}
         setIdleOpen={setIdleOpen}
         zellijTabs={data?.zellijTabs ?? []}
+        nowS={nowS}
         selectedAgent={selectedAgent}
         soloReadyTab={soloReadyTab}
         openLaunchModal={openLaunchModal}

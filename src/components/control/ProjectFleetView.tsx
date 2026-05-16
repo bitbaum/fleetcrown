@@ -1,8 +1,10 @@
 "use client";
 
-import { ChevronUp, ChevronDown, Focus, X, Plus, Sparkles } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronLeft, Plus, Sparkles } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { cn } from "@/lib/utils";
 import type { ProjectState } from "@/lib/control-types";
+import { getProjectDisplayState } from "./control-presenter";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectTile } from "./ProjectTile";
 import { ProjectCommanderCard } from "./ProjectCommanderCard";
@@ -21,6 +23,7 @@ interface ProjectFleetViewProps {
   idleOpen: boolean;
   setIdleOpen: Dispatch<SetStateAction<boolean>>;
   zellijTabs: string[];
+  nowS: number;
   selectedAgent: string;
   soloReadyTab: string | null;
   openLaunchModal: (project: ProjectState) => void;
@@ -41,6 +44,7 @@ export function ProjectFleetView({
   idleOpen,
   setIdleOpen,
   zellijTabs,
+  nowS,
   selectedAgent,
   soloReadyTab,
   openLaunchModal,
@@ -123,17 +127,41 @@ export function ProjectFleetView({
   return (
     <div className="space-y-4">
       {focusedTab && (
-        <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm">
-          <Focus className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-          <span className="font-medium text-accent-text">{focusedTab}</span>
-          <span className="text-text-tertiary">— focus mode</span>
+        <div className="flex items-center gap-1 overflow-x-auto">
           <button
             onClick={() => setFocusedTab(null)}
-            className="ml-auto flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-text-primary"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-muted transition-colors hover:border-border-default hover:text-text-primary"
           >
-            <X className="h-3 w-3" />
-            Exit focus
+            <ChevronLeft className="h-3 w-3" />
+            Fleet
           </button>
+          <div className="mx-1.5 h-4 w-px shrink-0 bg-border-subtle" />
+          {activeProjects.map((project) => {
+            const display = getProjectDisplayState(project, zellijTabs, nowS);
+            const dotClass = display.isRunning
+              ? "text-accent-text animate-pulse"
+              : display.isReady || display.isOrchestrationReady || display.isClosed
+              ? "text-status-positive"
+              : project.agentRunning
+              ? "text-text-secondary"
+              : "text-border-default";
+            const isFocused = project.tab === focusedTab;
+            return (
+              <button
+                key={project.tab}
+                onClick={() => setFocusedTab(project.tab)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors",
+                  isFocused
+                    ? "border-accent-primary/30 bg-accent-muted text-accent-text"
+                    : "border-transparent text-text-secondary hover:border-border-subtle hover:text-text-primary",
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full bg-current", dotClass)} />
+                {project.tab}
+              </button>
+            );
+          })}
         </div>
       )}
 
