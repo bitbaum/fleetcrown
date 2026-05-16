@@ -23,17 +23,34 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
   const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
   const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/today";
 
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
+  const [error, setError]           = useState("");
+  const [loading, setLoading]       = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [showOwner, setShowOwner]   = useState(false);
+  const [ownerPwd, setOwnerPwd]     = useState("");
+  const [ownerLoading, setOwnerLoading] = useState(false);
 
-  async function handleLocal(e: React.FormEvent) {
+  async function handleEmailPassword(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const res = await signIn("local", { password, redirect: false });
+    const res = await signIn("email-password", { email, password, redirect: false });
     setLoading(false);
+    if (res?.ok) {
+      router.push(safeCallback);
+    } else {
+      setError("Incorrect email or password.");
+    }
+  }
+
+  async function handleOwnerPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setOwnerLoading(true);
+    const res = await signIn("local", { password: ownerPwd, redirect: false });
+    setOwnerLoading(false);
     if (res?.ok) {
       router.push(safeCallback);
     } else {
@@ -56,7 +73,7 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
     >
       <AuthHeading
         title="Welcome to Cockpit"
-        description="Sign in or create your account to get started."
+        description="Sign in to your account."
       />
 
       <AuthCard>
@@ -71,35 +88,89 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
               <GithubIcon />
               {githubLoading ? "Redirecting…" : "Continue with GitHub"}
             </AuthSecondaryButton>
-            <p className="text-center text-xs text-white/[0.25]">
-              New accounts are created automatically
-            </p>
-            <AuthDivider label="or owner password" />
+            <AuthDivider label="or email" />
           </>
         )}
 
-        <form onSubmit={handleLocal} className="space-y-3">
-          <AuthField label="Password">
+        <form onSubmit={handleEmailPassword} className="space-y-3">
+          <AuthField label="Email">
             <AuthInput
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password…"
-              autoComplete="current-password"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
             />
+          </AuthField>
+          <AuthField label="Password">
+            <div className="space-y-1">
+              <AuthInput
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Your password"
+                autoComplete="current-password"
+                required
+              />
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
           </AuthField>
           {error && <p className="ui-error">{error}</p>}
           <AuthSubmitButton
             loading={loading}
-            disabled={!password}
+            disabled={!email || !password}
             label="Sign in →"
             loadingLabel="Signing in…"
           />
         </form>
       </AuthCard>
 
-      <AuthFooterLink href="/">← Back to home</AuthFooterLink>
+      <AuthFooterLink href="/sign-up">
+        No account? Create one →
+      </AuthFooterLink>
+
+      {/* Owner key fallback — for the admin account without email */}
+      {!showOwner ? (
+        <p className="mt-2 text-center">
+          <button
+            type="button"
+            onClick={() => setShowOwner(true)}
+            className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
+          >
+            Use owner key
+          </button>
+        </p>
+      ) : (
+        <form onSubmit={handleOwnerPassword} className="mt-4 space-y-3">
+          <AuthField label="Owner password">
+            <AuthInput
+              type="password"
+              value={ownerPwd}
+              onChange={(e) => setOwnerPwd(e.target.value)}
+              placeholder="Owner password"
+              autoComplete="current-password"
+              autoFocus
+            />
+          </AuthField>
+          {error && <p className="ui-error">{error}</p>}
+          <AuthSubmitButton
+            loading={ownerLoading}
+            disabled={!ownerPwd}
+            label="Sign in as owner →"
+            loadingLabel="Signing in…"
+          />
+        </form>
+      )}
     </AuthShell>
   );
 }

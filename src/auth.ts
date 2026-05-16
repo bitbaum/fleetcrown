@@ -8,7 +8,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
-import { getDefaultUser, getUserById, updateUser } from "@/db/queries/users";
+import { getDefaultUser, getUserById, getUserByEmail, updateUser } from "@/db/queries/users";
 
 declare module "next-auth" {
   interface Session {
@@ -61,6 +61,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!ok) return null;
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
+      },
+    }),
+    // Used by the sign-in form for multi-user email + password authentication.
+    Credentials({
+      id: "email-password",
+      name: "Email and password",
+      credentials: {
+        email:    { label: "Email",    type: "email"    },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const email    = credentials.email    as string | undefined;
+        const password = credentials.password as string | undefined;
+        if (!email || !password) return null;
+
+        const user = await getUserByEmail(email);
+        if (!user?.passwordHash) return null;
+
+        const ok = await verifyPassword(password, user.passwordHash);
+        if (!ok) return null;
+        return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
       },
     }),
     // Used by the invite acceptance flow to sign in the newly-created invited user.

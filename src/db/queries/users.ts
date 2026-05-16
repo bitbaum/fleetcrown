@@ -11,6 +11,23 @@ export async function getUserByUsername(username: string) {
   return db.query.users.findFirst({ where: eq(users.username, username) }) ?? null;
 }
 
+export async function getUserByEmail(email: string) {
+  return db.query.users.findFirst({ where: eq(users.email, email.toLowerCase().trim()) }) ?? null;
+}
+
+export async function createUser(data: { name: string; email: string; passwordHash: string }) {
+  const [user] = await db
+    .insert(users)
+    .values({
+      name: data.name,
+      email: data.email.toLowerCase().trim(),
+      passwordHash: data.passwordHash,
+      onboardedAt: new Date(),
+    })
+    .returning({ id: users.id });
+  return user;
+}
+
 export async function getDefaultUser() {
   return db.query.users.findFirst({ where: eq(users.isDefault, true) }) ?? null;
 }

@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { getUserByEmail } from "@/db/queries/users";
+import { createPasswordReset } from "@/db/queries/passwordResets";
+import { sendEmail, resetPasswordEmail } from "@/lib/email";
+
+const Body = z.object({
+  email: z.string().trim().email().toLowerCase(),
+});
+
+function appUrl(): string {
+  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+}
+
+export async function POST(req: NextRequest) {
+  const dataOrResp = await readJsonBody(req, Body);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+  const { email } = dataOrResp;
+
+  // Always return 200 — don't reveal whether the email exists.
+  const user = await getUserByEmail(email);
+  if (!user?.passwordHash) return NextResponse.json({ ok: true });
+
+  const token = await createPasswordReset(user.id);
+  const resetUrl = `${appUrl()}/reset-password/${token}`;
+
+  try {
+    await sendEmail({ to: email, ...resetPasswordEmail(resetUrl) });
+  } catch (err) {
+    console.error("[forgot-password] email error:", err);
+    // Don't expose email errors to the client
+  }
+
+  return NextResponse.json({ ok: true });
+}
