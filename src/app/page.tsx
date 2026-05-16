@@ -12,12 +12,15 @@ import {
   LANDING_SUBTITLE,
   LANDING_WHITEPAPER_LABEL,
 } from "@/config/marketing";
+import { isStripeReady } from "@/lib/stripe";
 
 export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
 
   const session = await auth();
   if (session?.user) redirect("/today");
+
+  const stripeReady = isStripeReady();
 
   return (
     <PublicSurface
@@ -113,7 +116,7 @@ export default async function LandingPage() {
                   {tier.tagline}
                 </p>
                 <Link
-                  href="/sign-in"
+                  href={stripeReady ? `/sign-in?plan=${tier.name.toLowerCase()}` : "/sign-in"}
                   className={
                     tier.highlighted
                       ? "ui-public-primary-action mb-6 block text-center"

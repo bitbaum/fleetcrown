@@ -7,7 +7,9 @@ import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { TeamSettings } from "@/components/settings/TeamSettings";
 import { BeaconSettings } from "@/components/settings/BeaconSettings";
+import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PageLayout } from "@/components/ui/page-layout";
+import { isStripeReady } from "@/lib/stripe";
 
 export const metadata = { title: "Settings" };
 
@@ -27,6 +29,12 @@ export default async function SettingsPage() {
     <PageLayout title="Settings" maxWidth="max-w-2xl">
       <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "" }} />
       <BeaconSettings />
+      <BillingSettings
+        plan={user.plan}
+        planStatus={user.planStatus ?? null}
+        stripeReady={isStripeReady()}
+        hasSubscription={!!user.stripeSubscriptionId}
+      />
       <ProjectsSettings projects={projects} />
       <TeamSettings invitations={invitations} />
     </PageLayout>

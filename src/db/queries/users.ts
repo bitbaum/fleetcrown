@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
+import type { Plan, PlanStatus } from "@/db/schema/users";
 
 export async function getUserById(id: string) {
   return db.query.users.findFirst({ where: eq(users.id, id) }) ?? null;
@@ -38,6 +39,32 @@ export interface UpdateUserInput {
   email?: string | null;
   image?: string | null;
   onboardedAt?: Date;
+}
+
+export interface UpdateUserBillingInput {
+  plan?: Plan;
+  planStatus?: PlanStatus | null;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string | null;
+}
+
+export async function getUserByStripeCustomerId(stripeCustomerId: string) {
+  return db.query.users.findFirst({ where: eq(users.stripeCustomerId, stripeCustomerId) }) ?? null;
+}
+
+export async function updateUserBilling(id: string, patch: UpdateUserBillingInput) {
+  const [updated] = await db
+    .update(users)
+    .set({
+      ...(patch.plan              !== undefined && { plan:                 patch.plan }),
+      ...(patch.planStatus        !== undefined && { planStatus:           patch.planStatus }),
+      ...(patch.stripeCustomerId  !== undefined && { stripeCustomerId:     patch.stripeCustomerId }),
+      ...(patch.stripeSubscriptionId !== undefined && { stripeSubscriptionId: patch.stripeSubscriptionId }),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, id))
+    .returning();
+  return updated ?? null;
 }
 
 export async function updateUser(id: string, patch: UpdateUserInput) {
