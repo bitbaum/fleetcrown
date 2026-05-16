@@ -1,4 +1,4 @@
-import { Bot } from "lucide-react";
+import { Bot, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getRecentOrchestrationRuns } from "@/db/queries/today";
@@ -31,9 +31,10 @@ export async function RecentRunsCard() {
             const healthShort = health ? getHealthShort(health) : "";
             const tagCls = HEALTH_TAG_STYLE[healthShort];
             const done = run.summary?.done ?? "";
+            const next = run.summary?.next ?? "";
 
             return (
-              <div key={run.id} className="flex items-start gap-3">
+              <div key={run.id} className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-text-secondary">{run.projectKey}</span>
@@ -46,6 +47,12 @@ export async function RecentRunsCard() {
                   </div>
                   {done && (
                     <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{done}</p>
+                  )}
+                  {next && (
+                    <p className="mt-1 flex items-start gap-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">
+                      <ArrowRight className="h-3 w-3 shrink-0 mt-0.5" />
+                      {next}
+                    </p>
                   )}
                 </div>
               </div>
