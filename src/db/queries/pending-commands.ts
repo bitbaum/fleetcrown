@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload } from "@/db/schema/pending-commands";
-import { eq, isNull, and } from "drizzle-orm";
+import { eq, isNull, and, inArray } from "drizzle-orm";
 
 export async function getCommandById(id: string) {
   const [row] = await db.select().from(pendingCommands).where(eq(pendingCommands.id, id)).limit(1);
@@ -28,23 +28,29 @@ export async function enqueueSwitchAgentCommand(
   return enqueuePendingCommand({ userId, type: "switch_agent", payload });
 }
 
-// Used by the local daemon: claims the next unclaimed command for this user.
-export async function claimNextPendingCommand(userId: string) {
-  const [row] = await db
-    .select()
-    .from(pendingCommands)
-    .where(and(eq(pendingCommands.userId, userId), isNull(pendingCommands.claimedAt)))
-    .orderBy(pendingCommands.createdAt)
-    .limit(1);
-
-  if (!row) return null;
-
-  await db
-    .update(pendingCommands)
-    .set({ claimedAt: new Date() })
-    .where(eq(pendingCommands.id, row.id));
-
-  return row;
+// Used by the local daemon: atomically claims the next unclaimed command for any of the given userIds.
+// Accepts an array so the daemon can drain commands for all registered users (not just isDefault).
+// FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
+export async function claimNextPendingCommand(userIds: string[]) {
+  if (userIds.length === 0) return null;
+  const userFilter = userIds.length === 1
+    ? eq(pendingCommands.userId, userIds[0])
+    : inArray(pendingCommands.userId, userIds);
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(pendingCommands)
+      .where(and(userFilter, isNull(pendingCommands.claimedAt)))
+      .orderBy(pendingCommands.createdAt)
+      .limit(1)
+      .for("update", { skipLocked: true });
+    if (!row) return null;
+    await tx
+      .update(pendingCommands)
+      .set({ claimedAt: new Date() })
+      .where(eq(pendingCommands.id, row.id));
+    return row;
+  });
 }
 
 export async function markCommandExecuted(

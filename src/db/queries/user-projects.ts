@@ -168,3 +168,16 @@ export async function appendProjectDevLogByEntityProjectId(
   if (!project) return;
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
 }
+
+/**
+ * Returns all distinct userIds that have registered projects.
+ * Used by the daemon when claiming pending commands — the daemon services all
+ * local projects regardless of which DB user row owns them, so we must drain
+ * commands for every userId rather than just the isDefault one.
+ */
+export async function getAllDistinctUserIds(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ userId: userProjects.userId })
+    .from(userProjects);
+  return rows.map((r) => r.userId);
+}
