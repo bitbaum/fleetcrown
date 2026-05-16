@@ -6,7 +6,7 @@ import {
 } from "@/lib/constants";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns } from "@/db/schema";
+import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities } from "@/db/schema";
 import { eq, and, lt, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
@@ -281,8 +281,10 @@ export async function getStuckGoals(userId: string, days = 30) {
       id: goals.id,
       title: goals.title,
       updatedAt: goals.updatedAt,
+      entityName: entities.name,
     })
     .from(goals)
+    .leftJoin(entities, eq(goals.entityId, entities.id))
     .where(and(
       eq(goals.userId, userId),
       eq(goals.status, GOAL_STATUS.ACTIVE),

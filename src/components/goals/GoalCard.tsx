@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Target, CheckCircle, Archive, Bot, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
+import { Target, CheckCircle, Archive, Loader2, X, Check, FolderKanban, Plus, Repeat2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import type { GoalWithChildren } from "@/db/queries/goals";
 import type { Milestone } from "@/db/schema/goals";
@@ -13,6 +13,7 @@ import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow, CopyGoalPromptButton, SendToIvyButton } from "./goal-card-helpers";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
+import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
 
@@ -87,6 +88,9 @@ export function GoalCard({
   const milestoneDone = milestones.filter((m) => m.done).length;
   const milestoneTotal = milestones.length;
   const hasMilestones = milestoneTotal > 0;
+  const controlPrompt = goal.entityName
+    ? [`Goal: ${displayTitle}`, ...(description?.trim() ? [`Description: ${description.trim()}`] : []), `Progress: ${progress}%`, `Project: ${goal.entityName}`, "", "Please advance this goal in the codebase. Identify what needs to be done next, implement the concrete next step, and report back."].join("\n")
+    : null;
 
   const toggleComplete = async () => {
     if (togglingStatus) return;
@@ -259,21 +263,8 @@ export function GoalCard({
                   <FolderKanban className="h-3 w-3 text-status-positive/50" />
                   <span className="text-xs text-status-positive/60">{goal.entityName}</span>
                 </Link>
-                {!isClosed && (
-                  <button
-                    onClick={() => {
-                      const lines = [`Goal: ${displayTitle}`];
-                      if (description?.trim()) lines.push(`Description: ${description.trim()}`);
-                      lines.push(`Progress: ${progress}%`, `Project: ${goal.entityName}`, "", "Please advance this goal in the codebase. Identify what needs to be done next, implement the concrete next step, and report back.");
-                      localStorage.setItem("control:prefill", JSON.stringify({ tab: goal.entityName, prompt: lines.join("\n") }));
-                      router.push("/control");
-                    }}
-                    className="flex items-center gap-1 text-text-muted hover:text-accent-text transition-colors"
-                    title="Send to Control agent"
-                  >
-                    <Bot className="h-3 w-3" />
-                    <span className="text-xs">Agent</span>
-                  </button>
+                {!isClosed && controlPrompt && (
+                  <ControlDispatchButton tab={goal.entityName!} prompt={controlPrompt} />
                 )}
               </div>
             )}

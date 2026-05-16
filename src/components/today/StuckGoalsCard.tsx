@@ -5,6 +5,7 @@ import { getStuckGoals } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
 import { AbandonGoalButton } from "./AbandonGoalButton";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
 function daysAgo(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -43,6 +44,12 @@ export async function StuckGoalsCard() {
                   prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days with no progress.\n\nThis goal has been completely stalled. What is the single smallest concrete step I can take right now to get it moving?`}
                   title="Ask Ivy to unblock this goal"
                 />
+                {goal.entityName && (
+                  <ControlDispatchButton
+                    tab={goal.entityName}
+                    prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days.\nProject: ${goal.entityName}\n\nThis goal has been stalled with no progress. Please investigate the codebase and make the first concrete step to get it moving.`}
+                  />
+                )}
                 <AbandonGoalButton goalId={goal.id} />
               </div>
             );
