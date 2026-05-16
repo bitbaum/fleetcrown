@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ProjectDetail } from "./ProjectDetail";
 import {
   MaturityBar,
@@ -34,6 +35,16 @@ function ProjectCard({
   const signals = getHealthSignals(attrs);
   const hasIssues = signals.length > 0;
 
+  const ivyPrompt = [
+    `Project: ${project.name}`,
+    status && `Status: ${status}`,
+    maturity && `Maturity: ${maturity}`,
+    description && `Description: ${description}`,
+    signals.length > 0 && `Issues: ${signals.map((s) => s.label).join(", ")}`,
+    "",
+    "What should I prioritize for this project? What are the biggest risks or next steps?",
+  ].filter(Boolean).join("\n");
+
   return (
     <div
       onClick={onOpen}
@@ -52,6 +63,13 @@ function ProjectCard({
         </div>
 
         <div className="ui-card-actions shrink-0 self-start">
+          <div onClick={(e) => e.stopPropagation()}>
+            <IvyDispatchButton
+              prompt={ivyPrompt}
+              title="Ask Ivy about this project"
+              className="ui-icon-action min-h-8 min-w-8 rounded-lg p-1.5 text-text-muted hover:text-status-positive"
+            />
+          </div>
           {prodUrl && (
             <a
               href={prodUrl}
