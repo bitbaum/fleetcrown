@@ -45,6 +45,38 @@ const DEFAULTS: Brief = {
   launchStrategy: "",
 };
 
+function BriefField({
+  label, value, onChange, placeholder, autoFocus,
+}: {
+  label: string; value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="ui-kicker">{label}</p>
+      <input autoFocus={autoFocus} value={value} onChange={(e) => onChange(e.target.value)} className="ui-input w-full" placeholder={placeholder} />
+    </div>
+  );
+}
+
+function ToggleGroup<T extends string>({
+  options, value, onChange, labelFn,
+}: {
+  options: readonly T[]; value: T; onChange: (v: T) => void; labelFn?: (opt: T) => string;
+}) {
+  return (
+    <div className="flex gap-2">
+      {options.map((opt) => (
+        <button key={opt} type="button" onClick={() => onChange(opt)}
+          className={cn("flex-1 rounded-xl border px-3 py-2 text-sm capitalize transition-colors",
+            value === opt ? "border-accent-primary bg-accent-muted text-text-primary" : "border-border-subtle text-text-secondary hover:text-text-primary")}
+        >
+          {labelFn ? labelFn(opt) : opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function BootstrapModal({
   agentId,
   agentModel,
@@ -222,46 +254,13 @@ export function BootstrapModal({
         <>
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="ui-kicker">Project name</p>
-                <input
-                  autoFocus
-                  value={brief.name}
-                  onChange={(e) => setBrief((b) => ({ ...b, name: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="my-project"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="ui-kicker">Tagline</p>
-                <input
-                  value={brief.tagline}
-                  onChange={(e) => setBrief((b) => ({ ...b, tagline: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="One sentence description"
-                />
-              </div>
+              <BriefField label="Project name" value={brief.name} onChange={(v) => setBrief((b) => ({ ...b, name: v }))} placeholder="my-project" autoFocus />
+              <BriefField label="Tagline" value={brief.tagline} onChange={(v) => setBrief((b) => ({ ...b, tagline: v }))} placeholder="One sentence description" />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="ui-kicker">For</p>
-                <input
-                  value={brief.targetUser}
-                  onChange={(e) => setBrief((b) => ({ ...b, targetUser: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="Who is this for?"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="ui-kicker">Problem</p>
-                <input
-                  value={brief.coreProblem}
-                  onChange={(e) => setBrief((b) => ({ ...b, coreProblem: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="Pain point in one sentence"
-                />
-              </div>
+              <BriefField label="For" value={brief.targetUser} onChange={(v) => setBrief((b) => ({ ...b, targetUser: v }))} placeholder="Who is this for?" />
+              <BriefField label="Problem" value={brief.coreProblem} onChange={(v) => setBrief((b) => ({ ...b, coreProblem: v }))} placeholder="Pain point in one sentence" />
             </div>
 
             <div className="space-y-1.5">
@@ -306,66 +305,18 @@ export function BootstrapModal({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="ui-kicker">Monetization</p>
-                <input
-                  value={brief.monetization}
-                  onChange={(e) => setBrief((b) => ({ ...b, monetization: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="How it makes money"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <p className="ui-kicker">Launch strategy</p>
-                <input
-                  value={brief.launchStrategy}
-                  onChange={(e) => setBrief((b) => ({ ...b, launchStrategy: e.target.value }))}
-                  className="ui-input w-full"
-                  placeholder="First channel or approach"
-                />
-              </div>
+              <BriefField label="Monetization" value={brief.monetization} onChange={(v) => setBrief((b) => ({ ...b, monetization: v }))} placeholder="How it makes money" />
+              <BriefField label="Launch strategy" value={brief.launchStrategy} onChange={(v) => setBrief((b) => ({ ...b, launchStrategy: v }))} placeholder="First channel or approach" />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <p className="ui-kicker">Database</p>
-                <div className="flex gap-2">
-                  {(["neon", "none"] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setDb(opt)}
-                      className={cn(
-                        "flex-1 rounded-xl border px-3 py-2 text-sm transition-colors",
-                        db === opt
-                          ? "border-accent-primary bg-accent-muted text-text-primary"
-                          : "border-border-subtle text-text-secondary hover:text-text-primary",
-                      )}
-                    >
-                      {opt === "neon" ? "Neon Postgres" : "None"}
-                    </button>
-                  ))}
-                </div>
+                <ToggleGroup options={["neon", "none"] as const} value={db} onChange={setDb} labelFn={(opt) => opt === "neon" ? "Neon Postgres" : "None"} />
               </div>
               <div className="space-y-1.5">
                 <p className="ui-kicker">Visibility</p>
-                <div className="flex gap-2">
-                  {(["private", "public"] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => setVisibility(opt)}
-                      className={cn(
-                        "flex-1 rounded-xl border px-3 py-2 text-sm capitalize transition-colors",
-                        visibility === opt
-                          ? "border-accent-primary bg-accent-muted text-text-primary"
-                          : "border-border-subtle text-text-secondary hover:text-text-primary",
-                      )}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
+                <ToggleGroup options={["private", "public"] as const} value={visibility} onChange={setVisibility} />
               </div>
             </div>
           </div>
