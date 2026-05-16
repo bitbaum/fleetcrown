@@ -23,12 +23,16 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
   exit 1
 }
 
-BASE_URL="${COCKPIT_BASE_URL:-https://cockpitapp.vercel.app}"
+_LOCAL_URL="http://localhost:3000"
+_REMOTE_URL="${COCKPIT_BASE_URL:-https://cockpitapp.vercel.app}"
 POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-5}"
 PUSH_INTERVAL="${COCKPIT_PUSH_INTERVAL:-2}"
 DRY_RUN="${COCKPIT_DRY_RUN:-0}"
 TOKEN="${COCKPIT_DAEMON_TOKEN:-}"
 CONF_FILE="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
+# Cache file shared between the main poll loop and the background push loop.
+_URL_CACHE="/tmp/cockpit-daemon-url-$$"
+_URL_TTL=30  # re-detect every 30 s
 
 if [ -z "$TOKEN" ]; then
   echo "[daemon] ERROR: COCKPIT_DAEMON_TOKEN is not set" >&2
@@ -37,10 +41,51 @@ fi
 
 log() { echo "[daemon] $(date '+%H:%M:%S') $*"; }
 
+# Returns the best available base URL: local server if reachable, else remote.
+# Result is cached in $_URL_CACHE for $_URL_TTL seconds so we don't probe on
+# every 2-second push. The file is shared between the main process and the
+# background push-loop subshell.
+_base_url() {
+  local now ts cached url
+  now=$(date +%s)
+  if [ -f "$_URL_CACHE" ]; then
+    ts=$(cut -d' ' -f1 "$_URL_CACHE" 2>/dev/null)
+    cached=$(cut -d' ' -f2 "$_URL_CACHE" 2>/dev/null)
+    if [[ "$ts" =~ ^[0-9]+$ ]] && (( now - ts < _URL_TTL )) && [ -n "$cached" ]; then
+      echo "$cached"; return
+    fi
+  fi
+  if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
+    url="$_LOCAL_URL"
+  else
+    url="$_REMOTE_URL"
+  fi
+  echo "$now $url" > "$_URL_CACHE"
+  echo "$url"
+}
+
+# Warm the cache at startup, retrying briefly so the local app has time to boot.
+_init_base_url() {
+  local i=0
+  while (( i < 8 )); do
+    if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
+      echo "$(date +%s) $_LOCAL_URL" > "$_URL_CACHE"
+      log "local server detected — using $_LOCAL_URL"
+      return
+    fi
+    (( i++ )) || true
+    sleep 1
+  done
+  echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
+  log "local server not available — using $_REMOTE_URL"
+}
+
+trap 'rm -f "$_URL_CACHE"' EXIT
+
 claim_next() {
   curl -sf \
     -H "Authorization: Bearer $TOKEN" \
-    "$BASE_URL/api/control/commands" 2>/dev/null
+    "$(_base_url)/api/control/commands" 2>/dev/null
 }
 
 mark_done() {
@@ -55,7 +100,7 @@ mark_done() {
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$body" \
-    "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
+    "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
 }
 
 # Returns 0 if user is actively typing in the given tab (marker file exists and is <60s old).
@@ -238,7 +283,7 @@ execute_transcription() {
       -H "Authorization: Bearer $TOKEN" \
       -H "Content-Type: application/json" \
       -d '{"ok":true,"text":"dry run transcription"}' \
-      "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
+      "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
     return 0
   fi
 
@@ -293,7 +338,7 @@ execute_transcription() {
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$body" \
-    "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
+    "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
   log "transcribe done ✓ (${#transcription} chars)"
 }
 
@@ -430,7 +475,7 @@ push_runtime_state() {
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"projects\":$projects_arr}" \
-    "$BASE_URL/api/control/runtime-state" >/dev/null 2>&1 || true
+    "$(_base_url)/api/control/runtime-state" >/dev/null 2>&1 || true
 }
 
 _push_loop() {
@@ -440,10 +485,11 @@ _push_loop() {
   done
 }
 
-log "starting — polling $BASE_URL every ${POLL_INTERVAL}s, pushing state every ${PUSH_INTERVAL}s"
+_init_base_url
+log "starting — polling $(_base_url) every ${POLL_INTERVAL}s, pushing state every ${PUSH_INTERVAL}s"
 _push_loop &
 _PUSH_PID=$!
-trap 'kill "$_PUSH_PID" 2>/dev/null; exit' INT TERM
+trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE"; exit' INT TERM
 
 while true; do
   response=$(claim_next) || { sleep "$POLL_INTERVAL"; continue; }
