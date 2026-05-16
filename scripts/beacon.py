@@ -14,7 +14,8 @@ Module layout:
   beacon.py          — entry point: _web_stop, _pyqt_stop, main
 """
 
-import sys, os, subprocess
+import sys, os, subprocess, threading, json as _json
+import urllib.request
 from pathlib import Path
 
 
@@ -26,22 +27,71 @@ def _bootstrap_vendor_packages() -> None:
 
 _bootstrap_vendor_packages()
 
-from _beacon_config import COCKPIT_URL, COUNTDOWN_SECONDS, load_settings
+from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS
 from _beacon_popups import ContinuePopup, ConfirmPopup, terminal_screen_position
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 
 
-# ── Web beacon (primary path when Cockpit is running) ─────────────────────────
+# ── Shared helpers ─────────────────────────────────────────────────────────────
+
+def _cockpit_ready(timeout: float = 2.0) -> bool:
+    try:
+        r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=timeout)
+        return r.status == 200
+    except Exception:
+        return False
+
+
+def _current_agent() -> str:
+    raw = os.environ.get("AGENT_CURRENT_AGENT", "").strip().lower()
+    return raw if raw in ("claude", "codex", "gemini") else "claude"
+
+
+def _create_web_session(label: str, session_content: str) -> str | None:
+    data = _json.dumps({
+        "project": label,
+        "sessionContent": session_content,
+        "currentAgent": _current_agent(),
+    }).encode()
+    req = urllib.request.Request(
+        f"{COCKPIT_URL}/api/beacon",
+        data=data, headers={"Content-Type": "application/json"}, method="POST",
+    )
+    try:
+        resp = urllib.request.urlopen(req, timeout=5)
+        return _json.loads(resp.read())["id"]
+    except Exception:
+        return None
+
+
+def _patch_web_session(session_id: str, choice: str) -> None:
+    try:
+        data = _json.dumps({"choice": choice}).encode()
+        req = urllib.request.Request(
+            f"{COCKPIT_URL}/api/beacon/{session_id}",
+            data=data, headers={"Content-Type": "application/json"}, method="PATCH",
+        )
+        urllib.request.urlopen(req, timeout=2)
+    except Exception:
+        pass
+
+
+# ── Stop handler ───────────────────────────────────────────────────────────────
 
 def _web_stop(label: str, session_file: str) -> None:
-    """Open a Cockpit web page for the session-stop beacon instead of PyQt6."""
-    import urllib.request, urllib.error, time, json as _json
+    """PyQt-primary stop: popup opens immediately; web session created if Cockpit is already up.
 
-    TIMEOUT_S = 120
-    POLL_S = 0.8
+    Old design: wait up to 30s for Cockpit to start, then open a Chromium --app= window,
+    then launch PyQt as a background subprocess.  That caused 1-3+ second delays before
+    the user saw anything.
 
+    New design: PyQt is the primary UI (near-instant).  A web session is created only when
+    Cockpit is already running (2s check, ~100ms POST).  The Control panel's ReadyBanner
+    still detects the session; if the user clicks there the choice propagates back via PATCH.
+    No browser window is opened, no npm dev process is started.
+    """
     session_content = ""
     if session_file and os.path.exists(session_file):
         try:
@@ -49,131 +99,17 @@ def _web_stop(label: str, session_file: str) -> None:
         except OSError:
             pass
 
-    def _cockpit_ready() -> bool:
-        try:
-            # Use /api/health (instant response) not /api/control (slow DB+git endpoint)
-            r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=5)
-            return r.status == 200
-        except Exception:
-            return False
+    # Non-blocking: only create a web session when Cockpit is already running.
+    session_id: str | None = None
+    if _cockpit_ready():
+        session_id = _create_web_session(label, session_content)
 
-    def _start_cockpit():
-        env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
-        # Redirect stdout/stderr to DEVNULL — otherwise npm run dev inherits the bash
-        # command substitution pipe and its startup output pollutes the captured choice.
-        subprocess.Popen(
-            ["bash", "-lc", "cd ~/dev/cockpit && npm run dev"],
-            env=env, start_new_session=True,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-
-    def _open_browser(url: str):
-        env = {**os.environ, "DISPLAY": os.environ.get("DISPLAY", ":0")}
-        x, y = terminal_screen_position(520, 640)
-        app_flags = ["--app=" + url, "--window-size=520,640", f"--window-position={x},{y}"]
-        for cmd, extra in (
-            (["brave-browser"], app_flags),
-            (["google-chrome"], app_flags),
-            (["chromium"], app_flags),
-            (["chromium-browser"], app_flags),
-            (["x-www-browser", url], []),
-            (["xdg-open", url], []),
-            (["firefox", url], []),
-        ):
-            try:
-                full_cmd = cmd + extra if extra else cmd
-                subprocess.Popen(full_cmd, env=env, start_new_session=True,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return
-            except FileNotFoundError:
-                continue
-
-    def _current_agent() -> str:
-        raw = os.environ.get("AGENT_CURRENT_AGENT", "").strip().lower()
-        if raw in ("claude", "codex", "gemini"):
-            return raw
-        return "claude"
-
-    def _create_session() -> str | None:
-        data = _json.dumps({
-            "project": label,
-            "sessionContent": session_content,
-            "currentAgent": _current_agent(),
-        }).encode()
-        req  = urllib.request.Request(
-            f"{COCKPIT_URL}/api/beacon",
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        try:
-            resp = urllib.request.urlopen(req, timeout=5)
-            return _json.loads(resp.read())["id"]
-        except Exception:
-            return None
-
-    def _poll_choice(session_id: str, deadline: float) -> str | None:
-        url = f"{COCKPIT_URL}/api/beacon/{session_id}"
-        while time.time() < deadline:
-            try:
-                # 8s timeout: 3s was too tight for cold Next.js route compilation
-                resp = urllib.request.urlopen(url, timeout=8)
-                data = _json.loads(resp.read())
-                # Use `is not None` — empty string "" signals cancellation and must
-                # be returned so the bash caller can `[ -z "$choice" ] && exit 0`.
-                if data.get("choice") is not None:
-                    return data["choice"]
-            except Exception:
-                pass
-            time.sleep(POLL_S)
-        return None
-
-    # Ensure Cockpit is running
-    if not _cockpit_ready():
-        _start_cockpit()
-        deadline = time.time() + 30
-        while time.time() < deadline:
-            if _cockpit_ready():
-                break
-            time.sleep(1)
-        if not _cockpit_ready():
-            _pyqt_stop(label, session_file)
-            return
-
-    session_id = _create_session()
-    if not session_id:
-        _pyqt_stop(label, session_file)
-        return
-
-    # Standard path: Open browser for Web Beacon, BUT ALSO keep PyQt popup as a fallback/overlay.
-    # This allows coordinated closing when either UI is used.
-    _s = load_settings()
-    countdown = int(_s.get("countdown_seconds", _s.get("countdown_secs", COUNTDOWN_SECONDS)))
-    _open_browser(f"{COCKPIT_URL}/beacon/{session_id}?countdown={countdown}")
-
-    # Launch PyQt in the background so it doesn't block polling, but can still
-    # update the web session if the user clicks it.
-    pyqt_proc = subprocess.Popen(
-        ["python3", str(Path(__file__).resolve()), "pyqt-stop", label, session_file, session_id],
-        stdout=subprocess.PIPE, text=True,
-    )
-
-    # Poll web session for choice (from browser or PyQt)
-    choice = _poll_choice(session_id, time.time() + TIMEOUT_S)
-    
-    # Clean up PyQt proc if choice came from browser
-    if pyqt_proc.poll() is None:
-        pyqt_proc.terminate()
-
-    if choice is not None:
-        print(choice)
-        sys.exit(0)
-    sys.exit(1)
+    _pyqt_stop(label, session_file, session_id)
 
 
-# ── PyQt fallback (when Cockpit is unavailable) ────────────────────────────────
+# ── PyQt popup ─────────────────────────────────────────────────────────────────
 
-def _pyqt_stop(label: str, session_file: str, session_id: str = None) -> None:
+def _pyqt_stop(label: str, session_file: str, session_id: str | None = None) -> None:
     os.environ.setdefault("DISPLAY", ":0")
     app = QApplication(sys.argv)
     app.setApplicationName("Beacon")
@@ -182,24 +118,42 @@ def _pyqt_stop(label: str, session_file: str, session_id: str = None) -> None:
     popup.raise_()
     popup.activateWindow()
     QTimer.singleShot(0, popup._position)
-    app.exec()
-    if popup.result:
-        # If we have a web session ID, sync the choice back to Cockpit so
-        # other views (like a stray browser popup) can close/cancel.
-        if session_id:
-            import urllib.request, json as _json
+
+    # Poll the web session in a daemon thread every 3s so the PyQt popup closes
+    # automatically if the user picks from the Control panel's ReadyBanner.
+    # Non-blocking: HTTP runs off the Qt main thread; result dispatched via singleShot.
+    _web_poll_active = [True]
+
+    def _web_poll_loop():
+        import time
+        while _web_poll_active[0] and session_id:
+            time.sleep(3)
+            if not _web_poll_active[0]:
+                break
             try:
-                data = _json.dumps({"choice": popup.result}).encode()
-                req  = urllib.request.Request(
-                    f"{COCKPIT_URL}/api/beacon/{session_id}",
-                    data=data,
-                    headers={"Content-Type": "application/json"},
-                    method="PATCH",
-                )
-                urllib.request.urlopen(req, timeout=2)
+                r = urllib.request.urlopen(
+                    f"{COCKPIT_URL}/api/beacon/{session_id}", timeout=2)
+                data = _json.loads(r.read())
+                choice = data.get("choice")
+                if choice is not None and _web_poll_active[0]:
+                    # Marshal back to Qt main thread
+                    QTimer.singleShot(0, lambda c=choice: popup._choose(c))
+                    break
             except Exception:
                 pass
 
+    if session_id:
+        threading.Thread(target=_web_poll_loop, daemon=True).start()
+
+    app.exec()
+    _web_poll_active[0] = False
+
+    if popup.result:
+        # Sync PyQt choice back to Cockpit so Control panel / any open tab can react.
+        if session_id:
+            threading.Thread(
+                target=_patch_web_session, args=(session_id, popup.result), daemon=True
+            ).start()
         print(popup.result)
         sys.exit(0)
     sys.exit(1)
@@ -236,7 +190,7 @@ def main():
         _pyqt_stop(label, sf, sid)
     else:
         label = sys.argv[2]
-        sf    = sys.argv[3] if len(sys.argv) > 4 else ""
+        sf    = sys.argv[3] if len(sys.argv) > 3 else ""
         _web_stop(label, sf)
 
 

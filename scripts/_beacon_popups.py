@@ -659,7 +659,11 @@ class ContinuePopup(BasePopup):
         self._queue_prev      = None   # last polled snapshot for change detection
         self._queue_container = None   # QWidget shown/hidden based on queue size
         self._queue_items_lay = None   # QVBoxLayout rebuilt on every queue change
+        self._queue_hint      = None   # hint label shown when queue is empty
         self._queue_timer     = None
+        self._recent_btn      = None   # recent prompts toggle
+        self._recent_frame    = None   # recent prompts collapsible frame
+        self._recent_history  = []     # loaded history entries
         self.session          = ""
         if session_file and os.path.exists(session_file):
             try:
@@ -762,8 +766,8 @@ class ContinuePopup(BasePopup):
 
             self._queue_items_lay.addWidget(row_w)
 
-        visible = bool(self._queue)
-        self._queue_container.setVisible(visible)
+        if self._queue_hint is not None:
+            self._queue_hint.setVisible(not bool(self._queue))
         if self.isVisible():
             self.adjustSize()
             self._position()
@@ -796,6 +800,42 @@ class ContinuePopup(BasePopup):
             self._custom_input.clear()
         self._refresh_queue_ui()
         self._update_status_label()
+
+    # ── History ────────────────────────────────────────────────────────────────
+
+    def _history_file(self) -> Path:
+        d = Path.home() / ".local" / "share" / "cockpit"
+        d.mkdir(parents=True, exist_ok=True)
+        return d / "prompt-history.json"
+
+    def _load_history(self) -> list[str]:
+        try:
+            p = self._history_file()
+            if p.exists():
+                data = json.loads(p.read_text())
+                if isinstance(data, list):
+                    return [str(x) for x in data if x][:20]
+        except Exception:
+            pass
+        return []
+
+    def _save_to_history(self, text: str) -> None:
+        try:
+            hist = self._load_history()
+            hist = [h for h in hist if h != text]
+            hist.insert(0, text)
+            self._history_file().write_text(json.dumps(hist[:20]))
+        except Exception:
+            pass
+
+    def _fill_input(self, text: str):
+        self._engage_input()
+        if self._custom_input:
+            self._custom_input.setPlainText(text)
+            cursor = self._custom_input.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)
+            self._custom_input.setTextCursor(cursor)
+            self._custom_input.setFocus()
 
     # ── Countdown ──────────────────────────────────────────────────────────────
 
@@ -858,6 +898,10 @@ class ContinuePopup(BasePopup):
             self._timer.stop()
         if self._queue_timer and self._queue_timer.isActive():
             self._queue_timer.stop()
+        if key.startswith(CUSTOM_CHOICE_PREFIX):
+            text = key[len(CUSTOM_CHOICE_PREFIX):]
+            if text:
+                self._save_to_history(text)
         super()._choose(key)
 
     def _dismiss(self):
@@ -1271,7 +1315,7 @@ class ContinuePopup(BasePopup):
             lay.addWidget(self._divider())
             lay.addSpacing(10)
 
-        # ── Queue section (shown/hidden dynamically) ──
+        # ── Queue section (always visible) ──
         self._queue_container = QWidget()
         self._queue_container.setObjectName("queue_card")
         q_outer = QVBoxLayout(self._queue_container)
@@ -1290,9 +1334,13 @@ class ContinuePopup(BasePopup):
         self._queue_items_lay.setContentsMargins(0, 0, 0, 0)
         self._queue_items_lay.setSpacing(0)
         q_outer.addLayout(self._queue_items_lay)
-        q_outer.addSpacing(6)
 
-        self._queue_container.setVisible(False)
+        self._queue_hint = QLabel("Alt+Enter to add  ·  runs automatically when session ends")
+        self._queue_hint.setStyleSheet(
+            f"color:{C['text3']};font-size:11px;font-style:italic;"
+            f"padding:2px 14px 8px 14px;background:transparent;")
+        q_outer.addWidget(self._queue_hint)
+
         lay.addWidget(self._queue_container)
         lay.addSpacing(6)
 
@@ -1361,6 +1409,33 @@ class ContinuePopup(BasePopup):
         self._more_btn.pressed.connect(self._cancel_countdown)
         lay.addWidget(self._more_btn)
         lay.addWidget(self._more_frame)
+
+        # ── Recent prompts (collapsed) ──
+        self._recent_history = self._load_history()
+        if self._recent_history:
+            self._recent_frame = QWidget()
+            self._recent_frame.setVisible(False)
+            recent_lay = QVBoxLayout(self._recent_frame)
+            recent_lay.setContentsMargins(0, 0, 0, 0)
+            recent_lay.setSpacing(2)
+            for text in self._recent_history[:5]:
+                disp = text if len(text) <= 52 else text[:50] + "…"
+                rbtn = SafeButton(f"  ↺  {disp}")
+                rbtn.setObjectName("more_item")
+                rbtn.setToolTip(text)
+                rbtn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                rbtn.clicked.connect(lambda _, t=text: self._fill_input(t))
+                rbtn.pressed.connect(self._cancel_countdown)
+                recent_lay.addWidget(rbtn)
+
+            n = min(5, len(self._recent_history))
+            self._recent_btn = SafeButton(f"▸  Recent  ({n})")
+            self._recent_btn.setObjectName("more_toggle")
+            self._recent_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self._recent_btn.clicked.connect(self._toggle_recent)
+            self._recent_btn.pressed.connect(self._cancel_countdown)
+            lay.addWidget(self._recent_btn)
+            lay.addWidget(self._recent_frame)
 
         lay.addSpacing(10)
         lay.addWidget(self._divider())
@@ -1473,6 +1548,19 @@ class ContinuePopup(BasePopup):
         self._more_btn.setText(
             f"▾  More prompts  ({len(self.MORE_ACTIONS)})" if not vis
             else f"▸  More prompts  ({len(self.MORE_ACTIONS)})")
+        self.adjustSize()
+        self._position()
+
+    def _toggle_recent(self):
+        if self._recent_frame is None:
+            return
+        vis = self._recent_frame.isVisible()
+        self._recent_frame.setVisible(not vis)
+        n = min(5, len(self._recent_history))
+        if self._recent_btn:
+            self._recent_btn.setText(
+                f"▾  Recent  ({n})" if not vis
+                else f"▸  Recent  ({n})")
         self.adjustSize()
         self._position()
 
