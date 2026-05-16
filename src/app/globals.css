@@ -436,7 +436,7 @@
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
   .ui-page-header   { @apply flex items-start justify-between gap-4; }
-  .ui-page-title    { @apply text-2xl sm:text-3xl font-semibold text-text-primary; }
+  .ui-page-title    { @apply text-xl sm:text-2xl font-semibold text-text-primary; }
   .ui-page-subtitle { @apply mt-1.5 max-w-2xl text-sm text-text-tertiary; }
 
   /* Panels */
