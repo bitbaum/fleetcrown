@@ -7,10 +7,12 @@ export function IvyDispatchButton({
   prompt,
   title = "Ask Ivy",
   className = "shrink-0 p-0.5 rounded text-text-muted hover:text-status-positive transition-colors",
+  label,
 }: {
   prompt: string;
   title?: string;
   className?: string;
+  label?: string;
 }) {
   const [sent, setSent] = useState(false);
 
@@ -26,6 +28,7 @@ export function IvyDispatchButton({
         ? <CheckCircle className="h-3 w-3 text-status-positive" />
         : <Send className="h-3 w-3" />
       }
+      {label && <span>{sent ? "Sent" : label}</span>}
     </button>
   );
 }

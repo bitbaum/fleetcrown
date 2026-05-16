@@ -1,11 +1,30 @@
 import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity, CirclePause } from "lucide-react";
 import Link from "next/link";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
 
 export async function SummaryBar() {
   const userId = await getCurrentUserId();
   const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
+
+  const todayBriefPrompt = [
+    `Daily brief — ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`,
+    "",
+    s.activeGoals > 0 && `Goals: ${s.activeGoals} active, ${s.avgGoalProgress}% average progress`,
+    s.habitsTotal > 0 && `Habits: ${s.habitsDone}/${s.habitsTotal} done today`,
+    s.goalsDueSoon > 0 && `Goals due soon: ${s.goalsDueSoon}`,
+    s.stuckGoals > 0 && `Stalled goals: ${s.stuckGoals}`,
+    s.eventsDueSoon > 0 && `Events with upcoming deadlines: ${s.eventsDueSoon}`,
+    s.overdueCommitments > 0 && `Overdue commitments: ${s.overdueCommitments}`,
+    s.staleContacts > 0 && `Contacts needing attention: ${s.staleContacts}`,
+    s.pendingDrafts > 0 && `Pending action drafts: ${s.pendingDrafts}`,
+    s.urgentAlerts > 0 && `Urgent alerts: ${s.urgentAlerts}`,
+    (fleet.running > 0 || fleet.waiting > 0 || fleet.degraded > 0) &&
+      `Agent fleet: ${[fleet.running > 0 && `${fleet.running} running`, fleet.waiting > 0 && `${fleet.waiting} waiting`, fleet.degraded > 0 && `${fleet.degraded} degraded`].filter(Boolean).join(", ")}`,
+    "",
+    "What should I focus on today? What's the most urgent thing I'm likely to overlook?",
+  ].filter(Boolean).join("\n");
 
   return (
     <div className="flex flex-wrap gap-3">
@@ -55,6 +74,12 @@ export async function SummaryBar() {
       {fleet.waiting > 0 && (
         <Pill icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href="/control" />
       )}
+      <IvyDispatchButton
+        prompt={todayBriefPrompt}
+        title="Brief Ivy on today"
+        label="Brief Ivy"
+        className="flex items-center gap-1.5 rounded-full border border-border-default bg-surface-base px-3 py-2 text-xs font-medium text-text-secondary hover:text-status-positive hover:border-status-positive/30 transition-colors"
+      />
     </div>
   );
 }
