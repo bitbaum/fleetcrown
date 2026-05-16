@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ProjectDetail } from "./ProjectDetail";
 import {
   MaturityBar,
@@ -138,17 +139,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      setQuery("");
-      setStatusFilter(null);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useEscapeKey(() => { setQuery(""); setStatusFilter(null); });
 
   const statuses = useMemo(
     () => [...new Set(projects.map((p) => p.attrs["status"]).filter(Boolean))].sort() as string[],

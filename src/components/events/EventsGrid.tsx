@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Calendar, Archive, ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EventCard } from "./EventCard";
 import { AddEventForm } from "./AddEventForm";
 import type { EventRow } from "@/db/queries/events";
 import { EVENT_STATUS } from "@/lib/constants/statuses";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 
 export function EventsGrid({
   initialEvents,
@@ -21,17 +22,7 @@ export function EventsGrid({
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      setQuery("");
-      setTypeFilter(null);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useEscapeKey(() => { setQuery(""); setTypeFilter(null); });
 
   const types = [...new Set(items.map((e) => e.type).filter(Boolean))].sort() as string[];
 

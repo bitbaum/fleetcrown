@@ -9,6 +9,7 @@ import { type PersonWithAttributes } from "@/db/queries/people";
 import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, SORT_LABELS, type SortMode } from "@/lib/constants/statuses";
 import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/constants/people";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 
@@ -87,17 +88,7 @@ export function PeopleGrid({
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [query, sort, healthFilter, search]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      setQuery("");
-      setHealthFilter([]);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useEscapeKey(() => { setQuery(""); setHealthFilter([]); });
 
   function toggleHealth(h: RelationshipHealth) {
     setHealthFilter((prev) =>

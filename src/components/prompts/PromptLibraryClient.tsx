@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Search, Star } from "lucide-react";
 import { CATEGORY_META, type PromptTemplate, type PromptCategory } from "@/config/prompt-library";
 import { PromptRow } from "./PromptRow";
@@ -8,6 +8,7 @@ import { FeaturedCard } from "./FeaturedCard";
 import { CategoryBar } from "./CategoryBar";
 import { ALL_CATEGORIES } from "@/config/prompt-library";
 import type { Project } from "./types";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 
 export function PromptLibraryClient({
   templates,
@@ -20,18 +21,7 @@ export function PromptLibraryClient({
   const [activeCategory, setActiveCategory] = useState<PromptCategory | "all">("all");
   const [activeScope, setActiveScope] = useState<"all" | "global" | "project">("all");
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      setSearch("");
-      setActiveCategory("all");
-      setActiveScope("all");
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useEscapeKey(() => { setSearch(""); setActiveCategory("all"); setActiveScope("all"); });
 
   const isFiltered = search.length > 0 || activeCategory !== "all" || activeScope !== "all";
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { GoalCard } from "./GoalCard";
 import { CompletedGoals } from "./CompletedGoals";
 import { AbandonedGoals } from "./AbandonedGoals";
 import type { GoalWithChildren } from "@/db/queries/goals";
+import { useEscapeKey } from "@/hooks/use-escape-key";
 
 /** True if goal title/description matches query, OR any descendant does */
 function matchesQuery(goal: GoalWithChildren, q: string): boolean {
@@ -78,18 +79,7 @@ export function GoalsGrid({
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>("default");
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA") return;
-      setQuery("");
-      setProjectFilter(null);
-      setSort("default");
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  useEscapeKey(() => { setQuery(""); setProjectFilter(null); setSort("default"); });
 
   const projects = useMemo(() => {
     const names = activeGoals.map((g) => g.entityName).filter((n): n is string => !!n);
