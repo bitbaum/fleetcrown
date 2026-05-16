@@ -21,7 +21,8 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
   const ok = typeof body.ok === "boolean" ? body.ok : true;
   const error = typeof body.error === "string" ? body.error : undefined;
+  const text = typeof body.text === "string" ? body.text : undefined;
 
-  await markCommandExecuted(id, { ok, error });
+  await markCommandExecuted(id, { ok, text, error });
   return NextResponse.json({ ok: true });
 }

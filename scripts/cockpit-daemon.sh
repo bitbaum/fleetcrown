@@ -123,6 +123,73 @@ execute_focus_tab() {
   fi
 }
 
+execute_transcription() {
+  local id="$1" audio_b64="$2" mime_type="$3"
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN transcribe id=$id"
+    curl -sf -X PATCH \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"ok":true,"text":"dry run transcription"}' \
+      "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  log "transcribe id=$id (${#audio_b64} b64 chars)"
+  local tmp_webm tmp_wav
+  tmp_webm=$(mktemp /tmp/daemon-audio-XXXXXX.webm)
+  tmp_wav="${tmp_webm%.webm}.wav"
+
+  # Decode base64 audio
+  echo "$audio_b64" | base64 -d > "$tmp_webm" 2>/dev/null
+  if [ ! -s "$tmp_webm" ]; then
+    rm -f "$tmp_webm"
+    mark_done "$id" "false" "base64 decode produced empty file"
+    log "transcribe failed — empty audio ✗"
+    return 0
+  fi
+
+  # Convert to 16 kHz mono wav for Whisper
+  if ! ffmpeg -nostdin -threads 0 -err_detect ignore_err \
+      -i "$tmp_webm" -f wav -ac 1 -ar 16000 -y "$tmp_wav" \
+      >/dev/null 2>&1; then
+    rm -f "$tmp_webm" "$tmp_wav"
+    mark_done "$id" "false" "ffmpeg conversion failed"
+    log "transcribe failed — ffmpeg ✗"
+    return 0
+  fi
+
+  # Run Whisper — reads model from beacon settings if set, else "base"
+  local model="base"
+  local settings_file="${BEACON_SETTINGS_PATH:-$HOME/.config/cockpit/beacon.json}"
+  if [ -f "$settings_file" ]; then
+    local m
+    m=$(jq -r '.whisper_model // empty' "$settings_file" 2>/dev/null)
+    [ -n "$m" ] && model="$m"
+  fi
+
+  local transcription
+  transcription=$(python3 "$SCRIPT_DIR/transcribe.py" "$tmp_wav" "$model" 2>/dev/null)
+  local exit_code=$?
+  rm -f "$tmp_webm" "$tmp_wav"
+
+  if [ $exit_code -ne 0 ] || [ -z "$transcription" ]; then
+    mark_done "$id" "false" "whisper returned no text"
+    log "transcribe failed — no speech ✗"
+    return 0
+  fi
+
+  # Store result — text field is picked up by the polling endpoint
+  local body
+  body=$(printf '{"ok":true,"text":%s}' "$(printf '%s' "$transcription" | jq -Rs .)")
+  curl -sf -X PATCH \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$body" \
+    "$BASE_URL/api/control/commands/$id" >/dev/null 2>&1 || true
+  log "transcribe done ✓ (${#transcription} chars)"
+}
+
 # ── Runtime state push ────────────────────────────────────────────────────────
 # Reads /proc + /tmp every PUSH_INTERVAL seconds and POSTs to /api/control/runtime-state
 # so the Vercel control plane sees live agent status without needing local access.
@@ -162,6 +229,15 @@ push_runtime_state() {
   local agent_lines
   agent_lines=$(_scan_agents 2>/dev/null || true)
 
+  # Collect all tab names currently open across every Zellij session (once per push cycle).
+  local all_open_tabs=""
+  while IFS= read -r zs; do
+    [ -z "$zs" ] && continue
+    local tabs
+    tabs=$(ZELLIJ_SESSION_NAME="$zs" zellij action query-tab-names 2>/dev/null || true)
+    all_open_tabs="${all_open_tabs}"$'\n'"${tabs}"
+  done < <(zellij list-sessions -n 2>/dev/null | awk '{print $1}')
+
   local projects_arr="[]"
 
   while IFS='|' read -r tab dir || [ -n "$tab" ]; do
@@ -184,6 +260,12 @@ push_runtime_state() {
         agents_json=$(echo "$agents_json" | jq --arg a "$agent_name" '. + [$a] | unique' 2>/dev/null || echo "$agents_json")
       fi
     done <<< "$agent_lines"
+
+    # Check if this project's Zellij tab is actually open (case-insensitive)
+    local tab_open="false"
+    if echo "$all_open_tabs" | grep -qiF "$tab"; then
+      tab_open="true"
+    fi
 
     # Sentinel timestamps
     local ready_at closing_at closed_at lock_at
@@ -211,6 +293,7 @@ push_runtime_state() {
     proj=$(jq -n \
       --arg      tab     "$tab" \
       --argjson  running "$running" \
+      --argjson  tab_open "$tab_open" \
       --argjson  agents  "$agents_json" \
       --arg      cpk     "$cpk" \
       --arg      cpl     "$cpl" \
@@ -222,6 +305,7 @@ push_runtime_state() {
       '{
         tab:                    $tab,
         agentRunning:           $running,
+        tabOpen:                $tab_open,
         activeAgents:           $agents,
         currentPromptKey:       (if $cpk   == "" then null else $cpk   end),
         currentPromptLabel:     (if $cpl   == "" then null else $cpl   end),
@@ -273,6 +357,11 @@ while true; do
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')
       execute_focus_tab "$id" "$tab"
+      ;;
+    transcribe)
+      audio_b64=$(echo "$payload" | jq -r '.audio_b64')
+      mime_type=$(echo "$payload" | jq -r '.mime_type // "audio/webm"')
+      execute_transcription "$id" "$audio_b64" "$mime_type"
       ;;
     *)
       log "unknown command type: $type — marking done"

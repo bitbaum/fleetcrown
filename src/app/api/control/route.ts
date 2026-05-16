@@ -52,11 +52,17 @@ let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
 async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
-  const [gitMap, dbProjects, zellijTabs] = await Promise.all([
+  const [gitMap, dbProjects, zellijTabsLocal, dbStates] = await Promise.all([
     fetchAllGitStates(dirs),
     getProjects(userId).catch(() => [] as ProjectRow[]),
-    getZellijTabs(),
+    isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
+    isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch(() => [] as DbProjectState[]),
   ]);
+  // On Vercel, zellijTabs comes from the daemon-pushed tabOpen field in project_states.
+  // Locally, getZellijTabs() reads from the live Zellij process.
+  const zellijTabs = isRuntimeAvailable()
+    ? zellijTabsLocal
+    : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName);
   return { gitMap, dbProjects, zellijTabs, dirs, builtAt: Date.now() };
 }
 

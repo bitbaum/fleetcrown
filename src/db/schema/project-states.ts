@@ -8,6 +8,7 @@ export const projectStates = pgTable("project_states", {
   projectId:              uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
   tabName:                text("tab_name").notNull(),
   agentRunning:           boolean("agent_running").notNull().default(false),
+  tabOpen:                boolean("tab_open").notNull().default(false),
   activeAgents:           text("active_agents").array().notNull().default([]),
   readyAt:                timestamp("ready_at",   { withTimezone: true }),
   lockAt:                 timestamp("lock_at",    { withTimezone: true }),

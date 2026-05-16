@@ -2,6 +2,24 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
+async function pollTranscriptionResult(id: string, maxWaitMs = 60_000): Promise<string | null> {
+  const interval = 1500;
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, interval));
+    try {
+      const res = await fetch(`/api/beacon/transcribe/${id}`);
+      if (!res.ok) return null;
+      const data = (await res.json()) as { status: string; text?: string; error?: string };
+      if (data.status === "done" && data.text) return data.text;
+      if (data.status === "error") return null;
+    } catch {
+      // network hiccup — keep polling
+    }
+  }
+  return null;
+}
+
 export function useWhisperMic(onResult: (text: string) => void) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -100,7 +118,7 @@ export function useWhisperMic(onResult: (text: string) => void) {
       setListening(false);
       const name = err instanceof Error ? (err as DOMException).name : "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        setError("Mic blocked — allow microphone in Chrome settings for localhost");
+        setError("Mic blocked — allow microphone in your browser settings");
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         setError("No microphone found — check your audio input device");
       } else {
@@ -147,13 +165,28 @@ export function useWhisperMic(onResult: (text: string) => void) {
       form.append("audio", blob, "recording.webm");
       try {
         const res = await fetch("/api/beacon/transcribe", { method: "POST", body: form });
-        const data = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok || !data.text) {
-          setError(data.error ?? "No speech detected");
-        } else {
+        const data = (await res.json()) as { text?: string; transcriptionId?: string; error?: string };
+        if (!res.ok) {
+          setError(data.error ?? "Transcription failed");
+          return;
+        }
+        if (data.text) {
           onResult(data.text);
           setError("");
+          return;
         }
+        // Remote path: poll for result
+        if (data.transcriptionId) {
+          const text = await pollTranscriptionResult(data.transcriptionId);
+          if (text) {
+            onResult(text);
+            setError("");
+          } else {
+            setError("Transcription timed out — daemon may be offline");
+          }
+          return;
+        }
+        setError("No speech detected");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Transcription failed");
       } finally {

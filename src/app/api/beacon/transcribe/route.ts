@@ -7,6 +7,8 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 import { BEACON_SETTINGS_PATH } from "@/config/beacon";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { enqueuePendingCommand } from "@/db/queries/pending-commands";
+import { getCurrentUserId } from "@/lib/session";
 
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
@@ -23,13 +25,25 @@ async function whisperModel(): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: "Transcription not available in cloud mode" }, { status: 503 });
-  }
-
   const audio = form.get("audio") as File | null;
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
+  if (!isRuntimeAvailable()) {
+    // Remote path: relay to local daemon via pending_commands queue.
+    // Daemon picks up the 'transcribe' command, runs local Whisper, stores result.
+    const buf = Buffer.from(await audio.arrayBuffer());
+    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
+
+    const userId = await getCurrentUserId();
+    const transcriptionId = await enqueuePendingCommand({
+      userId,
+      type: "transcribe",
+      payload: { audio_b64: buf.toString("base64"), mime_type: audio.type || "audio/webm" },
+    });
+    return NextResponse.json({ transcriptionId });
+  }
+
+  // Local path: run Whisper directly.
   const [model, webmPath] = await Promise.all([
     whisperModel(),
     Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
@@ -44,8 +58,6 @@ export async function POST(req: NextRequest) {
     if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
     await writeFile(webmPath, buf);
 
-    // Pre-convert to wav with lenient error detection. Fails fast with a clear message
-    // instead of a cryptic Python traceback from inside Whisper's ffmpeg subprocess.
     try {
       await execFileAsync("ffmpeg", [
         "-nostdin", "-threads", "0",
@@ -57,7 +69,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Audio decode failed — recording may be too short or corrupt" }, { status: 422 });
     }
 
-    // execFile returns strings when encoding is specified — stderr is usable in catch.
     const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, wavPath, model], {
       timeout: 60_000,
       maxBuffer: 1024 * 1024,

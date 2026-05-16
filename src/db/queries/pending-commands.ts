@@ -2,6 +2,11 @@ import { db } from "@/db";
 import { pendingCommands, type NewPendingCommand, type InjectPayload } from "@/db/schema/pending-commands";
 import { eq, isNull, and } from "drizzle-orm";
 
+export async function getCommandById(id: string) {
+  const [row] = await db.select().from(pendingCommands).where(eq(pendingCommands.id, id)).limit(1);
+  return row ?? null;
+}
+
 export async function enqueuePendingCommand(
   command: Omit<NewPendingCommand, "id" | "createdAt">,
 ): Promise<string> {
@@ -37,7 +42,7 @@ export async function claimNextPendingCommand(userId: string) {
 
 export async function markCommandExecuted(
   id: string,
-  result: { ok: boolean; error?: string },
+  result: { ok: boolean; text?: string; error?: string },
 ): Promise<void> {
   await db
     .update(pendingCommands)

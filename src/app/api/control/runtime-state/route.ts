@@ -5,6 +5,7 @@ import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
 interface ProjectRuntimePatch {
   tab: string;
   agentRunning: boolean;
+  tabOpen: boolean;
   activeAgents: string[];
   currentPromptKey?: string | null;
   currentPromptLabel?: string | null;
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
         userId,
         tabName:                p.tab,
         agentRunning:           p.agentRunning,
+        tabOpen:                p.tabOpen,
         activeAgents:           p.activeAgents,
         currentPromptKey:       p.currentPromptKey   ?? null,
         currentPromptLabel:     p.currentPromptLabel  ?? null,
