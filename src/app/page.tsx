@@ -116,7 +116,11 @@ export default async function LandingPage() {
                   {tier.tagline}
                 </p>
                 <Link
-                  href={stripeReady ? `/sign-in?plan=${tier.name.toLowerCase()}` : "/sign-in"}
+                  href={
+                    stripeReady
+                      ? `/sign-in?callbackUrl=${encodeURIComponent(`/api/checkout/${tier.name.toLowerCase()}`)}`
+                      : "/sign-in"
+                  }
                   className={
                     tier.highlighted
                       ? "ui-public-primary-action mb-6 block text-center"

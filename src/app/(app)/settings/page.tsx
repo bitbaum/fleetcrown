@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserProjects } from "@/db/queries/user-projects";
@@ -29,12 +30,14 @@ export default async function SettingsPage() {
     <PageLayout title="Settings" maxWidth="max-w-2xl">
       <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "" }} />
       <BeaconSettings />
-      <BillingSettings
-        plan={user.plan}
-        planStatus={user.planStatus ?? null}
-        stripeReady={isStripeReady()}
-        hasSubscription={!!user.stripeSubscriptionId}
-      />
+      <Suspense>
+        <BillingSettings
+          plan={user.plan}
+          planStatus={user.planStatus ?? null}
+          stripeReady={isStripeReady()}
+          hasSubscription={!!user.stripeSubscriptionId}
+        />
+      </Suspense>
       <ProjectsSettings projects={projects} />
       <TeamSettings invitations={invitations} />
     </PageLayout>
