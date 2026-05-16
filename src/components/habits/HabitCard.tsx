@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { HabitHeatmap } from "./HabitHeatmap";
 import { HabitGoalLinks } from "./HabitGoalLinks";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import type { HabitWithHistory } from "@/db/queries/habits";
 import type { LinkedGoal } from "@/db/queries/habit-goals";
@@ -37,6 +38,17 @@ export function HabitCard({
   const [togglingDone, setTogglingDone] = useState(false);
   const scheduled = scheduledDays(frequency, HABIT_HISTORY_DAYS);
   const pct = Math.round((habit.completionsInWindow / scheduled) * 100);
+
+  const ivyPrompt = [
+    `Habit: ${habit.title}`,
+    `Frequency: ${frequency}`,
+    `Completion rate: ${pct}% (${habit.completionsInWindow}/${scheduled} days in the last ${HABIT_HISTORY_DAYS} days)`,
+    habit.streak >= 2 && `Current streak: ${habit.streak} days`,
+    doneToday ? "Completed today" : "Not yet done today",
+    linkedGoals.length > 0 && `Linked goals: ${linkedGoals.map((g) => g.title).join(", ")}`,
+    "",
+    "How can I improve consistency with this habit? What strategies or context would help me stick to it?",
+  ].filter(Boolean).join("\n");
 
   const commitTitle = () => {
     const trimmed = titleEdit.draft.trim();
@@ -213,6 +225,12 @@ export function HabitCard({
                 </span>
             }
           </button>
+
+          <IvyDispatchButton
+            prompt={ivyPrompt}
+            title="Ask Ivy about this habit"
+            className="mt-0.5 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+          />
 
           <button
             onClick={handleDelete}
