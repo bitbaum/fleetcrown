@@ -11,7 +11,7 @@ import { DeleteGoalButton } from "./DeleteGoalButton";
 import { patchGoal, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow } from "./goal-card-helpers";
+import { ProgressInput, DateInput, AddMilestoneInline, MilestoneRow, CopyGoalPromptButton } from "./goal-card-helpers";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
@@ -171,6 +171,17 @@ export function GoalCard({
                 </span>
               )}
               <div className="ml-auto flex items-center gap-0.5">
+                {/* Copy prompt — only on active goals */}
+                {!isClosed && (
+                  <CopyGoalPromptButton
+                    title={displayTitle}
+                    description={description}
+                    progress={progress}
+                    milestones={milestones}
+                    targetDate={targetDate}
+                    entityName={goal.entityName ?? null}
+                  />
+                )}
                 {/* Abandon / restore button */}
                 <button
                   onClick={toggleAbandon}
