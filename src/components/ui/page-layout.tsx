@@ -17,8 +17,7 @@ export function PageLayout({
     <div className={cn("app-page space-y-7 md:space-y-9", maxWidth)}>
       <div className="ui-page-header">
         <div>
-          <p className="ui-kicker">Cockpit</p>
-          <h1 className="ui-page-title mt-2">{title}</h1>
+          <h1 className="ui-page-title">{title}</h1>
           {subtitle && <p className="ui-page-subtitle">{subtitle}</p>}
         </div>
         {right && <div className="shrink-0 mt-1">{right}</div>}

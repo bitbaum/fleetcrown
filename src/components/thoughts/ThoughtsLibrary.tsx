@@ -28,42 +28,68 @@ export function ThoughtsLibrary({
     return articles.filter((article) => {
       if (activeTag !== "all" && !article.tags.includes(activeTag)) return false;
       if (!normalized) return true;
-      const haystack = [
-        article.title,
-        article.summary,
-        article.excerpt,
-        article.tags.join(" "),
-      ].join(" ").toLowerCase();
+      const haystack = [article.title, article.summary, article.excerpt, article.tags.join(" ")]
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(normalized);
     });
   }, [activeTag, articles, query]);
 
-  const featuredVisible = featured && filtered.some((article) => article.slug === featured.slug) ? featured : null;
-  const rest = filtered.filter((article) => article.slug !== featuredVisible?.slug);
+  const featuredVisible =
+    featured && filtered.some((a) => a.slug === featured.slug) ? featured : null;
+  const rest = filtered.filter((a) => a.slug !== featuredVisible?.slug);
 
   return (
     <div className="space-y-6">
-      <div className="space-y-3 border-b border-border-subtle pb-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-sm text-text-tertiary">
-            {filtered.length} of {articles.length} essays
+      {/* Featured essay — leads the page, first thing visible */}
+      {featuredVisible && (
+        <Link
+          href={`/thoughts/${featuredVisible.slug}`}
+          className="ui-card-shell-raised block space-y-4 p-6 transition hover:bg-surface-raised md:p-8"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="ui-kicker">Featured</span>
+            <span className="ui-badge">{formatMeta(featuredVisible)}</span>
           </div>
-          <div className="relative w-full lg:max-w-sm">
+          <h2 className="text-2xl font-medium leading-tight text-text-primary md:text-3xl">
+            {featuredVisible.title}
+          </h2>
+          <p className="text-base leading-relaxed text-text-secondary md:text-lg">
+            {featuredVisible.excerpt}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {featuredVisible.tags.map((tag) => (
+              <span key={tag} className="ui-tag ui-tag-neutral">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </Link>
+      )}
+
+      {/* Search + count + horizontal-scroll tag strip */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" />
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Search essays"
               className="ui-input pl-12"
             />
           </div>
+          <span className="shrink-0 text-sm text-text-tertiary">
+            {filtered.length} of {articles.length}
+          </span>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Single scrollable row — no wrapping */}
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setActiveTag("all")}
-            className={activeTag === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}
+            className={`shrink-0 ${activeTag === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}`}
           >
             All
           </button>
@@ -72,7 +98,7 @@ export function ThoughtsLibrary({
               key={tag}
               type="button"
               onClick={() => setActiveTag(tag)}
-              className={activeTag === tag ? "ui-chip-filter-active" : "ui-chip-filter"}
+              className={`shrink-0 ${activeTag === tag ? "ui-chip-filter-active" : "ui-chip-filter"}`}
             >
               {tag}
             </button>
@@ -89,51 +115,19 @@ export function ThoughtsLibrary({
           </p>
         </div>
       ) : (
-        <>
-          {featuredVisible && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {rest.map((article) => (
             <Link
-              href={`/thoughts/${featuredVisible.slug}`}
-              className="ui-card-shell-raised block space-y-4 p-6 transition hover:bg-surface-raised md:p-8"
+              key={article.slug}
+              href={`/thoughts/${article.slug}`}
+              className="ui-card-shell-raised block space-y-2 p-5 transition hover:bg-surface-raised md:p-6"
             >
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="ui-kicker">Featured</span>
-                <span className="ui-badge">{formatMeta(featuredVisible)}</span>
-              </div>
-              <h2 className="text-2xl font-medium leading-tight text-text-primary md:text-3xl">
-                {featuredVisible.title}
-              </h2>
-              <p className="text-base leading-relaxed text-text-secondary md:text-lg">
-                {featuredVisible.excerpt}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {featuredVisible.tags.map((tag) => (
-                  <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
-                ))}
-              </div>
+              <span className="ui-badge">{formatMeta(article)}</span>
+              <h3 className="text-xl font-medium text-text-primary">{article.title}</h3>
+              <p className="text-sm text-text-secondary">{article.summary}</p>
             </Link>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {rest.map((article) => (
-              <Link
-                key={article.slug}
-                href={`/thoughts/${article.slug}`}
-                className="ui-card-shell-raised block space-y-3 p-5 transition hover:bg-surface-raised md:p-6"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="ui-badge">{formatMeta(article)}</span>
-                </div>
-                <h3 className="text-xl font-medium text-text-primary">{article.title}</h3>
-                <p className="text-base text-text-secondary">{article.summary}</p>
-                <div className="flex flex-wrap gap-2">
-                  {article.tags.map((tag) => (
-                    <span key={tag} className="ui-tag ui-tag-neutral">{tag}</span>
-                  ))}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
+          ))}
+        </div>
       )}
     </div>
   );
