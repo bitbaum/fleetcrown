@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { GoalCard } from "./GoalCard";
@@ -78,6 +78,19 @@ export function GoalsGrid({
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>("default");
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setQuery("");
+      setProjectFilter(null);
+      setSort("default");
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const projects = useMemo(() => {
     const names = activeGoals.map((g) => g.entityName).filter((n): n is string => !!n);
     return [...new Set(names)].sort();
@@ -101,6 +114,7 @@ export function GoalsGrid({
           placeholder="Search goals…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
           className="ui-input pl-10 pr-14"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
