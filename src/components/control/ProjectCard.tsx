@@ -78,7 +78,7 @@ export function ProjectCard({
 
   const [dismissed, setDismissed] = useState(false);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(project.tab);
-  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue } = usePromptQueue(project.tab);
+  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue, mergeItems: mergeItemsInQueue } = usePromptQueue(project.tab);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -200,6 +200,7 @@ export function ProjectCard({
             onReorderInQueue={reorderInQueue}
             onEditInQueue={editInQueue}
             onMergeQueue={handleMergeQueue}
+            onMergeItemsInQueue={mergeItemsInQueue}
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
           />

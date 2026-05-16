@@ -30,6 +30,7 @@ export function IntentButtonPanel({
   onReorderInQueue,
   onEditInQueue,
   onMergeQueue,
+  onMergeItemsInQueue,
   onSendText,
   onCustomChange,
   onCustomFocusChange,
@@ -52,6 +53,7 @@ export function IntentButtonPanel({
   onReorderInQueue?: (from: number, to: number) => void;
   onEditInQueue?: (index: number, text: string) => void;
   onMergeQueue?: () => void;
+  onMergeItemsInQueue?: (indices: number[]) => void;
   // Direct-text send used when recording stops: bypasses stale `custom` state
   onSendText?: (text: string) => void;
   onCustomChange: (value: string) => void;
@@ -94,7 +96,7 @@ export function IntentButtonPanel({
       <div className="ui-card-section space-y-3">
         <PromptInput {...inputProps} placeholder="Send interrupt…" />
         {queue.length > 0 && (
-          <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
+          <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
         )}
       {recentPrompts.length > 0 && (
         <div className="space-y-1.5">

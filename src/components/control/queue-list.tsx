@@ -1,8 +1,166 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Loader2, Send, X, GripVertical, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Loader2, Send, X, GripVertical, Sparkles, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+type RowProps = {
+  index: number;
+  item: string;
+  isFirst: boolean;
+  selected: boolean;
+  isDragging?: boolean;
+  isOverlay?: boolean;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  editingIndex: number | null;
+  editText: string;
+  editRef: React.RefObject<HTMLTextAreaElement | null>;
+  onSetEditText: (v: string) => void;
+  onToggleSelect: () => void;
+  onStartEdit: () => void;
+  onConfirmEdit: () => void;
+  onCancelEdit: () => void;
+  onSend?: () => void;
+  onRemove?: () => void;
+};
+
+function QueueItemRow({
+  index, item, isFirst, selected, isDragging, isOverlay,
+  dragHandleProps, editingIndex, editText, editRef,
+  onSetEditText, onToggleSelect, onStartEdit, onConfirmEdit, onCancelEdit,
+  onSend, onRemove,
+}: RowProps) {
+  const editing = editingIndex === index;
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-2 px-4 py-2 sm:px-5",
+        "border-b border-border-subtle last:border-b-0",
+        isDragging && "opacity-20",
+        isOverlay && "rounded-lg border border-border-default bg-surface-raised shadow-lg",
+        selected && !isDragging && "bg-accent-primary/[0.04]",
+      )}
+    >
+      {/* Checkbox */}
+      <button
+        onClick={onToggleSelect}
+        title={selected ? "Deselect" : "Select"}
+        className={cn(
+          "mt-[3px] shrink-0 p-0.5 transition-colors",
+          selected ? "text-accent-text" : "text-border-default hover:text-text-muted",
+        )}
+      >
+        {selected ? <CheckSquare className="h-3 w-3" /> : <Square className="h-3 w-3" />}
+      </button>
+
+      {/* Drag handle — omitted in overlay (no interaction needed) */}
+      {dragHandleProps ? (
+        <button
+          {...dragHandleProps}
+          className="mt-[3px] shrink-0 cursor-grab touch-none text-text-muted hover:text-text-secondary active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <div className="mt-[3px] w-3.5 shrink-0" />
+      )}
+
+      {/* Position indicator */}
+      <span
+        className={cn(
+          "mt-[3px] shrink-0 text-micro font-bold tabular-nums",
+          isFirst ? "text-accent-text" : "text-text-muted",
+        )}
+      >
+        {index + 1}
+      </span>
+
+      {/* Content */}
+      {editing ? (
+        <textarea
+          ref={editRef}
+          value={editText}
+          onChange={(e) => onSetEditText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onConfirmEdit(); }
+            if (e.key === "Escape") onCancelEdit();
+          }}
+          onBlur={onConfirmEdit}
+          rows={2}
+          className="ui-input flex-1 resize-none text-sm"
+          style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
+        />
+      ) : (
+        <button
+          onClick={onStartEdit}
+          title="Click to edit"
+          className={cn(
+            "flex-1 text-left text-sm leading-snug transition-colors",
+            isFirst ? "text-text-primary" : "text-text-tertiary",
+            "hover:text-text-primary",
+          )}
+        >
+          {item}
+        </button>
+      )}
+
+      {/* Actions — hidden while editing */}
+      {!editing && (
+        <div className="mt-0.5 flex shrink-0 gap-0.5">
+          {onSend && (
+            <button
+              onClick={onSend}
+              title="Send now"
+              className="ui-icon-btn rounded p-0.5 text-text-muted transition-colors hover:text-accent-text"
+            >
+              <Send className="h-3 w-3" />
+            </button>
+          )}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              title="Remove"
+              className="ui-icon-btn rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SortableQueueItem({ id, ...rowProps }: { id: string } & RowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <QueueItemRow
+        {...rowProps}
+        isDragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>}
+      />
+    </div>
+  );
+}
 
 export function QueueList({
   queue,
@@ -12,6 +170,7 @@ export function QueueList({
   onEdit,
   onMerge,
   merging,
+  onMergeItems,
 }: {
   queue: string[];
   onSend?: (i: number) => void;
@@ -20,12 +179,48 @@ export function QueueList({
   onEdit?: (i: number, text: string) => void;
   onMerge?: () => void;
   merging?: boolean;
+  onMergeItems?: (indices: number[]) => void;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editText, setEditText] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
   const editRef = useRef<HTMLTextAreaElement>(null);
-  const dragIndex = useRef<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+
+  // Clear selection when queue length changes (items added/removed/merged).
+  useEffect(() => { setSelected(new Set()); }, [queue.length]); // eslint-disable-line react-hooks/set-state-in-effect
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+    setEditingIndex(null); // close any open edit
+  };
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = e;
+    if (over && active.id !== over.id) {
+      onReorder?.(Number(active.id), Number(over.id));
+    }
+  };
+
+  const toggleSelect = (i: number) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  const handleMergeSelected = () => {
+    const indices = [...selected].sort((a, b) => a - b);
+    onMergeItems?.(indices);
+    setSelected(new Set());
+  };
 
   const startEdit = (i: number) => {
     setEditingIndex(i);
@@ -38,107 +233,72 @@ export function QueueList({
     setEditingIndex(null);
   };
 
+  const activeIndex = activeId !== null ? Number(activeId) : null;
+  const itemIds = queue.map((_, i) => String(i));
+
+  const rowProps = (i: number): RowProps => ({
+    index: i,
+    item: queue[i],
+    isFirst: i === 0,
+    selected: selected.has(i),
+    editingIndex,
+    editText,
+    editRef,
+    onSetEditText: setEditText,
+    onToggleSelect: () => toggleSelect(i),
+    onStartEdit: onEdit ? () => startEdit(i) : () => {},
+    onConfirmEdit: confirmEdit,
+    onCancelEdit: () => setEditingIndex(null),
+    onSend: onSend ? () => onSend(i) : undefined,
+    onRemove: onRemove ? () => onRemove(i) : undefined,
+  });
+
   return (
-    <div className="space-y-0 border-t border-border-subtle">
+    <div className="border-t border-border-subtle">
       <div className="flex items-center justify-between px-4 pt-3 pb-2 sm:px-5">
         <p className="ui-kicker">Queue · {queue.length}</p>
-        {queue.length >= 2 && onMerge && (
-          <button
-            onClick={onMerge}
-            disabled={merging}
-            title="Merge all items into one coherent prompt with AI"
-            className="flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
-          >
-            {merging ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3 w-3" />}
-            {merging ? "Merging…" : "AI merge"}
-          </button>
-        )}
-      </div>
-      {queue.map((item, i) => (
-        <div
-          key={i}
-          draggable={onReorder ? true : undefined}
-          onDragStart={() => { dragIndex.current = i; }}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (dragIndex.current !== null && dragIndex.current !== i && onReorder) {
-              onReorder(dragIndex.current, i);
-            }
-            setDragOver(null);
-            dragIndex.current = null;
-          }}
-          onDragEnd={() => { setDragOver(null); dragIndex.current = null; }}
-          className={cn(
-            "flex items-start gap-2 px-4 py-2 sm:px-5",
-            dragOver === i && "bg-accent-primary/5",
-            "border-b border-border-subtle last:border-b-0",
-          )}
-        >
-          {onReorder && (
-            <div className="mt-[3px] shrink-0 cursor-grab text-text-muted hover:text-text-secondary active:cursor-grabbing">
-              <GripVertical className="h-3.5 w-3.5" />
-            </div>
-          )}
-          <span className={cn(
-            "mt-[3px] shrink-0 text-micro font-bold tabular-nums",
-            i === 0 ? "text-accent-text" : "text-text-muted",
-          )}>
-            {i + 1}
-          </span>
-
-          {editingIndex === i ? (
-            <textarea
-              ref={editRef}
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmEdit(); }
-                if (e.key === "Escape") setEditingIndex(null);
-              }}
-              onBlur={confirmEdit}
-              rows={2}
-              className="ui-input flex-1 resize-none text-sm"
-              style={{ fieldSizing: "content", maxHeight: "6rem" } as React.CSSProperties}
-            />
-          ) : (
+        <div className="flex items-center gap-3">
+          {selected.size >= 2 && onMergeItems && (
             <button
-              onClick={() => onEdit && startEdit(i)}
-              title="Click to edit · use → to send now"
-              className={cn(
-                "flex-1 text-left text-sm leading-snug transition-colors",
-                i === 0 ? "text-text-primary" : "text-text-tertiary",
-                onEdit && "hover:text-text-primary",
-              )}
+              onClick={handleMergeSelected}
+              title="Concatenate selected items into one"
+              className="text-micro text-text-muted transition-colors hover:text-text-primary"
             >
-              {item}
+              Merge ({selected.size})
             </button>
           )}
-
-          {editingIndex !== i && (
-            <div className="mt-0.5 flex shrink-0 gap-0.5">
-              {onSend && (
-                <button
-                  onClick={() => onSend(i)}
-                  className="ui-icon-btn rounded p-0.5 text-text-muted transition-colors hover:text-accent-text"
-                  title="Send now"
-                >
-                  <Send className="h-3 w-3" />
-                </button>
-              )}
-              {onRemove && (
-                <button
-                  onClick={() => onRemove(i)}
-                  className="ui-icon-btn rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
-                  title="Remove from queue"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
+          {queue.length >= 2 && onMerge && (
+            <button
+              onClick={onMerge}
+              disabled={merging}
+              title="Merge all items into one coherent prompt with AI"
+              className="flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-accent-text disabled:opacity-50"
+            >
+              {merging ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3 w-3" />}
+              {merging ? "Merging…" : "AI merge"}
+            </button>
           )}
         </div>
-      ))}
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          {queue.map((_, i) => (
+            <SortableQueueItem key={String(i)} id={String(i)} {...rowProps(i)} />
+          ))}
+        </SortableContext>
+
+        <DragOverlay>
+          {activeIndex !== null && queue[activeIndex] !== undefined && (
+            <QueueItemRow {...rowProps(activeIndex)} isOverlay />
+          )}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }
