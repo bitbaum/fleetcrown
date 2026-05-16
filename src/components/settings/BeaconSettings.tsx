@@ -11,7 +11,6 @@ export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
   const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [model, setModel] = useState("base");
-  const [browserUi, setBrowserUi] = useState(false);
   const [provider, setProvider] = useState("auto");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -22,7 +21,6 @@ export function BeaconSettings() {
       setData(d);
       setCountdown(d.countdown_seconds);
       setModel(d.whisper_model);
-      setBrowserUi(d.prefer_browser_ready_ui);
       setProvider(d.transcription_provider);
     }).catch(() => {});
   }, []);
@@ -30,7 +28,6 @@ export function BeaconSettings() {
   const dirty = data !== null && (
     countdown !== data.countdown_seconds ||
     model !== data.whisper_model ||
-    browserUi !== data.prefer_browser_ready_ui ||
     provider !== data.transcription_provider
   );
 
@@ -42,11 +39,10 @@ export function BeaconSettings() {
       const res = await patchJson("/api/beacon-settings", {
         countdown_seconds: countdown,
         whisper_model: model,
-        prefer_browser_ready_ui: browserUi,
         transcription_provider: provider,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      setData({ countdown_seconds: countdown, whisper_model: model, prefer_browser_ready_ui: browserUi, transcription_provider: provider });
+      setData({ countdown_seconds: countdown, whisper_model: model, transcription_provider: provider });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -70,28 +66,6 @@ export function BeaconSettings() {
         </div>
       ) : (
         <div className="space-y-5">
-          {/* Web UI mode */}
-          <div className="flex items-start gap-3">
-            <div className="flex h-5 items-center pt-0.5">
-              <input
-                id="beacon-browser-ui"
-                type="checkbox"
-                checked={browserUi}
-                onChange={(e) => setBrowserUi(e.target.checked)}
-                className="h-4 w-4 rounded border-border-default accent-accent-primary cursor-pointer"
-              />
-            </div>
-            <div className="space-y-0.5">
-              <label htmlFor="beacon-browser-ui" className="text-sm font-medium text-text-primary cursor-pointer">
-                Control panel only (skip popup)
-              </label>
-              <p className="text-xs text-text-muted">
-                When enabled: no popup window opens — the Control panel&apos;s ReadyBanner handles auto-continue.
-                When disabled (default): a web popup window opens with session summary, queue, and prompt choices.
-              </p>
-            </div>
-          </div>
-
           {/* Countdown */}
           <div className="space-y-1.5">
             <label className="ui-kicker">Auto-continue countdown</label>
