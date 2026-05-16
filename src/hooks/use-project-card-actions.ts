@@ -1,0 +1,242 @@
+"use client";
+
+import { useState, useCallback, useRef, useEffect } from "react";
+import { postJson } from "@/lib/api/fetch";
+import type { ProjectState } from "@/lib/control-types";
+import type { PromptMeta } from "@/lib/agent-config";
+import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { mapClaudePromptToIntent } from "@/lib/orchestration";
+import { isAutoContinueEnabledSync } from "@/lib/control-storage";
+import type { DispatchResult } from "@/app/api/control/dispatch/route";
+
+export function useProjectCardActions({
+  project,
+  queue,
+  shiftQueue,
+  removeFromQueue,
+  clearQueue,
+  onInject,
+  onRunWithBrain,
+  setDismissed,
+  isReadyNow,
+  prompts,
+  isOnlyReady,
+}: {
+  project: ProjectState;
+  queue: string[];
+  shiftQueue: () => string | null | undefined;
+  removeFromQueue: (index: number) => void;
+  clearQueue: () => void;
+  onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
+  onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
+  setDismissed: (v: boolean) => void;
+  isReadyNow: boolean;
+  prompts: PromptMeta[];
+  isOnlyReady: boolean;
+}) {
+  const [sending, setSending] = useState<string | null>(null);
+  const [custom, setCustom] = useState("");
+  const [customFocused, setCustomFocused] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [preloadedDispatch, setPreloadedDispatch] = useState<DispatchResult | null>(null);
+
+  // Pre-fetch dispatch decision as soon as the ready banner appears.
+  useEffect(() => {
+    if (!isReadyNow || queue.length === 0) {
+      setPreloadedDispatch(null);
+      return;
+    }
+    const handoff = {
+      done:   project.session?.done   ?? "",
+      next:   project.session?.next   ?? "",
+      health: project.session?.health ?? "",
+      tests:  project.session?.tests  ?? "",
+      todos:  project.session?.todos  ?? "",
+    };
+    let cancelled = false;
+    postJson("/api/control/dispatch", {
+      handoff,
+      queue,
+      projectName:   project.tab,
+      gitBranch:     project.git?.branch,
+      recentCommits: project.git?.recentCommits,
+    }).then(async (res) => {
+      if (!cancelled && res.ok) setPreloadedDispatch(await res.json() as DispatchResult);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReadyNow, queue.length]);
+
+  const sessionHealthBlocksQueue = (): boolean => {
+    const health = (project.session?.health ?? "").toLowerCase();
+    const tests  = (project.session?.tests  ?? "").toLowerCase();
+    return health.includes("critical") || tests.includes("fail");
+  };
+
+  const sendCustom = async () => {
+    if (!custom.trim()) return;
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, custom.trim());
+      setCustom("");
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const sendText = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, text.trim());
+    } finally {
+      setSending(null);
+    }
+  }, [project.tab, onInject, setDismissed]);
+
+  const sendIntent = async (intent: OrchestrationTaskIntentId) => {
+    if (intent === "next_best" && !sessionHealthBlocksQueue()) {
+      const queued = shiftQueue();
+      if (queued) {
+        setSending("custom");
+        setDismissed(true);
+        try { await onInject(project.tab, undefined, queued); }
+        finally { setSending(null); }
+        return;
+      }
+    }
+    setSending(intent);
+    setDismissed(true);
+    try {
+      await onRunWithBrain(project, intent);
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const send = async (promptKey?: string, customPrompt?: string) => {
+    setSending(promptKey ?? "custom");
+    setDismissed(true);
+    try {
+      if (customPrompt) {
+        await onInject(project.tab, undefined, customPrompt);
+      } else if (promptKey) {
+        const intent = mapClaudePromptToIntent(promptKey);
+        if (intent) {
+          if (intent === "next_best") {
+            const queued = shiftQueue();
+            if (queued) {
+              await onInject(project.tab, undefined, queued);
+            } else {
+              await onRunWithBrain(project, intent);
+            }
+          } else {
+            await onRunWithBrain(project, intent);
+          }
+        } else {
+          await onInject(project.tab, promptKey);
+        }
+      }
+      if (!promptKey) setCustom("");
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const handleAutoInject = useCallback(async () => {
+    if (!isAutoContinueEnabledSync(project.tab)) return;
+    if (sessionHealthBlocksQueue()) {
+      await sendIntent("next_best");
+      return;
+    }
+    const decision = preloadedDispatch;
+    const action = decision?.action ?? (queue.length > 0 ? "queue" : "nextbest");
+    if (action === "queue") {
+      const queued = shiftQueue();
+      if (queued) {
+        setSending("custom");
+        setDismissed(true);
+        try { await onInject(project.tab, undefined, queued); }
+        finally { setSending(null); }
+        return;
+      }
+    }
+    await sendIntent("next_best");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preloadedDispatch, shiftQueue, queue.length, project.tab, onInject, setDismissed, project.session?.health, project.session?.tests]);
+
+  const handleSendFromQueue = useCallback(async (index: number) => {
+    const item = queue[index];
+    if (!item) return;
+    removeFromQueue(index);
+    setSending("custom");
+    setDismissed(true);
+    try {
+      await onInject(project.tab, undefined, item);
+    } finally {
+      setSending(null);
+    }
+  }, [queue, removeFromQueue, project.tab, onInject, setDismissed]);
+
+  const handleMergeQueue = useCallback(async () => {
+    if (queue.length < 2) return;
+    setMerging(true);
+    try {
+      const res = await postJson("/api/control/merge-prompts", { prompts: queue });
+      const data = await res.json();
+      if (data.merged) {
+        clearQueue();
+        setCustom(data.merged);
+      }
+    } catch { /* ignore */ } finally {
+      setMerging(false);
+    }
+  }, [queue, clearQueue]);
+
+  // Keyboard: 1–9 dispatch prompt slots when this is the sole ready project on the page.
+  const sendRef = useRef(send);
+  useEffect(() => { sendRef.current = send; });
+  const sendingRef = useRef(sending);
+  useEffect(() => { sendingRef.current = sending; }, [sending]);
+
+  useEffect(() => {
+    if (!isOnlyReady) return;
+    const handler = (e: KeyboardEvent) => {
+      if (sendingRef.current) return;
+      const el = e.target as HTMLElement;
+      if (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const n = parseInt(e.key);
+      if (!isNaN(n) && n >= 1 && n <= 9) {
+        const all = [
+          ...prompts.filter((p) => p.style === "primary"),
+          ...prompts.filter((p) => p.style === "action"),
+        ];
+        const pick = all.find((p) => p.slot === n) ?? all[n - 1];
+        if (pick) sendRef.current(pick.key);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOnlyReady, prompts]);
+
+  return {
+    sending,
+    custom,
+    setCustom,
+    customFocused,
+    setCustomFocused,
+    merging,
+    preloadedDispatch,
+    sendCustom,
+    sendText,
+    sessionHealthBlocksQueue,
+    sendIntent,
+    send,
+    handleAutoInject,
+    handleSendFromQueue,
+    handleMergeQueue,
+  };
+}
