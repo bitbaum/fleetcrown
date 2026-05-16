@@ -7,6 +7,7 @@ import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
 export async function RecentRunsCard() {
   const userId = await getCurrentUserId();
@@ -56,6 +57,10 @@ export async function RecentRunsCard() {
                       <IvyDispatchButton
                         prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
                         title="Ask Ivy to execute this next step"
+                      />
+                      <ControlDispatchButton
+                        tab={run.projectKey}
+                        prompt={`Project: ${run.projectKey}\nPrevious run: ${done}\nNext step: ${next}\n\nPlease execute this next step in the codebase.`}
                       />
                     </div>
                   )}
