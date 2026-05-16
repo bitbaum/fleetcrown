@@ -15,6 +15,7 @@ import { LogConversationButton } from "@/components/today/LogConversationButton"
 import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
+import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { getCurrentUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
 
@@ -73,6 +74,9 @@ export default async function TodayPage() {
         </Suspense>
         <Suspense fallback={null}>
           <EventsDueCard />
+        </Suspense>
+        <Suspense fallback={null}>
+          <StuckGoalsCard />
         </Suspense>
       </div>
 

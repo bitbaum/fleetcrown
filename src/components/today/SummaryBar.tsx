@@ -1,4 +1,4 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity, CirclePause } from "lucide-react";
 import Link from "next/link";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
@@ -22,6 +22,9 @@ export async function SummaryBar() {
       )}
       {s.goalsDueSoon > 0 && (
         <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href="/goals" />
+      )}
+      {s.stuckGoals > 0 && (
+        <Pill icon={CirclePause} value={`${s.stuckGoals} goal${s.stuckGoals > 1 ? "s" : ""} stalled`} variant="amber" href="#stuck-goals" />
       )}
       {s.pendingDrafts > 0 && (
         <Pill icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" href="#actions" />

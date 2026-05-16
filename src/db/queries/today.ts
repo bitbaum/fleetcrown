@@ -7,7 +7,7 @@ import {
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns } from "@/db/schema";
-import { eq, and, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
+import { eq, and, lt, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
@@ -125,6 +125,8 @@ export async function getTodaySummary(userId: string) {
   const eventsSoon = new Date();
   eventsSoon.setDate(eventsSoon.getDate() + EVENTS_DUE_SOON_DAYS);
 
+  const staleGoalsAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
   const [
     [goalStats],
     [alertStats],
@@ -135,6 +137,7 @@ export async function getTodaySummary(userId: string) {
     [eventsDueSoonStats],
     habitStatsResult,
     staleContactsResult,
+    [stuckGoalStats],
   ] = await Promise.all([
     db
       .select({
@@ -208,6 +211,15 @@ export async function getTodaySummary(userId: string) {
         HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})
       ) sub
     `),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(goals)
+      .where(and(
+        eq(goals.userId, userId),
+        eq(goals.status, GOAL_STATUS.ACTIVE),
+        eq(goals.progress, 0),
+        lt(goals.updatedAt, staleGoalsAt),
+      )),
   ]);
 
   const staleContacts = Number((staleContactsResult[0] as { count: string } | undefined)?.count ?? 0);
@@ -225,6 +237,7 @@ export async function getTodaySummary(userId: string) {
     staleContacts,
     habitsTotal: Number(habitRow?.total ?? 0),
     habitsDone: Number(habitRow?.done ?? 0),
+    stuckGoals: Number(stuckGoalStats.count),
   };
 }
 
@@ -259,6 +272,25 @@ export async function getFleetSummary(userId: string) {
     }
   }
   return { running, waiting, degraded };
+}
+
+export async function getStuckGoals(userId: string, days = 30) {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return db
+    .select({
+      id: goals.id,
+      title: goals.title,
+      updatedAt: goals.updatedAt,
+    })
+    .from(goals)
+    .where(and(
+      eq(goals.userId, userId),
+      eq(goals.status, GOAL_STATUS.ACTIVE),
+      eq(goals.progress, 0),
+      lt(goals.updatedAt, cutoff),
+    ))
+    .orderBy(goals.updatedAt)
+    .limit(5);
 }
 
 export async function getRecentOrchestrationRuns(userId: string, hours = 24, limit = 6) {
