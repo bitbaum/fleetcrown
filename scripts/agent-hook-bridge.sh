@@ -21,14 +21,23 @@ LOG=/tmp/agent-hooks.log
 log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
 beacon_python() {
+  local display="${DISPLAY:-:1}"
+  # Prefer system PyQt6 (installed via pip or apt) — works for standalone installs
+  # without the .python-vendor bundle.
+  if python3 -c "import PyQt6" 2>/dev/null; then
+    DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
+      python3 "$SCRIPT_DIR/beacon.py" "$@"
+    return
+  fi
+  # Fall back to the vendored Qt6 shipped in the Cockpit repo.
   local qt_lib="$SCRIPT_DIR/../.python-vendor/site-packages/PyQt6/Qt6/lib"
   local plugin_path="$SCRIPT_DIR/../.python-vendor/site-packages/PyQt6/Qt6/plugins"
   local ld="${LD_LIBRARY_PATH:-}"
-  DISPLAY="${DISPLAY:-:1}" \
+  DISPLAY="$display" \
   DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
   QT_PLUGIN_PATH="$plugin_path" \
   LD_LIBRARY_PATH="${qt_lib}:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu${ld:+:$ld}" \
-  python3 "$SCRIPT_DIR/beacon.py" "$@"
+    python3 "$SCRIPT_DIR/beacon.py" "$@"
 }
 
 patch_project_state() {
