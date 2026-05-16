@@ -34,6 +34,33 @@ function countGoals(goals: GoalWithChildren[]): number {
   return goals.reduce((sum, g) => sum + 1 + countGoals(g.children), 0);
 }
 
+type SortMode = "default" | "due" | "stuck" | "progress";
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: "default", label: "Default" },
+  { value: "due",      label: "Due soon" },
+  { value: "stuck",    label: "Stuck first" },
+  { value: "progress", label: "Most done" },
+];
+
+function sortGoals(goals: GoalWithChildren[], mode: SortMode): GoalWithChildren[] {
+  if (mode === "default") return goals;
+  return [...goals].sort((a, b) => {
+    if (mode === "due") {
+      // nulls last
+      if (!a.targetDate && !b.targetDate) return 0;
+      if (!a.targetDate) return 1;
+      if (!b.targetDate) return -1;
+      return a.targetDate.getTime() - b.targetDate.getTime();
+    }
+    if (mode === "stuck") {
+      return (a.progress ?? 0) - (b.progress ?? 0);
+    }
+    // progress descending
+    return (b.progress ?? 0) - (a.progress ?? 0);
+  });
+}
+
 type SupportingHabits = Record<string, { id: string; title: string }[]>;
 
 export function GoalsGrid({
@@ -49,6 +76,7 @@ export function GoalsGrid({
 }) {
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortMode>("default");
 
   const projects = useMemo(() => {
     const names = activeGoals.map((g) => g.entityName).filter((n): n is string => !!n);
@@ -57,7 +85,7 @@ export function GoalsGrid({
 
   const q = query.trim();
   const byProject = projectFilter ? filterByProject(activeGoals, projectFilter) : activeGoals;
-  const filteredActive = filterTree(byProject, q);
+  const filteredActive = sortGoals(filterTree(byProject, q), sort);
   const filteredCompleted = filterTree(completedGoals, q);
   const totalActive = countGoals(activeGoals);
   const matchCount = countGoals(filteredActive);
@@ -78,6 +106,19 @@ export function GoalsGrid({
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
           {isFiltered ? `${matchCount} / ${totalActive}` : totalActive}
         </span>
+      </div>
+
+      {/* Sort chips */}
+      <div className="flex flex-wrap gap-1.5">
+        {SORT_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setSort(opt.value)}
+            className={sort === opt.value ? "ui-chip-filter-active" : "ui-chip-filter"}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Project filter chips */}
