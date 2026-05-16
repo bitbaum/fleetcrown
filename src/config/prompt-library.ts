@@ -1,11 +1,13 @@
 /**
  * Prompt Library — SSOT for all prompt templates.
- * Categories map to development disciplines.
+ * Categories: fleet → security → engineering → frontend → backend → database → devops → design → business → marketing → research → personal
  * scope: "global" = runs across all projects, "project" = runs against one project
  * suggestedSchedule: cron expression if this makes sense as a recurring job
  */
 
 export type PromptCategory =
+  | "fleet"
+  | "security"
   | "engineering"
   | "frontend"
   | "backend"
@@ -32,39 +34,294 @@ export type PromptTemplate = {
 };
 
 export const CATEGORY_META: Record<PromptCategory, { label: string; color: string }> = {
-  engineering:  { label: "Engineering",  color: "ui-cat-engineering" },
-  frontend:     { label: "Frontend",     color: "ui-cat-frontend" },
-  backend:      { label: "Backend",      color: "ui-cat-backend" },
-  database:     { label: "Database",     color: "ui-cat-database" },
-  devops:       { label: "DevOps",       color: "ui-cat-devops" },
-  design:       { label: "Design",       color: "ui-cat-design" },
-  business:     { label: "Business",     color: "ui-cat-business" },
-  marketing:    { label: "Marketing",    color: "ui-cat-marketing" },
-  research:     { label: "Research",     color: "ui-cat-research" },
-  personal:     { label: "Personal",     color: "ui-cat-personal" },
+  fleet:       { label: "Fleet Control", color: "ui-cat-fleet" },
+  security:    { label: "Security",      color: "ui-cat-security" },
+  engineering: { label: "Engineering",   color: "ui-cat-engineering" },
+  frontend:    { label: "Frontend",      color: "ui-cat-frontend" },
+  backend:     { label: "Backend",       color: "ui-cat-backend" },
+  database:    { label: "Database",      color: "ui-cat-database" },
+  devops:      { label: "DevOps",        color: "ui-cat-devops" },
+  design:      { label: "Design",        color: "ui-cat-design" },
+  business:    { label: "Business",      color: "ui-cat-business" },
+  marketing:   { label: "Marketing",     color: "ui-cat-marketing" },
+  research:    { label: "Research",      color: "ui-cat-research" },
+  personal:    { label: "Personal",      color: "ui-cat-personal" },
 };
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
-  // ─── Engineering ──────────────────────────────────────────────────────────
+  // ─── Fleet Control ────────────────────────────────────────────────────────
+  {
+    id: "next-best-step",
+    name: "Next Best Step",
+    featured: true,
+    description: "Autonomously determine and execute the single highest-impact task right now",
+    category: "fleet",
+    scope: "project",
+    template: `Autonomously determine and execute the single highest-impact task for {{project_name}}.
+
+Before acting:
+1. Run \`git status && git log --oneline -5\` — what was last touched?
+2. Check the session file for any \`next:\` context from the last run
+3. Read CLAUDE.md for project-specific constraints
+
+Pick ONE task using this triage order:
+- Priority 1: Interrupted work in progress — resume it
+- Priority 2: Failing tests or type errors — fix them
+- Priority 3: Open \`next:\` from session — execute it
+- Priority 4: The highest-impact quality, UX, or product gap you can close today
+
+Execute the task completely. Don't plan or draft — build, fix, ship.
+
+When done, update the session file:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count> TODOs
+health: <good | needs attention | critical>`,
+    tags: ["autonomous", "agent", "execution"],
+  },
+  {
+    id: "continue-task",
+    name: "Continue Task",
+    featured: true,
+    description: "Pick up exactly where you left off — no recap, straight back to work",
+    category: "fleet",
+    scope: "project",
+    template: `Continue the current task for {{project_name}}. Pick up exactly where you left off.
+
+1. Run \`git status\` to see what was in progress
+2. Read the session file for context on the last run
+3. Resume without re-planning — just continue
+
+Don't re-introduce yourself or summarize what you're about to do. Just do it.`,
+    tags: ["resume", "continue", "agent"],
+  },
+  {
+    id: "test-and-fix",
+    name: "Test & Fix",
+    featured: true,
+    description: "Run the full test suite, fix every failure, verify primary flows end-to-end",
+    category: "fleet",
+    scope: "project",
+    template: `Run the full test suite for {{project_name}} and fix every failure.
+
+Steps:
+1. Run \`npm test\` (or the project's test command) — capture all output
+2. For each failure: trace the error to root cause, don't just suppress it
+3. Fix each failure properly — no mocking what should be real, no skipping tests
+4. Run the suite again to confirm all pass
+5. Verify the primary user flows work end-to-end (smoke test if available)
+
+Report: N passed · N failed → N fixed · N remaining`,
+    tags: ["testing", "quality", "fix"],
+  },
+  {
+    id: "commit-push",
+    name: "Commit & Push",
+    featured: true,
+    description: "Verify types + tests pass, write a conventional commit, push to origin",
+    category: "fleet",
+    scope: "project",
+    template: `Commit and push the current changes for {{project_name}}.
+
+Steps:
+1. Run type check (\`npx tsc --noEmit\`) — fix any errors before committing
+2. Run lint — fix any errors
+3. Run tests if they exist — do not commit with failing tests
+4. Review \`git diff\` — understand what changed
+5. Stage the relevant files (never .env, secrets, or build artifacts)
+6. Write a conventional commit message:
+   - Format: \`<type>(<scope>): <description>\`
+   - Types: feat, fix, refactor, perf, test, docs, chore
+   - Description: WHY this change, not what
+7. Commit and push to origin
+
+Report: ✓ pushed <hash> or ✗ blocked: <reason>`,
+    suggestedSchedule: "0 18 * * 1-5",
+    tags: ["git", "commit", "push"],
+  },
+  {
+    id: "review-clean",
+    name: "Review & Clean",
+    description: "Audit the last 5 commits for quality issues, fix the top 3 most impactful",
+    category: "fleet",
+    scope: "project",
+    template: `Review recent work in {{project_name}} for quality issues and fix the top 3.
+
+1. Run \`git log --oneline -5\` and read the diffs
+2. Check for: DRY violations, SSOT breaks, type safety gaps, poor error handling, dead code
+3. Check for: hardcoded values that should be config, missing input validation, god components
+4. Rank issues by impact — pick the top 3
+5. Fix them properly (not just cosmetically)
+6. Commit the cleanup
+
+Do not add features. Only clean.`,
+    suggestedSchedule: "0 10 * * 1",
+    tags: ["quality", "refactor", "cleanup"],
+  },
+  {
+    id: "full-health-check",
+    name: "Full Health Check",
+    description: "Git status, type check, tests, lint — full green board before shipping",
+    category: "fleet",
+    scope: "project",
+    template: `Run a full health check for {{project_name}} and fix everything that's red.
+
+Check in order:
+1. \`git status\` — any uncommitted changes that should be committed or stashed?
+2. \`npx tsc --noEmit\` — fix all type errors
+3. \`npx eslint src/\` — fix all lint errors
+4. Test suite — fix all failures
+5. \`npm run build\` — fix any build errors
+
+Report: ✓ / ✗ per check. Fix whatever's broken before stopping.`,
+    tags: ["health", "ci", "quality"],
+  },
+
+  // ─── Security ─────────────────────────────────────────────────────────────
   {
     id: "security-audit",
     name: "Security Audit",
     featured: true,
     description: "Scan for vulnerabilities, auth gaps, exposed secrets, injection risks",
-    category: "engineering",
+    category: "security",
     scope: "project",
-    template: `Run a security audit for the {{project_name}} project.
+    template: `Run a comprehensive security audit for {{project_name}}.
 
-Check for:
-1. Authentication and authorization gaps
-2. Input validation issues (injection, XSS, CSRF)
-3. Exposed secrets or credentials in code
-4. Dependencies with known CVEs
-5. API endpoints without proper validation
+Check:
+1. Authentication and authorization gaps — are all routes that touch user data protected?
+2. Input validation — injection (SQL, command, LDAP), XSS, CSRF on all user-facing inputs
+3. Exposed secrets — API keys, tokens, passwords in code, env files, git history
+4. Dependencies — run \`npm audit\` and flag any critical/high CVEs
+5. API endpoints — every endpoint has proper validation and auth checks
+6. Data exposure — API responses don't leak internal IDs, hashes, or other users' data
+7. File upload handling — if present, are MIME types and sizes validated?
+8. Rate limiting — are auth, password reset, and expensive endpoints rate-limited?
 
-Report findings as: CRITICAL / HIGH / MEDIUM / LOW with recommended fixes.`,
-    tags: ["security", "audit"],
+Report findings as: CRITICAL / HIGH / MEDIUM / LOW
+For each: file path + line, description, recommended fix.`,
+    tags: ["security", "audit", "vulnerabilities"],
   },
+  {
+    id: "auth-session-audit",
+    name: "Auth & Session Audit",
+    featured: true,
+    description: "Deep audit of login, session management, JWT handling, and multi-user isolation",
+    category: "security",
+    scope: "project",
+    template: `Audit authentication and session management in {{project_name}}.
+
+Inspect:
+1. All routes handling user data — are they protected with a session/auth check?
+2. JWT or session token security — expiry set? signature validated? stored securely (httpOnly cookie, not localStorage)?
+3. OAuth flows — is the \`state\` parameter verified? Is \`redirect_uri\` allowlisted?
+4. Password handling — bcrypt or argon2? Minimum entropy enforced? Reset tokens expire quickly?
+5. Session lifecycle — is the session ID regenerated on login? Can sessions be revoked?
+6. CSRF protection — are state-mutating routes (POST/PUT/DELETE) protected?
+7. Multi-user data isolation — can user A access user B's data by manipulating an ID param? (IDOR)
+8. "Remember me" / long-lived sessions — are they revocable? Stored separately from short sessions?
+9. Admin vs user privilege — is privilege escalation possible?
+
+Report: CRITICAL / HIGH / MEDIUM per finding. Include file + line + recommended fix.`,
+    tags: ["auth", "session", "jwt", "idor", "csrf"],
+  },
+  {
+    id: "data-exposure-audit",
+    name: "Data Exposure & Privacy Audit",
+    featured: true,
+    description: "Trace personal data flows — what's stored, where it leaks, GDPR readiness",
+    category: "security",
+    scope: "project",
+    template: `Audit personal data handling and privacy exposure in {{project_name}}.
+
+Map the data flow:
+1. What PII is stored? (name, email, phone, payment info, IP addresses, usage patterns)
+   — List every DB column, cache key, or localStorage field that holds user data
+2. Is any PII written to logs? Even in error messages or stack traces?
+3. What does the user API return? Strip any fields the client doesn't need (password hashes, internal IDs, other users' data)
+4. Third-party services — what data is sent to analytics, monitoring, email providers, payment processors?
+5. Database queries — is every query scoped to the authenticated user's \`user_id\`? Check for missing WHERE clauses.
+6. Backups and exports — is PII included? Is it encrypted at rest?
+7. Data deletion — is there a flow to delete a user's data? Does it cascade properly?
+8. GDPR/privacy compliance — can a user export their data? Request deletion? See what's stored?
+
+Output:
+- Data map (what PII, where stored, who can access)
+- Exposure risks ranked by severity
+- Recommended fixes with code locations`,
+    tags: ["privacy", "gdpr", "pii", "data-exposure"],
+  },
+  {
+    id: "api-security-review",
+    name: "API Security Review",
+    description: "Check every endpoint for auth, validation, IDOR, rate limiting, and response hygiene",
+    category: "security",
+    scope: "project",
+    template: `Perform a security review of all API endpoints in {{project_name}}.
+
+For each route:
+1. Authentication — is a valid session required? Are there unprotected routes that should be protected?
+2. Authorization — does each handler verify the requesting user owns the resource (not just that they're logged in)?
+3. Input validation — are all parameters (path, query, body) validated before use in DB queries or shell commands?
+4. IDOR vulnerabilities — can a user substitute another user's ID/UUID in params to access their data?
+5. SQL injection — are parameterized queries used everywhere? No raw string concatenation?
+6. Mass assignment — does the handler only accept the specific fields it expects? (No \`...req.body\` into DB)
+7. Sensitive data in responses — are tokens, password hashes, internal system fields stripped?
+8. Rate limiting — are auth endpoints, password reset, and expensive operations rate-limited?
+9. Idempotency — are destructive operations (DELETE, fund transfers) protected against double-execution?
+
+List vulnerable endpoints first, ranked by severity. Include route path, method, vulnerability type, and fix.`,
+    tags: ["api", "rest", "validation", "idor", "injection"],
+  },
+  {
+    id: "dependency-cve-scan",
+    name: "Dependency CVE Scan",
+    description: "Audit npm packages for known vulnerabilities and outdated critical deps",
+    category: "security",
+    scope: "project",
+    template: `Audit dependencies in {{project_name}} for security vulnerabilities.
+
+Steps:
+1. Run \`npm audit --json\` — capture all CVEs
+2. Categorize findings: critical → high → moderate → low
+3. For each critical/high CVE:
+   - Which package is affected?
+   - Is there a fixed version available?
+   - Is the vulnerable code path actually reachable in this app?
+   - What's the remediation? (\`npm audit fix\`, pin to a safe version, or replace the package)
+4. Check for outdated auth-related packages (passport, next-auth, jsonwebtoken, bcrypt) — these age fast
+5. Check for packages with no recent activity that handle security-sensitive operations
+
+Output: vulnerability table (package · severity · CVE · fix), then run \`npm audit fix\` for any auto-fixable issues.`,
+    suggestedSchedule: "0 9 * * 1",
+    tags: ["dependencies", "cve", "npm", "vulnerabilities"],
+  },
+  {
+    id: "owasp-top-10",
+    name: "OWASP Top 10 Check",
+    description: "Systematic check against the OWASP Top 10 web application security risks",
+    category: "security",
+    scope: "project",
+    template: `Check {{project_name}} against the OWASP Top 10 web application security risks.
+
+For each risk, state: ✓ Not applicable / ✓ Mitigated / ⚠ Partial / ✗ Vulnerable
+
+1. A01 Broken Access Control — can users access resources they shouldn't? IDOR? Missing auth checks?
+2. A02 Cryptographic Failures — is sensitive data encrypted in transit and at rest? Weak algorithms?
+3. A03 Injection — SQL, command, LDAP, template injection possible via user input?
+4. A04 Insecure Design — are security controls designed in, or bolted on? Threat modeling done?
+5. A05 Security Misconfiguration — default credentials? Debug mode in prod? Unnecessary features enabled?
+6. A06 Vulnerable Components — outdated or CVE-affected packages? (run npm audit)
+7. A07 Auth & Session Failures — weak passwords? Session fixation? Missing MFA? Insecure token storage?
+8. A08 Software & Data Integrity — unsigned code? Unverified dependencies? CI/CD pipeline security?
+9. A09 Security Logging Failures — are auth failures, access control failures, and input validation failures logged?
+10. A10 SSRF — does the app make server-side requests to user-supplied URLs?
+
+For each ✗ or ⚠: explain the specific gap in this codebase and recommended fix.`,
+    tags: ["owasp", "top-10", "comprehensive", "checklist"],
+  },
+
+  // ─── Engineering ──────────────────────────────────────────────────────────
   {
     id: "code-quality-review",
     name: "Code Quality Review",
@@ -162,7 +419,7 @@ Output: component refactor priority list.`,
   {
     id: "api-review",
     name: "API Design Review",
-    description: "Check REST conventions, input validation, error responses, auth",
+    description: "Check REST conventions, input validation, error responses",
     category: "backend",
     scope: "project",
     template: `Review {{project_name}} API design and implementation.
@@ -171,9 +428,8 @@ Audit:
 1. RESTful conventions (methods, status codes, naming)
 2. Input validation at every endpoint boundary
 3. Consistent error response format
-4. Authentication/authorization on all protected routes
-5. Rate limiting where needed
-6. Response shape consistency
+4. Rate limiting where needed
+5. Response shape consistency
 
 List any violations with the endpoint and recommended fix.`,
     tags: ["api", "rest", "validation"],
@@ -257,6 +513,48 @@ Report: green / amber / red per area.`,
     suggestedSchedule: "0 9 * * 1",
     tags: ["ci", "deployment", "monitoring"],
   },
+  {
+    id: "commit-push-deploy",
+    name: "Commit → Push → Deploy → Verify",
+    featured: true,
+    description: "Stage all changes, write commit message, push to GitHub, monitor Vercel deployment, run smoke tests",
+    category: "devops",
+    scope: "project",
+    template: `Run the full commit → push → deploy → verify cycle for {{project_name}}.
+
+Steps:
+1. Check git status — what files changed?
+2. Run lint and type check. If failures, stop and report.
+3. Stage relevant files (not .env, not secrets)
+4. Write a clear commit message (conventional commits: feat/fix/chore/refactor)
+5. Commit and push to origin/main
+6. If Vercel is connected, monitor deployment until Ready or Failed
+7. If Failed: read error logs, identify root cause, report
+8. If Ready: hit the production URL and verify the main flow works
+
+Report: ✓ deployed at <url> or ✗ failed: <reason>`,
+    tags: ["git", "deploy", "ci", "vercel"],
+  },
+  {
+    id: "project-status",
+    name: "Project Status Report",
+    featured: true,
+    description: "Full health check: git status, CI, Vercel, broken features, next action",
+    category: "devops",
+    scope: "project",
+    template: `Generate a full status report for {{project_name}}.
+
+Check:
+1. **Git**: last commit, any uncommitted changes, branch status
+2. **CI**: GitHub Actions status (passing/failing)
+3. **Deployment**: Vercel status, last deploy date
+4. **Known issues**: broken features, open bugs from Cockpit knowledge graph
+5. **Next action**: single most important thing to do right now
+
+Format as a quick-scan card. Green ✓ / Yellow ⚠ / Red ✗ per area.`,
+    suggestedSchedule: "0 9 * * 1",
+    tags: ["status", "ci", "deployment", "health"],
+  },
 
   // ─── Design ────────────────────────────────────────────────────────────────
   {
@@ -317,38 +615,14 @@ Audit areas:
    - Public pages should have coherent brand, content hierarchy, responsive composition, and reusable marketing/content sections.
    - Admin screens should be dense, calm, readable, consistent, and optimized for repeated operational use.
 
-Suggested searches:
-- className=, style=, bg-, text-, border-, rounded-, shadow-, ring-, p-, px-, py-, m-, gap-, grid, flex
-- hardcoded hex colors and arbitrary Tailwind values
-- color families such as slate, blue, purple, emerald, orange, rose, teal, cyan, indigo, violet
-- text-xs, text-sm, text-lg, font-, leading-
-- token/config/style files under src/lib, src/config, src/components, src/app
-
 Output format:
-1. Executive verdict
-   - One paragraph on whether design is centralized or scattered.
-   - Redesign readiness: Green / Yellow / Red.
+1. Executive verdict (one paragraph, redesign readiness: Green / Yellow / Red)
+2. Evidence (quantified findings, important files, good foundations vs. debt)
+3. Main risks (top design-architecture risks in priority order)
+4. Refactor plan (Phase 1: tokens → Phase 2: primitives → Phase 3: admin UI → Phase 4: public UI)
+5. First implementation slice (smallest high-leverage change to start)
 
-2. Evidence
-   - Quantified findings where possible.
-   - Important files and examples.
-   - Distinguish "good foundations already present" from "debt to fix".
-
-3. Main risks
-   - List the top design-architecture risks in priority order.
-
-4. Refactor plan
-   - Phase 1: consolidate tokens and theme SSOT.
-   - Phase 2: define core primitives and variants.
-   - Phase 3: migrate admin UI patterns.
-   - Phase 4: migrate public UI patterns.
-   - Phase 5: add theme presets or adapters only after the foundation is stable.
-
-5. First implementation slice
-   - Recommend the smallest high-leverage code change to start with.
-   - Include exact files/modules to touch and what not to touch yet.
-
-Be direct. Do not repaint the UI yet unless explicitly asked. The first goal is to expose and reduce design debt so future redesigns are cheaper and less repetitive.`,
+Be direct. Do not repaint the UI yet unless explicitly asked.`,
     tags: ["design-system", "debt", "architecture", "redesign", "tokens"],
   },
 
@@ -462,50 +736,6 @@ Be specific with examples from actual competitor products.`,
 
 Format as: Pain points → Product improvements → Priority order.`,
     tags: ["feedback", "insights"],
-  },
-
-  // ─── DevOps (continued) ────────────────────────────────────────────────────
-  {
-    id: "commit-push-deploy",
-    name: "Commit → Push → Deploy → Verify",
-    featured: true,
-    description: "Stage all changes, write commit message, push to GitHub, monitor Vercel deployment, run smoke tests",
-    category: "devops",
-    scope: "project",
-    template: `Run the full commit → push → deploy → verify cycle for {{project_name}}.
-
-Steps:
-1. Check git status — what files changed?
-2. Run lint and type check. If failures, stop and report.
-3. Stage relevant files (not .env, not secrets)
-4. Write a clear commit message (conventional commits: feat/fix/chore/refactor)
-5. Commit and push to origin/main
-6. If Vercel is connected, monitor deployment until Ready or Failed
-7. If Failed: read error logs, identify root cause, report
-8. If Ready: hit the production URL and verify the main flow works
-
-Report: ✓ deployed at <url> or ✗ failed: <reason>`,
-    tags: ["git", "deploy", "ci", "vercel"],
-  },
-  {
-    id: "project-status",
-    name: "Project Status Report",
-    featured: true,
-    description: "Full health check: git status, CI, Vercel, broken features, next action",
-    category: "devops",
-    scope: "project",
-    template: `Generate a full status report for {{project_name}}.
-
-Check:
-1. **Git**: last commit, any uncommitted changes, branch status
-2. **CI**: GitHub Actions status (passing/failing)
-3. **Deployment**: Vercel status, last deploy date
-4. **Known issues**: broken features, open bugs from Cockpit knowledge graph
-5. **Next action**: single most important thing to do right now
-
-Format as a quick-scan card. Green ✓ / Yellow ⚠ / Red ✗ per area.`,
-    suggestedSchedule: "0 9 * * 1",
-    tags: ["status", "ci", "deployment", "health"],
   },
 
   // ─── Personal / Global ─────────────────────────────────────────────────────

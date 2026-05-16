@@ -13,7 +13,7 @@ export default async function PromptsPage() {
   return (
     <PageLayout
       title="Prompt Library"
-      subtitle={`${PROMPT_TEMPLATES.length} templates · engineering, design, business, research`}
+      subtitle={`${PROMPT_TEMPLATES.length} templates · fleet control, security, engineering, design, business`}
     >
       <PromptLibraryClient templates={PROMPT_TEMPLATES} projects={projects} />
     </PageLayout>
