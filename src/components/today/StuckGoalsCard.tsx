@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getStuckGoals } from "@/db/queries/today";
 import { getCurrentUserId } from "@/lib/session";
+import { AbandonGoalButton } from "./AbandonGoalButton";
 
 function daysAgo(date: Date): number {
   return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
@@ -37,6 +38,7 @@ export async function StuckGoalsCard() {
                   </p>
                 </div>
                 <span className="shrink-0 text-xs text-text-muted">{idle}d idle</span>
+                <AbandonGoalButton goalId={goal.id} />
               </div>
             );
           })}

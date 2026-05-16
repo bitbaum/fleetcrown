@@ -5,7 +5,9 @@ import { dismissAlert } from "@/db/queries/alerts";
 import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
+import { patchGoal } from "@/db/queries/goals";
 import { getCurrentUserId } from "@/lib/session";
+import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
 
@@ -73,4 +75,11 @@ export async function handleCancelSubscription(id: string) {
   const userId = await getCurrentUserId();
   await cancelSubscription(id, userId);
   revalidatePath("/money");
+}
+
+export async function handleAbandonGoal(id: string) {
+  const userId = await getCurrentUserId();
+  await patchGoal(userId, id, { status: GOAL_STATUS.ABANDONED });
+  revalidatePath("/today");
+  revalidatePath("/goals");
 }
