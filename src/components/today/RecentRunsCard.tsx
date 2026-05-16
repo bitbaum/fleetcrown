@@ -6,6 +6,7 @@ import { getCurrentUserId } from "@/lib/session";
 import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
+import { SendNextToIvyButton } from "./SendNextToIvyButton";
 
 export async function RecentRunsCard() {
   const userId = await getCurrentUserId();
@@ -49,10 +50,11 @@ export async function RecentRunsCard() {
                     <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{done}</p>
                   )}
                   {next && (
-                    <p className="mt-1 flex items-start gap-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">
-                      <ArrowRight className="h-3 w-3 shrink-0 mt-0.5" />
-                      {next}
-                    </p>
+                    <div className="mt-1 flex items-start gap-1">
+                      <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-accent-text/80" />
+                      <p className="flex-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">{next}</p>
+                      <SendNextToIvyButton projectKey={run.projectKey} next={next} />
+                    </div>
                   )}
                 </div>
               </div>
