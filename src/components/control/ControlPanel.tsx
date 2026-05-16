@@ -107,6 +107,12 @@ export function ControlPanel() {
   const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
   const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
   const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
+  // When daemon is offline or never connected we don't know which projects are actually
+  // running — don't label them all "idle". Collapse the idle section and show everything
+  // in the main list so nothing falsely appears inactive.
+  const daemonStateUnknown = daemonOffline || daemonNeverSeen;
+  const fleetActive = daemonStateUnknown ? (sorted ?? []) : activeProjects;
+  const fleetIdle   = daemonStateUnknown ? [] : idleProjects;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -178,7 +184,7 @@ export function ControlPanel() {
                 <div className="space-y-2">
                   <p className="ui-kicker">Control inventory</p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={`${dashboard.idleCount} idle`} />
+                    <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={daemonStateUnknown ? undefined : `${dashboard.idleCount} idle`} />
                     <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
                     <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
                     <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note="Zellij-backed project tabs" />
@@ -268,8 +274,8 @@ export function ControlPanel() {
       <ProjectFleetView
         viewMode={viewMode}
         sorted={sorted}
-        activeProjects={activeProjects}
-        idleProjects={idleProjects}
+        activeProjects={fleetActive}
+        idleProjects={fleetIdle}
         focusedTab={focusedTab}
         setFocusedTab={setFocusedTab}
         expandedTabs={expandedTabs}

@@ -20,7 +20,7 @@ export function ControlMetricCard({
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: React.ReactNode;
-  note: React.ReactNode;
+  note?: React.ReactNode;
 }) {
   return (
     <div className="ui-control-metric-card">
@@ -29,7 +29,7 @@ export function ControlMetricCard({
         {label}
       </div>
       <div className="ui-control-metric-value">{value}</div>
-      <p className="ui-control-metric-note">{note}</p>
+      {note != null && <p className="ui-control-metric-note">{note}</p>}
     </div>
   );
 }
