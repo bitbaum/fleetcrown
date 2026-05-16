@@ -32,7 +32,7 @@ export default function SignUpPage() {
 
       const result = await signIn("email-password", { email, password, redirect: false });
       if (result?.ok) {
-        router.push("/today");
+        router.push("/onboarding");
       } else {
         router.push("/sign-in");
       }
