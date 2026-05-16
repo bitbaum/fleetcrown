@@ -6,9 +6,13 @@ import { postJson, deleteJson, patchJson } from "@/lib/api/fetch";
 import type { UserProject } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
-type Props = { projects: UserProject[] };
+type Props = {
+  projects: UserProject[];
+  /** null means unlimited (owner or pro/team plan) */
+  projectLimit: number | null;
+};
 
-export function ProjectsSettings({ projects: initial }: Props) {
+export function ProjectsSettings({ projects: initial, projectLimit }: Props) {
   const [projects, setProjects] = useState(initial);
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -107,14 +111,36 @@ export function ProjectsSettings({ projects: initial }: Props) {
     });
   };
 
+  const atLimit = projectLimit !== null && projects.length >= projectLimit;
+
   return (
     <section className="ui-settings-section">
       <div className="flex items-center justify-between">
-        <h2 className="font-medium text-text-primary">Projects</h2>
-        <button onClick={() => setAdding((v) => !v)} className="ui-btn-secondary py-1.5 text-xs gap-1.5">
+        <div>
+          <h2 className="font-medium text-text-primary">Projects</h2>
+          {projectLimit !== null && (
+            <p className="text-xs text-text-tertiary mt-0.5">
+              {projects.length} / {projectLimit} projects
+              {atLimit && <span className="ml-1 text-status-warning">· limit reached</span>}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => !atLimit && setAdding((v) => !v)}
+          disabled={atLimit}
+          title={atLimit ? `Upgrade your plan to add more than ${projectLimit} projects` : undefined}
+          className="ui-btn-secondary py-1.5 text-xs gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <Plus className="h-3.5 w-3.5" /> Add
         </button>
       </div>
+
+      {atLimit && (
+        <p className="text-sm text-text-secondary bg-surface-raised rounded-lg px-4 py-3">
+          You&apos;ve reached the {projectLimit}-project limit on your plan.{" "}
+          <a href="/settings#billing" className="ui-link">Upgrade to Pro</a> for unlimited projects.
+        </p>
+      )}
 
       {adding && (
         <div className="ui-settings-subpanel">

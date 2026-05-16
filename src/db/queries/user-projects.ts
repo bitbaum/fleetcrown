@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, isNotNull } from "drizzle-orm";
+import { and, asc, count, eq, ilike, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -10,6 +10,14 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
     .from(userProjects)
     .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
+}
+
+export async function countActiveProjects(userId: string): Promise<number> {
+  const [{ value }] = await db
+    .select({ value: count() })
+    .from(userProjects)
+    .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)));
+  return value;
 }
 
 async function findOrCreateProjectEntity(userId: string, name: string, description?: string | null): Promise<string> {

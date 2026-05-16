@@ -11,6 +11,7 @@ import { BeaconSettings } from "@/components/settings/BeaconSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PageLayout } from "@/components/ui/page-layout";
 import { isStripeReady } from "@/lib/stripe";
+import { getProjectLimit, isUnlimitedProjects } from "@/lib/plan";
 
 export const metadata = { title: "Settings" };
 
@@ -38,7 +39,10 @@ export default async function SettingsPage() {
           hasSubscription={!!user.stripeSubscriptionId}
         />
       </Suspense>
-      <ProjectsSettings projects={projects} />
+      <ProjectsSettings
+        projects={projects}
+        projectLimit={user.isDefault || isUnlimitedProjects(user.plan) ? null : getProjectLimit(user.plan)}
+      />
       <TeamSettings invitations={invitations} />
     </PageLayout>
   );
