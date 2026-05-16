@@ -161,12 +161,13 @@ export function useControlData(): ControlDataHook {
   };
 
   const launchProject = async (tab: string, dir: string, agent?: string, model?: string) => {
-    await postJson("/api/agent/launch", {
+    const res = await postJson("/api/agent/launch", {
       tab,
       dir,
       agent: agent ?? selectedAgent,
       model,
     });
+    if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     setTimeout(() => refresh(true), 1500);
   };
 

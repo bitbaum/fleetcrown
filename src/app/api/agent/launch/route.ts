@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { launchAgentInTab } from "@/lib/agent-runtime";
 import { listAgentRegistry } from "@/lib/agent-registry";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -11,6 +12,13 @@ const LaunchAgentBody = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json(
+      { error: "Agent launch requires the local runtime — open Cockpit on your machine to launch tabs." },
+      { status: 503 },
+    );
+  }
+
   const dataOrResp = await readJsonBody(req, LaunchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
