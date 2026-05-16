@@ -427,5 +427,6 @@ export async function GET() {
     prompts,
     zellijTabs,
     recentActivity: recentActivity ?? [],
+    runtimeAvailable: isRuntimeAvailable(),
   } satisfies ControlData);
 }

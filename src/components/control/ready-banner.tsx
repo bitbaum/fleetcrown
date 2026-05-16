@@ -64,13 +64,13 @@ export function ReadyBanner({
   }, [nextQueueItem]);
 
   useEffect(() => {
-    if (paused || !autoContinueEnabled) return;
+    // In cloud mode onAutoInject is undefined — the local stop hook handles auto-continue.
+    if (paused || !autoContinueEnabled || !onAutoInjectRef.current) return;
     if (seconds <= 0) {
       try {
         if (tab && localStorage.getItem(beaconComposingKey(tab))) return;
       } catch {}
-      if (onAutoInjectRef.current) onAutoInjectRef.current();
-      else onSendRef.current(primaryKey);
+      onAutoInjectRef.current();
       return;
     }
     const id = setTimeout(() => setSeconds((s) => s - 1), 1000);

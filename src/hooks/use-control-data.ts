@@ -23,6 +23,7 @@ export interface ControlDataHook {
   savingAgent: boolean;
   lastTabResults: TabResult[];
   lastTabResultsAt: number | null;
+  runtimeAvailable: boolean;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string) => Promise<void>;
@@ -239,6 +240,7 @@ export function useControlData(): ControlDataHook {
     selectedAgent, model, savedConfig,
     switchableRegistry, activeDefinition, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
+    runtimeAvailable: data?.runtimeAvailable ?? true,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,
     handleAgentSelect, handleModelChange, setError,

@@ -32,6 +32,7 @@ export function ProjectCard({
   onDeleted,
   onProfileSaved,
   isOnlyReady = false,
+  runtimeAvailable = true,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -46,6 +47,7 @@ export function ProjectCard({
   onDeleted?: () => void;
   onProfileSaved?: () => void;
   isOnlyReady?: boolean;
+  runtimeAvailable?: boolean;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -169,7 +171,7 @@ export function ProjectCard({
             dispatchReason={!sessionHealthBlocksQueue() && preloadedDispatch?.source === "groq" ? preloadedDispatch.reason : undefined}
             onDismiss={() => setDismissed(true)}
             onSend={send}
-            onAutoInject={handleAutoInject}
+            onAutoInject={runtimeAvailable !== false ? handleAutoInject : undefined}
             onToggleAutoContinue={toggleAutoContinue}
             showKeyHints={isOnlyReady}
           />

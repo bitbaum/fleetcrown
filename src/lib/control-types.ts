@@ -96,4 +96,5 @@ export type ControlData = {
   prompts: import("@/lib/agent-config").PromptMeta[];
   zellijTabs: string[];
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
+  runtimeAvailable: boolean;
 };

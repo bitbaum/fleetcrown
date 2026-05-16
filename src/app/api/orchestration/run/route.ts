@@ -23,6 +23,7 @@ import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orc
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { getCurrentUserId } from "@/lib/session";
+import { enqueueInjectCommand } from "@/db/queries/pending-commands";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -53,14 +54,34 @@ async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskR
 }
 
 export async function POST(req: NextRequest) {
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: "Orchestration requires local runtime — not available in cloud mode" }, { status: 503 });
-  }
-
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const userId = await getCurrentUserId();
+
+  if (!isRuntimeAvailable()) {
+    // Cloud mode: only the claude adapter can be queued via pending_commands.
+    // Other adapters (openclaw, codex, gemini) require local workers/tools.
+    const request = dataOrResp as OrchestrationTaskRequest;
+    if (request.adapter !== "claude") {
+      return NextResponse.json(
+        { error: `${request.adapter} orchestration requires the local runtime — not available in cloud mode` },
+        { status: 503 },
+      );
+    }
+    const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
+    const prompt = renderTaskForAdapter(request);
+    const commandId = await enqueueInjectCommand(userId, {
+      tab: request.projectKey,
+      prompt,
+      promptKey: request.intent,
+      promptLabel: intent.name,
+      adapter: request.adapter,
+      projectId: request.projectId ?? null,
+      projectKey: request.projectKey,
+    });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
+  }
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);
   let intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);

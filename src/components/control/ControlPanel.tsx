@@ -27,6 +27,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
+    runtimeAvailable,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -99,6 +100,7 @@ export function ControlPanel() {
     },
     onDeleted: () => { refresh(true); },
     onProfileSaved: () => { refresh(true); },
+    runtimeAvailable,
   });
 
   const headerRight = (
