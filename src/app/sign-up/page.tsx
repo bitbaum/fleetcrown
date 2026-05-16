@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import Link from "next/link";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
   AuthFooterLink, AuthHeading,
