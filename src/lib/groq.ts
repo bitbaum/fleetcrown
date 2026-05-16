@@ -51,7 +51,8 @@ export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): 
   if (!key) throw new Error("GROQ_API_KEY not set");
 
   const form = new FormData();
-  form.append("file", audio, `audio.${mimeType.split("/")[1] ?? "webm"}`);
+  const ext = mimeType.split("/")[1]?.split(";")[0] ?? "webm";
+  form.append("file", audio, `audio.${ext}`);
   form.append("model", GROQ_WHISPER_MODEL);
 
   const res = await fetch(GROQ_AUDIO_URL, {
