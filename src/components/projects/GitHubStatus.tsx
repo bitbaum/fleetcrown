@@ -3,6 +3,7 @@
 import { GitBranch, CheckCircle, XCircle, Loader2, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 
 type RepoStatus = {
@@ -21,7 +22,7 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
 };
 
 export function GitHubStatus() {
-  const { data, loading, error } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github");
+  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github");
   const repos = data?.repos ?? [];
 
   return (
@@ -30,7 +31,7 @@ export function GitHubStatus() {
       {loading ? (
         <div className="animate-pulse text-sm text-text-tertiary">Checking repos...</div>
       ) : error || (data?.error && repos.length === 0) ? (
-        <div className="text-sm text-text-tertiary">{error ?? data?.error}</div>
+        <FetchErrorState message="Couldn't load GitHub status" onRetry={refetch} />
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>
       ) : (

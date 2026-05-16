@@ -7,10 +7,13 @@ export function useFetch<T>(url: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
   useEffect(() => {
     if (!url) { setLoading(false); return; } // eslint-disable-line react-hooks/set-state-in-effect
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
     getJson<T>(url)
       .then((json) => {
@@ -26,7 +29,9 @@ export function useFetch<T>(url: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, revision]);
 
-  return { data, loading, error };
+  const refetch = () => setRevision((v) => v + 1);
+
+  return { data, loading, error, refetch };
 }

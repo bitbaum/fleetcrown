@@ -3,6 +3,7 @@
 import { Calendar } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 import { APP_LOCALE } from "@/lib/constants";
 
@@ -15,7 +16,7 @@ type CalendarEvent = {
 };
 
 export function CalendarCard() {
-  const { data, loading, error } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar");
+  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar");
   const events = data?.events ?? [];
 
   return (
@@ -24,7 +25,7 @@ export function CalendarCard() {
       {loading ? (
         <div className="text-sm text-text-muted animate-pulse">Loading...</div>
       ) : error || (data?.error && events.length === 0) ? (
-        <div className="text-sm text-text-secondary">{error ?? data?.error}</div>
+        <FetchErrorState message="Couldn't load calendar" onRetry={refetch} />
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (

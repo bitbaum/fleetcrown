@@ -2,6 +2,7 @@
 
 import { Sun, CloudRain, Cloud, CloudSnow, CloudFog } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
+import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 
 function parseWeather(raw: string) {
@@ -37,13 +38,22 @@ function WeatherIcon({ condition, className }: { condition: string; className?: 
 }
 
 export function WeatherCard() {
-  const { data, loading } = useFetch<{ weather: string | null }>("/api/weather");
+  const { data, loading, error, refetch } = useFetch<{ weather: string | null; error?: string }>("/api/weather");
 
   if (loading) {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
         <div className="text-sm text-text-muted animate-pulse">Loading...</div>
+      </Card>
+    );
+  }
+
+  if (error || data?.error) {
+    return (
+      <Card>
+        <CardHeader icon={Sun} title="Weather" />
+        <FetchErrorState message="Couldn't load weather" onRetry={refetch} />
       </Card>
     );
   }
