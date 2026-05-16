@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "install-app": "bash scripts/install-cockpit-app.sh",
     "migrate": "drizzle-kit push",
     "lint": "eslint",
     "check:design": "bash scripts/check-design-system.sh",
