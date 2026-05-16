@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Star } from "lucide-react";
 import { CATEGORY_META, type PromptTemplate, type PromptCategory } from "@/config/prompt-library";
 import { PromptRow } from "./PromptRow";
@@ -19,6 +19,19 @@ export function PromptLibraryClient({
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<PromptCategory | "all">("all");
   const [activeScope, setActiveScope] = useState<"all" | "global" | "project">("all");
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setSearch("");
+      setActiveCategory("all");
+      setActiveScope("all");
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const isFiltered = search.length > 0 || activeCategory !== "all" || activeScope !== "all";
 
@@ -49,6 +62,7 @@ export function PromptLibraryClient({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setSearch(""); (e.target as HTMLInputElement).blur(); } }}
             placeholder="Search prompts…"
             className="ui-input pl-12"
           />
