@@ -1,19 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2, History, Bot } from "lucide-react";
+import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
-import { DevLogList } from "@/components/shared/DevLogList";
-import { AddAttrInline, AttrRow, ClaudeSession } from "./project-overview-helpers";
+import { AddAttrInline, AttrRow, ClaudeSession, ProjectHistorySection, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { APP_LOCALE } from "@/lib/constants";
-import { HEALTH_TAG_STYLE } from "@/config/ui";
 import type { LucideProps } from "lucide-react";
 
 type IssueConfig = {
@@ -274,66 +272,3 @@ export function OverviewTab({
   );
 }
 
-function ProjectHistorySection({ events }: { events: ProjectData["activity"] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 ui-link-muted py-1"
-      >
-        <Bot className="h-3.5 w-3.5" />
-        Agent History ({events.length})
-        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
-      </button>
-      {open && (
-        <div className="mt-2 space-y-2">
-          {events.map((event) => {
-            const healthLabel = event.kind === "orchestrated_run" ? event.health : undefined;
-            const healthCls = healthLabel ? HEALTH_TAG_STYLE[healthLabel.toLowerCase()] : undefined;
-            return (
-              <div key={event.id} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2">
-                <div className="flex items-center gap-2 text-xs flex-wrap">
-                  <span className="font-medium text-text-secondary">{event.title}</span>
-                  {"state" in event && event.state !== "done" && (
-                    <span className="ui-tag ui-tag-neutral">{event.state}</span>
-                  )}
-                  {healthCls && healthLabel && (
-                    <span className={healthCls}>{healthLabel}</span>
-                  )}
-                  <span className="ml-auto text-text-muted shrink-0">{new Date(event.occurredAt).toLocaleString(APP_LOCALE)}</span>
-                </div>
-                {event.body && (
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={event.body}>
-                    {event.body}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DevLogSection({ entries }: { entries: import("./project-detail-types").DevLogEntry[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 ui-link-muted py-1"
-      >
-        <History className="h-3.5 w-3.5" />
-        Session Log ({entries.length})
-        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
-      </button>
-      {open && (
-        <div className="mt-2">
-          <DevLogList entries={entries} />
-        </div>
-      )}
-    </div>
-  );
-}
