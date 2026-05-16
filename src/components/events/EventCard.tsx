@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Loader2, Archive, Pencil, Check, X } from "lucide-react";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
@@ -35,6 +36,16 @@ export function EventCard({
 
   const deadline = event.deadline ? new Date(event.deadline) : null;
   const { label: deadlineText, overdue } = deadlineLabel(deadline);
+
+  const ivyPrompt = [
+    `Event: ${event.name}`,
+    `Type: ${event.type}`,
+    event.category && `Category: ${event.category}`,
+    deadline ? `Deadline: ${deadlineText} (${format(deadline, "d MMM yyyy")})` : "No deadline set",
+    event.description && `Description: ${event.description}`,
+    "",
+    "What should I do to prepare for or make the most of this event/opportunity before the deadline?",
+  ].filter(Boolean).join("\n");
 
   const openEdit = () => {
     setDraftName(event.name);
@@ -183,6 +194,13 @@ export function EventCard({
         </div>
 
         <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
+          {!dimmed && (
+            <IvyDispatchButton
+              prompt={ivyPrompt}
+              title="Ask Ivy about this event"
+              className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
+            />
+          )}
           {onEdit && !dimmed && (
             <button
               onClick={openEdit}
