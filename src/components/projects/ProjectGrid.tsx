@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
@@ -138,6 +138,18 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setQuery("");
+      setStatusFilter(null);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const statuses = useMemo(
     () => [...new Set(projects.map((p) => p.attrs["status"]).filter(Boolean))].sort() as string[],
     [projects],
@@ -170,6 +182,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           placeholder="Search projects..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
           className="ui-search-input"
         />
         <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">

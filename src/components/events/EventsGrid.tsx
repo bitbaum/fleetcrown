@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Calendar, Archive, ChevronDown, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EventCard } from "./EventCard";
@@ -20,6 +20,18 @@ export function EventsGrid({
   const [showArchived, setShowArchived] = useState(false);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setQuery("");
+      setTypeFilter(null);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const types = [...new Set(items.map((e) => e.type).filter(Boolean))].sort() as string[];
 
@@ -63,6 +75,7 @@ export function EventsGrid({
             placeholder="Search events…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
             className="ui-input pl-10 pr-14"
           />
           <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
