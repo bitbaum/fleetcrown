@@ -6,6 +6,7 @@ import { isPast, format } from "date-fns";
 import { deadlineLabel } from "@/lib/dates";
 import { EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 
 export async function EventsDueCard() {
   const userId = await getCurrentUserId();
@@ -71,6 +72,18 @@ export async function EventsDueCard() {
                     <span className="ui-kicker">{event.type}</span>
                   )}
                 </div>
+                <IvyDispatchButton
+                  prompt={[
+                    `Event: ${event.name}`,
+                    event.type && `Type: ${event.type}`,
+                    event.category && `Category: ${event.category}`,
+                    `Deadline: ${deadlineText}${overdue ? " (OVERDUE)" : ""}`,
+                    event.description && `Description: ${event.description}`,
+                    "",
+                    `This deadline is ${overdue ? "overdue" : "approaching"}. What should I do about it? What are the key next steps?`,
+                  ].filter(Boolean).join("\n")}
+                  title="Ask Ivy about this deadline"
+                />
               </div>
             );
           })}
