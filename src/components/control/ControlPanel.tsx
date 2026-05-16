@@ -12,6 +12,7 @@ import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
 import { AttentionBar } from "./AttentionBar";
+import { DaemonStatusBanner } from "./DaemonStatusBanner";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
@@ -113,11 +114,8 @@ export function ControlPanel() {
         <>
           {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums">● {dashboard.runningCount}</span>}
           {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
-          {daemonNeverSeen && (
-            <span className="hidden sm:inline text-status-warning" title="Start the cockpit-daemon on your local machine to see live agent state">daemon not connected</span>
-          )}
-          {daemonOffline && (
-            <span className="hidden sm:inline text-status-warning" title={`Daemon last seen ${timeAgo(new Date(daemonLastPushedAt!).getTime())} — restart cockpit-daemon on your local machine`}>daemon offline</span>
+          {(daemonNeverSeen || daemonOffline) && (
+            <span className="hidden sm:inline h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
           )}
           {!daemonNeverSeen && !daemonOffline && daemonLastPushedAt && (
             <span className="hidden sm:inline text-text-muted" title="Local daemon last sync">daemon {timeAgo(new Date(daemonLastPushedAt).getTime())}</span>
@@ -246,6 +244,12 @@ export function ControlPanel() {
           onClose={() => setLaunchTarget(null)}
         />
       )}
+
+      <DaemonStatusBanner
+        daemonNeverSeen={daemonNeverSeen}
+        daemonOffline={daemonOffline}
+        daemonLastPushedAt={daemonLastPushedAt}
+      />
 
       {error && <p className="ui-box-error">{error}</p>}
       {queuedNotice && (
