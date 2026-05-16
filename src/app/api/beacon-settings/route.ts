@@ -3,18 +3,20 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
-import { WHISPER_MODEL_VALUES, BEACON_SETTINGS_PATH } from "@/config/beacon";
+import { WHISPER_MODEL_VALUES, TRANSCRIPTION_PROVIDER_VALUES, BEACON_SETTINGS_PATH } from "@/config/beacon";
 
 const PatchBody = z.object({
   countdown_seconds: z.number().int().min(MIN_BEACON_COUNTDOWN_S).max(MAX_BEACON_COUNTDOWN_S).optional(),
   whisper_model: z.enum(WHISPER_MODEL_VALUES).optional(),
   prefer_browser_ready_ui: z.boolean().optional(),
+  transcription_provider: z.enum(TRANSCRIPTION_PROVIDER_VALUES).optional(),
 });
 
 export type BeaconSettingsData = {
   countdown_seconds: number;
   whisper_model: string;
   prefer_browser_ready_ui: boolean;
+  transcription_provider: string;
 };
 
 async function readSettings(): Promise<Record<string, unknown>> {
@@ -36,6 +38,7 @@ export async function GET() {
     countdown_seconds: typeof s.countdown_seconds === "number" ? s.countdown_seconds : DEFAULT_BEACON_COUNTDOWN_S,
     whisper_model: typeof s.whisper_model === "string" ? s.whisper_model : "base",
     prefer_browser_ready_ui: s.prefer_browser_ready_ui === true,
+    transcription_provider: typeof s.transcription_provider === "string" ? s.transcription_provider : "auto",
   };
   return NextResponse.json(result);
 }
@@ -48,6 +51,7 @@ export async function PATCH(req: NextRequest) {
   if (dataOrResp.countdown_seconds !== undefined) current.countdown_seconds = dataOrResp.countdown_seconds;
   if (dataOrResp.whisper_model !== undefined) current.whisper_model = dataOrResp.whisper_model;
   if (dataOrResp.prefer_browser_ready_ui !== undefined) current.prefer_browser_ready_ui = dataOrResp.prefer_browser_ready_ui;
+  if (dataOrResp.transcription_provider !== undefined) current.transcription_provider = dataOrResp.transcription_provider;
   await writeSettings(current);
   return NextResponse.json({ ok: true });
 }

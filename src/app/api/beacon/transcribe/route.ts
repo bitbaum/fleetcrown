@@ -12,14 +12,18 @@ import { callGroqTranscribe } from "@/lib/groq";
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
 
-async function whisperModel(): Promise<string> {
+async function readBeaconSettings(): Promise<{ whisperModel: string; provider: string }> {
   try {
     const raw = await readFile(BEACON_SETTINGS_PATH, "utf-8");
     const s = JSON.parse(raw) as Record<string, unknown>;
-    const m = s["whisper_model"];
-    if (typeof m === "string" && m.length > 0) return m;
-  } catch { /* settings missing or malformed — use default */ }
-  return "base";
+    const whisperModel = typeof s["whisper_model"] === "string" && s["whisper_model"].length > 0
+      ? s["whisper_model"] : "base";
+    const provider = typeof s["transcription_provider"] === "string"
+      ? s["transcription_provider"] : "auto";
+    return { whisperModel, provider };
+  } catch {
+    return { whisperModel: "base", provider: "auto" };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -27,8 +31,15 @@ export async function POST(req: NextRequest) {
   const audio = form.get("audio") as File | null;
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
-  if (!isRuntimeAvailable()) {
-    // Remote path: cloud transcription via Groq Whisper — no daemon round-trip needed.
+  const [{ whisperModel: model, provider }, webmPath] = await Promise.all([
+    readBeaconSettings(),
+    Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
+  ]);
+
+  const useGroq = provider === "groq" || (provider !== "local" && !isRuntimeAvailable());
+
+  if (useGroq) {
+    // Cloud transcription via Groq Whisper.
     const buf = Buffer.from(await audio.arrayBuffer());
     if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
     try {
@@ -42,11 +53,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: "Local transcription unavailable — runtime not active" }, { status: 503 });
+  }
+
   // Local path: run Whisper directly.
-  const [model, webmPath] = await Promise.all([
-    whisperModel(),
-    Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
-  ]);
   // Whisper receives a wav converted from the webm — avoids ffmpeg codec failures on
   // incomplete MediaRecorder output (Chrome sometimes produces webm without an EBML
   // EndOfFile tag, which makes Whisper's internal ffmpeg exit with status 254).

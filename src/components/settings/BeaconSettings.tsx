@@ -5,13 +5,14 @@ import { Loader2 } from "lucide-react";
 import { getJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
-import { WHISPER_MODELS } from "@/config/beacon";
+import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS } from "@/config/beacon";
 
 export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
   const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [model, setModel] = useState("base");
   const [browserUi, setBrowserUi] = useState(false);
+  const [provider, setProvider] = useState("auto");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -22,13 +23,15 @@ export function BeaconSettings() {
       setCountdown(d.countdown_seconds);
       setModel(d.whisper_model);
       setBrowserUi(d.prefer_browser_ready_ui);
+      setProvider(d.transcription_provider);
     }).catch(() => {});
   }, []);
 
   const dirty = data !== null && (
     countdown !== data.countdown_seconds ||
     model !== data.whisper_model ||
-    browserUi !== data.prefer_browser_ready_ui
+    browserUi !== data.prefer_browser_ready_ui ||
+    provider !== data.transcription_provider
   );
 
   const save = async () => {
@@ -40,9 +43,10 @@ export function BeaconSettings() {
         countdown_seconds: countdown,
         whisper_model: model,
         prefer_browser_ready_ui: browserUi,
+        transcription_provider: provider,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      setData({ countdown_seconds: countdown, whisper_model: model, prefer_browser_ready_ui: browserUi });
+      setData({ countdown_seconds: countdown, whisper_model: model, prefer_browser_ready_ui: browserUi, transcription_provider: provider });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -107,6 +111,25 @@ export function BeaconSettings() {
             </p>
           </div>
 
+          {/* Transcription provider */}
+          <div className="space-y-1.5">
+            <label className="ui-kicker">Transcription provider</label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              className="ui-input"
+            >
+              {TRANSCRIPTION_PROVIDERS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label} — {p.note}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-text-muted">
+              Force local Whisper when Groq is rate-limited, or force Groq when local runtime is unavailable.
+            </p>
+          </div>
+
           {/* Whisper model */}
           <div className="space-y-1.5">
             <label className="ui-kicker">Voice transcription model</label>
@@ -122,8 +145,8 @@ export function BeaconSettings() {
               ))}
             </select>
             <p className="text-xs text-text-muted">
-              Whisper model used when you speak into the beacon mic. Larger models are more accurate but slower.
-              Model files are cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
+              Whisper model used when provider is Local or Auto with runtime available. Larger models are more accurate but slower.
+              Cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
             </p>
           </div>
         </div>
