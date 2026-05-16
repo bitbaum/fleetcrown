@@ -3,7 +3,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand } from "@/lib/agent-registry";
 import { injectIntoTab } from "@/lib/zellij";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 
 const SwitchAgentBody = z.object({
@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
 
   // Cloud mode: enqueue for the local daemon to execute.
   if (!isRuntimeAvailable()) {
-    const userId = await getCurrentUserId();
+    const userId = await getSessionUserId();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const commandId = await enqueueSwitchAgentCommand(userId, { tab, dir, toAgent, fromAgent, model });
     return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });

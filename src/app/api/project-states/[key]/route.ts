@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 
 const PatchBody = z.object({
   tabName:                z.string().optional(),
@@ -25,10 +25,10 @@ export async function PATCH(
   const { key } = await params;
   if (!key) return NextResponse.json({ error: "Missing key" }, { status: 400 });
 
-  const [dataOrResp, userId] = await Promise.all([
-    readJsonBody(request, PatchBody),
-    getCurrentUserId(),
-  ]);
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dataOrResp = await readJsonBody(request, PatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   const d = dataOrResp;

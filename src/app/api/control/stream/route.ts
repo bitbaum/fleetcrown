@@ -6,7 +6,7 @@ import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
 import { parseProjectsConf, resolveEffectiveTab } from "@/lib/agent-config";
 import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import type { FastProjectState } from "@/lib/control-fast-state";
 
@@ -49,7 +49,8 @@ function sseEvent(event: string, data: unknown): string {
 }
 
 export async function GET() {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json" } });
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);

@@ -2,10 +2,10 @@ import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot,
 import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 
 export async function SummaryBar() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
 
   const todayBriefPrompt = [

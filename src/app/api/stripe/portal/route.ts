@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, isStripeReady } from "@/lib/stripe";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { getUserById } from "@/db/queries/users";
 
 export async function GET(req: NextRequest) {
@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await getUserById(userId);

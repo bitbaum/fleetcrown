@@ -6,7 +6,7 @@ import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-cata
 import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
 import { getUserProjects } from "@/db/queries/user-projects";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
@@ -96,7 +96,8 @@ export async function POST(req: NextRequest) {
         // Merge conf-file projects with DB projects so DB-only projects are restarted too.
         const confProjects = parseProjectsConf();
         const confTabs = new Set(confProjects.map((p) => p.tab.toLowerCase()));
-        const userId = await getCurrentUserId();
+        const userId = await getSessionUserId();
+        if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         const dbProjects = await getUserProjects(userId).catch(() => []);
         const dbOnlyProjects = dbProjects
           .filter((p) => p.dirPath && !confTabs.has(p.name.toLowerCase()))

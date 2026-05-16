@@ -3,7 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { getHabitsByGoalIds } from "@/db/queries/habit-goals";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
@@ -17,7 +17,7 @@ function collectGoalIds(goals: GoalWithChildren[]): string[] {
 }
 
 export default async function GoalsPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [goalTree, stats] = await Promise.all([getGoals(userId), getGoalStats(userId)]);
 
   const allGoalIds = collectGoalIds(goalTree);

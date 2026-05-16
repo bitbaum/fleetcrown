@@ -22,7 +22,7 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState } from "@/db/queries/project-states";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
 
 const RunOrchestrationBody = z.object({
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!isRuntimeAvailable()) {
     // Cloud mode: only the claude adapter can be queued via pending_commands.

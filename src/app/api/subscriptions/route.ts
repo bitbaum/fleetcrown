@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { createSubscription, CreateSubscriptionBody } from "@/db/queries/money";
 import { readJsonBody } from "@/lib/api/route-helpers";
 
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const dataOrResp = await readJsonBody(req, CreateSubscriptionBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

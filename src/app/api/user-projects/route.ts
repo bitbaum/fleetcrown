@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { createUserProject, ensureUserProjectEntityLinks, countActiveProjects } from "@/db/queries/user-projects";
@@ -15,13 +15,15 @@ const CreateBody = z.object({
 });
 
 export async function GET() {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const projects = await ensureUserProjectEntityLinks(userId);
   return NextResponse.json(projects);
 }
 
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

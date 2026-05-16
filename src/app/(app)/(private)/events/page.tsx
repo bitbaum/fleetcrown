@@ -1,12 +1,12 @@
 import { PageLayout } from "@/components/ui/page-layout";
 import { getEvents, getArchivedEvents } from "@/db/queries/events";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { EventsGrid } from "@/components/events/EventsGrid";
 
 export const metadata = { title: "Events" };
 
 export default async function EventsPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [items, archived] = await Promise.all([getEvents(userId), getArchivedEvents(userId)]);
   return (
     <PageLayout

@@ -6,7 +6,7 @@ import {
 import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { AgentOption } from "@/lib/agent-registry";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executeInject } from "@/lib/executor";
@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
   const { tab, promptKey, customPrompt, adapter } = dataOrResp;
   const eventAdapter: AgentOption = adapter ?? "claude";
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Resolve canonical tab name: conf file first, DB fallback.
   const projectsMap = readProjectsMap();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { beaconPath, readBeaconSession } from "@/app/api/beacon/route";
 import { parseSessionText } from "@/lib/session-content";
@@ -15,7 +15,8 @@ async function appendDevLog(projectName: string, content: string): Promise<void>
   const parsed = parseSessionText(content);
   if (!parsed.done.length && !parsed.next.length) return;
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return; // unauthenticated — skip logging, don't fail the beacon response
   await appendProjectDevLog(userId, projectName, {
     date: new Date().toISOString(),
     done: parsed.done.join("; "),

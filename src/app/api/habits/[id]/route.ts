@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toggleHabitCompletion, deleteHabit, updateHabit, PatchHabitBody } from "@/db/queries/habits";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 
 export async function PATCH(
@@ -14,7 +14,8 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchHabitBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (dataOrResp.done !== undefined) {
     await toggleHabitCompletion(id, dataOrResp.done, userId);
@@ -32,7 +33,8 @@ export async function DELETE(
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   await deleteHabit(idOrResp, userId);
   return NextResponse.json({ ok: true });
 }

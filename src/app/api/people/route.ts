@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchPeople, createPerson, SORT_MODE, type SortMode, CreatePersonBody } from "@/db/queries/people";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/constants/people";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 
 const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);
 
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const dataOrResp = await readJsonBody(req, CreatePersonBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
     .map((h) => h.trim())
     .filter((h): h is RelationshipHealth => (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h));
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const result = await searchPeople(userId, q, limit, offset, sort, health);
   return NextResponse.json(result);
 }

@@ -2,7 +2,7 @@ import { Bot, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getRecentOrchestrationRuns } from "@/db/queries/today";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
@@ -10,7 +10,7 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
 export async function RecentRunsCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const runs = await getRecentOrchestrationRuns(userId);
 
   if (runs.length === 0) return null;

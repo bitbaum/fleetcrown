@@ -2,7 +2,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { searchPeople, SORT_MODE } from "@/db/queries/people";
 import { PeopleGrid } from "@/components/people/PeopleGrid";
 import { RELATIONSHIP_HEALTH_VALUES, type RelationshipHealth } from "@/lib/constants/people";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 
 export const metadata = { title: "People" };
 
@@ -22,7 +22,7 @@ export default async function PeoplePage({
         )
     : [];
 
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const { people, total } = await searchPeople(userId, "", 50, 0, SORT_MODE.RECENT, initialHealthFilter);
 
   return (

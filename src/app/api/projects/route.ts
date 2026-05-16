@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SOURCE_COCKPIT_UI } from "@/lib/constants";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { createProject, CreateProjectBody } from "@/db/queries/projects";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
 
 export async function POST(req: NextRequest) {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const dataOrResp = await readJsonBody(req, CreateProjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

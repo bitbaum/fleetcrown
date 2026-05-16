@@ -12,7 +12,7 @@ import {
   getFinancialCommitments,
   calculateMonthlyBurn,
 } from "@/db/queries/money";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { format, isPast } from "date-fns";
 
 export const metadata = { title: "Money" };
@@ -85,7 +85,7 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
 }
 
 export default async function MoneyPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [activeSubs, allSubs, commitments] = await Promise.all([
     getActiveSubscriptions(userId),
     getAllSubscriptions(userId),

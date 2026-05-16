@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { normalizeUsername } from "@/lib/username";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserById, getUserByUsername, updateUser } from "@/db/queries/users";
@@ -14,14 +14,16 @@ const PatchBody = z.object({
 });
 
 export async function GET() {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(user);
 }
 
 export async function PATCH(req: NextRequest) {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const dataOrResp = await readJsonBody(req, PatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { username, name, onboardedAt } = dataOrResp;

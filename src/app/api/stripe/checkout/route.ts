@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe, STRIPE_PRICE_IDS, isStripeReady } from "@/lib/stripe";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { getUserById, updateUserBilling } from "@/db/queries/users";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 
@@ -14,7 +14,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const dataOrResp = await readJsonBody(req, CheckoutBody);

@@ -1,7 +1,7 @@
 import { Bell, AlertTriangle, Info, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveAlerts } from "@/db/queries/alerts";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { DismissAlertButton } from "./DismissAlertButton";
 import Link from "next/link";
 import { ALERT_SEVERITY } from "@/lib/constants/statuses";
@@ -13,7 +13,7 @@ const SEVERITY_CONFIG = {
 } as const;
 
 export async function AlertsCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const items = await getActiveAlerts(userId);
 
   if (items.length === 0) return null;

@@ -1,7 +1,7 @@
 import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users, Check, X } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
@@ -58,7 +58,7 @@ function groupSimilarActions(
 }
 
 export async function ActionQueueCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [pending, recent] = await Promise.all([
     getPendingActions(userId),
     getRecentActions(userId, 5),

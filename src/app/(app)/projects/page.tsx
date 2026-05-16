@@ -6,12 +6,12 @@ import { getProjects } from "@/db/queries/projects";
 import { GitHubStatus } from "@/components/projects/GitHubStatus";
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 
 export const metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const projects = await getProjects(userId);
 
   return (

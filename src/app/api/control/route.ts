@@ -26,7 +26,7 @@ import {
   getAgentProcesses,
 } from "@/lib/control-fast-state";
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData } from "@/lib/control-types";
 
@@ -193,7 +193,8 @@ function matchProfileById(
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);

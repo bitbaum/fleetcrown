@@ -1,14 +1,14 @@
 import { History } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card } from "@/components/ui/card";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { getPromptHistory } from "@/db/queries/prompt-history";
 import { HistoryFeed } from "@/components/history/HistoryFeed";
 
 export const metadata = { title: "History" };
 
 export default async function HistoryPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const items = await getPromptHistory(userId, 200);
 
   return (

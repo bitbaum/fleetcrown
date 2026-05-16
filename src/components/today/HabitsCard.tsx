@@ -1,12 +1,12 @@
 import { Repeat2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getTodayHabits } from "@/db/queries/habits";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import Link from "next/link";
 import { HabitsList } from "./HabitsList";
 
 export async function HabitsCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const habits = await getTodayHabits(userId);
 
   const done = habits.filter((h) => h.doneToday).length;

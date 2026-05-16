@@ -6,7 +6,7 @@ import { fulfillCommitment } from "@/db/queries/today";
 import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
 import { patchGoal } from "@/db/queries/goals";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
@@ -18,7 +18,7 @@ const INTERACTION_ACTION_TYPES = new Set<ActionType>([
 ]);
 
 export async function handleApprove(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [action] = await approveAction(id, userId);
   if (action?.entityId && INTERACTION_ACTION_TYPES.has(action.type)) {
     const channel = action.payload?.channel ?? "other";
@@ -34,7 +34,7 @@ export async function handleApprove(id: string) {
 }
 
 export async function handleApproveAll(ids: string[]) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const results = await Promise.all(ids.map((id) => approveAction(id, userId)));
   const approved = results.flat();
   await Promise.all(
@@ -54,31 +54,31 @@ export async function handleApproveAll(ids: string[]) {
 }
 
 export async function handleReject(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   await rejectAction(id, userId);
   revalidatePath("/today");
 }
 
 export async function handleDismissAlert(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   await dismissAlert(id, userId);
   revalidatePath("/today");
 }
 
 export async function handleFulfillCommitment(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   await fulfillCommitment(id, userId);
   revalidatePath("/today");
 }
 
 export async function handleCancelSubscription(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   await cancelSubscription(id, userId);
   revalidatePath("/money");
 }
 
 export async function handleAbandonGoal(id: string) {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   await patchGoal(userId, id, { status: GOAL_STATUS.ABANDONED });
   revalidatePath("/today");
   revalidatePath("/goals");

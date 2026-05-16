@@ -1,7 +1,7 @@
 import { Target, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getGoalsDueSoon } from "@/db/queries/today";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { deadlineLabel } from "@/lib/dates";
 import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
@@ -9,7 +9,7 @@ import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 
 export async function GoalsDueCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const items = await getGoalsDueSoon(userId);
 
   if (items.length === 0) return null;

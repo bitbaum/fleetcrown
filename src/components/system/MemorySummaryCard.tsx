@@ -1,11 +1,11 @@
 import { Brain, Database, Link2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats } from "@/db/queries/memory";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import Link from "next/link";
 
 export async function MemorySummaryCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const stats = await getEntityStats(userId);
 
   return (

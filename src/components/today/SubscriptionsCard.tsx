@@ -1,11 +1,11 @@
 import { CreditCard } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getUpcomingSubscriptions } from "@/db/queries/today";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { format, startOfDay } from "date-fns";
 
 export async function SubscriptionsCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const items = await getUpcomingSubscriptions(userId);
 
   if (items.length === 0) return null;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCommandById } from "@/db/queries/pending-commands";
-import { getCurrentUserId } from "@/lib/session";
+import { getSessionUserId } from "@/lib/session";
 
 // GET /api/beacon/transcribe/:id
 // Client polls this after the remote path enqueues a transcription command.
@@ -11,7 +11,8 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const userId = await getCurrentUserId();
+  const userId = await getSessionUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const cmd = await getCommandById(id);
 
   if (!cmd || cmd.userId !== userId) {

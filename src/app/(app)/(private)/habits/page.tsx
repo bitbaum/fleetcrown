@@ -4,7 +4,7 @@ import { Card, StatCard } from "@/components/ui/card";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { listActiveGoals } from "@/db/queries/goals";
 import { getGoalsByHabitIds } from "@/db/queries/habit-goals";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { HabitCard } from "@/components/habits/HabitCard";
 import { AddHabitButton } from "@/components/habits/AddHabitButton";
 import { NewHabitButton } from "@/components/habits/NewHabitButton";
@@ -13,7 +13,7 @@ import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 export const metadata = { title: "Habits" };
 
 export default async function HabitsPage() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const [habits, activeGoals] = await Promise.all([
     getAllHabitsWithHistory(userId, HABIT_HISTORY_DAYS),
     listActiveGoals(userId),

@@ -2,7 +2,7 @@ import { CirclePause } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getStuckGoals } from "@/db/queries/today";
-import { getCurrentUserId } from "@/lib/session";
+import { requirePageUserId } from "@/lib/session";
 import { AbandonGoalButton } from "./AbandonGoalButton";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
@@ -12,7 +12,7 @@ function daysAgo(date: Date): number {
 }
 
 export async function StuckGoalsCard() {
-  const userId = await getCurrentUserId();
+  const userId = await requirePageUserId();
   const items = await getStuckGoals(userId);
 
   if (items.length === 0) return null;
