@@ -1,16 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import {
-  CheckCircle2, Loader2, Zap, Pause, Play,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { secondsAgo } from "@/lib/dates";
-import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
-import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
-import type { PromptMeta } from "@/lib/agent-config";
 
 export function ClosedBanner({
   session,
@@ -108,152 +103,6 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
           }
         </div>
         <span className={cn("shrink-0 pt-[3px] text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
-      </div>
-    </div>
-  );
-}
-
-export function ReadyBanner({
-  tab,
-  prompts,
-  onSend,
-  onDismiss,
-  onAutoInject,
-  onToggleAutoContinue,
-  paused = false,
-  title = "Agent finished",
-  autoContinueEnabled = true,
-  nextQueueItem,
-  queueTotal = 0,
-  healthBypass,
-  dispatchReason,
-  showKeyHints = false,
-}: {
-  tab?: string;
-  prompts: PromptMeta[];
-  onSend: (key: string) => void;
-  onDismiss: () => void;
-  onAutoInject?: () => void;
-  onToggleAutoContinue?: () => void;
-  paused?: boolean;
-  title?: string;
-  autoContinueEnabled?: boolean;
-  nextQueueItem?: string;
-  queueTotal?: number;
-  healthBypass?: string;
-  dispatchReason?: string;
-  showKeyHints?: boolean;
-}) {
-  const [seconds, setSeconds] = useState(() => {
-    if (tab) {
-      try {
-        const stored = localStorage.getItem(readyAtKey(tab));
-        if (stored) {
-          const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
-          return Math.max(0, AUTO_INJECT_S - elapsed);
-        }
-      } catch {}
-    }
-    return AUTO_INJECT_S;
-  });
-  const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
-  const onAutoInjectRef = useRef(onAutoInject);
-  const onSendRef = useRef(onSend);
-  useEffect(() => { onAutoInjectRef.current = onAutoInject; }, [onAutoInject]);
-  useEffect(() => { onSendRef.current = onSend; }, [onSend]);
-
-  // Reset countdown when a queue item arrives while banner is visible — this ensures
-  // items queued from the beacon popup (which has a longer countdown than 12s) are
-  // picked up on this cycle rather than stranded until the next ready event.
-  const prevQueueItemRef = useRef(nextQueueItem);
-  useEffect(() => {
-    const wasEmpty = !prevQueueItemRef.current;
-    prevQueueItemRef.current = nextQueueItem;
-    if (wasEmpty && nextQueueItem) setSeconds(AUTO_INJECT_S); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [nextQueueItem]);
-
-  useEffect(() => {
-    if (paused || !autoContinueEnabled) return;
-    if (seconds <= 0) {
-      // Cross-window guard: don't fire if the beacon popup is mid-composition.
-      // The popup writes to localStorage when isComposing is true, which survives
-      // the window boundary — this panel reads it synchronously before injecting.
-      try {
-        if (tab && localStorage.getItem(beaconComposingKey(tab))) return;
-      } catch {}
-      if (onAutoInjectRef.current) onAutoInjectRef.current();
-      else onSendRef.current(primaryKey);
-      return;
-    }
-    const id = setTimeout(() => setSeconds((s) => s - 1), 1000);
-    return () => clearTimeout(id);
-  }, [seconds, paused, autoContinueEnabled, primaryKey, tab]);
-
-  const timerLabel = !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
-
-  // What actually fires when the countdown hits zero.
-  // healthBypass means queue items exist but are being held back — show the reason.
-  const nextLabel = healthBypass
-    ? `AI picks recovery task — ${healthBypass.toLowerCase()}, queue paused`
-    : nextQueueItem
-    ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
-    : "AI picks next task";
-
-  return (
-    <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Zap className="h-3.5 w-3.5 text-status-positive" />
-          <span className="text-sm font-medium text-status-positive">{title}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-xs text-text-muted tabular-nums">{timerLabel}</span>
-          {onToggleAutoContinue && (
-            <button
-              onClick={onToggleAutoContinue}
-              title={autoContinueEnabled && !paused ? "Pause auto-continue" : "Resume auto-continue"}
-              className={cn(
-                "ui-icon-btn rounded p-0.5 transition-colors",
-                paused || !autoContinueEnabled
-                  ? "text-accent-text hover:bg-surface-overlay"
-                  : "text-text-muted hover:text-text-secondary hover:bg-surface-overlay",
-              )}
-            >
-              {autoContinueEnabled && !paused
-                ? <Pause className="h-3.5 w-3.5" />
-                : <Play className="h-3.5 w-3.5" />}
-            </button>
-          )}
-          <button onClick={onDismiss} className="inline-flex min-h-11 sm:min-h-0 items-center px-1 text-sm text-text-secondary transition-colors hover:text-text-primary">
-            dismiss
-          </button>
-        </div>
-      </div>
-
-      {/* Pipeline preview — what the countdown will actually fire */}
-      <p className="mb-2 truncate font-mono text-xs text-text-muted">
-        <span className="mr-1 text-text-muted">→</span>
-        {nextLabel}
-      </p>
-      {dispatchReason && (
-        <p className="mb-2 truncate font-mono text-[10px] text-text-muted/60">
-          <span className="mr-1">AI:</span>{dispatchReason}
-        </p>
-      )}
-
-      <div className="ui-control-intent-grid">
-        {prompts.filter((p) => p.style === "primary" || p.style === "action").map((p, i) => (
-          <button
-            key={p.key}
-            onClick={() => onSend(p.key)}
-            className={cn(PROMPT_STYLE[p.style] ?? PROMPT_STYLE.action)}
-          >
-            {p.icon} {p.label}
-            {showKeyHints && (
-              <span className="font-mono text-micro opacity-50 tabular-nums">[{p.slot ?? i + 1}]</span>
-            )}
-          </button>
-        ))}
       </div>
     </div>
   );

@@ -7,7 +7,8 @@ import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
-import { PromptInput, QueueList } from "./project-composer";
+import { PromptInput } from "./prompt-input";
+import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 
 export function IntentButtonPanel({

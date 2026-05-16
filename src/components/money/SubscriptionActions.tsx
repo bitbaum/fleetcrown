@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, Save } from "lucide-react";
+import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
-import { SUBSCRIPTION_META, VALID_CURRENCIES, VALID_FREQUENCIES, FREQUENCY } from "@/config/subscriptions";
+import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { advanceDueDate } from "@/lib/dates";
+import { SubscriptionEditForm } from "./SubscriptionEditForm";
 
 export function SubscriptionActions({
   subId,
@@ -44,16 +45,6 @@ export function SubscriptionActions({
   const [paid, setPaid] = useState(false);
   const [paidError, setPaidError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [editName, setEditName] = useState(subName);
-  const [editVendor, setEditVendor] = useState(vendor ?? "");
-  const [editAmount, setEditAmount] = useState(amount != null ? String(amount) : "");
-  const [editCurrency, setEditCurrency] = useState(currency ?? "CHF");
-  const [editFrequency, setEditFrequency] = useState(frequency ?? FREQUENCY.MONTHLY);
-  const [editNextDue, setEditNextDue] = useState(nextDue?.slice(0, 10) ?? "");
-  const [editNotes, setEditNotes] = useState(notes ?? "");
-  const [editPaymentMethod, setEditPaymentMethod] = useState(paymentMethod ?? "");
-  const [saving, setSaving] = useState(false);
 
   const meta = SUBSCRIPTION_META[subName];
   const isCancelled = status === SUB_STATUS.CANCELLED;
@@ -88,28 +79,20 @@ export function SubscriptionActions({
     }
   }
 
-  async function onSaveEdit() {
-    setSaving(true);
-    setEditError(null);
-    try {
-      const res = await patchJson(`/api/subscriptions/${subId}`, {
-        name: editName.trim() || undefined,
-        vendor: editVendor.trim() || null,
-        amount: editAmount ? parseFloat(editAmount) : null,
-        currency: editCurrency,
-        frequency: editFrequency,
-        nextDue: editNextDue || null,
-        notes: editNotes || null,
-        paymentMethod: editPaymentMethod || null,
-      });
-      if (!res.ok) await throwApiError(res, "Failed to save");
-      setEditing(false);
-      router.refresh();
-    } catch (e) {
-      setEditError(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
-      setSaving(false);
-    }
+  async function onSaveEditData(data: { name: string; vendor: string; amount: string; currency: string; frequency: string; nextDue: string; notes: string; paymentMethod: string }) {
+    const res = await patchJson(`/api/subscriptions/${subId}`, {
+      name: data.name.trim() || undefined,
+      vendor: data.vendor.trim() || null,
+      amount: data.amount ? parseFloat(data.amount) : null,
+      currency: data.currency,
+      frequency: data.frequency,
+      nextDue: data.nextDue || null,
+      notes: data.notes || null,
+      paymentMethod: data.paymentMethod || null,
+    });
+    if (!res.ok) await throwApiError(res, "Failed to save");
+    setEditing(false);
+    router.refresh();
   }
 
   const ivyPrompt = [
@@ -214,79 +197,11 @@ export function SubscriptionActions({
       />
 
       {editing && (
-        <div className="w-full mt-1 p-2.5 rounded bg-surface-base border border-border-subtle space-y-2">
-          <input
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            placeholder="Name"
-            className="w-full ui-input-tight"
-          />
-          <input
-            value={editVendor}
-            onChange={(e) => setEditVendor(e.target.value)}
-            placeholder="Vendor (optional)"
-            className="w-full ui-input-tight"
-          />
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={editAmount}
-              onChange={(e) => setEditAmount(e.target.value)}
-              placeholder="Amount"
-              className="w-24 ui-input-tight"
-            />
-            <select
-              value={editCurrency}
-              onChange={(e) => setEditCurrency(e.target.value)}
-              className="ui-input-tight"
-            >
-              {VALID_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <select
-              value={editFrequency}
-              onChange={(e) => setEditFrequency(e.target.value)}
-              className="flex-1 ui-input-tight"
-            >
-              {VALID_FREQUENCIES.map((f) => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2 items-center">
-            <label className="text-xs text-text-tertiary shrink-0">Next due</label>
-            <input
-              type="date"
-              value={editNextDue}
-              onChange={(e) => setEditNextDue(e.target.value)}
-              className="flex-1 ui-input-tight"
-            />
-          </div>
-          <input
-            value={editPaymentMethod}
-            onChange={(e) => setEditPaymentMethod(e.target.value)}
-            placeholder="Payment method (e.g. Visa ····1234)"
-            className="w-full ui-input-tight"
-          />
-          <input
-            value={editNotes}
-            onChange={(e) => setEditNotes(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") onSaveEdit(); if (e.key === "Escape") setEditing(false); }}
-            placeholder="Notes (optional)"
-            className="w-full ui-input-tight"
-          />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onSaveEdit}
-              disabled={saving}
-              className="ui-btn-save"
-            >
-              {saving ? <Loader2 className="ui-spinner-xs" /> : <Save className="h-3 w-3" />}
-              Save
-            </button>
-            <button onClick={() => { setEditing(false); setEditError(null); }} className="ui-btn-text-cancel">Cancel</button>
-          </div>
-          {editError && <p className="ui-error-xs">{editError}</p>}
-        </div>
+        <SubscriptionEditForm
+          initial={{ name: subName, vendor, amount, currency, frequency, nextDue, notes, paymentMethod }}
+          onSave={onSaveEditData}
+          onCancel={() => setEditing(false)}
+        />
       )}
 
       {/* Free alternatives — only when meta is configured */}

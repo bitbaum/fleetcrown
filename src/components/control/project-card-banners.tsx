@@ -3,9 +3,8 @@
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
-import {
-  ClosedBanner, ClosingBanner, RunningBanner, ReadyBanner,
-} from "./project-card-helpers";
+import { ClosedBanner, ClosingBanner, RunningBanner } from "./project-card-helpers";
+import { ReadyBanner } from "./ready-banner";
 
 export function ProjectBanners({
   tab,
