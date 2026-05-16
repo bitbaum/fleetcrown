@@ -87,6 +87,18 @@ export function PeopleGrid({
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [query, sort, healthFilter, search]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setQuery("");
+      setHealthFilter([]);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   function toggleHealth(h: RelationshipHealth) {
     setHealthFilter((prev) =>
       prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h],
@@ -123,6 +135,7 @@ export function PeopleGrid({
             placeholder="Search people..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") { setQuery(""); (e.target as HTMLInputElement).blur(); } }}
             className="ui-search-input"
           />
           <span className="ui-badge absolute right-3 top-1/2 -translate-y-1/2">
