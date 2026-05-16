@@ -17,6 +17,7 @@ import { AttentionBar } from "./AttentionBar";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
+  ControlMetricCard,
   LaunchTabModal,
   NewProjectModal,
 } from "./control-panel-helpers";
@@ -232,44 +233,10 @@ export function ControlPanel() {
               <div className="space-y-2">
                 <p className="ui-kicker">Control inventory</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="ui-control-metric-card">
-                    <div className="ui-control-metric-label">
-                      <FolderKanban className="h-3.5 w-3.5" />
-                      Projects in control
-                    </div>
-                    <div className="ui-control-metric-value">{dashboard.controlProjectCount}</div>
-                    <p className="ui-control-metric-note">
-                      {dashboard.idleCount} idle
-                    </p>
-                  </div>
-                  <div className="ui-control-metric-card">
-                    <div className="ui-control-metric-label">
-                      <Activity className="h-3.5 w-3.5" />
-                      Running now
-                    </div>
-                    <div className="ui-control-metric-value">{dashboard.runningCount}</div>
-                    <p className="ui-control-metric-note">Live agent execution</p>
-                  </div>
-                  <div className="ui-control-metric-card">
-                    <div className="ui-control-metric-label">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Needs input
-                    </div>
-                    <div className="ui-control-metric-value">{dashboard.waitingCount}</div>
-                    <p className="ui-control-metric-note">Ready for the next prompt</p>
-                  </div>
-                  <div className="ui-control-metric-card">
-                    <div className="ui-control-metric-label">
-                      <PanelsTopLeft className="h-3.5 w-3.5" />
-                      Open tabs
-                    </div>
-                    <div className="ui-control-metric-value">{dashboard.openTabCount}</div>
-                    <p className="ui-control-metric-note">
-                      {dashboard.expandedCount > 0
-                        ? `${dashboard.expandedCount} manually expanded`
-                        : "Zellij-backed project tabs"}
-                    </p>
-                  </div>
+                  <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={`${dashboard.idleCount} idle`} />
+                  <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
+                  <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
+                  <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={dashboard.openTabCount} note={dashboard.expandedCount > 0 ? `${dashboard.expandedCount} manually expanded` : "Zellij-backed project tabs"} />
                 </div>
                 {dashboard.commitsToday > 0 && (
                   <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
