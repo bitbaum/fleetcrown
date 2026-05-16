@@ -126,7 +126,7 @@ export function IntentButtonPanel({
     <div className="space-y-3 ui-card-section">
       <PromptInput {...inputProps} placeholder="Custom prompt…" />
       {queue.length > 0 && (
-        <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} />
+        <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
       )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
