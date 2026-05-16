@@ -63,6 +63,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
       },
     }),
+    // Used by the invite acceptance flow to sign in the newly-created invited user.
+    Credentials({
+      id: "user-password",
+      name: "User password",
+      credentials: {
+        userId:   { label: "User ID",  type: "text"     },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        const userId   = credentials.userId   as string | undefined;
+        const password = credentials.password as string | undefined;
+        if (!userId || !password) return null;
+
+        const user = await getUserById(userId);
+        if (!user?.passwordHash) return null;
+
+        const ok = await verifyPassword(password, user.passwordHash);
+        if (!ok) return null;
+        return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
+      },
+    }),
   ],
   pages: {
     signIn: "/sign-in",

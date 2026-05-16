@@ -13,7 +13,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const { token } = use(params);
   const router = useRouter();
 
-  const [status, setStatus] = useState<"loading" | "valid" | "invalid">("loading");
+  const [status, setStatus] = useState<"loading" | "valid" | "expired" | "used">("loading");
   const [prefillEmail, setPrefillEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -28,10 +28,10 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
           setStatus("valid");
           if (data.email) setPrefillEmail(data.email);
         } else {
-          setStatus("invalid");
+          setStatus(data.used ? "used" : "expired");
         }
       })
-      .catch(() => setStatus("invalid"));
+      .catch(() => setStatus("expired"));
   }, [token]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,7 +46,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
 
-      const result = await signIn("local", { password, redirect: false });
+      const result = await signIn("user-password", { userId: data.userId, password, redirect: false });
       if (result?.ok) {
         router.push("/today");
       } else {
@@ -61,13 +61,17 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
   const heading =
     status === "loading" ? "Checking…" :
-    status === "invalid" ? "Link expired" :
+    status === "used"    ? "Already used" :
+    status === "expired" ? "Link expired" :
     "You're invited";
 
   const subheading =
     status === "loading" ? "Verifying your invitation link." :
-    status === "invalid" ? "This invitation is invalid or has already been used." :
+    status === "used"    ? "This invitation has already been accepted." :
+    status === "expired" ? "This invitation link is invalid or has expired." :
     prefillEmail ? `Joining as ${prefillEmail}.` : "Create your Cockpit account.";
+
+  const isError = status === "expired" || status === "used";
 
   return (
     <AuthShell>
@@ -77,7 +81,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         description={subheading}
       />
 
-      {status === "invalid" && (
+      {isError && (
         <p className="ui-auth-note">
           <Link href="/sign-in" className="ui-auth-inline-link">Sign in</Link>{" "}
           if you already have an account.
