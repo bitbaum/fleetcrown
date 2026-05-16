@@ -16,8 +16,24 @@ import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getCurrentUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects } from "@/db/queries/user-projects";
+
+const PLAN_DAY_PROMPT = `Plan my day.
+
+Check in Cockpit and the codebase:
+- Which of my active projects has the most urgent open work or is blocking a goal?
+- Which goals are due soon or have been stuck at 0% for 30+ days?
+- Are there any commitments or events with deadlines in the next 3 days?
+- Which habit am I most at risk of breaking today?
+
+Then give me:
+1. The ONE thing I should work on first today (be specific — project name + what exactly)
+2. Three concrete tasks for it (each under 10 words)
+3. One person I should reach out to and why
+
+Under 150 words. No hedging.`;
 
 export const metadata = { title: "Today" };
 
@@ -49,6 +65,12 @@ export default async function TodayPage() {
           </div>
         </Suspense>
         <div className="mt-3 flex flex-wrap gap-2">
+          <IvyDispatchButton
+            prompt={PLAN_DAY_PROMPT}
+            label="Plan my day"
+            title="Ask Ivy to plan your day"
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
+          />
           <LogConversationButton />
           <QuickCaptureButton />
         </div>
