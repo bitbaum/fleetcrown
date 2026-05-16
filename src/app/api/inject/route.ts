@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  readProjectsMap,
-  parseProjectsConf,
-} from "@/lib/agent-config";
 import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { AgentOption } from "@/lib/agent-registry";
@@ -30,27 +26,16 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Resolve canonical tab name: conf file first, DB fallback.
-  const projectsMap = readProjectsMap();
-  let canonical = projectsMap.get(tab.toLowerCase());
-  let projectPath: string | null = parseProjectsConf().find(
-    (p) => p.tab.toLowerCase() === tab.toLowerCase(),
-  )?.dir ?? null;
-  let projectId: string | null = null;
-
+  // Resolve canonical tab name and project path from the user's own DB projects.
   const dbProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase() && p.dirPath);
-  if (dbMatch) projectId = dbMatch.entityProjectId ?? null;
-
-  if (!canonical) {
-    if (!dbMatch) {
-      return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
-    }
-    canonical = dbMatch.name;
-    projectPath = dbMatch.dirPath!;
-  } else if (!projectId) {
-    projectId = dbProjects.find((p) => p.name.toLowerCase() === canonical!.toLowerCase())?.entityProjectId ?? null;
+  const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+  if (!dbMatch) {
+    return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
+
+  const canonical = dbMatch.name;
+  const projectPath: string | null = dbMatch.dirPath ?? null;
+  const projectId: string | null = dbMatch.entityProjectId ?? null;
 
   let prompt: string;
   let promptLabel = "Custom";

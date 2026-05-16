@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execSync } from "child_process";
 import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from "@/lib/agent-preferences";
-import { parseProjectsConf } from "@/lib/agent-config";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
@@ -93,16 +92,13 @@ export async function POST(req: NextRequest) {
       if (!isRuntimeAvailable()) {
         tabResults = [{ status: "skipped", reason: "Local runtime not available — cannot restart zellij tabs remotely." }];
       } else {
-        // Merge conf-file projects with DB projects so DB-only projects are restarted too.
-        const confProjects = parseProjectsConf();
-        const confTabs = new Set(confProjects.map((p) => p.tab.toLowerCase()));
         const userId = await getSessionUserId();
         if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         const dbProjects = await getUserProjects(userId).catch(() => []);
-        const dbOnlyProjects = dbProjects
-          .filter((p) => p.dirPath && !confTabs.has(p.name.toLowerCase()))
+        const allProjects = dbProjects
+          .filter((p) => p.dirPath)
           .map((p) => ({ tab: p.name, dir: p.dirPath! }));
-        tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, [...confProjects, ...dbOnlyProjects]);
+        tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, allProjects);
       }
     }
 
