@@ -547,6 +547,25 @@ Be specific. No more than 150 words.`,
     suggestedSchedule: "0 8 * * 1-5",
     tags: ["planning", "daily"],
   },
+  {
+    id: "daily-wrap-up",
+    name: "Daily Wrap-Up",
+    featured: true,
+    description: "End-of-day review: what shipped, what's blocked, what's first tomorrow.",
+    category: "personal",
+    scope: "global",
+    template: `Run my end-of-day wrap-up.
+
+1. Check git commits across all active projects since this morning — what actually shipped?
+2. What is currently blocked or waiting on input?
+3. Review open commitments — anything overdue or due tomorrow?
+4. Did I make progress on my highest-priority goal today?
+5. What is the single first task to do tomorrow morning?
+
+Be direct. If nothing shipped, say so. Under 150 words.`,
+    suggestedSchedule: "0 17 * * 1-5",
+    tags: ["review", "daily"],
+  },
 ];
 
 export const ALL_CATEGORIES = Object.keys(CATEGORY_META) as PromptCategory[];

@@ -35,12 +35,24 @@ Then give me:
 
 Under 150 words. No hedging.`;
 
+const WRAP_UP_PROMPT = `Run my end-of-day wrap-up.
+
+1. Check git commits across all active projects since this morning — what actually shipped?
+2. What is currently blocked or waiting on input?
+3. Review open commitments — anything overdue or due tomorrow?
+4. Did I make progress on my highest-priority goal today?
+5. What is the single first task to do tomorrow morning?
+
+Be direct. If nothing shipped, say so. Under 150 words.`;
+
 export const metadata = { title: "Today" };
 
 export default async function TodayPage() {
   const [name, userId] = await Promise.all([getCurrentUserName(), getCurrentUserId()]);
   const projects = await getUserProjects(userId);
   const isFirstRun = projects.length === 0;
+  const hour = new Date().getHours();
+  const isEvening = hour >= 17;
   return (
     <div className="app-page max-w-4xl space-y-6">
       <div>
@@ -65,12 +77,21 @@ export default async function TodayPage() {
           </div>
         </Suspense>
         <div className="mt-3 flex flex-wrap gap-2">
-          <IvyDispatchButton
-            prompt={PLAN_DAY_PROMPT}
-            label="Plan my day"
-            title="Ask Ivy to plan your day"
-            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
-          />
+          {isEvening ? (
+            <IvyDispatchButton
+              prompt={WRAP_UP_PROMPT}
+              label="Wrap up day"
+              title="Ask Ivy to run your end-of-day review"
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
+            />
+          ) : (
+            <IvyDispatchButton
+              prompt={PLAN_DAY_PROMPT}
+              label="Plan my day"
+              title="Ask Ivy to plan your day"
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
+            />
+          )}
           <LogConversationButton />
           <QuickCaptureButton />
         </div>
