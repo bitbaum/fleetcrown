@@ -3,6 +3,11 @@ import fs from "fs";
 import path from "path";
 import { SESSIONS_DIR } from "@/lib/agent-config";
 import { parseSessionFile } from "@/lib/session-content";
+import { getSessionUserId } from "@/lib/session";
+import { isDaemonRequest } from "@/lib/daemon-auth";
+
+// readFileSync has no Next.js dynamic signal — force dynamic so middleware runs.
+export const dynamic = "force-dynamic";
 
 export type SessionData = {
   found: false;
@@ -39,6 +44,11 @@ function findSessionFile(projectName: string): string | null {
 }
 
 export async function GET(req: NextRequest) {
+  const userId = await getSessionUserId();
+  if (!userId && !isDaemonRequest(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const project = req.nextUrl.searchParams.get("project");
   if (!project || project.length > 100) {
     return NextResponse.json({ found: false } satisfies SessionData);
