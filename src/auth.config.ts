@@ -21,13 +21,12 @@ export const authConfig = {
     },
     authorized({ auth, request }) {
       if (!auth?.user) {
-        // Daemon requests carry a bearer token instead of a session cookie.
-        // Allow them through — individual routes enforce daemon-specific auth.
+        // Bearer-authenticated requests (daemon env token or ck_* agent tokens).
+        // Pass through — individual routes enforce the real auth check.
+        const authHeader = request.headers.get("authorization") ?? "";
         const daemonToken = process.env.COCKPIT_DAEMON_TOKEN;
-        if (daemonToken) {
-          const authHeader = request.headers.get("authorization") ?? "";
-          if (authHeader === `Bearer ${daemonToken}`) return true;
-        }
+        if (daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
+        if (authHeader.startsWith("Bearer ck_")) return true;
 
         // On Vercel, the Edge Runtime sees the deployment URL (cockpit-orangecat.vercel.app)
         // not the custom alias. x-forwarded-host carries the real host the user typed.
