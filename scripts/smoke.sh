@@ -48,6 +48,7 @@ PAGE_ROUTES=(
 # We accept 200 OR 401 — either proves the route isn't crashing (500).
 # Set COCKPIT_SESSION_TOKEN=<token> to run them fully authenticated.
 PUBLIC_API_ROUTES=(
+  "/api/health"
   "/api/crons"
   "/api/system"
 )
@@ -58,10 +59,14 @@ AUTH_API_ROUTES=(
   "/api/people"
   "/api/events"
   "/api/control"
+  "/api/control/agent"
+  "/api/control/commands"
   "/api/user-projects"
   "/api/invitations"
   "/api/sessions"
   "/api/prompts/agent"
+  "/api/captures"
+  "/api/beacon-settings"
 )
 
 # Optional session cookie for authenticated smoke runs.
