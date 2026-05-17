@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { orgs, orgMemberships } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { normalizeUsername } from "@/lib/username";
 
 export async function getOrgMembershipCount(userId: string): Promise<number> {
