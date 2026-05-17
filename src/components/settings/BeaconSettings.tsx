@@ -15,6 +15,7 @@ export function BeaconSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     getJson<BeaconSettingsData>("/api/beacon-settings").then((d) => {
@@ -22,7 +23,7 @@ export function BeaconSettings() {
       setCountdown(d.countdown_seconds);
       setModel(d.whisper_model);
       setProvider(d.transcription_provider);
-    }).catch(() => {});
+    }).catch(() => setLoadError(true));
   }, []);
 
   const dirty = data !== null && (
@@ -60,7 +61,9 @@ export function BeaconSettings() {
         </p>
       </div>
 
-      {data === null ? (
+      {loadError ? (
+        <p className="ui-error">Failed to load beacon settings — check that the server is reachable and try reloading.</p>
+      ) : data === null ? (
         <div className="flex items-center gap-2 text-sm text-text-muted">
           <Loader2 className="ui-spinner" /> Loading…
         </div>

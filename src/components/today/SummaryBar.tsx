@@ -4,6 +4,22 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 
+/** Placeholder shown while SummaryBar's DB queries run. */
+export function SummaryBarSkeleton() {
+  const widths = ["5rem", "7rem", "6rem", "5rem", "5rem"];
+  return (
+    <div className="flex flex-wrap gap-3">
+      {widths.map((w, i) => (
+        <div
+          key={i}
+          style={{ width: w }}
+          className="h-8 animate-pulse rounded-full border border-border-default bg-surface-raised"
+        />
+      ))}
+    </div>
+  );
+}
+
 export async function SummaryBar() {
   const userId = await requirePageUserId();
   const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);

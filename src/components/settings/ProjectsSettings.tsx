@@ -101,11 +101,15 @@ export function ProjectsSettings({ projects: initial, projectLimit }: Props) {
   const reorder = (from: number, to: number) => {
     if (from === to) return;
     setProjects((prev) => {
+      const original = prev;
       const next = [...prev];
       const [moved] = next.splice(from, 1);
       next.splice(to, 0, moved);
-      next.forEach((p, i) => {
-        patchJson(`/api/user-projects/${p.id}`, { position: i }).catch(() => {});
+      Promise.all(
+        next.map((p, i) => patchJson(`/api/user-projects/${p.id}`, { position: i }))
+      ).catch(() => {
+        setProjects(original);
+        setError("Failed to save order — please try again");
       });
       return next;
     });

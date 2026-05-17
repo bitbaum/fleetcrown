@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CardSkeleton } from "@/components/ui/card";
 import { Greeting } from "@/components/today/Greeting";
-import { SummaryBar } from "@/components/today/SummaryBar";
+import { SummaryBar, SummaryBarSkeleton } from "@/components/today/SummaryBar";
 import { ActionQueueCard } from "@/components/today/ActionQueueCard";
 import { AlertsCard } from "@/components/today/AlertsCard";
 import { GoalsDueCard } from "@/components/today/GoalsDueCard";
@@ -71,7 +71,7 @@ export default async function TodayPage() {
             </div>
           </div>
         )}
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="mt-2"><SummaryBarSkeleton /></div>}>
           <div className="mt-2">
             <SummaryBar />
           </div>
