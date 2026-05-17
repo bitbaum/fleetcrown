@@ -127,7 +127,7 @@ def _open_browser_beacon(session_id: str) -> bool:
     url = f"{COCKPIT_URL}/beacon/{session_id}"
 
     candidates: list[list[str]] = []
-    for b in ("chromium", "chromium-browser", "google-chrome", "brave-browser"):
+    for b in ("chromium", "chromium-browser", "brave-browser", "google-chrome"):
         if shutil.which(b):
             candidates.append([b, f"--app={url}"])
             break
