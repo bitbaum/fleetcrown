@@ -1,28 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
 import { getAllDistinctUserIds } from "@/db/queries/user-projects";
-import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
+import { getApiUserId } from "@/lib/session";
 
 // Daemon polls this to claim the next pending command.
-// Auth: Authorization: Bearer <COCKPIT_DAEMON_TOKEN>  OR  authenticated browser session.
-export async function GET(req: NextRequest) {
-  if (isDaemonRequest(req)) {
-    // Daemon services all local projects regardless of which DB user row owns them.
-    // Use all distinct userIds so commands enqueued by an OAuth user (≠ isDefault user)
-    // are drained correctly.
-    const daemonUserId = await getDaemonUserId();
-    if (!daemonUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const userIds = await getAllDistinctUserIds().catch(() => [daemonUserId]);
-    if (userIds.length === 0) userIds.push(daemonUserId);
-    const command = await claimNextPendingCommand(userIds);
+// Auth: Bearer (env token or ck_* agent token) OR browser session.
+export async function GET() {
+  const session = await auth();
+  if (session?.user?.id) {
+    const command = await claimNextPendingCommand([session.user.id]);
     return NextResponse.json({ command: command ?? null });
   }
 
-  const session = await auth();
-  const userId = session?.user?.id;
+  // Bearer-authenticated daemon: services all locally-registered users.
+  const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const command = await claimNextPendingCommand([userId]);
+  const userIds = await getAllDistinctUserIds().catch(() => [userId]);
+  if (userIds.length === 0) userIds.push(userId);
+  const command = await claimNextPendingCommand(userIds);
   return NextResponse.json({ command: command ?? null });
 }

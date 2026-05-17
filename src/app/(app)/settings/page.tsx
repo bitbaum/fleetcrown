@@ -7,6 +7,7 @@ import { getUserById } from "@/db/queries/users";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
 import { ProfileSettings } from "@/components/settings/ProfileSettings";
 import { TeamSettings } from "@/components/settings/TeamSettings";
+import { AgentTokenSettings } from "@/components/settings/AgentTokenSettings";
 import { BeaconSettings } from "@/components/settings/BeaconSettings";
 import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PageLayout } from "@/components/ui/page-layout";
@@ -43,6 +44,7 @@ export default async function SettingsPage() {
         projects={projects}
         projectLimit={user.isDefault || isUnlimitedProjects(user.plan) ? null : getProjectLimit(user.plan)}
       />
+      <AgentTokenSettings />
       <TeamSettings invitations={invitations} />
     </PageLayout>
   );

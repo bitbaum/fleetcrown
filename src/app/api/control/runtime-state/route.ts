@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { getUserIdsByProjectNames } from "@/db/queries/user-projects";
-import { isDaemonRequest, getDaemonUserId } from "@/lib/daemon-auth";
+import { getApiUserId } from "@/lib/session";
 
 interface ProjectRuntimePatch {
   tab: string;
@@ -22,12 +22,10 @@ function tsOrNull(epochS: number | null | undefined): Date | null {
 }
 
 // POST /api/control/runtime-state
-// Daemon-only: accepts Bearer COCKPIT_DAEMON_TOKEN.
+// Bearer-authenticated (env token or ck_* agent token).
 // Pushes local agent runtime state into the DB so the cloud control plane can read it.
 export async function POST(req: NextRequest) {
-  if (!isDaemonRequest(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  // Resolve the daemon's fallback userId — used for projects not found in user_projects.
-  const daemonUserId = await getDaemonUserId();
+  const daemonUserId = await getApiUserId();
   if (!daemonUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: { projects?: unknown };

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { markCommandExecuted } from "@/db/queries/pending-commands";
-import { isDaemonRequest } from "@/lib/daemon-auth";
+import { getApiUserId } from "@/lib/session";
 
 // Daemon calls this to mark a command as executed.
 // PATCH /api/control/commands/:id  body: { ok: boolean, error?: string }
@@ -10,13 +9,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-
-  if (!isDaemonRequest(req)) {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const ok = typeof body.ok === "boolean" ? body.ok : true;
