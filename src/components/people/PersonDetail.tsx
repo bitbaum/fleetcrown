@@ -180,7 +180,27 @@ export function PersonDetail({
       </div>
 
       {loading ? (
-        <div className="animate-pulse p-5 text-text-tertiary">Loading...</div>
+        <div className="animate-pulse space-y-7 p-5">
+          <div className="space-y-2">
+            <div className="h-2.5 w-20 rounded bg-surface-raised" />
+            <div className="h-3 w-full rounded bg-surface-raised" />
+            <div className="h-3 w-3/4 rounded bg-surface-overlay" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="h-2.5 w-16 rounded bg-surface-raised" />
+                <div className="h-3 w-24 rounded bg-surface-overlay" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            <div className="h-2.5 w-28 rounded bg-surface-raised" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-9 rounded-xl bg-surface-raised" />
+            ))}
+          </div>
+        </div>
       ) : !data ? (
         <div className="p-5 text-text-tertiary">Person not found</div>
       ) : (
