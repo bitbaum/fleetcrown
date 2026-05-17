@@ -18,7 +18,7 @@ import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
-import { getUserProjects } from "@/db/queries/user-projects";
+import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 
 const PLAN_DAY_PROMPT = `Plan my day.
 
@@ -49,8 +49,11 @@ export const metadata = { title: "Today" };
 
 export default async function TodayPage() {
   const [name, userId] = await Promise.all([getCurrentUserName(), requirePageUserId()]);
-  const projects = await getUserProjects(userId);
-  const isFirstRun = projects.length === 0;
+  const [projects, orgProjects] = await Promise.all([
+    getUserProjects(userId),
+    getOrgProjects(userId),
+  ]);
+  const isFirstRun = projects.length === 0 && orgProjects.length === 0;
   const hour = new Date().getHours();
   const isEvening = hour >= 17;
   return (
