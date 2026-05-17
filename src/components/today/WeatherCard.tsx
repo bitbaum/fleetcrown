@@ -44,7 +44,17 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <div className="text-sm text-text-muted animate-pulse">Loading...</div>
+        <div className="flex items-center gap-4 animate-pulse">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-border-default shrink-0" />
+            <div className="h-7 w-12 rounded bg-border-default" />
+          </div>
+          <div className="space-y-1.5">
+            <div className="h-3 w-20 rounded bg-border-default" />
+            <div className="h-3 w-32 rounded bg-border-subtle" />
+            <div className="h-3 w-28 rounded bg-border-subtle" />
+          </div>
+        </div>
       </Card>
     );
   }

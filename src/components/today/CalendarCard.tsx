@@ -23,7 +23,17 @@ export function CalendarCard() {
     <Card>
       <CardHeader icon={Calendar} title="Calendar" />
       {loading ? (
-        <div className="text-sm text-text-muted animate-pulse">Loading...</div>
+        <div className="space-y-3 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex gap-3 items-start">
+              <div className="h-3 w-12 rounded bg-border-default shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 bg-border-default rounded w-3/4" />
+                {i === 0 && <div className="h-3 bg-border-subtle rounded w-1/2" />}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : error || (data?.error && events.length === 0) ? (
         <FetchErrorState message="Couldn't load calendar" onRetry={refetch} />
       ) : events.length === 0 ? (
