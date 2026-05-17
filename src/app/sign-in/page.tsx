@@ -8,5 +8,6 @@ export default function SignInPage() {
   const githubEnabled = Boolean(
     process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET,
   );
-  return <SignInForm githubEnabled={githubEnabled} />;
+  const localAuthEnabled = Boolean(process.env.LOCAL_AUTH_PASSWORD);
+  return <SignInForm githubEnabled={githubEnabled} localAuthEnabled={localAuthEnabled} />;
 }

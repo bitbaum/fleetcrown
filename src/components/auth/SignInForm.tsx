@@ -5,7 +5,7 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthDivider, AuthFooterLink, AuthHeading, AuthSecondaryButton,
+  AuthDivider, AuthHeading, AuthSecondaryButton,
 } from "@/components/auth/AuthShell";
 import Link from "next/link";
 
@@ -19,7 +19,7 @@ function GithubIcon() {
 
 type Mode = "email" | "owner";
 
-function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
+function FormInner({ githubEnabled, localAuthEnabled }: { githubEnabled: boolean; localAuthEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
@@ -76,31 +76,33 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
         description="Sign in to your Cockpit account."
       />
 
-      {/* Mode tabs */}
-      <div className="mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
-        <button
-          type="button"
-          onClick={() => switchMode("email")}
-          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mode === "email"
-              ? "bg-white/[0.09] text-white/80"
-              : "text-white/30 hover:text-white/55"
-          }`}
-        >
-          Email
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode("owner")}
-          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-            mode === "owner"
-              ? "bg-white/[0.09] text-white/80"
-              : "text-white/30 hover:text-white/55"
-          }`}
-        >
-          Owner key
-        </button>
-      </div>
+      {/* Mode tabs — only show owner key tab when LOCAL_AUTH_PASSWORD is configured */}
+      {localAuthEnabled && (
+        <div className="mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
+          <button
+            type="button"
+            onClick={() => switchMode("email")}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+              mode === "email"
+                ? "bg-white/[0.09] text-white/80"
+                : "text-white/30 hover:text-white/55"
+            }`}
+          >
+            Email
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode("owner")}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+              mode === "owner"
+                ? "bg-white/[0.09] text-white/80"
+                : "text-white/30 hover:text-white/55"
+            }`}
+          >
+            Owner key
+          </button>
+        </div>
+      )}
 
       {mode === "email" ? (
         <AuthCard>
@@ -159,6 +161,12 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
               label="Sign in →"
               loadingLabel="Signing in…"
             />
+            <p className="text-center text-sm text-white/35">
+              No account?{" "}
+              <Link href="/sign-up" className="text-white/60 underline underline-offset-2 hover:text-white/80 transition-colors">
+                Create one free →
+              </Link>
+            </p>
           </form>
         </AuthCard>
       ) : (
@@ -188,17 +196,14 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
         </AuthCard>
       )}
 
-      <AuthFooterLink href="/sign-up">
-        No account? Create one →
-      </AuthFooterLink>
     </AuthShell>
   );
 }
 
-export function SignInForm({ githubEnabled }: { githubEnabled: boolean }) {
+export function SignInForm({ githubEnabled, localAuthEnabled }: { githubEnabled: boolean; localAuthEnabled: boolean }) {
   return (
     <Suspense>
-      <FormInner githubEnabled={githubEnabled} />
+      <FormInner githubEnabled={githubEnabled} localAuthEnabled={localAuthEnabled} />
     </Suspense>
   );
 }
