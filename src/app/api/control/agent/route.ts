@@ -4,7 +4,7 @@ import { readAgentPreferences, resolveAgentConfig, writeAgentPreferences } from 
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import { buildAgentLaunchCommand, AGENT_IDS, type Agent } from "@/lib/agent-registry";
 import { shellEscape } from "@/lib/zellij";
-import { getUserProjects } from "@/db/queries/user-projects";
+import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
@@ -94,9 +94,13 @@ export async function POST(req: NextRequest) {
       } else {
         const userId = await getSessionUserId();
         if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        const dbProjects = await getUserProjects(userId).catch(() => []);
-        const allProjects = dbProjects
-          .filter((p) => p.dirPath)
+        const [dbProjects, dbTeamProjects] = await Promise.all([
+          getUserProjects(userId).catch(() => []),
+          getOrgProjects(userId).catch(() => []),
+        ]);
+        const seenDirs = new Set<string>();
+        const allProjects = [...dbProjects, ...dbTeamProjects]
+          .filter((p) => p.dirPath && !seenDirs.has(p.dirPath) && seenDirs.add(p.dirPath))
           .map((p) => ({ tab: p.name, dir: p.dirPath! }));
         tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, allProjects);
       }

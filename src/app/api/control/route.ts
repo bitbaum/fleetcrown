@@ -9,7 +9,7 @@ import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
-import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
+import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
 import {
@@ -199,13 +199,23 @@ export async function GET() {
   const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
   const prompts = readPromptMeta();
 
-  // Each user sees only their own registered projects.
-  // The conf-file fallback that existed here was removed: it leaked the owner's
-  // projects to any authenticated user who had no projects yet.
-  const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const projects = dbUserProjects
-    .filter((p) => p.dirPath)
-    .map((p) => ({ id: p.id, projectId: p.entityProjectId ?? null, tab: p.name, dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null }));
+  // Own projects + team projects (org peers). Own take precedence on tab-name collision.
+  const [dbUserProjects, dbTeamProjects] = await Promise.all([
+    ensureUserProjectEntityLinks(userId).catch(() => []),
+    getOrgProjects(userId).catch(() => []),
+  ]);
+
+  const seenTabs = new Set<string>();
+  const toEntry = (p: (typeof dbUserProjects)[number]) => ({
+    id: p.id, projectId: p.entityProjectId ?? null, tab: p.name,
+    dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null,
+    ownerUserId: p.userId,
+  });
+  const ownEntries = dbUserProjects.filter((p) => p.dirPath).map(toEntry)
+    .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
+  const teamEntries = dbTeamProjects.filter((p) => p.dirPath).map(toEntry)
+    .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
+  const projects = [...ownEntries, ...teamEntries];
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
@@ -213,11 +223,17 @@ export async function GET() {
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
+
+  // Fetch DB states for own user + all team project owners so session progress is visible.
+  const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
   const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
-    getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
+    Promise.all([
+      getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
+      ...teamOwnerIds.map((oid) => getProjectStatesByUserId(oid).catch((): DbProjectState[] => [])),
+    ]).then((arrs) => arrs.flat()),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
       .catch(() => new Map()),
     cleanupStaleOrchestrationRuns(userId).catch(() => {}),
