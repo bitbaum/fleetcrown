@@ -1,4 +1,4 @@
-import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
+import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectStatesByUserId } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
@@ -55,16 +55,22 @@ export async function GET() {
   const agentConfig = resolveAgentConfig(preferences);
   const agentRegistry = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
 
-  const dbUserProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const confProjects = dbUserProjects.filter((p) => p.dirPath).map((p) => {
-    const agentId = p.agentPref ?? agentConfig.agent;
-    const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
-    return {
-      tab: p.name,
-      dir: p.dirPath!,
-      sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
-    };
-  });
+  const [dbUserProjects, dbTeamProjects] = await Promise.all([
+    ensureUserProjectEntityLinks(userId).catch(() => []),
+    getOrgProjects(userId).catch(() => []),
+  ]);
+  const seenStreamTabs = new Set<string>();
+  const confProjects = [...dbUserProjects, ...dbTeamProjects]
+    .filter((p) => p.dirPath && !seenStreamTabs.has(p.name.toLowerCase()) && seenStreamTabs.add(p.name.toLowerCase()))
+    .map((p) => {
+      const agentId = p.agentPref ?? agentConfig.agent;
+      const agent = agentRegistry.agents.find((entry) => entry.id === agentId);
+      return {
+        tab: p.name,
+        dir: p.dirPath!,
+        sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
+      };
+    });
 
   // Resolve each project's canonical tab name to its exact zellij casing.
   // The cache is refreshed every 10s in the background so new Claude sessions
