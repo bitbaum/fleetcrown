@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { getUserById } from "@/db/queries/users";
 import { getOrgsByUserId } from "@/db/queries/orgs";
@@ -10,7 +10,7 @@ import { getOrgsByUserId } from "@/db/queries/orgs";
  * Verifies the token is valid and returns the user + org context the agent
  * should operate under. The CLI stores this response alongside the token.
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

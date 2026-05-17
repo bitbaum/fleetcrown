@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, Check, Plus, Trash2, Loader2, Terminal } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
 
@@ -19,6 +19,13 @@ export function AgentTokenSettings() {
   const [error, setError] = useState("");
   const [tokens, setTokens] = useState<TokenMeta[]>([]);
   const [revealed, setRevealed] = useState<NewToken | null>(null);
+
+  useEffect(() => {
+    fetch("/api/agent-tokens")
+      .then((r) => r.json())
+      .then((d: { tokens?: TokenMeta[] }) => setTokens(d.tokens ?? []))
+      .catch(() => {});
+  }, []);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
