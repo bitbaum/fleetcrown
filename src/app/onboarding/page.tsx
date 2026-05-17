@@ -129,6 +129,18 @@ export default function OnboardingPage() {
       const res = await patchJson("/api/me", { username: normalizeUsername(username) });
       if (!res.ok) await throwApiError(res, "Failed to save username");
       await update();
+
+      // Team members already have org projects — skip the project step for them.
+      const orgsData: { orgs?: { id: string }[] } = await fetch("/api/orgs")
+        .then((r) => r.json())
+        .catch(() => ({ orgs: [] }));
+      if (orgsData.orgs && orgsData.orgs.length > 0) {
+        await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
+        await update();
+        router.push("/today");
+        return;
+      }
+
       setStep("project");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
