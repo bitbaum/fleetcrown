@@ -39,9 +39,9 @@ export function BeaconLiveClient() {
 
   if (!session) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-surface-page">
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-surface-base">
         <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
-        <p className="text-sm text-text-muted">Waiting for Claude…</p>
+        <p className="text-xs text-text-muted">Waiting for Claude…</p>
       </div>
     );
   }

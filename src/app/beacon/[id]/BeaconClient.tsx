@@ -237,7 +237,7 @@ function BeaconBody({
             <button
               key={p.key}
               onClick={() => submit(String(p.slot ?? p.key))}
-              className="ui-btn-primary w-full justify-start gap-3 px-4 py-3 text-left text-base"
+              className="ui-btn-ready-primary w-full justify-start gap-3 px-4 py-3 text-left text-sm"
             >
               <span className="text-base leading-none">{p.icon}</span>
               <span className="flex-1">{p.label}</span>
@@ -341,7 +341,7 @@ function BeaconBody({
 
       <button
         onClick={() => window.close()}
-        className="w-full py-1.5 text-center ui-link-muted"
+        className="ui-btn-ghost w-full text-xs text-text-muted"
       >
         Dismiss · Esc
       </button>
@@ -384,61 +384,65 @@ export function BeaconPageClient({
 
   if (submitted) {
     return (
-      <div className="bg-surface-page p-6">
-        <div className="mx-auto max-w-lg space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-status-positive/15">
-              <Check className="h-5 w-5 text-status-positive" />
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-caps text-status-positive">Dispatched</p>
-              <p className="mt-0.5 text-base font-semibold text-text-primary">
-                {submittedLabel || "Agent running…"}
-              </p>
-            </div>
+      <div className="min-h-screen bg-surface-base p-4 sm:p-5">
+        <div className="ui-card-header mb-0">
+          <div className="ui-card-header-main flex items-center gap-2.5">
+            <span className="block h-2.5 w-2.5 shrink-0 rounded-full border border-status-positive bg-status-positive" />
+            <span className="text-sm font-semibold text-text-primary">{session.project}</span>
+            <span className="ui-tag ui-tag-positive">dispatched</span>
           </div>
-          <div className="ui-panel rounded-xl p-4 space-y-2">
-            <p className="text-sm text-text-secondary">
-              Agent task dispatched for <span className="font-medium text-text-primary">{session.project}</span>.
-            </p>
-            <p className="text-xs text-text-tertiary">
-              Watch progress in the Control panel — this window will close automatically.
-            </p>
+          <div className="ui-card-actions">
+            <button
+              onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
+              className="ui-icon-action"
+              title="Open Control panel"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <button
-            onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle py-2.5 text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open Control panel
-          </button>
+        </div>
+
+        <div className="mt-4 border-t border-border-subtle pt-4 space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-status-positive/15">
+              <Check className="h-4 w-4 text-status-positive" />
+            </div>
+            <p className="text-sm font-medium text-text-primary">{submittedLabel || "Agent running…"}</p>
+          </div>
+          <p className="text-xs text-text-tertiary">
+            Watch progress in the Control panel — this window will close shortly.
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-surface-page p-4 sm:p-6">
-      <div className="mx-auto max-w-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <p className="ui-kicker text-micro">Session complete</p>
-            <h1 className="mt-1 text-xl font-bold text-text-primary">{session.project}</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
-              title="Open Cockpit control panel"
-              className="flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-xs text-text-muted transition-colors hover:border-border-default hover:text-text-secondary"
-            >
-              <ExternalLink className="h-3 w-3" />
-              Cockpit
-            </button>
-            <ThemeToggle compact />
-            <span className="ui-tag ui-tag-positive">● done</span>
+    <div className="min-h-screen bg-surface-base p-4 sm:p-5">
+      <div className="ui-card-header">
+        <div className="ui-card-header-main flex items-center gap-2.5">
+          <span className="block h-2.5 w-2.5 shrink-0 rounded-full border border-status-positive bg-status-positive" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-semibold text-text-primary">{session.project}</span>
+              <span className="ui-tag ui-tag-positive">done</span>
+            </div>
+            <p className="ui-micro-label mt-0.5">session complete</p>
           </div>
         </div>
+        <div className="ui-card-actions">
+          <ThemeToggle compact />
+          <button
+            onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
+            className="ui-icon-action"
+            title="Open Control panel"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
 
+      <div className="border-t border-border-subtle pt-4">
         <BeaconBody
           session={session}
           prompts={prompts}
@@ -453,7 +457,7 @@ export function BeaconPageClient({
 // Loading state used while the server reads the session.
 export function BeaconLoading() {
   return (
-    <div className="flex h-64 items-center justify-center bg-surface-page">
+    <div className="flex h-64 items-center justify-center bg-surface-base">
       <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
     </div>
   );
