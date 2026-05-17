@@ -87,7 +87,9 @@ export function useControlData(): ControlDataHook {
       inFlight.current = false;
     };
 
-    poll();
+    // Always fetch on mount — bypass visibility so background-opened tabs load data.
+    inFlight.current = true;
+    refresh().finally(() => { inFlight.current = false; });
 
     const onVisibilityChange = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
