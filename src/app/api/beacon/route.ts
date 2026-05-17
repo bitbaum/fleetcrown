@@ -63,6 +63,18 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   fs.mkdirSync(BEACON_DIR, { recursive: true });
+
+  // Purge sessions older than 10 minutes to prevent /tmp accumulation.
+  const purge = Date.now() - 600_000;
+  for (const file of fs.readdirSync(BEACON_DIR)) {
+    if (!file.endsWith(".json")) continue;
+    try {
+      const p = path.join(BEACON_DIR, file);
+      const s = JSON.parse(fs.readFileSync(p, "utf-8")) as BeaconSession;
+      if (s.createdAt < purge) fs.unlinkSync(p);
+    } catch { /* corrupt or already deleted */ }
+  }
+
   const session: BeaconSession = {
     id: randomUUID(),
     project: dataOrResp.project,
