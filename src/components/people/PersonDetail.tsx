@@ -113,13 +113,15 @@ export function PersonDetail({
               </div>
               {nameError && <p className="ui-error-xs">{nameError}</p>}
             </div>
+          ) : loading && !name ? (
+            <div className="h-7 w-36 animate-pulse rounded-lg bg-border-default" />
           ) : (
             <h2
               className="cursor-text truncate text-2xl font-semibold text-text-primary transition-colors hover:text-accent-text"
               onClick={() => data && nameEdit.start(name)}
               title="Click to rename"
             >
-              {name || (data?.name ?? "Loading...")}
+              {name}
             </h2>
           )}
           {data && (() => {
