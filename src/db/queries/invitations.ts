@@ -1,6 +1,6 @@
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "@/db";
-import { invitations, users, type Invitation } from "@/db/schema";
+import { invitations, users, orgMemberships, orgs, type Invitation } from "@/db/schema";
 import { randomBytes } from "crypto";
 import { INVITATION_EXPIRY_DAYS } from "@/lib/constants";
 
@@ -55,6 +55,21 @@ export async function acceptInvitation(
       .update(invitations)
       .set({ usedBy: user.id, usedAt: new Date() })
       .where(eq(invitations.token, token));
+
+    // Add new member to inviter's org (if the inviter owns one).
+    const [inviterOrg] = await tx
+      .select({ id: orgs.id })
+      .from(orgs)
+      .where(eq(orgs.ownerId, invite.createdBy))
+      .limit(1);
+
+    if (inviterOrg) {
+      await tx.insert(orgMemberships).values({
+        orgId: inviterOrg.id,
+        userId: user.id,
+        role: "member",
+      }).onConflictDoNothing();
+    }
 
     return { userId: user.id };
   });

@@ -1,6 +1,6 @@
-import { and, asc, count, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
+import { entities, orgMemberships, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
@@ -9,6 +9,32 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
     .select()
     .from(userProjects)
     .where(and(eq(userProjects.userId, userId), eq(userProjects.isActive, true)))
+    .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
+}
+
+/**
+ * Returns active projects belonging to other members of the user's orgs.
+ * Used to surface shared team projects alongside the user's own projects.
+ */
+export async function getOrgProjects(userId: string): Promise<UserProject[]> {
+  const memberships = await db
+    .select({ orgId: orgMemberships.orgId })
+    .from(orgMemberships)
+    .where(eq(orgMemberships.userId, userId));
+
+  if (memberships.length === 0) return [];
+  const orgIds = memberships.map((m) => m.orgId);
+
+  return db
+    .select()
+    .from(userProjects)
+    .where(
+      and(
+        inArray(userProjects.orgId, orgIds),
+        eq(userProjects.isActive, true),
+        ne(userProjects.userId, userId),
+      ),
+    )
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 

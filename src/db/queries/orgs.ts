@@ -60,3 +60,13 @@ export async function addOrgMember(orgId: string, userId: string, role: "admin" 
       set: { role },
     });
 }
+
+/** Returns the org owned by this user (their primary team). */
+export async function getOwnerOrgId(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: orgs.id })
+    .from(orgs)
+    .where(eq(orgs.ownerId, userId))
+    .limit(1);
+  return row?.id ?? null;
+}
