@@ -158,6 +158,23 @@ handle_stop() {
 
   play_sound "complete"
 
+  # Skip beacon when user is actively at keyboard.  Uses XScreenSaver idle time via
+  # libXss (or xprintidle if installed).  Returns 9999 when no idle source is available,
+  # which causes the beacon to show as a safe fallback.  Install xprintidle for this gate
+  # to work on systems without the MIT-SCREEN-SAVER X11 extension.
+  _idle_secs=$(
+    if command -v xprintidle >/dev/null 2>&1; then
+      ms=$(DISPLAY="${DISPLAY:-:0}" xprintidle 2>/dev/null || echo 99999999)
+      echo $(( ms / 1000 ))
+    else
+      DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
+    fi
+  )
+  if [ "${_idle_secs:-9999}" -lt 60 ]; then
+    log "user active (idle=${_idle_secs}s < 60s) — skipping beacon"
+    exit 0
+  fi
+
   # Ensure the screen-position sentinel exists so beacon.py knows which monitor to
   # appear on. The claude() bash wrapper writes this at launch, but context-limit
   # continuations (started with ! or --continue) bypass the wrapper and miss it.
@@ -179,9 +196,14 @@ handle_stop() {
 
 
   session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+
+  # Instant visual feedback before Chrome loads (browser beacon takes 1-4s to open).
+  notify-send -u normal -t 8000 \
+      "Claude · ${label}" "Task done — beacon loading…" 2>/dev/null &
+
   if ! choice=$(beacon_python stop "$label" "$session_file" 2>>"$LOG"); then
-    log "native popup failed — falling back to slot 1 auto-continue"
-    choice="1"
+    log "beacon timed out or closed without choice — no auto-inject (user types manually)"
+    exit 0
   fi
   log "popup choice=$choice"
   [ -z "$choice" ] && exit 0
