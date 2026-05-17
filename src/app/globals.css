@@ -320,10 +320,13 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
   }
   .ui-public-nav {
-    @apply relative z-10 flex items-center justify-between px-8 py-6 sm:px-14;
+    @apply relative z-10 flex items-center justify-between border-b border-white/[0.06] px-6 py-5 sm:px-10;
   }
   .ui-public-nav-action {
     @apply rounded-full border border-white/[0.12] px-5 py-2 text-sm font-medium text-white/[0.55] transition-all hover:border-white/[0.22] hover:text-white/[0.80];
+  }
+  .ui-public-nav-link {
+    @apply rounded-lg px-4 py-2 text-sm text-white/40 transition-colors hover:text-white/80;
   }
   .ui-public-badge {
     @apply inline-flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.05] px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-white/[0.45];

@@ -17,20 +17,21 @@ function GithubIcon() {
   );
 }
 
+type Mode = "email" | "owner";
+
 function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
   const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/today";
 
-  const [email, setEmail]           = useState("");
-  const [password, setPassword]     = useState("");
-  const [error, setError]           = useState("");
-  const [loading, setLoading]       = useState(false);
+  const [mode, setMode]               = useState<Mode>("email");
+  const [email, setEmail]             = useState("");
+  const [password, setPassword]       = useState("");
+  const [ownerPwd, setOwnerPwd]       = useState("");
+  const [error, setError]             = useState("");
+  const [loading, setLoading]         = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
-  const [showOwner, setShowOwner]   = useState(false);
-  const [ownerPwd, setOwnerPwd]     = useState("");
-  const [ownerLoading, setOwnerLoading] = useState(false);
 
   async function handleEmailPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -48,13 +49,13 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
   async function handleOwnerPassword(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    setOwnerLoading(true);
+    setLoading(true);
     const res = await signIn("local", { password: ownerPwd, redirect: false });
-    setOwnerLoading(false);
+    setLoading(false);
     if (res?.ok) {
       router.push(safeCallback);
     } else {
-      setError("Wrong password.");
+      setError("Wrong owner password.");
     }
   }
 
@@ -63,114 +64,133 @@ function FormInner({ githubEnabled }: { githubEnabled: boolean }) {
     await signIn("github", { callbackUrl: safeCallback });
   }
 
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError("");
+  }
+
   return (
-    <AuthShell
-      navRight={(
-        <Link href="/" className="ui-public-nav-action">
-          Home
-        </Link>
-      )}
-    >
+    <AuthShell>
       <AuthHeading
-        title="Welcome to Cockpit"
-        description="Sign in to your account."
+        title="Welcome back"
+        description="Sign in to your Cockpit account."
       />
 
-      <AuthCard>
-        {githubEnabled && (
-          <>
-            <AuthSecondaryButton
-              type="button"
-              onClick={handleGithub}
-              disabled={githubLoading}
-              className="ui-auth-secondary-btn-strong gap-2.5"
-            >
-              <GithubIcon />
-              {githubLoading ? "Redirecting…" : "Continue with GitHub"}
-            </AuthSecondaryButton>
-            <AuthDivider label="or email" />
-          </>
-        )}
+      {/* Mode tabs */}
+      <div className="mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
+        <button
+          type="button"
+          onClick={() => switchMode("email")}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+            mode === "email"
+              ? "bg-white/[0.09] text-white/80"
+              : "text-white/30 hover:text-white/55"
+          }`}
+        >
+          Email
+        </button>
+        <button
+          type="button"
+          onClick={() => switchMode("owner")}
+          className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+            mode === "owner"
+              ? "bg-white/[0.09] text-white/80"
+              : "text-white/30 hover:text-white/55"
+          }`}
+        >
+          Owner key
+        </button>
+      </div>
 
-        <form onSubmit={handleEmailPassword} className="space-y-3">
-          <AuthField label="Email">
-            <AuthInput
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
-            />
-          </AuthField>
-          <AuthField label="Password">
-            <div className="space-y-1">
+      {mode === "email" ? (
+        <AuthCard>
+          {githubEnabled && (
+            <>
+              <AuthSecondaryButton
+                type="button"
+                onClick={handleGithub}
+                disabled={githubLoading}
+                className="ui-auth-secondary-btn-strong gap-2.5"
+              >
+                <GithubIcon />
+                {githubLoading ? "Redirecting…" : "Continue with GitHub"}
+              </AuthSecondaryButton>
+              <AuthDivider label="or email" />
+            </>
+          )}
+
+          <form onSubmit={handleEmailPassword} className="space-y-3">
+            <AuthField label="Email">
               <AuthInput
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-                autoComplete="current-password"
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoComplete="email"
                 required
               />
-              <div className="text-right">
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
-                >
-                  Forgot password?
-                </Link>
+            </AuthField>
+            <AuthField label="Password">
+              <div className="space-y-1">
+                <AuthInput
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  autoComplete="current-password"
+                  required
+                />
+                <div className="text-right">
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
               </div>
-            </div>
-          </AuthField>
-          {error && <p className="ui-error">{error}</p>}
-          <AuthSubmitButton
-            loading={loading}
-            disabled={!email || !password}
-            label="Sign in →"
-            loadingLabel="Signing in…"
-          />
-        </form>
-      </AuthCard>
+            </AuthField>
+            {error && <p className="ui-error">{error}</p>}
+            <AuthSubmitButton
+              loading={loading}
+              disabled={!email || !password}
+              label="Sign in →"
+              loadingLabel="Signing in…"
+            />
+          </form>
+        </AuthCard>
+      ) : (
+        <AuthCard>
+          <p className="text-sm text-white/35">
+            Use the owner password set in <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-xs text-white/50">LOCAL_AUTH_PASSWORD</code>.
+          </p>
+          <form onSubmit={handleOwnerPassword} className="space-y-3">
+            <AuthField label="Owner password">
+              <AuthInput
+                type="password"
+                value={ownerPwd}
+                onChange={(e) => setOwnerPwd(e.target.value)}
+                placeholder="Enter owner password"
+                autoComplete="current-password"
+                autoFocus
+              />
+            </AuthField>
+            {error && <p className="ui-error">{error}</p>}
+            <AuthSubmitButton
+              loading={loading}
+              disabled={!ownerPwd}
+              label="Sign in as owner →"
+              loadingLabel="Signing in…"
+            />
+          </form>
+        </AuthCard>
+      )}
 
       <AuthFooterLink href="/sign-up">
         No account? Create one →
       </AuthFooterLink>
-
-      {/* Owner key fallback — for the admin account without email */}
-      {!showOwner ? (
-        <p className="mt-2 text-center">
-          <button
-            type="button"
-            onClick={() => setShowOwner(true)}
-            className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
-          >
-            Use owner key
-          </button>
-        </p>
-      ) : (
-        <form onSubmit={handleOwnerPassword} className="mt-4 space-y-3">
-          <AuthField label="Owner password">
-            <AuthInput
-              type="password"
-              value={ownerPwd}
-              onChange={(e) => setOwnerPwd(e.target.value)}
-              placeholder="Owner password"
-              autoComplete="current-password"
-              autoFocus
-            />
-          </AuthField>
-          {error && <p className="ui-error">{error}</p>}
-          <AuthSubmitButton
-            loading={ownerLoading}
-            disabled={!ownerPwd}
-            label="Sign in as owner →"
-            loadingLabel="Signing in…"
-          />
-        </form>
-      )}
     </AuthShell>
   );
 }
