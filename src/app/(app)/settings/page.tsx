@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getUserProjects } from "@/db/queries/user-projects";
+import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { listInvitations } from "@/db/queries/invitations";
 import { getUserById } from "@/db/queries/users";
 import { ProjectsSettings } from "@/components/settings/ProjectsSettings";
@@ -20,8 +20,9 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
 
-  const [projects, user, invitations] = await Promise.all([
+  const [projects, teamProjects, user, invitations] = await Promise.all([
     getUserProjects(session.user.id),
+    getOrgProjects(session.user.id),
     getUserById(session.user.id),
     listInvitations(session.user.id),
   ]);
@@ -42,6 +43,7 @@ export default async function SettingsPage() {
       </Suspense>
       <ProjectsSettings
         projects={projects}
+        teamProjects={teamProjects}
         projectLimit={user.isDefault || isUnlimitedProjects(user.plan) ? null : getProjectLimit(user.plan)}
       />
       <AgentTokenSettings />

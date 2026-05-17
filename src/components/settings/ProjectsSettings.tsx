@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   projects: UserProject[];
+  teamProjects: UserProject[];
   /** null means unlimited (owner or pro/team plan) */
   projectLimit: number | null;
 };
 
-export function ProjectsSettings({ projects: initial, projectLimit }: Props) {
+export function ProjectsSettings({ projects: initial, teamProjects, projectLimit }: Props) {
   const [projects, setProjects] = useState(initial);
   const dragIndex = useRef<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -280,6 +281,27 @@ export function ProjectsSettings({ projects: initial, projectLimit }: Props) {
             </li>
           ))}
         </ul>
+      )}
+
+      {teamProjects.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-border-subtle">
+          <p className="ui-kicker">Team projects</p>
+          <ul className="space-y-2">
+            {teamProjects.map((p) => (
+              <li key={p.id} className="ui-list-item opacity-75">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium text-text-primary truncate">{p.name}</div>
+                  {p.dirPath && (
+                    <div className="text-xs text-text-tertiary truncate font-mono">{p.dirPath}</div>
+                  )}
+                  {p.gitUrl && (
+                    <div className="text-xs text-text-tertiary truncate">{p.gitUrl}</div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
   );

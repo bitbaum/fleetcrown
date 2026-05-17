@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, orgMemberships, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
+import { entities, orgs, orgMemberships, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
@@ -14,7 +14,8 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
 
 /**
  * Returns active projects belonging to other members of the user's orgs.
- * Used to surface shared team projects alongside the user's own projects.
+ * Queries by org membership (not orgId on the project) so it works
+ * regardless of whether projects have been explicitly org-tagged.
  */
 export async function getOrgProjects(userId: string): Promise<UserProject[]> {
   const memberships = await db
@@ -25,16 +26,18 @@ export async function getOrgProjects(userId: string): Promise<UserProject[]> {
   if (memberships.length === 0) return [];
   const orgIds = memberships.map((m) => m.orgId);
 
+  const peers = await db
+    .select({ userId: orgMemberships.userId })
+    .from(orgMemberships)
+    .where(and(inArray(orgMemberships.orgId, orgIds), ne(orgMemberships.userId, userId)));
+
+  if (peers.length === 0) return [];
+  const peerIds = peers.map((p) => p.userId);
+
   return db
     .select()
     .from(userProjects)
-    .where(
-      and(
-        inArray(userProjects.orgId, orgIds),
-        eq(userProjects.isActive, true),
-        ne(userProjects.userId, userId),
-      ),
-    )
+    .where(and(inArray(userProjects.userId, peerIds), eq(userProjects.isActive, true)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
@@ -113,7 +116,15 @@ export async function createUserProject(
   data: Omit<NewUserProject, "id" | "createdAt" | "updatedAt">,
 ): Promise<UserProject> {
   const entityProjectId = data.entityProjectId ?? await findOrCreateProjectEntity(data.userId, data.name, data.description);
-  const [row] = await db.insert(userProjects).values({ ...data, entityProjectId }).returning();
+
+  // Auto-link to the user's primary org so team members can see it via getOrgProjects.
+  let orgId = data.orgId ?? null;
+  if (!orgId) {
+    const [orgRow] = await db.select({ id: orgs.id }).from(orgs).where(eq(orgs.ownerId, data.userId)).limit(1);
+    orgId = orgRow?.id ?? null;
+  }
+
+  const [row] = await db.insert(userProjects).values({ ...data, entityProjectId, orgId }).returning();
   return row;
 }
 
