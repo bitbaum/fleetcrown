@@ -44,7 +44,11 @@ function applyToOpenTabs(agent: Agent, model: string, allProjects: { tab: string
   let openTabs: string[] = [];
   try {
     const out = execSync("zellij action query-tab-names 2>/dev/null || true", { encoding: "utf-8" });
-    openTabs = out.split("\n").map((line) => line.trim().toLowerCase()).filter(Boolean);
+    const ansiRe = /\x1b\[[0-9;]*m/g;
+    openTabs = out
+      .split("\n")
+      .map((line) => line.replace(ansiRe, "").trim().toLowerCase())
+      .filter((s) => s.length > 0 && !s.includes("[created "));
   } catch {
     return [{ status: "failed", error: "Failed to read open zellij tabs." }];
   }
