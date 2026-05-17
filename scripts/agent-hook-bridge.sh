@@ -197,16 +197,68 @@ handle_stop() {
 
   session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
 
-  # Instant visual feedback before Chrome loads (browser beacon takes 1-4s to open).
-  notify-send -u normal -t 8000 \
-      "Claude · ${label}" "Task done — beacon loading…" 2>/dev/null &
+  # Two-layer race — both run in parallel; first choice wins.
+  #
+  # Layer 1 (< 100 ms): OS notification with KDE action buttons.
+  #   notify-choice.py shows a native notification immediately.  When the user
+  #   clicks a button, it writes the slot number to CHOICE_FILE AND patches the
+  #   beacon session JSON so the browser popup sees choice != null and self-closes.
+  #
+  # Layer 2 (1-4 s): browser beacon popup (full React UI).
+  #   beacon_python opens Chrome/Brave with the full web beacon.  When the user
+  #   clicks there, it writes to CHOICE_FILE.
+  #
+  # If the user ignores both (at keyboard, typing their own prompt) neither
+  # writes to CHOICE_FILE → no injection.
 
-  if ! choice=$(beacon_python stop "$label" "$session_file" 2>>"$LOG"); then
-    log "beacon timed out or closed without choice — no auto-inject (user types manually)"
+  local _choice_file _nc_pid _bp_pid
+  _choice_file="/tmp/beacon-choice-${TAB_NAME}-$$"
+
+  # Build action args from the first 3 non-"more" slots in _PROMPTS.
+  local -a _notif_actions
+  mapfile -t _notif_actions < <(
+    jq -r '.[] | select(.slot != null and .style != "more") | "\(.slot)=\(.icon) \(.label)"' \
+    "$_PROMPTS" 2>/dev/null | head -3
+  )
+
+  (
+    result=$(python3 "$SCRIPT_DIR/notify-choice.py" \
+      "Claude · ${label}" "Done — click to continue" "$label" \
+      "${_notif_actions[@]}" 2>>"$LOG")
+    if [ -n "$result" ] && [ ! -f "$_choice_file" ]; then
+      printf '%s' "$result" > "${_choice_file}.tmp" \
+        && mv "${_choice_file}.tmp" "$_choice_file" 2>/dev/null || true
+    fi
+  ) &
+  _nc_pid=$!
+
+  (
+    result=$(beacon_python stop "$label" "$session_file" 2>>"$LOG")
+    if [ -n "$result" ] && [ ! -f "$_choice_file" ]; then
+      printf '%s' "$result" > "${_choice_file}.tmp" \
+        && mv "${_choice_file}.tmp" "$_choice_file" 2>/dev/null || true
+    fi
+  ) &
+  _bp_pid=$!
+
+  # Wait until a choice lands or both layers exit.
+  while kill -0 "$_nc_pid" 2>/dev/null || kill -0 "$_bp_pid" 2>/dev/null; do
+    if [ -f "$_choice_file" ]; then
+      kill "$_nc_pid" "$_bp_pid" 2>/dev/null
+      break
+    fi
+    sleep 0.2
+  done
+
+  choice=""
+  [ -f "$_choice_file" ] && choice=$(cat "$_choice_file")
+  rm -f "$_choice_file" "${_choice_file}.tmp"
+
+  if [ -z "$choice" ]; then
+    log "no choice from either layer — user types manually"
     exit 0
   fi
   log "popup choice=$choice"
-  [ -z "$choice" ] && exit 0
 
   local inject_key inject_label queue_file
   queue_file="/tmp/agent-queue-${TAB_NAME,,}"
