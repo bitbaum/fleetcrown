@@ -405,6 +405,24 @@ handle_notification() {
 
   play_sound "window-attention"
 
+  # Only auto-inject the continue prompt when the user is away from the keyboard.
+  # If they're active (idle < 60s) they'll see the sound alert and respond themselves —
+  # injecting on top of their typing causes the double-prompt problem the Stop hook fix
+  # already addressed.  Same idle detection logic used in handle_stop.
+  local _notif_idle
+  _notif_idle=$(
+    if command -v xprintidle >/dev/null 2>&1; then
+      ms=$(DISPLAY="${DISPLAY:-:0}" xprintidle 2>/dev/null || echo 99999999)
+      echo $(( ms / 1000 ))
+    else
+      DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
+    fi
+  )
+  if [ "${_notif_idle:-9999}" -lt 60 ]; then
+    log "notification: user active (idle=${_notif_idle}s) — skipping auto-inject"
+    exit 0
+  fi
+
   prompt=$(get_prompt "continue")
   [ -z "$prompt" ] && exit 0
 
