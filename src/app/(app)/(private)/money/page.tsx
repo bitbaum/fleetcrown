@@ -131,7 +131,7 @@ export default async function MoneyPage() {
           title="Active Subscriptions"
           right={
             <span className="text-sm text-text-tertiary">
-              Verified against email receipts Apr 2026
+              Verified against email receipts
             </span>
           }
         />

@@ -51,6 +51,7 @@ PUBLIC_API_ROUTES=(
   "/api/health"
   "/api/crons"
   "/api/system"
+  "/api/setup"
 )
 AUTH_API_ROUTES=(
   "/api/me"
@@ -67,6 +68,7 @@ AUTH_API_ROUTES=(
   "/api/prompts/agent"
   "/api/captures"
   "/api/beacon-settings"
+  "/api/checkout/personal"
 )
 
 # Optional session cookie for authenticated smoke runs.
@@ -85,12 +87,13 @@ fi
 
 failed=0
 
-# check_route ROUTE [check_body=0] [label] [allow_401=0]
+# check_route ROUTE [check_body=0] [label] [allow_401=0] [extra_ok_code=""]
 check_route() {
   local route="$1"
   local check_body="${2:-0}"
   local label="${3:-$route}"
   local allow_401="${4:-0}"
+  local extra_ok_code="${5:-}"
 
   local body_file
   body_file=$(mktemp)
@@ -102,6 +105,8 @@ check_route() {
   if [ "$code" -ge 200 ] && [ "$code" -lt 400 ]; then
     ok=1
   elif [ "$allow_401" = "1" ] && [ "$code" = "401" ]; then
+    ok=1
+  elif [ -n "$extra_ok_code" ] && [ "$code" = "$extra_ok_code" ]; then
     ok=1
   fi
 
@@ -133,6 +138,10 @@ for route in "${AUTH_API_ROUTES[@]}"; do
   check_route "$route" 0 "$route" 1
 done
 
+# Routes that may return 503 when optional integrations (Stripe) are not configured.
+# 401 (no session) or 503 (not configured) both prove the route isn't crashing.
+check_route "/api/stripe/portal" 0 "/api/stripe/portal" 1 "503"
+
 # Dynamic [id] routes — discover an id from a list endpoint, then hit
 # the detail route. Catches regressions in the parameter handlers and
 # the per-row drizzle queries that the static-list smoke can't.
@@ -147,7 +156,7 @@ if command -v jq >/dev/null 2>&1; then
   fi
 fi
 
-total=$((${#PAGE_ROUTES[@]} + ${#PUBLIC_API_ROUTES[@]} + ${#AUTH_API_ROUTES[@]} + dynamic_total))
+total=$((${#PAGE_ROUTES[@]} + ${#PUBLIC_API_ROUTES[@]} + ${#AUTH_API_ROUTES[@]} + 1 + dynamic_total))
 
 echo ""
 if [ "$failed" -gt 0 ]; then
