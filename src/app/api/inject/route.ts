@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureUserProjectEntityLinks } from "@/db/queries/user-projects";
+import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { AgentOption } from "@/lib/agent-registry";
 import { getSessionUserId } from "@/lib/session";
@@ -26,9 +26,14 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Resolve canonical tab name and project path from the user's own DB projects.
-  const dbProjects = await ensureUserProjectEntityLinks(userId).catch(() => []);
-  const dbMatch = dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+  // Resolve canonical tab name and project path — own projects first, then org team projects.
+  const [dbProjects, dbTeamProjects] = await Promise.all([
+    ensureUserProjectEntityLinks(userId).catch(() => []),
+    getOrgProjects(userId).catch(() => []),
+  ]);
+  const dbMatch =
+    dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase()) ??
+    dbTeamProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
   if (!dbMatch) {
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
