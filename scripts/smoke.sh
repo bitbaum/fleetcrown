@@ -69,6 +69,9 @@ AUTH_API_ROUTES=(
   "/api/captures"
   "/api/beacon-settings"
   "/api/checkout/personal"
+  "/api/orgs"
+  "/api/agent-tokens"
+  "/api/agent/register"
 )
 
 # Optional session cookie for authenticated smoke runs.

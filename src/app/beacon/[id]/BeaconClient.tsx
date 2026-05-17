@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Loader2, Check, ExternalLink, Repeat2,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
@@ -430,7 +429,6 @@ export function BeaconPageClient({
           </div>
         </div>
         <div className="ui-card-actions">
-          <ThemeToggle compact />
           <button
             onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
             className="ui-icon-action"
