@@ -21,7 +21,7 @@ Module layout:
   beacon.py          — entry point: _web_stop, _pyqt_stop, main
 """
 
-import sys, os, subprocess, threading, time, json as _json
+import sys, os, subprocess, threading, time, json as _json, uuid
 import urllib.request
 from pathlib import Path
 
@@ -39,6 +39,9 @@ from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
+_BEACON_DIR = "/tmp/cockpit-beacon"
+
+
 def _cockpit_ready(timeout: float = 2.0) -> bool:
     try:
         r = urllib.request.urlopen(f"{COCKPIT_URL}/api/health", timeout=timeout)
@@ -52,19 +55,48 @@ def _current_agent() -> str:
     return raw if raw in ("claude", "codex", "gemini") else "claude"
 
 
-def _create_web_session(label: str, session_content: str) -> str | None:
-    data = _json.dumps({
+def _write_beacon_session(label: str, session_content: str) -> str:
+    """Write a beacon session file directly to /tmp — no API auth required.
+
+    The Next.js beacon API stores sessions in /tmp/cockpit-beacon/{id}.json.
+    Writing directly here means beacon.py never needs to authenticate with the
+    web server; the browser popup reads/writes via the API using its session cookie.
+    """
+    session_id = str(uuid.uuid4())
+    session = {
+        "id": session_id,
         "project": label,
         "sessionContent": session_content,
+        "createdAt": int(time.time() * 1000),
+        "choice": None,
         "currentAgent": _current_agent(),
-    }).encode()
-    req = urllib.request.Request(
-        f"{COCKPIT_URL}/api/beacon",
-        data=data, headers={"Content-Type": "application/json"}, method="POST",
-    )
+        "nextAgent": None,
+        "capacityIssue": False,
+    }
+    os.makedirs(_BEACON_DIR, exist_ok=True)
+    # Cancel any active (no choice yet) sessions for this project.
     try:
-        resp = urllib.request.urlopen(req, timeout=5)
-        return _json.loads(resp.read())["id"]
+        for fname in os.listdir(_BEACON_DIR):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(_BEACON_DIR, fname)
+            try:
+                existing = _json.loads(open(fpath).read())
+                if existing.get("project") == label and existing.get("choice") is None:
+                    os.remove(fpath)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    with open(os.path.join(_BEACON_DIR, f"{session_id}.json"), "w") as f:
+        _json.dump(session, f)
+    return session_id
+
+
+def _read_beacon_choice_fs(session_id: str) -> str | None:
+    try:
+        data = _json.loads(open(os.path.join(_BEACON_DIR, f"{session_id}.json")).read())
+        return data.get("choice")
     except Exception:
         return None
 
@@ -121,20 +153,14 @@ def _open_browser_beacon(session_id: str) -> bool:
 def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
     """Block until the beacon session records a user choice or timeout elapses.
 
-    The hook has a 150s timeout; 130s gives plenty of margin before it hard-kills
-    the process and falls back to slot-1 auto-continue.
+    Reads directly from the session file — no HTTP round trip, no auth needed.
+    The hook has a 150s timeout; 130s gives margin before it hard-kills the process.
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        try:
-            r = urllib.request.urlopen(
-                f"{COCKPIT_URL}/api/beacon/{session_id}", timeout=3)
-            data = _json.loads(r.read())
-            choice = data.get("choice")
-            if choice is not None:
-                return choice
-        except Exception:
-            pass
+        choice = _read_beacon_choice_fs(session_id)
+        if choice is not None:
+            return choice
         time.sleep(0.5)
     return None
 
@@ -164,9 +190,10 @@ def _web_stop(label: str, session_file: str) -> None:
             pass
 
     if _cockpit_ready():
-        session_id = _create_web_session(label, session_content)
-        if session_id and _open_browser_beacon(session_id):
-            # Browser opened — block until the user picks or timeout.
+        # Write session directly to /tmp — no API auth required.
+        session_id = _write_beacon_session(label, session_content)
+        if _open_browser_beacon(session_id):
+            # Browser opened — poll the session file until the user picks or timeout.
             choice = _poll_beacon_choice(session_id)
             if choice:
                 print(choice)
@@ -206,16 +233,10 @@ def _pyqt_stop(label: str, session_file: str, session_id: str | None = None) -> 
             time.sleep(3)
             if not _web_poll_active[0]:
                 break
-            try:
-                r = urllib.request.urlopen(
-                    f"{COCKPIT_URL}/api/beacon/{session_id}", timeout=2)
-                data = _json.loads(r.read())
-                choice = data.get("choice")
-                if choice is not None and _web_poll_active[0]:
-                    QTimer.singleShot(0, lambda c=choice: popup._choose(c))
-                    break
-            except Exception:
-                pass
+            choice = _read_beacon_choice_fs(session_id)
+            if choice is not None and _web_poll_active[0]:
+                QTimer.singleShot(0, lambda c=choice: popup._choose(c))
+                break
 
     if session_id:
         threading.Thread(target=_web_poll_loop, daemon=True).start()
