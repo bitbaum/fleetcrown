@@ -18,20 +18,25 @@ BASE="${BASE:-http://localhost:3000}"
 # checking misses the regression — body grep is the correction.
 ERROR_BOUNDARY_MARKER="Something went wrong"
 
-# Page routes — match config/navigation.ts NAV_ITEMS plus the / redirect.
+# Page routes — match config/navigation.ts NAV_ITEMS plus the / redirect
+# and public-surface pages (/whitepaper).
 PAGE_ROUTES=(
   "/"
+  "/whitepaper"
   "/today"
-  "/people"
-  "/goals"
+  "/control"
   "/projects"
-  "/money"
+  "/goals"
+  "/people"
   "/habits"
   "/events"
+  "/money"
+  "/history"
   "/prompts"
   "/system"
   "/memory"
-  "/control"
+  "/thoughts"
+  "/settings"
 )
 
 # DB-backed API GETs. Exercises drizzle, the postgres connection, and the
@@ -47,11 +52,16 @@ PUBLIC_API_ROUTES=(
   "/api/system"
 )
 AUTH_API_ROUTES=(
+  "/api/me"
   "/api/goals"
   "/api/habits"
   "/api/people"
   "/api/events"
   "/api/control"
+  "/api/user-projects"
+  "/api/invitations"
+  "/api/sessions"
+  "/api/prompts/agent"
 )
 
 # Optional session cookie for authenticated smoke runs.
