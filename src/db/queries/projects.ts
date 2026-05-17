@@ -1,7 +1,7 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects } from "@/db/schema";
-import { eq, and, desc, inArray, ilike } from "drizzle-orm";
+import { entities, entityRelations, interactions, goals, userProjects, orgMemberships } from "@/db/schema";
+import { eq, and, desc, inArray, ilike, ne } from "drizzle-orm";
 import { fetchAttributesByEntityIds } from "./utils";
 import { z } from "zod";
 
@@ -76,6 +76,34 @@ export async function getProjects(userId: string) {
 }
 
 export type ProjectRow = Awaited<ReturnType<typeof getProjects>>[number];
+
+/** Returns entity-level project profiles belonging to org peers (read-only for the viewer). */
+export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow & { readonly: true })[]> {
+  const memberships = await db
+    .select({ orgId: orgMemberships.orgId })
+    .from(orgMemberships)
+    .where(eq(orgMemberships.userId, userId));
+
+  if (memberships.length === 0) return [];
+  const orgIds = memberships.map((m) => m.orgId);
+
+  const peers = await db
+    .select({ userId: orgMemberships.userId })
+    .from(orgMemberships)
+    .where(and(inArray(orgMemberships.orgId, orgIds), ne(orgMemberships.userId, userId)));
+
+  if (peers.length === 0) return [];
+  const peerIds = peers.map((p) => p.userId);
+
+  const projects = await db
+    .select()
+    .from(entities)
+    .where(and(inArray(entities.userId, peerIds), eq(entities.type, ENTITY_TYPE.PROJECT)))
+    .orderBy(entities.name);
+
+  const attrsByEntity = await fetchAttributesByEntityIds(projects.map((p) => p.id));
+  return projects.map((p) => ({ ...p, attrs: attrsByEntity.get(p.id) ?? {}, readonly: true as const }));
+}
 
 export async function getProjectDetail(userId: string, id: string) {
   const [project] = await db

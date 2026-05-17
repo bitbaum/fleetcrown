@@ -19,6 +19,7 @@ type Project = {
   name: string;
   description: string | null;
   attrs: Record<string, string>;
+  readonly?: boolean;
 };
 
 function ProjectCard({
@@ -48,14 +49,19 @@ function ProjectCard({
 
   return (
     <div
-      onClick={onOpen}
-      className={`ui-card-shell ui-panel-interactive group relative flex cursor-pointer flex-col gap-3 p-4 sm:p-5 ${
-        hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"
-      }`}
+      onClick={project.readonly ? undefined : onOpen}
+      className={`ui-card-shell group relative flex flex-col gap-3 p-4 sm:p-5 ${
+        project.readonly ? "cursor-default" : "ui-panel-interactive cursor-pointer"
+      } ${hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"}`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-semibold text-text-primary" title={project.name}>{project.name}</div>
+          <div className="flex items-center gap-2">
+            <div className="truncate text-base font-semibold text-text-primary" title={project.name}>{project.name}</div>
+            {project.readonly && (
+              <span className="ui-kicker shrink-0">team</span>
+            )}
+          </div>
           {description && (
             <div className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary" title={description}>
               {description}

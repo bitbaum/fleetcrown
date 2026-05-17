@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { FolderKanban } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
-import { getProjects } from "@/db/queries/projects";
+import { getProjects, getOrgEntityProjects } from "@/db/queries/projects";
 import { GitHubStatus } from "@/components/projects/GitHubStatus";
 import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
@@ -12,7 +12,11 @@ export const metadata = { title: "Projects" };
 
 export default async function ProjectsPage() {
   const userId = await requirePageUserId();
-  const projects = await getProjects(userId);
+  const [ownProjects, orgProjects] = await Promise.all([
+    getProjects(userId),
+    getOrgEntityProjects(userId),
+  ]);
+  const projects = [...ownProjects, ...orgProjects];
 
   return (
     <PageLayout title="Projects" subtitle={`${projects.length} projects tracked`} right={<NewProjectButton />}>
