@@ -31,6 +31,7 @@ export function PeopleGrid({
   const [healthFilter, setHealthFilter] = useState<RelationshipHealth[]>(initialHealthFilter);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
   const [offset, setOffset] = useState(0);
   const LIMIT = 50;
   const skipInitialFetch = useRef(true);
@@ -61,6 +62,7 @@ export function PeopleGrid({
         if (hf.length > 0) params.set("health", hf.join(","));
         const data = await getJson<{ people: PersonWithAttributes[]; total: number }>(`/api/people?${params}`, { signal });
         if (signal?.aborted) return;
+        setFetchError(false);
         if (newOffset === 0) {
           setPeople(data.people);
         } else {
@@ -70,7 +72,7 @@ export function PeopleGrid({
         setOffset(newOffset);
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") return;
-        throw err;
+        setFetchError(true);
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
@@ -168,7 +170,18 @@ export function PeopleGrid({
         )}
       </div>
 
-      {people.length === 0 ? (
+      {fetchError && (
+        <div className="flex items-center justify-between rounded-xl border border-status-negative/20 bg-status-negative/5 px-4 py-3 text-sm text-status-negative">
+          <span>Failed to load — check your connection and try again.</span>
+          <button
+            onClick={() => search(query, sort, healthFilter, 0)}
+            className="ml-4 shrink-0 font-medium underline underline-offset-2 hover:opacity-80 transition-opacity"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {people.length === 0 && !fetchError ? (
         <div className="ui-empty-panel">
           <Users className="h-8 w-8" />
           <div className="text-base text-text-secondary">
