@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { getDefaultUser, getUserById, getUserByEmail, updateUser } from "@/db/queries/users";
+import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 
 declare module "next-auth" {
   interface Session {
@@ -117,13 +118,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      if (account?.provider !== "github") return true;
-
-      // Update profile fields (name, avatar) when a GitHub account is linked
-      // to an existing Cockpit user for the first time. The adapter with
-      // allowDangerousEmailAccountLinking handles the actual account linking;
-      // we only handle the profile refresh here.
-      if (user.email) {
+      // Update GitHub profile fields on first OAuth link.
+      if (account?.provider === "github" && user.email) {
         const existingUser = await getUserByEmail(user.email);
         if (existingUser) {
           const patch: Record<string, string | null | undefined> = {};
@@ -133,6 +129,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (Object.keys(patch).length > 0) {
             await updateUser(existingUser.id, patch);
           }
+        }
+      }
+
+      // Auto-create a personal org for users who don't have one yet.
+      // Runs on every sign-in but is a no-op after the first time.
+      if (user.id) {
+        const memberCount = await getOrgMembershipCount(user.id);
+        if (memberCount === 0) {
+          const displayName = user.name ?? user.email?.split("@")[0] ?? "user";
+          await createPersonalOrg(user.id, displayName);
         }
       }
 

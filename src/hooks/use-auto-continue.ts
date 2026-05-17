@@ -11,7 +11,7 @@ const deserialize = (raw: string) => raw !== "off";
 export function useAutoContinue(tab: string) {
   const [enabled, setEnabled] = useLocalStorageState(
     autoContinueKey(tab),
-    true,
+    false,
     serialize,
     deserialize,
   );

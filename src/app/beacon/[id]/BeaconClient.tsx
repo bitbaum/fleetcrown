@@ -57,8 +57,7 @@ function BeaconBody({
   onClose?: () => void;
 }) {
   const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project);
-  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(session.project);
-  useEffect(() => { enableAutoContinue(); }, [enableAutoContinue]);
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
   const [custom, setCustom] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);

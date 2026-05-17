@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./orgs";
 export * from "./entities";
 export * from "./entity-relations";
 export * from "./attributes";
