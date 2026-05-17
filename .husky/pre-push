@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Run smoke tests before push IF the local server is already running.
+# Skips silently when the server is down — never blocks a push.
+# To run fully authenticated: COCKPIT_SESSION_TOKEN=<token> git push
+
+set -e
+
+BASE="${COCKPIT_URL:-http://localhost:3000}"
+
+if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
+  echo "→ smoke: server not running at $BASE — skipping (start with npm run dev or install-app)"
+  exit 0
+fi
+
+echo "→ smoke: server detected at $BASE"
+npm run smoke

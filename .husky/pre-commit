@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
-# Run quick correctness checks on every commit. Smoke (which needs a
-# running dev server) is intentionally NOT here — run `npm run smoke`
-# manually before opening a PR.
+# Run quick correctness checks on every commit. Smoke runs in pre-push
+# (when the local server is up) — see .husky/pre-push.
 
 set -e
 
