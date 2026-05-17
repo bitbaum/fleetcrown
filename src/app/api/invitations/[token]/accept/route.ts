@@ -6,6 +6,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 const AcceptBody = z.object({
   name:     z.string().trim().min(2, "Name must be at least 2 characters."),
   password: z.string().min(8, "Password must be at least 8 characters."),
+  email:    z.string().email().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -13,10 +14,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   const dataOrResp = await readJsonBody(req, AcceptBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { name, password } = dataOrResp;
+  const { name, password, email } = dataOrResp;
 
   const passwordHash = await hashPassword(password);
-  const result = await acceptInvitation(token, name, passwordHash);
+  const result = await acceptInvitation(token, name, passwordHash, email);
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ ok: true, userId: result.userId });

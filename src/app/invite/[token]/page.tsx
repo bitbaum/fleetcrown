@@ -16,6 +16,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   const [status, setStatus] = useState<"loading" | "valid" | "expired" | "used">("loading");
   const [prefillEmail, setPrefillEmail] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -42,7 +43,11 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
     setSubmitting(true);
     try {
-      const res = await postJson(`/api/invitations/${token}/accept`, { name, password });
+      const res = await postJson(`/api/invitations/${token}/accept`, {
+        name,
+        password,
+        ...(email ? { email } : {}),
+      });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Registration failed."); return; }
 
@@ -102,13 +107,24 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
               />
             </AuthField>
 
-            {prefillEmail && (
+            {prefillEmail ? (
               <AuthField label="Email">
                 <AuthInput
                   type="email"
                   value={prefillEmail}
                   disabled
                   className="ui-auth-input-disabled"
+                />
+              </AuthField>
+            ) : (
+              <AuthField label="Email">
+                <AuthInput
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
                 />
               </AuthField>
             )}
@@ -139,7 +155,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
             <AuthSubmitButton
               loading={submitting}
-              disabled={!name || !password || !confirm}
+              disabled={!name || !password || !confirm || (!prefillEmail && !email)}
               label="Create account →"
               loadingLabel="Creating account…"
             />

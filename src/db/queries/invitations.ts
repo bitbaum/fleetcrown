@@ -35,6 +35,7 @@ export async function acceptInvitation(
   token: string,
   name: string,
   passwordHash: string,
+  email?: string,
 ): Promise<{ userId: string } | { error: string }> {
   const invite = await getInvitation(token);
   if (!invite) return { error: "Invitation not found or expired." };
@@ -45,7 +46,7 @@ export async function acceptInvitation(
       .insert(users)
       .values({
         name,
-        email: invite.email,
+        email: invite.email ?? email ?? null,
         passwordHash,
         onboardedAt: new Date(),
       })
