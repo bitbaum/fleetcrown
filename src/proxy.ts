@@ -30,6 +30,6 @@ export const config = {
      *   api/health, api/setup      – infrastructure endpoints (pre-auth)
      *   api/crons, api/system      – public read endpoints used by daemon/monitoring
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon).+)",
   ],
 };

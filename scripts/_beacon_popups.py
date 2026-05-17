@@ -501,7 +501,6 @@ class FocusCancelTextEdit(QPlainTextEdit):
         super().__init__()
         self._on_focus  = on_focus
         self._on_engage = on_engage
-        self.setAcceptRichText(False)
 
     def mousePressEvent(self, e):
         if self._on_engage:
