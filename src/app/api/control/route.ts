@@ -40,7 +40,6 @@ const execAsync = promisify(exec);
 
 type SlowCache = {
   gitMap: Map<string, GitState>;
-  dbProjects: ProjectRow[];
   zellijTabs: string[];
   dirs: string[];        // dirs list used to build this cache
   builtAt: number;
@@ -51,9 +50,8 @@ let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
 async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
-  const [gitMap, dbProjects, zellijTabsLocal, dbStates] = await Promise.all([
+  const [gitMap, zellijTabsLocal, dbStates] = await Promise.all([
     fetchAllGitStates(dirs),
-    getProjects(userId).catch(() => [] as ProjectRow[]),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
     isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch(() => [] as DbProjectState[]),
   ]);
@@ -62,7 +60,7 @@ async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache>
   const zellijTabs = isRuntimeAvailable()
     ? zellijTabsLocal
     : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName);
-  return { gitMap, dbProjects, zellijTabs, dirs, builtAt: Date.now() };
+  return { gitMap, zellijTabs, dirs, builtAt: Date.now() };
 }
 
 async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
@@ -219,14 +217,14 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, dbProjects, zellijTabs } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs } = await getSlowData(userId, dirs);
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
 
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
-  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, teamOwnerProjects] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
@@ -236,11 +234,11 @@ export async function GET() {
     ]).then((arrs) => arrs.flat()),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
       .catch(() => new Map()),
-    Promise.all(teamOwnerIds.map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
+    // Fetch own + team owners' entity projects per-request (not cached) so each user
+    // always sees their own profile data regardless of who last built the git cache.
+    Promise.all([userId, ...teamOwnerIds].map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
   ]);
-  cleanupStaleOrchestrationRuns(userId).catch(() => {});
-  // Merge own projects + team owners' projects so profile data is visible for member users.
-  const effectiveDbProjects = [...dbProjects, ...teamOwnerProjects];
+  cleanupStaleOrchestrationRuns(userId).catch(() => {})
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
 
   // Group recent activity by project key so each card gets its own slice (no extra query).
