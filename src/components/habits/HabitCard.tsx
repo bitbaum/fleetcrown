@@ -36,6 +36,7 @@ export function HabitCard({
   const completedDatesArr = [...habit.completedDates];
   const [doneToday, setDoneToday] = useState(() => completedDatesArr.includes(toLocalDateStr(new Date())));
   const [togglingDone, setTogglingDone] = useState(false);
+  const [toggleError, setToggleError] = useState("");
   const scheduled = scheduledDays(frequency, HABIT_HISTORY_DAYS);
   const pct = Math.round((habit.completionsInWindow / scheduled) * 100);
 
@@ -60,6 +61,11 @@ export function HabitCard({
     });
   };
 
+  const flashError = (msg: string) => {
+    setToggleError(msg);
+    setTimeout(() => setToggleError(""), 3000);
+  };
+
   const handleFrequencyChange = async (next: HabitFrequency) => {
     if (next === frequency || savingFreq) return;
     setSavingFreq(true);
@@ -70,6 +76,7 @@ export function HabitCard({
       if (!res.ok) throw new Error("Failed");
     } catch {
       setFrequency(prev);
+      flashError("Failed to save — try again");
     } finally {
       setSavingFreq(false);
     }
@@ -85,6 +92,7 @@ export function HabitCard({
       if (!res.ok) throw new Error("Failed");
     } catch {
       setActive(!next);
+      flashError("Failed to save — try again");
     } finally {
       setTogglingActive(false);
     }
@@ -100,6 +108,7 @@ export function HabitCard({
       if (!res.ok) throw new Error("Failed");
     } catch {
       setDoneToday(!next);
+      flashError("Failed to save — try again");
     } finally {
       setTogglingDone(false);
     }
@@ -114,6 +123,7 @@ export function HabitCard({
       router.refresh();
     } catch {
       setDeleting(false);
+      flashError("Failed to delete — try again");
     }
   };
 
@@ -245,6 +255,10 @@ export function HabitCard({
           </button>
         </div>
       </div>
+
+      {toggleError && (
+        <p className="mt-2 text-xs text-status-negative">{toggleError}</p>
+      )}
 
       <HabitHeatmap completedDates={completedDatesArr} frequency={frequency} />
     </Card>
