@@ -47,7 +47,7 @@ export default function SignUpPage() {
     <AuthShell>
       <AuthHeading
         title="Create your account"
-        description="Join Cockpit to manage your projects and fleet."
+        description="Free to start. Add projects, launch agents, track everything."
       />
 
       <AuthCard>

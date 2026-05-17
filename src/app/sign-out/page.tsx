@@ -1,40 +1,24 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { useState } from "react";
-import { AuthShell, AuthCard, AuthIconBadge, AuthSubmitButton, AuthHeading, AuthSecondaryButton } from "@/components/auth/AuthShell";
+import { useEffect } from "react";
+import { AuthShell, AuthHeading } from "@/components/auth/AuthShell";
+import { Loader2 } from "lucide-react";
 
 export default function SignOutPage() {
-  const [loading, setLoading] = useState(false);
-
-  async function handleSignOut() {
-    setLoading(true);
-    await signOut({ callbackUrl: "/sign-in" });
-  }
+  useEffect(() => {
+    signOut({ callbackUrl: "/sign-in" });
+  }, []);
 
   return (
     <AuthShell>
       <AuthHeading
-        badge={<AuthIconBadge>✦</AuthIconBadge>}
-        title="Sign out?"
-        description="You will need your password to sign back in."
+        title="Signing out…"
+        description="You'll be redirected to the sign-in page."
       />
-
-      <AuthCard>
-        <div className="space-y-3">
-          <AuthSubmitButton
-            onClick={handleSignOut}
-            loading={loading}
-            label="Sign out →"
-            loadingLabel="Signing out…"
-          />
-          <AuthSecondaryButton
-            onClick={() => history.back()}
-          >
-            Cancel
-          </AuthSecondaryButton>
-        </div>
-      </AuthCard>
+      <div className="flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+      </div>
     </AuthShell>
   );
 }
