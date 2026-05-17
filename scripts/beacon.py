@@ -113,40 +113,80 @@ def _patch_web_session(session_id: str, choice: str) -> None:
         pass
 
 
-def _open_browser_beacon(session_id: str) -> bool:
-    """Launch the web beacon URL in a focused browser window.
+_LIVE_PID_FILE = os.path.join(_BEACON_DIR, "live-browser.pid")
+_LIVE_URL = f"{COCKPIT_URL}/beacon/live"
 
-    Chrome-family browsers use --app= to open a frameless popup (no address bar,
-    tabs, or browser chrome) that supports window.resizeTo/moveTo — matching the
-    experience the beacon page was designed for.  Firefox and xdg-open are tried as
-    fallbacks; they open a regular browser window instead of an app popup.
 
-    Returns True if a browser process was launched, False if no browser was found.
+def _focus_live_window() -> bool:
+    """Bring the pre-warmed /beacon/live window to the foreground.
+
+    Tries xdotool first (most reliable), then wmctrl as fallback.
+    Returns True if a window was found and raised.
     """
     import shutil
-    url = f"{COCKPIT_URL}/beacon/{session_id}"
+    if shutil.which("xdotool"):
+        result = subprocess.run(
+            ["xdotool", "search", "--name", "beacon/live"],
+            capture_output=True, text=True,
+        )
+        wids = result.stdout.strip().split()
+        for wid in wids:
+            subprocess.run(["xdotool", "windowactivate", "--sync", wid],
+                           capture_output=True)
+            subprocess.run(["xdotool", "windowraise", wid],
+                           capture_output=True)
+        if wids:
+            return True
+    if shutil.which("wmctrl"):
+        result = subprocess.run(
+            ["wmctrl", "-l"], capture_output=True, text=True,
+        )
+        for line in result.stdout.splitlines():
+            if "beacon/live" in line:
+                wid = line.split()[0]
+                subprocess.run(["wmctrl", "-ia", wid], capture_output=True)
+                return True
+    return False
 
-    candidates: list[list[str]] = []
+
+def _open_browser_beacon(_session_id: str) -> bool:
+    """Ensure the /beacon/live pre-warmed window is open and visible.
+
+    On the first call this launches an --app= frameless window at /beacon/live.
+    On subsequent calls it focuses the existing window (sub-100 ms — no cold start).
+    The session is delivered to the already-loaded page via SSE.
+
+    Returns True if a browser window is running, False if no browser was found.
+    """
+    import shutil
+
+    # Check if a previously launched live-browser process is still alive.
+    if os.path.exists(_LIVE_PID_FILE):
+        try:
+            pid = int(open(_LIVE_PID_FILE).read().strip())
+            os.kill(pid, 0)  # raises if process is dead
+            # Process alive — focus the window and return immediately.
+            _focus_live_window()
+            return True
+        except (ProcessLookupError, ValueError, OSError):
+            pass  # stale PID file — fall through to launch a new window
+
+    # Launch a new --app= frameless window at /beacon/live.
     for b in ("chromium", "chromium-browser", "brave-browser", "google-chrome"):
         if shutil.which(b):
-            candidates.append([b, f"--app={url}"])
-            break
-    if shutil.which("firefox"):
-        candidates.append(["firefox", "--new-window", url])
-    if shutil.which("xdg-open"):
-        candidates.append(["xdg-open", url])
-
-    for cmd in candidates:
-        try:
-            subprocess.Popen(
-                cmd,
-                start_new_session=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            return True
-        except (FileNotFoundError, OSError):
-            continue
+            try:
+                proc = subprocess.Popen(
+                    [b, f"--app={_LIVE_URL}"],
+                    start_new_session=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                os.makedirs(_BEACON_DIR, exist_ok=True)
+                with open(_LIVE_PID_FILE, "w") as f:
+                    f.write(str(proc.pid))
+                return True
+            except (FileNotFoundError, OSError):
+                continue
     return False
 
 

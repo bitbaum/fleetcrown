@@ -49,10 +49,12 @@ function BeaconBody({
   session,
   prompts,
   onSubmitted,
+  onClose,
 }: {
   session: BeaconSession;
   prompts: AgentPrompt[];
   onSubmitted: (label: string) => void;
+  onClose?: () => void;
 }) {
   const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(session.project);
@@ -152,8 +154,8 @@ function BeaconBody({
     }
     onSubmitted(label);
     await patchJson(`/api/beacon/${session.id}`, { choice }).catch(() => {});
-    setTimeout(() => window.close(), 400);
-  }, [session.id, onSubmitted]);
+    setTimeout(() => (onClose ? onClose() : window.close()), 400);
+  }, [session.id, onSubmitted, onClose]);
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
 
@@ -354,8 +356,10 @@ function BeaconBody({
 
 export function BeaconPageClient({
   initialSession,
+  onClose,
 }: {
   initialSession: BeaconSession;
+  onClose?: () => void;
 }) {
   const [session] = useState<BeaconSession>(initialSession);
   const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
@@ -366,17 +370,17 @@ export function BeaconPageClient({
     getJson<AgentPrompt[]>("/api/prompts/agent").then(setPrompts).catch(() => {});
   }, []);
 
-  // Poll every 500ms to close this window if another client already injected a choice.
+  // Poll every 500ms to close/reset if another client already injected a choice.
   useEffect(() => {
     if (submitted) return;
     const interval = setInterval(async () => {
       try {
         const data = await getJson<BeaconSession>(`/api/beacon/${session.id}`);
-        if (data.choice !== null) window.close();
+        if (data.choice !== null) { if (onClose) { onClose(); } else { window.close(); } }
       } catch { /* network error or 401 — ignore */ }
     }, 500);
     return () => clearInterval(interval);
-  }, [session.id, submitted]);
+  }, [session.id, submitted, onClose]);
 
   if (submitted) {
     return (
@@ -439,6 +443,7 @@ export function BeaconPageClient({
           session={session}
           prompts={prompts}
           onSubmitted={(label) => { setSubmitted(true); setSubmittedLabel(label); }}
+          onClose={onClose}
         />
       </div>
     </div>
