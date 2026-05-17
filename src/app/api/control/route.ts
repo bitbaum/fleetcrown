@@ -226,7 +226,7 @@ export async function GET() {
 
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
-  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, teamOwnerProjects] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
@@ -236,8 +236,11 @@ export async function GET() {
     ]).then((arrs) => arrs.flat()),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
       .catch(() => new Map()),
-    cleanupStaleOrchestrationRuns(userId).catch(() => {}),
+    Promise.all(teamOwnerIds.map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
   ]);
+  cleanupStaleOrchestrationRuns(userId).catch(() => {});
+  // Merge own projects + team owners' projects so profile data is visible for member users.
+  const effectiveDbProjects = [...dbProjects, ...teamOwnerProjects];
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
 
   // Group recent activity by project key so each card gets its own slice (no extra query).
@@ -397,7 +400,7 @@ export async function GET() {
     sessionLifecycleSignals,
     agentRunning,
     activeAgents,
-    profile: matchProfileById(projectId, dbProjects) ?? matchProfile(tab, dir, dbProjects),
+    profile: matchProfileById(projectId, effectiveDbProjects) ?? matchProfile(tab, dir, effectiveDbProjects),
     currentPrompt,
     readyAt:   derivedLifecycle.readyAt,
     lockAt:    derivedLifecycle.lockAt,
