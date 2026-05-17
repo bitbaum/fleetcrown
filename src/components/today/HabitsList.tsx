@@ -12,8 +12,10 @@ import { postJson, patchJson, deleteJson } from "@/lib/api/fetch";
 export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[] }) {
   const router = useRouter();
   const [habits, setHabits] = useState(initialHabits);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   const toggle = async (id: string, currentDone: boolean) => {
+    setToggleError(null);
     setHabits((prev) =>
       prev.map((h) =>
         h.id === id
@@ -29,6 +31,8 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
       setHabits((prev) =>
         prev.map((h) => (h.id === id ? { ...h, doneToday: currentDone } : h)),
       );
+      setToggleError("Failed to save — try again");
+      setTimeout(() => setToggleError(null), 3000);
     }
   };
 
@@ -88,6 +92,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
           onRemove={removeHabit}
         />
       ))}
+      {toggleError && <p className="ui-error-xs px-1">{toggleError}</p>}
       <AddHabitForm onCreated={addHabit} />
     </div>
   );
