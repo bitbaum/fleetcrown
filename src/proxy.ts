@@ -1,17 +1,35 @@
 import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+import { authConfig } from "@/auth.config";
 
-// Thin edge-safe middleware using the JWT-only config.
-// Full auth (DB adapter + crypto) stays in src/auth.ts for server components.
-const { auth } = NextAuth(authConfig);
-
-export default auth;
+// Edge-safe auth middleware — uses only the JWT session and the authorized()
+// callback from auth.config.ts. No DB adapter, no Node.js crypto.
+//
+// What this activates:
+//   • Unauthenticated users → redirect to /sign-in with callbackUrl
+//   • Authenticated + onboardedAt null → redirect to /onboarding
+//   • Daemon bearer-token requests → pass through to individual routes
+//
+// The matcher intentionally excludes public routes so they stay accessible
+// without a session. Protected pages that need a userId also call
+// requirePageUserId() as a belt-and-suspenders check.
+export default NextAuth(authConfig).auth;
 
 export const config = {
-  // Protect only app routes. Root "/" and all listed prefixes are public.
-  // Use (.+) instead of (.*) so the root "/" (zero chars after slash) is never caught.
-  // All api/ routes handle their own auth — exclude them entirely from the middleware.
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sign-in|sign-out|sign-up|forgot-password|reset-password|beacon|thoughts|invite|whitepaper|setup|u/).+)",
+    /*
+     * Run on every path EXCEPT:
+     *   _next/static, _next/image  – Next.js internals
+     *   favicon.ico                – browser icon request
+     *   /                          – public landing page (.+ not .*)
+     *   sign-in, sign-up           – public auth pages
+     *   forgot-password, reset-password, setup, invite
+     *   whitepaper, thoughts       – public content
+     *   u/                         – public user profiles (/u/[username])
+     *   beacon                     – public beacon page
+     *   api/auth                   – NextAuth internal endpoints
+     *   api/health, api/setup      – infrastructure endpoints (pre-auth)
+     *   api/crons, api/system      – public read endpoints used by daemon/monitoring
+     */
+    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system).+)",
   ],
 };

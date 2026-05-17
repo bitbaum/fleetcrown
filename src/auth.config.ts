@@ -40,6 +40,13 @@ export const authConfig = {
         if (pathname !== "/sign-in") {
           signInUrl.searchParams.set("callbackUrl", pathname + search);
         }
+        // API routes must not redirect — callers expect JSON 401.
+        if (pathname.startsWith("/api/")) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
         return Response.redirect(signInUrl);
       }
 
