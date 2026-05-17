@@ -129,7 +129,7 @@ export function ControlPanel() {
           {lastUpdated && <span className="hidden sm:inline">{timeAgo(lastUpdated)}</span>}
         </>
       ) : (
-        <span>Loading…</span>
+        <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
       )}
       <button
         onClick={() => setViewMode((v) => v === "full" ? "commander" : "full")}
@@ -179,7 +179,20 @@ export function ControlPanel() {
           </section>
 
           <section className="ui-control-sidepanel">
-            {dashboard && (
+            {!dashboard ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-2.5 w-20 rounded bg-border-default" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[0, 1, 2, 3].map((i) => (
+                    <div key={i} className="ui-control-metric-card space-y-3">
+                      <div className="h-2.5 w-24 rounded bg-border-default" />
+                      <div className="h-7 w-10 rounded bg-border-default" />
+                      <div className="h-2.5 w-20 rounded bg-border-subtle" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
               <>
                 <div className="space-y-2">
                   <p className="ui-kicker">Control inventory</p>
