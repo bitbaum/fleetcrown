@@ -13,7 +13,14 @@ export function shellEscape(value: string): string {
 export async function getZellijTabs(): Promise<string[]> {
   try {
     const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
-    return stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+    // Strip ANSI escape sequences (present when called outside an active pane context).
+    // Also drop lines that look like session-list entries ("name [Created Xs ago]") which
+    // query-tab-names emits when ZELLIJ_SESSION_NAME points to a stale/wrong session.
+    const ansiRe = /\x1b\[[0-9;]*m/g;
+    return stdout
+      .split("\n")
+      .map((s) => s.replace(ansiRe, "").trim())
+      .filter((s) => s.length > 0 && !s.includes("[Created "));
   } catch {
     return [];
   }
