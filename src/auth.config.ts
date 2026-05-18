@@ -20,6 +20,13 @@ export const authConfig = {
       return session;
     },
     authorized({ auth, request }) {
+      const { pathname, search } = request.nextUrl;
+
+      // Invitation token routes must be publicly accessible so unauthenticated
+      // users can accept team invitations. Explicitly allow them here as a
+      // belt-and-suspenders guard in case the matcher regex misses them.
+      if (/^\/api\/invitations\/[^/]+/.test(pathname)) return true;
+
       if (!auth?.user) {
         // Bearer-authenticated requests (daemon env token or ck_* agent tokens).
         // Pass through — individual routes enforce the real auth check.
@@ -35,7 +42,6 @@ export const authConfig = {
         const proto =
           request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
         const signInUrl = new URL("/sign-in", `${proto}://${host}`);
-        const { pathname, search } = request.nextUrl;
         if (pathname !== "/sign-in") {
           signInUrl.searchParams.set("callbackUrl", pathname + search);
         }
@@ -52,7 +58,6 @@ export const authConfig = {
       // Redirect authenticated-but-not-onboarded users to the onboarding flow.
       // API routes are excluded so onboarding page API calls (/api/me, /api/user-projects)
       // work normally. Sign-out is excluded to avoid a redirect loop on logout.
-      const { pathname } = request.nextUrl;
       if (
         !auth.user.onboardedAt &&
         !pathname.startsWith("/onboarding") &&
