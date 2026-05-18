@@ -23,9 +23,10 @@ export const authConfig = {
       const { pathname, search } = request.nextUrl;
 
       // Invitation token routes must be publicly accessible so unauthenticated
-      // users can accept team invitations. Explicitly allow them here as a
-      // belt-and-suspenders guard in case the matcher regex misses them.
-      if (/^\/api\/invitations\/[^/]+/.test(pathname)) return true;
+      // users can accept team invitations. startsWith is used rather than a
+      // regex because the edge runtime's regex engine does not reliably evaluate
+      // complex lookahead patterns at compile time.
+      if (pathname.startsWith("/api/invitations/")) return true;
 
       if (!auth?.user) {
         // Bearer-authenticated requests (daemon env token or ck_* agent tokens).

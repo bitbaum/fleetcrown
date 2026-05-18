@@ -31,9 +31,6 @@ export const config = {
      *   api/crons, api/system      – GET excluded for daemon/monitoring; write methods enforce auth in-handler
      *   api/invitations/           – token-scoped invitation routes (GET validate, POST accept);
      *                                trailing slash keeps GET /api/invitations (list) protected
-     *                                NOTE: the matcher regex can match /api/invitations/<token> at
-     *                                substring position; authorized() in auth.config.ts is the
-     *                                definitive enforcement point for public invitation paths
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header
      */
     "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
