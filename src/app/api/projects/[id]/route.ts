@@ -87,8 +87,9 @@ export async function GET(
   ]);
 
   if (!resolved) return NextResponse.json(null, { status: 404 });
-  const { detail } = resolved;
+  const { detail, ownerId } = resolved;
   const { project, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
+  const readonly = ownerId !== userId;
 
   const linkedJobs = getLinkedJobs(project.id, project.name);
   const activity = [
@@ -116,6 +117,7 @@ export async function GET(
     type: project.type,
     description: project.description,
     source: project.source,
+    readonly: readonly || undefined,
     attrs,
     relations,
     interactions: recentInteractions,

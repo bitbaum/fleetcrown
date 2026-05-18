@@ -107,6 +107,7 @@ export function OverviewTab({
               attrKey={key}
               onReload={onReload}
               placeholder={SUGGESTED_ATTR_PLACEHOLDERS[key]}
+              editable={!data.readonly}
             />
           ))}
         </div>
@@ -114,7 +115,7 @@ export function OverviewTab({
         <p className="text-xs text-text-secondary italic">No details recorded yet.</p>
       )}
 
-      {missingSuggested.length > 0 && (
+      {!data.readonly && missingSuggested.length > 0 && (
         <div>
           {showEmpty ? (
             <div className="space-y-1">
@@ -160,7 +161,7 @@ export function OverviewTab({
         </div>
       )}
 
-      {addingKey === "__custom__" ? (
+      {!data.readonly && (addingKey === "__custom__" ? (
         <div className="pt-1">
           <AddAttrInline
             projectId={projectId}
@@ -175,7 +176,7 @@ export function OverviewTab({
         >
           <Plus className="h-3.5 w-3.5" /> Add custom attribute
         </button>
-      )}
+      ))}
 
       {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
         <div>
@@ -251,7 +252,7 @@ export function OverviewTab({
               </button>
             </div>
           </div>
-        ) : (
+        ) : !data.readonly && (
           <button
             onClick={() => setLoggingActivity(true)}
             className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-2"

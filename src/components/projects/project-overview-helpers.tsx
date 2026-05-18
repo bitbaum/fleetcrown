@@ -92,6 +92,7 @@ export function AttrRow({
   attrKey,
   onReload,
   placeholder,
+  editable = true,
 }: {
   label: string;
   value: string;
@@ -99,6 +100,7 @@ export function AttrRow({
   attrKey: string;
   onReload: () => void;
   placeholder?: string;
+  editable?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -142,21 +144,25 @@ export function AttrRow({
         ) : (
           <span className="text-xs text-text-secondary leading-relaxed break-words">{value}</span>
         )}
-        <button
-          onClick={() => setEditing(true)}
-          className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
-          title="Edit"
-        >
-          <Pencil className="h-3 w-3" />
-        </button>
-        <button
-          onClick={deleteAttr}
-          disabled={deleting}
-          className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
-          title="Delete attribute"
-        >
-          {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
-        </button>
+        {editable && (
+          <>
+            <button
+              onClick={() => setEditing(true)}
+              className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-text-secondary hover:bg-surface-raised transition-all shrink-0 mt-0.5"
+              title="Edit"
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+            <button
+              onClick={deleteAttr}
+              disabled={deleting}
+              className="ui-hover-reveal ui-icon-btn p-1 rounded text-text-muted hover:text-status-negative hover:bg-surface-raised transition-all shrink-0 mt-0.5 disabled:opacity-30"
+              title="Delete attribute"
+            >
+              {deleting ? <Loader2 className="ui-spinner-xs" /> : <Trash2 className="h-3 w-3" />}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

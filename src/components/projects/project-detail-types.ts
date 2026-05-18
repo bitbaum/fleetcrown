@@ -28,6 +28,7 @@ export type ProjectData = {
   type: string;
   description: string | null;
   source: string | null;
+  readonly?: boolean;
   attrs: Record<string, string>;
   relations: Array<{ type: string; strength: number | null; targetId: string; targetName: string; targetType: string }>;
   interactions: Array<{ channel: string; direction: string; summary: string | null; occurredAt: string }>;

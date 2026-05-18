@@ -53,6 +53,7 @@ export function ProjectDetailHeader({
   const effectiveMaturity = maturityOverride ?? attrs["maturity"] ?? null;
   const { prodUrl, repo } = getProjectLinks(attrs);
   const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
+  const editable = !!data && !loading && !data.readonly;
 
   const saveName = async (next: string) => {
     const res = await patchJson(`/api/projects/${projectId}`, { name: next });
@@ -85,12 +86,12 @@ export function ProjectDetailHeader({
       <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:flex-row sm:items-start sm:px-5">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <NameEditor value={displayName} editable={!!data && !loading} onSave={saveName} />
+            <NameEditor value={displayName} editable={editable} onSave={saveName} />
             {owner && (
               <span className="ui-micro-badge border-border-subtle text-text-tertiary shrink-0">{owner}</span>
             )}
           </div>
-          <DescriptionEditor value={description} onSave={saveDescription} />
+          <DescriptionEditor value={description} editable={editable} onSave={saveDescription} />
         </div>
 
         <div className="ui-card-actions shrink-0 self-start">
@@ -125,7 +126,7 @@ export function ProjectDetailHeader({
               <Activity className="h-4 w-4 text-accent-text" />
             </Link>
           )}
-          {data && (
+          {editable && (
             <DeleteButton
               onDelete={async () => {
                 const res = await deleteJson(`/api/projects/${projectId}`);
@@ -149,8 +150,8 @@ export function ProjectDetailHeader({
 
       {data && (
         <div className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5">
-          <StatusEditor value={effectiveStatus} onSave={saveStatus} />
-          <MaturityEditor value={effectiveMaturity} onSave={saveMaturity} />
+          <StatusEditor value={effectiveStatus} editable={editable} onSave={saveStatus} />
+          <MaturityEditor value={effectiveMaturity} editable={editable} onSave={saveMaturity} />
           {hasIssues && (
             <span className="flex items-center gap-1 text-micro text-status-negative/70 ml-auto">
               <AlertTriangle className="h-3 w-3" /> Issues detected

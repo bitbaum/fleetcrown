@@ -70,14 +70,22 @@ export function NameEditor({
 /** Inline-editable description (button ↔ textarea + Save/Cancel). */
 export function DescriptionEditor({
   value,
+  editable = true,
   onSave,
 }: {
   value: string | null;
+  editable?: boolean;
   onSave: (next: string) => Promise<void>;
 }) {
   const ie = useInlineEdit<string>("");
 
   const commit = () => ie.commit(() => onSave(ie.draft.trim()));
+
+  if (!editable) {
+    return value ? (
+      <p className="ui-link-subtle mt-0.5 w-full text-left leading-relaxed cursor-default">{value}</p>
+    ) : null;
+  }
 
   if (ie.editing) {
     return (
@@ -127,9 +135,11 @@ export function DescriptionEditor({
 /** Inline-editable status pill. */
 export function StatusEditor({
   value,
+  editable = true,
   onSave,
 }: {
   value: string | null;
+  editable?: boolean;
   onSave: (next: string) => Promise<void>;
 }) {
   const ie = useInlineEdit<string>("");
@@ -139,6 +149,10 @@ export function StatusEditor({
     if (!trimmed) { ie.cancel(); return; }
     ie.commit(() => onSave(trimmed));
   };
+
+  if (!editable) {
+    return value ? <StatusBadge value={value} /> : null;
+  }
 
   if (ie.editing) {
     return (
@@ -169,9 +183,11 @@ export function StatusEditor({
 /** Inline-editable maturity score (1–10 slider). */
 export function MaturityEditor({
   value,
+  editable = true,
   onSave,
 }: {
   value: string | null;
+  editable?: boolean;
   onSave: (next: string) => Promise<void>;
 }) {
   const ie = useInlineEdit<number>(5);
@@ -180,6 +196,10 @@ export function MaturityEditor({
     const match = value?.match(/^(\d+)\/10/);
     ie.start(match ? parseInt(match[1]) : 5);
   };
+
+  if (!editable) {
+    return value ? <MaturityBar value={value} /> : null;
+  }
 
   if (ie.editing) {
     return (
