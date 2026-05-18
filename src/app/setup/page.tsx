@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
@@ -27,7 +28,7 @@ export default function SetupPage() {
       const res = await postJson("/api/setup", { name, password });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Setup failed."); return; }
-      router.push("/sign-in");
+      router.push(ROUTES.SIGN_IN);
     } catch {
       setError("Something went wrong.");
     } finally {
@@ -91,7 +92,7 @@ export default function SetupPage() {
 
       <p className="ui-auth-footer">
         Already have an account?{" "}
-        <Link href="/sign-in" className="ui-auth-footer-link">
+        <Link href={ROUTES.SIGN_IN} className="ui-auth-footer-link">
           Sign in
         </Link>
       </p>

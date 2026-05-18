@@ -8,6 +8,7 @@ import {
   AuthFooterLink, AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 
 function VerifyEmailInner() {
   const params = useSearchParams();
@@ -80,7 +81,7 @@ function VerifyEmailInner() {
             </form>
           </AuthCard>
         )}
-        <AuthFooterLink href="/sign-in">← Back to sign in</AuthFooterLink>
+        <AuthFooterLink href={ROUTES.SIGN_IN}>← Back to sign in</AuthFooterLink>
       </AuthShell>
     );
   }
@@ -122,7 +123,7 @@ function VerifyEmailInner() {
           </form>
         </AuthCard>
       )}
-      <AuthFooterLink href="/sign-in">← Back to sign in</AuthFooterLink>
+      <AuthFooterLink href={ROUTES.SIGN_IN}>← Back to sign in</AuthFooterLink>
     </AuthShell>
   );
 }

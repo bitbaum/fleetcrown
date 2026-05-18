@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { ThemeToggle } from "../ThemeToggle";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
+import { ROUTES } from "@/config/auth";
 
 export function SidebarFooter({
   collapsed,
@@ -43,7 +44,7 @@ export function SidebarFooter({
         </button>
       )}
       <button
-        onClick={() => signOut({ callbackUrl: "/sign-in" })}
+        onClick={() => signOut({ callbackUrl: ROUTES.SIGN_IN })}
         className={cn(
           "ui-sidebar-utility w-full",
           collapsed && "justify-center px-2",

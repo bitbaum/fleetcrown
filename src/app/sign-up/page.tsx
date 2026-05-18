@@ -8,6 +8,7 @@ import {
   AuthFooterLink, AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -32,9 +33,9 @@ export default function SignUpPage() {
 
       const result = await signIn("email-password", { email, password, redirect: false });
       if (result?.ok) {
-        router.push("/onboarding");
+        router.push(ROUTES.ONBOARDING);
       } else {
-        router.push("/sign-in");
+        router.push(ROUTES.SIGN_IN);
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -107,7 +108,7 @@ export default function SignUpPage() {
         </form>
       </AuthCard>
 
-      <AuthFooterLink href="/sign-in">
+      <AuthFooterLink href={ROUTES.SIGN_IN}>
         Already have an account? Sign in →
       </AuthFooterLink>
     </AuthShell>

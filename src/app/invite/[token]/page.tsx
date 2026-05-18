@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { getJson, postJson } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
@@ -53,9 +54,9 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
       const result = await signIn("user-password", { userId: data.userId, password, redirect: false });
       if (result?.ok) {
-        router.push("/today");
+        router.push(ROUTES.APP_HOME);
       } else {
-        router.push("/sign-in");
+        router.push(ROUTES.SIGN_IN);
       }
     } catch {
       setError("Something went wrong.");
@@ -88,7 +89,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
       {isError && (
         <p className="ui-auth-note">
-          <Link href="/sign-in" className="ui-auth-inline-link">Sign in</Link>{" "}
+          <Link href={ROUTES.SIGN_IN} className="ui-auth-inline-link">Sign in</Link>{" "}
           if you already have an account.
         </p>
       )}

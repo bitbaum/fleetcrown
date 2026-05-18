@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ROUTES } from "@/config/auth";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
   AuthDivider, AuthHeading, AuthSecondaryButton,
@@ -48,8 +49,8 @@ function FormInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/today";
-  const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : "/today";
+  const callbackUrl = searchParams.get("callbackUrl") ?? ROUTES.APP_HOME;
+  const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : ROUTES.APP_HOME;
 
   const [mode, setMode]     = useState<Mode>("email");
   const [email, setEmail]   = useState("");
@@ -200,7 +201,7 @@ function FormInner({
                 />
                 <div className="text-right">
                   <Link
-                    href="/forgot-password"
+                    href={ROUTES.FORGOT_PASSWORD}
                     className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2"
                   >
                     Forgot password?
@@ -217,7 +218,7 @@ function FormInner({
             />
             <p className="text-center text-sm text-white/35">
               No account?{" "}
-              <Link href="/sign-up" className="text-white/60 underline underline-offset-2 hover:text-white/80 transition-colors">
+              <Link href={ROUTES.SIGN_UP} className="text-white/60 underline underline-offset-2 hover:text-white/80 transition-colors">
                 Create one free →
               </Link>
             </p>

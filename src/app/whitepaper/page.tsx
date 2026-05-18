@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { parseThoughtBlocks } from "@/lib/thoughts-content";
+import { ROUTES } from "@/config/auth";
 
 export const metadata: Metadata = {
   title: "Whitepaper — Cockpit",
@@ -44,7 +45,7 @@ export default function WhitepaperPage() {
   return (
     <PublicSurface
       right={(
-        <Link href="/sign-in" className="ui-public-nav-action">
+        <Link href={ROUTES.SIGN_IN} className="ui-public-nav-action">
           Get started →
         </Link>
       )}
@@ -147,7 +148,7 @@ export default function WhitepaperPage() {
           <p className="mb-2 text-sm font-medium text-white/60">Ready to close the execution gap?</p>
           <p className="mb-8 text-sm text-white/30">Start using Cockpit as your builder operating system.</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link href="/sign-in" className="ui-public-primary-action">
+            <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action">
               Get started →
             </Link>
             <Link href="/" className="ui-public-nav-action px-6 py-2.5 text-sm">

@@ -8,6 +8,7 @@ import {
   AuthHeading,
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -30,7 +31,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Reset failed."); return; }
       setDone(true);
-      setTimeout(() => router.push("/sign-in"), 2000);
+      setTimeout(() => router.push(ROUTES.SIGN_IN), 2000);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -94,7 +95,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
       <p className="mt-4 text-center text-xs text-text-muted">
         Link expired?{" "}
-        <Link href="/forgot-password" className="text-text-secondary underline underline-offset-2 hover:text-text-primary">
+        <Link href={ROUTES.FORGOT_PASSWORD} className="text-text-secondary underline underline-offset-2 hover:text-text-primary">
           Request a new one
         </Link>
       </p>

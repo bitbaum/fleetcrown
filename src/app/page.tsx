@@ -12,30 +12,25 @@ import {
   LANDING_WHITEPAPER_LABEL,
 } from "@/config/marketing";
 import { isStripeReady } from "@/lib/stripe";
-
-const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Whitepaper", href: "/whitepaper" },
-];
+import { ROUTES, PUBLIC_NAV_LINKS } from "@/config/auth";
 
 export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
 
   const session = await auth();
-  if (session?.user) redirect("/today");
+  if (session?.user) redirect(ROUTES.APP_HOME);
 
   const stripeReady = isStripeReady();
 
   return (
     <PublicSurface
-      navLinks={NAV_LINKS}
+      navLinks={PUBLIC_NAV_LINKS}
       right={(
         <div className="flex items-center gap-2">
-          <Link href="/sign-in" className="ui-public-nav-link hidden sm:block">
+          <Link href={ROUTES.SIGN_IN} className="ui-public-nav-link hidden sm:block">
             Sign in
           </Link>
-          <Link href="/sign-in" className="ui-public-primary-action !py-2 !px-5 text-sm">
+          <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action !py-2 !px-5 text-sm">
             Get started →
           </Link>
         </div>
@@ -55,7 +50,7 @@ export default async function LandingPage() {
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/sign-in" className="ui-public-primary-action">
+          <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action">
             Get started →
           </Link>
           <Link href="/whitepaper" className="ui-public-nav-action px-8 py-3">
@@ -116,8 +111,8 @@ export default async function LandingPage() {
                 <Link
                   href={
                     stripeReady
-                      ? `/sign-in?callbackUrl=${encodeURIComponent(`/api/checkout/${tier.name.toLowerCase()}`)}`
-                      : "/sign-in"
+                      ? `${ROUTES.SIGN_IN}?callbackUrl=${encodeURIComponent(`/api/checkout/${tier.name.toLowerCase()}`)}`
+                      : ROUTES.SIGN_IN
                   }
                   className={
                     tier.highlighted

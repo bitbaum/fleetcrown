@@ -1,6 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY ?? "");
+// Lazy — Resend throws at construction if key is empty string, which breaks next build
+let _resend: Resend | null = null;
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY!);
+  return _resend;
+}
+
 const FROM = process.env.EMAIL_FROM ?? "Cockpit <noreply@cockpit.app>";
 
 function appUrl(): string {
@@ -14,7 +20,7 @@ export function sendEmailFire(to: string, subject: string, html: string, text: s
     console.log(`  To: ${to}\n  Subject: ${subject}\n  Text: ${text}`);
     return;
   }
-  resend.emails.send({ from: FROM, to, subject, html, text }).catch((err) => {
+  getResend().emails.send({ from: FROM, to, subject, html, text }).catch((err) => {
     console.error("[email] send error:", err);
   });
 }
@@ -25,7 +31,7 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     console.log("[email] no RESEND_API_KEY — skipping send");
     return;
   }
-  const { error } = await resend.emails.send({ from: FROM, to, subject, html, text });
+  const { error } = await getResend().emails.send({ from: FROM, to, subject, html, text });
   if (error) throw new Error(`Resend error: ${error.message}`);
 }
 

@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Loader2, GitBranch, Star, Lock } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
+import { ROUTES } from "@/config/auth";
 import {
   AuthShell,
   AuthCard,
@@ -137,7 +138,7 @@ export default function OnboardingPage() {
       if (orgsData.orgs && orgsData.orgs.length > 0) {
         await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
         await update();
-        router.push("/today");
+        router.push(ROUTES.APP_HOME);
         return;
       }
 
@@ -168,7 +169,7 @@ export default function OnboardingPage() {
       }
       await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
       await update();
-      router.push("/today");
+      router.push(ROUTES.APP_HOME);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

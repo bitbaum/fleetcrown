@@ -1,12 +1,7 @@
 import Link from "next/link";
-import { PublicSurface, type NavLink } from "@/components/public/PublicSurface";
+import { PublicSurface } from "@/components/public/PublicSurface";
 import { PUBLIC_SURFACE } from "@/config/ui";
-
-const AUTH_NAV_LINKS: NavLink[] = [
-  { label: "Features", href: "/#features" },
-  { label: "Pricing", href: "/#pricing" },
-  { label: "Whitepaper", href: "/whitepaper" },
-];
+import { PUBLIC_NAV_LINKS } from "@/config/auth";
 
 export function AuthField({
   label,
@@ -92,7 +87,7 @@ export function AuthShell({
   navRight?: React.ReactNode;
 }) {
   return (
-    <PublicSurface navLinks={AUTH_NAV_LINKS} right={navRight}>
+    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={navRight}>
       <main
         className="relative z-10 flex items-center justify-center px-4 pb-16"
         style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}
