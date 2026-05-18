@@ -83,7 +83,7 @@ _init_base_url() {
 trap 'rm -f "$_URL_CACHE"' EXIT
 
 claim_next() {
-  curl -sf \
+  curl -sf --max-time 15 \
     -H "Authorization: Bearer $TOKEN" \
     "$(_base_url)/api/control/commands" 2>/dev/null
 }
@@ -96,7 +96,7 @@ mark_done() {
   else
     body=$(printf '{"ok":%s}' "$ok")
   fi
-  curl -sf -X PATCH \
+  curl -sf --max-time 10 -X PATCH \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$body" \
@@ -227,7 +227,7 @@ _agent_launch_cmd() {
       ;;
     codex)
       local esc_model
-      esc_model=$(printf '%q' "${model:-codex-4-5}")
+      esc_model=$(printf '%q' "${model:-gpt-5.4}")
       echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && codex --model ${esc_model} --no-alt-screen"
       ;;
     *)
@@ -237,32 +237,18 @@ _agent_launch_cmd() {
 }
 
 # Returns 0 (true) if any process matching the agent's basename is running with
-# a cwd equal to or inside dir; 1 otherwise. Used to verify the outgoing agent
-# actually exited before launching the replacement.
+# a cwd equal to or inside dir; 1 otherwise. Delegates to _scan_agents so the
+# /proc walking logic lives in exactly one place.
 _is_agent_running_in_dir() {
   local agent="$1" dir="$2"
-  local matcher
-  case "$agent" in
-    claude)  matcher="claude" ;;
-    codex)   matcher="codex"  ;;
-    gemini)  matcher="gemini" ;;
-    *)       return 1 ;;
-  esac
-  local pid_dir argv0 basename cwd
-  for pid_dir in /proc/[0-9]*/; do
-    [ -f "${pid_dir}cmdline" ] || continue
-    argv0=$(cut -d '' -f1 "${pid_dir}cmdline" 2>/dev/null) || continue
-    basename="${argv0##*/}"
-    case "$basename" in
-      "$matcher"|"${matcher}"-*) ;;
-      *) continue ;;
-    esac
-    cwd=$(readlink "${pid_dir}cwd" 2>/dev/null) || continue
+  local found
+  found=$(_scan_agents 2>/dev/null | while IFS=' ' read -r cwd aname; do
+    [ "$aname" = "$agent" ] || continue
     if [ "$cwd" = "$dir" ] || [ "${cwd#"${dir}/"}" != "$cwd" ]; then
-      return 0
+      echo "1"; break
     fi
-  done
-  return 1
+  done)
+  [ "$found" = "1" ]
 }
 
 execute_switch_agent() {
@@ -459,9 +445,9 @@ push_runtime_state() {
       fi
     done <<< "$agent_lines"
 
-    # Check if this project's Zellij tab is actually open (case-insensitive)
+    # Check if this project's Zellij tab is actually open (case-insensitive exact line)
     local tab_open="false"
-    if echo "$all_open_tabs" | grep -qiF "$tab"; then
+    if echo "$all_open_tabs" | grep -qixF "$tab"; then
       tab_open="true"
     fi
 
@@ -517,7 +503,7 @@ push_runtime_state() {
 
   done < "$CONF_FILE"
 
-  curl -sf -X POST \
+  curl -sf --max-time 8 -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "{\"projects\":$projects_arr}" \

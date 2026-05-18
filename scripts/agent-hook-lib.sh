@@ -173,7 +173,7 @@ _find_session_for_tab() {
   local tab="$1"
   zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
     if ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null \
-        | grep -qF "$tab"; then
+        | grep -qxF "$tab"; then
       echo "$s"
       return 0
     fi
