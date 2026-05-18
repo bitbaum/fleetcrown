@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
 
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const dataOrResp = await readJsonBody(req, CheckoutBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;

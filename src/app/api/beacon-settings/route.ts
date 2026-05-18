@@ -4,6 +4,7 @@ import { dirname } from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 import { WHISPER_MODEL_VALUES, TRANSCRIPTION_PROVIDER_VALUES, BEACON_SETTINGS_PATH } from "@/config/beacon";
+import { getApiUserId } from "@/lib/session";
 
 const PatchBody = z.object({
   countdown_seconds: z.number().int().min(MIN_BEACON_COUNTDOWN_S).max(MAX_BEACON_COUNTDOWN_S).optional(),
@@ -41,6 +42,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, PatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
