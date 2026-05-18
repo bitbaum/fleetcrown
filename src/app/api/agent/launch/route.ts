@@ -4,6 +4,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { launchAgentInTab } from "@/lib/agent-runtime";
 import { listAgentRegistry } from "@/lib/agent-registry";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { getApiUserId } from "@/lib/session";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -56,6 +57,9 @@ function scheduleInjectAfterLaunch(tab: string, dir: string, prompt: string): vo
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!isRuntimeAvailable()) {
     return NextResponse.json(
       { error: "Agent launch requires the local runtime — open Cockpit on your machine to launch tabs." },
