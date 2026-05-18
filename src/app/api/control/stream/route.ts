@@ -122,6 +122,7 @@ export async function GET() {
           ? scanProjects()
           : dbToFastState(confProjects, await getProjectStatesByUserId(userId).catch((): DbProjectState[] => []));
 
+        const agentsKey = (a: string[]) => [...a].sort().join(",");
         const changed = current.filter((proj, i) => {
           const prev = lastSent[i];
           if (!prev) return true;
@@ -133,7 +134,8 @@ export async function GET() {
             proj.closedAt !== prev.closedAt ||
             proj.currentPrompt?.key !== prev.currentPrompt?.key ||
             proj.currentPrompt?.startedAt !== prev.currentPrompt?.startedAt ||
-            proj.session?.mtime !== prev.session?.mtime
+            proj.session?.mtime !== prev.session?.mtime ||
+            agentsKey(proj.activeAgents) !== agentsKey(prev.activeAgents)
           );
         });
 
