@@ -423,6 +423,22 @@ handle_notification() {
     exit 0
   fi
 
+  # Dequeue any user-dispatched task first — same logic handle_stop uses for slot 1.
+  local queue_file
+  queue_file="/tmp/agent-queue-${TAB_NAME,,}"
+  if [ -f "$queue_file" ]; then
+    local first_item tmp_q
+    first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
+    if [ -n "$first_item" ]; then
+      log "notification: dequeuing queued prompt instead of next_best"
+      tmp_q="${queue_file}.tmp"
+      jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+      emit_or_inject_prompt "$TAB_NAME" "$first_item"
+      write_inject_state "$TAB_NAME" "custom" "Queued prompt"
+      exit 0
+    fi
+  fi
+
   local base session session_file session_update_block
   base=$(get_prompt "next_best")
   [ -z "$base" ] && exit 0
