@@ -63,6 +63,8 @@ def _write_beacon_session(label: str, session_content: str) -> str:
     web server; the browser popup reads/writes via the API using its session cookie.
     """
     session_id = str(uuid.uuid4())
+    _s = load_settings()
+    configured_countdown = int(_s.get("countdown_seconds", _s.get("countdown_secs", COUNTDOWN_SECONDS)))
     session = {
         "id": session_id,
         "project": label,
@@ -72,6 +74,7 @@ def _write_beacon_session(label: str, session_content: str) -> str:
         "currentAgent": _current_agent(),
         "nextAgent": None,
         "capacityIssue": False,
+        "countdownSeconds": configured_countdown,
     }
     os.makedirs(_BEACON_DIR, exist_ok=True)
     # Cancel any active (no choice yet) sessions for this project.

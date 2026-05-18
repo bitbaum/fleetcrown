@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
+import { BEACON_SETTINGS_PATH } from "@/config/beacon";
+import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 
 const BEACON_DIR = "/tmp/cockpit-beacon";
 
@@ -16,7 +18,18 @@ export type BeaconSession = {
   currentAgent: Agent | null;
   nextAgent: Agent | null;
   capacityIssue: boolean;
+  countdownSeconds: number;
 };
+
+function readConfiguredCountdown(): number {
+  try {
+    const raw = JSON.parse(fs.readFileSync(BEACON_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
+    const n = raw.countdown_seconds;
+    return typeof n === "number" && n > 0 ? n : DEFAULT_BEACON_COUNTDOWN_S;
+  } catch {
+    return DEFAULT_BEACON_COUNTDOWN_S;
+  }
+}
 
 const CreateBody = z.object({
   project: z.string().max(200),
@@ -84,6 +97,7 @@ export async function POST(req: NextRequest) {
     currentAgent: isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude",
     nextAgent: resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude"),
     capacityIssue: looksLikeAgentCapacityIssue(dataOrResp.sessionContent),
+    countdownSeconds: readConfiguredCountdown(),
   };
   fs.writeFileSync(beaconPath(session.id), JSON.stringify(session));
   return NextResponse.json({ id: session.id });

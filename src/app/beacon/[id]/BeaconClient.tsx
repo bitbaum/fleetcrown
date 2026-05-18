@@ -14,7 +14,7 @@ import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/componen
 import { getJson, patchJson } from "@/lib/api/fetch";
 import { PROMPT_STYLE } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
-import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, AUTO_INJECT_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX } from "@/lib/constants/control";
 import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import { getAdapterLabel } from "@/config/control-intents";
 import type { BeaconSession } from "@/app/api/beacon/route";
@@ -35,10 +35,7 @@ function SessionSummary({ content }: { content: string }) {
   );
 }
 
-function readCountdownParam(): number {
-  if (typeof window === "undefined") return DEFAULT_BEACON_COUNTDOWN_S;
-  const raw = new URLSearchParams(window.location.search).get("countdown");
-  const n = raw ? parseInt(raw, 10) : NaN;
+function clampCountdown(n: number): number {
   return Number.isFinite(n) && n >= MIN_BEACON_COUNTDOWN_S && n <= MAX_BEACON_COUNTDOWN_S ? n : DEFAULT_BEACON_COUNTDOWN_S;
 }
 
@@ -61,15 +58,16 @@ function BeaconBody({
   const [inputFocused, setInputFocused] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const configured = clampCountdown(session.countdownSeconds ?? DEFAULT_BEACON_COUNTDOWN_S);
   const [countdown, setCountdown] = useState(() => {
     try {
       const stored = localStorage.getItem(readyAtKey(session.project));
       if (stored) {
         const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
-        return Math.max(0, AUTO_INJECT_S - elapsed);
+        return Math.max(0, configured - elapsed);
       }
     } catch {}
-    return readCountdownParam();
+    return configured;
   });
   const autoFiredRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);

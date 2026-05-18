@@ -3,8 +3,8 @@
 export const READY_WINDOW_S   = 600;    // 10 min — "Agent finished" banner
 export const CLOSED_WINDOW_S  = 3600;   // 1 hour — "Session closed" banner
 export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banner
-export const AUTO_INJECT_S              = 12;  // countdown before auto-inject in control panel
-export const DEFAULT_BEACON_COUNTDOWN_S = 30;  // default countdown in beacon popup (user-configurable)
+export const AUTO_INJECT_S              = 12;  // countdown before auto-inject in control panel (matches Python COUNTDOWN_SECONDS)
+export const DEFAULT_BEACON_COUNTDOWN_S = 12;  // fallback when settings file is absent — must match Python COUNTDOWN_SECONDS
 export const MIN_BEACON_COUNTDOWN_S     = 5;   // shortest allowed beacon countdown
 export const MAX_BEACON_COUNTDOWN_S     = 300; // longest allowed beacon countdown (5 minutes)
 
