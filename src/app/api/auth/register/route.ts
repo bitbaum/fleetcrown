@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserByEmail, createUser } from "@/db/queries/users";
+import { createEmailVerificationToken } from "@/db/queries/emailVerification";
 import { hashPassword } from "@/lib/password";
+import { sendEmailFire, verifyEmailTemplate, welcomeEmailTemplate } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const Body = z.object({
@@ -12,6 +14,10 @@ const Body = z.object({
 
 const LIMIT  = 10;           // max registrations
 const WINDOW = 60 * 60_000; // per hour
+
+function appUrl(): string {
+  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+}
 
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`register:${getClientIp(req)}`, LIMIT, WINDOW)) {
@@ -32,6 +38,23 @@ export async function POST(req: NextRequest) {
 
   const passwordHash = await hashPassword(password);
   const user = await createUser({ name, email, passwordHash });
+
+  // Send verification + welcome emails (fire-and-forget — don't block registration)
+  try {
+    const token = await createEmailVerificationToken(user.id);
+    const verifyUrl = `${appUrl()}/verify-email/${token}`;
+    const { subject, html, text } = verifyEmailTemplate(verifyUrl, name);
+    sendEmailFire(email, subject, html, text);
+  } catch (err) {
+    console.error("[register] failed to create verification token:", err);
+  }
+
+  try {
+    const { subject, html, text } = welcomeEmailTemplate(name);
+    sendEmailFire(email, subject, html, text);
+  } catch (err) {
+    console.error("[register] failed to send welcome email:", err);
+  }
 
   return NextResponse.json({ ok: true, userId: user.id }, { status: 201 });
 }

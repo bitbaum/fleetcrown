@@ -22,7 +22,7 @@ export const config = {
      *   favicon.ico                – browser icon request
      *   /                          – public landing page (.+ not .*)
      *   sign-in, sign-up           – public auth pages
-     *   forgot-password, reset-password, setup, invite
+     *   forgot-password, reset-password, verify-email, setup, invite
      *   whitepaper, thoughts       – public content
      *   u/                         – public user profiles (/u/[username])
      *   beacon                     – public beacon page
@@ -33,6 +33,6 @@ export const config = {
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
   ],
 };
