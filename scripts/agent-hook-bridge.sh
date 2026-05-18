@@ -75,29 +75,22 @@ switch_agent_and_continue() {
   local tab_name="$1" project_dir="$2" agent="$3" prompt="$4"
   local command prompt_file runner
 
+  # Interrupt any lingering process at the prompt. send_raw_key_to_tab handles
+  # session discovery and waits for tab focus before sending the keycode.
+  send_raw_key_to_tab "$tab_name" 3 2>/dev/null || true
+  sleep 0.3
+
   case "$agent" in
     codex|gemini)
       prompt_file="/tmp/cockpit-${agent}-prompt-$(date +%s)-$$.txt"
       printf '%s' "$prompt" > "$prompt_file"
       runner="$SCRIPT_DIR/run-${agent}-task.sh"
       command=$(printf "bash %q %q %q %q %q" "$runner" "$tab_name" "$project_dir" "$prompt_file" "$([ "$agent" = "gemini" ] && echo auto || echo gpt-5.4)")
-      zellij action go-to-tab-name "$tab_name" 2>/dev/null || true
-      sleep 0.2
-      zellij action write 3 2>/dev/null || true
-      sleep 0.1
-      zellij action write-chars -- "$command" 2>/dev/null || true
-      sleep 0.1
-      zellij action write 13 2>/dev/null || true
+      inject_prompt "$tab_name" "$command" 2>/dev/null || true
       ;;
     claude)
       command=$(agent_command "$agent" "$project_dir") || return 1
-      zellij action go-to-tab-name "$tab_name" 2>/dev/null || true
-      sleep 0.2
-      zellij action write 3 2>/dev/null || true
-      sleep 0.1
-      zellij action write-chars -- "$command" 2>/dev/null || true
-      sleep 0.1
-      zellij action write 13 2>/dev/null || true
+      inject_prompt "$tab_name" "$command" 2>/dev/null || true
       sleep 3
       inject_prompt "$tab_name" "$prompt"
       ;;
