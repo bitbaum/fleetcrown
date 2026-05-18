@@ -676,10 +676,10 @@
     @apply flex flex-col items-center justify-center;
   }
 
-  /* Tall-modal scroll container — caps at --modal-max-height */
+  /* Override modal height cap + keep whole-panel scroll (simple modals without sticky header/footer) */
   .ui-modal-scrollable {
     max-height: var(--modal-max-height);
-    @apply flex flex-col overflow-hidden;
+    @apply overflow-y-auto;
   }
 
   /* Error-state focus ring — recording/mic-active input border + glow */

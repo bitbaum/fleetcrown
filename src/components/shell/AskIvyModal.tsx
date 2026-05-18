@@ -56,7 +56,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
   const displayedPrompts = showAllPrompts ? GLOBAL_PROMPTS : QUICK_PROMPTS;
 
   return (
-      <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="ui-modal-scrollable">
+      <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col">
         {/* Header */}
         <div className="shrink-0 border-b border-border-subtle px-5 py-4">
           <div className="flex items-center justify-between gap-3">
