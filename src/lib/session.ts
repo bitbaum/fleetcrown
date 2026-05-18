@@ -61,11 +61,3 @@ export async function getApiUserId(): Promise<string | null> {
 
   return null;
 }
-
-/**
- * @deprecated Use requirePageUserId() in server components/actions,
- * or getSessionUserId() + 401 check in API routes.
- */
-export async function getCurrentUserId(): Promise<string> {
-  return requirePageUserId();
-}

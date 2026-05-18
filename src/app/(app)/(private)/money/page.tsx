@@ -7,7 +7,6 @@ import { CancelledSubsSection } from "@/components/money/CancelledSubsSection";
 import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS, type SubStatus } from "@/lib/constants/statuses";
 import {
-  getActiveSubscriptions,
   getAllSubscriptions,
   getFinancialCommitments,
   calculateMonthlyBurn,
@@ -86,11 +85,11 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
 
 export default async function MoneyPage() {
   const userId = await requirePageUserId();
-  const [activeSubs, allSubs, commitments] = await Promise.all([
-    getActiveSubscriptions(userId),
+  const [allSubs, commitments] = await Promise.all([
     getAllSubscriptions(userId),
     getFinancialCommitments(userId),
   ]);
+  const activeSubs = allSubs.filter((s) => s.status === SUB_STATUS.ACTIVE);
   const burn = calculateMonthlyBurn(activeSubs);
   const visibleSubs = allSubs.filter((s) => s.status !== SUB_STATUS.CANCELLED);
   const cancelledSubs = allSubs.filter((s) => s.status === SUB_STATUS.CANCELLED);

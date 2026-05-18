@@ -90,19 +90,6 @@ export async function deleteSubscription(userId: string, id: string) {
   return deleted ?? null;
 }
 
-export async function getActiveSubscriptions(userId: string) {
-  return db
-    .select()
-    .from(subscriptions)
-    .where(
-      and(
-        eq(subscriptions.userId, userId),
-        eq(subscriptions.status, SUB_STATUS.ACTIVE),
-      ),
-    )
-    .orderBy(sql`${subscriptions.amount} DESC NULLS LAST`);
-}
-
 export async function getAllSubscriptions(userId: string) {
   return db
     .select()
