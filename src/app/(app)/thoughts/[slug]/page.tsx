@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { PageLayout } from "@/components/ui/page-layout";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
-import { getAdjacentThoughts, getRelatedThoughts, getThought, listThoughts, parseThoughtBlocks } from "@/lib/thoughts-content";
+import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
 
 export const dynamic = "force-dynamic";
 
