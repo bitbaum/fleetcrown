@@ -21,6 +21,7 @@ export function ScheduleModal({
   const [schedule, setSchedule] = useState(template.suggestedSchedule ?? "0 9 * * 1");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const resolvedMessage =
     template.scope === "project" && projectName
@@ -35,15 +36,22 @@ export function ScheduleModal({
   const handleCreate = async () => {
     if (template.scope === "project" && !projectId) return;
     setSaving(true);
-    await createCronJob({
-      name: jobName,
-      scheduleExpr: schedule,
-      message: resolvedMessage,
-      ...(projectId ? { projectId, projectName } : {}),
-    });
-    setSaving(false);
-    setDone(true);
-    setTimeout(onClose, 1200);
+    setError(null);
+    try {
+      const res = await createCronJob({
+        name: jobName,
+        scheduleExpr: schedule,
+        message: resolvedMessage,
+        ...(projectId ? { projectId, projectName } : {}),
+      });
+      if (!res.ok) { setError("Failed to create job — try again"); return; }
+      setDone(true);
+      setTimeout(onClose, 1200);
+    } catch {
+      setError("Network error — try again");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -97,6 +105,7 @@ export function ScheduleModal({
         </div>
       </div>
 
+      {error && <p className="ui-error-xs">{error}</p>}
       <button
         onClick={handleCreate}
         disabled={saving || done || (template.scope === "project" && !projectId)}
