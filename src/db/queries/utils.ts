@@ -1,6 +1,7 @@
 import { db } from "@/db";
-import { attributes, entities, interactions, type Interaction } from "@/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { attributes, entities, interactions, orgMemberships, type Interaction } from "@/db/schema";
+import { alias } from "drizzle-orm/pg-core";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { z } from "zod";
@@ -22,6 +23,20 @@ export const SetAttrBody = z.object({
 export const DeleteAttrBody = z.object({
   key: z.string().trim().min(1, "key required"),
 });
+
+/**
+ * Returns distinct userIds of other members who share at least one org with this user.
+ * Single self-join query — callers use it to scope lookups to org peers.
+ */
+export async function getOrgPeerIds(userId: string): Promise<string[]> {
+  const m2 = alias(orgMemberships, "m2");
+  const rows = await db
+    .selectDistinct({ userId: m2.userId })
+    .from(orgMemberships)
+    .innerJoin(m2, eq(orgMemberships.orgId, m2.orgId))
+    .where(and(eq(orgMemberships.userId, userId), ne(m2.userId, userId)));
+  return rows.map((r) => r.userId);
+}
 
 export async function fetchAttributesByEntityIds(
   entityIds: string[],

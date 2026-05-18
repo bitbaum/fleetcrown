@@ -1,8 +1,9 @@
-import { and, asc, count, eq, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, orgs, orgMemberships, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
+import { entities, orgs, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { getOrgPeerIds } from "./utils";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -18,22 +19,8 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
  * regardless of whether projects have been explicitly org-tagged.
  */
 export async function getOrgProjects(userId: string): Promise<UserProject[]> {
-  const memberships = await db
-    .select({ orgId: orgMemberships.orgId })
-    .from(orgMemberships)
-    .where(eq(orgMemberships.userId, userId));
-
-  if (memberships.length === 0) return [];
-  const orgIds = memberships.map((m) => m.orgId);
-
-  const peers = await db
-    .select({ userId: orgMemberships.userId })
-    .from(orgMemberships)
-    .where(and(inArray(orgMemberships.orgId, orgIds), ne(orgMemberships.userId, userId)));
-
-  if (peers.length === 0) return [];
-  const peerIds = peers.map((p) => p.userId);
-
+  const peerIds = await getOrgPeerIds(userId);
+  if (peerIds.length === 0) return [];
   return db
     .select()
     .from(userProjects)
