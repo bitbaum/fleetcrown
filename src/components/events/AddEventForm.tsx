@@ -35,6 +35,8 @@ export function AddEventForm({ onCreated, existingTypes = [] }: { onCreated: (ev
       onCreated(data.event as EventRow);
       reset();
       setOpen(false);
+    } catch {
+      setError("Network error — try again");
     } finally {
       setSaving(false);
     }

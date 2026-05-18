@@ -50,22 +50,26 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   };
 
   const addHabit = async (input: { title: string; frequency: HabitFrequency }): Promise<boolean> => {
-    const res = await postJson("/api/habits", input);
-    const data = await res.json() as { habit?: { id: string; title: string } };
-    if (!data.habit) return false;
-    setHabits((prev) => [
-      ...prev,
-      {
-        id: data.habit!.id,
-        title: data.habit!.title,
-        frequency: input.frequency,
-        sortOrder: prev.length,
-        doneToday: false,
-        streak: 0,
-      },
-    ]);
-    router.refresh();
-    return true;
+    try {
+      const res = await postJson("/api/habits", input);
+      const data = await res.json() as { habit?: { id: string; title: string } };
+      if (!data.habit) return false;
+      setHabits((prev) => [
+        ...prev,
+        {
+          id: data.habit!.id,
+          title: data.habit!.title,
+          frequency: input.frequency,
+          sortOrder: prev.length,
+          doneToday: false,
+          streak: 0,
+        },
+      ]);
+      router.refresh();
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   if (habits.length === 0) {

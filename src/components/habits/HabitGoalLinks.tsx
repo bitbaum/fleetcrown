@@ -19,6 +19,12 @@ export function HabitGoalLinks({
   const [items, setItems] = useState<LinkedGoal[]>(linked);
   const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  const flashError = (msg: string) => {
+    setLinkError(msg);
+    setTimeout(() => setLinkError(null), 3000);
+  };
 
   const unlinked = allGoals.filter((g) => !items.some((l) => l.id === g.id));
 
@@ -30,7 +36,13 @@ export function HabitGoalLinks({
       if (res.ok) {
         setItems((prev) => [...prev, goal]);
         router.refresh();
+      } else {
+        setPicking(true);
+        flashError("Failed to link — try again");
       }
+    } catch {
+      setPicking(true);
+      flashError("Network error — try again");
     } finally {
       setSaving(null);
     }
@@ -43,7 +55,11 @@ export function HabitGoalLinks({
       if (res.ok) {
         setItems((prev) => prev.filter((g) => g.id !== goalId));
         router.refresh();
+      } else {
+        flashError("Failed to unlink — try again");
       }
+    } catch {
+      flashError("Network error — try again");
     } finally {
       setSaving(null);
     }
@@ -52,6 +68,7 @@ export function HabitGoalLinks({
   return (
     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
       <Target className="h-3 w-3 text-text-muted shrink-0" />
+      {linkError && <span className="text-xs text-status-negative">{linkError}</span>}
 
       {items.length === 0 && !picking && (
         <span className="text-xs text-text-muted">no goal linked</span>

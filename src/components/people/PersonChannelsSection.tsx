@@ -47,13 +47,20 @@ export function ChannelsSection({
 
   const deleteChannel = async (key: string) => {
     setDeletingKey(key);
+    setSaveError(null);
     try {
       const res = await removeAttr(`/api/people/${personId}`, key);
       if (res.ok) {
         const next = { ...attrs };
         delete next[key];
         onUpdate(next);
+      } else {
+        setSaveError("Failed to remove — try again");
+        setTimeout(() => setSaveError(null), 3000);
       }
+    } catch {
+      setSaveError("Network error — try again");
+      setTimeout(() => setSaveError(null), 3000);
     } finally {
       setDeletingKey(null);
     }
