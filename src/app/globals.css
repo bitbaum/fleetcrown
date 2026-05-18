@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Exclude documentation/config files — they contain example class names that
+   confuse the Tailwind scanner and generate invalid CSS (e.g. var(--*)). */
+@source not "../../CLAUDE.md";
+@source not "../../.claude";
+@source not "../../content";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
