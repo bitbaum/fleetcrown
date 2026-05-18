@@ -1,8 +1,9 @@
+import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand } from "@/lib/agent-registry";
-import { injectIntoTab } from "@/lib/zellij";
+import { injectIntoTab, sendRawKey } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 
@@ -16,6 +17,28 @@ const SwitchAgentBody = z.object({
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Scan /proc to check whether any process matching the given basenames is
+ * currently running with a cwd equal to or inside dir. Used to verify the
+ * outgoing agent actually exited before we launch the replacement.
+ */
+function isAgentRunningInDir(processMatchers: string[], dir: string): boolean {
+  try {
+    for (const entry of fs.readdirSync("/proc")) {
+      if (!/^\d+$/.test(entry)) continue;
+      try {
+        const cmdline = fs.readFileSync(`/proc/${entry}/cmdline`, "utf-8");
+        const argv0 = cmdline.split("\0")[0] ?? "";
+        const basename = argv0.includes("/") ? argv0.split("/").pop()! : argv0;
+        if (!processMatchers.some((m) => basename === m || basename.startsWith(`${m}-`))) continue;
+        const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);
+        if (cwd === dir || cwd.startsWith(dir + "/")) return true;
+      } catch { /* process gone or permission denied */ }
+    }
+  } catch { /* /proc unavailable */ }
+  return false;
 }
 
 export async function POST(req: NextRequest) {
@@ -32,7 +55,6 @@ export async function POST(req: NextRequest) {
   if (!isRuntimeAvailable()) {
     const userId = await getSessionUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const commandId = await enqueueSwitchAgentCommand(userId, { tab, dir, toAgent, fromAgent, model });
     return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
   }
@@ -45,8 +67,24 @@ export async function POST(req: NextRequest) {
       const fromEntry = registry.find((e) => e.id === fromAgent);
       if (fromEntry?.quitCommand) {
         injectIntoTab(tab, fromEntry.quitCommand);
-        // Give the agent time to exit and return to shell prompt.
-        await sleep(900);
+
+        // Poll /proc for up to 2s to confirm the process exited cleanly.
+        const deadline = Date.now() + 2000;
+        let gone = false;
+        while (Date.now() < deadline) {
+          await sleep(200);
+          if (!isAgentRunningInDir(fromEntry.processMatchers, dir)) {
+            gone = true;
+            break;
+          }
+        }
+
+        // Quit command didn't land — agent is stuck on a prompt or permission
+        // dialog. Send Ctrl+C as a harder interrupt and give it 600ms to clean up.
+        if (!gone) {
+          sendRawKey(tab, 3);
+          await sleep(600);
+        }
       }
     }
 

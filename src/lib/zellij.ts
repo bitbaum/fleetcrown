@@ -72,6 +72,20 @@ export function isUserTypingInTab(tab: string): boolean {
   return false;
 }
 
+/**
+ * Send a raw key code (e.g. 3 = Ctrl+C, 13 = Enter) to a tab without writing
+ * any characters first. Use for interrupt signals where write-chars would be wrong.
+ */
+export function sendRawKey(tab: string, keyCode: number): void {
+  const originalTab = getCurrentTab();
+  execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
+  waitForTabFocus(tab);
+  execSync(`zellij action write ${keyCode}`);
+  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
+    try { execSync(`zellij action go-to-tab-name ${shellEscape(originalTab)}`); } catch { /* best effort */ }
+  }
+}
+
 export function injectIntoTab(tab: string, prompt: string): void {
   // Capture where the user currently is so we can restore it after injection.
   // Zellij has no "write to unfocused pane" command — we must switch tabs to inject.
