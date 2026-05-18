@@ -43,6 +43,8 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
       }
       setEditing(false);
       router.refresh();
+    } catch {
+      setError("Network error — try again");
     } finally {
       setSaving(false);
     }

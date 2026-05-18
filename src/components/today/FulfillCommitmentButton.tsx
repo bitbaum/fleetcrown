@@ -11,6 +11,8 @@ export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string
     setBusy(true);
     try {
       await handleFulfillCommitment(commitmentId);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setBusy(false);
     }

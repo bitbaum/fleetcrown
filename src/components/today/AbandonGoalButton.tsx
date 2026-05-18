@@ -11,6 +11,8 @@ export function AbandonGoalButton({ goalId }: { goalId: string }) {
     setBusy(true);
     try {
       await handleAbandonGoal(goalId);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setBusy(false);
     }

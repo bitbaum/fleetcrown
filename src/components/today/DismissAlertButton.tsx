@@ -11,6 +11,8 @@ export function DismissAlertButton({ alertId }: { alertId: string }) {
     setBusy(true);
     try {
       await handleDismissAlert(alertId);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setBusy(false);
     }
