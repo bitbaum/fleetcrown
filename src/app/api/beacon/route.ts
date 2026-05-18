@@ -19,6 +19,7 @@ export type BeaconSession = {
   nextAgent: Agent | null;
   capacityIssue: boolean;
   countdownSeconds: number;
+  gitBranch?: string | null;
 };
 
 function readConfiguredCountdown(): number {

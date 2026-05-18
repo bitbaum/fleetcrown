@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
-  Loader2, Check, ExternalLink, Repeat2,
+  Loader2, Check, ExternalLink, Repeat2, GitBranch,
 } from "lucide-react";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
@@ -375,19 +375,27 @@ export function BeaconPageClient({
   return (
     <div className="min-h-screen bg-surface-base p-4 sm:p-5">
       <div className="ui-card-header">
-        <div className="ui-card-header-main flex items-center gap-2.5">
-          <span className="block h-2.5 w-2.5 shrink-0 rounded-full border border-status-positive bg-status-positive" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+        <div className="ui-card-header-main">
+          <div className="flex items-center gap-2.5">
+            <span className="block h-2.5 w-2.5 shrink-0 rounded-full border border-status-positive bg-status-positive" />
+            <div className="flex items-center gap-2 min-w-0">
               <span className="truncate text-sm font-semibold text-text-primary">{session.project}</span>
-              <span className="ui-tag ui-tag-positive">ready</span>
+              <span className="ui-tag ui-tag-positive">Ready</span>
             </div>
-            <p className="ui-micro-label mt-0.5">
-              {session.currentAgent ? getAdapterLabel(session.currentAgent) : "agent"} finished
-            </p>
+          </div>
+          <div className="ui-control-card-header-meta mt-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-2.5 py-1 text-xs text-text-tertiary">
+              {getAdapterLabel(session.currentAgent ?? "claude")} ready
+            </span>
+            {session.gitBranch && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-2.5 py-1 text-xs text-text-tertiary">
+                <GitBranch className="h-3 w-3 shrink-0" />
+                {session.gitBranch}
+              </span>
+            )}
           </div>
         </div>
-        <div className="ui-card-actions">
+        <div className="ui-card-actions shrink-0 self-start">
           <button
             onClick={() => window.open(`${window.location.origin}/control`, "_blank")}
             className="ui-icon-action"

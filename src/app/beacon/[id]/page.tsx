@@ -1,12 +1,11 @@
+import { execSync } from "child_process";
 import { readBeaconSession } from "@/app/api/beacon/route";
 import { BeaconPageClient, BeaconLoading } from "./BeaconClient";
+import { isRuntimeAvailable } from "@/lib/runtime";
+import { parseProjectsConf } from "@/lib/agent-config";
 
 // Reads the beacon session from the filesystem on the server, so the initial
 // page render includes the full session content without any client-side API call.
-// This means the beacon page works even when the browser does not have a Cockpit
-// session cookie — the PATCH for recording the user's choice still needs auth,
-// but that always succeeds because beacon.py opens the browser the user is
-// already logged in to (Brave, sorted first in the candidate list).
 export default async function BeaconPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = readBeaconSession(id);
@@ -15,5 +14,21 @@ export default async function BeaconPage({ params }: { params: Promise<{ id: str
     return <BeaconLoading />;
   }
 
-  return <BeaconPageClient initialSession={session} />;
+  // Enrich with git branch when running locally — server has filesystem access.
+  let gitBranch: string | null = null;
+  if (isRuntimeAvailable() && !session.gitBranch) {
+    try {
+      const projects = parseProjectsConf();
+      const match = projects.find((p) => p.tab.toLowerCase() === session.project.toLowerCase());
+      if (match) {
+        gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+          cwd: match.dir,
+          encoding: "utf-8",
+          timeout: 2000,
+        }).trim() || null;
+      }
+    } catch { /* not a git repo or dir not found */ }
+  }
+
+  return <BeaconPageClient initialSession={{ ...session, gitBranch: session.gitBranch ?? gitBranch }} />;
 }
