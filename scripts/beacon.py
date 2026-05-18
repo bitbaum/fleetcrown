@@ -55,6 +55,26 @@ def _current_agent() -> str:
     return raw if raw in ("claude", "codex", "gemini") else "claude"
 
 
+def _check_capacity_sentinel(label: str) -> bool:
+    """Return True if the notification hook wrote a capacity-issue sentinel < 5 min ago.
+
+    Deletes the sentinel on read so it doesn't carry over to the next session.
+    """
+    path = f"/tmp/agent-capacity-issue-{label}"
+    if not os.path.exists(path):
+        return False
+    try:
+        ts = int(open(path).read().strip())
+        os.unlink(path)
+        return (time.time() - ts) < 300
+    except Exception:
+        try:
+            os.unlink(path)
+        except Exception:
+            pass
+        return False
+
+
 def _write_beacon_session(label: str, session_content: str) -> str:
     """Write a beacon session file directly to /tmp — no API auth required.
 
@@ -73,7 +93,7 @@ def _write_beacon_session(label: str, session_content: str) -> str:
         "choice": None,
         "currentAgent": _current_agent(),
         "nextAgent": resolve_next_agent(_current_agent()),
-        "capacityIssue": looks_like_capacity_issue(session_content),
+        "capacityIssue": _check_capacity_sentinel(label) or looks_like_capacity_issue(session_content),
         "countdownSeconds": configured_countdown,
         "gitBranch": read_project_git_branch(label),
     }

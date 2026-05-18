@@ -383,6 +383,16 @@ handle_notification() {
   resolve_tab "$cwd"
   [ -z "${TAB_NAME:-}" ] && exit 0
 
+  # Capture rate-limit / capacity messages before any early-exit guard so the
+  # stop hook that fires next can set capacityIssue=true in the beacon session.
+  local _notif_message
+  _notif_message=$(echo "$input" | jq -r '.message // empty' 2>/dev/null)
+  if echo "$_notif_message" | grep -qiE \
+    "rate.?limit|quota|credit|usage.?limit|token.?limit|out.of.tokens|context.window|maximum.context|insufficient.quota|at.capacity"; then
+    echo "$(date +%s)" > "/tmp/agent-capacity-issue-${TAB_NAME}"
+    log "notification: capacity issue detected — sentinel written for ${TAB_NAME}"
+  fi
+
   lock="/tmp/agent-stop-active-${TAB_NAME}"
   if [ -f "$lock" ]; then
     age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
