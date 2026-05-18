@@ -46,6 +46,8 @@ _copy_scripts() {
   cp "$SCRIPT_DIR/run-codex-task.sh"            "$dest/"
   cp "$SCRIPT_DIR/run-gemini-task.sh"           "$dest/"
   cp "$SCRIPT_DIR/sync-agent-runtime-config.py" "$dest/"
+  cp "$SCRIPT_DIR/notify-choice.py"             "$dest/"
+  cp "$SCRIPT_DIR/get-idle-secs.py"             "$dest/"
   chmod +x "$dest/agent-hook-bridge.sh" "$dest/agent-hook-lib.sh" \
            "$dest/run-codex-task.sh"    "$dest/run-gemini-task.sh"
 }
