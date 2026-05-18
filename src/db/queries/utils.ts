@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { attributes, entities, interactions, orgMemberships, type Interaction } from "@/db/schema";
 import { alias } from "drizzle-orm/pg-core";
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { SOURCE_COCKPIT_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { z } from "zod";
@@ -46,12 +46,7 @@ export async function fetchAttributesByEntityIds(
   const allAttrs = await db
     .select()
     .from(attributes)
-    .where(
-      sql`${attributes.entityId} IN (${sql.join(
-        entityIds.map((id) => sql`${id}`),
-        sql`, `,
-      )})`,
-    );
+    .where(inArray(attributes.entityId, entityIds));
 
   const grouped = new Map<string, Record<string, string>>();
   for (const attr of allAttrs) {
