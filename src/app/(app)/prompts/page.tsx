@@ -2,13 +2,17 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 import { PromptLibraryClient } from "@/components/prompts/PromptLibraryClient";
 import { requirePageUserId } from "@/lib/session";
-import { getProjects } from "@/db/queries/projects";
+import { getProjects, getOrgEntityProjects } from "@/db/queries/projects";
 
 export const metadata = { title: "Prompts" };
 
 export default async function PromptsPage() {
   const userId = await requirePageUserId();
-  const projects = await getProjects(userId);
+  const [ownProjects, orgProjects] = await Promise.all([
+    getProjects(userId),
+    getOrgEntityProjects(userId),
+  ]);
+  const projects = [...ownProjects, ...orgProjects];
 
   return (
     <PageLayout

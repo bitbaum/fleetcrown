@@ -90,7 +90,8 @@ export function RunModal({
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <label className="ui-kicker text-text-tertiary">Project</label>
-                {projectId && projectId !== "__global__" && (
+                {projectId && projectId !== "__global__" &&
+                  !projects.find((p) => p.id === projectId)?.readonly && (
                   <button
                     onClick={() => setShowProjectDetail(true)}
                     className="flex items-center gap-1 text-sm font-medium text-accent-text transition-colors hover:text-accent-hover"
