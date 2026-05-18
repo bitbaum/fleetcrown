@@ -88,7 +88,7 @@ export function IntentButtonPanel({
       : "Auto-continue paused: Cockpit will wait for you before sending more work.",
   };
 
-  const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : undefined);
+  const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : 5);
 
   // Running: interrupt input + auto-continue toggle (below, not adjacent) + queue + recent prompts
   if (isRunning) {
@@ -109,7 +109,7 @@ export function IntentButtonPanel({
                 title={`Reuse this prompt: ${r.customPrompt}`}
                 className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
               >
-                {r.customPrompt.length > 50 ? r.customPrompt.slice(0, 50) + "…" : r.customPrompt}
+                {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 50 ? t.slice(0, 50) + "…" : t; })()}
               </button>
             ))}
           </div>
@@ -209,7 +209,7 @@ export function IntentButtonPanel({
                 className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
               >
                 {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
-                {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
+                {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 60 ? t.slice(0, 60) + "…" : t; })()}
               </button>
             ))}
           </div>

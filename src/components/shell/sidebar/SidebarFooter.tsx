@@ -2,7 +2,6 @@
 
 import { PanelLeftOpen, LogOut, Lock } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { ThemeToggle } from "../ThemeToggle";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { ROUTES } from "@/config/auth";
@@ -18,7 +17,6 @@ export function SidebarFooter({
 
   return (
     <div className="ui-sidebar-section space-y-2 border-t border-border-subtle">
-      <ThemeToggle compact={collapsed} />
       {collapsed && (
         <button
           type="button"
