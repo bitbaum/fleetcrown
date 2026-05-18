@@ -7,7 +7,7 @@ import type { LinkedJob, ProjectData } from "./project-detail-types";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
 
-function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enabled: boolean) => void }) {
+function JobRow({ job, onToggle, editable = true }: { job: LinkedJob; onToggle: (id: string, enabled: boolean) => void; editable?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const hasError = (job.consecutiveErrors ?? 0) > 0;
 
@@ -23,14 +23,16 @@ function JobRow({ job, onToggle }: { job: LinkedJob; onToggle: (id: string, enab
           <div className="text-micro text-text-tertiary font-mono mt-0.5">{job.schedule}</div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
-            className="text-text-muted hover:text-text-secondary transition-colors"
-          >
-            {job.enabled
-              ? <ToggleRight className="h-4 w-4 text-status-positive" />
-              : <ToggleLeft className="h-4 w-4" />}
-          </button>
+          {editable && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle(job.id, !job.enabled); }}
+              className="text-text-muted hover:text-text-secondary transition-colors"
+            >
+              {job.enabled
+                ? <ToggleRight className="h-4 w-4 text-status-positive" />
+                : <ToggleLeft className="h-4 w-4" />}
+            </button>
+          )}
           {expanded ? <ChevronUp className="h-3 w-3 text-text-muted" /> : <ChevronDown className="h-3 w-3 text-text-muted" />}
         </div>
       </div>
@@ -148,16 +150,18 @@ export function PromptsTab({
       ) : (
         <div className="space-y-2">
           {jobs.map((job) => (
-            <JobRow key={job.id} job={job} onToggle={toggleJob} />
+            <JobRow key={job.id} job={job} onToggle={toggleJob} editable={!data.readonly} />
           ))}
         </div>
       )}
 
-      <NewJobForm
-        projectId={projectId}
-        projectName={data.name}
-        onCreated={(job) => setJobs((prev) => [...prev, job])}
-      />
+      {!data.readonly && (
+        <NewJobForm
+          projectId={projectId}
+          projectName={data.name}
+          onCreated={(job) => setJobs((prev) => [...prev, job])}
+        />
+      )}
 
       <a
         href="/prompts"
