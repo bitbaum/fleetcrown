@@ -28,7 +28,7 @@ export default async function SettingsPage() {
     listInvitations(session.user.id),
   ]);
 
-  if (!user) redirect("/sign-in");
+  if (!user) redirect(ROUTES.SIGN_IN);
 
   return (
     <PageLayout title="Settings" maxWidth="max-w-2xl">

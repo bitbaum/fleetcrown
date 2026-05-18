@@ -64,7 +64,7 @@ export const authConfig = {
         !auth.user.onboardedAt &&
         !pathname.startsWith(ROUTES.ONBOARDING) &&
         !pathname.startsWith("/api/") &&
-        !pathname.startsWith("/sign-out")
+        !pathname.startsWith(ROUTES.SIGN_OUT)
       ) {
         const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
