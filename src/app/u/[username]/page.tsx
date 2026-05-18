@@ -1,9 +1,14 @@
+import { cache } from "react";
 import { getUserByUsername } from "@/db/queries/users";
 import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, BookOpen, Folder } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+// Deduplicate the user lookup across generateMetadata + the page component.
+// Both run in the same request; React cache() collapses them to one DB query.
+const getUser = cache(getUserByUsername);
 import { CockpitMark } from "@/components/shell/CockpitMark";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { listThoughts } from "@/lib/thoughts-content";
@@ -16,7 +21,7 @@ export async function generateMetadata({
   params: Promise<{ username: string }>;
 }): Promise<Metadata> {
   const { username } = await params;
-  const user = await getUserByUsername(username);
+  const user = await getUser(username);
   if (!user) return { title: "Not Found — Cockpit" };
   return {
     title: `${user.name ?? username} — Cockpit`,
@@ -30,7 +35,7 @@ export default async function PublicProfilePage({
   params: Promise<{ username: string }>;
 }) {
   const { username } = await params;
-  const user = await getUserByUsername(username);
+  const user = await getUser(username);
   if (!user) notFound();
 
   const projects = await getPublicProjects(user.id);
