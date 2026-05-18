@@ -40,6 +40,7 @@ export function SubscriptionActions({
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelled, setCancelled] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [deleted, setDeleted] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -59,8 +60,16 @@ export function SubscriptionActions({
 
   async function onCancel() {
     setCancelling(true);
-    await handleCancelSubscription(subId);
-    setCancelled(true);
+    setCancelError(null);
+    try {
+      await handleCancelSubscription(subId);
+      setCancelled(true);
+    } catch {
+      setCancelError("Failed to cancel — try again");
+      setConfirmCancel(false);
+    } finally {
+      setCancelling(false);
+    }
   }
 
   async function onMarkPaid() {
@@ -168,20 +177,21 @@ export function SubscriptionActions({
       )}
 
       {/* Mark as cancelled — inline confirm */}
+      {cancelError && <span className="ui-error-xs w-full">{cancelError}</span>}
       {!isCancelled && (confirmCancel ? (
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-text-tertiary">Mark cancelled?</span>
           <button onClick={onCancel} disabled={cancelling}
             className="text-xs text-status-negative hover:text-status-negative transition-colors px-1 disabled:opacity-50">
-            Yes
+            {cancelling ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
           </button>
-          <button onClick={() => setConfirmCancel(false)}
+          <button onClick={() => { setConfirmCancel(false); setCancelError(null); }}
             className="ui-btn-text-cancel">
             No
           </button>
         </div>
       ) : (
-        <button onClick={() => setConfirmCancel(true)}
+        <button onClick={() => { setConfirmCancel(true); setCancelError(null); }}
           className="ui-btn-xs">
           <X className="h-2.5 w-2.5" />
           Mark cancelled
