@@ -7,6 +7,9 @@ import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import type { PromptMeta } from "@/lib/agent-config";
 
+// Minimal shape ReadyBanner actually needs — both PromptMeta and AgentPrompt satisfy this.
+export type PromptItem = Pick<PromptMeta, "key" | "slot" | "icon" | "label" | "style">;
+
 export function ReadyBanner({
   tab,
   prompts,
@@ -24,7 +27,7 @@ export function ReadyBanner({
   showKeyHints = false,
 }: {
   tab?: string;
-  prompts: PromptMeta[];
+  prompts: PromptItem[];
   onSend: (key: string) => void;
   onDismiss: () => void;
   onAutoInject?: () => void;

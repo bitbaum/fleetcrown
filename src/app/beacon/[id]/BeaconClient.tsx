@@ -10,15 +10,16 @@ import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { PromptInput } from "@/components/control/prompt-input";
 import { QueueList } from "@/components/control/queue-list";
 import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary";
+import { ReadyBanner } from "@/components/control/ready-banner";
 import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
 import { getJson, patchJson } from "@/lib/api/fetch";
-import { PROMPT_STYLE } from "@/lib/constants/control";
+import { PROMPT_STYLE, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
-import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX } from "@/lib/constants/control";
-import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
+import { beaconComposingKey } from "@/lib/control-storage";
 import { getAdapterLabel } from "@/config/control-intents";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
+import type { RecentCustomPrompt } from "@/db/queries/prompt-history";
 
 function agentLabel(agent: string | null | undefined): string {
   return agent ? getAdapterLabel(agent) : "agent";
@@ -33,10 +34,6 @@ function SessionSummary({ content }: { content: string }) {
       microLabels
     />
   );
-}
-
-function clampCountdown(n: number): number {
-  return Number.isFinite(n) && n >= MIN_BEACON_COUNTDOWN_S && n <= MAX_BEACON_COUNTDOWN_S ? n : DEFAULT_BEACON_COUNTDOWN_S;
 }
 
 // ─── BeaconBody ─────────────────────────────────────────────────────────────
@@ -56,20 +53,8 @@ function BeaconBody({
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
   const [custom, setCustom] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
-  const configured = clampCountdown(session.countdownSeconds ?? DEFAULT_BEACON_COUNTDOWN_S);
-  const [countdown, setCountdown] = useState(() => {
-    try {
-      const stored = localStorage.getItem(readyAtKey(session.project));
-      if (stored) {
-        const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
-        return Math.max(0, configured - elapsed);
-      }
-    } catch {}
-    return configured;
-  });
-  const autoFiredRef = useRef(false);
+  const [recentPrompts, setRecentPrompts] = useState<RecentCustomPrompt[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
   const submitRef = useRef<(choice: string) => void>(() => {});
@@ -85,6 +70,7 @@ function BeaconBody({
 
   const isComposing = custom.trim().length > 0 || inputFocused || listening || processing;
 
+  // Mirror composing state to localStorage so ReadyBanner's auto-fire respects it cross-window.
   useEffect(() => {
     try {
       if (isComposing) {
@@ -99,29 +85,12 @@ function BeaconBody({
   }, [isComposing, session.project]);
 
   useEffect(() => {
-    if (!autoContinueEnabled || isComposing || countdown <= 0 || prompts.length === 0) return;
-    const t = setInterval(() => setCountdown((c) => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoContinueEnabled, isComposing, prompts.length]);
+    getJson<RecentCustomPrompt[]>(`/api/beacon/recent?project=${encodeURIComponent(session.project)}`)
+      .then(setRecentPrompts)
+      .catch(() => {});
+  }, [session.project]);
 
-  useEffect(() => {
-    if (!autoContinueEnabled || countdown !== 0 || autoFiredRef.current || prompts.length === 0 || isComposing) return;
-    const t = setTimeout(() => {
-      if (autoFiredRef.current) return;
-      autoFiredRef.current = true;
-      const primary = prompts.find((p) => p.style === "primary");
-      const choice = session.capacityIssue && session.nextAgent
-        ? `${SWITCH_CHOICE_PREFIX}${session.nextAgent}`
-        : queue.length > 0
-        ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
-        : primary ? String(primary.slot ?? primary.key) : "1";
-      if (!session.capacityIssue && queue.length > 0) remove(0);
-      submitRef.current(choice);
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [countdown, autoContinueEnabled, prompts, queue, remove, isComposing, session.capacityIssue, session.nextAgent]);
-
+  // Resize the popup window to fit content after layout settles.
   useEffect(() => {
     if (prompts.length === 0) return;
     const t = setTimeout(() => {
@@ -134,7 +103,9 @@ function BeaconBody({
       } catch { /* blocked in non-popup windows */ }
     }, 120);
     return () => clearTimeout(t);
-  }, [prompts.length, queue.length]);
+  }, [prompts.length, queue.length, recentPrompts.length]);
+
+  const dismiss = useCallback(() => { if (onClose) onClose(); else window.close(); }, [onClose]);
 
   const submit = useCallback(async (choice: string) => {
     const all = promptsRef.current;
@@ -150,15 +121,15 @@ function BeaconBody({
     }
     onSubmitted(label);
     await patchJson(`/api/beacon/${session.id}`, { choice }).catch(() => {});
-    setTimeout(() => (onClose ? onClose() : window.close()), 400);
-  }, [session.id, onSubmitted, onClose]);
+    setTimeout(() => dismiss(), 400);
+  }, [session.id, onSubmitted, dismiss]);
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (document.activeElement === inputRef.current) return;
-      if (e.key === "Escape") { window.close(); return; }
+      if (e.key === "Escape") { dismiss(); return; }
       const n = parseInt(e.key);
       if (!isNaN(n) && n >= 1 && n <= 9) {
         const all = [
@@ -171,7 +142,7 @@ function BeaconBody({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [dismiss]);
 
   const handleSendCustom = () => wrapSend(() => {
     if (!custom.trim()) return;
@@ -185,9 +156,39 @@ function BeaconBody({
     setCustom("");
   });
 
-  const primaryPrompts = prompts.filter((p) => p.style === "primary");
-  const actionPrompts = prompts.filter((p) => p.style === "action");
+  // Auto-fire logic: picks the right choice based on queue / capacity issue state.
+  // Called by ReadyBanner when the countdown reaches zero (and auto-continue is on).
+  const handleAutoInject = useCallback(() => {
+    const all = promptsRef.current;
+    const primary = all.find((p) => p.style === "primary");
+    const choice = session.capacityIssue && session.nextAgent
+      ? `${SWITCH_CHOICE_PREFIX}${session.nextAgent}`
+      : queue.length > 0
+      ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
+      : primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
+    if (!session.capacityIssue && queue.length > 0) remove(0);
+    submitRef.current(choice);
+  }, [session.capacityIssue, session.nextAgent, queue, remove]);
+
   const morePrompts = prompts.filter((p) => p.style === "more");
+
+  const statusLabel = micError
+    ? micError
+    : listening
+    ? "Recording - paused"
+    : processing
+    ? "Transcribing..."
+    : custom.trim()
+    ? "Enter sends · Alt+Enter queues"
+    : inputFocused
+    ? "Focused - paused"
+    : !autoContinueEnabled
+    ? "Paused - click play to resume"
+    : session.capacityIssue && session.nextAgent
+    ? `Switching to ${agentLabel(session.nextAgent)}`
+    : queue.length > 0
+    ? `"${queue[0].length > 30 ? queue[0].slice(0, 28) + "…" : queue[0]}" queued`
+    : "Auto-continue ready";
 
   return (
     <div className="space-y-4">
@@ -220,65 +221,31 @@ function BeaconBody({
           >
             <Repeat2 className="h-4 w-4" />
             Switch to {agentLabel(session.nextAgent)} and continue
-            {session.capacityIssue && autoContinueEnabled && countdown > 0 && (
-              <span className="ml-auto font-mono text-xs tabular-nums">{countdown}s</span>
-            )}
           </button>
         </div>
       )}
 
-      {primaryPrompts.length > 0 && (
-        <div className="space-y-2">
-          {primaryPrompts.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => submit(String(p.slot ?? p.key))}
-              className="ui-btn-ready-primary w-full justify-start gap-3 px-4 py-3 text-left text-sm"
-            >
-              <span className="text-base leading-none">{p.icon}</span>
-              <span className="flex-1">{p.label}</span>
-              {p.slot === 1 && (
-                !autoContinueEnabled
-                  ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 text-xs">⏸ Paused</span>
-                  : countdown > 0
-                  ? <span className="ml-auto shrink-0 rounded-md bg-black/20 px-2 py-0.5 font-mono text-xs tabular-nums">⚡ {countdown}s</span>
-                  : null
-              )}
-            </button>
-          ))}
-        </div>
+      {/* ReadyBanner is the SSOT for the countdown, auto-continue toggle, and primary/action buttons. */}
+      {prompts.length > 0 && (
+        <ReadyBanner
+          tab={session.project}
+          prompts={prompts}
+          onSend={(key) => submit(key)}
+          onDismiss={dismiss}
+          onAutoInject={handleAutoInject}
+          autoContinueEnabled={autoContinueEnabled}
+          onToggleAutoContinue={toggleAutoContinue}
+          paused={isComposing}
+          nextQueueItem={queue.length > 0 ? queue[0] : undefined}
+          queueTotal={queue.length}
+          title="Agent ready"
+        />
       )}
 
-      {(actionPrompts.length > 0 || morePrompts.length > 0) && (
-        <div className="flex flex-wrap gap-2">
-          {actionPrompts.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => submit(String(p.slot ?? p.key))}
-              className={PROMPT_STYLE.action}
-            >
-              {p.icon} {p.label}
-            </button>
-          ))}
-          {morePrompts.length > 0 && (
-            <button
-              onClick={() => setMoreOpen((v) => !v)}
-              className={PROMPT_STYLE.more}
-            >
-              {moreOpen ? "↑ Less" : `More (${morePrompts.length})`}
-            </button>
-          )}
-        </div>
-      )}
-
-      {moreOpen && morePrompts.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+      {morePrompts.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-5">
           {morePrompts.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => submit(String(p.slot ?? p.key))}
-              className={PROMPT_STYLE.more}
-            >
+            <button key={p.key} onClick={() => submit(String(p.slot ?? p.key))} className={PROMPT_STYLE.more}>
               {p.icon} {p.label}
             </button>
           ))}
@@ -291,33 +258,13 @@ function BeaconBody({
         processing={processing}
         micError={micError}
         sending={null}
-        placeholder="Custom prompt..."
+        placeholder="Custom prompt…"
         showQueue
         waveformBars={waveformBars}
         recordingSeconds={recordingSeconds}
         maxRecordingSeconds={maxRecordingSeconds}
         autoContinueEnabled={autoContinueEnabled}
-        statusLabel={
-          micError
-            ? micError
-            : listening
-            ? "Recording - paused"
-            : processing
-            ? "Transcribing..."
-            : custom.trim()
-            ? "Enter sends - Alt+Enter queues"
-            : inputFocused
-            ? "Focused - paused"
-            : !autoContinueEnabled
-            ? "Paused - click play to resume"
-            : countdown <= 0
-            ? "Dispatching..."
-            : session.capacityIssue && session.nextAgent
-            ? `Switching to ${agentLabel(session.nextAgent)} in ${countdown}s`
-            : queue.length > 0
-            ? `"${queue[0].length > 30 ? queue[0].slice(0, 28) + "..." : queue[0]}" in ${countdown}s`
-            : `AI continues in ${countdown}s`
-        }
+        statusLabel={statusLabel}
         textareaRef={inputRef}
         onCustomChange={setCustom}
         onCustomFocusChange={setInputFocused}
@@ -327,6 +274,25 @@ function BeaconBody({
         toggleMic={toggleMic}
       />
 
+      {recentPrompts.length > 0 && (
+        <div className="space-y-1.5 px-5">
+          <p className="ui-kicker">Reuse recent prompts</p>
+          <div className="flex flex-wrap gap-1.5">
+            {recentPrompts.map((r) => (
+              <button
+                key={r.customPrompt}
+                onClick={() => setCustom(r.customPrompt)}
+                title={r.customPrompt}
+                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+              >
+                {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
+                {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ProjectPromptLibrary
         projectName={session.project}
         open={libraryOpen}
@@ -334,13 +300,6 @@ function BeaconBody({
         onSelect={(prompt) => submit(`${CUSTOM_CHOICE_PREFIX}${prompt}`)}
         compact
       />
-
-      <button
-        onClick={() => window.close()}
-        className="ui-btn-ghost w-full text-xs text-text-muted"
-      >
-        Dismiss · Esc
-      </button>
     </div>
   );
 }
@@ -421,9 +380,11 @@ export function BeaconPageClient({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="truncate text-sm font-semibold text-text-primary">{session.project}</span>
-              <span className="ui-tag ui-tag-positive">done</span>
+              <span className="ui-tag ui-tag-positive">ready</span>
             </div>
-            <p className="ui-micro-label mt-0.5">session complete</p>
+            <p className="ui-micro-label mt-0.5">
+              {session.currentAgent ? getAdapterLabel(session.currentAgent) : "agent"} finished
+            </p>
           </div>
         </div>
         <div className="ui-card-actions">
