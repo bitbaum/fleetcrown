@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { habitGoals, habits, goals } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export async function linkHabitToGoal(userId: string, habitId: string, goalId: string): Promise<void> {
   await db
@@ -52,11 +52,10 @@ export async function getHabitsByGoalIds(
     .select({ goalId: habitGoals.goalId, habitId: habits.id, habitTitle: habits.title })
     .from(habitGoals)
     .innerJoin(habits, eq(habitGoals.habitId, habits.id))
-    .where(eq(habitGoals.userId, userId));
+    .where(and(eq(habitGoals.userId, userId), inArray(habitGoals.goalId, goalIds)));
 
   const map = new Map<string, LinkedHabit[]>();
   for (const row of rows) {
-    if (!goalIds.includes(row.goalId)) continue;
     const existing = map.get(row.goalId) ?? [];
     existing.push({ id: row.habitId, title: row.habitTitle });
     map.set(row.goalId, existing);
@@ -74,11 +73,10 @@ export async function getGoalsByHabitIds(
     .select({ habitId: habitGoals.habitId, goalId: goals.id, goalTitle: goals.title })
     .from(habitGoals)
     .innerJoin(goals, eq(habitGoals.goalId, goals.id))
-    .where(eq(habitGoals.userId, userId));
+    .where(and(eq(habitGoals.userId, userId), inArray(habitGoals.habitId, habitIds)));
 
   const map = new Map<string, LinkedGoal[]>();
   for (const row of rows) {
-    if (!habitIds.includes(row.habitId)) continue;
     const existing = map.get(row.habitId) ?? [];
     existing.push({ id: row.goalId, title: row.goalTitle });
     map.set(row.habitId, existing);
