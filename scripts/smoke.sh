@@ -145,6 +145,11 @@ done
 # 401 (no session) or 503 (not configured) both prove the route isn't crashing.
 check_route "/api/stripe/portal" 0 "/api/stripe/portal" 1 "503"
 
+# Invitation token routes are excluded from the auth middleware so unauthenticated
+# users can accept invites. A bogus token must return 404 — if it returns 401 the
+# middleware exclusion regressed and new users can no longer accept invitations.
+check_route "/api/invitations/smoke-test-bogus-token" 0 "/api/invitations/<token> (must not 401)" 0 "404"
+
 # Dynamic [id] routes — discover an id from a list endpoint, then hit
 # the detail route. Catches regressions in the parameter handlers and
 # the per-row drizzle queries that the static-list smoke can't.
@@ -159,7 +164,7 @@ if command -v jq >/dev/null 2>&1; then
   fi
 fi
 
-total=$((${#PAGE_ROUTES[@]} + ${#PUBLIC_API_ROUTES[@]} + ${#AUTH_API_ROUTES[@]} + 1 + dynamic_total))
+total=$((${#PAGE_ROUTES[@]} + ${#PUBLIC_API_ROUTES[@]} + ${#AUTH_API_ROUTES[@]} + 2 + dynamic_total))
 
 echo ""
 if [ "$failed" -gt 0 ]; then
