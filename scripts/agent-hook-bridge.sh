@@ -439,11 +439,23 @@ handle_notification() {
     fi
   fi
 
-  local base session session_file session_update_block
-  base=$(get_prompt "next_best")
-  [ -z "$base" ] && exit 0
-
+  # Context-aware prompt selection: read session health before picking which
+  # prompt to auto-inject. Degraded health → unblock (fix before advancing).
+  # Everything else → next_best (discovers or executes session.next).
+  local session_file auto_key _health
   session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+  auto_key="next_best"
+  _health=""
+  if [ -f "$session_file" ]; then
+    _health=$(grep "^health:" "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' | tr -d '\n\r')
+    case "$_health" in
+      "needs attention"|"critical") auto_key="unblock" ;;
+    esac
+  fi
+
+  local base session session_update_block
+  base=$(get_prompt "$auto_key")
+  [ -z "$base" ] && exit 0
   session_update_block="When done, update ${session_file} with exactly these lines:
 done: <one sentence what you completed>
 next: <one sentence what remains>
@@ -467,8 +479,8 @@ ${session_update_block}"
   fi
 
   emit_or_inject_prompt "$TAB_NAME" "$prompt"
-  write_inject_state "$TAB_NAME" "next_best" "▶ Next Best Task"
-  log "notification: injected next_best with session context"
+  write_inject_state "$TAB_NAME" "$auto_key" "▶ Auto: ${auto_key}"
+  log "notification: injected ${auto_key} (health=${_health:-unknown}) with session context"
 }
 
 case "$MODE" in
