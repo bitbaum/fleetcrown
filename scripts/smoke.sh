@@ -162,6 +162,15 @@ if command -v jq >/dev/null 2>&1; then
     dynamic_total=$((dynamic_total + 1))
     check_route "/api/people/$person_id" 0 "/api/people/<id>" 1
   fi
+
+  # /api/projects/[id] — GET is the hottest project route (every drawer open) but
+  # static-list smoke can't cover it. Derive an entity project ID from user-projects.
+  project_id=$(curl -s --max-time 5 "${CURL_AUTH_ARGS[@]}" "$BASE/api/user-projects" 2>/dev/null \
+    | jq -r '.[0].entityProjectId // empty' 2>/dev/null)
+  if [ -n "$project_id" ]; then
+    dynamic_total=$((dynamic_total + 1))
+    check_route "/api/projects/$project_id" 0 "/api/projects/<id>" 1
+  fi
 fi
 
 total=$((${#PAGE_ROUTES[@]} + ${#PUBLIC_API_ROUTES[@]} + ${#AUTH_API_ROUTES[@]} + 2 + dynamic_total))
