@@ -6,7 +6,8 @@
 # agents are running in which project tabs).
 #
 # Usage:
-#   bash scripts/install-daemon.sh
+#   bash scripts/install-daemon.sh             # full install or re-install
+#   bash scripts/install-daemon.sh --restart   # restart to load changed daemon code
 #   bash scripts/install-daemon.sh --uninstall
 #
 # Environment:
@@ -31,6 +32,23 @@ ok()   { printf '%s✓%s %s\n' "$green"  "$reset" "$*"; }
 info() { printf '%s→%s %s\n' "$cyan"   "$reset" "$*"; }
 warn() { printf '%s!%s %s\n' "$yellow" "$reset" "$*"; }
 die()  { printf '%s✗%s %s\n' "$red"    "$reset" "$*" >&2; exit 1; }
+
+# ── --restart: reload daemon code without re-generating service file ─────────
+# Use this after pulling changes to cockpit-daemon.sh or agent-hook-lib.sh.
+#   bash scripts/install-daemon.sh --restart
+if [[ "${1:-}" == "--restart" ]]; then
+  if ! systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+    die "Daemon is not running — run without --restart to install first."
+  fi
+  systemctl --user restart "$SERVICE_NAME"
+  sleep 1
+  if systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+    ok "Daemon restarted — running updated code from ${PROJECT_DIR}/scripts/"
+  else
+    die "Daemon failed to restart — check: journalctl --user -u ${SERVICE_NAME} -n 20"
+  fi
+  exit 0
+fi
 
 # ── Uninstall ────────────────────────────────────────────────────────────────
 if [[ "${1:-}" == "--uninstall" ]]; then
