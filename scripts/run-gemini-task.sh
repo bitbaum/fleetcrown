@@ -11,7 +11,7 @@ PROJECT_DIR="$2"
 PROMPT_FILE="$3"
 MODEL="${4:-auto}"  # must match AGENT_DEFAULT_MODELS.gemini in src/lib/agent-registry.ts
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "$HOME/.bashrc" >/dev/null 2>&1 || true
 
@@ -28,6 +28,6 @@ rm -f "$PROMPT_FILE"
 
 printf '%s' "$PROJECT_DIR" \
   | jq -Rs '{cwd:.}' \
-  | AGENT_TAB_NAME="$TAB_NAME" AGENT_CURRENT_AGENT="gemini" "$ROOT/scripts/agent-hook-bridge.sh" stop || true
+  | AGENT_TAB_NAME="$TAB_NAME" AGENT_CURRENT_AGENT="gemini" "$SCRIPT_DIR/agent-hook-bridge.sh" stop || true
 
 exit "$status"
