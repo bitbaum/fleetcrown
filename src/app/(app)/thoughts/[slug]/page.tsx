@@ -7,9 +7,7 @@ import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, listThoughts, parseThoughtBlocks } from "@/lib/thoughts-content";
 
-export function generateStaticParams() {
-  return listThoughts().map((a) => ({ slug: a.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
