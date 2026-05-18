@@ -34,16 +34,25 @@ info() { printf '   %s\n' "$*"; }
 # ── --sync: re-copy scripts only (no hooks or config changes) ────────────────
 # Use this after pulling updates instead of re-running the full installer.
 #   bash scripts/install-beacon.sh --sync
+_copy_scripts() {
+  local dest="$1"
+  cp "$SCRIPT_DIR/beacon.py"                    "$dest/"
+  cp "$SCRIPT_DIR/_beacon_audio.py"             "$dest/"
+  cp "$SCRIPT_DIR/_beacon_config.py"            "$dest/"
+  cp "$SCRIPT_DIR/_beacon_popups.py"            "$dest/"
+  cp "$SCRIPT_DIR/_beacon_theme.py"             "$dest/"
+  cp "$SCRIPT_DIR/agent-hook-bridge.sh"         "$dest/"
+  cp "$SCRIPT_DIR/agent-hook-lib.sh"            "$dest/"
+  cp "$SCRIPT_DIR/run-codex-task.sh"            "$dest/"
+  cp "$SCRIPT_DIR/run-gemini-task.sh"           "$dest/"
+  cp "$SCRIPT_DIR/sync-agent-runtime-config.py" "$dest/"
+  chmod +x "$dest/agent-hook-bridge.sh" "$dest/agent-hook-lib.sh" \
+           "$dest/run-codex-task.sh"    "$dest/run-gemini-task.sh"
+}
+
 if [[ "${1:-}" == "--sync" ]]; then
   [ -d "$BEACON_HOME" ] || { echo "Beacon not installed — run without --sync first." >&2; exit 1; }
-  cp "$SCRIPT_DIR/beacon.py"            "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/_beacon_audio.py"     "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/_beacon_config.py"    "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/_beacon_popups.py"    "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/_beacon_theme.py"     "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/agent-hook-bridge.sh" "$BEACON_HOME/"
-  cp "$SCRIPT_DIR/agent-hook-lib.sh"    "$BEACON_HOME/"
-  chmod +x "$BEACON_HOME/agent-hook-bridge.sh" "$BEACON_HOME/agent-hook-lib.sh"
+  _copy_scripts "$BEACON_HOME"
   ok "Beacon scripts synced to $BEACON_HOME"
   exit 0
 fi
@@ -53,14 +62,7 @@ echo ""
 
 # ── 1. Copy beacon scripts ───────────────────────────────────────────────────
 mkdir -p "$BEACON_HOME"
-cp "$SCRIPT_DIR/beacon.py"              "$BEACON_HOME/"
-cp "$SCRIPT_DIR/_beacon_audio.py"       "$BEACON_HOME/"
-cp "$SCRIPT_DIR/_beacon_config.py"      "$BEACON_HOME/"
-cp "$SCRIPT_DIR/_beacon_popups.py"      "$BEACON_HOME/"
-cp "$SCRIPT_DIR/_beacon_theme.py"       "$BEACON_HOME/"
-cp "$SCRIPT_DIR/agent-hook-bridge.sh"   "$BEACON_HOME/"
-cp "$SCRIPT_DIR/agent-hook-lib.sh"      "$BEACON_HOME/"
-chmod +x "$BEACON_HOME/agent-hook-bridge.sh" "$BEACON_HOME/agent-hook-lib.sh"
+_copy_scripts "$BEACON_HOME"
 ok "Scripts installed to $BEACON_HOME"
 
 # ── 2. Wire Claude Code Stop hook ───────────────────────────────────────────
