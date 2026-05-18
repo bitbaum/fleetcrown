@@ -10,7 +10,7 @@ function getResend(): Resend {
 
 const FROM = process.env.EMAIL_FROM ?? "Cockpit <noreply@cockpit.app>";
 
-function appUrl(): string {
+export function appUrl(): string {
   return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 }
 

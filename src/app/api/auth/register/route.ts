@@ -3,7 +3,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserByEmail, createUser } from "@/db/queries/users";
 import { createEmailVerificationToken } from "@/db/queries/emailVerification";
 import { hashPassword } from "@/lib/password";
-import { sendEmailFire, verifyEmailTemplate, welcomeEmailTemplate } from "@/lib/email";
+import { sendEmailFire, verifyEmailTemplate, welcomeEmailTemplate, appUrl } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const Body = z.object({
@@ -14,10 +14,6 @@ const Body = z.object({
 
 const LIMIT  = 10;           // max registrations
 const WINDOW = 60 * 60_000; // per hour
-
-function appUrl(): string {
-  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-}
 
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`register:${getClientIp(req)}`, LIMIT, WINDOW)) {

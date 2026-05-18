@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getPasswordReset, consumePasswordReset } from "@/db/queries/passwordResets";
 import { hashPassword } from "@/lib/password";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { updateUserPasswordHash } from "@/db/queries/users";
 
 const Body = z.object({
   token:    z.string().min(1),
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This reset link is invalid or has expired." }, { status: 400 });
   }
 
-  await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, reset.userId));
+  await updateUserPasswordHash(reset.userId, passwordHash);
 
   return NextResponse.json({ ok: true });
 }

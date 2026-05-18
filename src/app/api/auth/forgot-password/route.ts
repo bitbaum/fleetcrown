@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getUserByEmail } from "@/db/queries/users";
 import { createPasswordReset } from "@/db/queries/passwordResets";
-import { sendEmail, resetPasswordEmailTemplate } from "@/lib/email";
+import { sendEmail, resetPasswordEmailTemplate, appUrl } from "@/lib/email";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const Body = z.object({
@@ -11,10 +11,6 @@ const Body = z.object({
 
 const LIMIT  = 5;            // max reset requests
 const WINDOW = 15 * 60_000; // per 15 minutes
-
-function appUrl(): string {
-  return process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
-}
 
 export async function POST(req: NextRequest) {
   if (!checkRateLimit(`forgot:${getClientIp(req)}`, LIMIT, WINDOW)) {
