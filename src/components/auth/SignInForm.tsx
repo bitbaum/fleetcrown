@@ -52,11 +52,20 @@ function FormInner({
   const callbackUrl = searchParams.get("callbackUrl") ?? ROUTES.APP_HOME;
   const safeCallback = callbackUrl.startsWith("/") && !callbackUrl.startsWith("//") ? callbackUrl : ROUTES.APP_HOME;
 
+  const urlError = searchParams.get("error");
+  const urlErrorMsg = urlError === "OAuthAccountNotLinked"
+    ? "This email is already registered with a different sign-in method."
+    : urlError === "AccessDenied"
+    ? "Access was denied. Please try again."
+    : urlError
+    ? "Sign-in failed. Please try again."
+    : "";
+
   const [mode, setMode]     = useState<Mode>("email");
   const [email, setEmail]   = useState("");
   const [password, setPassword] = useState("");
   const [ownerPwd, setOwnerPwd] = useState("");
-  const [error, setError]   = useState("");
+  const [error, setError]   = useState(urlErrorMsg);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
 
