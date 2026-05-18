@@ -102,45 +102,45 @@ export async function POST(req: NextRequest) {
   const resolvedProjectPath = projectPath ?? canonical;
   const nowS = Math.floor(Date.now() / 1000);
 
-  // Build the inject function lazily — only called when runtime is available.
+  // Run local filesystem side-effects immediately — the server process can always write to /tmp
+  // regardless of whether it's inside a Zellij pane or not.
+  if (isRuntimeAvailable()) {
+    const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] = await Promise.all([
+      import("@/app/api/beacon/route"),
+      import("@/lib/agent-config"),
+      import("fs"),
+    ]);
+
+    cancelActiveBeaconSessions(effectiveTab);
+
+    fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
+      key: promptKey ?? "custom",
+      label: promptLabel,
+      startedAt: nowS,
+      source: "inject",
+      adapter: eventAdapter,
+    }));
+
+    clearHandshakeFiles(effectiveTab);
+
+    if (promptKey === "hard_stop") {
+      fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
+      fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
+      fs.writeFileSync(stateFile.closed(effectiveTab), String(nowS));
+    } else if (promptKey === "close_session") {
+      fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
+      fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
+    } else {
+      try { fs.unlinkSync(stateFile.closing(effectiveTab)); } catch { /* gone */ }
+    }
+  }
+
+  // Build the Zellij injection function — executor calls it only when ZELLIJ_SESSION_NAME
+  // is present in this process (dev server inside Zellij). Otherwise it queues for the daemon.
   const injectFn = isRuntimeAvailable()
     ? async () => {
-        const { injectIntoTab, cancelActiveBeaconSessions, stateFile, clearHandshakeFiles } = await Promise.all([
-          import("@/lib/zellij"),
-          import("@/app/api/beacon/route"),
-          import("@/lib/agent-config"),
-          import("@/lib/agent-config"),
-        ]).then(([zellij, beacon, config]) => ({
-          injectIntoTab: zellij.injectIntoTab,
-          cancelActiveBeaconSessions: beacon.cancelActiveBeaconSessions,
-          stateFile: config.stateFile,
-          clearHandshakeFiles: config.clearHandshakeFiles,
-        }));
-        const fs = await import("fs");
-
+        const { injectIntoTab } = await import("@/lib/zellij");
         injectIntoTab(effectiveTab, prompt);
-        cancelActiveBeaconSessions(effectiveTab);
-
-        fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
-          key: promptKey ?? "custom",
-          label: promptLabel,
-          startedAt: nowS,
-          source: "inject",
-          adapter: eventAdapter,
-        }));
-
-        clearHandshakeFiles(effectiveTab);
-
-        if (promptKey === "hard_stop") {
-          fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
-          fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
-          fs.writeFileSync(stateFile.closed(effectiveTab), String(nowS));
-        } else if (promptKey === "close_session") {
-          fs.writeFileSync(stateFile.sentinel(effectiveTab), "");
-          fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
-        } else {
-          try { fs.unlinkSync(stateFile.closing(effectiveTab)); } catch { /* gone */ }
-        }
       }
     : null;
 

@@ -28,7 +28,10 @@ export async function executeInject(
   userId: string,
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
-  if (isRuntimeAvailable()) {
+  // Direct injection requires both filesystem access AND a Zellij session in this process.
+  // The production standalone server runs outside Zellij; the local daemon (which IS inside
+  // a Zellij pane) picks up queued commands and injects with the correct session context.
+  if (isRuntimeAvailable() && !!process.env.ZELLIJ_SESSION_NAME) {
     try {
       await injectFn();
       return { ok: true, mode: "direct" };
