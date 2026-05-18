@@ -29,7 +29,9 @@ export const config = {
      *   api/auth                   – NextAuth internal endpoints
      *   api/health, api/setup      – infrastructure endpoints (pre-auth)
      *   api/crons, api/system      – public read endpoints used by daemon/monitoring
+     *   api/invitations/           – token-scoped invitation routes (GET validate, POST accept);
+     *                                trailing slash keeps GET /api/invitations (list) protected
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|sign-in|sign-up|forgot-password|reset-password|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/).+)",
   ],
 };
