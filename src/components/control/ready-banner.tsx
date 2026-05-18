@@ -124,7 +124,7 @@ export function ReadyBanner({
         {nextLabel}
       </p>
       {dispatchReason && (
-        <p className="mb-2 truncate font-mono text-[10px] text-text-muted/60">
+        <p className="mb-2 truncate font-mono text-micro text-text-muted/60">
           <span className="mr-1">AI:</span>{dispatchReason}
         </p>
       )}

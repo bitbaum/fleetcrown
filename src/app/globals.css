@@ -79,11 +79,14 @@
   --radius-modal: calc(var(--radius) * 4);   /* modal sheets: 2rem at default scale */
   --radius-pill: calc(var(--radius) * 3.5);  /* floating nav pill: 1.75rem at default scale */
   --text-micro: var(--text-micro);
+  --text-nano: var(--text-nano);
   --tracking-display: var(--tracking-display);
   --tracking-label: var(--tracking-label);
   --tracking-caps: var(--tracking-caps);
   --shadow-panel: var(--shadow-panel);
   --shadow-panel-strong: var(--shadow-panel-strong);
+  --modal-max-height: var(--modal-max-height);
+  --page-min-height: var(--page-min-height);
   --shell-max: var(--shell-max);
   --public-nav-height: var(--public-nav-height);
   --public-backdrop-primary-width: var(--public-backdrop-primary-width);
@@ -129,6 +132,9 @@
   --font-heading: var(--font-space-display);
   --font-mono: var(--font-ibm-plex-mono);
   --text-micro: 0.625rem; /* 10px — compact widget/metadata text */
+  --text-nano: 0.5rem;    /* 8px — micro heatmap labels, tightest readable size */
+  --modal-max-height: 85vh;  /* standard tall-modal cap */
+  --page-min-height: 60vh;   /* error / empty / placeholder page min */
   --tracking-display: -0.03em;
   --tracking-label: 0.10em;
   --tracking-caps: 0.16em;
@@ -658,6 +664,35 @@
   .ui-cat-marketing    { @apply bg-yellow-500/15 text-yellow-400 border-yellow-500/20; }
   .ui-cat-research     { @apply bg-teal-500/15 text-teal-400 border-teal-500/20; }
   .ui-cat-personal     { @apply bg-rose-500/15 text-rose-400 border-rose-500/20; }
+
+  /* ── Brand / category color classes ────────────────────────────────────────
+     These ARE the SSOT for chromatic colors outside the status system.
+     Define here, reference by class name in components and config files.
+     Never write raw Tailwind color utilities (text-green-400, etc.) in JSX. */
+
+  /* Empty / error / placeholder page wrapper */
+  .ui-empty-page {
+    min-height: var(--page-min-height);
+    @apply flex flex-col items-center justify-center;
+  }
+
+  /* Contact channel icon colors — brand identity, intentionally chromatic */
+  .ui-channel-whatsapp  { @apply text-green-400/60; }
+  .ui-channel-telegram  { @apply text-blue-400/60; }
+  .ui-channel-phone     { @apply text-cyan-400/60; }
+  .ui-channel-in-person { @apply text-violet-400/60; }
+
+  /* Programming language badge colors — GitHub lingua franca palette */
+  .ui-lang-ts   { @apply bg-blue-500/20 text-blue-300; }
+  .ui-lang-js   { @apply bg-yellow-500/20 text-yellow-300; }
+  .ui-lang-py   { @apply bg-green-500/20 text-green-300; }
+  .ui-lang-go   { @apply bg-cyan-500/20 text-cyan-300; }
+  .ui-lang-rs   { @apply bg-orange-500/20 text-orange-300; }
+  .ui-lang-rb   { @apply bg-red-500/20 text-red-300; }
+  .ui-lang-cs   { @apply bg-purple-500/20 text-purple-300; }
+  .ui-lang-java { @apply bg-amber-500/20 text-amber-300; }
+
+  /* ── End brand / category colors ─────────────────────────────────────────── */
 
   /* Horizontal label+value row (e.g. "RAM — 4/16 GiB") above a progress bar */
   .ui-label-row  { @apply mb-2 flex justify-between text-sm text-text-tertiary; }

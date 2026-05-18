@@ -19,14 +19,14 @@ import type { GitHubRepo } from "@/app/api/github/repos/route";
 // ── Repo picker ───────────────────────────────────────────────────────────────
 
 const LANG_COLORS: Record<string, string> = {
-  TypeScript: "bg-blue-500/20 text-blue-300",
-  JavaScript: "bg-yellow-500/20 text-yellow-300",
-  Python: "bg-green-500/20 text-green-300",
-  Go: "bg-cyan-500/20 text-cyan-300",
-  Rust: "bg-orange-500/20 text-orange-300",
-  Ruby: "bg-red-500/20 text-red-300",
-  "C#": "bg-purple-500/20 text-purple-300",
-  Java: "bg-amber-500/20 text-amber-300",
+  TypeScript: "ui-lang-ts",
+  JavaScript: "ui-lang-js",
+  Python:     "ui-lang-py",
+  Go:         "ui-lang-go",
+  Rust:       "ui-lang-rs",
+  Ruby:       "ui-lang-rb",
+  "C#":       "ui-lang-cs",
+  Java:       "ui-lang-java",
 };
 
 function RepoPicker({

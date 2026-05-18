@@ -69,7 +69,7 @@ export default async function PublicProfilePage({
               className="h-18 w-18 rounded-full"
             />
           ) : (
-            <div className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full bg-accent-muted text-2xl font-semibold text-accent-primary">
+            <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-full bg-accent-muted text-2xl font-semibold text-accent-primary">
               {(user.name ?? username)[0]?.toUpperCase()}
             </div>
           )}

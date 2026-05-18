@@ -98,7 +98,7 @@ export default async function LandingPage() {
                 className={`ui-public-pricing-card${tier.highlighted ? " ui-public-pricing-card-highlighted" : ""}`}
               >
                 {tier.highlighted && (
-                  <div className="mb-4 inline-flex items-center rounded-full bg-white/[0.08] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                  <div className="mb-4 inline-flex items-center rounded-full bg-white/[0.08] px-2.5 py-1 text-micro font-semibold uppercase tracking-widest text-white/50">
                     Most popular
                   </div>
                 )}

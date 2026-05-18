@@ -129,7 +129,7 @@ export default function WhitepaperPage() {
                 return (
                   <div key={i} className="overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.04] p-5">
                     {block.lang && (
-                      <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-white/20">{block.lang}</p>
+                      <p className="mb-3 font-mono text-micro uppercase tracking-widest text-white/20">{block.lang}</p>
                     )}
                     <pre className="font-mono text-sm leading-relaxed text-white/60">
                       <code>{block.text}</code>

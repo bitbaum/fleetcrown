@@ -8,7 +8,7 @@ export function PlaceholderView({
   title: string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-text-tertiary gap-4">
+    <div className="ui-empty-page h-full text-text-tertiary gap-4">
       <Icon className="h-16 w-16" />
       <div className="text-xl font-semibold">{title}</div>
       <div className="text-sm">Coming in Phase 2</div>

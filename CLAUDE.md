@@ -47,34 +47,105 @@ src/
 
 ## Key Conventions
 
-### Styling — Three layers, each with a strict purpose
+### Design System — The Four-Layer Architecture
+
+Every pixel in Cockpit flows through exactly four layers in order. Any shortcut past a layer is a violation.
 
 ```
-globals.css @layer components   → SSOT for all recurring visual patterns (ui-* classes)
-Tailwind utilities              → layout, spacing, sizing only — never colors
-shadcn/ui                       → complex interactive JS components only (Dialog, Dropdown, etc.)
+Layer 1  globals.css :root / .dark     → Raw values: OKLCH colors, rem sizes, shadows
+Layer 2  globals.css @theme inline     → Tailwind mappings: --color-* pointing to Layer 1 vars
+Layer 3  globals.css @layer components → ui-* classes: every recurring visual pattern
+Layer 4  JSX in components/            → Uses Layer 3 classes + layout-only Tailwind
 ```
 
-**Hard rules — violation = rewrite:**
-- **Never** hardcode colors inline (`text-gray-400`, `bg-indigo-500`, `#fff`) — always use semantic tokens
-- **Never** re-implement a pattern that has a `ui-*` class — use it
-- **Never** reach for shadcn primitives (Card, Button, Input) — use `ui-panel`, `ui-btn-primary`, `ui-input`
-- **`ui-*` classes are the SSOT** for buttons, panels, inputs, kickers, stat cards, nav items
-- **Tailwind** for layout only: `flex`, `grid`, `gap-*`, `px-*`, `py-*`, `w-*`, `h-*`, `min-h-*`, `max-w-*`
+**The rule in one sentence:** components describe structure and layout; globals.css owns every visual decision.
 
-**Design tokens (all in `globals.css`):**
-- Surfaces: `bg-surface-page` → `bg-surface-base` → `bg-surface-raised` → `bg-surface-overlay`
-- Text: `text-text-primary` → `text-text-secondary` → `text-text-tertiary` → `text-text-muted`
-- Borders: `border-border-subtle` → `border-border-default` → `border-border-strong`
-- Accent: `bg-accent-primary`, `text-accent-text`, `bg-accent-muted`
+#### Layer 1 — CSS Custom Properties (the raw values)
 
-**Component classes (use these, don't reinvent):**
-- Panels: `.ui-panel`, `.ui-panel-raised`
-- Buttons: `.ui-btn-primary` (white bg), `.ui-btn-secondary` (outline), `.ui-btn-ghost`
-- Input: `.ui-input`
-- Labels: `.ui-kicker`
-- Stats: `.ui-stat-grid`, `.ui-stat-card`, `.ui-stat-label`, `.ui-stat-value`
-- Layout: `.app-page` (page wrapper), `.ui-page-title`, `.ui-page-subtitle`
+All raw values live in `:root` / `.dark` in `globals.css`. Never define a visual value anywhere else.
+
+```
+Surfaces:  --surface-page → --surface-base → --surface-raised → --surface-overlay
+Text:      --text-primary → --text-secondary → --text-tertiary → --text-muted
+Borders:   --border-subtle → --border-default → --border-strong → --border-interactive
+Accent:    --accent-primary, --accent-hover, --accent-muted, --accent-text
+Status:    --status-positive / -warning / -negative / -neutral (+ -subtle variants)
+Type:      --text-micro (10px), --text-nano (8px), --tracking-*, --font-*
+Shadows:   --shadow-panel, --shadow-panel-strong
+Spacing:   --modal-max-height (85vh), --page-min-height (60vh)
+```
+
+Dark mode is handled automatically — tokens flip under `.dark`. Components never hardcode light/dark variants.
+
+#### Layer 2 — Tailwind Theme Mapping
+
+`@theme inline` in `globals.css` maps Tailwind utilities to the Layer 1 vars. This means Tailwind class names like `bg-surface-raised`, `text-text-primary`, `shadow-panel-strong`, `text-micro` all resolve through CSS vars — one retheme = one file change.
+
+**Never** put literal hex or RGB values in `@theme inline`. Only `var(--*)` references.
+
+#### Layer 3 — The `ui-*` Class System (SSOT for patterns)
+
+Every recurring visual pattern is a named `ui-*` class in `@layer components`. This is where all styling decisions are encoded.
+
+```
+Panels:    ui-panel, ui-card-shell, ui-card-shell-raised, ui-settings-section
+Buttons:   ui-btn-primary, ui-btn-secondary, ui-btn-ghost, ui-btn-chip,
+           ui-btn-icon, ui-btn-xs, ui-btn-save, ui-btn-submit, ui-btn-lg,
+           ui-btn-ready-primary, ui-btn-ready-action, ui-btn-ready-more,
+           ui-btn-confirm, ui-btn-danger, ui-btn-overlay
+Inputs:    ui-input, ui-input-compact, ui-input-tight, ui-input-inline
+Text:      ui-kicker, ui-micro-label, ui-page-title, ui-page-subtitle, ui-error
+Chips:     ui-chip-filter, ui-chip-toggle, ui-badge, ui-tag (+ variants)
+Status:    ui-dot-positive/-warning/-negative, ui-tag-positive/-warning/-negative
+Layout:    app-page, ui-page-header, ui-empty-page (error/empty/placeholder pages)
+Control:   ui-control-hero, ui-control-card-header-meta, ui-control-metric-*
+Auth:      ui-auth-card, ui-auth-input, ui-auth-submit-btn, ui-auth-label (etc.)
+Public:    ui-public-surface, ui-public-nav, ui-public-title, ui-public-badge (etc.)
+Brand:     ui-channel-whatsapp/-telegram/-phone/-in-person (contact channel icons)
+           ui-lang-ts/-js/-py/-go/-rs/-rb/-cs/-java (programming language badges)
+           ui-cat-fleet/-security/-engineering/-frontend/... (prompt categories)
+```
+
+When a pattern appears in 3+ components: extract it to `@layer components` immediately.
+
+**The public and auth surfaces** (`ui-public-*`, `ui-auth-*`) intentionally use `text-white/[opacity]` and `bg-white/[opacity]` inside their class definitions — those surfaces are always dark (near-black bg). This is correct and centralized. Components should use the class name, not the opacity utilities directly.
+
+#### Layer 4 — JSX (structure and layout only)
+
+In component JSX, only two things are allowed:
+1. **`ui-*` class names** (semantic, from Layer 3)
+2. **Tailwind layout utilities** — `flex`, `grid`, `gap-*`, `px-*`, `py-*`, `w-*`, `h-*`, `max-w-*`, `min-h-*`, `items-*`, `justify-*`, `col-span-*`, `overflow-*`, `rounded-*` (using the token-mapped values), `text-*` sizing only (not color)
+
+**Absolutely never in JSX:**
+```
+❌  text-gray-400       ← palette color (use text-text-secondary etc.)
+❌  bg-indigo-500       ← palette color
+❌  bg-[#1a2b3c]        ← hex value
+❌  text-[10px]         ← arbitrary size (use text-micro)
+❌  text-[8px]          ← arbitrary size (use text-nano)
+❌  shadow-[var(--*)]   ← use shadow-panel / shadow-panel-strong
+❌  min-h-[44px]        ← use min-h-11 (44px on spacing scale)
+❌  h-[72px]            ← use h-18 (72px on spacing scale)
+❌  min-h-[60vh]        ← use ui-empty-page class
+```
+
+#### The Decision Tree
+
+Adding any visual element — ask in order:
+
+1. **Does a `ui-*` class already exist for this?** → Use it.
+2. **Is this a new recurring pattern (will appear 3+ times)?** → Add a `ui-*` class to `globals.css @layer components`.
+3. **Is this a new color?** → Add a CSS custom property to `:root`/`.dark` in `globals.css`, map it in `@theme inline`, then use it via a new `ui-*` class or a semantic Tailwind class.
+4. **Is this a layout value?** → Check the Tailwind spacing scale first (multiples of 4px: `h-18`=72px, `min-h-11`=44px). Use a CSS var + token if it's repeated (`--modal-max-height`, `--page-min-height`).
+5. **Is this a one-off layout constraint with no semantic meaning?** → Arbitrary value `[value]` is acceptable only here, and only for layout (widths, heights, max-widths) — never for colors or typography.
+
+#### Audit command
+
+```bash
+# Find all violations instantly:
+grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red-\|text-purple-\|text-yellow-\|text-orange-\|text-cyan-\|text-violet-\|bg-gray-\|bg-blue-\|bg-green-\|bg-red-\|bg-\[#\|text-\[#\|text-\[1[0-9]px\]\|text-\[8px\]" src/components/ src/app/ --include="*.tsx" --include="*.ts"
+# Zero output = compliant.
+```
 
 ### SSOT Rules
 - **User ID**: `getCurrentUserId()` from `lib/session.ts` in API routes; `DEFAULT_USER_ID` is fallback only

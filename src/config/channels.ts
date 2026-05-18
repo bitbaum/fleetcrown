@@ -11,11 +11,11 @@ type ChannelConfig = {
 };
 
 export const CHANNEL_CONFIG: Record<string, ChannelConfig> = {
-  "channel:whatsapp":  { icon: MessageCircle, label: "WhatsApp",  color: "text-green-400/60" },
-  "channel:telegram":  { icon: Send,          label: "Telegram",  color: "text-blue-400/60" },
+  "channel:whatsapp":  { icon: MessageCircle, label: "WhatsApp",  color: "ui-channel-whatsapp" },
+  "channel:telegram":  { icon: Send,          label: "Telegram",  color: "ui-channel-telegram" },
   "channel:email":     { icon: Mail,          label: "Email",     color: "text-text-tertiary" },
-  "channel:phone":     { icon: Phone,         label: "Phone",     color: "text-cyan-400/60" },
-  "channel:in-person": { icon: Users,         label: "In person", color: "text-violet-400/60" },
+  "channel:phone":     { icon: Phone,         label: "Phone",     color: "ui-channel-phone" },
+  "channel:in-person": { icon: Users,         label: "In person", color: "ui-channel-in-person" },
   "channel:other":     { icon: HelpCircle,    label: "Other",     color: "text-text-muted" },
 };
 

@@ -18,7 +18,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="fixed bottom-3 inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-2 py-2 backdrop-blur-xl shadow-[var(--shadow-panel-strong)]">
+      <nav className="fixed bottom-3 inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-2 py-2 backdrop-blur-xl shadow-panel-strong">
         {MOBILE_NAV_ITEMS.map((item) => {
           const isActive = isCurrentPath(pathname, item.href);
           const Icon = item.icon;
@@ -59,7 +59,7 @@ export function MobileNav() {
             className="fixed inset-0 z-40 bg-black/48 backdrop-blur-sm md:hidden"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border-default bg-surface-base shadow-[var(--shadow-panel-strong)] md:hidden">
+          <div className="fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border-default bg-surface-base shadow-panel-strong md:hidden">
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <span className="text-sm font-semibold text-text-primary">All views</span>
               <button

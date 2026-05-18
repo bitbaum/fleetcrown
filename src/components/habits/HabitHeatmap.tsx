@@ -43,7 +43,7 @@ export function HabitHeatmap({
       {/* Day-of-week labels */}
       <div className="flex flex-col gap-0.5 shrink-0">
         {ROW_LABELS.map((label, i) => (
-          <div key={i} className="h-3.5 w-3 flex items-center justify-end text-[8px] text-text-muted leading-none">
+          <div key={i} className="h-3.5 w-3 flex items-center justify-end text-nano text-text-muted leading-none">
             {i % 2 === 0 ? label : ""}
           </div>
         ))}
