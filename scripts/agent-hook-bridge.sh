@@ -423,10 +423,36 @@ handle_notification() {
     exit 0
   fi
 
-  prompt=$(get_prompt "continue")
-  [ -z "$prompt" ] && exit 0
+  local base session session_file session_update_block
+  base=$(get_prompt "next_best")
+  [ -z "$base" ] && exit 0
 
-  inject_prompt "$TAB_NAME" "$prompt"
+  session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+  session_update_block="When done, update ${session_file} with exactly these lines:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count> TODOs
+health: <good | needs attention | critical>"
+
+  if [ -f "$session_file" ]; then
+    session=$(cat "$session_file")
+    prompt="${base}
+
+Session state from last run:
+${session}
+
+${session_update_block}"
+  else
+    prompt="${base}
+
+Before stopping, create ${session_file}.
+${session_update_block}"
+  fi
+
+  emit_or_inject_prompt "$TAB_NAME" "$prompt"
+  write_inject_state "$TAB_NAME" "next_best" "▶ Next Best Task"
+  log "notification: injected next_best with session context"
 }
 
 case "$MODE" in
