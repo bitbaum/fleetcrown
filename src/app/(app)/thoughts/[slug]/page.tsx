@@ -2,10 +2,30 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
+
+// Splits a string on bold, italic, inline-code, and link patterns then
+// returns an array of strings and React elements. Used for paragraph text,
+// list items, and blockquote lines where inline markdown must render.
+function ri(text: string): ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i} className="font-semibold text-text-primary">{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`") && part.endsWith("`"))
+      return <code key={i} className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-sm text-text-primary">{part.slice(1, -1)}</code>;
+    const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link)
+      return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-accent-hover transition-colors">{link[1]}</a>;
+    return part;
+  });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -50,43 +70,43 @@ export default async function ThoughtArticlePage({
               case "h2":
                 return (
                   <h2 key={i} className="text-2xl font-medium text-text-primary">
-                    {block.text}
+                    {ri(block.text)}
                   </h2>
                 );
               case "h3":
                 return (
                   <h3 key={i} className="text-xl font-medium text-text-primary">
-                    {block.text}
+                    {ri(block.text)}
                   </h3>
                 );
               case "ul":
                 return (
                   <ul key={i} className="list-disc space-y-2 pl-6 text-base text-text-secondary md:text-lg">
-                    {block.items.map((item) => (
-                      <li key={item}>{item}</li>
+                    {block.items.map((item, j) => (
+                      <li key={j}>{ri(item)}</li>
                     ))}
                   </ul>
                 );
               case "ol":
                 return (
                   <ol key={i} className="list-decimal space-y-2 pl-6 text-base text-text-secondary md:text-lg">
-                    {block.items.map((item) => (
-                      <li key={item}>{item}</li>
+                    {block.items.map((item, j) => (
+                      <li key={j}>{ri(item)}</li>
                     ))}
                   </ol>
                 );
               case "blockquote":
                 return (
                   <blockquote key={i} className="border-l-2 border-border-default pl-4 italic text-text-secondary md:text-lg">
-                    {block.text.map((line) => (
-                      <p key={line}>{line}</p>
+                    {block.text.map((line, j) => (
+                      <p key={j}>{ri(line)}</p>
                     ))}
                   </blockquote>
                 );
               case "p":
                 return (
                   <p key={i} className="text-base leading-relaxed text-text-secondary md:text-lg">
-                    {block.text}
+                    {ri(block.text)}
                   </p>
                 );
               case "image":
