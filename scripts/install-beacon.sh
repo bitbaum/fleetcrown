@@ -31,6 +31,23 @@ ok()   { printf '%s✓%s %s\n' "$green" "$reset" "$*"; }
 warn() { printf '%s⚠%s  %s\n' "$yellow" "$reset" "$*"; }
 info() { printf '   %s\n' "$*"; }
 
+# ── --sync: re-copy scripts only (no hooks or config changes) ────────────────
+# Use this after pulling updates instead of re-running the full installer.
+#   bash scripts/install-beacon.sh --sync
+if [[ "${1:-}" == "--sync" ]]; then
+  [ -d "$BEACON_HOME" ] || { echo "Beacon not installed — run without --sync first." >&2; exit 1; }
+  cp "$SCRIPT_DIR/beacon.py"            "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/_beacon_audio.py"     "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/_beacon_config.py"    "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/_beacon_popups.py"    "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/_beacon_theme.py"     "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/agent-hook-bridge.sh" "$BEACON_HOME/"
+  cp "$SCRIPT_DIR/agent-hook-lib.sh"    "$BEACON_HOME/"
+  chmod +x "$BEACON_HOME/agent-hook-bridge.sh" "$BEACON_HOME/agent-hook-lib.sh"
+  ok "Beacon scripts synced to $BEACON_HOME"
+  exit 0
+fi
+
 echo "${bold}Cockpit Beacon installer${reset}"
 echo ""
 
