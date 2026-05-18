@@ -4,10 +4,11 @@ import { signOut } from "next-auth/react";
 import { useEffect } from "react";
 import { AuthShell, AuthHeading } from "@/components/auth/AuthShell";
 import { Loader2 } from "lucide-react";
+import { ROUTES } from "@/config/auth";
 
 export default function SignOutPage() {
   useEffect(() => {
-    signOut({ callbackUrl: "/sign-in" });
+    signOut({ callbackUrl: ROUTES.SIGN_IN });
   }, []);
 
   return (

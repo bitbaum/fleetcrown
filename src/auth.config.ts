@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { ROUTES } from "@/config/auth";
 
 // Edge-safe auth config — no DB adapter, no Node.js crypto.
 // Used by src/middleware.ts (Edge Runtime).
@@ -6,7 +7,7 @@ import type { NextAuthConfig } from "next-auth";
 export const authConfig = {
   session: { strategy: "jwt" } as const,
   pages: {
-    signIn: "/sign-in",
+    signIn: ROUTES.SIGN_IN,
   },
   providers: [],
   callbacks: {
@@ -42,8 +43,8 @@ export const authConfig = {
           request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto =
           request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-        const signInUrl = new URL("/sign-in", `${proto}://${host}`);
-        if (pathname !== "/sign-in") {
+        const signInUrl = new URL(ROUTES.SIGN_IN, `${proto}://${host}`);
+        if (pathname !== ROUTES.SIGN_IN) {
           signInUrl.searchParams.set("callbackUrl", pathname + search);
         }
         // API routes must not redirect — callers expect JSON 401.
@@ -61,13 +62,13 @@ export const authConfig = {
       // work normally. Sign-out is excluded to avoid a redirect loop on logout.
       if (
         !auth.user.onboardedAt &&
-        !pathname.startsWith("/onboarding") &&
+        !pathname.startsWith(ROUTES.ONBOARDING) &&
         !pathname.startsWith("/api/") &&
         !pathname.startsWith("/sign-out")
       ) {
         const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "");
-        return Response.redirect(new URL("/onboarding", `${proto}://${host}`));
+        return Response.redirect(new URL(ROUTES.ONBOARDING, `${proto}://${host}`));
       }
 
       return true;

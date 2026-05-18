@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
+import { ROUTES } from "@/config/auth";
 import Google from "next-auth/providers/google";
 import Twitter from "next-auth/providers/twitter";
 import Credentials from "next-auth/providers/credentials";
@@ -126,8 +127,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   pages: {
-    signIn: "/sign-in",
-    signOut: "/sign-out",
+    signIn: ROUTES.SIGN_IN,
+    signOut: ROUTES.SIGN_OUT,
   },
   callbacks: {
     async signIn({ user, account }) {

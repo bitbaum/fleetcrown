@@ -13,12 +13,13 @@ import { BillingSettings } from "@/components/settings/BillingSettings";
 import { PageLayout } from "@/components/ui/page-layout";
 import { isStripeReady } from "@/lib/stripe";
 import { getProjectLimit, isUnlimitedProjects } from "@/lib/plan";
+import { ROUTES } from "@/config/auth";
 
 export const metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
   const session = await auth();
-  if (!session?.user?.id) redirect("/sign-in");
+  if (!session?.user?.id) redirect(ROUTES.SIGN_IN);
 
   const [projects, teamProjects, user, invitations] = await Promise.all([
     getUserProjects(session.user.id),

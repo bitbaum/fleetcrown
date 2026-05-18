@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Compass } from "lucide-react";
+import { ROUTES } from "@/config/auth";
 
 export default function NotFound() {
   return (
@@ -11,7 +12,7 @@ export default function NotFound() {
           That route doesn&rsquo;t exist in Cockpit.
         </div>
         <Link
-          href="/today"
+          href={ROUTES.APP_HOME}
           className="ui-btn-chip rounded-2xl px-5 py-3 text-base text-text-primary"
         >
           Back to Today

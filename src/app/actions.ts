@@ -7,6 +7,7 @@ import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
 import { patchGoal } from "@/db/queries/goals";
 import { requirePageUserId } from "@/lib/session";
+import { ROUTES } from "@/config/auth";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { revalidatePath } from "next/cache";
@@ -29,7 +30,7 @@ export async function handleApprove(id: string) {
       summary: action.title,
     });
   }
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
   revalidatePath("/people");
 }
 
@@ -49,26 +50,26 @@ export async function handleApproveAll(ids: string[]) {
         }),
       ),
   );
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
   revalidatePath("/people");
 }
 
 export async function handleReject(id: string) {
   const userId = await requirePageUserId();
   await rejectAction(id, userId);
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
 }
 
 export async function handleDismissAlert(id: string) {
   const userId = await requirePageUserId();
   await dismissAlert(id, userId);
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
 }
 
 export async function handleFulfillCommitment(id: string) {
   const userId = await requirePageUserId();
   await fulfillCommitment(id, userId);
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
 }
 
 export async function handleCancelSubscription(id: string) {
@@ -80,6 +81,6 @@ export async function handleCancelSubscription(id: string) {
 export async function handleAbandonGoal(id: string) {
   const userId = await requirePageUserId();
   await patchGoal(userId, id, { status: GOAL_STATUS.ABANDONED });
-  revalidatePath("/today");
+  revalidatePath(ROUTES.APP_HOME);
   revalidatePath("/goals");
 }

@@ -41,7 +41,7 @@ function VerifyEmailInner() {
           title="Email verified ✓"
           description="Your email address has been confirmed. You're all set."
         />
-        <AuthFooterLink href="/today">Go to Cockpit →</AuthFooterLink>
+        <AuthFooterLink href={ROUTES.APP_HOME}>Go to Cockpit →</AuthFooterLink>
       </AuthShell>
     );
   }

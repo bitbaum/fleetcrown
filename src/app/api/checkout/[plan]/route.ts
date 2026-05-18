@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { stripe, STRIPE_PRICE_IDS, isStripeReady } from "@/lib/stripe";
 import { getUserById, updateUserBilling } from "@/db/queries/users";
+import { ROUTES } from "@/config/auth";
 
 const PAID_PLANS = ["personal", "pro", "team"] as const;
 type PaidPlan = typeof PAID_PLANS[number];
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
 
   const session = await auth();
   if (!session?.user?.id) {
-    const signInUrl = new URL("/sign-in", req.url);
+    const signInUrl = new URL(ROUTES.SIGN_IN, req.url);
     signInUrl.searchParams.set("callbackUrl", `/api/checkout/${plan}`);
     return NextResponse.redirect(signInUrl);
   }
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
   }
 
   const user = await getUserById(session.user.id);
-  if (!user) return NextResponse.redirect(new URL("/sign-in", req.url));
+  if (!user) return NextResponse.redirect(new URL(ROUTES.SIGN_IN, req.url));
 
   // Already on this plan
   if (user.plan === plan && user.planStatus === "active") {

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
+import { ROUTES } from "@/config/auth";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
 
 /**
@@ -21,7 +22,7 @@ export async function getSessionUserId(): Promise<string | null> {
  */
 export async function requirePageUserId(): Promise<string> {
   const session = await auth();
-  if (!session?.user?.id) redirect("/sign-in");
+  if (!session?.user?.id) redirect(ROUTES.SIGN_IN);
   return session.user.id;
 }
 

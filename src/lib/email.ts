@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { ROUTES } from "@/config/auth";
 
 // Lazy — Resend throws at construction if key is empty string, which breaks next build
 let _resend: Resend | null = null;
@@ -111,10 +112,10 @@ export function welcomeEmailTemplate(name: string) {
       <li>Set up your daily habits and goals</li>
       <li>Dispatch your first AI agent from the Control panel</li>
     </ul>
-    <div style="text-align:center;">${btn(url + "/today", "Open Cockpit →")}</div>
+    <div style="text-align:center;">${btn(url + ROUTES.APP_HOME, "Open Cockpit →")}</div>
     ${small("Questions? Reply to this email — we read everything.")}
   `);
-  const text = `Welcome to Cockpit, ${name}!\n\nOpen your dashboard: ${url}/today`;
+  const text = `Welcome to Cockpit, ${name}!\n\nOpen your dashboard: ${url}${ROUTES.APP_HOME}`;
   return { subject, html, text };
 }
 
