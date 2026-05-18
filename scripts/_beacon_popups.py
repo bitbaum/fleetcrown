@@ -18,7 +18,7 @@ from PyQt6.QtGui import QColor, QCursor, QPalette
 from _beacon_theme import load_theme
 from _beacon_config import (
     COUNTDOWN_SECONDS, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX, COCKPIT_URL,
-    load_settings, load_prompt_meta,
+    load_settings, load_prompt_meta, read_project_git_branch,
 )
 from _beacon_audio import WhisperThread
 AGENT_FALLBACK_ORDER = ["claude", "codex", "gemini"]
@@ -649,6 +649,7 @@ class ContinuePopup(BasePopup):
         self._current_agent   = os.environ.get("AGENT_CURRENT_AGENT", "claude").strip().lower()
         if self._current_agent not in AGENT_FALLBACK_ORDER:
             self._current_agent = "claude"
+        self._git_branch      = read_project_git_branch(label)
         self._capacity_issue  = False
         self._next_agent      = None
         # Start paused if the web app wrote the sentinel while Cockpit was running.
@@ -1266,18 +1267,51 @@ class ContinuePopup(BasePopup):
         lay.setContentsMargins(20, 18, 20, 16)
         lay.setSpacing(0)
 
-        # ── Header ──
+        # ── Header ── (mirrors web card: project name + Ready badge, then chips row)
         hdr = QHBoxLayout()
         hdr.setSpacing(8)
 
+        dot = QLabel("●")
+        dot.setStyleSheet(f"color:{C['green']};font-size:10px;")
+        dot.setFixedWidth(14)
+        hdr.addWidget(dot)
+
         hdr_left = QVBoxLayout()
-        hdr_left.setSpacing(2)
-        kicker = QLabel("SESSION COMPLETE")
-        kicker.setObjectName("kicker")
-        hdr_left.addWidget(kicker)
+        hdr_left.setSpacing(4)
+
+        # Title row: project name + "Ready" badge
+        title_row = QHBoxLayout()
+        title_row.setSpacing(8)
         proj = QLabel(self.label)
         proj.setObjectName("proj")
-        hdr_left.addWidget(proj)
+        title_row.addWidget(proj)
+        badge = QLabel("Ready")
+        badge.setStyleSheet(
+            f"color:{C['green']};font-size:11px;font-weight:700;"
+            f"padding:3px 10px;background:{C['surface']};border-radius:10px;"
+            f"border:1px solid {C['green']}44;")
+        title_row.addWidget(badge)
+        title_row.addStretch()
+        hdr_left.addLayout(title_row)
+
+        # Chips row: agent + git branch (matches web ProjectStatusChips)
+        chips_row = QHBoxLayout()
+        chips_row.setSpacing(6)
+        _chip_ss = (
+            f"color:{C['text3']};font-size:11px;"
+            f"padding:2px 9px;background:{C['surface']};"
+            f"border-radius:10px;border:1px solid {C['border']};"
+        )
+        agent_chip = QLabel(f"{_agent_label(self._current_agent)} ready")
+        agent_chip.setStyleSheet(_chip_ss)
+        chips_row.addWidget(agent_chip)
+        if self._git_branch:
+            branch_chip = QLabel(f"⎇  {self._git_branch}")
+            branch_chip.setStyleSheet(_chip_ss)
+            chips_row.addWidget(branch_chip)
+        chips_row.addStretch()
+        hdr_left.addLayout(chips_row)
+
         hdr.addLayout(hdr_left)
         hdr.addStretch()
 
@@ -1287,13 +1321,6 @@ class ContinuePopup(BasePopup):
         dash_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         dash_btn.clicked.connect(self._open_cockpit)
         hdr.addWidget(dash_btn)
-
-        badge = QLabel("● done")
-        badge.setStyleSheet(
-            f"color:{C['green']};font-size:11px;font-weight:700;"
-            f"padding:3px 10px;background:{C['surface']};border-radius:10px;"
-            f"border:1px solid {C['green']}44;")
-        hdr.addWidget(badge)
 
         close_btn = QPushButton("×")
         close_btn.setObjectName("close_btn")

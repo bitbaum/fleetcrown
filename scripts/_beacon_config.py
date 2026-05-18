@@ -1,5 +1,5 @@
 """Beacon — runtime constants and config-file helpers.  No PyQt dependency."""
-import os, json
+import os, json, subprocess
 
 # Wire-format prefixes — must match constants in src/lib/constants/control.ts
 CUSTOM_CHOICE_PREFIX = "custom:"
@@ -33,3 +33,39 @@ def load_prompt_meta() -> list:
     except Exception:
         pass
     return []
+
+
+def read_project_git_branch(label: str) -> str | None:
+    """Look up the project directory from claude-projects.conf and return the git branch.
+
+    Tries agent-projects.conf first (new), then claude-projects.conf (legacy).
+    Returns None if the directory is not found or is not a git repo.
+    """
+    tab = label.lower()
+    conf_paths = [
+        os.path.expanduser(os.environ.get("AGENT_PROJECTS_CONF", "~/.config/agent-projects.conf")),
+        os.path.expanduser("~/.config/claude-projects.conf"),
+    ]
+    for conf in conf_paths:
+        if not os.path.exists(conf):
+            continue
+        try:
+            for line in open(conf).read().split("\n"):
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("|")
+                if len(parts) < 2 or parts[0].strip().lower() != tab:
+                    continue
+                d = os.path.expanduser(parts[1].strip())
+                if not os.path.isdir(d):
+                    continue
+                result = subprocess.run(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    cwd=d, capture_output=True, text=True, timeout=2,
+                )
+                if result.returncode == 0:
+                    return result.stdout.strip() or None
+        except Exception:
+            pass
+    return None

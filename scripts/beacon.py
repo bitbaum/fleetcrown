@@ -34,7 +34,7 @@ def _bootstrap_vendor_packages() -> None:
 
 _bootstrap_vendor_packages()
 
-from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS
+from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch
 
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -75,6 +75,7 @@ def _write_beacon_session(label: str, session_content: str) -> str:
         "nextAgent": None,
         "capacityIssue": False,
         "countdownSeconds": configured_countdown,
+        "gitBranch": read_project_git_branch(label),
     }
     os.makedirs(_BEACON_DIR, exist_ok=True)
     # Cancel any active (no choice yet) sessions for this project.
