@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { shellEscape } from "@/lib/zellij";
+import { getApiUserId } from "@/lib/session";
 
 const CommitBody = z.object({
   dir:     z.string().trim().min(1),
@@ -19,6 +20,9 @@ function gitExec(dir: string, args: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!isRuntimeAvailable()) {
     return NextResponse.json({ ok: false, reason: "runtime_offline" }, { status: 503 });
   }

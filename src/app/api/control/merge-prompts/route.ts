@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText } from "@/lib/groq";
+import { getApiUserId } from "@/lib/session";
 
 const Body = z.object({
   prompts: z.array(z.string().trim().min(1)).min(2),
@@ -34,6 +35,9 @@ async function mergeViaAgent(message: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText } from "@/lib/groq";
+import { getApiUserId } from "@/lib/session";
 
 const HandoffSchema = z.object({
   done:   z.string().default(""),
@@ -121,6 +122,9 @@ function parseGroqResponse(text: string): { action: DispatchAction; reason: stri
 // ── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

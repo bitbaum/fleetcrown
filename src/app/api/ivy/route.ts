@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { getApiUserId } from "@/lib/session";
 
 // openclaw agent --json output shape
 type OpenclawResult = {
@@ -16,6 +17,9 @@ const AskIvyBody = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, AskIvyBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

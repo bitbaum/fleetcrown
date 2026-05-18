@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { shellEscape } from "@/lib/zellij";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { getApiUserId } from "@/lib/session";
 
 const FocusTabBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -43,6 +44,9 @@ function switchTab(session: string, tab: string): void {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   if (!isRuntimeAvailable()) {
     return NextResponse.json({ ok: false, reason: "runtime_offline" }, { status: 503 });
   }
