@@ -212,6 +212,21 @@ inject_prompt() {
   ZELLIJ_SESSION_NAME="$zellij_session" zellij action write 13 2>/dev/null || true
 }
 
+# Send a raw key code (e.g. 3 = Ctrl+C, 13 = Enter) to a tab without typing
+# characters first. Used for interrupt signals where write-chars would be wrong.
+send_raw_key_to_tab() {
+  local tab="$1" keycode="$2"
+  [ -z "$tab" ] && return 1
+  local zellij_session="${ZELLIJ_SESSION_NAME:-}"
+  if [ -z "$zellij_session" ]; then
+    zellij_session=$(_find_session_for_tab "$tab")
+    [ -z "$zellij_session" ] && return 1
+  fi
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$tab" 2>/dev/null || true
+  sleep 0.1
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write "$keycode" 2>/dev/null || true
+}
+
 # Call after every injection to keep the Control panel and web beacon in sync.
 # Writes agent-current-prompt-<tab> so the UI shows which task is running,
 # and clears agent-ready-<tab> so the UI stops showing "waiting for input".

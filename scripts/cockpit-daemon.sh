@@ -236,6 +236,35 @@ _agent_launch_cmd() {
   esac
 }
 
+# Returns 0 (true) if any process matching the agent's basename is running with
+# a cwd equal to or inside dir; 1 otherwise. Used to verify the outgoing agent
+# actually exited before launching the replacement.
+_is_agent_running_in_dir() {
+  local agent="$1" dir="$2"
+  local matcher
+  case "$agent" in
+    claude)  matcher="claude" ;;
+    codex)   matcher="codex"  ;;
+    gemini)  matcher="gemini" ;;
+    *)       return 1 ;;
+  esac
+  local pid_dir argv0 basename cwd
+  for pid_dir in /proc/[0-9]*/; do
+    [ -f "${pid_dir}cmdline" ] || continue
+    argv0=$(cut -d '' -f1 "${pid_dir}cmdline" 2>/dev/null) || continue
+    basename="${argv0##*/}"
+    case "$basename" in
+      "$matcher"|"${matcher}"-*) ;;
+      *) continue ;;
+    esac
+    cwd=$(readlink "${pid_dir}cwd" 2>/dev/null) || continue
+    if [ "$cwd" = "$dir" ] || [ "${cwd#"${dir}/"}" != "$cwd" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 execute_switch_agent() {
   local id="$1" tab="$2" dir="$3" to_agent="$4" from_agent="${5:-}" model="${6:-}"
 
@@ -261,7 +290,24 @@ execute_switch_agent() {
     quit_cmd=$(_agent_quit_cmd "$from_agent")
     if [ -n "$quit_cmd" ]; then
       inject_prompt "$tab" "$quit_cmd" 2>/dev/null || true
-      sleep 1
+
+      # Poll /proc for up to 2s to confirm the process exited cleanly.
+      local gone=0 deadline
+      deadline=$(( $(date +%s) + 2 ))
+      while (( $(date +%s) < deadline )); do
+        sleep 0.3
+        if ! _is_agent_running_in_dir "$from_agent" "$dir"; then
+          gone=1; break
+        fi
+      done
+
+      # Quit command didn't land — agent stuck on a prompt or permission dialog.
+      # Send Ctrl+C as a harder interrupt and give it 600ms to clean up.
+      if [ "$gone" = "0" ]; then
+        log "switch_agent: quit didn't land, sending Ctrl+C to $tab"
+        send_raw_key_to_tab "$tab" 3 2>/dev/null || true
+        sleep 0.6
+      fi
     fi
   fi
 
