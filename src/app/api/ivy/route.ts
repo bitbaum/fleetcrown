@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
 
 // openclaw agent --json output shape
@@ -16,41 +17,17 @@ const AskIvyBody = z.object({
   message: z.string().trim().min(1, "message is required"),
 });
 
-// Direct Groq API fallback when the local openclaw gateway is unavailable
+const IVY_SYSTEM_PROMPT =
+  "You are Ivy, a helpful AI assistant inside Cockpit — a personal life operating system for builders. Be concise and direct.";
+
+// Direct Groq fallback when the local openclaw gateway is unavailable.
 async function callGroq(message: string): Promise<{ text: string; model: string }> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error("GROQ_API_KEY not configured");
-
-  const model = "llama-3.3-70b-versatile";
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Ivy, a helpful AI assistant inside Cockpit — a personal life operating system for builders. Be concise and direct.",
-        },
-        { role: "user", content: message },
-      ],
-      max_tokens: 1024,
-    }),
-    signal: AbortSignal.timeout(30_000),
+  const text = await callGroqText(message, {
+    systemPrompt: IVY_SYSTEM_PROMPT,
+    maxTokens: 1024,
+    timeoutMs: 30_000,
   });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Groq error ${res.status}: ${body}`);
-  }
-
-  const data = await res.json();
-  const text: string = data.choices?.[0]?.message?.content ?? "";
-  return { text, model: `groq/${model}` };
+  return { text, model: `groq/${GROQ_FAST_MODEL}` };
 }
 
 export async function POST(req: NextRequest) {
