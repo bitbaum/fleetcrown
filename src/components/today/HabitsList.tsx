@@ -17,11 +17,7 @@ export function HabitsList({ initialHabits }: { initialHabits: HabitWithStatus[]
   const toggle = async (id: string, currentDone: boolean) => {
     setToggleError(null);
     setHabits((prev) =>
-      prev.map((h) =>
-        h.id === id
-          ? { ...h, doneToday: !currentDone, streak: !currentDone ? h.streak + 1 : Math.max(0, h.streak - 1) }
-          : h,
-      ),
+      prev.map((h) => (h.id === id ? { ...h, doneToday: !currentDone } : h)),
     );
     try {
       const res = await patchJson(`/api/habits/${id}`, { done: !currentDone });
