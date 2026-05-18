@@ -34,7 +34,7 @@ def _bootstrap_vendor_packages() -> None:
 
 _bootstrap_vendor_packages()
 
-from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch
+from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch, looks_like_capacity_issue, resolve_next_agent
 
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -72,8 +72,8 @@ def _write_beacon_session(label: str, session_content: str) -> str:
         "createdAt": int(time.time() * 1000),
         "choice": None,
         "currentAgent": _current_agent(),
-        "nextAgent": None,
-        "capacityIssue": False,
+        "nextAgent": resolve_next_agent(_current_agent()),
+        "capacityIssue": looks_like_capacity_issue(session_content),
         "countdownSeconds": configured_countdown,
         "gitBranch": read_project_git_branch(label),
     }

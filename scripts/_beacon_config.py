@@ -1,5 +1,5 @@
 """Beacon — runtime constants and config-file helpers.  No PyQt dependency."""
-import os, json, subprocess
+import os, json, re, shutil, subprocess
 
 # Wire-format prefixes — must match constants in src/lib/constants/control.ts
 CUSTOM_CHOICE_PREFIX = "custom:"
@@ -68,4 +68,40 @@ def read_project_git_branch(label: str) -> str | None:
                     return result.stdout.strip() or None
         except Exception:
             pass
+    return None
+
+
+# Agent fallback order — must match AGENT_FALLBACK_ORDER in src/lib/agent-registry.ts
+_AGENT_FALLBACK_ORDER = ["claude", "codex", "gemini"]
+_VALID_AGENTS = frozenset(_AGENT_FALLBACK_ORDER)
+
+
+def looks_like_capacity_issue(text: str) -> bool:
+    """Mirror of looksLikeAgentCapacityIssue() in src/lib/agent-registry.ts."""
+    return bool(re.search(
+        r"rate\s*limit|quota|credit|usage\s*limit|token\s*limit|out\s+of\s+tokens"
+        r"|context\s*(window|length|limit)|maximum\s+context|insufficient\s+quota",
+        text, re.IGNORECASE,
+    ))
+
+
+def resolve_next_agent(current_agent: str | None) -> str | None:
+    """Mirror of resolveNextAvailableAgent() in src/lib/agent-registry.ts.
+
+    Returns the first switchable agent after current_agent in fallback order
+    whose CLI is present on PATH, or None if no alternative is available.
+    """
+    current = current_agent if current_agent in _VALID_AGENTS else None
+    available = {a for a in _AGENT_FALLBACK_ORDER if shutil.which(a)}
+
+    if current and current in _AGENT_FALLBACK_ORDER:
+        idx = _AGENT_FALLBACK_ORDER.index(current)
+        for candidate in _AGENT_FALLBACK_ORDER[idx + 1:]:
+            if candidate in available:
+                return candidate
+
+    for candidate in _AGENT_FALLBACK_ORDER:
+        if candidate != current and candidate in available:
+            return candidate
+
     return None
