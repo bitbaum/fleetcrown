@@ -238,7 +238,7 @@ export async function GET() {
     // always sees their own profile data regardless of who last built the git cache.
     Promise.all([userId, ...teamOwnerIds].map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
   ]);
-  cleanupStaleOrchestrationRuns(userId).catch(() => {})
+  cleanupStaleOrchestrationRuns(userId).catch((err) => console.error("[control] cleanup failed:", err))
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
 
   // Group recent activity by project key so each card gets its own slice (no extra query).
@@ -274,7 +274,7 @@ export async function GET() {
           sessionTodos:  session.todos,
           sessionHealth: session.health,
           sessionUpdatedAt: new Date(sessionMtimeMs),
-        }).catch(() => {});
+        }).catch((err) => console.error("[control] upsertProjectState failed:", err));
 
         // Capture agent progress to dev log when the "done" section actually changes.
         // Creates a natural timeline of what each agent accomplished without requiring
@@ -289,8 +289,8 @@ export async function GET() {
             todos: session.todos?.trim() ?? "",
             health: session.health?.trim() || "good",
           };
-          if (projectId) appendProjectDevLogByEntityProjectId(userId, projectId, entry).catch(() => {});
-          else appendProjectDevLog(userId, tab, entry).catch(() => {});
+          if (projectId) appendProjectDevLogByEntityProjectId(userId, projectId, entry).catch((err) => console.error("[control] devlog append failed:", err));
+          else appendProjectDevLog(userId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
         }
       }
     } else if (session && !dbState) {
@@ -306,7 +306,7 @@ export async function GET() {
         sessionTodos:  session.todos,
         sessionHealth: session.health,
         sessionUpdatedAt: new Date(session.mtime),
-      }).catch(() => {});
+      }).catch((err) => console.error("[control] upsertProjectState failed:", err));
     }
 
     const nowS = Math.floor(Date.now() / 1000);
@@ -382,7 +382,7 @@ export async function GET() {
         source: event.source,
         detail: event.detail,
         happenedAt: new Date(event.at * 1000),
-      }).catch(() => {});
+      }).catch((err) => console.error("[control] createOrchestrationEvent failed:", err));
     }
 
     return ({

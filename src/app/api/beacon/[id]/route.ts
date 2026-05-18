@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   fs.writeFileSync(beaconPath(id), JSON.stringify(session));
 
   // Persist session state to project dev log (fire-and-forget — never blocks the beacon response)
-  appendDevLog(session.project, session.sessionContent).catch(() => {});
+  appendDevLog(session.project, session.sessionContent).catch((err) => console.error("[beacon] devlog append failed:", err));
 
   return NextResponse.json({ ok: true });
 }

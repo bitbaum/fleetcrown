@@ -163,7 +163,7 @@ export async function GET() {
       scheduleKeepalive();
 
       // Tick loop
-      const interval = setInterval(() => { tick().catch(() => {}); }, TICK_MS);
+      const interval = setInterval(() => { tick().catch((err) => console.error("[control/stream] tick failed:", err)); }, TICK_MS);
 
       // Cleanup when stream is cancelled
       return () => {

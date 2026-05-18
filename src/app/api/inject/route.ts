@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     adapter: eventAdapter,
     intent: eventIntent ?? "custom",
     customPrompt: customPrompt ?? null,
-  }).catch(() => {});
+  }).catch((err) => console.error("[inject] db write failed:", err));
 
   upsertProjectState({
     projectKey: canonical,
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     currentPromptKey: promptKey ?? "custom",
     currentPromptLabel: promptLabel,
     currentPromptStartedAt: new Date(nowS * 1000),
-  }).catch(() => {});
+  }).catch((err) => console.error("[inject] db write failed:", err));
 
   createOrchestrationEvent({
     userId,
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest) {
     intent: eventIntent,
     detail: promptLabel,
     happenedAt: new Date(nowS * 1000),
-  }).catch(() => {});
+  }).catch((err) => console.error("[inject] db write failed:", err));
 
   createOrchestrationEvent({
     userId,
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
     intent: eventIntent,
     detail: promptLabel,
     happenedAt: new Date(nowS * 1000),
-  }).catch(() => {});
+  }).catch((err) => console.error("[inject] db write failed:", err));
 
   return NextResponse.json({
     ok: true,

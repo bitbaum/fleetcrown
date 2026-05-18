@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
     adapter: request.adapter as AdapterId,
     intent: request.intent as OrchestrationTaskIntentId,
     customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
-  }).catch(() => {});
+  }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
         currentPromptKey: request.intent,
         currentPromptLabel: intent.name,
         currentPromptStartedAt: new Date(nowS * 1000),
-      }).catch(() => {});
+      }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
       createOrchestrationEvent({
         userId,
@@ -188,7 +188,7 @@ export async function POST(req: NextRequest) {
         intent: request.intent,
         detail: intent.name,
         happenedAt: new Date(nowS * 1000),
-      }).catch(() => {});
+      }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
       createOrchestrationEvent({
         userId,
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
         intent: request.intent,
         detail: intent.name,
         happenedAt: new Date(nowS * 1000),
-      }).catch(() => {});
+      }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
       clearHandshakeFiles(effectiveKey);
 

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         lockAt:                 tsOrNull(p.lockAt),
         closingAt:              tsOrNull(p.closingAt),
         closedAt:               tsOrNull(p.closedAt),
-      }).catch(() => {});
+      }).catch((err) => console.error("[runtime-state] db write failed:", err));
     })
   );
 
