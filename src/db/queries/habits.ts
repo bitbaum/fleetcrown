@@ -1,7 +1,7 @@
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
 import { db } from "@/db";
 import { habits, habitCompletions } from "@/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { HABIT_FREQUENCY, type HabitFrequency, isHabitScheduled } from "@/lib/constants/statuses";
 import { toLocalDateStr } from "@/lib/dates";
 import { z } from "zod";
@@ -159,7 +159,7 @@ export async function getAllHabitsWithHistory(userId: string, days = HABIT_HISTO
     .select()
     .from(habits)
     .where(eq(habits.userId, userId))
-    .orderBy(habits.active, habits.sortOrder, habits.createdAt);
+    .orderBy(desc(habits.active), habits.sortOrder, habits.createdAt);
 
   if (allHabits.length === 0) return [];
 
