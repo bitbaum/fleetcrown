@@ -44,6 +44,7 @@ export type GitState = {
 export type ProjectState = {
   id: string | null;
   projectId: string | null;
+  readonly?: boolean;
   tab: string;
   liveTab: string;
   dir: string;

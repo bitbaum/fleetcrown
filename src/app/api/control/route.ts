@@ -211,7 +211,7 @@ export async function GET() {
   });
   const ownEntries = dbUserProjects.filter((p) => p.dirPath).map(toEntry)
     .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
-  const teamEntries = dbTeamProjects.filter((p) => p.dirPath).map(toEntry)
+  const teamEntries = dbTeamProjects.filter((p) => p.dirPath).map((p) => ({ ...toEntry(p), readonly: true }))
     .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
   const projects = [...ownEntries, ...teamEntries];
   const dirs = projects.map((p) => p.dir);

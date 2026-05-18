@@ -155,7 +155,7 @@ export function ProjectProfile({
       {/* Project metadata */}
       {project.profile ? (
         <MetaSection profile={project.profile} />
-      ) : project.projectId ? (
+      ) : project.projectId && !project.readonly ? (
         <div className="border-t border-border-subtle">
           <div className="px-4 pt-3 sm:px-5">
             <p className="text-xs text-text-tertiary">
@@ -167,13 +167,13 @@ export function ProjectProfile({
             onSaved={() => onProfileSaved?.()}
           />
         </div>
-      ) : (
+      ) : !project.profile ? (
         <div className="px-4 py-6 text-center sm:px-5">
           <p className="text-sm text-text-secondary">
             No profile — add metadata in the Projects view to enable full awareness.
           </p>
         </div>
-      )}
+      ) : null}
 
       {/* Dimension prompt sections — loaded from ~/.config/agent-prompts.json */}
       {dimensionGroups.map(({ id, prompts }) => (
@@ -194,7 +194,7 @@ export function ProjectProfile({
       {/* Dev log — appended automatically when beacon sessions end */}
       {project.id && <DevLogSection entries={devLogEntries} />}
 
-      {project.id && onDeleted && (
+      {project.id && !project.readonly && onDeleted && (
         <RemoveSection projectId={project.id} onRemoved={onDeleted} />
       )}
     </div>
