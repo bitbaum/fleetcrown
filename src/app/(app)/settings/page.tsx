@@ -31,7 +31,7 @@ export default async function SettingsPage() {
 
   return (
     <PageLayout title="Settings" maxWidth="max-w-2xl">
-      <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "" }} />
+      <ProfileSettings user={{ id: user.id, name: user.name ?? "", username: user.username ?? "", image: user.image ?? "", hasPassword: !!user.passwordHash }} />
       <BeaconSettings />
       <Suspense>
         <BillingSettings

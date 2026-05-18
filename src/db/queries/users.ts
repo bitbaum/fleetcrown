@@ -84,6 +84,10 @@ export async function updateUserBilling(id: string, patch: UpdateUserBillingInpu
   return updated ?? null;
 }
 
+export async function updateUserPasswordHash(id: string, passwordHash: string) {
+  await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
+}
+
 export async function updateUser(id: string, patch: UpdateUserInput) {
   const [updated] = await db
     .update(users)
