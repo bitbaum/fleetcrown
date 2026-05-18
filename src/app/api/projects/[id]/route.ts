@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
-import { patchProject, deleteProject, PatchProjectBody, getProjectDetail } from "@/db/queries/projects";
+import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
 import { getProjectPromptActivity } from "@/db/queries/prompt-history";
 import { getProjectOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
@@ -79,14 +79,15 @@ export async function GET(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const [detail, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
-    getProjectDetail(userId, id),
+  const [resolved, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
+    resolveProjectDetailWithOrgFallback(userId, id),
     getProjectPromptActivity(userId, id, 40).catch(() => []),
     getProjectOrchestrationRuns(userId, id, 20).catch(() => []),
     getProjectStateByProjectId(id).catch(() => null),
   ]);
 
-  if (!detail) return NextResponse.json(null, { status: 404 });
+  if (!resolved) return NextResponse.json(null, { status: 404 });
+  const { detail } = resolved;
   const { project, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
 
   const linkedJobs = getLinkedJobs(project.id, project.name);

@@ -105,6 +105,52 @@ export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow 
   return projects.map((p) => ({ ...p, attrs: attrsByEntity.get(p.id) ?? {}, readonly: true as const }));
 }
 
+/**
+ * Resolves project detail for a viewer who may not own the entity.
+ * Falls back to org-member access: if the entity belongs to a peer in the
+ * same org, returns the detail fetched under the owner's userId (read-only
+ * from the viewer's perspective — PATCH/DELETE still require ownership).
+ *
+ * Returns { detail, ownerId } or null if no access.
+ */
+export async function resolveProjectDetailWithOrgFallback(
+  viewerUserId: string,
+  projectId: string,
+): Promise<{ detail: NonNullable<Awaited<ReturnType<typeof getProjectDetail>>>; ownerId: string } | null> {
+  // Fast path: viewer owns the entity.
+  const ownDetail = await getProjectDetail(viewerUserId, projectId);
+  if (ownDetail) return { detail: ownDetail, ownerId: viewerUserId };
+
+  // Look up the entity without userId filter to find its actual owner.
+  const [entity] = await db
+    .select({ id: entities.id, userId: entities.userId })
+    .from(entities)
+    .where(and(eq(entities.id, projectId), eq(entities.type, ENTITY_TYPE.PROJECT)))
+    .limit(1);
+
+  if (!entity || entity.userId === viewerUserId) return null;
+
+  // Check that viewer and owner share at least one org.
+  const viewerOrgs = await db
+    .select({ orgId: orgMemberships.orgId })
+    .from(orgMemberships)
+    .where(eq(orgMemberships.userId, viewerUserId));
+
+  if (viewerOrgs.length === 0) return null;
+  const orgIds = viewerOrgs.map((m) => m.orgId);
+
+  const shared = await db
+    .select({ id: orgMemberships.orgId })
+    .from(orgMemberships)
+    .where(and(eq(orgMemberships.userId, entity.userId), inArray(orgMemberships.orgId, orgIds)))
+    .limit(1);
+
+  if (shared.length === 0) return null;
+
+  const detail = await getProjectDetail(entity.userId, projectId);
+  return detail ? { detail, ownerId: entity.userId } : null;
+}
+
 export async function getProjectDetail(userId: string, id: string) {
   const [project] = await db
     .select()

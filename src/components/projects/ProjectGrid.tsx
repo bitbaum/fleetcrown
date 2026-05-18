@@ -49,10 +49,10 @@ function ProjectCard({
 
   return (
     <div
-      onClick={project.readonly ? undefined : onOpen}
-      className={`ui-card-shell group relative flex flex-col gap-3 p-4 sm:p-5 ${
-        project.readonly ? "cursor-default" : "ui-panel-interactive cursor-pointer"
-      } ${hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"}`}
+      onClick={onOpen}
+      className={`ui-card-shell ui-panel-interactive group relative flex cursor-pointer flex-col gap-3 p-4 sm:p-5 ${
+        hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"
+      }`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
