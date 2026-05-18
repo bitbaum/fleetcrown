@@ -28,6 +28,8 @@ export function AddMilestoneInline({
       onAdded(updated);
       setValue("");
       setOpen(false);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setSaving(false);
     }
@@ -104,6 +106,8 @@ export function MilestoneRow({
     try {
       await patchGoal(goalId, { milestones: updated, progress });
       onUpdate(updated, progress);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setToggling(false);
     }
@@ -126,6 +130,8 @@ export function MilestoneRow({
       await patchGoal(goalId, { milestones: updated, progress });
       onUpdate(updated, progress);
       setEditing(false);
+    } catch {
+      // state unchanged — user can retry or press Escape
     } finally {
       setSavingEdit(false);
     }
@@ -139,6 +145,8 @@ export function MilestoneRow({
     try {
       await patchGoal(goalId, { milestones: updated, progress });
       onUpdate(updated, progress);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setDeleting(false);
     }

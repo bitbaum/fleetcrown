@@ -22,6 +22,8 @@ export function useGoalCard(goal: GoalWithChildren) {
   const [childTitle, setChildTitle] = useState("");
   const [savingChild, setSavingChild] = useState(false);
   const [childError, setChildError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [descError, setDescError] = useState<string | null>(null);
   const titleEdit = useInlineEdit<string>(goal.title);
   const descEdit = useInlineEdit<string>(goal.description ?? "");
 
@@ -50,17 +52,29 @@ export function useGoalCard(goal: GoalWithChildren) {
   const commitTitle = () => {
     const trimmed = titleEdit.draft.trim();
     if (!trimmed || trimmed === displayTitle) { titleEdit.cancel(); return; }
+    setTitleError(null);
     titleEdit.commit(async () => {
       await patchGoal(goal.id, { title: trimmed });
       setDisplayTitle(trimmed);
+    }).then((saved) => {
+      if (!saved) {
+        setTitleError("Failed to save — try again");
+        setTimeout(() => setTitleError(null), 4000);
+      }
     });
   };
 
   const commitDesc = () => {
     const trimmed = descEdit.draft.trim();
+    setDescError(null);
     descEdit.commit(async () => {
       await patchGoal(goal.id, { description: trimmed || null });
       setDescription(trimmed || null);
+    }).then((saved) => {
+      if (!saved) {
+        setDescError("Failed to save — try again");
+        setTimeout(() => setDescError(null), 4000);
+      }
     });
   };
 
@@ -73,6 +87,8 @@ export function useGoalCard(goal: GoalWithChildren) {
       await patchGoal(goal.id, { status: newStatus, progress: newProgress });
       setStatus(newStatus);
       if (newStatus === GOAL_STATUS.COMPLETED) setProgress(100);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setTogglingStatus(false);
     }
@@ -85,6 +101,8 @@ export function useGoalCard(goal: GoalWithChildren) {
     try {
       await patchGoal(goal.id, { status: newStatus });
       setStatus(newStatus);
+    } catch {
+      // state unchanged — user can retry
     } finally {
       setAbandoningStatus(false);
     }
@@ -103,6 +121,7 @@ export function useGoalCard(goal: GoalWithChildren) {
     addingChild, childTitle, savingChild, childError,
     titleEdit, descEdit,
     isClosed, isCompleted, isAbandoned,
+    titleError, descError,
     handleAddChild, commitTitle, commitDesc,
     toggleComplete, toggleAbandon,
     setAddingChild: (v: boolean) => { setAddingChild(v); if (!v) { setChildTitle(""); setChildError(null); } },
