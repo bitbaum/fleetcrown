@@ -56,7 +56,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
   const displayedPrompts = showAllPrompts ? GLOBAL_PROMPTS : QUICK_PROMPTS;
 
   return (
-      <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="flex flex-col max-h-[85vh]">
+      <Modal onClose={onClose} size="2xl" padded={false} position="bottom-mobile" disableClose={loading} className="ui-modal-scrollable">
         {/* Header */}
         <div className="shrink-0 border-b border-border-subtle px-5 py-4">
           <div className="flex items-center justify-between gap-3">
@@ -182,7 +182,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
         <div className="shrink-0 ui-card-section">
           <div className={`ui-card-shell flex items-end gap-1 bg-surface-overlay transition-colors ${
             listening
-              ? "border-status-negative shadow-[0_0_0_3px_color-mix(in_oklch,var(--status-negative)_16%,transparent)]"
+              ? "ui-focus-ring-negative"
               : micProcessing
               ? "border-accent-primary/50"
               : "border-border-default"

@@ -61,7 +61,7 @@ export function RunModal({
 
   return (
     <>
-      <Modal onClose={onClose} size="2xl" padded={false} disableClose={running} className="flex flex-col max-h-[85vh]">
+      <Modal onClose={onClose} size="2xl" padded={false} disableClose={running} className="ui-modal-scrollable">
         <div className="shrink-0 border-b border-border-subtle p-6">
           <div className="flex items-start justify-between gap-3">
             <div>

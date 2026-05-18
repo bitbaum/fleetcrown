@@ -676,6 +676,18 @@
     @apply flex flex-col items-center justify-center;
   }
 
+  /* Tall-modal scroll container — caps at --modal-max-height */
+  .ui-modal-scrollable {
+    max-height: var(--modal-max-height);
+    @apply flex flex-col overflow-hidden;
+  }
+
+  /* Error-state focus ring — recording/mic-active input border + glow */
+  .ui-focus-ring-negative {
+    border-color: var(--status-negative);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-negative) 16%, transparent);
+  }
+
   /* Contact channel icon colors — brand identity, intentionally chromatic */
   .ui-channel-whatsapp  { @apply text-green-400/60; }
   .ui-channel-telegram  { @apply text-blue-400/60; }
