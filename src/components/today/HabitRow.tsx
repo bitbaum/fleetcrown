@@ -38,10 +38,12 @@ export function HabitRow({
         title: ie.draft.title.trim(),
         frequency: ie.draft.frequency,
       });
-      if (!ok) throw new Error("Failed to save");
-    }).catch(() => {
-      setEditError("Failed to save — try again");
-      setTimeout(() => setEditError(null), 4000);
+      if (!ok) throw new Error();
+    }).then((saved) => {
+      if (!saved) {
+        setEditError("Failed to save — try again");
+        setTimeout(() => setEditError(null), 4000);
+      }
     });
   };
 

@@ -33,14 +33,21 @@ export function useInlineEdit<T>(initial: T) {
     /** Exit edit mode without saving. */
     cancel: () => setEditing(false),
     /**
-     * Run the save action with saving-flag wrapping. Exits edit mode
-     * after the action resolves (success or error).
+     * Run the save action with saving-flag wrapping. Returns true on success,
+     * false on failure. Exits edit mode only on success — leaves the editor
+     * open on failure so the user can retry or cancel rather than silently
+     * losing their input.
      */
-    commit: async (action: () => Promise<void> | void) => {
+    commit: async (action: () => Promise<void> | void): Promise<boolean> => {
       setSaving(true);
-      try { await action(); } finally {
-        setSaving(false);
+      try {
+        await action();
         setEditing(false);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setSaving(false);
       }
     },
   };
