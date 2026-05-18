@@ -28,7 +28,7 @@ export const config = {
      *   beacon                     – public beacon page
      *   api/auth                   – NextAuth internal endpoints
      *   api/health, api/setup      – infrastructure endpoints (pre-auth)
-     *   api/crons, api/system      – public read endpoints used by daemon/monitoring
+     *   api/crons, api/system      – GET excluded for daemon/monitoring; write methods enforce auth in-handler
      *   api/invitations/           – token-scoped invitation routes (GET validate, POST accept);
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header

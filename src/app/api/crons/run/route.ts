@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { RunCronBody } from "@/lib/crons";
+import { getApiUserId } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, RunCronBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

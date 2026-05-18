@@ -3,6 +3,7 @@ import { writeFileSync } from "fs";
 import { CRON_FILE, DEFAULT_TIMEZONE, TELEGRAM_CHAT_ID } from "@/lib/constants";
 import { type CronJob, readCronJobs, readCronFile, CreateCronBody, PatchCronBody } from "@/lib/crons";
 import { readJsonBody } from "@/lib/api/route-helpers";
+import { getApiUserId } from "@/lib/session";
 
 // Re-export so existing imports from this path keep working
 export type { CronJob };
@@ -17,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, CreateCronBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { name, scheduleExpr, message, model, timeoutSeconds, tz, projectId, projectName } = dataOrResp;
@@ -61,6 +65,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const dataOrResp = await readJsonBody(req, PatchCronBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { id, enabled, message, projectId, projectName } = dataOrResp;
