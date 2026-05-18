@@ -39,9 +39,10 @@ export default async function PublicProfilePage({
   if (!user) notFound();
 
   const projects = await getPublicProjects(user.id);
-  const thoughts = listThoughts();
-
-  const recentThoughts = thoughts
+  // Only show filesystem-based essays on the site owner's profile.
+  // Team member profiles have no associated authored content.
+  const allThoughts = user.isDefault ? listThoughts() : [];
+  const recentThoughts = allThoughts
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, 4);
 
@@ -158,12 +159,12 @@ export default async function PublicProfilePage({
                 </Link>
               ))}
             </div>
-            {thoughts.length > 4 && (
+            {allThoughts.length > 4 && (
               <Link
                 href="/thoughts"
                 className="mt-3 inline-block text-sm text-accent-text hover:text-accent-hover transition-colors"
               >
-                View all {thoughts.length} essays →
+                View all {allThoughts.length} essays →
               </Link>
             )}
           </section>
