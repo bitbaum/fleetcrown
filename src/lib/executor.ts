@@ -26,11 +26,11 @@ export type ExecuteResult =
 export async function executeInject(
   payload: InjectPayload,
   userId: string,
-  injectFn: (tab: string, prompt: string) => void,
+  injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
   if (isRuntimeAvailable()) {
     try {
-      injectFn(payload.tab, payload.prompt);
+      await injectFn();
       return { ok: true, mode: "direct" };
     } catch (err) {
       return { ok: false, mode: "direct", error: err instanceof Error ? err.message : String(err) };

@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
   const result = await executeInject(
     { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, projectId, projectKey: canonical },
     userId,
-    injectFn ?? (() => { throw new Error("Runtime unavailable"); }),
+    injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );
 
   if (!result.ok) {
