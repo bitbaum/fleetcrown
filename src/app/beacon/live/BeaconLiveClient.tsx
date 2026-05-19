@@ -67,5 +67,5 @@ export function BeaconLiveClient({ initialSession = null }: { initialSession?: B
     );
   }
 
-  return <BeaconPageClient initialSession={session} onClose={handleClose} />;
+  return <BeaconPageClient key={session.id} initialSession={session} onClose={handleClose} />;
 }

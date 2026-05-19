@@ -316,7 +316,7 @@ export function BeaconPageClient({
   initialSession: BeaconSession;
   onClose?: () => void;
 }) {
-  const [session] = useState<BeaconSession>(initialSession);
+  const session = initialSession;
   const [prompts, setPrompts] = useState<AgentPrompt[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submittedLabel, setSubmittedLabel] = useState("");
