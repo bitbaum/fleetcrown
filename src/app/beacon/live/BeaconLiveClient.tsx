@@ -46,7 +46,10 @@ export function BeaconLiveClient({ initialSession = null }: { initialSession?: B
   }, [hasSession]);
 
   const handleClose = () => {
-    setTimeout(() => setSession(null), 1500);
+    const closingId = session?.id;
+    setTimeout(() => {
+      setSession((prev) => (prev?.id === closingId ? null : prev));
+    }, 1500);
   };
 
   if (!session) {

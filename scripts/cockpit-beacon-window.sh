@@ -47,10 +47,17 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
   if command -v "$browser" >/dev/null 2>&1; then
     # Write PID file so beacon.py can focus this window without xdotool on every call.
     echo "$$" > "/tmp/cockpit-beacon/live-browser.pid"
-    exec "$browser" \
+    # Unset WAYLAND_DISPLAY + force --ozone-platform=x11: on KDE Plasma Wayland,
+    #   chromium-family browsers default to native Wayland for --app windows
+    #   (only the clipboard helper goes through XWayland). xdotool is X11-only,
+    #   so a Wayland-native window is invisible to it and our show/hide endpoints
+    #   silently no-op. Unsetting WAYLAND_DISPLAY routes everything through
+    #   XWayland — xdotool can then find, move, and raise the window.
+    exec env -u WAYLAND_DISPLAY "$browser" \
       --app="$URL" \
       --user-data-dir="$PROFILE_DIR" \
       --class=cockpit-beacon \
+      --ozone-platform=x11 \
       --window-position=-32000,-32000 \
       --window-size=560,720 \
       --no-first-run \
