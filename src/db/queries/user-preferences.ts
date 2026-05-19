@@ -14,17 +14,21 @@ export type UserPreferencesData = {
 };
 
 export function getActiveCity(prefs: UserPreferencesData | null): string {
-  if (prefs?.currentCity && prefs.currentCityUntil) {
-    const until = new Date(prefs.currentCityUntil);
-    if (until >= new Date()) return prefs.currentCity;
+  if (prefs?.currentCity) {
+    // Expiry is optional — only skip if explicitly set AND already past.
+    if (!prefs.currentCityUntil || new Date(prefs.currentCityUntil) >= new Date()) {
+      return prefs.currentCity;
+    }
   }
   return prefs?.homeCity ?? WEATHER_CITY;
 }
 
 export function getActiveTimezone(prefs: UserPreferencesData | null): string {
-  if (prefs?.currentTimezone && prefs.currentCityUntil) {
-    const until = new Date(prefs.currentCityUntil);
-    if (until >= new Date()) return prefs.currentTimezone;
+  if (prefs?.currentTimezone) {
+    // Same expiry logic as getActiveCity — tied to currentCityUntil.
+    if (!prefs.currentCityUntil || new Date(prefs.currentCityUntil) >= new Date()) {
+      return prefs.currentTimezone;
+    }
   }
   return prefs?.homeTimezone ?? DEFAULT_TIMEZONE;
 }
