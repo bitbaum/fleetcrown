@@ -34,21 +34,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  // Temporary diagnostic — Vercel logs aren't reachable, so persist Auth.js failures
-  // to the debug_logs table where they can be queried directly.
-  debug: true,
+  // Persist Auth.js error events to the database — Vercel runtime logs aren't
+  // reliably reachable from the CLI in this environment, and an auth failure that
+  // can't be diagnosed is functionally a P0. Low write volume in steady state
+  // (only fires on actual errors).
   logger: {
     error: (err) => {
       console.error("[auth.logger.error]", err?.name, err?.message, err);
-      // Unwrap nested cause / type-specific fields — Auth.js v5 wraps the real
-      // failure under .cause and uses minified class names in prod, so a shallow
-      // stringify loses the actionable detail.
-      const meta: Record<string, unknown> = {
-        name: err?.name,
-        type: (err as { type?: string })?.type,
-        kind: (err as { kind?: string })?.kind,
-        stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
-      };
       const unwrapCause = (c: unknown, depth = 0): unknown => {
         if (!c || depth > 4) return c;
         if (c instanceof Error) {
@@ -66,15 +58,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         return c;
       };
+      const meta: Record<string, unknown> = {
+        name: err?.name,
+        type: (err as { type?: string })?.type,
+        stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
+      };
       if (err?.cause) meta.cause = unwrapCause(err.cause);
-      // Fire-and-forget DB write — never block the auth flow.
       db.execute(sql`
         INSERT INTO debug_logs (source, level, message, meta)
         VALUES ('auth', 'error', ${err?.message ?? String(err)}, ${JSON.stringify(meta)}::jsonb)
       `).catch(() => {});
     },
-    warn:  (code) => { console.warn("[auth.logger.warn]", code); },
-    debug: (code, meta) => { console.log("[auth.logger.debug]", code, meta); },
   },
   events: {
     async signIn(message) {
@@ -199,40 +193,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async signIn({ user, account }) {
-      // CRITICAL: at this point in the OAuth flow, `user.id` is the OAuth provider's
-      // user id (e.g. GitHub's numeric "41178744"), NOT a DB UUID. Passing it to any
-      // query that joins on a UUID column will throw at PostgreSQL — which Auth.js
-      // then wraps as AccessDenied. Always resolve to the DB user via email first.
-      try {
-        // OAuth profile sync — only for OAuth providers, only when we have an email.
-        if (account?.type === "oauth" && user.email) {
-          const existingUser = await getUserByEmail(user.email);
-          if (existingUser) {
-            const patch: Record<string, string | null | undefined> = {};
-            const oauthImage = (user as { image?: string | null }).image;
-            if (!existingUser.image && oauthImage) patch.image = oauthImage;
-            if (!existingUser.name  && user.name) patch.name  = user.name;
-            if (Object.keys(patch).length > 0) {
-              await updateUser(existingUser.id, patch);
-            }
+      // CRITICAL: at this point in the OAuth flow, user.id is the OAuth provider's
+      // id (e.g. GitHub's numeric "41178744"), NOT the DB UUID. Passing it to any
+      // query that joins on a uuid column trips PostgreSQL — which Auth.js wraps as
+      // AccessDenied. Resolve to the DB user via email before any uuid-typed write.
+      // Org bootstrap (which needs the real UUID) lives in events.signIn below.
+      if (account?.type === "oauth" && user.email) {
+        const existingUser = await getUserByEmail(user.email);
+        if (existingUser) {
+          const patch: Record<string, string | null | undefined> = {};
+          const oauthImage = (user as { image?: string | null }).image;
+          if (!existingUser.image && oauthImage) patch.image = oauthImage;
+          if (!existingUser.name  && user.name)  patch.name  = user.name;
+          if (Object.keys(patch).length > 0) {
+            await updateUser(existingUser.id, patch);
           }
         }
-        return true;
-      } catch (e) {
-        // Persist + rethrow — the outer Auth.js handler will surface AccessDenied,
-        // but this lands the real cause in debug_logs for diagnosis.
-        db.execute(sql`
-          INSERT INTO debug_logs (source, level, message, meta)
-          VALUES ('auth', 'callback:signIn', ${(e as Error)?.message ?? String(e)},
-                  ${JSON.stringify({
-                    provider: account?.provider,
-                    email: user?.email,
-                    name: (e as Error)?.name,
-                    stack: (e as Error)?.stack?.split("\n").slice(0, 6).join("\n"),
-                  })}::jsonb)
-        `).catch(() => {});
-        throw e;
       }
+      return true;
     },
     async jwt({ token, user, trigger }) {
       const userId = user?.id ?? (token.id as string | undefined);
