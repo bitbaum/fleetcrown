@@ -131,32 +131,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signOut: ROUTES.SIGN_OUT,
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // Update GitHub profile fields on first OAuth link.
-      if (account?.provider === "github" && user.email) {
-        const existingUser = await getUserByEmail(user.email);
-        if (existingUser) {
-          const patch: Record<string, string | null | undefined> = {};
-          const githubImage = (user as { image?: string | null }).image;
-          if (!existingUser.image && githubImage) patch.image = githubImage;
-          if (!existingUser.name && user.name)   patch.name  = user.name;
-          if (Object.keys(patch).length > 0) {
-            await updateUser(existingUser.id, patch);
+    async signIn({ user, account, profile }) {
+      console.log("[auth.signIn] called", {
+        provider: account?.provider,
+        userId: user?.id,
+        userEmail: user?.email,
+        userName: user?.name,
+        hasProfile: !!profile,
+        accountType: account?.type,
+      });
+      try {
+        // Update GitHub profile fields on first OAuth link.
+        if (account?.provider === "github" && user.email) {
+          const existingUser = await getUserByEmail(user.email);
+          console.log("[auth.signIn] existingUser lookup", { found: !!existingUser, id: existingUser?.id });
+          if (existingUser) {
+            const patch: Record<string, string | null | undefined> = {};
+            const githubImage = (user as { image?: string | null }).image;
+            if (!existingUser.image && githubImage) patch.image = githubImage;
+            if (!existingUser.name && user.name)   patch.name  = user.name;
+            if (Object.keys(patch).length > 0) {
+              await updateUser(existingUser.id, patch);
+            }
           }
         }
-      }
 
-      // Auto-create a personal org for users who don't have one yet.
-      // Runs on every sign-in but is a no-op after the first time.
-      if (user.id) {
-        const memberCount = await getOrgMembershipCount(user.id);
-        if (memberCount === 0) {
-          const displayName = user.name ?? user.email?.split("@")[0] ?? "user";
-          await createPersonalOrg(user.id, displayName);
+        // Auto-create a personal org for users who don't have one yet.
+        // Runs on every sign-in but is a no-op after the first time.
+        if (user.id) {
+          const memberCount = await getOrgMembershipCount(user.id);
+          console.log("[auth.signIn] membership count", { userId: user.id, count: memberCount });
+          if (memberCount === 0) {
+            const displayName = user.name ?? user.email?.split("@")[0] ?? "user";
+            await createPersonalOrg(user.id, displayName);
+          }
         }
-      }
 
-      return true;
+        console.log("[auth.signIn] returning true");
+        return true;
+      } catch (e) {
+        console.error("[auth.signIn] THREW", e);
+        throw e;
+      }
     },
     async jwt({ token, user, trigger }) {
       const userId = user?.id ?? (token.id as string | undefined);
