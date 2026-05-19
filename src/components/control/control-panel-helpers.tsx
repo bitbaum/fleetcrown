@@ -118,7 +118,7 @@ export function BrainConfigPanel({
               {selectedDefinition?.label ?? getAdapterLabel(selectedAgent)}
             </h2>
           </div>
-          <p className="max-w-2xl text-sm leading-relaxed text-text-secondary">
+          <p className="hidden sm:block max-w-2xl text-sm leading-relaxed text-text-secondary">
             Saved preference for new Control launches and continuation prompts. Live execution is shown per project below.
           </p>
         </div>

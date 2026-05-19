@@ -36,7 +36,7 @@ export default async function LandingPage() {
         </div>
       )}
     >
-      <main className="relative z-10 flex flex-col items-center px-6 pb-32 pt-28 text-center">
+      <main className="relative z-10 flex flex-col items-center px-6 pb-16 pt-16 text-center sm:pb-32 sm:pt-28">
 
         {/* Hero */}
         <h1 className="ui-public-title max-w-5xl">
@@ -59,11 +59,11 @@ export default async function LandingPage() {
         </div>
 
         {/* Features */}
-        <div id="features" className="mt-32 w-full max-w-4xl scroll-mt-24">
+        <div id="features" className="mt-16 sm:mt-32 w-full max-w-4xl scroll-mt-24">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25">
             What it does
           </p>
-          <h2 className="mb-12 text-2xl font-bold tracking-tight text-white/80">
+          <h2 className="mb-8 sm:mb-12 text-2xl font-bold tracking-tight text-white/80">
             One surface. Every system.
           </h2>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -78,14 +78,14 @@ export default async function LandingPage() {
         </div>
 
         {/* Pricing */}
-        <div id="pricing" className="mt-32 w-full max-w-4xl scroll-mt-24">
+        <div id="pricing" className="mt-16 sm:mt-32 w-full max-w-4xl scroll-mt-24">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25">
             Pricing
           </p>
           <h2 className="mb-2 text-2xl font-bold tracking-tight text-white/80">
             Simple, honest pricing
           </h2>
-          <p className="mb-12 text-sm text-white/30">Billed annually · cancel any time</p>
+          <p className="mb-8 sm:mb-12 text-sm text-white/30">Billed annually · cancel any time</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {LANDING_PRICING.map((tier) => (
               <div

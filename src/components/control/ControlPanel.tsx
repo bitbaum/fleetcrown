@@ -161,7 +161,7 @@ export function ControlPanel() {
     <div className="space-y-6">
       {!focusedTab && (
         <div className="grid gap-4 xl:items-start xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
-          <section className="ui-control-hero xl:sticky xl:top-6">
+          <section className="ui-control-hero order-2 xl:order-none xl:sticky xl:top-6">
             <BrainConfigPanel
               selectedAgent={selectedAgent}
               switchableRegistry={switchableRegistry}
@@ -178,7 +178,7 @@ export function ControlPanel() {
             />
           </section>
 
-          <section className="ui-control-sidepanel">
+          <section className="ui-control-sidepanel order-1 xl:order-none">
             {!dashboard ? (
               <div className="animate-pulse space-y-2">
                 <div className="h-2.5 w-20 rounded bg-border-default" />

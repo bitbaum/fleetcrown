@@ -65,7 +65,7 @@ export function MobileNav() {
               <button
                 type="button"
                 onClick={() => setMoreOpen(false)}
-                className="rounded-xl p-1.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary"
+                className="rounded-xl p-3 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
