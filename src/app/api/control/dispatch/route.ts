@@ -190,11 +190,20 @@ export async function POST(req: NextRequest) {
       reason: `${reason}${streakSuffix}`,
       source: "groq",
     } satisfies DispatchResult);
-  } catch {
-    // Groq unavailable or no key — fall back to queue drain (existing behaviour).
+  } catch (e) {
+    // Groq unavailable, key invalid, or timeout — surface the actual cause so
+    // the user knows whether to top up credits / rotate the key / wait it out.
+    // Without this the UI just said "Groq unavailable" with no hint to action.
+    const raw = e instanceof Error ? e.message : String(e);
+    const hint = /\b401\b|invalid.api.key/i.test(raw) ? "key invalid"
+              : /\b429\b/.test(raw)                  ? "rate-limited"
+              : /\b5\d\d\b/.test(raw)                ? "Groq server error"
+              : /timeout|abort/i.test(raw)           ? "Groq timed out"
+              : raw;
+    console.error("[dispatch] groq fallback:", raw);
     return NextResponse.json({
       action: "queue",
-      reason: `Groq unavailable — using queue order.${streakSuffix}`,
+      reason: `Groq unavailable (${hint}) — using queue order.${streakSuffix}`,
       source: "fallback",
     } satisfies DispatchResult);
   }
