@@ -123,81 +123,44 @@ def _read_beacon_choice_fs(session_id: str) -> str | None:
         return None
 
 
-# ── Browser launcher ───────────────────────────────────────────────────────────
+# ── Browser window ─────────────────────────────────────────────────────────────
+#
+# The cockpit-beacon-window.service systemd user unit owns the pre-warmed
+# brave/chromium --app window. beacon.py does NOT spawn its own — that path
+# created rogue, untargetable windows whenever the unit wasn't running.
+#
+# Window show/hide is driven by React's useEffect on /beacon/live, which posts
+# to /api/beacon/window/{show,hide}. beacon.py just writes the session JSON
+# (SSE picks it up) and ensures the systemd unit is running.
 
-_LIVE_PID_FILE = os.path.join(_BEACON_DIR, "live-browser.pid")
-_LIVE_URL = f"{COCKPIT_URL}/beacon/live"
 
-
-def _focus_live_window() -> bool:
-    """Bring the pre-warmed /beacon/live window to the foreground.
-
-    Tries xdotool first (most reliable), then wmctrl as fallback.
-    Returns True if a window was found and raised.
+def _ensure_beacon_window_unit() -> None:
+    """Make sure cockpit-beacon-window.service is running. Idempotent and fast
+    (systemctl start on an already-active unit is a no-op).
     """
-    if shutil.which("xdotool"):
-        result = subprocess.run(
-            ["xdotool", "search", "--name", "beacon/live"],
-            capture_output=True, text=True,
+    if shutil.which("systemctl"):
+        subprocess.Popen(
+            ["systemctl", "--user", "start", "cockpit-beacon-window"],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
-        wids = result.stdout.strip().split()
-        for wid in wids:
-            subprocess.run(["xdotool", "windowactivate", "--sync", wid], capture_output=True)
-            subprocess.run(["xdotool", "windowraise", wid], capture_output=True)
-        if wids:
-            return True
-    if shutil.which("wmctrl"):
-        result = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
-        for line in result.stdout.splitlines():
-            if "beacon/live" in line:
-                wid = line.split()[0]
-                subprocess.run(["wmctrl", "-ia", wid], capture_output=True)
-                return True
-    return False
 
 
-def _open_browser_beacon() -> bool:
-    """Ensure the /beacon/live pre-warmed window is open and visible.
-
-    Priority order:
-      1. Live PID file → check process alive → focus window.
-      2. No PID (or stale) → try xdotool/wmctrl first; the cockpit-beacon-window
-         systemd service manages its own process and never writes the PID file.
-      3. No window found at all → cold-spawn a new browser tab.
-
-    Returns True if a browser window is running, False if no browser was found.
+def _raise_beacon_window() -> None:
+    """Tell the show endpoint to bring the pre-warmed window forward.
+    Fires asynchronously — SSE delivery will trigger the same path from the
+    React side, so this is belt-and-suspenders to minimise perceived latency.
     """
-    # Case 1: beacon.py previously spawned a window (PID file exists).
-    if os.path.exists(_LIVE_PID_FILE):
-        try:
-            pid = int(open(_LIVE_PID_FILE).read().strip())
-            os.kill(pid, 0)  # raises if process is dead
-            _focus_live_window()
-            return True
-        except (ProcessLookupError, ValueError, OSError):
-            pass  # stale — fall through to cases 2/3
-
-    # Case 2: service-managed window (no PID file). Try focus before spawning.
-    if _focus_live_window():
-        return True
-
-    # Case 3: no window found — cold-start one.
-    for b in ("chromium", "chromium-browser", "brave-browser", "google-chrome"):
-        if shutil.which(b):
-            try:
-                proc = subprocess.Popen(
-                    [b, f"--app={_LIVE_URL}"],
-                    start_new_session=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                os.makedirs(_BEACON_DIR, exist_ok=True)
-                with open(_LIVE_PID_FILE, "w") as f:
-                    f.write(str(proc.pid))
-                return True
-            except (FileNotFoundError, OSError):
-                continue
-    return False
+    try:
+        req = urllib.request.Request(
+            f"{COCKPIT_URL}/api/beacon/window/show",
+            method="POST",
+            headers={"Content-Length": "0"},
+        )
+        urllib.request.urlopen(req, timeout=1.0).close()
+    except Exception:
+        pass
 
 
 def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
@@ -261,14 +224,11 @@ def _stop(label: str, session_file: str) -> None:
         _start_cockpit_background()
         sys.exit(1)
 
-    if not _open_browser_beacon():
-        # Browser unavailable — the Control panel ReadyBanner can still serve as
-        # the interaction surface, so poll the session file anyway.
-        choice = _poll_beacon_choice(session_id)
-        if choice:
-            print(choice)
-            sys.exit(0)
-        sys.exit(1)
+    # Ensure the pre-warmed window unit is running (idempotent), then ping the
+    # show endpoint optimistically — SSE will trigger the same path from React
+    # but this minimises perceived latency.
+    _ensure_beacon_window_unit()
+    _raise_beacon_window()
 
     choice = _poll_beacon_choice(session_id)
     if choice:

@@ -64,20 +64,20 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
     browser_pid=$!
 
     # Background watcher: as soon as the window appears, unmap it so the user
-    # never sees an empty "Standby" flash. The React useEffect then drives
-    # show/hide based on session state. We poll for up to ~10s.
-    (
-      for _ in $(seq 1 20); do
-        if command -v xdotool >/dev/null 2>&1; then
-          wids=$(xdotool search --class cockpit-beacon 2>/dev/null) || wids=""
-          if [ -n "$wids" ]; then
-            echo "$wids" | xargs -n1 xdotool windowunmap 2>/dev/null || true
-            exit 0
-          fi
-        fi
-        sleep 0.5
-      done
-    ) &
+    # never sees an empty "Standby" flash. `xdotool search --sync` blocks until
+    # at least one matching window exists (no fixed timeout — on slow systems
+    # brave can take 10+ seconds to create the window). Once unmapped, the
+    # React useEffect on /beacon/live drives show/hide based on session state.
+    if command -v xdotool >/dev/null 2>&1; then
+      (
+        # --sync waits for first match; --onlyvisible filters to mapped windows
+        # (the unmapped window won't be re-found on a second --sync call).
+        wids=$(xdotool search --sync --onlyvisible --class cockpit-beacon 2>/dev/null) || wids=""
+        for wid in $wids; do
+          xdotool windowunmap "$wid" 2>/dev/null || true
+        done
+      ) &
+    fi
 
     wait "$browser_pid"
     exit $?

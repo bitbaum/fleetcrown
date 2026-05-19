@@ -6,7 +6,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 export async function GET() {
   if (!isRuntimeAvailable()) {
     return NextResponse.json({
-      mem: null, swap: null, disk: null, uptime: null, gateway: null, runtime: false,
+      mem: null, swap: null, disk: null, uptime: null, gatewayStatus: "down", runtime: false,
     });
   }
   // Use LC_ALL=C to force English column headers for reliable parsing
