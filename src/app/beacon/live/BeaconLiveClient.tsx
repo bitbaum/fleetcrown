@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import { BeaconPageClient } from "@/app/beacon/[id]/BeaconClient";
 
@@ -37,9 +39,15 @@ export function BeaconLiveClient({ initialSession = null }: { initialSession?: B
 
   if (!session) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-surface-base select-none">
-        <Image src="/icon.svg" alt="Cockpit" width={48} height={48} className="opacity-40" />
-        <p className="text-xs text-text-muted tracking-widest uppercase">Standby</p>
+      <div className="flex h-screen flex-col items-center justify-center gap-6 bg-surface-base p-8 select-none">
+        <Image src="/icon.svg" alt="Cockpit" width={56} height={56} className="opacity-60" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-text-secondary">No agent session waiting</p>
+          <p className="mt-1 text-xs text-text-tertiary">This window will fill in the moment one stops.</p>
+        </div>
+        <Link href="/control" className="ui-btn-pill-positive">
+          Open Control panel <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
     );
   }

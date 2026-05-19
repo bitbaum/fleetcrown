@@ -15,6 +15,7 @@ const TOOL_PATH = [
 export function runTool(
   command: string,
   timeout = 15000,
+  extraEnv: Record<string, string> = {},
 ): Promise<{ ok: boolean; data?: string; error?: string }> {
   return new Promise((resolve) => {
     exec(
@@ -22,7 +23,7 @@ export function runTool(
       {
         timeout,
         shell: "/bin/bash",
-        env: { ...process.env, PATH: TOOL_PATH, HOME },
+        env: { ...process.env, PATH: TOOL_PATH, HOME, ...extraEnv },
       },
       (err, stdout, stderr) => {
         if (err) {
