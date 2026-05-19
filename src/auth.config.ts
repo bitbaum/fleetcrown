@@ -35,8 +35,9 @@ export const authConfig = {
         // routes enforce the real auth check via getApiUserId/getBearerUserId.
         const authHeader = request.headers.get("authorization") ?? "";
         if (authHeader.startsWith("Bearer ck_")) return true;
-        const daemonToken = process.env.COCKPIT_DAEMON_TOKEN;
-        const legacyAllowed = process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN === "1";
+        // Edge runtime — inline the alias logic instead of importing to keep the bundle tiny.
+        const daemonToken = process.env.APP_DAEMON_TOKEN ?? process.env.COCKPIT_DAEMON_TOKEN;
+        const legacyAllowed = (process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ?? process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
         // On Vercel, the Edge Runtime sees the deployment URL (cockpit-orangecat.vercel.app)

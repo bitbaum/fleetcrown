@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFileSync, unlinkSync } from "fs";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
+import { APP_SLUG } from "@/config/brand";
 
 const Body = z.object({
   tab:     z.string().max(200),
@@ -9,9 +10,9 @@ const Body = z.object({
 });
 
 // Sentinel file read by the beacon hook bridge on init so it respects the
-// web-app pause state even when Cockpit is not running at popup open time.
+// web-app pause state even when the app server is not running at popup open time.
 function sentinelPath(tab: string) {
-  return `/tmp/cockpit-auto-continue-${tab.toLowerCase()}`;
+  return `/tmp/${APP_SLUG}-auto-continue-${tab.toLowerCase()}`;
 }
 
 export async function POST(req: NextRequest) {

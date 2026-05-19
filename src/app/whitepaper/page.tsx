@@ -5,9 +5,10 @@ import type { Metadata } from "next";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { parseThoughtBlocks } from "@/lib/thoughts-content";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 
 export const metadata: Metadata = {
-  title: "Whitepaper — Cockpit",
+  title: `Whitepaper — ${APP_NAME}`,
   description: "A technical architecture for sustained autonomous execution across many projects simultaneously.",
 };
 
@@ -146,7 +147,7 @@ export default function WhitepaperPage() {
         {/* Footer CTA */}
         <div className="mt-24 border-t border-white/[0.08] pt-16 text-center">
           <p className="mb-2 text-sm font-medium text-white/60">Ready to close the execution gap?</p>
-          <p className="mb-8 text-sm text-white/30">Start using Cockpit as your builder operating system.</p>
+          <p className="mb-8 text-sm text-white/30">Start using {APP_NAME} as your builder operating system.</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action">
               Get started →

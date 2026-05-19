@@ -15,10 +15,10 @@ const execFileAsync = promisify(execFile);
 
 // Resolve scripts/transcribe.py for both deployment modes:
 //   • `npm run dev`           → cwd = repo root            → scripts/transcribe.py
-//   • cockpit-app.service     → cwd = .next/standalone     → ../../scripts/transcribe.py
-// COCKPIT_SCRIPTS_DIR can override (e.g. when the standalone bundle is moved).
+//   • <app>-app.service       → cwd = .next/standalone     → ../../scripts/transcribe.py
+// APP_SCRIPTS_DIR (or legacy COCKPIT_SCRIPTS_DIR) can override (e.g. when the standalone bundle is moved).
 function resolveTranscribePy(): string {
-  const envDir = process.env.COCKPIT_SCRIPTS_DIR;
+  const envDir = process.env.APP_SCRIPTS_DIR ?? process.env.COCKPIT_SCRIPTS_DIR;
   const candidates = [
     envDir && join(envDir, "transcribe.py"),
     join(process.cwd(), "scripts/transcribe.py"),

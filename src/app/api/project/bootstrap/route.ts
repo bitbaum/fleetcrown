@@ -5,6 +5,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { auth } from "@/auth";
 import { createUserProject } from "@/db/queries/user-projects";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { APP_NAME } from "@/config/brand";
 import os from "os";
 import path from "path";
 import fs from "fs";
@@ -107,12 +108,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── 5. Register project in Cockpit DB ────────────────────────────────────
+  // ── 5. Register project in ${APP_NAME} DB ────────────────────────────────
   try {
     await createUserProject({ userId: session.user.id, name, dirPath: dir, gitUrl: gitUrl || undefined });
-    steps.push({ step: "Register in Cockpit", ok: true });
+    steps.push({ step: `Register in ${APP_NAME}`, ok: true });
   } catch {
-    steps.push({ step: "Register in Cockpit", ok: false, detail: "Non-fatal — project still created" });
+    steps.push({ step: `Register in ${APP_NAME}`, ok: false, detail: "Non-fatal — project still created" });
   }
 
   // ── Build the initial Claude Code brief ───────────────────────────────────
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
     `   \`\`\`bash`,
     `   npx create-next-app@latest . --typescript --tailwind --app --src-dir --import-alias "@/*" --yes`,
     `   \`\`\``,
-    `2. Follow Cockpit's engineering standards (CLAUDE.md if present, or use: Drizzle ORM, server components, semantic design tokens, no \`any\`).`,
+    `2. Follow ${APP_NAME}'s engineering standards (CLAUDE.md if present, or use: Drizzle ORM, server components, semantic design tokens, no \`any\`).`,
     `3. Build the core MVP — ship something playable within this session.`,
     `4. Set up Vercel: \`vercel --yes\` — get a live URL.`,
     dbUrl ? `5. Add DATABASE_URL to \`.env.local\` and \`vercel env add DATABASE_URL\`.` : `5. Create a Neon/Supabase database and add DATABASE_URL.`,

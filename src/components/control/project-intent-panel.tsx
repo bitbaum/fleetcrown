@@ -5,6 +5,7 @@ import { Eraser, Loader2 } from "lucide-react";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
+import { APP_NAME } from "@/config/brand";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
@@ -84,8 +85,8 @@ export function IntentButtonPanel({
     autoContinueEnabled,
     onToggleAutoContinue,
     statusLabel: autoContinueEnabled
-      ? "Auto-continue ready: Cockpit can send the next queued prompt when the agent waits."
-      : "Auto-continue paused: Cockpit will wait for you before sending more work.",
+      ? `Auto-continue ready: ${APP_NAME} can send the next queued prompt when the agent waits.`
+      : `Auto-continue paused: ${APP_NAME} will wait for you before sending more work.`,
   };
 
   const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : 5);

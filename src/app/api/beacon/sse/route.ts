@@ -4,11 +4,12 @@ import { execSync } from "child_process";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { parseProjectsConf } from "@/lib/agent-config";
+import { APP_SLUG } from "@/config/brand";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BEACON_DIR = "/tmp/cockpit-beacon";
+const BEACON_DIR = `/tmp/${APP_SLUG}-beacon`;
 const POLL_MS = 150;
 const KEEPALIVE_MS = 20_000;
 

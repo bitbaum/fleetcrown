@@ -16,30 +16,34 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Source brand SSOT (APP_NAME, APP_SLUG, APP_DOMAIN, _brand_env, _brand_tmp).
+# shellcheck source=_brand.sh
+source "$SCRIPT_DIR/_brand.sh"
+
 # Source shared zellij helpers (inject_prompt, etc.)
 # shellcheck source=agent-hook-lib.sh
 source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
-  echo "[daemon] ERROR: cannot source agent-hook-lib.sh" >&2
+  echo "[${APP_SLUG}-daemon] ERROR: cannot source agent-hook-lib.sh" >&2
   exit 1
 }
 
 _LOCAL_URL="http://localhost:3000"
-_REMOTE_URL="${COCKPIT_BASE_URL:-https://cockpitapp.vercel.app}"
-POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-8}"
-PUSH_INTERVAL="${COCKPIT_PUSH_INTERVAL:-2}"
-DRY_RUN="${COCKPIT_DRY_RUN:-0}"
-TOKEN="${COCKPIT_DAEMON_TOKEN:-}"
+_REMOTE_URL="$(_brand_env BASE_URL "https://${APP_DOMAIN}")"
+POLL_INTERVAL="$(_brand_env POLL_INTERVAL 8)"
+PUSH_INTERVAL="$(_brand_env PUSH_INTERVAL 2)"
+DRY_RUN="$(_brand_env DRY_RUN 0)"
+TOKEN="$(_brand_env DAEMON_TOKEN "")"
 CONF_FILE="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
 # Cache file shared between the main poll loop and the background push loop.
-_URL_CACHE="/tmp/cockpit-daemon-url-$$"
+_URL_CACHE="$(_brand_tmp "daemon-url-$$")"
 _URL_TTL=30  # re-detect every 30 s
 
 if [ -z "$TOKEN" ]; then
-  echo "[daemon] ERROR: COCKPIT_DAEMON_TOKEN is not set" >&2
+  echo "[${APP_SLUG}-daemon] ERROR: ${APP_SLUG^^}_DAEMON_TOKEN is not set" >&2
   exit 1
 fi
 
-log() { echo "[daemon] $(date '+%H:%M:%S') $*"; }
+log() { echo "[${APP_SLUG}-daemon] $(date '+%H:%M:%S') $*"; }
 
 # Returns the best available base URL: local server if reachable, else remote.
 # Result is cached in $_URL_CACHE for $_URL_TTL seconds so we don't probe on
@@ -55,11 +59,12 @@ _base_url() {
       echo "$cached"; return
     fi
   fi
-  # COCKPIT_DAEMON_FORCE_REMOTE=1 skips the local probe entirely. Use this when
-  # a local dev server is running with a different DB than the remote — without
-  # it, the daemon prefers local and remote runtime state goes stale (the
-  # control panel on cockpitapp.vercel.app shows daemonLastPushedAt frozen).
-  if [ "${COCKPIT_DAEMON_FORCE_REMOTE:-0}" = "1" ]; then
+  # APP_DAEMON_FORCE_REMOTE=1 (or COCKPIT_DAEMON_FORCE_REMOTE=1 legacy) skips
+  # the local probe entirely. Use this when a local dev server is running with
+  # a different DB than the remote — without it, the daemon prefers local and
+  # remote runtime state goes stale (the cloud control panel shows
+  # daemonLastPushedAt frozen).
+  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ]; then
     url="$_REMOTE_URL"
   elif curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
     url="$_LOCAL_URL"
@@ -72,9 +77,9 @@ _base_url() {
 
 # Warm the cache at startup, retrying briefly so the local app has time to boot.
 _init_base_url() {
-  if [ "${COCKPIT_DAEMON_FORCE_REMOTE:-0}" = "1" ]; then
+  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ]; then
     echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
-    log "COCKPIT_DAEMON_FORCE_REMOTE=1 — using $_REMOTE_URL (skipping local probe)"
+    log "DAEMON_FORCE_REMOTE=1 — using $_REMOTE_URL (skipping local probe)"
     return
   fi
   local i=0
@@ -124,7 +129,7 @@ mark_done() {
 _is_user_typing_in_tab() {
   local tab="$1" now
   now=$(date +%s)
-  for f in /tmp/cockpit-typing-*; do
+  for f in "$(_brand_tmp 'typing-')"*; do
     [ -f "$f" ] || continue
     local ftab fts
     ftab=$(sed -n '1p' "$f" 2>/dev/null | xargs 2>/dev/null)
@@ -213,7 +218,7 @@ execute_inject() {
     rm -f "/tmp/agent-closing-${tab}" "/tmp/claude-closing-${tab}"
     # Cancel any open web-beacon popup for this tab (mirrors cancelActiveBeaconSessions).
     # Sets choice:"" so the React beacon client knows to self-close.
-    local _bdir="/tmp/cockpit-beacon"
+    local _bdir="$(_brand_tmp 'beacon')"
     if [ -d "$_bdir" ]; then
       for _bf in "$_bdir"/*.json; do
         [ -f "$_bf" ] || continue
@@ -665,7 +670,7 @@ while true; do
       # In cloud mode the run row was created on the server side; here we just
       # land the id where the stop hook expects to read it.
       if [ -n "$run_id" ]; then
-        printf '%s' "$run_id" > "/tmp/cockpit-run-${tab}"
+        printf '%s' "$run_id" > "$(_brand_tmp "run-${tab}")"
       fi
       execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label"
       ;;

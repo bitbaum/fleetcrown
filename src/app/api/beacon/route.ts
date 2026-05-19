@@ -7,8 +7,9 @@ import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type
 import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { APP_SLUG } from "@/config/brand";
 
-const BEACON_DIR = "/tmp/cockpit-beacon";
+const BEACON_DIR = `/tmp/${APP_SLUG}-beacon`;
 
 export type BeaconSession = {
   id: string;

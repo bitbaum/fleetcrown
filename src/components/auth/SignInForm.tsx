@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
   AuthDivider, AuthHeading, AuthSecondaryButton,
@@ -111,7 +112,7 @@ function FormInner({
     <AuthShell>
       <AuthHeading
         title="Welcome back"
-        description="Sign in to your Cockpit account."
+        description={`Sign in to your ${APP_NAME} account.`}
       />
 
       {/* Mode tabs — only show owner key tab when LOCAL_AUTH_PASSWORD is configured */}

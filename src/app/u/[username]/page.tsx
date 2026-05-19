@@ -13,6 +13,7 @@ import { CockpitMark } from "@/components/shell/CockpitMark";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { listThoughts } from "@/lib/thoughts-content";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
+import { APP_NAME } from "@/config/brand";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 
 export async function generateMetadata({
@@ -22,10 +23,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username } = await params;
   const user = await getUser(username);
-  if (!user) return { title: "Not Found — Cockpit" };
+  if (!user) return { title: `Not Found — ${APP_NAME}` };
   return {
-    title: `${user.name ?? username} — Cockpit`,
-    description: `${user.name ?? username}'s builder profile on Cockpit`,
+    title: `${user.name ?? username} — ${APP_NAME}`,
+    description: `${user.name ?? username}'s builder profile on ${APP_NAME}`,
   };
 }
 

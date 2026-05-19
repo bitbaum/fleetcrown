@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { writeFileSync, unlinkSync } from "fs";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
+import { APP_SLUG } from "@/config/brand";
 
 const Body = z.object({
   enabled: z.boolean(),
@@ -10,7 +11,7 @@ const Body = z.object({
 // Daemon-readable sentinel. agent-hook-bridge.sh:handle_stop can short-circuit
 // the popup launch entirely while this file exists, so the user really doesn't
 // see anything pop while they're away.
-const SENTINEL = "/tmp/cockpit-sleep-mode";
+const SENTINEL = `/tmp/${APP_SLUG}-sleep-mode`;
 
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();

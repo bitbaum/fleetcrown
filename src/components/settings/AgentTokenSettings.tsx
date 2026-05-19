@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Copy, Check, Plus, Trash2, Loader2, Terminal } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
+import { APP_NAME } from "@/config/brand";
 
 type TokenMeta = {
   id: string;
@@ -68,7 +69,7 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Authenticate the Cockpit agent daemon on any machine. Run{" "}
+        Authenticate the {APP_NAME} agent daemon on any machine. Run{" "}
         <code className="rounded bg-surface-raised px-1 py-0.5 font-mono text-xs text-text-secondary">
           npx @cockpit/agent init
         </code>{" "}

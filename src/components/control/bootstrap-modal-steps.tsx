@@ -2,6 +2,7 @@
 
 import { Loader2, Sparkles, CheckCircle, XCircle, Copy, Rocket, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/config/brand";
 
 export interface Brief {
   name: string;
@@ -201,7 +202,7 @@ export function CreatingStep({ name }: { name: string }) {
       <Loader2 className="h-8 w-8 animate-spin text-accent-text" />
       <div className="text-center">
         <p className="font-medium text-text-primary">{name}</p>
-        <p className="mt-1 text-sm text-text-tertiary">GitHub repo · git init · Neon database · Cockpit registration</p>
+        <p className="mt-1 text-sm text-text-tertiary">GitHub repo · git init · Neon database · {APP_NAME} registration</p>
       </div>
     </div>
   );

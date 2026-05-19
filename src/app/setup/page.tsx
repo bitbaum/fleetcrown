@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { postJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
@@ -40,7 +41,7 @@ export default function SetupPage() {
     <AuthShell>
       <AuthHeading
         badge={<AuthIconBadge>✦</AuthIconBadge>}
-        title="Set up Cockpit"
+        title={`Set up ${APP_NAME}`}
         description="Create your admin account to get started."
       />
 

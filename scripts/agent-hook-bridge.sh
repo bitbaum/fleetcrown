@@ -8,11 +8,14 @@ if [ -z "$MODE" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Source brand SSOT (APP_NAME, APP_SLUG, _brand_env, _brand_tmp).
+# shellcheck source=_brand.sh
+source "$SCRIPT_DIR/_brand.sh"
 # Wire-format prefixes — must match CUSTOM_CHOICE_PREFIX / SWITCH_CHOICE_PREFIX in src/lib/constants/control.ts
 readonly CUSTOM_CHOICE_PREFIX="custom:"
 readonly SWITCH_CHOICE_PREFIX="switch:"
-# Override via COCKPIT_URL env var for non-default ports or remote deployments.
-readonly COCKPIT_URL="${COCKPIT_URL:-http://localhost:3000}"
+# Override via APP_URL / APP_BASE_URL env var for non-default ports or remote deployments.
+readonly APP_BASE_URL="$(_brand_env URL "http://localhost:3000")"
 python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/agent-hook-lib.sh"
@@ -20,14 +23,19 @@ source "$SCRIPT_DIR/agent-hook-lib.sh"
 LOG=/tmp/agent-hooks.log
 log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
-# Read per-user beacon settings from the Cockpit API (uses daemon token for auth).
-# Falls back to Python file reader when Cockpit is offline.
-_BEACON_TOKEN="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
+_token_from_env_or_file() {
+  local key="$1"
+  echo "$(_brand_env "$key" "$(grep -m1 "^COCKPIT_${key}=" "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)")"
+}
+
+# Read per-user beacon settings from the API (uses daemon token for auth).
+# Falls back to Python file reader when the app is offline.
+_BEACON_TOKEN="$(_token_from_env_or_file DAEMON_TOKEN)"
 _BEACON_SETTINGS_JSON=""
 if [ -n "$_BEACON_TOKEN" ]; then
   _BEACON_SETTINGS_JSON=$(curl -sf --max-time 2 \
     -H "Authorization: Bearer ${_BEACON_TOKEN}" \
-    "${COCKPIT_URL}/api/beacon-settings" 2>/dev/null || true)
+    "${APP_BASE_URL}/api/beacon-settings" 2>/dev/null || true)
 fi
 
 if [ -n "$_BEACON_SETTINGS_JSON" ]; then
@@ -60,25 +68,25 @@ patch_project_state() {
   local field="$2"
   local iso_now token
   iso_now=$(date -Iseconds)
-  token="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
-  curl -sf -X PATCH "${COCKPIT_URL}/api/project-states/${tab_name}" \
+  token="$(_token_from_env_or_file DAEMON_TOKEN)"
+  curl -sf -X PATCH "${APP_BASE_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${token}" \
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
 
 # Finishes an orchestration_runs row with the captured handoff so dispatch
-# can learn from outcomes. The run id was written to /tmp/cockpit-run-<tab>
+# can learn from outcomes. The run id was written to $(_brand_tmp "run-<tab>")
 # at dispatch time. Fire-and-forget — never blocks the stop hook.
 finish_orchestration_run() {
   local tab_name="$1"
   local session_file="$2"
-  local run_sentinel="/tmp/cockpit-run-${tab_name}"
+  local run_sentinel="$(_brand_tmp "run-${tab_name}")"
   [ -f "$run_sentinel" ] || return 0
   local run_id token done_line next_line tests_line todos_line health_line
   run_id=$(cat "$run_sentinel" 2>/dev/null | tr -d '[:space:]')
   [ -z "$run_id" ] && return 0
-  token="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
+  token="$(_token_from_env_or_file DAEMON_TOKEN)"
   done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
   if [ -f "$session_file" ]; then
     done_line=$(grep -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//')
@@ -92,7 +100,7 @@ finish_orchestration_run() {
     --arg d "$done_line" --arg n "$next_line" --arg t "$tests_line" \
     --arg td "$todos_line" --arg h "$health_line" \
     '{summary: {done: $d, next: $n, tests: $t, todos: $td, health: $h}}')
-  curl -sf -X POST "${COCKPIT_URL}/api/orchestration/runs/${run_id}/finish" \
+  curl -sf -X POST "${APP_BASE_URL}/api/orchestration/runs/${run_id}/finish" \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${token}" \
     -d "$payload" &>/dev/null &
@@ -131,7 +139,7 @@ switch_agent_and_continue() {
 
   case "$agent" in
     codex|gemini)
-      prompt_file="/tmp/cockpit-${agent}-prompt-$(date +%s)-$$.txt"
+      prompt_file="$(_brand_tmp "${agent}-prompt-$(date +%s)-$$.txt")"
       printf '%s' "$prompt" > "$prompt_file"
       runner="$SCRIPT_DIR/run-${agent}-task.sh"
       command=$(printf "bash %q %q %q %q %q" "$runner" "$tab_name" "$project_dir" "$prompt_file" "$([ "$agent" = "gemini" ] && echo auto || echo gpt-5.4)")
@@ -224,7 +232,7 @@ handle_stop() {
   # Moon toggle in the control panel. We skip the popup entirely; the web-app
   # ReadyBanner already short-circuits its countdown to 0 in sleep mode, so
   # the auto-inject loop runs from the browser side as long as Cockpit is open.
-  if [ -f /tmp/cockpit-sleep-mode ]; then
+  if [ -f "$(_brand_tmp 'sleep-mode')" ]; then
     log "sleep mode on — skipping popup (web-app ReadyBanner handles auto-inject)"
     exit 0
   fi

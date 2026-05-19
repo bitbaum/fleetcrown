@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
 import { ROUTES } from "@/config/auth";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
+import { envAlias, envAliasBool } from "@/lib/brand-env";
 
 /**
  * Returns the authenticated user's ID, or null if there is no session.
@@ -59,13 +60,13 @@ export async function getApiUserId(): Promise<string | null> {
   }
 
   // Legacy env-var token → "default" user. Opt-in only; not multi-tenant safe.
-  const envToken = process.env.COCKPIT_DAEMON_TOKEN;
-  const legacyAllowed = process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN === "1";
+  const envToken = envAlias("DAEMON_TOKEN");
+  const legacyAllowed = envAliasBool("ALLOW_LEGACY_DAEMON_TOKEN");
   if (envToken && legacyAllowed && bearer === envToken) {
     if (!warnedDeprecatedDaemonToken) {
       warnedDeprecatedDaemonToken = true;
       console.warn(
-        "[session] COCKPIT_DAEMON_TOKEN is deprecated and unsafe in multi-tenant deployments. " +
+        "[session] DAEMON_TOKEN bearer is deprecated and unsafe in multi-tenant deployments. " +
         "Mint a ck_* agent token from /settings and use it instead.",
       );
     }
