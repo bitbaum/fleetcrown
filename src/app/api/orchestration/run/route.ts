@@ -21,7 +21,7 @@ import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } fr
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
-import { upsertProjectState } from "@/db/queries/project-states";
+import { upsertProjectState, getProjectState } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
 
@@ -97,20 +97,28 @@ export async function POST(req: NextRequest) {
   // openclaw uses a worker process, not tab injection, so it does not participate in the queue.
   // This matches the stop-hook behavior and prevents AI-generated plans from superseding
   // user-defined queue items during auto-fire or manual 'Next best' clicks.
+  // Health gate mirrors sessionHealthBlocksQueue() on the client: if session health is critical
+  // or tests are failing, skip queue pop so the agent picks the recovery task instead.
   if (request.adapter !== "openclaw" && request.intent === "next_best") {
-    const queueFile = stateFile.queue(effectiveKey);
-    try {
-      if (fs.existsSync(queueFile)) {
-        const queue = JSON.parse(fs.readFileSync(queueFile, "utf-8")) as string[];
-        if (queue.length > 0) {
-          const first = queue.shift()!;
-          fs.writeFileSync(queueFile, JSON.stringify(queue));
-          request.intent = "custom";
-          request.customInstructions = first;
-          intent = getOrchestrationIntent("custom");
+    const projectState = await getProjectState(request.projectKey).catch(() => null);
+    const healthBlocks = (projectState?.sessionHealth ?? "").toLowerCase().includes("critical")
+      || (projectState?.sessionTests ?? "").toLowerCase().includes("fail");
+
+    if (!healthBlocks) {
+      const queueFile = stateFile.queue(effectiveKey);
+      try {
+        if (fs.existsSync(queueFile)) {
+          const queue = JSON.parse(fs.readFileSync(queueFile, "utf-8")) as string[];
+          if (queue.length > 0) {
+            const first = queue.shift()!;
+            fs.writeFileSync(queueFile, JSON.stringify(queue));
+            request.intent = "custom";
+            request.customInstructions = first;
+            intent = getOrchestrationIntent("custom");
+          }
         }
-      }
-    } catch { /* fall through to default intent */ }
+      } catch { /* fall through to default intent */ }
+    }
   }
 
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
