@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
+import { APP_SLUG } from "@/config/brand";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -46,11 +47,11 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
         </p>
 
         <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-          COCKPIT_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/cockpit-daemon.sh
+          APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
         </code>
 
         <p className="text-xs text-text-muted">
-          The token is the value of <code className="text-text-tertiary">COCKPIT_DAEMON_TOKEN</code> in your local <code className="text-text-tertiary">.env.local</code>.
+          The token is the value of <code className="text-text-tertiary">APP_DAEMON_TOKEN</code> (or legacy <code className="text-text-tertiary">COCKPIT_DAEMON_TOKEN</code>) in your local <code className="text-text-tertiary">.env.local</code>.
         </p>
       </div>
 

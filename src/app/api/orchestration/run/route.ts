@@ -24,6 +24,7 @@ import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState, getProjectState } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { APP_SLUG } from "@/config/brand";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -246,7 +247,7 @@ export async function POST(req: NextRequest) {
       const basePrompt = renderTaskForAdapter(request);
 
       const prompt = buildPromptWithSession(basePrompt, effectiveKey);
-      const promptFile = path.join("/tmp", `cockpit-${request.adapter}-prompt-${randomUUID()}.txt`);
+      const promptFile = path.join("/tmp", `${APP_SLUG}-${request.adapter}-prompt-${randomUUID()}.txt`);
       fs.writeFileSync(promptFile, prompt);
 
       const nowS = Math.floor(Date.now() / 1000);

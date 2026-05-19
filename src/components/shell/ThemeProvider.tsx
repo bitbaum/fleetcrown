@@ -1,6 +1,7 @@
 "use client";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { APP_SLUG } from "@/config/brand";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -8,7 +9,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem={true}
-      storageKey="cockpit-theme"
+      storageKey={`${APP_SLUG}-theme`}
     >
       {children}
     </NextThemesProvider>

@@ -7,6 +7,7 @@ import { Loader2, GitBranch, Star, Lock } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
 import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
+import { APP_DOMAIN } from "@/config/brand";
 import {
   AuthShell,
   AuthCard,
@@ -189,12 +190,12 @@ export default function OnboardingPage() {
         <>
           <AuthHeading
             title="Choose your handle"
-            description="Your public profile: cockpit.app/u/you"
+            description={`Your public profile: ${APP_DOMAIN}/u/you`}
           />
           <AuthCard>
             <AuthField label="Username">
               <div className="ui-auth-input flex items-center gap-0 !py-0">
-                <span className="shrink-0 py-3 text-sm text-white/30 select-none">cockpit.app/u/</span>
+                <span className="shrink-0 py-3 text-sm text-white/30 select-none">{APP_DOMAIN}/u/</span>
                 <input
                   autoFocus
                   value={username}
