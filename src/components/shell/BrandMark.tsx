@@ -1,6 +1,6 @@
 import { APP_KICKER, APP_NAME } from "@/config/brand";
 
-export function CockpitMark({
+export function BrandMark({
   compact = false,
   showWordmark = true,
   inverted = false,

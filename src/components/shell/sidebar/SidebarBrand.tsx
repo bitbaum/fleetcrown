@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { APP_HOME_HREF } from "@/config/shell";
-import { CockpitMark } from "../CockpitMark";
+import { BrandMark } from "../BrandMark";
 
 export function SidebarBrand({
   collapsed,
@@ -21,7 +21,7 @@ export function SidebarBrand({
           href={APP_HOME_HREF}
           className="min-w-0 rounded-xl outline-none transition-opacity hover:opacity-85 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <CockpitMark compact={collapsed} />
+          <BrandMark compact={collapsed} />
         </Link>
         <button
           type="button"

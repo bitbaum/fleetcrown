@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CockpitMark } from "@/components/shell/CockpitMark";
+import { BrandMark } from "@/components/shell/BrandMark";
 
 export type NavLink = { label: string; href: string };
 
@@ -21,7 +21,7 @@ export function PublicSurface({
       <nav className="ui-public-nav">
         <div className="flex items-center gap-8">
           <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-            <CockpitMark inverted />
+            <BrandMark inverted />
           </Link>
           {navLinks && navLinks.length > 0 && (
             <div className="hidden items-center md:flex">

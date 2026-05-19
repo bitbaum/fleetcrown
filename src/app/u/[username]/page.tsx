@@ -9,7 +9,7 @@ import { notFound } from "next/navigation";
 // Deduplicate the user lookup across generateMetadata + the page component.
 // Both run in the same request; React cache() collapses them to one DB query.
 const getUser = cache(getUserByUsername);
-import { CockpitMark } from "@/components/shell/CockpitMark";
+import { BrandMark } from "@/components/shell/BrandMark";
 import { getPublicProjects } from "@/db/queries/user-projects";
 import { listThoughts } from "@/lib/thoughts-content";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
@@ -54,7 +54,7 @@ export default async function PublicProfilePage({
           href="/"
           className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
         >
-          <CockpitMark showWordmark={false} />
+          <BrandMark showWordmark={false} />
         </Link>
       </nav>
 
