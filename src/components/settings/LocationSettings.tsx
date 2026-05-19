@@ -29,6 +29,9 @@ const TIMEZONES = Intl.supportedValuesOf("timeZone");
 type Props = { initialPrefs: UserPreferencesData };
 
 export function LocationSettings({ initialPrefs }: Props) {
+  // savedPrefs mirrors what's actually on the server — updated after each successful save.
+  const [savedPrefs, setSavedPrefs] = useState(initialPrefs);
+
   // Home base
   const [homeCity,     setHomeCity]     = useState(initialPrefs.homeCity ?? "");
   const [homeTimezone, setHomeTimezone] = useState(initialPrefs.homeTimezone ?? "");
@@ -46,19 +49,19 @@ export function LocationSettings({ initialPrefs }: Props) {
   const [currentSaved,     setCurrentSaved]     = useState(false);
 
   const isCurrentExpired =
-    !!initialPrefs.currentCity &&
-    !!initialPrefs.currentCityUntil &&
-    new Date(initialPrefs.currentCityUntil) < new Date();
+    !!savedPrefs.currentCity &&
+    !!savedPrefs.currentCityUntil &&
+    new Date(savedPrefs.currentCityUntil) < new Date();
 
   const homeDirty =
-    homeCity !== (initialPrefs.homeCity ?? "") ||
-    homeTimezone !== (initialPrefs.homeTimezone ?? "") ||
-    homeLocale !== (initialPrefs.homeLocale ?? "");
+    homeCity !== (savedPrefs.homeCity ?? "") ||
+    homeTimezone !== (savedPrefs.homeTimezone ?? "") ||
+    homeLocale !== (savedPrefs.homeLocale ?? "");
 
   const currentDirty =
-    currentCity !== (initialPrefs.currentCity ?? "") ||
-    currentTimezone !== (initialPrefs.currentTimezone ?? "") ||
-    currentCityUntil !== (initialPrefs.currentCityUntil ?? "");
+    currentCity !== (savedPrefs.currentCity ?? "") ||
+    currentTimezone !== (savedPrefs.currentTimezone ?? "") ||
+    currentCityUntil !== (savedPrefs.currentCityUntil ?? "");
 
   const saveHome = async () => {
     setHomeSaving(true);
@@ -75,6 +78,8 @@ export function LocationSettings({ initialPrefs }: Props) {
         setHomeError(d.error ?? "Failed to save");
         return;
       }
+      const saved = { homeCity: homeCity.trim() || null, homeTimezone: homeTimezone || null, homeLocale: homeLocale || null };
+      setSavedPrefs((p) => ({ ...p, ...saved }));
       setHomeSaved(true);
       setTimeout(() => setHomeSaved(false), 3000);
     } catch {
@@ -99,6 +104,8 @@ export function LocationSettings({ initialPrefs }: Props) {
         setCurrentError(d.error ?? "Failed to save");
         return;
       }
+      const saved = { currentCity: currentCity.trim() || null, currentTimezone: currentTimezone || null, currentCityUntil: currentCityUntil || null };
+      setSavedPrefs((p) => ({ ...p, ...saved }));
       setCurrentSaved(true);
       setTimeout(() => setCurrentSaved(false), 3000);
     } catch {
@@ -115,12 +122,13 @@ export function LocationSettings({ initialPrefs }: Props) {
     setCurrentSaving(true);
     try {
       await patchJson("/api/me/preferences", { currentCity: null, currentTimezone: null, currentCityUntil: null });
+      setSavedPrefs((p) => ({ ...p, currentCity: null, currentTimezone: null, currentCityUntil: null }));
     } finally {
       setCurrentSaving(false);
     }
   };
 
-  const hasCurrentLocation = !!(initialPrefs.currentCity && !isCurrentExpired);
+  const hasCurrentLocation = !!(savedPrefs.currentCity && !isCurrentExpired);
 
   return (
     <section className="ui-settings-section">
@@ -193,7 +201,7 @@ export function LocationSettings({ initialPrefs }: Props) {
             <h3 className="text-sm font-medium text-text-primary">
               Currently in
               {hasCurrentLocation && (
-                <span className="ml-2 text-xs font-normal text-accent-text">{initialPrefs.currentCity}</span>
+                <span className="ml-2 text-xs font-normal text-accent-text">{savedPrefs.currentCity}</span>
               )}
             </h3>
           </div>
