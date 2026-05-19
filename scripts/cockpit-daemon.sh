@@ -174,6 +174,23 @@ execute_inject() {
     return 0
   fi
 
+  # Write session lifecycle sentinel files so the stop hook transitions the UI
+  # correctly — mirroring what /api/orchestration/run and /api/inject do locally.
+  if [ "$prompt_key" = "hard_stop" ] || [ "$prompt_key" = "close_session" ]; then
+    local now_s tab_lower
+    now_s=$(date +%s)
+    tab_lower="${tab,,}"
+    # Clear stale ready/closed state (mirrors clearHandshakeFiles in the API).
+    rm -f "/tmp/agent-ready-${tab_lower}" "/tmp/claude-ready-${tab_lower}"
+    rm -f "/tmp/agent-closed-${tab_lower}" "/tmp/claude-closed-${tab_lower}"
+    # Sentinel tells the stop hook to write closedAt instead of showing the beacon.
+    : > "/tmp/agent-session-closed-${tab_lower}"
+    echo "$now_s" > "/tmp/agent-closing-${tab_lower}"
+    if [ "$prompt_key" = "hard_stop" ]; then
+      echo "$now_s" > "/tmp/agent-closed-${tab_lower}"
+    fi
+  fi
+
   log "inject → tab=$tab"
   if inject_prompt "$tab" "$prompt" 2>/dev/null; then
     mark_done "$id" "true"
