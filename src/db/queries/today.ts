@@ -4,6 +4,7 @@ import {
   EVENTS_DUE_SOON_DAYS,
   SUBSCRIPTIONS_UPCOMING_DAYS,
 } from "@/lib/constants";
+import { STALE_GOALS_DAYS, STUCK_GOALS_LIMIT, RECENT_RUNS_HOURS, RECENT_RUNS_LIMIT } from "@/lib/constants/today";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities } from "@/db/schema";
@@ -15,13 +16,13 @@ import { z } from "zod";
 
 export const CreateCommitmentBody = z.object({
   description: z.string().trim().min(1, "description is required"),
-  dueDate: z.string().optional(),
+  dueDate: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").optional(),
   financialImpact: z.string().trim().optional(),
 });
 
 export const PatchCommitmentBody = z.object({
   description: z.string().trim().min(1, "description cannot be empty").optional(),
-  dueDate: z.string().nullable().optional(),
+  dueDate: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").nullable().optional(),
   financialImpact: z.string().nullable().optional(),
 });
 
@@ -125,7 +126,7 @@ export async function getTodaySummary(userId: string) {
   const eventsSoon = new Date();
   eventsSoon.setDate(eventsSoon.getDate() + EVENTS_DUE_SOON_DAYS);
 
-  const staleGoalsAt = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const staleGoalsAt = new Date(Date.now() - STALE_GOALS_DAYS * 24 * 60 * 60 * 1000);
 
   const [
     [goalStats],
@@ -274,7 +275,7 @@ export async function getFleetSummary(userId: string) {
   return { running, waiting, degraded };
 }
 
-export async function getStuckGoals(userId: string, days = 30) {
+export async function getStuckGoals(userId: string, days = STALE_GOALS_DAYS) {
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
   return db
     .select({
@@ -292,10 +293,10 @@ export async function getStuckGoals(userId: string, days = 30) {
       lt(goals.updatedAt, cutoff),
     ))
     .orderBy(goals.updatedAt)
-    .limit(5);
+    .limit(STUCK_GOALS_LIMIT);
 }
 
-export async function getRecentOrchestrationRuns(userId: string, hours = 24, limit = 6) {
+export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
   return db
     .select({

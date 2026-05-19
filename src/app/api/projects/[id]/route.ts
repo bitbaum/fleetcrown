@@ -79,15 +79,17 @@ export async function GET(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const [resolved, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
+  const [resolved, promptActivity, orchestrationRuns] = await Promise.all([
     resolveProjectDetailWithOrgFallback(userId, id),
     getProjectPromptActivity(userId, id, 40).catch((e) => { console.error("[projects/[id]] promptActivity query failed:", e); return []; }),
     getProjectOrchestrationRuns(userId, id, 20).catch((e) => { console.error("[projects/[id]] orchestrationRuns query failed:", e); return []; }),
-    getProjectStateByProjectId(id).catch(() => null),
   ]);
 
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
+  // Runtime state belongs to the project owner — fetch under their userId so org
+  // peers viewing a shared project see the same row the owner's daemon writes.
+  const runtimeState = await getProjectStateByProjectId(ownerId, id).catch(() => null);
   const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
   const readonly = ownerId !== userId;
 

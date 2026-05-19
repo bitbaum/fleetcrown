@@ -7,7 +7,7 @@ import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
-import { getProjectStatesByUserId, upsertProjectState } from "@/db/queries/project-states";
+import { getProjectStatesByUserId, getProjectStatesByUserIds, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
@@ -54,7 +54,7 @@ async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache>
   const [gitMap, zellijTabsLocal, dbStates] = await Promise.all([
     fetchAllGitStates(dirs),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
-    isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch(() => [] as DbProjectState[]),
+    isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => { console.error("[control/slowData] projectStates failed:", e); return []; }),
   ]);
   // On Vercel, zellijTabs comes from the daemon-pushed tabOpen field in project_states.
   // Locally, getZellijTabs() reads from the live Zellij process.
@@ -74,7 +74,7 @@ async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
       cacheRefreshing = true;
-      buildSlowData(userId, dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch(() => { cacheRefreshing = false; });
+      buildSlowData(userId, dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch((e) => { console.error("[control/cache] background refresh failed:", e); cacheRefreshing = false; });
     }
     return slowCache;
   }
@@ -200,8 +200,8 @@ export async function GET() {
 
   // Own projects + team projects (org peers). Own take precedence on tab-name collision.
   const [dbUserProjects, dbTeamProjects] = await Promise.all([
-    ensureUserProjectEntityLinks(userId).catch(() => []),
-    getOrgProjects(userId).catch(() => []),
+    ensureUserProjectEntityLinks(userId).catch((e) => { console.error("[control/GET] ensureUserProjectEntityLinks failed:", e); return []; }),
+    getOrgProjects(userId).catch((e) => { console.error("[control/GET] getOrgProjects failed:", e); return []; }),
   ]);
 
   const seenTabs = new Set<string>();
@@ -209,6 +209,7 @@ export async function GET() {
     id: p.id, projectId: p.entityProjectId ?? null, tab: p.name,
     dir: p.dirPath!, agentPref: p.agentPref ?? null, modelPref: p.modelPref ?? null,
     ownerUserId: p.userId,
+    readonly: false as boolean,
   });
   const ownEntries = dbUserProjects.filter((p) => p.dirPath).map(toEntry)
     .filter((p) => { if (seenTabs.has(p.tab.toLowerCase())) return false; seenTabs.add(p.tab.toLowerCase()); return true; });
@@ -225,23 +226,24 @@ export async function GET() {
 
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
+  const allOwnerIds = [userId, ...teamOwnerIds];
   const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
-    getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
-    getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
-    Promise.all([
-      getProjectStatesByUserId(userId).catch((): DbProjectState[] => []),
-      ...teamOwnerIds.map((oid) => getProjectStatesByUserId(oid).catch((): DbProjectState[] => [])),
-    ]).then((arrs) => arrs.flat()),
+    getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => { console.error("[control/GET] recentPromptsMap failed:", e); return new Map<string, RecentCustomPrompt[]>(); }),
+    getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((e): ActivityItem[] => { console.error("[control/GET] recentActivity failed:", e); return []; }),
+    // Single batch query instead of N per-owner queries
+    getProjectStatesByUserIds(allOwnerIds).catch((e): DbProjectState[] => { console.error("[control/GET] projectStates failed:", e); return []; }),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
-      .catch(() => new Map()),
+      .catch((e) => { console.error("[control/GET] lifecycleEvents failed:", e); return new Map(); }),
     // Fetch own + team owners' entity projects per-request (not cached) so each user
     // always sees their own profile data regardless of who last built the git cache.
-    Promise.all([userId, ...teamOwnerIds].map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
-    getRecentFailedCommands([userId]).catch((): FailedCommand[] => []),
+    Promise.all(allOwnerIds.map((oid) => getProjects(oid).catch((e) => { console.error("[control/GET] getProjects failed for", oid, e); return [] as ProjectRow[]; }))).then((arrs) => arrs.flat()),
+    getRecentFailedCommands([userId]).catch((e): FailedCommand[] => { console.error("[control/GET] failedCommands failed:", e); return []; }),
   ]);
   cleanupStaleOrchestrationRuns(userId).catch((err) => console.error("[control] cleanup failed:", err))
-  const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
+  // Key by (ownerUserId, projectKey) — two users in the same org may both have a
+  // project named "cockpit", and we want each card to read its own owner's row.
+  const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${s.projectKey.toLowerCase()}`, s]));
 
   // Group recent activity by project key so each card gets its own slice (no extra query).
   const activityByProject = new Map<string, typeof recentActivity>();
@@ -251,24 +253,26 @@ export async function GET() {
     activityByProject.set(item.projectKey, arr);
   }
 
-  const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref }) => {
+  const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
     const latestRun = latestRuns.get(dir);
-    const dbState = dbStateMap.get(tab.toLowerCase());
+    const dbState = dbStateMap.get(`${ownerUserId}:${tab.toLowerCase()}`);
 
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
     // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
     const session = parseSession(liveTab);
 
-    // Persist session to DB if it's newer than what DB has (fire-and-forget)
-    if (session && dbState) {
+    // Only the project's owner writes to project_states. A viewer reading a team
+    // (readonly) project's session would otherwise create a row under their own
+    // userId, which would never be queried again and would drift from the owner's.
+    if (!readonly && session && dbState) {
       const sessionMtimeMs = session.mtime;
       const dbSessionMs = dbState.sessionUpdatedAt?.getTime() ?? 0;
       if (sessionMtimeMs > dbSessionMs) {
         upsertProjectState({
           projectKey: tab,
           projectId,
-          userId,
+          userId: ownerUserId,
           tabName: liveTab,
           sessionDone:   session.done,
           sessionNext:   session.next,
@@ -291,16 +295,16 @@ export async function GET() {
             todos: session.todos?.trim() ?? "",
             health: session.health?.trim() || "good",
           };
-          if (projectId) appendProjectDevLogByEntityProjectId(userId, projectId, entry).catch((err) => console.error("[control] devlog append failed:", err));
-          else appendProjectDevLog(userId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
+          if (projectId) appendProjectDevLogByEntityProjectId(ownerUserId, projectId, entry).catch((err) => console.error("[control] devlog append failed:", err));
+          else appendProjectDevLog(ownerUserId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
         }
       }
-    } else if (session && !dbState) {
+    } else if (!readonly && session && !dbState) {
       // First time we're seeing this project's session — bootstrap the DB row
       upsertProjectState({
         projectKey: tab,
         projectId,
-        userId,
+        userId: ownerUserId,
         tabName: liveTab,
         sessionDone:   session.done,
         sessionNext:   session.next,

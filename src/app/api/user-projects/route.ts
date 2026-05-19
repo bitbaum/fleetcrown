@@ -44,6 +44,16 @@ export async function POST(req: NextRequest) {
 
   const dataOrResp = await readJsonBody(req, CreateBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const project = await createUserProject({ userId, ...dataOrResp });
-  return NextResponse.json(project, { status: 201 });
+  try {
+    const project = await createUserProject({ userId, ...dataOrResp });
+    return NextResponse.json(project, { status: 201 });
+  } catch (e: unknown) {
+    if (e && typeof e === "object" && "code" in e && e.code === "23505") {
+      return NextResponse.json(
+        { error: "You already have a project with that name." },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
 }

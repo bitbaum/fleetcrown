@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronUp, ChevronDown, ChevronLeft, Plus, Sparkles } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronLeft, LayoutGrid, Plus, Sparkles } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { cn } from "@/lib/utils";
 import type { ProjectState } from "@/lib/control-types";
@@ -75,7 +75,7 @@ export function ProjectFleetView({
   if (sorted.length === 0) {
     return (
       <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border-default px-8 py-16 text-center">
-        <span className="text-4xl text-text-muted">⊞</span>
+        <LayoutGrid className="h-12 w-12 text-text-muted" />
         <div>
           <h3 className="text-lg font-semibold text-text-primary">Add your first project</h3>
           <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">

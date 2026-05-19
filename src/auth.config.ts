@@ -30,12 +30,14 @@ export const authConfig = {
       if (pathname.startsWith("/api/invitations/")) return true;
 
       if (!auth?.user) {
-        // Bearer-authenticated requests (daemon env token or ck_* agent tokens).
-        // Pass through — individual routes enforce the real auth check.
+        // Bearer-authenticated requests (ck_* agent tokens preferred; legacy
+        // daemon env token honored only when explicitly opted in). Individual
+        // routes enforce the real auth check via getApiUserId/getBearerUserId.
         const authHeader = request.headers.get("authorization") ?? "";
-        const daemonToken = process.env.COCKPIT_DAEMON_TOKEN;
-        if (daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
         if (authHeader.startsWith("Bearer ck_")) return true;
+        const daemonToken = process.env.COCKPIT_DAEMON_TOKEN;
+        const legacyAllowed = process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN === "1";
+        if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
         // On Vercel, the Edge Runtime sees the deployment URL (cockpit-orangecat.vercel.app)
         // not the custom alias. x-forwarded-host carries the real host the user typed.

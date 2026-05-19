@@ -20,7 +20,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
     : null;
 
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning/5 px-4 py-3.5 text-sm">
+    <div className="ui-callout-warning">
       <div className="mt-0.5 shrink-0 text-status-warning">
         {daemonNeverSeen ? (
           <Radio className="h-4 w-4" />

@@ -98,7 +98,7 @@ export function AgentTokenSettings() {
 
       {/* One-time reveal */}
       {revealed && (
-        <div className="rounded-xl border border-status-positive/30 bg-status-positive/5 p-4 space-y-2">
+        <div className="ui-callout-positive flex-col items-stretch gap-2">
           <p className="text-xs font-medium text-status-positive">
             Token generated — copy it now. It won&apos;t be shown again.
           </p>

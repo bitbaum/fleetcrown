@@ -21,7 +21,7 @@ export const CreateSubscriptionBody = z.object({
   amount: z.number().optional(),
   currency: z.enum(CURRENCIES_ENUM, { error: `currency must be one of: ${VALID_CURRENCIES.join(", ")}` }).default("CHF"),
   frequency: z.enum(FREQUENCIES_ENUM, { error: `frequency must be one of: ${VALID_FREQUENCIES.join(", ")}` }).default(FREQUENCY.MONTHLY),
-  nextDue: z.string().optional(),
+  nextDue: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").optional(),
   paymentMethod: z.string().trim().optional(),
   notes: z.string().trim().optional(),
 });
@@ -35,7 +35,7 @@ export const PatchSubscriptionBody = z
     amount: z.number().nullable().optional(),
     currency: z.enum(CURRENCIES_ENUM, { error: "Invalid currency" }).optional(),
     frequency: z.enum(FREQUENCIES_ENUM, { error: "Invalid frequency" }).optional(),
-    nextDue: z.string().nullable().optional(),
+    nextDue: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").nullable().optional(),
     paymentMethod: z.string().optional(),
     notes: z.string().optional(),
     status: z.enum(SUB_STATUSES).optional(),

@@ -2,6 +2,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
 
+// Owner-only: deletes every row in goals and replaces them with the owner's
+// canonical hierarchy. Gate behind COCKPIT_OWNER_SEED=1 so it can't run
+// against a multi-tenant deployment.
+if (process.env.COCKPIT_OWNER_SEED !== "1") {
+  console.error("Refusing to run seed-goals.ts without COCKPIT_OWNER_SEED=1 (this wipes the goals table).");
+  process.exit(1);
+}
+
 const DATABASE_URL = process.env.DATABASE_URL!;
 const DEFAULT_USER_ID = "00000000-0000-0000-0000-000000000001";
 

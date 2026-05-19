@@ -1,12 +1,11 @@
 import {
+  ACTIVE_WINDOW_S,
   CLOSED_WINDOW_S,
   CLOSING_WINDOW_S,
   READY_WINDOW_S,
   withinWindow,
 } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/lib/control-types";
-
-const ACTIVE_WINDOW_S = 300;
 
 export type ProjectDisplayState = {
   isClosed: boolean;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean, integer, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { entities } from "./entities";
 import { orgs } from "./orgs";
@@ -35,6 +35,10 @@ export const userProjects = pgTable("user_projects", {
   index("idx_user_projects_user_active").on(t.userId, t.isActive),
   index("idx_user_projects_entity_project_id").on(t.entityProjectId),
   index("idx_user_projects_org_id").on(t.orgId),
+  // One project name per owner. Feeds project_states' (user_id, project_key) PK —
+  // without this, a user could register two "cockpit" projects and their runtime
+  // state would silently merge.
+  uniqueIndex("uq_user_projects_user_name").on(t.userId, t.name),
 ]);
 
 export type UserProject = typeof userProjects.$inferSelect;

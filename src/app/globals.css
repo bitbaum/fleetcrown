@@ -515,6 +515,26 @@
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);
   }
+  /* Inline empty state — lives inside an existing Card. Three sizes (sm/md/lg) cover
+     the spectrum from tight section empties (py-4) to first-run hero empties (py-16). */
+  .ui-empty-block    { @apply flex flex-col items-center gap-3 text-center; }
+  .ui-empty-block-sm { @apply py-4; }
+  .ui-empty-block-md { @apply py-10; }
+  .ui-empty-block-lg { @apply py-16; }
+  .ui-empty-icon     { @apply h-10 w-10 text-text-tertiary; }
+  .ui-empty-title    { @apply text-sm font-medium text-text-secondary; }
+  .ui-empty-helper   { @apply max-w-md text-xs text-text-tertiary; }
+
+  /* Callout banners — status-tinted inline notices used for warnings, errors, successes,
+     and brand accent. Same geometry across variants, only tint changes. */
+  .ui-callout-positive { @apply flex items-start gap-3 rounded-xl border border-status-positive/20 bg-status-positive-subtle px-4 py-3 text-sm; }
+  .ui-callout-warning  { @apply flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning-subtle px-4 py-3 text-sm; }
+  .ui-callout-negative { @apply flex items-start gap-3 rounded-xl border border-status-negative/30 bg-status-negative-subtle px-4 py-3 text-sm; }
+  .ui-callout-accent   { @apply flex items-start gap-3 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-3 text-sm; }
+
+  /* Clickable row inside a list — subtle hover, no shadow. */
+  .ui-row-interactive { @apply transition-colors hover:bg-surface-raised; }
+
   .ui-settings-section {
     @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-5 sm:p-6;
     box-shadow: var(--shadow-panel);
@@ -793,6 +813,9 @@
   }
   .ui-control-card-header-meta {
     @apply flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-text-tertiary;
+  }
+  .ui-control-notice {
+    @apply flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm text-accent-text;
   }
 
   /* FAB */

@@ -143,8 +143,11 @@ export async function getPersonDetail(userId: string, id: string) {
 
   if (!person) return null;
 
+  // Person ownership is verified above. The joined `entities` tables and the
+  // interactions/attributes queries also filter by userId — defense-in-depth
+  // against any stray row whose entity_id outlives its owning user.
   const [attrs, relationsFrom, relationsTo, recentInteractions] = await Promise.all([
-    db.select().from(attributes).where(eq(attributes.entityId, id)),
+    db.select().from(attributes).where(and(eq(attributes.entityId, id), eq(attributes.userId, userId))),
     db
       .select({
         type: entityRelations.type,
@@ -154,7 +157,7 @@ export async function getPersonDetail(userId: string, id: string) {
         targetType: entities.type,
       })
       .from(entityRelations)
-      .innerJoin(entities, eq(entities.id, entityRelations.toEntityId))
+      .innerJoin(entities, and(eq(entities.id, entityRelations.toEntityId), eq(entities.userId, userId)))
       .where(eq(entityRelations.fromEntityId, id)),
     db
       .select({
@@ -165,12 +168,12 @@ export async function getPersonDetail(userId: string, id: string) {
         targetType: entities.type,
       })
       .from(entityRelations)
-      .innerJoin(entities, eq(entities.id, entityRelations.fromEntityId))
+      .innerJoin(entities, and(eq(entities.id, entityRelations.fromEntityId), eq(entities.userId, userId)))
       .where(eq(entityRelations.toEntityId, id)),
     db
       .select()
       .from(interactions)
-      .where(eq(interactions.entityId, id))
+      .where(and(eq(interactions.entityId, id), eq(interactions.userId, userId)))
       .orderBy(desc(interactions.occurredAt))
       .limit(10),
   ]);

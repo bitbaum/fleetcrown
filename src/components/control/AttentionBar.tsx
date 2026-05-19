@@ -10,9 +10,11 @@ import { timeAgo } from "@/lib/dates";
 export function AttentionBar({
   items,
   failedCommands,
+  onFocusProject,
 }: {
   items: AttentionItem[];
   failedCommands?: FailedCommand[];
+  onFocusProject?: (tab: string) => void;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(() => {
     try {
@@ -45,7 +47,16 @@ export function AttentionBar({
               const tagCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-warning";
               return (
                 <span key={project.tab} className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-xs font-medium text-text-primary">{project.tab}</span>
+                  {onFocusProject ? (
+                    <button
+                      onClick={() => onFocusProject(project.tab)}
+                      className="text-xs font-medium text-text-primary underline-offset-2 hover:underline transition-colors"
+                    >
+                      {project.tab}
+                    </button>
+                  ) : (
+                    <span className="text-xs font-medium text-text-primary">{project.tab}</span>
+                  )}
                   {reason && <span className={tagCls}>{reason}</span>}
                 </span>
               );
@@ -55,7 +66,7 @@ export function AttentionBar({
       )}
 
       {visibleFailures.map((f) => (
-        <div key={f.id} className="flex items-start justify-between gap-3 rounded-xl border border-status-negative/30 bg-status-negative-subtle px-4 py-2.5">
+        <div key={f.id} className="ui-callout-negative justify-between">
           <div className="flex items-start gap-3 min-w-0">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-negative" />
             <span className="text-xs text-text-primary">

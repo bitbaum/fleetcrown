@@ -81,7 +81,7 @@ export async function upsertEntityAttribute(
       source: SOURCE_COCKPIT_UI,
     })
     .onConflictDoUpdate({
-      target: [attributes.entityId, attributes.key],
+      target: [attributes.userId, attributes.entityId, attributes.key],
       set: { value, updatedAt: new Date() },
     });
   return true;

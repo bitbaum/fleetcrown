@@ -31,9 +31,15 @@ export async function getCurrentUserName(): Promise<string> {
   return session?.user?.name ?? DEFAULT_USER_NAME;
 }
 
+let warnedDeprecatedDaemonToken = false;
+
 /**
  * For API routes that must also accept bearer tokens (daemon + CLI agent).
- * Checks cookie session first, then COCKPIT_DAEMON_TOKEN env var, then ck_* DB tokens.
+ * Prefers ck_* DB-backed agent tokens (per-user, revocable). The legacy
+ * COCKPIT_DAEMON_TOKEN env-var path is only honored when explicitly opted in
+ * via COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN=1 — and even then it always maps to
+ * the single "default" user, so it must never be used in a multi-tenant
+ * deployment.
  */
 export async function getApiUserId(): Promise<string | null> {
   // Cookie-based session (web UI).
@@ -46,18 +52,26 @@ export async function getApiUserId(): Promise<string | null> {
   if (!authHeader.startsWith("Bearer ")) return null;
   const bearer = authHeader.slice(7);
 
-  // Legacy env-var token → owner user.
-  const envToken = process.env.COCKPIT_DAEMON_TOKEN;
-  if (envToken && bearer === envToken) {
-    const { getDefaultUser } = await import("@/db/queries/users");
-    const user = await getDefaultUser();
-    return user?.id ?? null;
-  }
-
-  // DB agent token (ck_*).
+  // DB agent token (ck_*) — preferred path. Per-user, per-device, revocable.
   if (bearer.startsWith("ck_")) {
     const result = await validateAgentToken(bearer);
     return result?.userId ?? null;
+  }
+
+  // Legacy env-var token → "default" user. Opt-in only; not multi-tenant safe.
+  const envToken = process.env.COCKPIT_DAEMON_TOKEN;
+  const legacyAllowed = process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN === "1";
+  if (envToken && legacyAllowed && bearer === envToken) {
+    if (!warnedDeprecatedDaemonToken) {
+      warnedDeprecatedDaemonToken = true;
+      console.warn(
+        "[session] COCKPIT_DAEMON_TOKEN is deprecated and unsafe in multi-tenant deployments. " +
+        "Mint a ck_* agent token from /settings and use it instead.",
+      );
+    }
+    const { getDefaultUser } = await import("@/db/queries/users");
+    const user = await getDefaultUser();
+    return user?.id ?? null;
   }
 
   return null;

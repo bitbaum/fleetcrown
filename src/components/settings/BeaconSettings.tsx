@@ -15,7 +15,7 @@ import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES } from "@/config/b
 
 export function BeaconSettings() {
   const [data, setData]         = useState<BeaconSettingsData | null>(null);
-  const [popupMode, setPopupMode]   = useState("both");
+  const [popupMode, setPopupMode]   = useState("web");
   const [countdown, setCountdown]   = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [minIdle, setMinIdle]       = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel]           = useState("base");

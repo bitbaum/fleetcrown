@@ -1,4 +1,4 @@
-import { Bell, AlertTriangle, Info, AlertCircle, ArrowRight } from "lucide-react";
+import { Bell, AlertTriangle, Info, AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveAlerts } from "@/db/queries/alerts";
 import { requirePageUserId } from "@/lib/session";
@@ -16,7 +16,19 @@ export async function AlertsCard() {
   const userId = await requirePageUserId();
   const items = await getActiveAlerts(userId);
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div id="alerts" className="md:col-span-2">
+        <Card>
+          <CardHeader icon={Bell} title="Alerts" right={<span className="text-xs text-status-positive font-medium">All clear</span>} />
+          <div className="flex items-center gap-2 text-sm text-text-muted">
+            <CheckCircle2 className="h-4 w-4 text-status-positive/70 shrink-0" />
+            No active alerts.
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const urgentCount = items.filter((a) => a.severity === ALERT_SEVERITY.URGENT).length;
 

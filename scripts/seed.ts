@@ -8,6 +8,15 @@ import * as schema from "../src/db/schema";
 import type { EntityType, SubStatus, CommitmentStatus, EventStatus } from "../src/lib/constants/statuses";
 import type { SubscriptionCurrency, SubscriptionFrequency } from "../src/config/subscriptions";
 
+// Owner-only: this script truncates every table and inserts the owner's
+// historical data from ~/.openclaw. It must never run in a multi-tenant SaaS
+// deployment. Gate behind COCKPIT_OWNER_SEED=1 so an accidental invocation in
+// production can't wipe customer data.
+if (process.env.COCKPIT_OWNER_SEED !== "1") {
+  console.error("Refusing to run seed.ts without COCKPIT_OWNER_SEED=1 (this wipes the DB).");
+  process.exit(1);
+}
+
 const HOME = homedir();
 const DATABASE_URL = process.env.DATABASE_URL!;
 

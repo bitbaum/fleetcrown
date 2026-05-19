@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import Image from "next/image";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import { BeaconPageClient } from "@/app/beacon/[id]/BeaconClient";
 
-export function BeaconLiveClient() {
-  const [session, setSession] = useState<BeaconSession | null>(null);
+export function BeaconLiveClient({ initialSession = null }: { initialSession?: BeaconSession | null }) {
+  const [session, setSession] = useState<BeaconSession | null>(initialSession);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -23,7 +23,6 @@ export function BeaconLiveClient() {
 
       es.onerror = () => {
         es.close();
-        // Reconnect after a brief pause if the connection drops.
         setTimeout(connect, 2000);
       };
     }
@@ -33,15 +32,14 @@ export function BeaconLiveClient() {
   }, []);
 
   const handleClose = () => {
-    // Show "Dispatched" briefly, then reset to standby.
     setTimeout(() => setSession(null), 1500);
   };
 
   if (!session) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-surface-base">
-        <Loader2 className="h-5 w-5 animate-spin text-text-muted" />
-        <p className="text-xs text-text-muted">Waiting for Claude…</p>
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-surface-base select-none">
+        <Image src="/icon.svg" alt="Cockpit" width={48} height={48} className="opacity-40" />
+        <p className="text-xs text-text-muted tracking-widest uppercase">Standby</p>
       </div>
     );
   }

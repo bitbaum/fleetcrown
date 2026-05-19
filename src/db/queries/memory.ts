@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { entities, entityRelations, interactions } from "@/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 export async function getEntityStats(userId: string) {
   const [typeRows, [relCount]] = await Promise.all([
@@ -51,7 +51,7 @@ export async function getRecentInteractions(userId: string, limit = 10) {
       entityType: entities.type,
     })
     .from(interactions)
-    .innerJoin(entities, eq(interactions.entityId, entities.id))
+    .innerJoin(entities, and(eq(interactions.entityId, entities.id), eq(entities.userId, userId)))
     .where(eq(interactions.userId, userId))
     .orderBy(desc(interactions.occurredAt))
     .limit(limit);

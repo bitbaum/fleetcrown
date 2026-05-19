@@ -14,7 +14,7 @@ export const CreateEventBody = z.object({
   type: z.string().trim().min(1, "type is required"),
   description: z.string().trim().optional(),
   url: z.string().trim().optional(),
-  deadline: z.string().optional(),
+  deadline: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").optional(),
   category: z.string().trim().optional(),
 });
 
@@ -24,7 +24,7 @@ export const PatchEventBody = z
     name: z.string().trim().min(1, "name cannot be empty").optional(),
     description: z.string().nullable().optional(),
     url: z.string().trim().nullable().optional(),
-    deadline: z.string().nullable().optional(),
+    deadline: z.string().refine((s) => !Number.isNaN(new Date(s).getTime()), "Invalid date").nullable().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 

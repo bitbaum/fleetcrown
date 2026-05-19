@@ -19,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Loader2, Send, X, GripVertical, Sparkles, CheckSquare, Square } from "lucide-react";
+import { Loader2, Pencil, Send, X, GripVertical, Sparkles, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type RowProps = {
@@ -113,12 +113,13 @@ function QueueItemRow({
           onClick={onStartEdit}
           title="Click to edit"
           className={cn(
-            "flex-1 text-left text-sm leading-snug transition-colors",
+            "group/edit flex flex-1 items-start gap-1 text-left text-sm leading-snug transition-colors",
             isFirst ? "text-text-primary" : "text-text-tertiary",
             "hover:text-text-primary",
           )}
         >
-          {item}
+          <span className="flex-1">{item}</span>
+          <Pencil className="mt-0.5 h-3 w-3 shrink-0 text-text-muted opacity-0 transition-opacity group-hover/edit:opacity-100" />
         </button>
       )}
 
@@ -281,6 +282,12 @@ export function QueueList({
           )}
         </div>
       </div>
+
+      {queue.length === 0 && (
+        <p className="px-4 pb-3 text-micro text-text-muted sm:px-5">
+          Alt+Enter while composing to queue a prompt
+        </p>
+      )}
 
       <DndContext
         sensors={sensors}

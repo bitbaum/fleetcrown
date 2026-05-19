@@ -1,6 +1,7 @@
 import { History } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requirePageUserId } from "@/lib/session";
 import { getPromptHistory } from "@/db/queries/prompt-history";
 import { HistoryFeed } from "@/components/history/HistoryFeed";
@@ -18,13 +19,9 @@ export default async function HistoryPage() {
     >
       {items.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-10 text-text-secondary">
-            <History className="h-10 w-10 text-text-tertiary" />
-            <div className="text-sm">No prompt history yet</div>
-            <div className="text-xs text-text-tertiary text-center">
-              Dispatch a prompt from the Control panel and it will appear here.
-            </div>
-          </div>
+          <EmptyState icon={History} title="No prompt history yet">
+            Dispatch a prompt from the Control panel and it will appear here.
+          </EmptyState>
         </Card>
       ) : (
         <HistoryFeed items={items} />

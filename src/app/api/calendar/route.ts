@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { CALENDAR_LOOKAHEAD_DAYS } from "@/lib/constants/today";
 
 export async function GET() {
   if (!isRuntimeAvailable()) return NextResponse.json({ events: [] });
 
   const result = await runTool(
-    'gog calendar list --json --days 2 2>/dev/null || echo "[]"',
+    `gog calendar list --json --days ${CALENDAR_LOOKAHEAD_DAYS} 2>/dev/null || echo "[]"`,
     20000,
   );
 
@@ -23,7 +24,8 @@ export async function GET() {
         ? parsed.events
         : [];
     return NextResponse.json({ events });
-  } catch {
+  } catch (e) {
+    console.error("[calendar/GET] JSON parse failed:", e);
     return NextResponse.json({ events: [], raw: result.data });
   }
 }

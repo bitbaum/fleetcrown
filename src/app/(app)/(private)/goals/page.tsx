@@ -1,6 +1,7 @@
 import { Target } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { getHabitsByGoalIds } from "@/db/queries/habit-goals";
 import { requirePageUserId } from "@/lib/session";
@@ -49,19 +50,20 @@ export default async function GoalsPage() {
 
       {goalTree.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-3 py-8">
-            <Target className="h-10 w-10 text-text-tertiary" />
-            <div className="text-sm text-text-secondary">No goals yet</div>
-            <div className="text-xs text-text-tertiary text-center">
-              Goals connect your projects, commitments, and people to what matters.
-            </div>
-            <IvyDispatchButton
-              prompt={"I'm starting to track my goals in Cockpit. I'm a builder running multiple projects.\n\nHelp me think through what my top 2–3 goals should be right now. What areas should I consider (professional, health, learning, relationships, financial)? What makes a good goal versus just a task?"}
-              label="Ask Ivy to help define my goals"
-              title="Ask Ivy to help define your goals"
-              className="flex items-center gap-2 rounded-xl border border-status-positive/20 bg-status-positive/5 px-4 py-2 text-sm text-status-positive/80 hover:text-status-positive hover:border-status-positive/40 transition-colors"
-            />
-          </div>
+          <EmptyState
+            icon={Target}
+            title="No goals yet"
+            action={
+              <IvyDispatchButton
+                prompt={"I'm starting to track my goals in Cockpit. I'm a builder running multiple projects.\n\nHelp me think through what my top 2–3 goals should be right now. What areas should I consider (professional, health, learning, relationships, financial)? What makes a good goal versus just a task?"}
+                label="Ask Ivy to help define my goals"
+                title="Ask Ivy to help define your goals"
+                className="ui-callout-positive items-center gap-2 text-status-positive transition-colors hover:bg-status-positive/10"
+              />
+            }
+          >
+            Goals connect your projects, commitments, and people to what matters.
+          </EmptyState>
         </Card>
       ) : (
         <GoalsGrid

@@ -171,7 +171,7 @@ export function PeopleGrid({
       </div>
 
       {fetchError && (
-        <div className="flex items-center justify-between rounded-xl border border-status-negative/20 bg-status-negative/5 px-4 py-3 text-sm text-status-negative">
+        <div className="ui-callout-negative items-center justify-between text-status-negative">
           <span>Failed to load — check your connection and try again.</span>
           <button
             onClick={() => search(query, sort, healthFilter, 0)}

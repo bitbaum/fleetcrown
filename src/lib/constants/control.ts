@@ -3,13 +3,16 @@
 export const READY_WINDOW_S   = 600;    // 10 min — "Agent finished" banner
 export const CLOSED_WINDOW_S  = 3600;   // 1 hour — "Session closed" banner
 export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banner
+// Projects with recent ready/closing/closed activity are considered "active" for display.
+// Must be long enough to survive a brief idle gap between sessions on the same project.
+export const ACTIVE_WINDOW_S  = 300;    // 5 min — active vs idle split in control presenter
 export const AUTO_INJECT_S              = 12;  // countdown before auto-inject in control panel (matches Python COUNTDOWN_SECONDS)
 export const DEFAULT_BEACON_COUNTDOWN_S  = 12;  // fallback when settings file is absent — must match Python COUNTDOWN_SECONDS
 export const MIN_BEACON_COUNTDOWN_S      = 5;   // shortest allowed beacon countdown
 export const MAX_BEACON_COUNTDOWN_S      = 300; // longest allowed beacon countdown (5 minutes)
 export const DEFAULT_BEACON_MIN_IDLE_S   = 0;   // 0 = always show popup regardless of keyboard activity
 export const MAX_BEACON_MIN_IDLE_S       = 600; // 10 minutes max
-export const DEFAULT_POPUP_MODE          = "both"; // "both" | "web" | "pyqt" | "disabled"
+export const DEFAULT_POPUP_MODE          = "web"; // "web" | "disabled" — "both"/"pyqt" coerced to "web" for legacy rows
 
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).

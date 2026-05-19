@@ -15,9 +15,17 @@ export async function PATCH(
   const dataOrResp = await readJsonBody(req, PatchGoalBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const updated = await patchGoal(userId, idOrResp, dataOrResp);
-  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({ ok: true, goal: updated });
+  try {
+    const updated = await patchGoal(userId, idOrResp, dataOrResp);
+    if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true, goal: updated });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed to update goal";
+    if (msg === "Invalid entityId") {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    throw e;
+  }
 }
 
 export async function DELETE(

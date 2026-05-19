@@ -4,6 +4,7 @@ import { CRON_FILE, DEFAULT_TIMEZONE, TELEGRAM_CHAT_ID } from "@/lib/constants";
 import { type CronJob, readCronJobs, readCronFile, CreateCronBody, PatchCronBody } from "@/lib/crons";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
+import { getUserPreferences, getActiveTimezone } from "@/db/queries/user-preferences";
 
 // Re-export so existing imports from this path keep working
 export type { CronJob };
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const prefs = await getUserPreferences(userId).catch(() => null);
+  const defaultTz = getActiveTimezone(prefs);
+
   try {
     const data = readCronFile();
     const newJob: CronJob = {
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
       enabled: true,
       createdAtMs: Date.now(),
       updatedAtMs: Date.now(),
-      schedule: { kind: "cron", expr: scheduleExpr, tz: tz ?? DEFAULT_TIMEZONE },
+      schedule: { kind: "cron", expr: scheduleExpr, tz: tz ?? defaultTz },
       sessionTarget: "isolated",
       wakeMode: "now",
       payload: {

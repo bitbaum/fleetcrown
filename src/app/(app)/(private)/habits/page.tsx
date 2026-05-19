@@ -1,6 +1,7 @@
 import { Repeat2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { listActiveGoals } from "@/db/queries/goals";
 import { getGoalsByHabitIds } from "@/db/queries/habit-goals";
@@ -43,11 +44,7 @@ export default async function HabitsPage() {
 
       {habits.length === 0 ? (
         <Card>
-          <div className="flex flex-col items-center gap-4 py-10 text-text-secondary">
-            <Repeat2 className="h-10 w-10" />
-            <div className="text-lg">No habits tracked yet</div>
-            <AddHabitButton emptyState />
-          </div>
+          <EmptyState icon={Repeat2} title="No habits tracked yet" action={<AddHabitButton emptyState />} />
         </Card>
       ) : (
         <div className="space-y-3">

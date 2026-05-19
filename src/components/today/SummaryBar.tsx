@@ -3,6 +3,7 @@ import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
+import { APP_LOCALE } from "@/lib/constants";
 
 /** Placeholder shown while SummaryBar's DB queries run. */
 export function SummaryBarSkeleton() {
@@ -25,7 +26,7 @@ export async function SummaryBar() {
   const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
 
   const todayBriefPrompt = [
-    `Daily brief — ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}`,
+    `Daily brief — ${new Date().toLocaleDateString(APP_LOCALE, { weekday: "long", month: "long", day: "numeric" })}`,
     "",
     s.activeGoals > 0 && `Goals: ${s.activeGoals} active, ${s.avgGoalProgress}% average progress`,
     s.habitsTotal > 0 && `Habits: ${s.habitsDone}/${s.habitsTotal} done today`,

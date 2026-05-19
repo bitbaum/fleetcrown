@@ -127,6 +127,7 @@ export function HabitRow({
               onClick={startEdit}
               className="ui-btn-row-action opacity-0 group-hover:opacity-100"
               title="Edit habit"
+              aria-label="Edit habit"
             >
               <Pencil className="h-3 w-3" />
             </button>
@@ -134,6 +135,7 @@ export function HabitRow({
               onClick={() => onRemove(habit.id)}
               className="p-1.5 rounded text-text-muted hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors opacity-0 group-hover:opacity-100"
               title="Remove habit"
+              aria-label="Remove habit"
             >
               <X className="h-3 w-3" />
             </button>

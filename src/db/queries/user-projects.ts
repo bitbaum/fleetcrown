@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ilike, inArray, isNotNull, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, orgs, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -156,28 +156,6 @@ export async function appendProjectDevLog(
   });
   if (!project) return;
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
-}
-
-/**
- * Given a list of tab/project names, return a map of lowercased name → userId
- * for whichever user owns each project. Used by the daemon's runtime-state push
- * so state is stored under the correct user regardless of which user the daemon
- * authenticates as.
- */
-export async function getUserIdsByProjectNames(names: string[]): Promise<Map<string, string>> {
-  if (names.length === 0) return new Map();
-  // Use lower() equality so conf-file casing differences don't cause misses,
-  // and project names containing SQL LIKE wildcards (_ %) are matched literally.
-  const lowerNames = names.map((n) => n.toLowerCase());
-  const rows = await db
-    .select({ name: userProjects.name, userId: userProjects.userId })
-    .from(userProjects)
-    .where(or(...lowerNames.map((n) => sql`lower(${userProjects.name}) = ${n}`))!);
-  const map = new Map<string, string>();
-  for (const row of rows) {
-    map.set(row.name.toLowerCase(), row.userId);
-  }
-  return map;
 }
 
 export async function appendProjectDevLogByEntityProjectId(

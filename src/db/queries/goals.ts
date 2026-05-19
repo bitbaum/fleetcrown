@@ -55,7 +55,33 @@ export async function listActiveGoals(userId: string) {
     .orderBy(goals.title);
 }
 
+/** Throws if entityId is set but the entity doesn't belong to userId.
+ *  Prevents users from linking goals to other tenants' entities, which would
+ *  leak the entity name through getGoals' join. */
+async function assertEntityOwnership(userId: string, entityId: string | null | undefined): Promise<void> {
+  if (!entityId) return;
+  const [owned] = await db
+    .select({ id: entities.id })
+    .from(entities)
+    .where(and(eq(entities.id, entityId), eq(entities.userId, userId)))
+    .limit(1);
+  if (!owned) throw new Error("Invalid entityId");
+}
+
+/** Same idea for parentGoalId — a user can only nest under their own goals. */
+async function assertParentGoalOwnership(userId: string, parentGoalId: string | null | undefined): Promise<void> {
+  if (!parentGoalId) return;
+  const [owned] = await db
+    .select({ id: goals.id })
+    .from(goals)
+    .where(and(eq(goals.id, parentGoalId), eq(goals.userId, userId)))
+    .limit(1);
+  if (!owned) throw new Error("Invalid parentGoalId");
+}
+
 export async function createGoal(userId: string, data: CreateGoalInput) {
+  await assertEntityOwnership(userId, data.entityId);
+  await assertParentGoalOwnership(userId, data.parentGoalId);
   const [created] = await db
     .insert(goals)
     .values({
@@ -73,6 +99,7 @@ export async function createGoal(userId: string, data: CreateGoalInput) {
 }
 
 export async function patchGoal(userId: string, id: string, data: z.infer<typeof PatchGoalBody>) {
+  if (data.entityId !== undefined) await assertEntityOwnership(userId, data.entityId || null);
   const patch: Partial<typeof goals.$inferInsert> = { updatedAt: new Date() };
   if (data.title !== undefined) patch.title = data.title;
   if (data.description !== undefined) patch.description = data.description;
@@ -123,7 +150,9 @@ export async function getGoals(userId: string): Promise<GoalWithChildren[]> {
       entityName: entities.name,
     })
     .from(goals)
-    .leftJoin(entities, eq(goals.entityId, entities.id))
+    // Defense-in-depth: even if a goal somehow points to another tenant's
+    // entity, the join filter strips the name from the result.
+    .leftJoin(entities, and(eq(goals.entityId, entities.id), eq(entities.userId, userId)))
     .where(eq(goals.userId, userId))
     .orderBy(goals.createdAt);
 

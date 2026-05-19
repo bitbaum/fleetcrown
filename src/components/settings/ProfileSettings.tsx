@@ -8,7 +8,7 @@ import { patchJson, throwApiError } from "@/lib/api/fetch";
 import { normalizeUsername } from "@/lib/username";
 
 type Props = {
-  user: { id: string; name: string; username: string; image: string; hasPassword: boolean };
+  user: { id: string; name: string; username: string; image: string };
 };
 
 export function ProfileSettings({ user }: Props) {
@@ -32,38 +32,6 @@ export function ProfileSettings({ user }: Props) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setSaving(false);
-    }
-  };
-
-  // Password change state — only used when hasPassword is true
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmPwd, setConfirmPwd] = useState("");
-  const [pwdSaving, setPwdSaving] = useState(false);
-  const [pwdError, setPwdError] = useState("");
-  const [pwdSaved, setPwdSaved] = useState(false);
-
-  const pwdMismatch = confirmPwd.length > 0 && newPwd !== confirmPwd;
-  const pwdTooShort = newPwd.length > 0 && newPwd.length < 8;
-  const canSavePwd = !!currentPwd && newPwd.length >= 8 && newPwd === confirmPwd;
-
-  const savePassword = async () => {
-    setPwdSaving(true);
-    setPwdError("");
-    setPwdSaved(false);
-    try {
-      const res = await patchJson("/api/me/password", { currentPassword: currentPwd, newPassword: newPwd });
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Failed to change password");
-      }
-      setPwdSaved(true);
-      setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
-      setTimeout(() => setPwdSaved(false), 4000);
-    } catch (e) {
-      setPwdError(e instanceof Error ? e.message : "Something went wrong");
-    } finally {
-      setPwdSaving(false);
     }
   };
 
@@ -120,59 +88,6 @@ export function ProfileSettings({ user }: Props) {
         {saving && <Loader2 className="ui-spinner" />}
         Save changes
       </button>
-
-      {user.hasPassword && (
-        <div className="mt-6 border-t border-border-subtle pt-6 space-y-3">
-          <h3 className="text-sm font-medium text-text-primary">Change password</h3>
-          <div className="space-y-2">
-            <div className="space-y-1.5">
-              <label className="ui-kicker">Current password</label>
-              <input
-                type="password"
-                value={currentPwd}
-                onChange={(e) => { setCurrentPwd(e.target.value); setPwdError(""); }}
-                autoComplete="current-password"
-                className="ui-input"
-                placeholder="Your current password"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="ui-kicker">New password</label>
-              <input
-                type="password"
-                value={newPwd}
-                onChange={(e) => { setNewPwd(e.target.value); setPwdError(""); }}
-                autoComplete="new-password"
-                className={`ui-input ${pwdTooShort ? "border-status-negative/50" : ""}`}
-                placeholder="At least 8 characters"
-              />
-              {pwdTooShort && <p className="ui-error-xs">At least 8 characters required</p>}
-            </div>
-            <div className="space-y-1.5">
-              <label className="ui-kicker">Confirm new password</label>
-              <input
-                type="password"
-                value={confirmPwd}
-                onChange={(e) => { setConfirmPwd(e.target.value); setPwdError(""); }}
-                autoComplete="new-password"
-                className={`ui-input ${pwdMismatch ? "border-status-negative/50" : ""}`}
-                placeholder="Repeat new password"
-              />
-              {pwdMismatch && <p className="ui-error-xs">Passwords don&apos;t match</p>}
-            </div>
-          </div>
-          {pwdError && <p className="ui-error">{pwdError}</p>}
-          {pwdSaved && <p className="text-sm text-status-positive">Password updated.</p>}
-          <button
-            onClick={savePassword}
-            disabled={pwdSaving || !canSavePwd}
-            className="ui-btn-secondary"
-          >
-            {pwdSaving && <Loader2 className="ui-spinner" />}
-            Update password
-          </button>
-        </div>
-      )}
     </section>
   );
 }

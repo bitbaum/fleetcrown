@@ -16,6 +16,14 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateGoalBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const created = await createGoal(userId, dataOrResp);
-  return NextResponse.json({ ok: true, goal: created }, { status: 201 });
+  try {
+    const created = await createGoal(userId, dataOrResp);
+    return NextResponse.json({ ok: true, goal: created }, { status: 201 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Failed to create goal";
+    if (msg === "Invalid entityId" || msg === "Invalid parentGoalId") {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+    throw e;
+  }
 }

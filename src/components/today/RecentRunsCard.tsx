@@ -13,7 +13,16 @@ export async function RecentRunsCard() {
   const userId = await requirePageUserId();
   const runs = await getRecentOrchestrationRuns(userId);
 
-  if (runs.length === 0) return null;
+  if (runs.length === 0) {
+    return (
+      <div className="md:col-span-2">
+        <Card>
+          <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
+          <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="md:col-span-2">
@@ -22,7 +31,7 @@ export async function RecentRunsCard() {
           icon={Bot}
           title="Recent Agent Work"
           right={
-            <Link href="/control" className="text-xs text-text-tertiary hover:text-text-secondary transition-colors">
+            <Link href="/control" className="ui-link-subtle">
               Control →
             </Link>
           }

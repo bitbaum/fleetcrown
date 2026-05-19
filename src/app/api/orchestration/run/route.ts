@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   // Health gate mirrors sessionHealthBlocksQueue() on the client: if session health is critical
   // or tests are failing, skip queue pop so the agent picks the recovery task instead.
   if (request.adapter !== "openclaw" && request.intent === "next_best") {
-    const projectState = await getProjectState(request.projectKey).catch(() => null);
+    const projectState = await getProjectState(userId, request.projectKey).catch(() => null);
     const healthBlocks = (projectState?.sessionHealth ?? "").toLowerCase().includes("critical")
       || (projectState?.sessionTests ?? "").toLowerCase().includes("fail");
 

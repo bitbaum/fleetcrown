@@ -54,6 +54,27 @@ export function readBeaconSession(id: string): BeaconSession | null {
 }
 
 /**
+ * Return the most recently created pending session, if any. Used by the
+ * /beacon/live page to SSR-preload the popup state so the first paint
+ * already shows the Ready UI instead of the Standby placeholder.
+ */
+export function readLatestPendingSession(): BeaconSession | null {
+  try {
+    let best: BeaconSession | null = null;
+    for (const file of fs.readdirSync(BEACON_DIR)) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const s = JSON.parse(fs.readFileSync(path.join(BEACON_DIR, file), "utf-8")) as BeaconSession;
+        if (s.choice === null && (!best || s.createdAt > best.createdAt)) best = s;
+      } catch { /* skip unreadable */ }
+    }
+    return best;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Cancel any active beacon sessions for the given tab (project name).
  * Setting choice to "" signals beacon.py's polling loop to exit cleanly,
  * and the beacon popup page polls the same endpoint and closes itself.

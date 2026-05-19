@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { upsertProjectState } from "@/db/queries/project-states";
-import { getUserIdsByProjectNames } from "@/db/queries/user-projects";
 import { getApiUserId } from "@/lib/session";
 import { emitStateChanged } from "@/lib/sse-bus";
 
@@ -31,9 +30,14 @@ function tsOrNull(epochS: number | null | undefined): Date | null {
 // POST /api/control/runtime-state
 // Bearer-authenticated (env token or ck_* agent token).
 // Pushes local agent runtime state into the DB so the cloud control plane can read it.
+//
+// All rows are scoped to the authenticated user — the daemon services one user at
+// a time and may only mutate its own runtime state. Previous versions resolved
+// ownership by global project-name lookup, which silently merged state across
+// tenants when two users had a project with the same name.
 export async function POST(req: NextRequest) {
-  const daemonUserId = await getApiUserId();
-  if (!daemonUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let body: { projects?: unknown };
   try {
@@ -48,16 +52,9 @@ export async function POST(req: NextRequest) {
 
   const projects = body.projects as ProjectRuntimePatch[];
 
-  // Resolve the actual owning userId per project by looking up user_projects.
-  // This ensures state is stored under the right user even when the owner's
-  // session account differs from the daemon's default-user account (e.g. GitHub OAuth
-  // created a separate row from the initial local-password setup).
-  const ownerMap = await getUserIdsByProjectNames(projects.map((p) => p.tab)).catch(() => new Map<string, string>());
-
   await Promise.all(
-    projects.map((p) => {
-      const userId = ownerMap.get(p.tab.toLowerCase()) ?? daemonUserId;
-      return upsertProjectState({
+    projects.map((p) =>
+      upsertProjectState({
         projectKey:             p.tab,
         userId,
         tabName:                p.tab,
@@ -79,13 +76,11 @@ export async function POST(req: NextRequest) {
         ...(p.sessionTodos    !== undefined && { sessionTodos:    p.sessionTodos }),
         ...(p.sessionHealth   !== undefined && { sessionHealth:   p.sessionHealth }),
         ...(p.sessionUpdatedAt !== undefined && { sessionUpdatedAt: tsOrNull(p.sessionUpdatedAt) }),
-      }).catch((err) => console.error("[runtime-state] db write failed:", err));
-    })
+      }).catch((err) => console.error("[runtime-state] db write failed:", err)),
+    ),
   );
 
-  // Wake any open SSE connections for affected users — no need to wait for the next tick.
-  const notifiedUsers = new Set([daemonUserId, ...ownerMap.values()]);
-  for (const uid of notifiedUsers) emitStateChanged(uid);
+  emitStateChanged(userId);
 
   return NextResponse.json({ ok: true, count: projects.length });
 }

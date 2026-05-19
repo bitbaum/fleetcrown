@@ -276,13 +276,13 @@ export function ControlPanel() {
 
       {error && <p className="ui-box-error">{error}</p>}
       {queuedNotice && (
-        <div className="flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm text-accent-text">
+        <div className="ui-control-notice">
           <Sparkles className="h-3.5 w-3.5 shrink-0" />
           {queuedNotice}
         </div>
       )}
 
-      <AttentionBar items={attention} failedCommands={data?.failedCommands} />
+      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setFocusedTab} />
 
       <ProjectFleetView
         viewMode={viewMode}

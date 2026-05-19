@@ -1,5 +1,5 @@
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
-import { getProjectStatesByUserId } from "@/db/queries/project-states";
+import { getProjectStatesByUserIds } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
@@ -19,12 +19,14 @@ const KEEPALIVE_MS = 15_000;
 // Map DB state rows to the FastProjectState shape the SSE client expects.
 // Used on Vercel where /proc and /tmp are unavailable — daemon keeps DB current.
 function dbToFastState(
-  confProjects: Array<{ tab: string }>,
+  confProjects: Array<{ tab: string; ownerUserId: string }>,
   dbRows: DbProjectState[]
 ): FastProjectState[] {
-  const byKey = new Map(dbRows.map((r) => [r.projectKey.toLowerCase(), r]));
-  return confProjects.map(({ tab }) => {
-    const r = byKey.get(tab.toLowerCase());
+  // Key by (ownerUserId, projectKey) so two users with the same project name
+  // don't collide when an org peer is viewing a team project.
+  const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
+  return confProjects.map(({ tab, ownerUserId }) => {
+    const r = byKey.get(`${ownerUserId}:${tab.toLowerCase()}`);
     if (!r) return { tab, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
     return {
       tab,
@@ -69,9 +71,12 @@ export async function GET() {
       return {
         tab: p.name,
         dir: p.dirPath!,
+        ownerUserId: p.userId,
         sessionLifecycleSignals: agent?.capabilities.sessionLifecycleSignals ?? false,
       };
     });
+  // Fetch state for own user + team owners so org-shared projects show live state too.
+  const ownerIds = [...new Set([userId, ...confProjects.map((p) => p.ownerUserId)])];
 
   // Resolve each project's canonical tab name to its exact zellij casing.
   // The cache is refreshed every 10s in the background so new Claude sessions
@@ -121,7 +126,7 @@ export async function GET() {
         refreshTabsCacheIfStale();
         const current = isRuntimeAvailable()
           ? scanProjects()
-          : dbToFastState(confProjects, await getProjectStatesByUserId(userId).catch((): DbProjectState[] => []));
+          : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
 
         const agentsKey = (a: string[]) => [...a].sort().join(",");
         const changed = current.filter((proj, i) => {
@@ -159,7 +164,7 @@ export async function GET() {
       // Initial snapshot
       const initialProjects = isRuntimeAvailable()
         ? scanProjects()
-        : dbToFastState(confProjects, await getProjectStatesByUserId(userId).catch((): DbProjectState[] => []));
+        : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
       lastSent = initialProjects;
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();

@@ -18,7 +18,7 @@ export const attributes = pgTable("attributes", {
   index("idx_attributes_entity_id").on(table.entityId),
   index("idx_attributes_user_id").on(table.userId),
   index("idx_attributes_key").on(table.key),
-  uniqueIndex("uq_attributes_entity_key").on(table.entityId, table.key),
+  uniqueIndex("uq_attributes_user_entity_key").on(table.userId, table.entityId, table.key),
 ]);
 
 export type Attribute = typeof attributes.$inferSelect;

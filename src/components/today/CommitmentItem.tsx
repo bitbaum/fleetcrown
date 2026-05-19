@@ -128,6 +128,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <button
           onClick={() => setEditing(true)}
           title="Edit commitment"
+          aria-label="Edit commitment"
           className="ui-btn-row-action"
         >
           <Pencil className="h-3.5 w-3.5" />

@@ -4,6 +4,7 @@ import { Sun, CloudRain, Cloud, CloudSnow, CloudFog } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
+import { WEATHER_CITY } from "@/lib/constants/today";
 
 function parseWeather(raw: string) {
   // Format: "Now: Mainly clear, 22.3°C, wind 6.1 km/h, humidity 31%\n2026-04-07: 6.8-22.3°C, Foggy"
@@ -38,7 +39,7 @@ function WeatherIcon({ condition, className }: { condition: string; className?: 
 }
 
 export function WeatherCard() {
-  const { data, loading, error, refetch } = useFetch<{ weather: string | null; error?: string }>("/api/weather", { intervalMs: 10 * 60_000 });
+  const { data, loading, error, refetch } = useFetch<{ weather: string | null; city?: string; error?: string }>("/api/weather", { intervalMs: 10 * 60_000 });
 
   if (loading) {
     return (
@@ -78,10 +79,11 @@ export function WeatherCard() {
   }
 
   const w = parseWeather(data.weather);
+  const cityName = data.city ?? WEATHER_CITY;
 
   return (
     <Card>
-      <CardHeader icon={Sun} title="Zurich" />
+      <CardHeader icon={Sun} title={cityName} />
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <WeatherIcon condition={w.condition} className="h-8 w-8 text-status-warning/80" />

@@ -61,6 +61,7 @@ export function ActionButtons({
           disabled={busy}
           className="flex items-center justify-center rounded p-3 min-h-11 min-w-11 hover:bg-status-positive/20 text-status-positive/60 hover:text-status-positive transition-colors disabled:opacity-50"
           title="Done — mark as completed"
+          aria-label="Mark action as done"
         >
           <Check className="h-4 w-4" />
         </button>
@@ -69,6 +70,7 @@ export function ActionButtons({
           disabled={busy}
           className="flex items-center justify-center rounded p-3 min-h-11 min-w-11 hover:bg-surface-raised text-text-muted hover:text-text-secondary transition-colors disabled:opacity-50"
           title="Skip — dismiss this action"
+          aria-label="Skip this action"
         >
           <X className="h-4 w-4" />
         </button>

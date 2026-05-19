@@ -16,34 +16,11 @@ import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
+import { LayoutGrid } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
-
-const PLAN_DAY_PROMPT = `Plan my day.
-
-Check in Cockpit and the codebase:
-- Which of my active projects has the most urgent open work or is blocking a goal?
-- Which goals are due soon or have been stuck at 0% for 30+ days?
-- Are there any commitments or events with deadlines in the next 3 days?
-- Which habit am I most at risk of breaking today?
-
-Then give me:
-1. The ONE thing I should work on first today (be specific — project name + what exactly)
-2. Three concrete tasks for it (each under 10 words)
-3. One person I should reach out to and why
-
-Under 150 words. No hedging.`;
-
-const WRAP_UP_PROMPT = `Run my end-of-day wrap-up.
-
-1. Check git commits across all active projects since this morning — what actually shipped?
-2. What is currently blocked or waiting on input?
-3. Review open commitments — anything overdue or due tomorrow?
-4. Did I make progress on my highest-priority goal today?
-5. What is the single first task to do tomorrow morning?
-
-Be direct. If nothing shipped, say so. Under 150 words.`;
+import { PLAN_DAY_PROMPT, WRAP_UP_PROMPT } from "@/lib/constants/today";
 
 export const metadata = { title: "Today" };
 
@@ -61,8 +38,8 @@ export default async function TodayPage() {
       <div>
         <Greeting name={name} />
         {isFirstRun && (
-          <div className="mt-4 flex items-start gap-4 rounded-2xl border border-accent-primary/20 bg-accent-muted px-5 py-4">
-            <span className="mt-0.5 shrink-0 text-xl">⊞</span>
+          <div className="ui-callout-accent mt-4">
+            <LayoutGrid className="mt-0.5 h-5 w-5 shrink-0 text-accent-text" />
             <div className="min-w-0 flex-1">
               <p className="font-medium text-text-primary">Register your first project to get started</p>
               <p className="mt-0.5 text-sm text-text-secondary">
@@ -101,7 +78,7 @@ export default async function TodayPage() {
       </div>
 
       {/* Recent agent outcomes — what agents shipped since last visit */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<CardSkeleton />}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <RecentRunsCard />
         </div>
@@ -115,13 +92,13 @@ export default async function TodayPage() {
         <Suspense fallback={<CardSkeleton />}>
           <AlertsCard />
         </Suspense>
-        <Suspense fallback={null}>
+        <Suspense fallback={<CardSkeleton />}>
           <GoalsDueCard />
         </Suspense>
-        <Suspense fallback={null}>
+        <Suspense fallback={<CardSkeleton />}>
           <EventsDueCard />
         </Suspense>
-        <Suspense fallback={null}>
+        <Suspense fallback={<CardSkeleton />}>
           <StuckGoalsCard />
         </Suspense>
       </div>
