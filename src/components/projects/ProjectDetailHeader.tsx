@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { X, Globe, GitBranch, AlertTriangle, Activity } from "lucide-react";
 import Link from "next/link";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { setAttr } from "@/lib/api/attrs";
 import type { ProjectData, Tab } from "./project-detail-types";
-import { ISSUE_ATTRS, getProjectLinks } from "./project-detail-types";
+import { getProjectLinks } from "./project-detail-types";
+import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import {
   NameEditor,
   DescriptionEditor,
@@ -16,6 +18,25 @@ import {
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+
+function buildIvyPrompt(data: ProjectData): string {
+  const a = data.attrs;
+  const issueLines = HEALTH_SIGNAL_CONFIG
+    .filter((cfg) => a[cfg.key])
+    .map((cfg) => `${cfg.cardLabel}: ${a[cfg.key]}`);
+  return [
+    `Project: ${data.name}`,
+    a["status"] && `Status: ${a["status"]}`,
+    a["maturity"] && `Maturity: ${a["maturity"]}`,
+    data.description && `Description: ${data.description}`,
+    a["next_step"] && `Next Step: ${a["next_step"]}`,
+    a["stack"] && `Stack: ${a["stack"]}`,
+    a["mission"] && `Mission: ${a["mission"]}`,
+    ...issueLines,
+    "",
+    "What should I focus on for this project right now? Biggest risks and immediate next steps?",
+  ].filter(Boolean).join("\n");
+}
 
 export function ProjectDetailHeader({
   data,
@@ -52,7 +73,7 @@ export function ProjectDetailHeader({
   const effectiveStatus = statusOverride ?? attrs["status"] ?? null;
   const effectiveMaturity = maturityOverride ?? attrs["maturity"] ?? null;
   const { prodUrl, repo } = getProjectLinks(attrs);
-  const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
+  const hasIssues = HEALTH_SIGNAL_CONFIG.some((cfg) => attrs[cfg.key]);
   const editable = !!data && !loading && !data.readonly;
 
   const saveName = async (next: string) => {
@@ -95,6 +116,13 @@ export function ProjectDetailHeader({
         </div>
 
         <div className="ui-card-actions shrink-0 self-start">
+          {data && (
+            <IvyDispatchButton
+              prompt={buildIvyPrompt(data)}
+              title="Ask Ivy about this project"
+              className="ui-icon-action"
+            />
+          )}
           {prodUrl && (
             <a
               href={prodUrl}
@@ -153,7 +181,7 @@ export function ProjectDetailHeader({
           <StatusEditor value={effectiveStatus} editable={editable} onSave={saveStatus} />
           <MaturityEditor value={effectiveMaturity} editable={editable} onSave={saveMaturity} />
           {hasIssues && (
-            <span className="flex items-center gap-1 text-micro text-status-negative/70 ml-auto">
+            <span className="ui-tag ui-tag-negative gap-1 ml-auto">
               <AlertTriangle className="h-3 w-3" /> Issues detected
             </span>
           )}

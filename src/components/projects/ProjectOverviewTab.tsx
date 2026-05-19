@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Plus, Users, MessageSquare, Loader2 } from "lucide-react";
+import { ArrowRight, Bot, Circle, Code2, FileCheck, Loader2, MessageSquare, Phone, Plus, Rocket, Users } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
@@ -13,6 +13,16 @@ import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { APP_LOCALE } from "@/lib/constants";
+
+const CHANNEL_ICON: Record<string, React.ElementType> = {
+  "work-session": Code2,
+  meeting: Users,
+  ivy: Bot,
+  review: FileCheck,
+  deployment: Rocket,
+  call: Phone,
+  other: Circle,
+};
 
 function NextStepSection({
   attrs, projectId, editable, onReload,
@@ -116,8 +126,7 @@ export function OverviewTab({
 
   const attrs = data.attrs;
   const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
-  // next_step has its own dedicated section — exclude from the missing-suggested list
-  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key] && key !== "next_step");
+  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
 
   return (
     <div className="space-y-5">
@@ -243,14 +252,20 @@ export function OverviewTab({
           <MessageSquare className="h-3 w-3" /> Recent Activity
         </div>
         <div className="space-y-3">
-          {activityList.map((i, idx) => (
-            <div key={idx} className="text-xs">
-              <div className="text-text-tertiary mb-0.5">
-                {i.channel} · {new Date(i.occurredAt).toLocaleDateString(APP_LOCALE)}
+          {activityList.map((i, idx) => {
+            const ChannelIcon = CHANNEL_ICON[i.channel] ?? Circle;
+            return (
+              <div key={idx} className="text-xs">
+                <div className="flex items-center gap-1.5 text-text-tertiary mb-0.5">
+                  <ChannelIcon className="h-3 w-3 shrink-0" />
+                  <span className="capitalize">{i.channel.replace(/-/g, " ")}</span>
+                  <span className="text-text-muted">·</span>
+                  <span>{new Date(i.occurredAt).toLocaleDateString(APP_LOCALE)}</span>
+                </div>
+                {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}
               </div>
-              {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}
-            </div>
-          ))}
+            );
+          })}
           {activityList.length === 0 && !loggingActivity && (
             <p className="text-xs text-text-secondary">No activity recorded yet.</p>
           )}

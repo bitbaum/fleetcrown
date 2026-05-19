@@ -81,7 +81,7 @@ export function Drawer({
   children,
 }: {
   onClose: () => void;
-  size?: "md" | "lg" | "xl";
+  size?: "md" | "lg" | "xl" | "2xl";
   /** "drawer", "modal", or "background" (page bg). */
   surface?: "drawer" | "modal" | "background";
   disableClose?: boolean;

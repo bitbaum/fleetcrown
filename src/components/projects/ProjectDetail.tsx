@@ -54,7 +54,7 @@ export function ProjectDetail({
   }, [projectId, reloadKey]);
 
   return (
-    <Drawer onClose={onClose} size="xl" surface="drawer">
+    <Drawer onClose={onClose} size="2xl" surface="drawer">
       <ProjectDetailHeader
         data={data}
         loading={initialLoading}
@@ -86,7 +86,7 @@ export function ProjectDetail({
         ) : tab === "prompts" ? (
           <PromptsTab data={data} projectId={projectId} jobs={jobs} setJobs={setJobs} />
         ) : (
-          <GoalsTab goals={data.linkedGoals} projectId={data.id} />
+          <GoalsTab goals={data.linkedGoals} projectId={data.id} onReload={reload} />
         )}
       </div>
     </Drawer>

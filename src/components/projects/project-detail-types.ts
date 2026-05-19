@@ -2,6 +2,47 @@ import type { Milestone } from "@/db/schema/goals";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 export type { DevLogEntry };
 
+// ─── Health Signal Config (base — no Lucide icons, safe to import anywhere) ──
+
+export type HealthSignalKind = "security" | "broken" | "deployment";
+
+export type HealthSignalBase = {
+  kind: HealthSignalKind;
+  key: string;
+  label: string;
+  cardLabel: string;
+  badgeCls: string;
+  cardBorder: string;
+  cardBg: string;
+  cardText: string;
+  cardBody: string;
+};
+
+/** Single source of truth for health signal metadata. Icons are added in project-badges.tsx. */
+export const HEALTH_SIGNAL_BASE: HealthSignalBase[] = [
+  {
+    kind: "security", key: "security_vulnerability",
+    label: "Security risk", cardLabel: "Security Risk",
+    badgeCls: "bg-status-negative-subtle text-status-negative border-status-negative/25",
+    cardBorder: "border-status-negative/25", cardBg: "bg-status-negative-subtle",
+    cardText: "text-status-negative", cardBody: "text-status-negative/70",
+  },
+  {
+    kind: "broken", key: "broken_features",
+    label: "Broken", cardLabel: "Broken Features",
+    badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+    cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning", cardBody: "text-status-warning/70",
+  },
+  {
+    kind: "deployment", key: "deployment_issue",
+    label: "Deploy issue", cardLabel: "Deployment Issue",
+    badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+    cardBorder: "border-status-warning/25", cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning", cardBody: "text-status-warning/70",
+  },
+];
+
 export type LinkedGoal = {
   id: string;
   title: string;
@@ -71,8 +112,8 @@ export type Tab = "overview" | "prompts" | "goals";
 
 // Keys shown as quick-links in header
 export const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
-// Issue keys rendered as warning cards
-export const ISSUE_ATTRS = ["broken_features", "security_vulnerability", "deployment_issue"];
+// Derived from HEALTH_SIGNAL_BASE — never list these manually again
+export const ISSUE_ATTRS = HEALTH_SIGNAL_BASE.map((s) => s.key);
 // Keys with dedicated rendering (not shown in generic grid)
 export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner", "next_step"];
 
@@ -98,7 +139,7 @@ export const SUGGESTED_ATTRS: { key: string; label: string; placeholder: string 
   { key: "vision",    label: "Vision",    placeholder: "Where it's going in 3 years" },
   { key: "customers", label: "Customers", placeholder: "Who uses this and why" },
   { key: "stack",     label: "Stack",     placeholder: "Tech stack used" },
-  { key: "next_step", label: "Next Step", placeholder: "Single most important next action" },
+  // next_step intentionally omitted — rendered by NextStepSection with dedicated UX
 ];
 
 export const SUGGESTED_ATTR_LABELS: Record<string, string> =

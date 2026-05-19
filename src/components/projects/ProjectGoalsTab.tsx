@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, Loader2, Plus, Target, X } from "lucide-react";
 import { patchGoal, listGoals, createGoal } from "@/lib/api/goals";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
@@ -9,8 +9,14 @@ import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 
 type PanelMode = "idle" | "link" | "create";
 
-export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal[]; projectId: string }) {
+export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
+  goals: LinkedGoal[];
+  projectId: string;
+  onReload?: () => void;
+}) {
   const [linked, setLinked] = useState<LinkedGoal[]>(initialGoals);
+  // Sync when parent refetches (e.g. after linking a goal — real progress/status flows in)
+  useEffect(() => { setLinked(initialGoals); }, [initialGoals]);
   const [mode, setMode] = useState<PanelMode>("idle");
   const [allGoals, setAllGoals] = useState<Array<{ id: string; title: string; entityId: string | null }>>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -44,11 +50,8 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
     setSaving(true);
     try {
       await patchGoal(selectedId, { entityId: projectId });
-      const chosen = allGoals.find((g) => g.id === selectedId);
-      if (chosen) {
-        setLinked((prev) => [...prev, { id: chosen.id, title: chosen.title, description: null, status: GOAL_STATUS.ACTIVE, progress: 0, targetDate: null, milestones: null }]);
-      }
       setMode("idle");
+      onReload?.(); // parent refetches → real progress, status, milestones flow back in
     } finally {
       setSaving(false);
     }
@@ -63,18 +66,8 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       const res = await createGoal({ title, targetDate: newDate || undefined, entityId: projectId });
       const data = await res.json() as { ok?: boolean; goal?: { id: string; title: string; targetDate?: string | null }; error?: string };
       if (!data.ok) { setError(data.error ?? "Failed to create goal"); return; }
-      if (data.goal) {
-        setLinked((prev) => [...prev, {
-          id: data.goal!.id,
-          title: data.goal!.title,
-          description: null,
-          status: GOAL_STATUS.ACTIVE,
-          progress: 0,
-          targetDate: data.goal!.targetDate ?? null,
-          milestones: null,
-        }]);
-      }
       setMode("idle");
+      onReload?.(); // parent refetches → newly created goal comes back with full data
     } finally {
       setSaving(false);
     }
@@ -144,7 +137,10 @@ export function GoalsTab({ goals: initialGoals, projectId }: { goals: LinkedGoal
       })}
 
       {linked.length === 0 && mode === "idle" && (
-        <p className="text-xs text-text-secondary pt-1">No goals linked to this project.</p>
+        <div className="flex flex-col items-center gap-2 py-4 text-center">
+          <Target className="h-6 w-6 text-text-muted" />
+          <p className="text-xs text-text-secondary">No goals linked to this project yet.</p>
+        </div>
       )}
 
       {mode === "link" && (
