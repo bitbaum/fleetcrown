@@ -23,9 +23,13 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
+import type { Autonomy } from "@/lib/events";
 import { tailLog } from "./log";
-import { applyEvent, type GlobalState } from "./state";
+import { applyEvent, type GlobalState, type ProjectState } from "./state";
+import { decide, type Decision } from "./decide";
+import { appendEvent } from "./emit";
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
 const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
@@ -175,10 +179,96 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // M6 — dispatch. Run decide() against the current state for a project and
+  // either emit a bridge.dispatch event (when autonomy + confidence say "go")
+  // or return the proposed action for a confirm-mode UI to render.
+  //
+  // Body: { project: string, queueHead?: string, autonomy?: Autonomy }
+  // Response on auto-execute: { dispatched: true,  decision, runId }
+  // Response on hold:         { dispatched: false, decision }
+  if (url === "/api/dispatch" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => { body += String(chunk); });
+    req.on("end", () => {
+      try {
+        const parsed = body.trim() ? JSON.parse(body) : {};
+        const projectName: string | undefined = parsed.project;
+        if (typeof projectName !== "string" || !projectName) {
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: "missing 'project' string in body" }));
+          return;
+        }
+        const projectState = state.get(projectName);
+        if (!projectState) {
+          res.statusCode = 404;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: `unknown project: ${projectName}` }));
+          return;
+        }
+        const decision = decide({
+          project: projectState,
+          queueHead: typeof parsed.queueHead === "string" ? parsed.queueHead : undefined,
+          autonomy: parsed.autonomy as Autonomy | undefined,
+        });
+
+        // Wait actions never dispatch; same for any action where the autonomy
+        // gate said hold. Return the proposal so a confirm-mode UI can render
+        // the countdown + auto-fire button.
+        if (decision.action.kind === "wait" || !decision.autoExecute) {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ dispatched: false, decision }));
+          return;
+        }
+
+        // Auto-execute: emit a bridge.dispatch event with a fresh run id.
+        const runId = randomUUID();
+        const prompt = buildPromptForDispatch(decision, projectState);
+        const intent = decision.action.intent;
+        appendEvent({
+          kind: "bridge.dispatch",
+          project: projectName,
+          intent,
+          prompt,
+          runId,
+          autonomy: (parsed.autonomy as Autonomy | undefined) ?? "confirm",
+          reason: decision.action.reason,
+          confidence: decision.confidence,
+        });
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ dispatched: true, decision, runId }));
+      } catch (e) {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ error: String(e) }));
+      }
+    });
+    return;
+  }
+
   res.statusCode = 404;
   res.setHeader("Content-Type", "text/plain");
   res.end("Not Found");
 });
+
+/**
+ * Stub prompt builder for M6. When the decision carries an explicit prompt
+ * (queue-drain case where the queue item IS the prompt), passes it through.
+ * Otherwise emits a placeholder that names the intent — the real renderer
+ * lands in M7 along with the cutover from /api/control/dispatch.
+ */
+function buildPromptForDispatch(decision: Decision, project: ProjectState): string {
+  if (decision.action.kind === "dispatch" && decision.action.prompt) {
+    return decision.action.prompt;
+  }
+  const intent =
+    decision.action.kind === "dispatch" || decision.action.kind === "recovery"
+      ? decision.action.intent
+      : "unknown";
+  return `[m6 dispatch stub] intent=${intent} project=${project.project} — reason: ${
+    decision.action.kind === "wait" ? "n/a" : decision.action.reason
+  }`;
+}
 
 server.listen(PORT, () => {
   console.log(`[home] ${APP_NAME} brain listening on http://localhost:${PORT}`);
