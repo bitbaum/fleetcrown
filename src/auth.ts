@@ -33,6 +33,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
+  // Temporary diagnostic — verbose Auth.js logs to surface the AccessDenied root cause.
+  debug: true,
+  logger: {
+    error: (err) => {
+      console.error("[auth.logger.error]", err?.name, err?.message, err);
+    },
+    warn:  (code) => { console.warn("[auth.logger.warn]", code); },
+    debug: (code, meta) => { console.log("[auth.logger.debug]", code, meta); },
+  },
   // Allow localhost and any host when AUTH_TRUST_HOST=true (local production server).
   // Vercel sets VERCEL=1 which Auth.js already trusts automatically.
   trustHost: process.env.AUTH_TRUST_HOST === "true" || process.env.VERCEL === "1",
