@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install ZSH hooks that let Cockpit detect when you are actively typing at
+# Install ZSH hooks that let the app detect when you are actively typing at
 # the prompt — so auto-inject skips your tab instead of garbling your input.
 #
 # Usage:  bash scripts/install-cockpit-hooks.sh
@@ -7,7 +7,11 @@
 
 set -euo pipefail
 
-MARKER="# cockpit-typing-hooks"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_brand.sh
+source "$SCRIPT_DIR/_brand.sh"
+
+MARKER="# ${APP_SLUG}-typing-hooks"
 ZSHRC="${HOME}/.zshrc"
 
 if grep -qF "$MARKER" "$ZSHRC" 2>/dev/null; then
@@ -15,30 +19,33 @@ if grep -qF "$MARKER" "$ZSHRC" 2>/dev/null; then
   exit 0
 fi
 
-cat >> "$ZSHRC" << 'EOF'
+# Heredoc with substitution enabled (no quotes on EOF) so $APP_SLUG expands
+# into the emitted hook block. The inner $-references that must stay literal
+# in the user's .zshrc are escaped with \.
+cat >> "$ZSHRC" << EOF
 
-# cockpit-typing-hooks
-# Writes /tmp/cockpit-typing-<PANE_ID> while the user is at the interactive
-# prompt so Cockpit's inject API can skip this tab instead of garbling input.
-if [[ -n "${ZELLIJ:-}" && -n "${ZELLIJ_PANE_ID:-}" ]]; then
+# ${APP_SLUG}-typing-hooks
+# Writes /tmp/${APP_SLUG}-typing-<PANE_ID> while the user is at the interactive
+# prompt so the app's inject API can skip this tab instead of garbling input.
+if [[ -n "\${ZELLIJ:-}" && -n "\${ZELLIJ_PANE_ID:-}" ]]; then
   # Capture the tab name once at shell start (this pane must be focused).
-  _cockpit_tab=$(zellij action dump-layout 2>/dev/null \
-    | grep 'focus=true' \
-    | grep -o 'tab name="[^"]*"' \
-    | sed 's/tab name="\(.*\)"/\1/' \
+  _${APP_SLUG}_tab=\$(zellij action dump-layout 2>/dev/null \\
+    | grep 'focus=true' \\
+    | grep -o 'tab name="[^"]*"' \\
+    | sed 's/tab name="\\(.*\\)"/\\1/' \\
     | head -1)
 
-  function _cockpit_zle_line_init() {
-    [[ -n "${_cockpit_tab:-}" ]] && \
-      printf '%s\n%s' "$_cockpit_tab" "$(date +%s)" \
-        > "/tmp/cockpit-typing-${ZELLIJ_PANE_ID}"
+  function _${APP_SLUG}_zle_line_init() {
+    [[ -n "\${_${APP_SLUG}_tab:-}" ]] && \\
+      printf '%s\\n%s' "\$_${APP_SLUG}_tab" "\$(date +%s)" \\
+        > "/tmp/${APP_SLUG}-typing-\${ZELLIJ_PANE_ID}"
   }
-  function _cockpit_zle_line_finish() {
-    rm -f "/tmp/cockpit-typing-${ZELLIJ_PANE_ID}"
+  function _${APP_SLUG}_zle_line_finish() {
+    rm -f "/tmp/${APP_SLUG}-typing-\${ZELLIJ_PANE_ID}"
   }
-  zle -N zle-line-init _cockpit_zle_line_init
-  zle -N zle-line-finish _cockpit_zle_line_finish
-  trap 'rm -f "/tmp/cockpit-typing-${ZELLIJ_PANE_ID}"' EXIT
+  zle -N zle-line-init _${APP_SLUG}_zle_line_init
+  zle -N zle-line-finish _${APP_SLUG}_zle_line_finish
+  trap 'rm -f "/tmp/${APP_SLUG}-typing-\${ZELLIJ_PANE_ID}"' EXIT
 fi
 EOF
 

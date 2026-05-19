@@ -1,6 +1,12 @@
 import fs from "fs";
 import { exec, execSync, execFileSync } from "child_process";
 import { promisify } from "util";
+import { APP_SLUG } from "@/config/brand";
+
+// Filename prefix the zsh typing hooks write to /tmp. Must match
+// scripts/install-cockpit-hooks.sh (which generates the hooks) — derived
+// from APP_SLUG so a rename flips both sides together.
+const TYPING_FILE_PREFIX = `${APP_SLUG}-typing-`;
 
 const execAsync = promisify(exec);
 
@@ -52,13 +58,13 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000): void {
 
 /**
  * Check whether a user is actively at the interactive ZSH prompt in a given
- * Zellij tab.  ZSH hooks write /tmp/cockpit-typing-<PANE_ID> (content:
+ * Zellij tab.  ZSH hooks write /tmp/${APP_SLUG}-typing-<PANE_ID> (content:
  * "<tab>\n<unix-seconds>") at zle-line-init and remove it at zle-line-finish.
  * Files older than 60 s are ignored to handle unclean exits.
  */
 export function isUserTypingInTab(tab: string): boolean {
   try {
-    const files = (fs.readdirSync("/tmp") as string[]).filter((f) => f.startsWith("cockpit-typing-"));
+    const files = (fs.readdirSync("/tmp") as string[]).filter((f) => f.startsWith(TYPING_FILE_PREFIX));
     const now = Math.floor(Date.now() / 1000);
     for (const file of files) {
       try {
