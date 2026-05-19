@@ -9,6 +9,7 @@ SWITCH_CHOICE_PREFIX = "switch:"
 COCKPIT_URL = os.environ.get("COCKPIT_URL", "http://localhost:3000").rstrip("/")
 
 COUNTDOWN_SECONDS = 12   # default; overridden by settings file if present
+MIN_IDLE_SECONDS  = 0    # 0 = always show popup; overridden by settings file if present
 
 _SETTINGS_PATH    = os.path.expanduser("~/.config/agent-dashboard-settings.json")
 _META_PATH        = os.path.expanduser("~/.config/agent-prompts.json")
@@ -22,6 +23,16 @@ def load_settings() -> dict:
     except Exception:
         pass
     return {}
+
+
+def get_min_idle_seconds() -> int:
+    """Return the configured idle-gate threshold; 0 = always show."""
+    s = load_settings()
+    v = s.get("min_idle_seconds", MIN_IDLE_SECONDS)
+    try:
+        return max(0, int(v))
+    except (TypeError, ValueError):
+        return MIN_IDLE_SECONDS
 
 
 def load_prompt_meta() -> list:

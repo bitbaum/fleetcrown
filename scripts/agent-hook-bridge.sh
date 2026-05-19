@@ -20,6 +20,13 @@ source "$SCRIPT_DIR/agent-hook-lib.sh"
 LOG=/tmp/agent-hooks.log
 log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
+# Read idle-gate threshold from settings (0 = always show popup).
+_BEACON_MIN_IDLE=$(python3 -c "
+import sys; sys.path.insert(0, '$SCRIPT_DIR')
+from _beacon_config import get_min_idle_seconds
+print(get_min_idle_seconds())
+" 2>/dev/null || echo 0)
+
 beacon_python() {
   local display="${DISPLAY:-:1}"
   # Prefer system PyQt6 (installed via pip or apt) — works for standalone installs
@@ -165,8 +172,8 @@ handle_stop() {
       DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
     fi
   )
-  if [ "${_idle_secs:-9999}" -lt 60 ]; then
-    log "user active (idle=${_idle_secs}s < 60s) — skipping beacon"
+  if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_idle_secs:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
+    log "user active (idle=${_idle_secs}s < ${_BEACON_MIN_IDLE}s) — skipping beacon"
     exit 0
   fi
 
@@ -423,8 +430,8 @@ handle_notification() {
       DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
     fi
   )
-  if [ "${_notif_idle:-9999}" -lt 60 ]; then
-    log "notification: user active (idle=${_notif_idle}s) — skipping auto-inject"
+  if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_notif_idle:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
+    log "notification: user active (idle=${_notif_idle}s < ${_BEACON_MIN_IDLE}s) — skipping auto-inject"
     exit 0
   fi
 

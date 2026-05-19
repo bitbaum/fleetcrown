@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getJson, patchJson, throwApiError } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/app/api/beacon-settings/route";
-import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, DEFAULT_BEACON_MIN_IDLE_S, MAX_BEACON_MIN_IDLE_S } from "@/lib/constants/control";
 import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS } from "@/config/beacon";
 
 export function BeaconSettings() {
   const [data, setData] = useState<BeaconSettingsData | null>(null);
   const [countdown, setCountdown] = useState(DEFAULT_BEACON_COUNTDOWN_S);
+  const [minIdle, setMinIdle] = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel] = useState("base");
   const [provider, setProvider] = useState("auto");
   const [saving, setSaving] = useState(false);
@@ -21,6 +22,7 @@ export function BeaconSettings() {
     getJson<BeaconSettingsData>("/api/beacon-settings").then((d) => {
       setData(d);
       setCountdown(d.countdown_seconds);
+      setMinIdle(d.min_idle_seconds);
       setModel(d.whisper_model);
       setProvider(d.transcription_provider);
     }).catch(() => setLoadError(true));
@@ -28,6 +30,7 @@ export function BeaconSettings() {
 
   const dirty = data !== null && (
     countdown !== data.countdown_seconds ||
+    minIdle !== data.min_idle_seconds ||
     model !== data.whisper_model ||
     provider !== data.transcription_provider
   );
@@ -39,11 +42,12 @@ export function BeaconSettings() {
     try {
       const res = await patchJson("/api/beacon-settings", {
         countdown_seconds: countdown,
+        min_idle_seconds: minIdle,
         whisper_model: model,
         transcription_provider: provider,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      setData({ countdown_seconds: countdown, whisper_model: model, transcription_provider: provider });
+      setData({ countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -69,6 +73,27 @@ export function BeaconSettings() {
         </div>
       ) : (
         <div className="space-y-5">
+          {/* Idle gate */}
+          <div className="space-y-1.5">
+            <label className="ui-kicker">Show popup after idle</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                max={MAX_BEACON_MIN_IDLE_S}
+                value={minIdle}
+                onChange={(e) => setMinIdle(Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)))}
+                className="ui-input w-24 tabular-nums"
+              />
+              <span className="text-sm text-text-tertiary">seconds</span>
+            </div>
+            <p className="text-xs text-text-muted">
+              {minIdle === 0
+                ? "Always show — popup fires every time a session ends regardless of keyboard activity."
+                : `Skip popup if you've been active in the last ${minIdle}s — only show when idle.`}
+            </p>
+          </div>
+
           {/* Countdown */}
           <div className="space-y-1.5">
             <label className="ui-kicker">Auto-continue countdown</label>
