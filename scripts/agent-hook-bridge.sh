@@ -43,10 +43,12 @@ beacon_python() {
 patch_project_state() {
   local tab_name="$1"
   local field="$2"
-  local iso_now
+  local iso_now token
   iso_now=$(date -Iseconds)
+  token="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
   curl -sf -X PATCH "${COCKPIT_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${token}" \
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
 
