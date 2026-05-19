@@ -40,14 +40,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     error: (err) => {
       console.error("[auth.logger.error]", err?.name, err?.message, err);
+      // Unwrap nested cause / type-specific fields — Auth.js v5 wraps the real
+      // failure under .cause and uses minified class names in prod, so a shallow
+      // stringify loses the actionable detail.
+      const meta: Record<string, unknown> = {
+        name: err?.name,
+        type: (err as { type?: string })?.type,
+        kind: (err as { kind?: string })?.kind,
+        stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
+      };
+      const unwrapCause = (c: unknown, depth = 0): unknown => {
+        if (!c || depth > 4) return c;
+        if (c instanceof Error) {
+          return {
+            name: c.name,
+            message: c.message,
+            stack: c.stack?.split("\n").slice(0, 6).join("\n"),
+            cause: unwrapCause((c as { cause?: unknown }).cause, depth + 1),
+          };
+        }
+        if (typeof c === "object") {
+          try {
+            return JSON.parse(JSON.stringify(c, (_, v) => (v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v)));
+          } catch { return String(c); }
+        }
+        return c;
+      };
+      if (err?.cause) meta.cause = unwrapCause(err.cause);
       // Fire-and-forget DB write — never block the auth flow.
       db.execute(sql`
         INSERT INTO debug_logs (source, level, message, meta)
-        VALUES ('auth', 'error', ${err?.message ?? String(err)}, ${JSON.stringify({
-          name: err?.name,
-          stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
-          cause: err?.cause ? String(err.cause) : undefined,
-        })}::jsonb)
+        VALUES ('auth', 'error', ${err?.message ?? String(err)}, ${JSON.stringify(meta)}::jsonb)
       `).catch(() => {});
     },
     warn:  (code) => { console.warn("[auth.logger.warn]", code); },
