@@ -28,7 +28,7 @@ export function ProjectDetailTabBar({
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`ui-tab ${isActive ? "ui-tab-active" : ""}`}
+            className={`ui-tab flex-1 justify-center ${isActive ? "ui-tab-active" : ""}`}
           >
             {label}
             {badge !== undefined && badge > 0 && (

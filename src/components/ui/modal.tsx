@@ -103,7 +103,7 @@ export function Drawer({
       />
       <div
         className={cn(
-          "relative flex w-full flex-col border-l border-border-subtle shadow-panel-strong",
+          "relative flex w-full flex-col sm:border-l border-border-subtle shadow-panel-strong",
           SIZE_CLASSES[size],
           surfaceClass,
           className,

@@ -53,7 +53,7 @@ function ProjectCard({
           : "border-border-subtle bg-surface-base"
       }`}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-row items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="truncate text-base font-semibold text-text-primary" title={project.name}>{project.name}</div>
