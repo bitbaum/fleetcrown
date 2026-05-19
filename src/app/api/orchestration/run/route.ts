@@ -164,6 +164,10 @@ export async function POST(req: NextRequest) {
           source: "run",
           adapter: "claude",
         }));
+        // Clear any stale closing sentinel so the UI doesn't stay in "Closing…" state
+        // if the user re-dispatches after a close_session was sent but not yet completed.
+        // Mirrors the same guard in the inject route and the codex/gemini adapter path.
+        try { fs.unlinkSync(stateFile.closing(effectiveKey)); } catch { /* already gone */ }
       }
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
