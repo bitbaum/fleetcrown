@@ -77,12 +77,12 @@ export function EventsGrid({
 
       {/* Type filter chips */}
       {types.length > 1 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
           {types.map((t) => (
             <button
               key={t}
               onClick={() => setTypeFilter(typeFilter === t ? null : t)}
-              className={typeFilter === t ? "ui-chip-filter-active" : "ui-chip-filter"}
+              className={`shrink-0 ${typeFilter === t ? "ui-chip-filter-active" : "ui-chip-filter"}`}
             >
               {t}
             </button>
@@ -90,7 +90,7 @@ export function EventsGrid({
           {typeFilter && (
             <button
               onClick={() => setTypeFilter(null)}
-              className="ui-chip-filter"
+              className="shrink-0 ui-chip-filter"
             >
               Clear
             </button>

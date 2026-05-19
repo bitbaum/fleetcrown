@@ -188,18 +188,18 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       </div>
 
       {statuses.length > 1 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
           {statuses.map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-              className={statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}
+              className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
             >
               {s}
             </button>
           ))}
           {statusFilter && (
-            <button onClick={() => setStatusFilter(null)} className="ui-chip-filter">
+            <button onClick={() => setStatusFilter(null)} className="shrink-0 ui-chip-filter">
               Clear
             </button>
           )}
