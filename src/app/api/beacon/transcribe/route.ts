@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, unlink, readFile } from "fs/promises";
+import { writeFile, unlink } from "fs/promises";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { tmpdir } from "os";
 import { join } from "path";
 import { randomUUID } from "crypto";
-import { BEACON_SETTINGS_PATH } from "@/config/beacon";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
+import { getApiUserId } from "@/lib/session";
+import { getBeaconSettings } from "@/db/queries/beacon-settings";
 
 const execFileAsync = promisify(execFile);
 const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
 
-async function readBeaconSettings(): Promise<{ whisperModel: string; provider: string }> {
+async function readTranscriptionSettings(): Promise<{ whisperModel: string; provider: string }> {
   try {
-    const raw = await readFile(BEACON_SETTINGS_PATH, "utf-8");
-    const s = JSON.parse(raw) as Record<string, unknown>;
-    const whisperModel = typeof s["whisper_model"] === "string" && s["whisper_model"].length > 0
-      ? s["whisper_model"] : "base";
-    const provider = typeof s["transcription_provider"] === "string"
-      ? s["transcription_provider"] : "auto";
-    return { whisperModel, provider };
-  } catch {
-    return { whisperModel: "base", provider: "auto" };
-  }
+    const userId = await getApiUserId();
+    if (userId) {
+      const s = await getBeaconSettings(userId);
+      return { whisperModel: s.whisper_model, provider: s.transcription_provider };
+    }
+  } catch { /* no auth — use defaults */ }
+  return { whisperModel: "base", provider: "auto" };
 }
 
 export async function POST(req: NextRequest) {
@@ -32,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
 
   const [{ whisperModel: model, provider }, webmPath] = await Promise.all([
-    readBeaconSettings(),
+    readTranscriptionSettings(),
     Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
   ]);
 

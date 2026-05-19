@@ -34,7 +34,7 @@ def _bootstrap_vendor_packages() -> None:
 
 _bootstrap_vendor_packages()
 
-from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch, looks_like_capacity_issue, resolve_next_agent
+from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch, looks_like_capacity_issue, resolve_next_agent, get_popup_mode
 
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ def _check_capacity_sentinel(label: str) -> bool:
         return False
 
 
-def _write_beacon_session(label: str, session_content: str) -> str:
+def _write_beacon_session(label: str, session_content: str, popup_mode: str = "both") -> str:
     """Write a beacon session file directly to /tmp — no API auth required.
 
     The Next.js beacon API stores sessions in /tmp/cockpit-beacon/{id}.json.
@@ -95,6 +95,7 @@ def _write_beacon_session(label: str, session_content: str) -> str:
         "nextAgent": resolve_next_agent(_current_agent()),
         "capacityIssue": _check_capacity_sentinel(label) or looks_like_capacity_issue(session_content),
         "countdownSeconds": configured_countdown,
+        "popupMode": popup_mode,
         "gitBranch": read_project_git_branch(label),
     }
     os.makedirs(_BEACON_DIR, exist_ok=True)
@@ -232,20 +233,20 @@ def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
 # ── Stop handler ───────────────────────────────────────────────────────────────
 
 def _web_stop(label: str, session_file: str) -> None:
-    """Primary stop handler — browser popup first, PyQt fallback.
+    """Primary stop handler — respects user's popup_mode setting.
 
-    When Cockpit is already running the web beacon page is the preferred UI:
-    it is identical on every platform, requires no PyQt installation, and gives
-    the user the same interface whether they're clicking in the terminal or
-    in a browser popup.
-
-    Falls back to the PyQt native popup when:
-      • Cockpit is not running (nothing to create a web session against), or
-      • No browser was found on the system.
-
-    If Cockpit IS running but the browser launch fails, the web session is still
-    passed to PyQt so the Control panel's ReadyBanner can pick it up.
+    popup_mode controls which UI surfaces fire:
+      both     — browser --app window + PyQt fallback (default, fastest)
+      web      — browser/SSE popup only (headless-friendly, no PyQt)
+      pyqt     — native PyQt window only (no browser required)
+      disabled — exit immediately, no popup fires
     """
+    # Read once per invocation (cached for 5 min in _beacon_config)
+    popup_mode = get_popup_mode()
+
+    if popup_mode == "disabled":
+        sys.exit(1)
+
     session_content = ""
     if session_file and os.path.exists(session_file):
         try:
@@ -253,23 +254,41 @@ def _web_stop(label: str, session_file: str) -> None:
         except OSError:
             pass
 
+    use_web  = popup_mode in ("web", "both")
+    use_pyqt = popup_mode in ("pyqt", "both")
+
+    session_id = None
     if _cockpit_ready():
         # Write session directly to /tmp — no API auth required.
-        session_id = _write_beacon_session(label, session_content)
-        if _open_browser_beacon(session_id):
-            # Browser opened — poll the session file until the user picks or timeout.
-            choice = _poll_beacon_choice(session_id)
-            if choice:
-                print(choice)
-                sys.exit(0)
-            sys.exit(1)
-        # Browser unavailable — hand the session_id to PyQt so at least the
-        # ReadyBanner in Cockpit Control panel can reflect the active session.
+        # Always write for web/both so the Control panel SSE and ReadyBanner work.
+        # For pyqt mode we still write so the Control panel shows the Ready state.
+        session_id = _write_beacon_session(label, session_content, popup_mode)
+
+        if use_web:
+            if _open_browser_beacon(session_id):
+                # Browser opened — poll until the user picks or timeout.
+                choice = _poll_beacon_choice(session_id)
+                if choice:
+                    print(choice)
+                    sys.exit(0)
+                # Browser timed out; fall through to PyQt if available.
+                if not use_pyqt:
+                    sys.exit(1)
+            else:
+                # Browser unavailable in web-only mode — poll anyway so the
+                # Control panel ReadyBanner can serve as the interaction surface.
+                if not use_pyqt:
+                    choice = _poll_beacon_choice(session_id)
+                    if choice:
+                        print(choice)
+                        sys.exit(0)
+                    sys.exit(1)
+
+    if use_pyqt:
         _pyqt_stop(label, session_file, session_id)
         return
 
-    # Cockpit not running — PyQt only, no web session.
-    _pyqt_stop(label, session_file, None)
+    sys.exit(1)
 
 
 # ── PyQt popup ─────────────────────────────────────────────────────────────────

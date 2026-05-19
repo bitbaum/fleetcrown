@@ -24,3 +24,4 @@ export * from "./email-verification-tokens";
 export * from "./pending-commands";
 export * from "./captures";
 export * from "./habit-goals";
+export * from "./beacon-settings";

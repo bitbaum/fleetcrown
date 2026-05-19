@@ -20,12 +20,35 @@ source "$SCRIPT_DIR/agent-hook-lib.sh"
 LOG=/tmp/agent-hooks.log
 log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
-# Read idle-gate threshold from settings (0 = always show popup).
-_BEACON_MIN_IDLE=$(python3 -c "
+# Read per-user beacon settings from the Cockpit API (uses daemon token for auth).
+# Falls back to Python file reader when Cockpit is offline.
+_BEACON_TOKEN="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
+_BEACON_SETTINGS_JSON=""
+if [ -n "$_BEACON_TOKEN" ]; then
+  _BEACON_SETTINGS_JSON=$(curl -sf --max-time 2 \
+    -H "Authorization: Bearer ${_BEACON_TOKEN}" \
+    "${COCKPIT_URL}/api/beacon-settings" 2>/dev/null || true)
+fi
+
+if [ -n "$_BEACON_SETTINGS_JSON" ]; then
+  _BEACON_MIN_IDLE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(d.get('min_idle_seconds',0))" 2>/dev/null || echo 0)
+  _BEACON_POPUP_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(d.get('popup_mode','both'))" 2>/dev/null || echo both)
+else
+  # Cockpit offline — read from Python config (which reads the legacy file)
+  _BEACON_MIN_IDLE=$(python3 -c "
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from _beacon_config import get_min_idle_seconds
 print(get_min_idle_seconds())
 " 2>/dev/null || echo 0)
+  _BEACON_POPUP_MODE=$(python3 -c "
+import sys; sys.path.insert(0, '$SCRIPT_DIR')
+from _beacon_config import get_popup_mode
+print(get_popup_mode())
+" 2>/dev/null || echo both)
+fi
+export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 
 beacon_python() {
   local display="${DISPLAY:-:1}"
@@ -172,6 +195,10 @@ handle_stop() {
       DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
     fi
   )
+  if [ "${_BEACON_POPUP_MODE:-both}" = "disabled" ]; then
+    log "beacon disabled by user settings — skipping popup"
+    exit 0
+  fi
   if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_idle_secs:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
     log "user active (idle=${_idle_secs}s < ${_BEACON_MIN_IDLE}s) — skipping beacon"
     exit 0
@@ -430,6 +457,10 @@ handle_notification() {
       DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
     fi
   )
+  if [ "${_BEACON_POPUP_MODE:-both}" = "disabled" ]; then
+    log "notification: beacon disabled by user settings — skipping auto-inject"
+    exit 0
+  fi
   if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_notif_idle:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
     log "notification: user active (idle=${_notif_idle}s < ${_BEACON_MIN_IDLE}s) — skipping auto-inject"
     exit 0

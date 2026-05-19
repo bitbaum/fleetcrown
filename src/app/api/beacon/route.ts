@@ -4,8 +4,9 @@ import fs from "fs";
 import path from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
-import { BEACON_SETTINGS_PATH } from "@/config/beacon";
-import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
+import { getApiUserId } from "@/lib/session";
+import { getBeaconSettings } from "@/db/queries/beacon-settings";
 
 const BEACON_DIR = "/tmp/cockpit-beacon";
 
@@ -19,17 +20,19 @@ export type BeaconSession = {
   nextAgent: Agent | null;
   capacityIssue: boolean;
   countdownSeconds: number;
+  popupMode: string;
   gitBranch?: string | null;
 };
 
-function readConfiguredCountdown(): number {
+async function readConfiguredSettings(): Promise<{ countdownSeconds: number; popupMode: string }> {
   try {
-    const raw = JSON.parse(fs.readFileSync(BEACON_SETTINGS_PATH, "utf-8")) as Record<string, unknown>;
-    const n = raw.countdown_seconds;
-    return typeof n === "number" && n > 0 ? n : DEFAULT_BEACON_COUNTDOWN_S;
-  } catch {
-    return DEFAULT_BEACON_COUNTDOWN_S;
-  }
+    const userId = await getApiUserId();
+    if (userId) {
+      const s = await getBeaconSettings(userId);
+      return { countdownSeconds: s.countdown_seconds, popupMode: s.popup_mode };
+    }
+  } catch { /* no auth or DB error — use defaults */ }
+  return { countdownSeconds: DEFAULT_BEACON_COUNTDOWN_S, popupMode: DEFAULT_POPUP_MODE };
 }
 
 const CreateBody = z.object({
@@ -89,6 +92,8 @@ export async function POST(req: NextRequest) {
     } catch { /* corrupt or already deleted */ }
   }
 
+  const { countdownSeconds, popupMode } = await readConfiguredSettings();
+
   const session: BeaconSession = {
     id: randomUUID(),
     project: dataOrResp.project,
@@ -98,7 +103,8 @@ export async function POST(req: NextRequest) {
     currentAgent: isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude",
     nextAgent: resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude"),
     capacityIssue: looksLikeAgentCapacityIssue(dataOrResp.sessionContent),
-    countdownSeconds: readConfiguredCountdown(),
+    countdownSeconds,
+    popupMode,
   };
   fs.writeFileSync(beaconPath(session.id), JSON.stringify(session));
   return NextResponse.json({ id: session.id });

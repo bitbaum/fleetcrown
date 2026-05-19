@@ -1,5 +1,6 @@
 """Beacon — runtime constants and config-file helpers.  No PyQt dependency."""
-import os, json, re, shutil, subprocess
+import os, json, re, shutil, subprocess, time
+import urllib.request
 
 # Wire-format prefixes — must match constants in src/lib/constants/control.ts
 CUSTOM_CHOICE_PREFIX = "custom:"
@@ -8,20 +9,77 @@ SWITCH_CHOICE_PREFIX = "switch:"
 # Override via COCKPIT_URL env var for non-default ports or remote deployments.
 COCKPIT_URL = os.environ.get("COCKPIT_URL", "http://localhost:3000").rstrip("/")
 
-COUNTDOWN_SECONDS = 12   # default; overridden by settings file if present
-MIN_IDLE_SECONDS  = 0    # 0 = always show popup; overridden by settings file if present
+COUNTDOWN_SECONDS = 12   # default; overridden by settings API if reachable
+MIN_IDLE_SECONDS  = 0    # 0 = always show popup; overridden by settings API if reachable
 
-_SETTINGS_PATH    = os.path.expanduser("~/.config/agent-dashboard-settings.json")
+# Legacy file path — kept as fallback when API is unreachable
+_SETTINGS_PATH     = os.path.expanduser("~/.config/agent-dashboard-settings.json")
+# Per-session cache so we only make one API call per beacon invocation
+_SETTINGS_CACHE    = os.path.join("/tmp", "cockpit-beacon-settings.json")
+_CACHE_TTL_SECONDS = 300  # 5 minutes
+
 _META_PATH        = os.path.expanduser("~/.config/agent-prompts.json")
 _LEGACY_META_PATH = os.path.expanduser("~/.config/claude-prompts.json")
 
 
+def _read_daemon_token() -> str:
+    """Return COCKPIT_DAEMON_TOKEN from env or .env.local file."""
+    t = os.environ.get("COCKPIT_DAEMON_TOKEN", "")
+    if t:
+        return t
+    # Try .env.local next to the cockpit project root (two levels above scripts/)
+    env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+    try:
+        for line in open(env_path):
+            line = line.strip()
+            if line.startswith("COCKPIT_DAEMON_TOKEN="):
+                return line[len("COCKPIT_DAEMON_TOKEN="):].strip()
+    except Exception:
+        pass
+    return ""
+
+
 def load_settings() -> dict:
+    """Return beacon settings, fetching from the Cockpit API with 5-min cache.
+
+    Falls back to the legacy JSON file when the API is unreachable (e.g. Cockpit
+    not running at daemon startup time).
+    """
+    # 1. Try warm cache first (avoids HTTP on every hook invocation)
+    try:
+        cached = json.load(open(_SETTINGS_CACHE))
+        if time.time() - cached.get("ts", 0) < _CACHE_TTL_SECONDS:
+            return cached.get("data", {})
+    except Exception:
+        pass
+
+    # 2. Fetch from API using daemon token
+    token = _read_daemon_token()
+    if token:
+        try:
+            req = urllib.request.Request(
+                f"{COCKPIT_URL}/api/beacon-settings",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            resp = urllib.request.urlopen(req, timeout=2)
+            data = json.loads(resp.read().decode())
+            # Write cache
+            try:
+                with open(_SETTINGS_CACHE, "w") as f:
+                    json.dump({"data": data, "ts": time.time()}, f)
+            except Exception:
+                pass
+            return data
+        except Exception:
+            pass
+
+    # 3. Legacy file fallback (single-user installs or Cockpit offline)
     try:
         if os.path.exists(_SETTINGS_PATH):
             return json.load(open(_SETTINGS_PATH))
     except Exception:
         pass
+
     return {}
 
 
@@ -33,6 +91,13 @@ def get_min_idle_seconds() -> int:
         return max(0, int(v))
     except (TypeError, ValueError):
         return MIN_IDLE_SECONDS
+
+
+def get_popup_mode() -> str:
+    """Return the configured popup mode: 'both' | 'web' | 'pyqt' | 'disabled'."""
+    s = load_settings()
+    mode = s.get("popup_mode", "both")
+    return mode if mode in ("both", "web", "pyqt", "disabled") else "both"
 
 
 def load_prompt_meta() -> list:

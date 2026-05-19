@@ -9,6 +9,7 @@ export const MIN_BEACON_COUNTDOWN_S      = 5;   // shortest allowed beacon count
 export const MAX_BEACON_COUNTDOWN_S      = 300; // longest allowed beacon countdown (5 minutes)
 export const DEFAULT_BEACON_MIN_IDLE_S   = 0;   // 0 = always show popup regardless of keyboard activity
 export const MAX_BEACON_MIN_IDLE_S       = 600; // 10 minutes max
+export const DEFAULT_POPUP_MODE          = "both"; // "both" | "web" | "pyqt" | "disabled"
 
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).
