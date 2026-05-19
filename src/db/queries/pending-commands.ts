@@ -1,6 +1,7 @@
 import { db } from "@/db";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload } from "@/db/schema/pending-commands";
-import { eq, isNull, and, inArray } from "drizzle-orm";
+import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
+import type { FailedCommand } from "@/lib/control-types";
 
 export async function getCommandById(id: string) {
   const [row] = await db.select().from(pendingCommands).where(eq(pendingCommands.id, id)).limit(1);
@@ -70,4 +71,39 @@ export async function getPendingCommandsForUser(userId: string) {
     .from(pendingCommands)
     .where(and(eq(pendingCommands.userId, userId), isNull(pendingCommands.claimedAt)))
     .orderBy(pendingCommands.createdAt);
+}
+
+// Returns commands that were executed but reported ok=false in the last 10 minutes.
+export async function getRecentFailedCommands(userIds: string[]): Promise<FailedCommand[]> {
+  if (userIds.length === 0) return [];
+  const userFilter = userIds.length === 1
+    ? eq(pendingCommands.userId, userIds[0])
+    : inArray(pendingCommands.userId, userIds);
+  const rows = await db
+    .select({
+      id: pendingCommands.id,
+      type: pendingCommands.type,
+      payload: pendingCommands.payload,
+      result: pendingCommands.result,
+      executedAt: pendingCommands.executedAt,
+    })
+    .from(pendingCommands)
+    .where(and(
+      userFilter,
+      isNotNull(pendingCommands.executedAt),
+      sql`(${pendingCommands.result}->>'ok') = 'false'`,
+      sql`${pendingCommands.executedAt} > NOW() - INTERVAL '10 minutes'`,
+    ))
+    .orderBy(desc(pendingCommands.executedAt))
+    .limit(20);
+
+  return rows
+    .filter((r) => r.executedAt != null)
+    .map((r) => ({
+      id: r.id,
+      tab: (r.payload as Record<string, unknown>)?.tab as string ?? "unknown",
+      type: r.type,
+      error: (r.result as Record<string, unknown>)?.error as string ?? "command failed",
+      executedAt: r.executedAt!.toISOString(),
+    }));
 }

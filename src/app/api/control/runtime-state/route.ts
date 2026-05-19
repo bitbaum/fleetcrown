@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { upsertProjectState } from "@/db/queries/project-states";
 import { getUserIdsByProjectNames } from "@/db/queries/user-projects";
 import { getApiUserId } from "@/lib/session";
+import { emitStateChanged } from "@/lib/sse-bus";
 
 interface ProjectRuntimePatch {
   tab: string;
@@ -81,6 +82,10 @@ export async function POST(req: NextRequest) {
       }).catch((err) => console.error("[runtime-state] db write failed:", err));
     })
   );
+
+  // Wake any open SSE connections for affected users — no need to wait for the next tick.
+  const notifiedUsers = new Set([daemonUserId, ...ownerMap.values()]);
+  for (const uid of notifiedUsers) emitStateChanged(uid);
 
   return NextResponse.json({ ok: true, count: projects.length });
 }

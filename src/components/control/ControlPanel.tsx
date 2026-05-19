@@ -282,7 +282,7 @@ export function ControlPanel() {
         </div>
       )}
 
-      <AttentionBar items={attention} />
+      <AttentionBar items={attention} failedCommands={data?.failedCommands} />
 
       <ProjectFleetView
         viewMode={viewMode}

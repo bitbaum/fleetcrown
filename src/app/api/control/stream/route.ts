@@ -9,10 +9,11 @@ import { getZellijTabs } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import type { FastProjectState } from "@/lib/control-fast-state";
+import { sseBus } from "@/lib/sse-bus";
+import postgres from "postgres";
 
 export const dynamic = "force-dynamic";
 
-const TICK_MS = 2_000;
 const KEEPALIVE_MS = 15_000;
 
 // Map DB state rows to the FastProjectState shape the SSE client expects.
@@ -163,13 +164,46 @@ export async function GET() {
       send(sseEvent("projects-update", { projects: lastSent }));
       scheduleKeepalive();
 
-      // Tick loop
-      const interval = setInterval(() => { tick().catch((err) => console.error("[control/stream] tick failed:", err)); }, TICK_MS);
+      // Guard against concurrent ticks — events can fire faster than a tick completes.
+      let tickRunning = false;
+      const scheduledTick = () => {
+        if (tickRunning) return;
+        tickRunning = true;
+        tick().catch((err) => console.error("[control/stream] tick failed:", err)).finally(() => { tickRunning = false; });
+      };
 
-      // Cleanup when stream is cancelled
+      // Event-driven: daemon HTTP push → emitStateChanged → wake this stream immediately.
+      const onStateChanged = () => scheduledTick();
+      sseBus.on(`state:${userId}`, onStateChanged);
+
+      // Local-only: /tmp sentinel file changed → check if it belongs to one of our projects.
+      const tabSet = new Set(confProjects.map((p) => p.tab.toLowerCase()));
+      const onSentinelChanged = (tab: string) => {
+        if (tabSet.has(tab.toLowerCase())) scheduledTick();
+      };
+      sseBus.on("sentinel-changed", onSentinelChanged);
+
+      // Vercel-only: Postgres LISTEN/NOTIFY for sub-second state propagation.
+      // Must use DATABASE_URL (direct), not NEON_DATABASE_URL (pooler — no persistent LISTEN).
+      let pgListener: ReturnType<typeof postgres> | null = null;
+      if (!isRuntimeAvailable() && process.env.DATABASE_URL) {
+        pgListener = postgres(process.env.DATABASE_URL, { max: 1 });
+        pgListener.listen("cockpit_state", (notifyUserId) => {
+          if (notifyUserId === userId) scheduledTick();
+        }).catch((err) => console.warn("[control/stream] LISTEN setup failed:", err));
+      }
+
+      // Fallback tick — much longer now that events cover real-time changes.
+      const FALLBACK_TICK_MS = isRuntimeAvailable() ? 10_000 : 5_000;
+      const interval = setInterval(scheduledTick, FALLBACK_TICK_MS);
+
+      // Cleanup when client disconnects
       return () => {
         clearInterval(interval);
         if (keepaliveTimer) clearTimeout(keepaliveTimer);
+        sseBus.off(`state:${userId}`, onStateChanged);
+        sseBus.off("sentinel-changed", onSentinelChanged);
+        pgListener?.end().catch(() => {});
       };
     },
   });

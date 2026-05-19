@@ -27,9 +27,10 @@ import {
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData } from "@/lib/control-types";
+import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
+import { getRecentFailedCommands } from "@/db/queries/pending-commands";
 
-export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData };
+export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta, ActivityItem };
 
 const execAsync = promisify(exec);
@@ -224,7 +225,7 @@ export async function GET() {
 
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
-  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch(() => new Map<string, RecentCustomPrompt[]>()),
     getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((): ActivityItem[] => []),
@@ -237,6 +238,7 @@ export async function GET() {
     // Fetch own + team owners' entity projects per-request (not cached) so each user
     // always sees their own profile data regardless of who last built the git cache.
     Promise.all([userId, ...teamOwnerIds].map((oid) => getProjects(oid).catch(() => [] as ProjectRow[]))).then((arrs) => arrs.flat()),
+    getRecentFailedCommands([userId]).catch((): FailedCommand[] => []),
   ]);
   cleanupStaleOrchestrationRuns(userId).catch((err) => console.error("[control] cleanup failed:", err))
   const dbStateMap = new Map(dbStatesArr.map((s) => [s.projectKey.toLowerCase(), s]));
@@ -445,5 +447,6 @@ export async function GET() {
     daemonLastPushedAt: !isRuntimeAvailable() && dbStatesArr.length > 0
       ? dbStatesArr.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, dbStatesArr[0].updatedAt).toISOString()
       : null,
+    failedCommands: failedCommands ?? [],
   } satisfies ControlData);
 }

@@ -79,6 +79,14 @@ export type ProjectState = {
   } | null;
 };
 
+export type FailedCommand = {
+  id: string;
+  tab: string;
+  type: string;
+  error: string;
+  executedAt: string;
+};
+
 export type ControlData = {
   agentRegistry: import("@/lib/agent-catalog").AgentCatalog;
   agentConfig: { agent: import("@/lib/agent-catalog").SwitchableAgent; model: string };
@@ -99,4 +107,5 @@ export type ControlData = {
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
   daemonLastPushedAt: string | null;
+  failedCommands: FailedCommand[];
 };
