@@ -55,7 +55,13 @@ _base_url() {
       echo "$cached"; return
     fi
   fi
-  if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
+  # COCKPIT_DAEMON_FORCE_REMOTE=1 skips the local probe entirely. Use this when
+  # a local dev server is running with a different DB than the remote — without
+  # it, the daemon prefers local and remote runtime state goes stale (the
+  # control panel on cockpitapp.vercel.app shows daemonLastPushedAt frozen).
+  if [ "${COCKPIT_DAEMON_FORCE_REMOTE:-0}" = "1" ]; then
+    url="$_REMOTE_URL"
+  elif curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
     url="$_LOCAL_URL"
   else
     url="$_REMOTE_URL"
@@ -66,6 +72,11 @@ _base_url() {
 
 # Warm the cache at startup, retrying briefly so the local app has time to boot.
 _init_base_url() {
+  if [ "${COCKPIT_DAEMON_FORCE_REMOTE:-0}" = "1" ]; then
+    echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
+    log "COCKPIT_DAEMON_FORCE_REMOTE=1 — using $_REMOTE_URL (skipping local probe)"
+    return
+  fi
   local i=0
   while (( i < 8 )); do
     if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
