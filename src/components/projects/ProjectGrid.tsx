@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { GitBranch, Globe, ShieldAlert, AlertTriangle, Search } from "lucide-react";
+import { ArrowRight, GitBranch, Globe, ShieldAlert, AlertTriangle, Search } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ProjectDetail } from "./ProjectDetail";
@@ -36,14 +36,17 @@ function ProjectCard({
   const { prodUrl, repo } = getProjectLinks(attrs);
   const maturity = attrs["maturity"];
   const status = attrs["status"];
+  const nextStep = attrs["next_step"] ?? null;
   const signals = getHealthSignals(attrs);
   const hasIssues = signals.length > 0;
+  const extraAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
 
   const ivyPrompt = [
     `Project: ${project.name}`,
     status && `Status: ${status}`,
     maturity && `Maturity: ${maturity}`,
     description && `Description: ${description}`,
+    nextStep && `Next Step: ${nextStep}`,
     signals.length > 0 && `Issues: ${signals.map((s) => s.label).join(", ")}`,
     "",
     "What should I prioritize for this project? What are the biggest risks or next steps?",
@@ -123,17 +126,25 @@ function ProjectCard({
         </div>
       )}
 
-      {!status && !maturity && !hasIssues && (
-        <div className="flex flex-wrap gap-1.5">
-          {Object.entries(attrs)
-            .filter(([k]) => !RESERVED.includes(k))
-            .slice(0, 2)
-            .map(([key, value]) => (
+      {nextStep && (
+        <div className="flex items-start gap-1.5 rounded-md border border-status-positive/20 bg-status-positive-subtle px-2.5 py-2">
+          <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-status-positive/70" />
+          <span className="text-xs text-text-secondary leading-relaxed line-clamp-2">{nextStep}</span>
+        </div>
+      )}
+
+      {!status && !maturity && !hasIssues && !nextStep && (
+        extraAttrs.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {extraAttrs.slice(0, 2).map(([key, value]) => (
               <span key={key} title={`${key}: ${value}`} className="ui-micro-badge rounded-full border-border-default bg-surface-overlay text-text-tertiary">
                 {String(value).slice(0, 30)}
               </span>
             ))}
-        </div>
+          </div>
+        ) : (
+          <p className="text-xs text-text-muted italic">No context yet — click to add</p>
+        )
       )}
     </div>
   );

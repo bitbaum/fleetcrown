@@ -74,7 +74,7 @@ export const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
 // Issue keys rendered as warning cards
 export const ISSUE_ATTRS = ["broken_features", "security_vulnerability", "deployment_issue"];
 // Keys with dedicated rendering (not shown in generic grid)
-export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner"];
+export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner", "next_step"];
 
 /**
  * Resolve project quick-link attrs into ready-to-use href strings.

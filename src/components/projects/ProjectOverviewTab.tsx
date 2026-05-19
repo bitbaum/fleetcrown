@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, MessageSquare, Loader2 } from "lucide-react";
+import { ArrowRight, Plus, Users, MessageSquare, Loader2 } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
@@ -13,6 +13,61 @@ import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { APP_LOCALE } from "@/lib/constants";
+
+function NextStepSection({
+  attrs, projectId, editable, onReload,
+}: {
+  attrs: Record<string, string>;
+  projectId: string;
+  editable: boolean;
+  onReload: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const value = attrs["next_step"];
+
+  if (!value && !editable) return null;
+
+  if (editing) {
+    return (
+      <div className="rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 space-y-2">
+        <div className="ui-micro-label text-status-positive/70">Next Step</div>
+        <AddAttrInline
+          projectId={projectId}
+          presetKey="next_step"
+          presetPlaceholder="Single most important next action"
+          initialValue={value}
+          onSaved={() => { setEditing(false); onReload(); }}
+          onCancel={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
+
+  if (!value) {
+    return (
+      <button
+        onClick={() => setEditing(true)}
+        className="flex min-h-9 w-full items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-left transition-colors hover:border-status-positive/30 hover:bg-status-positive-subtle"
+      >
+        <Plus className="h-3 w-3 shrink-0 text-status-positive/60" />
+        <span className="text-xs text-text-muted italic">Define next step — the single most important action</span>
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 ${editable ? "cursor-text" : ""}`}
+      onClick={editable ? () => setEditing(true) : undefined}
+      title={editable ? "Click to edit next step" : undefined}
+    >
+      <div className="flex items-center gap-1.5 ui-micro-label text-status-positive/70 mb-1.5">
+        <ArrowRight className="h-3 w-3" /> Next Step
+      </div>
+      <p className="text-xs text-text-primary leading-relaxed">{value}</p>
+    </div>
+  );
+}
 
 export function OverviewTab({
   data,
@@ -61,12 +116,11 @@ export function OverviewTab({
 
   const attrs = data.attrs;
   const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
-  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
+  // next_step has its own dedicated section — exclude from the missing-suggested list
+  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key] && key !== "next_step");
 
   return (
     <div className="space-y-5">
-      <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
-
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
           {HEALTH_SIGNAL_CONFIG.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, cardLabel, cardBorder, cardBg, cardText, cardBody }) => (
@@ -80,7 +134,14 @@ export function OverviewTab({
         </div>
       )}
 
-      {displayAttrs.length > 0 ? (
+      <NextStepSection
+        attrs={attrs}
+        projectId={projectId}
+        editable={!data.readonly}
+        onReload={onReload}
+      />
+
+      {displayAttrs.length > 0 && (
         <div>
           {displayAttrs.map(([key, value]) => (
             <AttrRow
@@ -95,8 +156,6 @@ export function OverviewTab({
             />
           ))}
         </div>
-      ) : (
-        <p className="text-xs text-text-secondary italic">No details recorded yet.</p>
       )}
 
       {!data.readonly && missingSuggested.length > 0 && (
@@ -253,6 +312,8 @@ export function OverviewTab({
       {data.activity.length > 0 && (
         <ProjectHistorySection events={data.activity} />
       )}
+
+      <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
     </div>
   );
 }
