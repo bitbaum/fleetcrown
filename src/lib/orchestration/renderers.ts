@@ -7,7 +7,7 @@ function renderSharedHandoffBlock(): string {
     "done: <one sentence what you completed>",
     "next: <one sentence what remains>",
     "tests: <N pass · N fail, or 'no suite'>",
-    "todos: <count>",
+    "todos: <count> TODOs",
     "health: <good | needs attention | critical>",
   ].join("\n");
 }
