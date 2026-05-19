@@ -120,6 +120,18 @@ export function usePromptQueue(tab: string) {
   }, [setQueue, tab]);
 
   const reorder = useCallback((from: number, to: number) => {
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (raw) {
+        const q = JSON.parse(raw) as string[];
+        if (from >= 0 && to >= 0 && from < q.length && to < q.length) {
+          const next = [...q];
+          const [item] = next.splice(from, 1);
+          next.splice(to, 0, item);
+          writeToFile(tab, next, lastWrittenRef);
+        }
+      }
+    } catch { /* ignore */ }
     setQueue((q) => {
       if (from < 0 || to < 0 || from >= q.length || to >= q.length) return q;
       const next = [...q];
@@ -127,17 +139,41 @@ export function usePromptQueue(tab: string) {
       next.splice(to, 0, item);
       return next;
     });
-  }, [setQueue]);
+  }, [setQueue, tab]);
 
   const edit = useCallback((index: number, text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (raw) {
+        const q = JSON.parse(raw) as string[];
+        if (index >= 0 && index < q.length) {
+          const next = q.map((item, i) => (i === index ? trimmed : item));
+          writeToFile(tab, next, lastWrittenRef);
+        }
+      }
+    } catch { /* ignore */ }
     setQueue((q) => q.map((item, i) => (i === index ? trimmed : item)));
-  }, [setQueue]);
+  }, [setQueue, tab]);
 
   // Merges the items at the given (sorted) indices into a single item placed at
   // the lowest selected index. All other selected items are removed.
   const mergeItems = useCallback((indices: number[]) => {
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      if (raw) {
+        const q = JSON.parse(raw) as string[];
+        const sorted = [...indices].sort((a, b) => a - b);
+        if (sorted.length >= 2 && !sorted.some(i => i < 0 || i >= q.length)) {
+          const merged = sorted.map(i => q[i]).join("\n\n");
+          const firstIdx = sorted[0];
+          const next = q.filter((_, i) => !sorted.includes(i));
+          next.splice(firstIdx, 0, merged);
+          writeToFile(tab, next, lastWrittenRef);
+        }
+      }
+    } catch { /* ignore */ }
     setQueue((q) => {
       const sorted = [...indices].sort((a, b) => a - b);
       if (sorted.length < 2 || sorted.some(i => i < 0 || i >= q.length)) return q;
@@ -147,7 +183,7 @@ export function usePromptQueue(tab: string) {
       next.splice(firstIdx, 0, merged);
       return next;
     });
-  }, [setQueue]);
+  }, [setQueue, tab]);
 
   const clear = useCallback(() => setQueue(EMPTY), [setQueue]);
 
