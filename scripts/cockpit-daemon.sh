@@ -176,9 +176,9 @@ execute_inject() {
 
   # Write session lifecycle sentinel files so the stop hook transitions the UI
   # correctly — mirroring what /api/orchestration/run and /api/inject do locally.
+  local now_s
+  now_s=$(date +%s)
   if [ "$prompt_key" = "hard_stop" ] || [ "$prompt_key" = "close_session" ]; then
-    local now_s
-    now_s=$(date +%s)
     # Clear stale ready/closed state (mirrors clearHandshakeFiles in the API).
     # Use original-case tab name — the stop hook and push_runtime_state both read
     # these paths with ${TAB_NAME} / ${tab} which preserves the zellij/conf casing.
@@ -189,6 +189,23 @@ execute_inject() {
     echo "$now_s" > "/tmp/agent-closing-${tab}"
     if [ "$prompt_key" = "hard_stop" ]; then
       echo "$now_s" > "/tmp/agent-closed-${tab}"
+    fi
+  else
+    # Non-lifecycle dispatch: clear any stale closing sentinel so the UI doesn't
+    # stay in "Closing…" state. Mirrors /api/inject and /api/orchestration/run.
+    rm -f "/tmp/agent-closing-${tab}" "/tmp/claude-closing-${tab}"
+    # Cancel any open web-beacon popup for this tab (mirrors cancelActiveBeaconSessions).
+    # Sets choice:"" so the React beacon client knows to self-close.
+    local _bdir="/tmp/cockpit-beacon"
+    if [ -d "$_bdir" ]; then
+      for _bf in "$_bdir"/*.json; do
+        [ -f "$_bf" ] || continue
+        _proj=$(jq -r '.project // empty' "$_bf" 2>/dev/null)
+        _choice=$(jq -r '.choice' "$_bf" 2>/dev/null)
+        if [ "$_proj" = "$tab" ] && [ "$_choice" = "null" ]; then
+          jq '.choice = ""' "$_bf" > "${_bf}.tmp" 2>/dev/null && mv "${_bf}.tmp" "$_bf" 2>/dev/null || true
+        fi
+      done
     fi
   fi
 
