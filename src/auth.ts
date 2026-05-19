@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 import Twitter from "next-auth/providers/twitter";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { sql } from "drizzle-orm";
 // db required here for DrizzleAdapter — not avoidable
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
@@ -33,14 +34,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  // Temporary diagnostic — verbose Auth.js logs to surface the AccessDenied root cause.
+  // Temporary diagnostic — Vercel logs aren't reachable, so persist Auth.js failures
+  // to the debug_logs table where they can be queried directly.
   debug: true,
   logger: {
     error: (err) => {
       console.error("[auth.logger.error]", err?.name, err?.message, err);
+      // Fire-and-forget DB write — never block the auth flow.
+      db.execute(sql`
+        INSERT INTO debug_logs (source, level, message, meta)
+        VALUES ('auth', 'error', ${err?.message ?? String(err)}, ${JSON.stringify({
+          name: err?.name,
+          stack: err?.stack?.split("\n").slice(0, 8).join("\n"),
+          cause: err?.cause ? String(err.cause) : undefined,
+        })}::jsonb)
+      `).catch(() => {});
     },
     warn:  (code) => { console.warn("[auth.logger.warn]", code); },
     debug: (code, meta) => { console.log("[auth.logger.debug]", code, meta); },
+  },
+  events: {
+    async signIn(message) {
+      db.execute(sql`
+        INSERT INTO debug_logs (source, level, message, meta)
+        VALUES ('auth', 'event:signIn', 'signed in', ${JSON.stringify({
+          provider: message.account?.provider,
+          userId: message.user?.id,
+          email: message.user?.email,
+          isNewUser: message.isNewUser,
+        })}::jsonb)
+      `).catch(() => {});
+    },
   },
   // Allow localhost and any host when AUTH_TRUST_HOST=true (local production server).
   // Vercel sets VERCEL=1 which Auth.js already trusts automatically.
