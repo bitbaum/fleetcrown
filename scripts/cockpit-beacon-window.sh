@@ -34,9 +34,12 @@ until curl -sf -m 1 "$HEALTH" >/dev/null 2>&1; do
 done
 
 mkdir -p "$PROFILE_DIR"
+mkdir -p "/tmp/cockpit-beacon"
 
 for browser in chromium chromium-browser brave-browser google-chrome; do
   if command -v "$browser" >/dev/null 2>&1; then
+    # Write PID file so beacon.py can focus this window without xdotool on every call.
+    echo "$$" > "/tmp/cockpit-beacon/live-browser.pid"
     exec "$browser" \
       --app="$URL" \
       --user-data-dir="$PROFILE_DIR" \
