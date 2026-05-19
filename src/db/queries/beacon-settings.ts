@@ -23,6 +23,12 @@ const DEFAULTS: BeaconSettingsData = {
   transcription_provider: "auto",
 };
 
+/** PyQt mode was retired (see scripts/beacon.py). Legacy DB rows with 'both' or
+ *  'pyqt' are coerced to 'web' on read so the UI never offers a dead option. */
+function coercePopupMode(stored: string): string {
+  return stored === "disabled" ? "disabled" : "web";
+}
+
 export async function getBeaconSettings(userId: string): Promise<BeaconSettingsData> {
   const rows = await db
     .select()
@@ -33,7 +39,7 @@ export async function getBeaconSettings(userId: string): Promise<BeaconSettingsD
   if (!rows[0]) return { ...DEFAULTS };
 
   return {
-    popup_mode:             rows[0].popupMode,
+    popup_mode:             coercePopupMode(rows[0].popupMode),
     countdown_seconds:      rows[0].countdownSeconds,
     min_idle_seconds:       rows[0].minIdleSeconds,
     whisper_model:          rows[0].whisperModel,

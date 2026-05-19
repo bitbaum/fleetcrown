@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # install-beacon.sh — Install Cockpit Beacon on this machine
 #
-# Cockpit Beacon is the desktop popup that appears when Claude Code (or any AI
-# agent) finishes a session. It lets you queue prompts, pick what to run next,
-# and injects your choice directly into the terminal tab — no browser needed.
+# Cockpit Beacon is the desktop launcher that opens the Cockpit web popup
+# when Claude Code (or any AI agent) finishes a session. The popup itself
+# lives in the Cockpit web app (/beacon/live) — beacon.py just writes the
+# session file to /tmp and launches a Chrome --app= frameless window.
 #
-# Requirements: Python 3.11+, PyQt6, Zellij, jq
-# Optional:     xrandr (multi-monitor positioning), paplay (sounds)
+# Requirements: Python 3.11+, Zellij, jq, a Chromium-family browser
+# Optional:     xdotool/wmctrl (window raise), xrandr (multi-monitor)
 #
 # Usage:
 #   bash scripts/install-beacon.sh
@@ -37,10 +38,7 @@ info() { printf '   %s\n' "$*"; }
 _copy_scripts() {
   local dest="$1"
   cp "$SCRIPT_DIR/beacon.py"                    "$dest/"
-  cp "$SCRIPT_DIR/_beacon_audio.py"             "$dest/"
   cp "$SCRIPT_DIR/_beacon_config.py"            "$dest/"
-  cp "$SCRIPT_DIR/_beacon_popups.py"            "$dest/"
-  cp "$SCRIPT_DIR/_beacon_theme.py"             "$dest/"
   cp "$SCRIPT_DIR/agent-hook-bridge.sh"         "$dest/"
   cp "$SCRIPT_DIR/agent-hook-lib.sh"            "$dest/"
   cp "$SCRIPT_DIR/run-codex-task.sh"            "$dest/"
@@ -48,6 +46,12 @@ _copy_scripts() {
   cp "$SCRIPT_DIR/sync-agent-runtime-config.py" "$dest/"
   cp "$SCRIPT_DIR/notify-choice.py"             "$dest/"
   cp "$SCRIPT_DIR/get-idle-secs.py"             "$dest/"
+  # Retired PyQt modules — clear any leftover copies from older installs so
+  # `python3 beacon.py` doesn't accidentally pick up a stale ContinuePopup.
+  rm -f "$dest/_beacon_popups.py" "$dest/_beacon_theme.py" "$dest/_beacon_audio.py" \
+        "$dest/__pycache__/_beacon_popups."* \
+        "$dest/__pycache__/_beacon_theme."* \
+        "$dest/__pycache__/_beacon_audio."* 2>/dev/null || true
   chmod +x "$dest/agent-hook-bridge.sh" "$dest/agent-hook-lib.sh" \
            "$dest/run-codex-task.sh"    "$dest/run-gemini-task.sh"
 }
@@ -186,16 +190,17 @@ _check_cmd() {
   fi
 }
 
-if python3 -c "import PyQt6" 2>/dev/null; then
-  ok "PyQt6"
+if command -v chromium &>/dev/null || command -v chromium-browser &>/dev/null \
+   || command -v brave-browser &>/dev/null || command -v google-chrome &>/dev/null; then
+  ok "Chromium-family browser (for --app frameless popup)"
 else
-  warn "PyQt6 not found"
-  info "Install:  pip install PyQt6"
-  info "      or: apt install python3-pyqt6"
+  warn "No Chromium-family browser found"
+  info "Install:  apt install chromium  OR  brave-browser  OR  google-chrome"
 fi
 
 _check_cmd "jq"      "install: apt install jq  OR  brew install jq"
 _check_cmd "zellij"  "required for tab detection — https://zellij.dev"
+_check_cmd "xdotool" "optional, used to raise the beacon window — apt install xdotool"
 _check_cmd "xrandr"  "optional, used for multi-monitor positioning — apt install x11-xserver-utils"
 
 # ── 6. Done ──────────────────────────────────────────────────────────────────

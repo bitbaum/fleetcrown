@@ -14,7 +14,6 @@ fail() {
 python3 "$ROOT/scripts/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
 
 [ -x "$ROOT/scripts/agent-hook-bridge.sh" ] || fail "missing agent-hook-bridge.sh"
-[ -d "$ROOT/.python-vendor/site-packages/PyQt6" ] || fail "missing vendored PyQt6 runtime"
 
 if ! zellij action query-tab-names >/dev/null 2>&1; then
   fail "not connected to a live Zellij session"
@@ -52,7 +51,7 @@ fi
 printf 'Triggering Beacon stop smoke test for %s in tab %s\n' "$TARGET_DIR" "$TAB_NAME" >&2
 RESULT=$(
   jq -nc --arg cwd "$TARGET_DIR" '{cwd:$cwd}' \
-    | AGENT_TAB_NAME="$TAB_NAME" AGENT_BRIDGE_EMIT_PROMPT=1 AGENT_BRIDGE_FORCE_NATIVE_POPUP=1 \
+    | AGENT_TAB_NAME="$TAB_NAME" AGENT_BRIDGE_EMIT_PROMPT=1 \
       "$ROOT/scripts/agent-hook-bridge.sh" stop
 ) || RESULT=""
 

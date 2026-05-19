@@ -22,7 +22,6 @@ check_file "$ROOT/scripts/beacon.py"
 check_exec "$ROOT/scripts/agent-hook-bridge.sh"
 check_exec "$ROOT/scripts/agent-hook-lib.sh"
 check_exec "$ROOT/scripts/smoke-beacon-stop.sh"
-check_file "$ROOT/.python-vendor/site-packages/PyQt6/__init__.py"
 check_file "/home/g/dev/dotfiles/.claude/settings.json"
 check_exec "/home/g/dev/dotfiles/.claude/hooks/stop.sh"
 check_exec "/home/g/dev/dotfiles/.claude/hooks/notification.sh"
@@ -35,14 +34,6 @@ python3 "$ROOT/scripts/sync-agent-runtime-config.py"
 
 python3 - <<'PY'
 import json
-import os
-import pathlib
-import sys
-
-root = pathlib.Path("/home/g/dev/cockpit")
-sys.path.insert(0, str(root / ".python-vendor" / "site-packages"))
-
-import PyQt6  # noqa: F401
 
 settings = json.load(open("/home/g/dev/dotfiles/.claude/settings.json"))
 hooks = settings.get("hooks", {})
@@ -50,7 +41,6 @@ for name in ("Stop", "Notification"):
     if not hooks.get(name):
         raise SystemExit(f"missing {name} hook registration")
 
-print("PyQt6 import: ok")
 print("Claude hooks: ok")
 PY
 

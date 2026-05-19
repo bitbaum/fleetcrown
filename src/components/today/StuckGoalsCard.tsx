@@ -7,15 +7,23 @@ import { AbandonGoalButton } from "./AbandonGoalButton";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 
-function daysAgo(date: Date): number {
-  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-}
+const idleDaysSince = (updatedAt: Date | string): number =>
+  Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
 
 export async function StuckGoalsCard() {
   const userId = await requirePageUserId();
   const items = await getStuckGoals(userId);
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div id="stuck-goals">
+        <Card>
+          <CardHeader icon={CirclePause} title="Stalled Goals" right={<span className="text-xs text-status-positive font-medium">All on track</span>} />
+          <p className="text-sm text-text-muted">No goals stuck at 0% — good momentum.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div id="stuck-goals">
@@ -31,7 +39,7 @@ export async function StuckGoalsCard() {
         />
         <div className="space-y-2.5">
           {items.map((goal) => {
-            const idle = daysAgo(new Date(goal.updatedAt));
+            const idle = idleDaysSince(goal.updatedAt);
             return (
               <div key={goal.id} className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">

@@ -24,7 +24,7 @@ export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; l
   { value: "groq",  label: "Groq cloud",   note: "whisper-large-v3-turbo via API — rate limited" },
 ];
 
-export const POPUP_MODE_VALUES = ["both", "web", "pyqt", "disabled"] as const;
+export const POPUP_MODE_VALUES = ["web", "disabled"] as const;
 export type PopupMode = (typeof POPUP_MODE_VALUES)[number];
 
 export const POPUP_MODES: readonly {
@@ -35,25 +35,11 @@ export const POPUP_MODES: readonly {
   cons: string;
 }[] = [
   {
-    value: "both",
-    label: "Web + Desktop",
-    description: "Chrome --app window opens instantly; Control panel follows via SSE.",
-    pros: "Fastest: desktop popup appears in < 100 ms, no cold start after first launch",
-    cons: "Requires a Chromium browser and display access on the machine running the agent",
-  },
-  {
     value: "web",
-    label: "Web only",
-    description: "Beacon popup appears in your Cockpit browser tab via SSE.",
-    pros: "Works headlessly — SSH sessions, remote machines, no display required",
-    cons: "~1–4 s latency; Cockpit must be open in a browser tab to interact",
-  },
-  {
-    value: "pyqt",
-    label: "Desktop only",
-    description: "Native PyQt6 window — no browser required.",
-    pros: "Native OS widget, works without a browser tab open",
-    cons: "Requires PyQt6 + display; browser/Control panel popup is suppressed",
+    label: "Web popup",
+    description: "Chrome --app window opens at /beacon/live; same UI as Cockpit.",
+    pros: "Single source of truth — design lives in src/components/control, no native copy to drift",
+    cons: "Requires Cockpit to be running and a Chromium-family browser installed",
   },
   {
     value: "disabled",

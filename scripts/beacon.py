@@ -1,40 +1,39 @@
 #!/usr/bin/env python3
 """
-Beacon — Claude Code desktop overlay for session stops and tool confirms.
+Beacon — desktop launcher for the web popup.
 
-Usage:
-  beacon.py stop        <project_label> [session_file]
-  beacon.py pyqt-stop   <project_label> [session_file] [session_id]
-  beacon.py confirm     <tool_name> <cmd_file>
+When an agent session stops the hook calls:
 
-Stop priority:
-  1. Browser popup  — opens the web beacon in a frameless Chrome/Brave --app= window.
-                      Works without PyQt; identical UI on every platform. Requires
-                      Cockpit to be running and a Chromium-family browser installed.
-  2. PyQt popup     — native widget, instant (no Cockpit required), needs PyQt6.
+  beacon.py stop <project_label> [session_file]
+
+beacon.py writes the session metadata to /tmp/cockpit-beacon/<id>.json (no API
+auth required) and opens the Cockpit web popup at /beacon/live in a frameless
+Chrome `--app` window. The popup polls the session file for the user's choice
+and patches it back via the Cockpit API.
+
+If Cockpit isn't reachable the launcher writes the session anyway (it'll
+surface via SSE the moment Cockpit boots), fires the systemd user unit in
+the background, and exits silently. No blocking dialog, no foreign UI —
+design lives in src/components/control/* and the web popup is the single
+source of truth.
 
 Module layout:
-  _beacon_theme.py   — color palettes + theme loading (no PyQt)
-  _beacon_config.py  — runtime constants + settings/prompt-meta helpers (no PyQt)
-  _beacon_audio.py   — WhisperThread speech-to-text
-  _beacon_popups.py  — Qt stylesheet, widget helpers, ContinuePopup, ConfirmPopup
-  beacon.py          — entry point: _web_stop, _pyqt_stop, main
+  _beacon_config.py — runtime constants + settings/prompt-meta helpers
+  beacon.py         — entry point (this file)
 """
 
-import sys, os, subprocess, threading, time, json as _json, uuid
+import sys, os, subprocess, shutil, time, json as _json, uuid
 import urllib.request
-from pathlib import Path
 
-
-def _bootstrap_vendor_packages() -> None:
-    vendor_site = Path(__file__).resolve().parent.parent / ".python-vendor" / "site-packages"
-    if vendor_site.exists():
-        sys.path.insert(0, str(vendor_site))
-
-
-_bootstrap_vendor_packages()
-
-from _beacon_config import COCKPIT_URL, load_settings, COUNTDOWN_SECONDS, read_project_git_branch, looks_like_capacity_issue, resolve_next_agent, get_popup_mode
+from _beacon_config import (
+    COCKPIT_URL,
+    load_settings,
+    COUNTDOWN_SECONDS,
+    read_project_git_branch,
+    looks_like_capacity_issue,
+    resolve_next_agent,
+    get_popup_mode,
+)
 
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -56,10 +55,7 @@ def _current_agent() -> str:
 
 
 def _check_capacity_sentinel(label: str) -> bool:
-    """Return True if the notification hook wrote a capacity-issue sentinel < 5 min ago.
-
-    Deletes the sentinel on read so it doesn't carry over to the next session.
-    """
+    """Return True if the notification hook wrote a capacity-issue sentinel < 5 min ago."""
     path = f"/tmp/agent-capacity-issue-{label}"
     if not os.path.exists(path):
         return False
@@ -75,10 +71,10 @@ def _check_capacity_sentinel(label: str) -> bool:
         return False
 
 
-def _write_beacon_session(label: str, session_content: str, popup_mode: str = "both") -> str:
+def _write_beacon_session(label: str, session_content: str, popup_mode: str = "web") -> str:
     """Write a beacon session file directly to /tmp — no API auth required.
 
-    The Next.js beacon API stores sessions in /tmp/cockpit-beacon/{id}.json.
+    The Cockpit beacon route reads sessions from /tmp/cockpit-beacon/{id}.json.
     Writing directly here means beacon.py never needs to authenticate with the
     web server; the browser popup reads/writes via the API using its session cookie.
     """
@@ -99,7 +95,8 @@ def _write_beacon_session(label: str, session_content: str, popup_mode: str = "b
         "gitBranch": read_project_git_branch(label),
     }
     os.makedirs(_BEACON_DIR, exist_ok=True)
-    # Cancel any active (no choice yet) sessions for this project.
+    # Cancel any active (no choice yet) sessions for this project so the new
+    # session is the only pending one the SSE stream picks up.
     try:
         for fname in os.listdir(_BEACON_DIR):
             if not fname.endswith(".json"):
@@ -126,17 +123,7 @@ def _read_beacon_choice_fs(session_id: str) -> str | None:
         return None
 
 
-def _patch_web_session(session_id: str, choice: str) -> None:
-    try:
-        data = _json.dumps({"choice": choice}).encode()
-        req = urllib.request.Request(
-            f"{COCKPIT_URL}/api/beacon/{session_id}",
-            data=data, headers={"Content-Type": "application/json"}, method="PATCH",
-        )
-        urllib.request.urlopen(req, timeout=2)
-    except Exception:
-        pass
-
+# ── Browser launcher ───────────────────────────────────────────────────────────
 
 _LIVE_PID_FILE = os.path.join(_BEACON_DIR, "live-browser.pid")
 _LIVE_URL = f"{COCKPIT_URL}/beacon/live"
@@ -148,7 +135,6 @@ def _focus_live_window() -> bool:
     Tries xdotool first (most reliable), then wmctrl as fallback.
     Returns True if a window was found and raised.
     """
-    import shutil
     if shutil.which("xdotool"):
         result = subprocess.run(
             ["xdotool", "search", "--name", "beacon/live"],
@@ -156,16 +142,12 @@ def _focus_live_window() -> bool:
         )
         wids = result.stdout.strip().split()
         for wid in wids:
-            subprocess.run(["xdotool", "windowactivate", "--sync", wid],
-                           capture_output=True)
-            subprocess.run(["xdotool", "windowraise", wid],
-                           capture_output=True)
+            subprocess.run(["xdotool", "windowactivate", "--sync", wid], capture_output=True)
+            subprocess.run(["xdotool", "windowraise", wid], capture_output=True)
         if wids:
             return True
     if shutil.which("wmctrl"):
-        result = subprocess.run(
-            ["wmctrl", "-l"], capture_output=True, text=True,
-        )
+        result = subprocess.run(["wmctrl", "-l"], capture_output=True, text=True)
         for line in result.stdout.splitlines():
             if "beacon/live" in line:
                 wid = line.split()[0]
@@ -174,29 +156,24 @@ def _focus_live_window() -> bool:
     return False
 
 
-def _open_browser_beacon(_session_id: str) -> bool:
+def _open_browser_beacon() -> bool:
     """Ensure the /beacon/live pre-warmed window is open and visible.
 
     On the first call this launches an --app= frameless window at /beacon/live.
     On subsequent calls it focuses the existing window (sub-100 ms — no cold start).
-    The session is delivered to the already-loaded page via SSE.
+    Sessions are delivered to the already-loaded page via SSE.
 
     Returns True if a browser window is running, False if no browser was found.
     """
-    import shutil
-
-    # Check if a previously launched live-browser process is still alive.
     if os.path.exists(_LIVE_PID_FILE):
         try:
             pid = int(open(_LIVE_PID_FILE).read().strip())
             os.kill(pid, 0)  # raises if process is dead
-            # Process alive — focus the window and return immediately.
             _focus_live_window()
             return True
         except (ProcessLookupError, ValueError, OSError):
-            pass  # stale PID file — fall through to launch a new window
+            pass  # stale PID file — fall through
 
-    # Launch a new --app= frameless window at /beacon/live.
     for b in ("chromium", "chromium-browser", "brave-browser", "google-chrome"):
         if shutil.which(b):
             try:
@@ -218,8 +195,9 @@ def _open_browser_beacon(_session_id: str) -> bool:
 def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
     """Block until the beacon session records a user choice or timeout elapses.
 
-    Reads directly from the session file — no HTTP round trip, no auth needed.
-    The hook has a 150s timeout; 130s gives margin before it hard-kills the process.
+    Reads the session JSON directly — no HTTP round trip, no auth needed.
+    The Claude Code stop hook has a 150s timeout; 130s gives margin before
+    it hard-kills the process.
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -230,20 +208,32 @@ def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
     return None
 
 
+# ── Cockpit-not-running recovery ───────────────────────────────────────────────
+
+def _start_cockpit_background() -> None:
+    """Fire-and-forget start of the Cockpit systemd user unit. No polling, no
+    blocking dialog. The session JSON has already been written to /tmp; once
+    Cockpit boots, /api/beacon/sse picks it up on the next subscriber connect.
+    """
+    if shutil.which("systemctl"):
+        subprocess.Popen(
+            ["systemctl", "--user", "start", "cockpit-app"],
+            start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+
 # ── Stop handler ───────────────────────────────────────────────────────────────
 
-def _web_stop(label: str, session_file: str) -> None:
-    """Primary stop handler — respects user's popup_mode setting.
+def _stop(label: str, session_file: str) -> None:
+    """Open the web popup for an agent session that just ended.
 
-    popup_mode controls which UI surfaces fire:
-      both     — browser --app window + PyQt fallback (default, fastest)
-      web      — browser/SSE popup only (headless-friendly, no PyQt)
-      pyqt     — native PyQt window only (no browser required)
-      disabled — exit immediately, no popup fires
+    popup_mode controls whether to show anything at all:
+      web | both  — open browser popup (both is treated as web — pyqt was retired)
+      pyqt        — coerced to web at the config layer (deprecated)
+      disabled    — exit immediately, no popup fires
     """
-    # Read once per invocation (cached for 5 min in _beacon_config)
     popup_mode = get_popup_mode()
-
     if popup_mode == "disabled":
         sys.exit(1)
 
@@ -254,85 +244,27 @@ def _web_stop(label: str, session_file: str) -> None:
         except OSError:
             pass
 
-    use_web  = popup_mode in ("web", "both")
-    use_pyqt = popup_mode in ("pyqt", "both")
+    # Write the session unconditionally — it lands in /tmp and surfaces via SSE
+    # whenever Cockpit is up. If Cockpit is down, fire its systemd unit and exit;
+    # the user's stop hook doesn't block on a foreign dialog, and the session is
+    # still captured.
+    session_id = _write_beacon_session(label, session_content, popup_mode)
+    if not _cockpit_ready():
+        _start_cockpit_background()
+        sys.exit(1)
 
-    session_id = None
-    if _cockpit_ready():
-        # Write session directly to /tmp — no API auth required.
-        # Always write for web/both so the Control panel SSE and ReadyBanner work.
-        # For pyqt mode we still write so the Control panel shows the Ready state.
-        session_id = _write_beacon_session(label, session_content, popup_mode)
+    if not _open_browser_beacon():
+        # Browser unavailable — the Control panel ReadyBanner can still serve as
+        # the interaction surface, so poll the session file anyway.
+        choice = _poll_beacon_choice(session_id)
+        if choice:
+            print(choice)
+            sys.exit(0)
+        sys.exit(1)
 
-        if use_web:
-            if _open_browser_beacon(session_id):
-                # Browser opened — poll until the user picks or timeout.
-                choice = _poll_beacon_choice(session_id)
-                if choice:
-                    print(choice)
-                    sys.exit(0)
-                # Browser timed out; fall through to PyQt if available.
-                if not use_pyqt:
-                    sys.exit(1)
-            else:
-                # Browser unavailable in web-only mode — poll anyway so the
-                # Control panel ReadyBanner can serve as the interaction surface.
-                if not use_pyqt:
-                    choice = _poll_beacon_choice(session_id)
-                    if choice:
-                        print(choice)
-                        sys.exit(0)
-                    sys.exit(1)
-
-    if use_pyqt:
-        _pyqt_stop(label, session_file, session_id)
-        return
-
-    sys.exit(1)
-
-
-# ── PyQt popup ─────────────────────────────────────────────────────────────────
-
-def _pyqt_stop(label: str, session_file: str, session_id: str | None = None) -> None:
-    from _beacon_popups import ContinuePopup
-    from PyQt6.QtWidgets import QApplication
-    from PyQt6.QtCore import QTimer
-
-    os.environ.setdefault("DISPLAY", ":0")
-    app = QApplication(sys.argv)
-    app.setApplicationName("Beacon")
-    popup = ContinuePopup("stop", label, session_file)
-    popup.show()
-    popup.raise_()
-    popup.activateWindow()
-    QTimer.singleShot(0, popup._position)
-
-    # Poll the web session in a daemon thread every 3s so the PyQt popup closes
-    # automatically if the user picks from the Control panel's ReadyBanner.
-    _web_poll_active = [True]
-
-    def _web_poll_loop() -> None:
-        while _web_poll_active[0] and session_id:
-            time.sleep(3)
-            if not _web_poll_active[0]:
-                break
-            choice = _read_beacon_choice_fs(session_id)
-            if choice is not None and _web_poll_active[0]:
-                QTimer.singleShot(0, lambda c=choice: popup._choose(c))
-                break
-
-    if session_id:
-        threading.Thread(target=_web_poll_loop, daemon=True).start()
-
-    app.exec()
-    _web_poll_active[0] = False
-
-    if popup.result:
-        if session_id:
-            threading.Thread(
-                target=_patch_web_session, args=(session_id, popup.result), daemon=True
-            ).start()
-        print(popup.result)
+    choice = _poll_beacon_choice(session_id)
+    if choice:
+        print(choice)
         sys.exit(0)
     sys.exit(1)
 
@@ -345,35 +277,14 @@ def main() -> None:
     os.environ.setdefault("DISPLAY", ":0")
 
     mode = sys.argv[1]
-    if mode == "confirm":
-        from _beacon_popups import ConfirmPopup
-        from PyQt6.QtWidgets import QApplication
-        from PyQt6.QtCore import QTimer
-
-        app = QApplication(sys.argv)
-        app.setApplicationName("Beacon")
-        tool    = sys.argv[2]
-        cf      = sys.argv[3] if len(sys.argv) > 3 else ""
-        command = open(cf).read().strip() if cf and os.path.exists(cf) else ""
-        popup   = ConfirmPopup(tool, command)
-        popup.show()
-        popup.raise_()
-        popup.activateWindow()
-        QTimer.singleShot(0, popup._position)
-        app.exec()
-        if popup.result:
-            print(popup.result)
-            sys.exit(0)
-        sys.exit(1)
-    elif mode == "pyqt-stop":
+    if mode in ("stop", "pyqt-stop"):  # pyqt-stop kept as alias for back-compat
         label = sys.argv[2]
-        sf    = sys.argv[3] if len(sys.argv) > 3 else ""
-        sid   = sys.argv[4] if len(sys.argv) > 4 else None
-        _pyqt_stop(label, sf, sid)
+        sf = sys.argv[3] if len(sys.argv) > 3 else ""
+        _stop(label, sf)
     else:
-        label = sys.argv[2]
-        sf    = sys.argv[3] if len(sys.argv) > 3 else ""
-        _web_stop(label, sf)
+        # `confirm` was the destructive-command Allow/Deny dialog and is no
+        # longer wired into any hook. Exit cleanly so callers don't break.
+        sys.exit(1)
 
 
 if __name__ == "__main__":

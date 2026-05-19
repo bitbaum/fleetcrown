@@ -25,7 +25,7 @@ export function usePromptQueue(tab: string) {
   const [queue, setQueue] = useLocalStorageState(queueKey(tab), EMPTY, serialize, deserialize);
 
   // Content-based guard: tracks the last JSON string we PUT to the file.
-  // Poll only applies updates when file content differs (external change from PyQt/daemon).
+  // Poll only applies updates when file content differs (external change from the daemon or another tab).
   // Sync effect skips writes when queue content already matches (prevents double-writes).
   const lastWrittenRef = useRef<string>(toJson(EMPTY));
   const mounted = useRef(false);
@@ -38,8 +38,8 @@ export function usePromptQueue(tab: string) {
     writeToFile(tab, queue, lastWrittenRef);
   }, [queue, tab]);
 
-  // On mount: reconcile with file. File wins (may have PyQt-written items).
-  // If file is absent (reboot), push localStorage queue to file so PyQt sees it.
+  // On mount: reconcile with file. File wins (may have daemon- or hook-written items).
+  // If file is absent (reboot), push localStorage queue to file so the daemon sees it.
   useEffect(() => {
     (async () => {
       try {
@@ -63,7 +63,7 @@ export function usePromptQueue(tab: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
 
-  // Poll file every 2s for external changes (PyQt/daemon shifts/enqueues).
+  // Poll file every 2s for external changes (daemon/hook shifts/enqueues).
   // Skips silently when file content matches what we last wrote (our own echo).
   useEffect(() => {
     const t = setInterval(async () => {

@@ -8,7 +8,7 @@ const Body = z.object({
   enabled: z.boolean(),
 });
 
-// Sentinel file read by the PyQt beacon popup on init so it respects the
+// Sentinel file read by the beacon hook bridge on init so it respects the
 // web-app pause state even when Cockpit is not running at popup open time.
 function sentinelPath(tab: string) {
   return `/tmp/cockpit-auto-continue-${tab.toLowerCase()}`;

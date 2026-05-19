@@ -50,23 +50,8 @@ print(get_popup_mode())
 fi
 export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 
-beacon_python() {
-  local display="${DISPLAY:-:1}"
-  # Prefer system PyQt6 (installed via pip or apt) — works for standalone installs
-  # without the .python-vendor bundle.
-  if python3 -c "import PyQt6" 2>/dev/null; then
-    DISPLAY="$display" DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
-      python3 "$SCRIPT_DIR/beacon.py" "$@"
-    return
-  fi
-  # Fall back to the vendored Qt6 shipped in the Cockpit repo.
-  local qt_lib="$SCRIPT_DIR/../.python-vendor/site-packages/PyQt6/Qt6/lib"
-  local plugin_path="$SCRIPT_DIR/../.python-vendor/site-packages/PyQt6/Qt6/plugins"
-  local ld="${LD_LIBRARY_PATH:-}"
-  DISPLAY="$display" \
-  DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
-  QT_PLUGIN_PATH="$plugin_path" \
-  LD_LIBRARY_PATH="${qt_lib}:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu${ld:+:$ld}" \
+beacon_launch() {
+  DISPLAY="${DISPLAY:-:1}" DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
     python3 "$SCRIPT_DIR/beacon.py" "$@"
 }
 
@@ -234,7 +219,7 @@ handle_stop() {
   #   beacon session JSON so the browser popup sees choice != null and self-closes.
   #
   # Layer 2 (1-4 s): browser beacon popup (full React UI).
-  #   beacon_python opens Chrome/Brave with the full web beacon.  When the user
+  #   beacon_launch opens Chrome/Brave with the full web beacon.  When the user
   #   clicks there, it writes to CHOICE_FILE.
   #
   # If the user ignores both (at keyboard, typing their own prompt) neither
@@ -262,7 +247,7 @@ handle_stop() {
   _nc_pid=$!
 
   (
-    result=$(beacon_python stop "$label" "$session_file" 2>>"$LOG")
+    result=$(beacon_launch stop "$label" "$session_file" 2>>"$LOG")
     if [ -n "$result" ] && [ ! -f "$_choice_file" ]; then
       printf '%s' "$result" > "${_choice_file}.tmp" \
         && mv "${_choice_file}.tmp" "$_choice_file" 2>/dev/null || true
@@ -293,7 +278,7 @@ handle_stop() {
   queue_file="/tmp/agent-queue-${TAB_NAME,,}"
 
   # If choice is '1' (Next Best Task), check if there's a queue item and fire that instead.
-  # This matches the web beacon logic and handles the race where PyQt hits 0s first.
+  # This matches the web beacon logic and handles the race where the OS notification hits 0s first.
   if [ "$choice" = "1" ] && [ -f "$queue_file" ]; then
     local first_item
     first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)

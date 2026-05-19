@@ -94,10 +94,17 @@ def get_min_idle_seconds() -> int:
 
 
 def get_popup_mode() -> str:
-    """Return the configured popup mode: 'both' | 'web' | 'pyqt' | 'disabled'."""
+    """Return the configured popup mode.
+
+    The PyQt fallback has been retired. The settings DB may still contain
+    legacy values 'pyqt' or 'both' from before the migration — both are
+    coerced to 'web' since that's the only popup surface we ship now.
+    """
     s = load_settings()
-    mode = s.get("popup_mode", "both")
-    return mode if mode in ("both", "web", "pyqt", "disabled") else "both"
+    mode = s.get("popup_mode", "web")
+    if mode == "disabled":
+        return "disabled"
+    return "web"  # legacy 'both' / 'pyqt' both collapse to web
 
 
 def load_prompt_meta() -> list:

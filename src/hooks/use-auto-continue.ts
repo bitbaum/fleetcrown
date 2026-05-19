@@ -26,7 +26,6 @@ export function useAutoContinue(tab: string) {
     });
   }, [tab, setEnabled]);
 
-  // Sync re-enable to /tmp sentinel so PyQt popup starts unpaused.
   const enable = useCallback(() => {
     setEnabled(true);
     postJson("/api/control/auto-continue", { tab, enabled: true }).catch(() => {});
