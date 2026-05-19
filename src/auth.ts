@@ -78,15 +78,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   events: {
     async signIn(message) {
-      db.execute(sql`
-        INSERT INTO debug_logs (source, level, message, meta)
-        VALUES ('auth', 'event:signIn', 'signed in', ${JSON.stringify({
-          provider: message.account?.provider,
-          userId: message.user?.id,
-          email: message.user?.email,
-          isNewUser: message.isNewUser,
-        })}::jsonb)
-      `).catch(() => {});
+      // Org bootstrap moved here from the signIn callback — at this point
+      // `user.id` is the DB UUID (handleLoginOrRegister has run), so org
+      // queries that join on uuid columns are safe.
+      try {
+        if (message.user?.id) {
+          const memberCount = await getOrgMembershipCount(message.user.id);
+          if (memberCount === 0) {
+            const displayName = message.user.name ?? message.user.email?.split("@")[0] ?? "user";
+            await createPersonalOrg(message.user.id, displayName);
+          }
+        }
+      } catch (e) {
+        // Org bootstrap failures must not block sign-in. They'll surface in
+        // debug_logs but the user still lands authenticated.
+        db.execute(sql`
+          INSERT INTO debug_logs (source, level, message, meta)
+          VALUES ('auth', 'event:signIn-org-bootstrap', ${(e as Error)?.message ?? String(e)},
+                  ${JSON.stringify({ userId: message.user?.id, name: (e as Error)?.name })}::jsonb)
+        `).catch(() => {});
+      }
     },
   },
   // Allow localhost and any host when AUTH_TRUST_HOST=true (local production server).
@@ -187,46 +198,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signOut: ROUTES.SIGN_OUT,
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
-      console.log("[auth.signIn] called", {
-        provider: account?.provider,
-        userId: user?.id,
-        userEmail: user?.email,
-        userName: user?.name,
-        hasProfile: !!profile,
-        accountType: account?.type,
-      });
+    async signIn({ user, account }) {
+      // CRITICAL: at this point in the OAuth flow, `user.id` is the OAuth provider's
+      // user id (e.g. GitHub's numeric "41178744"), NOT a DB UUID. Passing it to any
+      // query that joins on a UUID column will throw at PostgreSQL — which Auth.js
+      // then wraps as AccessDenied. Always resolve to the DB user via email first.
       try {
-        // Update GitHub profile fields on first OAuth link.
-        if (account?.provider === "github" && user.email) {
+        // OAuth profile sync — only for OAuth providers, only when we have an email.
+        if (account?.type === "oauth" && user.email) {
           const existingUser = await getUserByEmail(user.email);
-          console.log("[auth.signIn] existingUser lookup", { found: !!existingUser, id: existingUser?.id });
           if (existingUser) {
             const patch: Record<string, string | null | undefined> = {};
-            const githubImage = (user as { image?: string | null }).image;
-            if (!existingUser.image && githubImage) patch.image = githubImage;
-            if (!existingUser.name && user.name)   patch.name  = user.name;
+            const oauthImage = (user as { image?: string | null }).image;
+            if (!existingUser.image && oauthImage) patch.image = oauthImage;
+            if (!existingUser.name  && user.name) patch.name  = user.name;
             if (Object.keys(patch).length > 0) {
               await updateUser(existingUser.id, patch);
             }
           }
         }
-
-        // Auto-create a personal org for users who don't have one yet.
-        // Runs on every sign-in but is a no-op after the first time.
-        if (user.id) {
-          const memberCount = await getOrgMembershipCount(user.id);
-          console.log("[auth.signIn] membership count", { userId: user.id, count: memberCount });
-          if (memberCount === 0) {
-            const displayName = user.name ?? user.email?.split("@")[0] ?? "user";
-            await createPersonalOrg(user.id, displayName);
-          }
-        }
-
-        console.log("[auth.signIn] returning true");
         return true;
       } catch (e) {
-        console.error("[auth.signIn] THREW", e);
+        // Persist + rethrow — the outer Auth.js handler will surface AccessDenied,
+        // but this lands the real cause in debug_logs for diagnosis.
+        db.execute(sql`
+          INSERT INTO debug_logs (source, level, message, meta)
+          VALUES ('auth', 'callback:signIn', ${(e as Error)?.message ?? String(e)},
+                  ${JSON.stringify({
+                    provider: account?.provider,
+                    email: user?.email,
+                    name: (e as Error)?.name,
+                    stack: (e as Error)?.stack?.split("\n").slice(0, 6).join("\n"),
+                  })}::jsonb)
+        `).catch(() => {});
         throw e;
       }
     },
