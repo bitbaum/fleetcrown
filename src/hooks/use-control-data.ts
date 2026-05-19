@@ -113,6 +113,7 @@ export function useControlData(): ControlDataHook {
           session: patch.session,
           currentPrompt: patch.currentPrompt,
           readyAt: patch.readyAt,
+          lockAt: patch.lockAt,
           closingAt: patch.closingAt,
           closedAt: patch.closedAt,
         };

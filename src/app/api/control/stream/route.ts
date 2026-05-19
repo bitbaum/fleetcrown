@@ -130,6 +130,7 @@ export async function GET() {
             proj.agentRunning !== prev.agentRunning ||
             proj.tabOpen !== prev.tabOpen ||
             proj.readyAt !== prev.readyAt ||
+            proj.lockAt !== prev.lockAt ||
             proj.closingAt !== prev.closingAt ||
             proj.closedAt !== prev.closedAt ||
             proj.currentPrompt?.key !== prev.currentPrompt?.key ||
