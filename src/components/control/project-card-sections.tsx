@@ -12,6 +12,7 @@ import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 import { ProjectStatusChips } from "./ProjectStatusChips";
+import { OutcomeStreak } from "./OutcomeStreak";
 
 export function ProjectCardHeader({
   project,
@@ -84,6 +85,7 @@ export function ProjectCardHeader({
                 <span className={cn("gap-1.5", stateTagClass)}>
                   {stateLabel}
                 </span>
+                <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>
               {isIdle && lastActiveLabel && (
                 <p className="mt-0.5 text-xs text-text-muted">

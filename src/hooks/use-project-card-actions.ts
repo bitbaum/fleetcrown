@@ -58,6 +58,7 @@ export function useProjectCardActions({
       handoff,
       queue,
       projectName:   project.tab,
+      projectKey:    project.tab,
       gitBranch:     project.git?.branch,
       recentCommits: project.git?.recentCommits,
     }).then(async (res) => {

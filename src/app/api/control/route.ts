@@ -5,7 +5,7 @@ import path from "path";
 import { getZellijTabs, shellEscape } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
-import { getLatestRunsByProjectPaths, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, upsertProjectState } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
@@ -227,9 +227,10 @@ export async function GET() {
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
   const allOwnerIds = [userId, ...teamOwnerIds];
-  const [latestRuns, recentPromptsMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentOutcomesMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => { console.error("[control/GET] recentPromptsMap failed:", e); return new Map<string, RecentCustomPrompt[]>(); }),
+    getRecentOutcomesByProjectKeys(userId, projectKeys, 5).catch((e) => { console.error("[control/GET] recentOutcomesMap failed:", e); return new Map<string, import("@/db/schema/orchestration-runs").OrchestrationOutcome[]>(); }),
     getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((e): ActivityItem[] => { console.error("[control/GET] recentActivity failed:", e); return []; }),
     // Single batch query instead of N per-owner queries
     getProjectStatesByUserIds(allOwnerIds).catch((e): DbProjectState[] => { console.error("[control/GET] projectStates failed:", e); return []; }),
@@ -412,6 +413,7 @@ export async function GET() {
     closedAt:  derivedLifecycle.closedAt,
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     recentInjections: activityByProject.get(tab) ?? [],
+    recentOutcomes: recentOutcomesMap.get(tab) ?? [],
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
       intent: latestRun.intent,

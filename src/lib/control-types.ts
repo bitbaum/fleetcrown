@@ -1,5 +1,6 @@
 import type { RecentCustomPrompt } from "@/db/queries/prompt-history";
 import type { OrchestrationTaskSummary } from "@/lib/orchestration";
+import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 
 export type ProjectProfile = {
   description: string;
@@ -63,6 +64,8 @@ export type ProjectState = {
   closedAt: number | null;
   recentCustomPrompts: RecentCustomPrompt[];
   recentInjections: import("@/db/queries/prompt-history").ActivityItem[];
+  /** Last 5 outcomes for this project, newest first. Powers the streak chip + dispatch reasoner. */
+  recentOutcomes: OrchestrationOutcome[];
   latestOrchestrationRun: {
     adapter: string;
     intent: string;

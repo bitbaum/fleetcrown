@@ -11,6 +11,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
+import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
+
+// Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
+const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
+  success: "✓",
+  partial: "~",
+  error: "✗",
+  hang: "✗",
+  timeout: "✗",
+  user_abort: "✕",
+};
+function streakLine(outcomes: RecentOutcome[]): string {
+  return outcomes.map((o) => OUTCOME_GLYPH[o.outcome]).join("");
+}
 
 const HandoffSchema = z.object({
   done:   z.string().default(""),
@@ -24,6 +38,7 @@ const DispatchBody = z.object({
   handoff:       HandoffSchema,
   queue:         z.array(z.string().trim().min(1)).max(20),
   projectName:   z.string().optional(),
+  projectKey:    z.string().optional(),
   gitBranch:     z.string().optional(),
   recentCommits: z.array(z.string()).max(5).optional(),
 });
@@ -45,6 +60,7 @@ function buildPrompt(
   projectName?: string,
   gitBranch?: string,
   recentCommits?: string[],
+  recentOutcomes?: RecentOutcome[],
 ): string {
   const projectCtx = [
     projectName ? `Project: ${projectName}` : "",
@@ -57,6 +73,11 @@ function buildPrompt(
     ? `\nRecent commits (newest first):\n${recentCommits.slice(0, 3).map((c) => `  • ${c.replace(/^[0-9a-f]+ /, "")}`).join("\n")}\n`
     : "";
 
+  // Outcome streak — most recent first. ✓=success ~=partial ✗=error/hang ✕=user_abort.
+  const outcomesSection = recentOutcomes && recentOutcomes.length > 0
+    ? `\nRecent run outcomes (most recent first): ${streakLine(recentOutcomes)}\n`
+    : "";
+
   const queueList = queue
     .slice(0, 5)
     .map((item, i) => `${i + 1}. ${item}`)
@@ -64,7 +85,7 @@ function buildPrompt(
   const queueOverflow = queue.length > 5 ? `\n(+${queue.length - 5} more items)` : "";
 
   return `You are a dispatch strategist for an AI coding agent workflow.
-${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}
+${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}${outcomesSection}
 The agent just finished a work session. Handoff summary:
   done:   ${handoff.done || "(none)"}
   next:   ${handoff.next || "(none)"}
@@ -128,13 +149,22 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, projectName, gitBranch, recentCommits } = dataOrResp;
+  const { handoff, queue, projectName, projectKey, gitBranch, recentCommits } = dataOrResp;
+
+  // Recent outcomes for this project — feeds Groq and is surfaced in the reason.
+  // Safe-defaults: if the lookup fails, dispatch still proceeds.
+  let recentOutcomes: RecentOutcome[] = [];
+  if (projectKey) {
+    recentOutcomes = await getRecentOutcomes(userId, projectKey, { limit: 5 }).catch(() => []);
+  }
+  const streak = streakLine(recentOutcomes);
+  const streakSuffix = streak ? `  [last 5: ${streak}]` : "";
 
   // No queue items — trivially run next_best.
   if (queue.length === 0) {
     return NextResponse.json({
       action: "nextbest",
-      reason: "Queue is empty — running AI-driven next step.",
+      reason: `Queue is empty — running AI-driven next step.${streakSuffix}`,
       source: "empty_queue",
     } satisfies DispatchResult);
   }
@@ -145,22 +175,26 @@ export async function POST(req: NextRequest) {
   if (health.includes("critical") || tests.includes("fail")) {
     return NextResponse.json({
       action: "nextbest",
-      reason: `${health.includes("critical") ? "Health critical" : "Tests failing"} — agent must stay focused on recovery before switching concerns.`,
+      reason: `${health.includes("critical") ? "Health critical" : "Tests failing"} — agent must stay focused on recovery before switching concerns.${streakSuffix}`,
       source: "health_gate",
     } satisfies DispatchResult);
   }
 
   // Groq classification.
-  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits);
+  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes);
 
   try {
     const { action, reason } = await callGroq(prompt);
-    return NextResponse.json({ action, reason, source: "groq" } satisfies DispatchResult);
+    return NextResponse.json({
+      action,
+      reason: `${reason}${streakSuffix}`,
+      source: "groq",
+    } satisfies DispatchResult);
   } catch {
     // Groq unavailable or no key — fall back to queue drain (existing behaviour).
     return NextResponse.json({
       action: "queue",
-      reason: "Groq unavailable — using queue order.",
+      reason: `Groq unavailable — using queue order.${streakSuffix}`,
       source: "fallback",
     } satisfies DispatchResult);
   }
