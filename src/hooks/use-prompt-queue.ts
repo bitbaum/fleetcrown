@@ -84,8 +84,14 @@ export function usePromptQueue(tab: string) {
 
   const enqueue = useCallback((prompt: string) => {
     const trimmed = prompt.trim();
-    if (trimmed) setQueue((q) => [...q, trimmed]);
-  }, [setQueue]);
+    if (!trimmed) return;
+    try {
+      const raw = localStorage.getItem(queueKey(tab));
+      const q = raw ? (JSON.parse(raw) as string[]) : [];
+      writeToFile(tab, [...q, trimmed], lastWrittenRef);
+    } catch { /* ignore */ }
+    setQueue((q) => [...q, trimmed]);
+  }, [setQueue, tab]);
 
   // Reads localStorage directly to get the definitive current value without
   // a render cycle, then writes the post-shift state atomically.
