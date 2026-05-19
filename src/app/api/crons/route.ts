@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFileSync } from "fs";
-import { CRON_FILE, DEFAULT_TIMEZONE, TELEGRAM_CHAT_ID } from "@/lib/constants";
+import { CRON_FILE, TELEGRAM_CHAT_ID } from "@/lib/constants";
 import { type CronJob, readCronJobs, readCronFile, CreateCronBody, PatchCronBody } from "@/lib/crons";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";

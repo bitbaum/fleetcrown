@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2, MapPin, Navigation, X } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
 import type { UserPreferencesData } from "@/db/queries/user-preferences";
