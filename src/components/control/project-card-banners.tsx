@@ -1,6 +1,5 @@
 "use client";
 
-import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import { ClosedBanner, ClosingBanner, RunningBanner } from "./project-card-helpers";
@@ -85,11 +84,7 @@ export function ProjectBanners({
         <ReadyBanner
           tab={tab}
           prompts={prompts}
-          onSend={(key) => {
-            const intent = mapClaudePromptToIntent(key);
-            if (!intent) return;
-            onSend(key);
-          }}
+          onSend={onSend}
           onDismiss={onDismiss}
           onAutoInject={onAutoInject}
           onToggleAutoContinue={onToggleAutoContinue}
