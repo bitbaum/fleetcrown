@@ -15,7 +15,14 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 export async function POST() {
   if (!isRuntimeAvailable()) return NextResponse.json({ ok: false, reason: "no-runtime" }, { status: 503 });
 
-  const search = spawnSync("xdotool", ["search", "--class", "cockpit-beacon"], { timeout: 1500 });
+  // Match only the actual beacon app window — brave creates ~2 internal splash
+  // subwindows tagged with the same WM_CLASS, but only the page window has a
+  // "Beacon" title. Skipping the others avoids unmapping invisible splashes.
+  const search = spawnSync(
+    "xdotool",
+    ["search", "--class", "cockpit-beacon", "--name", "Beacon"],
+    { timeout: 1500 },
+  );
   if (search.status !== 0) {
     return NextResponse.json({ ok: false, reason: "xdotool-or-window-missing" });
   }

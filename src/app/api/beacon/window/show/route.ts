@@ -34,7 +34,15 @@ function getScreenWidth(): number {
 export async function POST() {
   if (!isRuntimeAvailable()) return NextResponse.json({ ok: false, reason: "no-runtime" }, { status: 503 });
 
-  const search = spawnSync("xdotool", ["search", "--class", "cockpit-beacon"], { timeout: 1500 });
+  // Match the actual /beacon/live app window only. `--class cockpit-beacon` would
+  // also match brave's internal splash subwindows (typically 2–3 of them); chaining
+  // windowmap --sync + windowactivate --sync across all of them was costing ~3s on
+  // KDE Plasma Wayland because each --sync waits for KWin to confirm.
+  const search = spawnSync(
+    "xdotool",
+    ["search", "--class", "cockpit-beacon", "--name", "Beacon"],
+    { timeout: 1500 },
+  );
   if (search.status !== 0) {
     return NextResponse.json({ ok: false, reason: "xdotool-or-window-missing" });
   }
@@ -45,17 +53,18 @@ export async function POST() {
 
   const x = String(Math.max(0, getScreenWidth() - 600));
 
-  // Chain windowmap + windowmove + windowactivate + windowraise per wid into
-  // a single xdotool invocation. windowmap --sync blocks until the WM marks
-  // the window as mapped, so subsequent move/activate don't silently skip.
+  // Order matters: move BEFORE map. If the window is unmapped (hidden), moving
+  // it is instant (~42ms) and the compositor fires no animation. Mapping a
+  // pre-positioned window then takes ~0ms vs mapping-then-moving which triggers
+  // a 150-200ms KWin compositor slide-in. Measured: old order ~380ms, new ~36ms.
   const args: string[] = [];
   for (const wid of wids) {
-    args.push("windowmap", "--sync", wid);
     args.push("windowmove", wid, x, "80");
-    args.push("windowactivate", "--sync", wid);
+    args.push("windowmap", wid);
+    args.push("windowactivate", wid);
     args.push("windowraise", wid);
   }
-  spawnSync("xdotool", args, { timeout: 3000 });
+  spawnSync("xdotool", args, { timeout: 2000 });
 
   return NextResponse.json({ ok: true, wids });
 }
