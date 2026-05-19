@@ -72,6 +72,34 @@ export async function POST(req: NextRequest) {
     }
     const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
     const prompt = renderTaskForAdapter(request);
+    // Create an orchestration_runs row for trackable intents so the local daemon
+    // can write /tmp/cockpit-run-<tab> and agent-hook-bridge.sh can close out the
+    // outcome when the agent session ends. Lifecycle intents (hard_stop /
+    // close_session) end sessions and don't produce work outcomes — skip tracking.
+    let cloudRunId: string | null = null;
+    if (request.intent !== "hard_stop" && request.intent !== "close_session") {
+      try {
+        const run = await createOrchestrationRun({
+          userId,
+          projectId: request.projectId ?? null,
+          adapter: request.adapter,
+          intent: request.intent,
+          state: "running",
+          projectKey: request.projectKey,
+          projectPath: request.projectPath,
+          payload: {
+            projectId: request.projectId ?? null,
+            projectKey: request.projectKey,
+            projectPath: request.projectPath,
+            model: request.model,
+          },
+        });
+        cloudRunId = run.id;
+      } catch (err) {
+        console.error("[orchestration/run] cloud tracked-run create failed:", err);
+        // Non-fatal — dispatch still proceeds without outcome tracking.
+      }
+    }
     const commandId = await enqueueInjectCommand(userId, {
       tab: request.projectKey,
       prompt,
@@ -80,8 +108,9 @@ export async function POST(req: NextRequest) {
       adapter: request.adapter,
       projectId: request.projectId ?? null,
       projectKey: request.projectKey,
+      runId: cloudRunId ?? undefined,
     });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, runId: cloudRunId });
   }
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);

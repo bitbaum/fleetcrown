@@ -648,6 +648,14 @@ while true; do
       prompt=$(echo "$payload" | jq -r '.prompt')
       prompt_key=$(echo "$payload" | jq -r '.promptKey // empty')
       prompt_label=$(echo "$payload" | jq -r '.promptLabel // empty')
+      run_id=$(echo "$payload" | jq -r '.runId // empty')
+      # Mirror the local-mode sentinel write so agent-hook-bridge.sh:handle_stop
+      # can post the captured handoff back to /api/orchestration/runs/<id>/finish.
+      # In cloud mode the run row was created on the server side; here we just
+      # land the id where the stop hook expects to read it.
+      if [ -n "$run_id" ]; then
+        printf '%s' "$run_id" > "/tmp/cockpit-run-${tab}"
+      fi
       execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label"
       ;;
     focus_tab)

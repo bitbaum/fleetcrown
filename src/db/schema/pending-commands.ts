@@ -28,6 +28,13 @@ export type InjectPayload = {
   adapter?: string;
   projectId?: string | null;
   projectKey?: string;
+  /**
+   * Orchestration run id created on the cloud side at dispatch time. The local
+   * daemon writes /tmp/cockpit-run-<tab> with this value before injecting so
+   * agent-hook-bridge.sh:handle_stop can call /api/orchestration/runs/<id>/finish
+   * when the agent's session ends. Closes the outcome-tracking loop in cloud mode.
+   */
+  runId?: string;
 };
 
 export type SwitchAgentPayload = {
