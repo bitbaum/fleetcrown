@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PanelLeftOpen, LogOut, Lock, Sun, Moon } from "lucide-react";
+import { PanelLeftOpen, PanelLeftClose, LogOut, Lock, Sun, Moon } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -25,17 +25,20 @@ export function SidebarFooter({
 
   return (
     <div className="ui-sidebar-section space-y-1 border-t border-border-subtle">
-      {collapsed && (
-        <button
-          type="button"
-          onClick={onToggleCollapsed}
-          className="ui-btn-icon mx-auto flex xl:hidden"
-          title="Expand sidebar"
-          aria-label="Expand sidebar"
-        >
-          <PanelLeftOpen className="h-4 w-4" />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={onToggleCollapsed}
+        className={cn(
+          "xl:hidden",
+          collapsed ? "ui-btn-icon mx-auto flex" : "ui-sidebar-utility w-full",
+        )}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed
+          ? <PanelLeftOpen className="h-4 w-4" />
+          : <><PanelLeftClose className="h-4 w-4 shrink-0" /><span>Collapse</span></>}
+      </button>
       {unlocked && (
         <button
           onClick={lock}
