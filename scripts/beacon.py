@@ -159,12 +159,15 @@ def _focus_live_window() -> bool:
 def _open_browser_beacon() -> bool:
     """Ensure the /beacon/live pre-warmed window is open and visible.
 
-    On the first call this launches an --app= frameless window at /beacon/live.
-    On subsequent calls it focuses the existing window (sub-100 ms — no cold start).
-    Sessions are delivered to the already-loaded page via SSE.
+    Priority order:
+      1. Live PID file → check process alive → focus window.
+      2. No PID (or stale) → try xdotool/wmctrl first; the cockpit-beacon-window
+         systemd service manages its own process and never writes the PID file.
+      3. No window found at all → cold-spawn a new browser tab.
 
     Returns True if a browser window is running, False if no browser was found.
     """
+    # Case 1: beacon.py previously spawned a window (PID file exists).
     if os.path.exists(_LIVE_PID_FILE):
         try:
             pid = int(open(_LIVE_PID_FILE).read().strip())
@@ -172,8 +175,13 @@ def _open_browser_beacon() -> bool:
             _focus_live_window()
             return True
         except (ProcessLookupError, ValueError, OSError):
-            pass  # stale PID file — fall through
+            pass  # stale — fall through to cases 2/3
 
+    # Case 2: service-managed window (no PID file). Try focus before spawning.
+    if _focus_live_window():
+        return True
+
+    # Case 3: no window found — cold-start one.
     for b in ("chromium", "chromium-browser", "brave-browser", "google-chrome"):
         if shutil.which(b):
             try:
