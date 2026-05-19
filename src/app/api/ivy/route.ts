@@ -84,10 +84,19 @@ export async function POST(req: NextRequest) {
     const { text, model } = await callGroq(message);
     return NextResponse.json({ ok: true, text, model, durationMs: 0, via: "groq" });
   } catch (e) {
-    console.error("[ivy] Groq fallback failed:", e);
+    // Surface the actual Groq cause so the user can act (rotate key / wait
+    // out rate limit / etc) instead of seeing the generic "unavailable" wall.
+    // Mirrors the classification in /api/control/dispatch.
+    const raw = e instanceof Error ? e.message : String(e);
+    const hint = /\b401\b|invalid.api.key/i.test(raw) ? "Groq API key is invalid"
+              : /\b429\b/.test(raw)                  ? "Groq rate-limited — try again shortly"
+              : /\b5\d\d\b/.test(raw)                ? "Groq server error"
+              : /timeout|abort/i.test(raw)           ? "Groq timed out"
+              : `Ivy is unavailable right now (${raw.slice(0, 80)})`;
+    console.error("[ivy] Groq fallback failed:", raw);
     return NextResponse.json(
-      { error: "Ivy is unavailable right now — please try again in a moment." },
-      { status: 500 },
+      { error: `Ivy is offline — ${hint}.` },
+      { status: 503 },
     );
   }
 }
