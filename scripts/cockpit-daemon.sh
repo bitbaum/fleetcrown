@@ -6,7 +6,7 @@
 #
 # Optional env vars:
 #   COCKPIT_BASE_URL      — defaults to https://cockpitapp.vercel.app
-#   COCKPIT_POLL_INTERVAL — seconds between polls, default 5
+#   COCKPIT_POLL_INTERVAL — long-poll wait for remote/Vercel endpoint (seconds), default 8
 #   COCKPIT_DRY_RUN       — set to "1" to log commands without executing them
 #
 # The daemon authenticates via bearer token; the server finds the default user automatically.
@@ -25,7 +25,7 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
 
 _LOCAL_URL="http://localhost:3000"
 _REMOTE_URL="${COCKPIT_BASE_URL:-https://cockpitapp.vercel.app}"
-POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-5}"
+POLL_INTERVAL="${COCKPIT_POLL_INTERVAL:-8}"
 PUSH_INTERVAL="${COCKPIT_PUSH_INTERVAL:-2}"
 DRY_RUN="${COCKPIT_DRY_RUN:-0}"
 TOKEN="${COCKPIT_DAEMON_TOKEN:-}"
@@ -83,9 +83,15 @@ _init_base_url() {
 trap 'rm -f "$_URL_CACHE"' EXIT
 
 claim_next() {
-  curl -sf --max-time 15 \
+  local base wait_secs
+  base=$(_base_url)
+  # Use a longer wait on local server (no Vercel function-timeout concern).
+  # Fall back to POLL_INTERVAL for remote (stays within Vercel's 10s default).
+  [[ "$base" == *"localhost"* ]] || [[ "$base" == *"127.0.0.1"* ]] \
+    && wait_secs=25 || wait_secs="$POLL_INTERVAL"
+  curl -sf --max-time 30 \
     -H "Authorization: Bearer $TOKEN" \
-    "$(_base_url)/api/control/commands" 2>/dev/null
+    "${base}/api/control/commands?wait=${wait_secs}" 2>/dev/null
 }
 
 mark_done() {
@@ -424,8 +430,9 @@ execute_transcription() {
 }
 
 # ── Runtime state push ────────────────────────────────────────────────────────
-# Reads /proc + /tmp every PUSH_INTERVAL seconds and POSTs to /api/control/runtime-state
-# so the Vercel control plane sees live agent status without needing local access.
+# _build_state_json reads /proc + /tmp and outputs the runtime-state JSON to stdout.
+# push_runtime_state calls it and POSTs immediately (used after command execution).
+# _push_loop calls it every PUSH_INTERVAL seconds but only POSTs when the hash changes.
 
 # Read a /tmp sentinel file; output an integer or the JSON literal null.
 _sentinel() {
@@ -456,7 +463,7 @@ _scan_agents() {
   done
 }
 
-push_runtime_state() {
+_build_state_json() {
   [ -f "$CONF_FILE" ] || return
 
   local agent_lines
@@ -581,31 +588,55 @@ push_runtime_state() {
 
   done < "$CONF_FILE"
 
+  echo "{\"projects\":$projects_arr}"
+}
+
+# Push the current runtime state to the API immediately.
+# Used after command execution so the UI reflects the result without waiting for the push loop.
+push_runtime_state() {
+  local _s
+  _s=$(_build_state_json 2>/dev/null) || return
+  [ -z "$_s" ] && return
   curl -sf --max-time 8 -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "{\"projects\":$projects_arr}" \
+    -d "$_s" \
     "$(_base_url)/api/control/runtime-state" >/dev/null 2>&1 || true
 }
 
 _push_loop() {
+  local _last_hash=""
   while true; do
-    push_runtime_state
+    local _s _h
+    _s=$(_build_state_json 2>/dev/null) || true
+    if [ -n "$_s" ]; then
+      _h=$(printf '%s' "$_s" | md5sum | cut -d' ' -f1)
+      if [ "$_h" != "$_last_hash" ]; then
+        _last_hash="$_h"
+        curl -sf --max-time 8 -X POST \
+          -H "Authorization: Bearer $TOKEN" \
+          -H "Content-Type: application/json" \
+          -d "$_s" \
+          "$(_base_url)/api/control/runtime-state" >/dev/null 2>&1 || true
+      fi
+    fi
     sleep "$PUSH_INTERVAL"
   done
 }
 
 _init_base_url
-log "starting — polling $(_base_url) every ${POLL_INTERVAL}s, pushing state every ${PUSH_INTERVAL}s"
+log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
 _PUSH_PID=$!
 trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE"; exit' INT TERM
 
 while true; do
-  response=$(claim_next) || { sleep "$POLL_INTERVAL"; continue; }
+  # claim_next long-polls — returns immediately on command or after wait timeout.
+  # Only sleep on curl error (server unreachable) to avoid hammering a dead endpoint.
+  response=$(claim_next) || { sleep 1; continue; }
 
   command_json=$(echo "$response" | jq -c '.command // empty' 2>/dev/null)
-  [ -z "$command_json" ] && { sleep "$POLL_INTERVAL"; continue; }
+  [ -z "$command_json" ] && continue
 
   id=$(echo "$command_json" | jq -r '.id')
   type=$(echo "$command_json" | jq -r '.type')
@@ -642,6 +673,6 @@ while true; do
       ;;
   esac
 
-  # Poll immediately for any queued follow-ups, then wait.
-  sleep 1
+  # Push updated state immediately so the UI reflects the execution result.
+  push_runtime_state &
 done
