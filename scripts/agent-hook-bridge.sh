@@ -426,10 +426,26 @@ handle_notification() {
     exit 0
   fi
 
+  # Context-aware prompt selection: read session health BEFORE queue dequeue.
+  # Degraded health → skip queue and use unblock (fix first, advance later).
+  # This mirrors sessionHealthBlocksQueue() on the client and the server-side gate
+  # in /api/orchestration/run — all three paths must agree.
+  local session_file auto_key _health
+  session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+  auto_key="next_best"
+  _health=""
+  if [ -f "$session_file" ]; then
+    _health=$(grep "^health:" "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' | tr -d '\n\r')
+    case "$_health" in
+      "needs attention"|"critical") auto_key="unblock" ;;
+    esac
+  fi
+
   # Dequeue any user-dispatched task first — same logic handle_stop uses for slot 1.
+  # Skipped when health is degraded so the agent focuses on recovery before new work.
   local queue_file
   queue_file="/tmp/agent-queue-${TAB_NAME,,}"
-  if [ -f "$queue_file" ]; then
+  if [ "$auto_key" = "next_best" ] && [ -f "$queue_file" ]; then
     local first_item tmp_q
     first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
     if [ -n "$first_item" ]; then
@@ -440,20 +456,6 @@ handle_notification() {
       write_inject_state "$TAB_NAME" "custom" "Queued prompt"
       exit 0
     fi
-  fi
-
-  # Context-aware prompt selection: read session health before picking which
-  # prompt to auto-inject. Degraded health → unblock (fix before advancing).
-  # Everything else → next_best (discovers or executes session.next).
-  local session_file auto_key _health
-  session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
-  auto_key="next_best"
-  _health=""
-  if [ -f "$session_file" ]; then
-    _health=$(grep "^health:" "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' | tr -d '\n\r')
-    case "$_health" in
-      "needs attention"|"critical") auto_key="unblock" ;;
-    esac
   fi
 
   local base session session_update_block
