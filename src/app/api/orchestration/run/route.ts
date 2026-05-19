@@ -131,6 +131,39 @@ export async function POST(req: NextRequest) {
     customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
   }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
+  // Create an orchestration_runs row for tab-injected adapters too — gives every dispatch
+  // an outcome to learn from, not just openclaw worker runs. Lifecycle intents (hard_stop /
+  // close_session) end sessions and don't produce work outcomes, so they're skipped.
+  const TRACKABLE_INTENTS = (request.intent !== "hard_stop" && request.intent !== "close_session");
+  const TAB_ADAPTERS = (request.adapter === "claude" || request.adapter === "codex" || request.adapter === "gemini");
+  let trackedRunId: string | null = null;
+  if (TAB_ADAPTERS && TRACKABLE_INTENTS) {
+    try {
+      const run = await createOrchestrationRun({
+        userId,
+        projectId: request.projectId ?? null,
+        adapter: request.adapter,
+        intent: request.intent,
+        state: "running",
+        projectKey: request.projectKey,
+        projectPath: request.projectPath,
+        payload: {
+          projectId: request.projectId ?? null,
+          projectKey: request.projectKey,
+          projectPath: request.projectPath,
+          model: request.model,
+        },
+      });
+      trackedRunId = run.id;
+      // Sentinel read by scripts/agent-hook-bridge.sh:handle_stop to call the finish endpoint
+      // with the captured outcome once the agent ends its session.
+      fs.writeFileSync(stateFile.run(effectiveKey), trackedRunId);
+    } catch (err) {
+      console.error("[orchestration/run] tracked run create failed:", err);
+      // Non-fatal — dispatch still proceeds without outcome tracking for this run.
+    }
+  }
+
   // Claude remains hook-driven via prompt injection into a live tab.
   if (request.adapter === "claude") {
     try {

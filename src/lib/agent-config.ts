@@ -46,7 +46,8 @@ export const stateFile = {
   prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
   lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
   queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab}`),
-  
+  run:      (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `cockpit-run-${tab}`),
+
   // Legacy names — no new files are written with these names; only used to delete stale on-disk files.
   claudeReady:  (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-ready-${tab}`),
   claudeClosed: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `claude-closed-${tab}`),

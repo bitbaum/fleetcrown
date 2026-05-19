@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
 import { orgs } from "./orgs";
@@ -15,6 +16,16 @@ export type OrchestrationRunPayload = {
   error?: string;
 };
 
+export const ORCHESTRATION_OUTCOMES = [
+  "success",
+  "partial",
+  "error",
+  "hang",
+  "user_abort",
+  "timeout",
+] as const;
+export type OrchestrationOutcome = (typeof ORCHESTRATION_OUTCOMES)[number];
+
 export const orchestrationRuns = pgTable("orchestration_runs", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id),
@@ -23,6 +34,7 @@ export const orchestrationRuns = pgTable("orchestration_runs", {
   adapter: text("adapter").$type<AdapterId>().notNull(),
   intent: text("intent").$type<OrchestrationTaskIntentId>().notNull(),
   state: text("state").$type<OrchestrationState>().notNull(),
+  outcome: text("outcome").$type<OrchestrationOutcome>(),
   projectKey: text("project_key").notNull(),
   projectPath: text("project_path").notNull(),
   summary: jsonb("summary").$type<OrchestrationTaskSummary>(),
@@ -36,6 +48,8 @@ export const orchestrationRuns = pgTable("orchestration_runs", {
   index("idx_orchestration_runs_project_id").on(table.projectId),
   index("idx_orchestration_runs_project_path").on(table.projectPath),
   index("idx_orchestration_runs_started_at").on(table.startedAt),
+  // Powers getRecentOutcomes(userId, projectKey) — finishedAt DESC, partial-indexed to skip running rows
+  index("idx_orchestration_runs_recent_outcomes").on(table.userId, table.projectKey, sql`finished_at DESC`),
 ]);
 
 export type OrchestrationRun = typeof orchestrationRuns.$inferSelect;

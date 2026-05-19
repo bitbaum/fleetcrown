@@ -67,6 +67,38 @@ patch_project_state() {
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
 
+# Finishes an orchestration_runs row with the captured handoff so dispatch
+# can learn from outcomes. The run id was written to /tmp/cockpit-run-<tab>
+# at dispatch time. Fire-and-forget — never blocks the stop hook.
+finish_orchestration_run() {
+  local tab_name="$1"
+  local session_file="$2"
+  local run_sentinel="/tmp/cockpit-run-${tab_name}"
+  [ -f "$run_sentinel" ] || return 0
+  local run_id token done_line next_line tests_line todos_line health_line
+  run_id=$(cat "$run_sentinel" 2>/dev/null | tr -d '[:space:]')
+  [ -z "$run_id" ] && return 0
+  token="${COCKPIT_DAEMON_TOKEN:-$(grep -m1 '^COCKPIT_DAEMON_TOKEN=' "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)}"
+  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
+  if [ -f "$session_file" ]; then
+    done_line=$(grep -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//')
+    next_line=$(grep -m1 '^next:'   "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//')
+    tests_line=$(grep -m1 '^tests:' "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//')
+    todos_line=$(grep -m1 '^todos:' "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//')
+    health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//')
+  fi
+  local payload
+  payload=$(jq -n \
+    --arg d "$done_line" --arg n "$next_line" --arg t "$tests_line" \
+    --arg td "$todos_line" --arg h "$health_line" \
+    '{summary: {done: $d, next: $n, tests: $t, todos: $td, health: $h}}')
+  curl -sf -X POST "${COCKPIT_URL}/api/orchestration/runs/${run_id}/finish" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer ${token}" \
+    -d "$payload" &>/dev/null &
+  rm -f "$run_sentinel"
+}
+
 
 emit_or_inject_prompt() {
   local tab_name="$1"
@@ -165,6 +197,10 @@ handle_stop() {
   ready_ts=$(date +%s)
   echo "$ready_ts" > "/tmp/agent-ready-${TAB_NAME}"
   patch_project_state "$TAB_NAME" "readyAt"
+  # Close out the tracked orchestration run with the handoff from the session
+  # file the agent just wrote. Done before the popup so the next dispatch can
+  # see this outcome via getRecentOutcomes() if Cockpit fetches mid-popup.
+  finish_orchestration_run "$TAB_NAME" "$HOME/.claude/sessions/${TAB_NAME}.md"
 
   play_sound "complete"
 
