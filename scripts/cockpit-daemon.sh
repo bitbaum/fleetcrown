@@ -505,19 +505,40 @@ push_runtime_state() {
       fi
     fi
 
+    # Session file content (done/next/tests/todos/health) — read and push so the cloud
+    # control plane shows current session state without needing a local server connection.
+    local sf="$HOME/.claude/sessions/${tab}.md"
+    local sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
+    if [ -f "$sf" ]; then
+      sess_done=$(grep  '^done:'   "$sf" 2>/dev/null | head -1 | sed 's/^done:[[:space:]]*//')
+      sess_next=$(grep  '^next:'   "$sf" 2>/dev/null | head -1 | sed 's/^next:[[:space:]]*//')
+      sess_tests=$(grep '^tests:'  "$sf" 2>/dev/null | head -1 | sed 's/^tests:[[:space:]]*//')
+      sess_todos=$(grep '^todos:'  "$sf" 2>/dev/null | head -1 | sed 's/^todos:[[:space:]]*//')
+      sess_health=$(grep '^health:' "$sf" 2>/dev/null | head -1 | sed 's/^health:[[:space:]]*//')
+      local mts
+      mts=$(stat -c '%Y' "$sf" 2>/dev/null || true)
+      [[ "$mts" =~ ^[0-9]+$ ]] && sess_mtime="$mts"
+    fi
+
     local proj
     proj=$(jq -n \
-      --arg      tab     "$tab" \
-      --argjson  running "$running" \
-      --argjson  tab_open "$tab_open" \
-      --argjson  agents  "$agents_json" \
-      --arg      cpk     "$cpk" \
-      --arg      cpl     "$cpl" \
-      --argjson  cpsat   "$cpsat" \
-      --argjson  ready   "$ready_at" \
-      --argjson  lock    "$lock_at" \
-      --argjson  closing "$closing_at" \
-      --argjson  closed  "$closed_at" \
+      --arg      tab       "$tab" \
+      --argjson  running   "$running" \
+      --argjson  tab_open  "$tab_open" \
+      --argjson  agents    "$agents_json" \
+      --arg      cpk       "$cpk" \
+      --arg      cpl       "$cpl" \
+      --argjson  cpsat     "$cpsat" \
+      --argjson  ready     "$ready_at" \
+      --argjson  lock      "$lock_at" \
+      --argjson  closing   "$closing_at" \
+      --argjson  closed    "$closed_at" \
+      --arg      sdone     "$sess_done" \
+      --arg      snext     "$sess_next" \
+      --arg      stests    "$sess_tests" \
+      --arg      stodos    "$sess_todos" \
+      --arg      shealth   "$sess_health" \
+      --argjson  smtime    "$sess_mtime" \
       '{
         tab:                    $tab,
         agentRunning:           $running,
@@ -530,7 +551,15 @@ push_runtime_state() {
         lockAt:                 (if $lock    == null then null else ($lock    | tonumber) end),
         closingAt:              (if $closing == null then null else ($closing | tonumber) end),
         closedAt:               (if $closed  == null then null else ($closed  | tonumber) end)
-      }' 2>/dev/null) || continue
+      }
+      + (if $smtime == null then {} else {
+        sessionDone:      $sdone,
+        sessionNext:      $snext,
+        sessionTests:     $stests,
+        sessionTodos:     $stodos,
+        sessionHealth:    $shealth,
+        sessionUpdatedAt: ($smtime | tonumber)
+      } end)' 2>/dev/null) || continue
     projects_arr=$(echo "$projects_arr" | jq ". + [$proj]" 2>/dev/null || echo "$projects_arr")
 
   done < "$CONF_FILE"

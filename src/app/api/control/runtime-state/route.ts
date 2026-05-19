@@ -15,6 +15,12 @@ interface ProjectRuntimePatch {
   lockAt?: number | null;                 // epoch seconds
   closingAt?: number | null;
   closedAt?: number | null;
+  sessionDone?: string;
+  sessionNext?: string;
+  sessionTests?: string;
+  sessionTodos?: string;
+  sessionHealth?: string;
+  sessionUpdatedAt?: number | null;       // epoch seconds (file mtime)
 }
 
 function tsOrNull(epochS: number | null | undefined): Date | null {
@@ -64,6 +70,14 @@ export async function POST(req: NextRequest) {
         lockAt:                 tsOrNull(p.lockAt),
         closingAt:              tsOrNull(p.closingAt),
         closedAt:               tsOrNull(p.closedAt),
+        // Session content — only included when the daemon read a session file.
+        // undefined means "leave DB value as-is"; present string means "update."
+        ...(p.sessionDone     !== undefined && { sessionDone:     p.sessionDone }),
+        ...(p.sessionNext     !== undefined && { sessionNext:     p.sessionNext }),
+        ...(p.sessionTests    !== undefined && { sessionTests:    p.sessionTests }),
+        ...(p.sessionTodos    !== undefined && { sessionTodos:    p.sessionTodos }),
+        ...(p.sessionHealth   !== undefined && { sessionHealth:   p.sessionHealth }),
+        ...(p.sessionUpdatedAt !== undefined && { sessionUpdatedAt: tsOrNull(p.sessionUpdatedAt) }),
       }).catch((err) => console.error("[runtime-state] db write failed:", err));
     })
   );
