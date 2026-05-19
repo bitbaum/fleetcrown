@@ -599,7 +599,7 @@
   }
   /* Small icon row-action button (rounded, surface-raised hover) — for edit/action icons on list rows */
   .ui-btn-row-action {
-    @apply p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
+    @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center p-1.5 rounded text-text-muted transition-colors hover:text-text-secondary hover:bg-surface-raised;
   }
   /* Compact xs outlined action button — tight rows (subscription actions, inline toolbars) */
   .ui-btn-xs {

@@ -8,7 +8,7 @@ import { requirePageUserId } from "@/lib/session";
 export function SummaryBarSkeleton() {
   const widths = ["5rem", "7rem", "6rem", "5rem", "5rem"];
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex gap-3 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
       {widths.map((w, i) => (
         <div
           key={i}
@@ -43,7 +43,7 @@ export async function SummaryBar() {
   ].filter(Boolean).join("\n");
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex gap-3 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
       {s.activeGoals > 0 && (
         <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
       )}
@@ -73,7 +73,7 @@ export async function SummaryBar() {
       {s.staleContacts > 0 && (
         <Pill
           icon={Users}
-          value={`${s.staleContacts} contacts need attention`}
+          value={`${s.staleContacts} contacts`}
           variant="amber"
           href="/people?health=stale"
         />
@@ -94,7 +94,7 @@ export async function SummaryBar() {
         prompt={todayBriefPrompt}
         title="Brief Ivy on today"
         label="Brief Ivy"
-        className="flex items-center gap-1.5 rounded-full border border-border-default bg-surface-base px-3 py-2 text-xs font-medium text-text-secondary hover:text-status-positive hover:border-status-positive/30 transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-base px-3 py-2 text-xs font-medium text-text-secondary hover:text-status-positive hover:border-status-positive/30 transition-colors min-h-11 sm:min-h-0 shrink-0"
       />
     </div>
   );
@@ -130,14 +130,14 @@ function Pill({
 
   if (href) {
     return (
-      <Link href={href} className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80 ${colors}`}>
+      <Link href={href} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80 min-h-11 sm:min-h-0 shrink-0 ${colors}`}>
         {inner}
       </Link>
     );
   }
 
   return (
-    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium ${colors}`}>
+    <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium shrink-0 ${colors}`}>
       {inner}
     </div>
   );

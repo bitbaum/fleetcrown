@@ -85,14 +85,14 @@ export default async function TodayPage() {
               prompt={WRAP_UP_PROMPT}
               label="Wrap up day"
               title="Ask Ivy to run your end-of-day review"
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 min-h-11 sm:min-h-0 transition-colors"
             />
           ) : (
             <IvyDispatchButton
               prompt={PLAN_DAY_PROMPT}
               label="Plan my day"
               title="Ask Ivy to plan your day"
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 min-h-11 sm:min-h-0 transition-colors"
             />
           )}
           <LogConversationButton />
