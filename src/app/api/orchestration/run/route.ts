@@ -140,6 +140,11 @@ export async function POST(req: NextRequest) {
         fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
         fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
         fs.writeFileSync(stateFile.closed(effectiveKey), String(nowS));
+      } else if (request.intent === "close_session") {
+        // Sentinel tells the stop hook to write closedAt (not readyAt) when the session ends.
+        // Mirrors the same logic in /api/inject for close_session.
+        fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
+        fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
       }
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
