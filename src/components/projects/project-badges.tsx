@@ -61,15 +61,24 @@ export function MaturityBar({ value }: { value: string }) {
   );
 }
 
+const STATUS_COLOR_MAP: Record<string, string> = {
+  active:        "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  production:    "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  live:          "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  launched:      "bg-status-positive-subtle text-status-positive border-status-positive/25",
+  planning:      "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  "pre-launch":  "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  blueprint:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  early:         "bg-status-warning-subtle text-status-warning border-status-warning/25",
+  "in-progress": "bg-accent-muted text-accent-text border-accent-primary/25",
+  development:   "bg-accent-muted text-accent-text border-accent-primary/25",
+  paused:        "bg-surface-raised text-text-muted border-border-default",
+  archived:      "bg-surface-raised text-text-muted border-border-default",
+  deprecated:    "bg-surface-raised text-text-muted border-border-default",
+};
+
 export function StatusBadge({ value }: { value: string }) {
-  const v = value.toLowerCase();
-  const isProduction = v.includes("production") || v.includes("active");
-  const isEarly = v.includes("early") || v.includes("planning") || v.includes("blueprint") || v.includes("pre-launch");
-  const cls = isProduction
-    ? "bg-status-positive-subtle text-status-positive border-status-positive/25"
-    : isEarly
-    ? "bg-status-warning-subtle text-status-warning border-status-warning/25"
-    : "bg-accent-muted text-accent-text border-accent-primary/25";
+  const cls = STATUS_COLOR_MAP[value.toLowerCase()] ?? "bg-surface-raised text-text-tertiary border-border-subtle";
   return (
     <span className={`ui-micro-badge truncate max-w-[180px] ${cls}`} title={value}>
       {value}

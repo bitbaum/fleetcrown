@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { MaturityBar, StatusBadge } from "./project-badges";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 
@@ -124,10 +124,13 @@ export function DescriptionEditor({
   return (
     <button
       onClick={() => ie.start(value ?? "")}
-      className="ui-link-subtle mt-0.5 w-full text-left leading-relaxed"
+      className="group/desc ui-link-subtle mt-0.5 w-full text-left leading-relaxed flex items-start gap-1.5"
       title="Click to edit description"
     >
-      {value ?? <span className="italic text-text-muted">Add a description…</span>}
+      <span className="flex-1">
+        {value ?? <span className="italic text-text-muted">Add a description…</span>}
+      </span>
+      <Pencil className="h-3 w-3 shrink-0 mt-0.5 text-text-muted opacity-0 group-hover/desc:opacity-100 transition-opacity" />
     </button>
   );
 }

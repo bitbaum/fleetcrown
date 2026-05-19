@@ -5,6 +5,8 @@ import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { z } from "zod";
 
+export const RECENT_INTERACTION_LIMIT = 5;
+
 export const CreateProjectBody = z.object({
   name: z.string().trim().min(1, "name is required"),
   description: z.string().trim().optional(),
@@ -155,7 +157,7 @@ export async function getProjectDetail(userId: string, id: string) {
       .from(interactions)
       .where(and(eq(interactions.entityId, id), eq(interactions.userId, userId)))
       .orderBy(desc(interactions.occurredAt))
-      .limit(5),
+      .limit(RECENT_INTERACTION_LIMIT),
     db
       .select({
         id: goals.id,
@@ -195,6 +197,7 @@ export async function getProjectDetail(userId: string, id: string) {
 
   return {
     project,
+    createdAt: project.createdAt,
     attrs: attrMap.get(id) ?? {},
     relations: relations.map((r) => ({
       type: r.type,

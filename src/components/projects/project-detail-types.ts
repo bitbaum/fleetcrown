@@ -69,6 +69,7 @@ export type ProjectData = {
   type: string;
   description: string | null;
   source: string | null;
+  createdAt: string | null;
   readonly?: boolean;
   attrs: Record<string, string>;
   relations: Array<{ type: string; strength: number | null; targetId: string; targetName: string; targetType: string }>;
@@ -148,4 +149,17 @@ export const SUGGESTED_ATTR_LABELS: Record<string, string> =
 export const SUGGESTED_ATTR_PLACEHOLDERS: Record<string, string> =
   Object.fromEntries(SUGGESTED_ATTRS.map(({ key, placeholder }) => [key, placeholder]));
 
-export const PROJECT_CHANNELS = ["work-session", "meeting", "ivy", "review", "deployment", "call", "other"] as const;
+export type ChannelConfig = { key: string; label: string };
+
+/** Single source of truth for activity channels. Icons live in ProjectOverviewTab (UI concern). */
+export const CHANNEL_CONFIG: ChannelConfig[] = [
+  { key: "work-session", label: "Work Session" },
+  { key: "meeting",      label: "Meeting" },
+  { key: "ivy",          label: "Ivy" },
+  { key: "review",       label: "Review" },
+  { key: "deployment",   label: "Deployment" },
+  { key: "call",         label: "Call" },
+  { key: "other",        label: "Other" },
+];
+
+export const PROJECT_CHANNELS = CHANNEL_CONFIG.map((c) => c.key) as [string, ...string[]];

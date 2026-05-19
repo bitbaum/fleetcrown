@@ -81,14 +81,14 @@ export async function GET(
 
   const [resolved, promptActivity, orchestrationRuns, runtimeState] = await Promise.all([
     resolveProjectDetailWithOrgFallback(userId, id),
-    getProjectPromptActivity(userId, id, 40).catch(() => []),
-    getProjectOrchestrationRuns(userId, id, 20).catch(() => []),
+    getProjectPromptActivity(userId, id, 40).catch((e) => { console.error("[projects/[id]] promptActivity query failed:", e); return []; }),
+    getProjectOrchestrationRuns(userId, id, 20).catch((e) => { console.error("[projects/[id]] orchestrationRuns query failed:", e); return []; }),
     getProjectStateByProjectId(id).catch(() => null),
   ]);
 
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
-  const { project, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
+  const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
   const readonly = ownerId !== userId;
 
   const linkedJobs = getLinkedJobs(project.id, project.name);
@@ -117,6 +117,7 @@ export async function GET(
     type: project.type,
     description: project.description,
     source: project.source,
+    createdAt: createdAt instanceof Date ? createdAt.toISOString() : (createdAt ?? null),
     readonly: readonly || undefined,
     attrs,
     relations,

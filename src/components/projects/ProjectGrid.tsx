@@ -13,6 +13,7 @@ import {
   getHealthSignals,
 } from "./project-badges";
 import { getProjectLinks, RESERVED } from "./project-detail-types";
+import { buildProjectIvyPrompt } from "@/lib/ivy-prompts";
 
 const CHIP_MAX_CHARS = 28;
 
@@ -41,16 +42,7 @@ function ProjectCard({
   const hasIssues = signals.length > 0;
   const extraAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
 
-  const ivyPrompt = [
-    `Project: ${project.name}`,
-    status && `Status: ${status}`,
-    maturity && `Maturity: ${maturity}`,
-    description && `Description: ${description}`,
-    nextStep && `Next Step: ${nextStep}`,
-    signals.length > 0 && `Issues: ${signals.map((s) => s.label).join(", ")}`,
-    "",
-    "What should I prioritize for this project? What are the biggest risks or next steps?",
-  ].filter(Boolean).join("\n");
+  const ivyPrompt = buildProjectIvyPrompt({ name: project.name, description, attrs });
 
   return (
     <div
@@ -143,7 +135,9 @@ function ProjectCard({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-text-muted italic">No context yet — click to add</p>
+          <div className="rounded border border-dashed border-border-default px-2.5 py-2 text-center">
+            <span className="text-xs text-text-muted">Add context →</span>
+          </div>
         )
       )}
     </div>

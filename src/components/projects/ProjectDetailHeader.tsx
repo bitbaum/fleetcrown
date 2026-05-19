@@ -18,25 +18,8 @@ import {
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
-
-function buildIvyPrompt(data: ProjectData): string {
-  const a = data.attrs;
-  const issueLines = HEALTH_SIGNAL_CONFIG
-    .filter((cfg) => a[cfg.key])
-    .map((cfg) => `${cfg.cardLabel}: ${a[cfg.key]}`);
-  return [
-    `Project: ${data.name}`,
-    a["status"] && `Status: ${a["status"]}`,
-    a["maturity"] && `Maturity: ${a["maturity"]}`,
-    data.description && `Description: ${data.description}`,
-    a["next_step"] && `Next Step: ${a["next_step"]}`,
-    a["stack"] && `Stack: ${a["stack"]}`,
-    a["mission"] && `Mission: ${a["mission"]}`,
-    ...issueLines,
-    "",
-    "What should I focus on for this project right now? Biggest risks and immediate next steps?",
-  ].filter(Boolean).join("\n");
-}
+import { buildProjectIvyPrompt } from "@/lib/ivy-prompts";
+import { compactRelativeDate } from "@/lib/dates";
 
 export function ProjectDetailHeader({
   data,
@@ -113,12 +96,15 @@ export function ProjectDetailHeader({
             )}
           </div>
           <DescriptionEditor value={description} editable={editable} onSave={saveDescription} />
+          {data?.createdAt && (
+            <p className="mt-1 text-micro text-text-muted">Created {compactRelativeDate(data.createdAt)}</p>
+          )}
         </div>
 
         <div className="ui-card-actions shrink-0 self-start">
           {data && (
             <IvyDispatchButton
-              prompt={buildIvyPrompt(data)}
+              prompt={buildProjectIvyPrompt(data)}
               title="Ask Ivy about this project"
               className="ui-icon-action"
             />
@@ -154,6 +140,7 @@ export function ProjectDetailHeader({
               <Activity className="h-4 w-4 text-accent-text" />
             </Link>
           )}
+          <div className="w-px h-4 bg-border-default mx-0.5 shrink-0" />
           {editable && (
             <DeleteButton
               onDelete={async () => {
@@ -181,7 +168,7 @@ export function ProjectDetailHeader({
           <StatusEditor value={effectiveStatus} editable={editable} onSave={saveStatus} />
           <MaturityEditor value={effectiveMaturity} editable={editable} onSave={saveMaturity} />
           {hasIssues && (
-            <span className="ui-tag ui-tag-negative gap-1 ml-auto">
+            <span className="ui-tag ui-tag-negative gap-1">
               <AlertTriangle className="h-3 w-3" /> Issues detected
             </span>
           )}

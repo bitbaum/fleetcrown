@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowRight, Bot, Circle, Code2, FileCheck, Loader2, MessageSquare, Phone, Plus, Rocket, Users } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
-  ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
+  ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, CHANNEL_CONFIG,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
@@ -92,7 +92,7 @@ export function OverviewTab({
   const [showEmpty, setShowEmpty] = useState(false);
   const [activityList, setActivityList] = useState(data.interactions);
   const [loggingActivity, setLoggingActivity] = useState(false);
-  const [actChannel, setActChannel] = useState<string>(PROJECT_CHANNELS[0]);
+  const [actChannel, setActChannel] = useState<string>(CHANNEL_CONFIG[0].key);
   const [actSummary, setActSummary] = useState("");
   const [actDate, setActDate] = useState(toLocalDateStr(new Date()));
   const [actSaving, setActSaving] = useState(false);
@@ -279,7 +279,7 @@ export function OverviewTab({
                 onChange={(e) => setActChannel(e.target.value)}
                 className="flex-1 ui-input-tight"
               >
-                {PROJECT_CHANNELS.map((c) => <option key={c} value={c}>{c}</option>)}
+                {CHANNEL_CONFIG.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
               <input
                 type="date"
