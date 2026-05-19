@@ -8,6 +8,7 @@ import { getAgentProcesses, readFastState } from "@/lib/control-fast-state";
 import { getZellijTabs } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
 import postgres from "postgres";
@@ -193,7 +194,7 @@ export async function GET() {
       let pgListener: ReturnType<typeof postgres> | null = null;
       if (!isRuntimeAvailable() && process.env.DATABASE_URL) {
         pgListener = postgres(process.env.DATABASE_URL, { max: 1 });
-        pgListener.listen("cockpit_state", (notifyUserId) => {
+        pgListener.listen(NOTIFY_CHANNEL, (notifyUserId) => {
           if (notifyUserId === userId) scheduledTick();
         }).catch((err) => console.warn("[control/stream] LISTEN setup failed:", err));
       }
