@@ -26,3 +26,18 @@ export const isAutoContinueEnabledSync = (tab: string): boolean => {
     return true;
   }
 };
+
+// Global sleep mode — when "on", every ready banner auto-injects immediately
+// (no countdown) so the user can walk away and have the outcome-tracking loop
+// run on its own. Persisted in localStorage so the toggle survives reloads;
+// synced to a /tmp sentinel so the daemon can skip popup launching too.
+export const SLEEP_MODE_KEY = "control:sleep-mode";
+
+export const isSleepModeEnabledSync = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SLEEP_MODE_KEY) === "on";
+  } catch {
+    return false;
+  }
+};

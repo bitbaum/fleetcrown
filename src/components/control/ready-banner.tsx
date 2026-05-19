@@ -5,6 +5,7 @@ import { Zap, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
+import { useSleepMode } from "@/hooks/use-sleep-mode";
 import type { PromptMeta } from "@/lib/agent-config";
 
 // Minimal shape ReadyBanner actually needs — both PromptMeta and AgentPrompt satisfy this.
@@ -41,6 +42,7 @@ export function ReadyBanner({
   dispatchReason?: string;
   showKeyHints?: boolean;
 }) {
+  const { enabled: sleepMode } = useSleepMode();
   const [seconds, setSeconds] = useState(() => {
     if (tab) {
       try {
@@ -53,6 +55,11 @@ export function ReadyBanner({
     }
     return AUTO_INJECT_S;
   });
+  // Sleep mode short-circuits the countdown: auto-inject the next-best action
+  // immediately so the user can walk away.
+  useEffect(() => {
+    if (sleepMode) setSeconds(0); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [sleepMode]);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
   const onAutoInjectRef = useRef(onAutoInject);
   const onSendRef = useRef(onSend);
@@ -80,7 +87,7 @@ export function ReadyBanner({
     return () => clearTimeout(id);
   }, [seconds, paused, autoContinueEnabled, primaryKey, tab]);
 
-  const timerLabel = !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
+  const timerLabel = sleepMode ? "Sleep" : !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
 
   const nextLabel = healthBypass
     ? `AI picks recovery task — ${healthBypass.toLowerCase()}, queue paused`

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { RefreshCw, FolderKanban, Sparkles, PanelsTopLeft, Activity, GitCommitHorizontal, LayoutList, LayoutGrid, Plus } from "lucide-react";
+import { RefreshCw, FolderKanban, Sparkles, PanelsTopLeft, Activity, GitCommitHorizontal, LayoutList, LayoutGrid, Plus, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
@@ -10,6 +10,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
+import { useSleepMode } from "@/hooks/use-sleep-mode";
 import { buildControlPageState, getProjectDisplayState } from "./control-presenter";
 import { AttentionBar } from "./AttentionBar";
 import { DaemonStatusBanner } from "./DaemonStatusBanner";
@@ -33,6 +34,7 @@ export function ControlPanel() {
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
 
+  const { enabled: sleepMode, toggle: toggleSleepMode } = useSleepMode();
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
   const [viewMode, setViewMode] = useLocalStorageState<"full" | "commander">(
     "control:view-mode",
@@ -131,6 +133,13 @@ export function ControlPanel() {
       ) : (
         <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
       )}
+      <button
+        onClick={toggleSleepMode}
+        title={sleepMode ? "Sleep mode on — countdown is 0; any keypress wakes" : "Sleep mode — auto-fire every ready banner with no countdown"}
+        className={cn("ui-icon-btn rounded p-0.5 transition-colors hover:text-text-primary", sleepMode && "text-accent-text")}
+      >
+        <Moon className={cn("h-3.5 w-3.5", sleepMode && "fill-current")} />
+      </button>
       <button
         onClick={() => setViewMode((v) => v === "full" ? "commander" : "full")}
         title={viewMode === "full" ? "Switch to commander view" : "Switch to full view"}
