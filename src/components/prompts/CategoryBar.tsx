@@ -18,10 +18,10 @@ export function CategoryBar({
   );
 
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
       <button
         onClick={() => onSelect("all")}
-        className={active === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}
+        className={`shrink-0 ${active === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}`}
       >
         All ({templates.length})
       </button>
@@ -33,8 +33,8 @@ export function CategoryBar({
             key={cat}
             onClick={() => onSelect(isActive ? "all" : cat)}
             className={isActive
-              ? cn("rounded-2xl border px-4 py-3 text-sm font-medium transition-colors", meta.color)
-              : "ui-chip-filter"
+              ? cn("shrink-0 rounded-2xl border px-4 py-3 text-sm font-medium transition-colors", meta.color)
+              : "shrink-0 ui-chip-filter"
             }
           >
             {meta.label} ({counts.get(cat)})
