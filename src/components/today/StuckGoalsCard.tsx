@@ -16,18 +16,15 @@ export async function StuckGoalsCard() {
 
   if (items.length === 0) {
     return (
-      <div id="stuck-goals">
-        <Card>
-          <CardHeader icon={CirclePause} title="Stalled Goals" right={<span className="text-xs text-status-positive font-medium">All on track</span>} />
-          <p className="text-sm text-text-muted">No goals stuck at 0% — good momentum.</p>
-        </Card>
-      </div>
+      <Card id="stuck-goals">
+        <CardHeader icon={CirclePause} title="Stalled Goals" right={<span className="text-xs text-status-positive font-medium">All on track</span>} />
+        <p className="text-sm text-text-muted">No goals stuck at 0% — good momentum.</p>
+      </Card>
     );
   }
 
   return (
-    <div id="stuck-goals">
-      <Card>
+    <Card id="stuck-goals">
         <CardHeader
           icon={CirclePause}
           title="Stalled Goals"
@@ -69,6 +66,5 @@ export async function StuckGoalsCard() {
           </Link>
         </div>
       </Card>
-    </div>
   );
 }

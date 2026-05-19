@@ -15,18 +15,15 @@ export async function RecentRunsCard() {
 
   if (runs.length === 0) {
     return (
-      <div className="md:col-span-2">
-        <Card>
-          <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
-          <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
+        <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
+      </Card>
     );
   }
 
   return (
-    <div className="md:col-span-2">
-      <Card>
+    <Card>
         <CardHeader
           icon={Bot}
           title="Recent Agent Work"
@@ -79,6 +76,5 @@ export async function RecentRunsCard() {
           })}
         </div>
       </Card>
-    </div>
   );
 }

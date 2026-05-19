@@ -511,6 +511,12 @@
   .ui-chip-action-compact {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
   }
+  /* Pill action button — Today page quick-action chips (Log, Capture, Plan day, etc.) */
+  .ui-btn-pill {
+    @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay min-h-11 sm:min-h-0;
+  }
+  .ui-btn-pill-muted    { @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary min-h-11 sm:min-h-0; }
+  .ui-btn-pill-positive { @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30 min-h-11 sm:min-h-0; }
   .ui-empty-panel {
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);

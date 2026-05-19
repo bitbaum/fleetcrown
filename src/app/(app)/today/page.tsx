@@ -62,14 +62,14 @@ export default async function TodayPage() {
               prompt={WRAP_UP_PROMPT}
               label="Wrap up day"
               title="Ask Ivy to run your end-of-day review"
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 min-h-11 sm:min-h-0 transition-colors"
+              className="ui-btn-pill-positive"
             />
           ) : (
             <IvyDispatchButton
               prompt={PLAN_DAY_PROMPT}
               label="Plan my day"
               title="Ask Ivy to plan your day"
-              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-status-positive bg-surface-raised hover:bg-surface-overlay border border-border-subtle hover:border-status-positive/30 rounded-full px-3 py-1.5 min-h-11 sm:min-h-0 transition-colors"
+              className="ui-btn-pill-positive"
             />
           )}
           <LogConversationButton />
@@ -79,9 +79,7 @@ export default async function TodayPage() {
 
       {/* Recent agent outcomes — what agents shipped since last visit */}
       <Suspense fallback={<CardSkeleton />}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <RecentRunsCard />
-        </div>
+        <RecentRunsCard />
       </Suspense>
 
       {/* Actionable first — what needs your decision */}
