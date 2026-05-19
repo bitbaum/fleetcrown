@@ -4,6 +4,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { tmpdir } from "os";
 import { join } from "path";
+import { existsSync } from "fs";
 import { randomUUID } from "crypto";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
@@ -11,7 +12,24 @@ import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 
 const execFileAsync = promisify(execFile);
-const TRANSCRIBE_PY = join(process.cwd(), "scripts/transcribe.py");
+
+// Resolve scripts/transcribe.py for both deployment modes:
+//   • `npm run dev`           → cwd = repo root            → scripts/transcribe.py
+//   • cockpit-app.service     → cwd = .next/standalone     → ../../scripts/transcribe.py
+// COCKPIT_SCRIPTS_DIR can override (e.g. when the standalone bundle is moved).
+function resolveTranscribePy(): string {
+  const envDir = process.env.COCKPIT_SCRIPTS_DIR;
+  const candidates = [
+    envDir && join(envDir, "transcribe.py"),
+    join(process.cwd(), "scripts/transcribe.py"),
+    join(process.cwd(), "..", "..", "scripts/transcribe.py"),
+  ].filter((p): p is string => Boolean(p));
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return candidates[candidates.length - 1];  // fail loudly at exec time with the last guess
+}
+const TRANSCRIBE_PY = resolveTranscribePy();
 
 async function readTranscriptionSettings(): Promise<{ whisperModel: string; provider: string }> {
   try {
