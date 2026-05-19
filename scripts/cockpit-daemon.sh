@@ -177,17 +177,18 @@ execute_inject() {
   # Write session lifecycle sentinel files so the stop hook transitions the UI
   # correctly — mirroring what /api/orchestration/run and /api/inject do locally.
   if [ "$prompt_key" = "hard_stop" ] || [ "$prompt_key" = "close_session" ]; then
-    local now_s tab_lower
+    local now_s
     now_s=$(date +%s)
-    tab_lower="${tab,,}"
     # Clear stale ready/closed state (mirrors clearHandshakeFiles in the API).
-    rm -f "/tmp/agent-ready-${tab_lower}" "/tmp/claude-ready-${tab_lower}"
-    rm -f "/tmp/agent-closed-${tab_lower}" "/tmp/claude-closed-${tab_lower}"
+    # Use original-case tab name — the stop hook and push_runtime_state both read
+    # these paths with ${TAB_NAME} / ${tab} which preserves the zellij/conf casing.
+    rm -f "/tmp/agent-ready-${tab}" "/tmp/claude-ready-${tab}"
+    rm -f "/tmp/agent-closed-${tab}" "/tmp/claude-closed-${tab}"
     # Sentinel tells the stop hook to write closedAt instead of showing the beacon.
-    : > "/tmp/agent-session-closed-${tab_lower}"
-    echo "$now_s" > "/tmp/agent-closing-${tab_lower}"
+    : > "/tmp/agent-session-closed-${tab}"
+    echo "$now_s" > "/tmp/agent-closing-${tab}"
     if [ "$prompt_key" = "hard_stop" ]; then
-      echo "$now_s" > "/tmp/agent-closed-${tab_lower}"
+      echo "$now_s" > "/tmp/agent-closed-${tab}"
     fi
   fi
 
