@@ -5,6 +5,8 @@
  * suggestedSchedule: cron expression if this makes sense as a recurring job
  */
 
+import { APP_NAME } from "./brand";
+
 export type PromptCategory =
   | "fleet"
   | "security"
@@ -548,7 +550,7 @@ Check:
 1. **Git**: last commit, any uncommitted changes, branch status
 2. **CI**: GitHub Actions status (passing/failing)
 3. **Deployment**: Vercel status, last deploy date
-4. **Known issues**: broken features, open bugs from Cockpit knowledge graph
+4. **Known issues**: broken features, open bugs from ${APP_NAME} knowledge graph
 5. **Next action**: single most important thing to do right now
 
 Format as a quick-scan card. Green ✓ / Yellow ⚠ / Red ✗ per area.`,
@@ -754,7 +756,7 @@ For each project:
 
 Then: across all projects, what's the single most important thing to focus on next week?
 
-Check git logs and Cockpit database for current state.`,
+Check git logs and ${APP_NAME} database for current state.`,
     suggestedSchedule: "0 18 * * 5",
     tags: ["weekly", "review"],
   },

@@ -1,5 +1,6 @@
 import { join } from "path";
 import { homedir } from "os";
+import { APP_NAME } from "./brand";
 
 /** Legacy settings file path — kept for daemon fallback reads only. */
 export const BEACON_SETTINGS_PATH = join(homedir(), ".config", "agent-dashboard-settings.json");
@@ -37,9 +38,9 @@ export const POPUP_MODES: readonly {
   {
     value: "web",
     label: "Web popup",
-    description: "Chrome --app window opens at /beacon/live; same UI as Cockpit.",
+    description: `Chrome --app window opens at /beacon/live; same UI as ${APP_NAME}.`,
     pros: "Single source of truth — design lives in src/components/control, no native copy to drift",
-    cons: "Requires Cockpit to be running and a Chromium-family browser installed",
+    cons: `Requires ${APP_NAME} to be running and a Chromium-family browser installed`,
   },
   {
     value: "disabled",

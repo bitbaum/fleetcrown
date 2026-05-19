@@ -8,6 +8,7 @@ import { requirePageUserId } from "@/lib/session";
 import { NewGoalButton } from "@/components/goals/NewGoalButton";
 import { GoalsGrid } from "@/components/goals/GoalsGrid";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { APP_NAME } from "@/config/brand";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import type { GoalWithChildren } from "@/db/queries/goals";
 
@@ -55,7 +56,7 @@ export default async function GoalsPage() {
             title="No goals yet"
             action={
               <IvyDispatchButton
-                prompt={"I'm starting to track my goals in Cockpit. I'm a builder running multiple projects.\n\nHelp me think through what my top 2–3 goals should be right now. What areas should I consider (professional, health, learning, relationships, financial)? What makes a good goal versus just a task?"}
+                prompt={`I'm starting to track my goals in ${APP_NAME}. I'm a builder running multiple projects.\n\nHelp me think through what my top 2–3 goals should be right now. What areas should I consider (professional, health, learning, relationships, financial)? What makes a good goal versus just a task?`}
                 label="Ask Ivy to help define my goals"
                 title="Ask Ivy to help define your goals"
                 className="ui-callout-positive items-center gap-2 text-status-positive transition-colors hover:bg-status-positive/10"

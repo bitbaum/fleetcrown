@@ -1,3 +1,5 @@
+import { APP_NAME } from "@/config/brand";
+
 // Goals with 0% progress older than this are considered stalled.
 export const STALE_GOALS_DAYS = 30;
 
@@ -16,7 +18,7 @@ export const WEATHER_CITY = "Zurich";
 
 export const PLAN_DAY_PROMPT = `Plan my day.
 
-Check in Cockpit and the codebase:
+Check in ${APP_NAME} and the codebase:
 - Which of my active projects has the most urgent open work or is blocking a goal?
 - Which goals are due soon or have been stuck at 0% for 30+ days?
 - Are there any commitments or events with deadlines in the next 3 days?

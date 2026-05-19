@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Compass } from "lucide-react";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 
 export default function NotFound() {
   return (
@@ -9,7 +10,7 @@ export default function NotFound() {
         <Compass className="h-14 w-14 text-text-muted" />
         <div className="text-2xl font-medium text-text-primary">Page not found</div>
         <div className="max-w-xl text-lg text-text-secondary">
-          That route doesn&rsquo;t exist in Cockpit.
+          That route doesn&rsquo;t exist in {APP_NAME}.
         </div>
         <Link
           href={ROUTES.APP_HOME}

@@ -17,6 +17,7 @@ import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { LayoutGrid } from "lucide-react";
+import { APP_NAME } from "@/config/brand";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
@@ -43,7 +44,7 @@ export default async function TodayPage() {
             <div className="min-w-0 flex-1">
               <p className="font-medium text-text-primary">Register your first project to get started</p>
               <p className="mt-0.5 text-sm text-text-secondary">
-                Cockpit tracks your AI agent sessions, git state, and progress across projects — add one to the control panel to unlock the fleet view.
+                {APP_NAME} tracks your AI agent sessions, git state, and progress across projects — add one to the control panel to unlock the fleet view.
               </p>
               <Link href="/control" className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
                 Go to Control Panel →

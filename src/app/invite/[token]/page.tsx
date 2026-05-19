@@ -6,6 +6,7 @@ import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { getJson, postJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton, AuthIconBadge, AuthHeading,
 } from "@/components/auth/AuthShell";
@@ -75,7 +76,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
     status === "loading" ? "Verifying your invitation link." :
     status === "used"    ? "This invitation has already been accepted." :
     status === "expired" ? "This invitation link is invalid or has expired." :
-    prefillEmail ? `Joining as ${prefillEmail}.` : "Create your Cockpit account.";
+    prefillEmail ? `Joining as ${prefillEmail}.` : `Create your ${APP_NAME} account.`;
 
   const isError = status === "expired" || status === "used";
 

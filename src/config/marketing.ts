@@ -1,3 +1,5 @@
+import { APP_NAME } from "./brand";
+
 export const LANDING_BADGE = "Personal AI workspace";
 export const LANDING_HEADLINE = ["Command your", "AI fleet."] as const;
 export const LANDING_SUBTITLE = "Add projects. Launch agents. Track progress. Keep the work visible in one place.";
@@ -13,7 +15,7 @@ export const LANDING_FEATURES = [
   {
     icon: "⚡",
     title: "Continuation loop",
-    body: "When a session pauses, Cockpit can surface the next decision instead of leaving it buried in a terminal tab.",
+    body: `When a session pauses, ${APP_NAME} can surface the next decision instead of leaving it buried in a terminal tab.`,
   },
   {
     icon: "◎",

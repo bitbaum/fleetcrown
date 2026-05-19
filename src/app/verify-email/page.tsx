@@ -9,6 +9,7 @@ import {
 } from "@/components/auth/AuthShell";
 import { postJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
+import { APP_NAME } from "@/config/brand";
 
 function VerifyEmailInner() {
   const params = useSearchParams();
@@ -41,7 +42,7 @@ function VerifyEmailInner() {
           title="Email verified ✓"
           description="Your email address has been confirmed. You're all set."
         />
-        <AuthFooterLink href={ROUTES.APP_HOME}>Go to Cockpit →</AuthFooterLink>
+        <AuthFooterLink href={ROUTES.APP_HOME}>Go to {APP_NAME} →</AuthFooterLink>
       </AuthShell>
     );
   }

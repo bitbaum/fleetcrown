@@ -3,6 +3,7 @@ import { runTool } from "@/lib/tools";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
+import { APP_NAME } from "@/config/brand";
 
 // openclaw agent --json output shape
 type OpenclawResult = {
@@ -18,7 +19,7 @@ const AskIvyBody = z.object({
 });
 
 const IVY_SYSTEM_PROMPT =
-  "You are Ivy, a helpful AI assistant inside Cockpit — a personal life operating system for builders. Be concise and direct.";
+  `You are Ivy, a helpful AI assistant inside ${APP_NAME} — a personal life operating system for builders. Be concise and direct.`;
 
 // Direct Groq fallback when the local openclaw gateway is unavailable.
 async function callGroq(message: string): Promise<{ text: string; model: string }> {
