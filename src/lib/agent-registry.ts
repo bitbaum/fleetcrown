@@ -115,6 +115,24 @@ function getOpenClawAvailability(): Pick<AgentRegistryEntry, "available" | "avai
   };
 }
 
+function getCodexAvailability(): Pick<AgentRegistryEntry, "available" | "availabilityReason"> {
+  if (commandExistsInPath("codex")) {
+    return { available: true };
+  }
+
+  if (existsSync(path.join(HOME, ".codex"))) {
+    return {
+      available: false,
+      availabilityReason: "Codex configuration exists, but no Codex CLI command is installed on PATH.",
+    };
+  }
+
+  return {
+    available: false,
+    availabilityReason: "Codex CLI is not installed on this machine.",
+  };
+}
+
 function getGeminiAvailability(): Pick<AgentRegistryEntry, "available" | "availabilityReason"> {
   if (commandExistsInPath("gemini")) {
     return { available: true };
@@ -136,6 +154,7 @@ function getGeminiAvailability(): Pick<AgentRegistryEntry, "available" | "availa
 export function listAgentRegistry(): AgentRegistryEntry[] {
   const codexDefaultModel = readConfiguredCodexModel() ?? AGENT_DEFAULT_MODELS.codex;
   const claudeDefaultModel = readClaudeSettingsModel() ?? AGENT_DEFAULT_MODELS.claude;
+  const codexAvailability = getCodexAvailability();
   const openclawAvailability = getOpenClawAvailability();
   const geminiAvailability = getGeminiAvailability();
 
@@ -163,8 +182,8 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       modelSuggestions: dedupeStrings([codexDefaultModel, "codex-4", "gpt-5.4"]),
       processMatchers: ["codex"],
       switchable: true,
-      available: true,
       quitCommand: "q",
+      ...codexAvailability,
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,
