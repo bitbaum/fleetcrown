@@ -126,9 +126,12 @@ export function ProjectCard({
         project={project}
         tabOpen={display.tabOpen}
         isClosed={display.isClosed}
+        isClosing={display.isClosing}
         isReady={display.isReady}
         isOrchReady={display.isOrchestrationReady}
         isRunning={display.isRunning}
+        stateLabel={display.stateLabel}
+        stateTagClass={display.stateTagClass}
         profileOpen={profileOpen}
         onProfileToggle={() => setProfileOpen((v) => !v)}
         onCollapse={onCollapse}

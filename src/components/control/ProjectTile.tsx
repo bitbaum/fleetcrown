@@ -21,20 +21,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
   const { tab, session, agentRunning, dir } = project;
   const display = getProjectDisplayState(project, zellijTabs, Math.floor(Date.now() / 1000));
   const tabOpen = zellijTabs.some((t) => t.toLowerCase() === (project.liveTab ?? tab).toLowerCase());
-  const stateLabel = display.isClosed
-    ? "Closed"
-    : display.isReady || display.isOrchestrationReady
-    ? "Waiting"
-    : display.isRunning
-    ? "Working"
-    : display.isSessionOpen
-    ? "Ready"
-    : "Idle";
-  const stateClass = display.isRunning
-    ? "ui-tag ui-tag-warning"
-    : display.isClosed || display.isReady || display.isOrchestrationReady
-    ? "ui-tag ui-tag-positive"
-    : "ui-tag ui-tag-neutral";
+  const { stateLabel, stateTagClass: stateClass } = display;
   const summary = project.currentPrompt && display.isRunning
     ? project.currentPrompt.label
     : display.isReady || display.isOrchestrationReady
@@ -71,6 +58,8 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
               "block h-2.5 w-2.5 rounded-full border bg-current",
               display.isReady || display.isOrchestrationReady || display.isClosed
                 ? "border-status-positive text-status-positive"
+                : display.isClosing
+                ? "border-status-warning text-status-warning"
                 : display.isSessionOpen
                 ? "border-text-secondary text-text-secondary"
                 : "border-border-default text-border-default",

@@ -17,9 +17,12 @@ export function ProjectCardHeader({
   project,
   tabOpen,
   isClosed,
+  isClosing,
   isReady,
   isOrchReady,
   isRunning,
+  stateLabel,
+  stateTagClass,
   profileOpen,
   onProfileToggle,
   onCollapse,
@@ -32,9 +35,12 @@ export function ProjectCardHeader({
   project: ProjectState;
   tabOpen: boolean;
   isClosed: boolean;
+  isClosing: boolean;
   isReady: boolean;
   isOrchReady: boolean;
   isRunning: boolean;
+  stateLabel: string;
+  stateTagClass: string;
   profileOpen: boolean;
   onProfileToggle: () => void;
   onCollapse?: () => void;
@@ -48,23 +54,16 @@ export function ProjectCardHeader({
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { git, session, profile } = project;
 
-  const isIdle = !project.agentRunning && !isRunning && !isReady && !isOrchReady && !isClosed;
+  const isIdle = !project.agentRunning && !isRunning && !isReady && !isOrchReady && !isClosed && !isClosing;
   const lastActiveMs = session?.mtime ?? (project.closedAt ? project.closedAt * 1000 : null);
   const lastActiveLabel = lastActiveMs
     ? compactRelativeDate(new Date(lastActiveMs))
     : git?.lastWhen ?? null;
-  const stateLabel = isClosed
-    ? "Closed"
-    : isReady || isOrchReady
-    ? "Waiting"
-    : isRunning
-    ? "Working"
-    : project.agentRunning
-    ? "Ready"
-    : "Idle";
 
   const dotColor = isRunning
     ? "text-accent-text animate-pulse"
+    : isClosing
+    ? "text-status-warning"
     : project.agentRunning
     ? "text-text-secondary"
     : isClosed || isReady || isOrchReady
@@ -82,10 +81,7 @@ export function ProjectCardHeader({
                 <span className="truncate text-base font-semibold text-text-primary sm:text-lg" title={project.tab}>
                   {project.tab}
                 </span>
-                <span className={cn(
-                  "ui-tag gap-1.5",
-                  isRunning ? "ui-tag-warning" : isClosed || isReady || isOrchReady ? "ui-tag-positive" : "ui-tag-neutral",
-                )}>
+                <span className={cn("gap-1.5", stateTagClass)}>
                   {stateLabel}
                 </span>
               </div>

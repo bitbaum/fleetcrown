@@ -28,6 +28,10 @@ export type ProjectDisplayState = {
     | "closing"
     | "closed"
     | "idle";
+  /** Human-readable label for the state badge — single source of truth */
+  stateLabel: "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "Idle";
+  /** Tailwind classes for the ui-tag badge */
+  stateTagClass: string;
 };
 
 export type ControlDashboardState = {
@@ -157,6 +161,25 @@ export function getProjectDisplayState(
     ? "session-open"
     : "idle";
 
+  const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
+    running:               "Working",
+    "session-open":        "Ready",
+    ready:                 "Waiting",
+    "orchestration-ready": "Waiting",
+    closing:               "Closing",
+    closed:                "Closed",
+    idle:                  "Idle",
+  };
+  const STATE_TAG: Record<ProjectDisplayState["tone"], string> = {
+    running:               "ui-tag ui-tag-warning",
+    "session-open":        "ui-tag ui-tag-neutral",
+    ready:                 "ui-tag ui-tag-positive",
+    "orchestration-ready": "ui-tag ui-tag-positive",
+    closing:               "ui-tag ui-tag-warning",
+    closed:                "ui-tag ui-tag-positive",
+    idle:                  "ui-tag ui-tag-neutral",
+  };
+
   return {
     isClosed,
     isClosing,
@@ -170,6 +193,8 @@ export function getProjectDisplayState(
     showLatestOrchestration,
     tabOpen,
     tone,
+    stateLabel: STATE_LABEL[tone],
+    stateTagClass: STATE_TAG[tone],
   };
 }
 
