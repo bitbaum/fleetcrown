@@ -275,6 +275,10 @@
   }
   html {
     @apply font-sans;
+    color-scheme: light dark;
+  }
+  body {
+    transition: background-color 250ms ease, color 200ms ease;
   }
   h1, h2, h3, h4 {
     letter-spacing: var(--tracking-display);
@@ -298,7 +302,11 @@
     @apply mx-auto px-5 py-6 md:px-8 md:py-8;
   }
   .ui-sidebar {
-    @apply border-r border-border-subtle bg-sidebar/88 backdrop-blur-xl transition-[width] duration-200;
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    @apply border-r border-border-subtle bg-sidebar/88 backdrop-blur-xl;
+    transition: width 200ms ease, background-color 250ms ease, border-color 250ms ease;
   }
   .ui-sidebar-section {
     @apply px-3 py-4;
@@ -307,7 +315,15 @@
     min-height: 3.5rem;
   }
   .ui-sidebar-tooltip {
-    @apply pointer-events-none absolute left-full top-1/2 z-50 ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-xl border border-border-default bg-surface-base px-3 py-1.5 text-xs font-medium text-text-primary shadow-[var(--shadow-panel)] group-hover:block;
+    @apply pointer-events-none absolute left-full top-1/2 z-50 ml-3 whitespace-nowrap rounded-xl border border-border-default bg-surface-overlay px-3 py-1.5 text-xs font-medium text-text-primary;
+    box-shadow: var(--shadow-panel-strong);
+    opacity: 0;
+    transform: translate(-6px, -50%);
+    transition: opacity 140ms ease, transform 140ms ease;
+  }
+  .group:hover .ui-sidebar-tooltip {
+    opacity: 1;
+    transform: translate(0, -50%);
   }
   .ui-sidebar-utility {
     @apply flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
@@ -858,6 +874,28 @@
   .ui-btn-danger:hover {
     background-color: color-mix(in oklch, var(--status-negative) 18%, transparent);
   }
+}
+
+/* ─── Sidebar portal tooltip (outside @layer to avoid Tailwind 4 keyframe issue) ── */
+@keyframes sidebar-tooltip-in {
+  from { opacity: 0; transform: translate(-4px, -50%); }
+  to   { opacity: 1; transform: translate(0,   -50%); }
+}
+.ui-sidebar-portal-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-default);
+  background: var(--surface-overlay);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-panel-strong);
+  animation: sidebar-tooltip-in 140ms ease forwards;
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */

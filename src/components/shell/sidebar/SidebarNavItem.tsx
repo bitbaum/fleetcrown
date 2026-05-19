@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { NavItem } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -14,27 +16,47 @@ export function SidebarNavItem({
   collapsed: boolean;
 }) {
   const Icon = item.icon;
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    if (!collapsed || !linkRef.current) return;
+    const rect = linkRef.current.getBoundingClientRect();
+    setTooltipPos({ top: rect.top + rect.height / 2, left: rect.right + 12 });
+  }, [collapsed]);
+
+  const handleMouseLeave = useCallback(() => setTooltipPos(null), []);
 
   return (
-    <Link
-      href={item.href}
-      className={cn(
-        "ui-nav-item ui-sidebar-nav-item group relative",
-        collapsed ? "justify-center px-2 py-3" : "",
-        current && "ui-nav-item-active",
-        !item.active && "opacity-40",
+    <>
+      <Link
+        ref={linkRef}
+        href={item.href}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={cn(
+          "ui-nav-item ui-sidebar-nav-item",
+          collapsed ? "justify-center px-2 py-3" : "",
+          current && "ui-nav-item-active",
+          !item.active && "opacity-40",
+        )}
+        aria-label={collapsed ? item.label : undefined}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        {!collapsed && (
+          <div className="min-w-0">
+            <span className="block">{item.label}</span>
+            <span className="mt-0.5 block text-xs text-text-tertiary">{item.description}</span>
+          </div>
+        )}
+        {!collapsed && !item.active && <span className="ml-auto ui-micro-label">soon</span>}
+      </Link>
+      {collapsed && tooltipPos && createPortal(
+        <span className="ui-sidebar-portal-tooltip" style={{ top: tooltipPos.top, left: tooltipPos.left }}>
+          {item.label}
+        </span>,
+        document.body,
       )}
-      aria-label={collapsed ? item.label : undefined}
-    >
-      <Icon className="h-5 w-5 shrink-0" />
-      {!collapsed && (
-        <div className="min-w-0">
-          <span className="block">{item.label}</span>
-          <span className="mt-0.5 block text-xs text-text-tertiary">{item.description}</span>
-        </div>
-      )}
-      {!collapsed && !item.active && <span className="ml-auto ui-micro-label">soon</span>}
-      {collapsed && <span className="ui-sidebar-tooltip">{item.label}</span>}
-    </Link>
+    </>
   );
 }

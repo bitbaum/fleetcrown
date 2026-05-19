@@ -1,7 +1,9 @@
 "use client";
 
-import { PanelLeftOpen, LogOut, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { PanelLeftOpen, LogOut, Lock, Sun, Moon } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { ROUTES } from "@/config/auth";
@@ -14,9 +16,15 @@ export function SidebarFooter({
   onToggleCollapsed: () => void;
 }) {
   const { unlocked, lock } = usePrivateZone();
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- standard next-themes SSR hydration guard
+  useEffect(() => setMounted(true), []);
+
+  const isDark = resolvedTheme !== "light";
 
   return (
-    <div className="ui-sidebar-section space-y-2 border-t border-border-subtle">
+    <div className="ui-sidebar-section space-y-1 border-t border-border-subtle">
       {collapsed && (
         <button
           type="button"
@@ -32,25 +40,41 @@ export function SidebarFooter({
         <button
           onClick={lock}
           className={cn(
-            "ui-sidebar-utility w-full",
+            "ui-sidebar-utility group relative w-full",
             collapsed && "justify-center px-2",
           )}
-          title={collapsed ? "Lock private zone" : undefined}
         >
           <Lock className="h-4 w-4 shrink-0" />
           {!collapsed && "Lock private zone"}
+          {collapsed && <span className="ui-sidebar-tooltip">Lock private zone</span>}
+        </button>
+      )}
+      {mounted && (
+        <button
+          type="button"
+          onClick={() => setTheme(isDark ? "light" : "dark")}
+          className={cn(
+            "ui-sidebar-utility group relative w-full",
+            collapsed && "justify-center px-2",
+          )}
+        >
+          {isDark
+            ? <Sun className="h-4 w-4 shrink-0" />
+            : <Moon className="h-4 w-4 shrink-0" />}
+          {!collapsed && (isDark ? "Light mode" : "Dark mode")}
+          {collapsed && <span className="ui-sidebar-tooltip">{isDark ? "Light mode" : "Dark mode"}</span>}
         </button>
       )}
       <button
         onClick={() => signOut({ callbackUrl: ROUTES.SIGN_IN })}
         className={cn(
-          "ui-sidebar-utility w-full",
+          "ui-sidebar-utility group relative w-full",
           collapsed && "justify-center px-2",
         )}
-        title={collapsed ? "Sign out" : undefined}
       >
         <LogOut className="h-4 w-4 shrink-0" />
         {!collapsed && "Sign out"}
+        {collapsed && <span className="ui-sidebar-tooltip">Sign out</span>}
       </button>
     </div>
   );
