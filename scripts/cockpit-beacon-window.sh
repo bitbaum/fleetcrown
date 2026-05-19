@@ -11,8 +11,18 @@
 
 set -euo pipefail
 
-URL="${COCKPIT_BEACON_URL:-http://localhost:3000/beacon/live}"
-PROFILE_DIR="${COCKPIT_BEACON_PROFILE:-$HOME/.config/cockpit-beacon-profile}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_brand.sh
+source "$SCRIPT_DIR/_brand.sh"
+
+# WM_CLASS for this window. Contract between this script, /api/beacon/window/show,
+# and /api/beacon/window/hide — all three must agree or the show/hide endpoints
+# can't find the window via xdotool. Derived from APP_SLUG so a rename flips
+# all three together.
+BEACON_WM_CLASS="${APP_SLUG}-beacon"
+
+URL="$(_brand_env BEACON_URL "http://localhost:3000/beacon/live")"
+PROFILE_DIR="$(_brand_env BEACON_PROFILE "$HOME/.config/${APP_SLUG}-beacon-profile")"
 
 # No graphical session → exit cleanly. Systemd will retry per Restart=always;
 # the sleep avoids a tight restart loop during boot before X/Wayland comes up.
@@ -27,14 +37,14 @@ HEALTH="${URL%/beacon/live}/api/health"
 deadline=$((SECONDS + 60))
 until curl -sf -m 1 "$HEALTH" >/dev/null 2>&1; do
   if [ "$SECONDS" -gt "$deadline" ]; then
-    echo "cockpit-app unreachable after 60s — exiting" >&2
+    echo "${APP_SLUG}-app unreachable after 60s — exiting" >&2
     exit 1
   fi
   sleep 1
 done
 
 mkdir -p "$PROFILE_DIR"
-mkdir -p "/tmp/cockpit-beacon"
+mkdir -p "$(_brand_tmp 'beacon')"
 
 # --class=cockpit-beacon: lets /api/beacon/window/{show,hide} target this window
 #   specifically via xdotool, so a user's regular browser tab at the same URL is
@@ -46,7 +56,7 @@ mkdir -p "/tmp/cockpit-beacon"
 for browser in chromium chromium-browser brave-browser google-chrome; do
   if command -v "$browser" >/dev/null 2>&1; then
     # Write PID file so beacon.py can focus this window without xdotool on every call.
-    echo "$$" > "/tmp/cockpit-beacon/live-browser.pid"
+    echo "$$" > "$(_brand_tmp 'beacon')/live-browser.pid"
     # Unset WAYLAND_DISPLAY + force --ozone-platform=x11: on KDE Plasma Wayland,
     #   chromium-family browsers default to native Wayland for --app windows
     #   (only the clipboard helper goes through XWayland). xdotool is X11-only,
@@ -56,7 +66,7 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
     env -u WAYLAND_DISPLAY "$browser" \
       --app="$URL" \
       --user-data-dir="$PROFILE_DIR" \
-      --class=cockpit-beacon \
+      --class="$BEACON_WM_CLASS" \
       --ozone-platform=x11 \
       --window-size=560,720 \
       --no-first-run \
@@ -72,7 +82,7 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
       (
         # --sync waits for first match; --onlyvisible filters to mapped windows
         # (the unmapped window won't be re-found on a second --sync call).
-        wids=$(xdotool search --sync --onlyvisible --class cockpit-beacon 2>/dev/null) || wids=""
+        wids=$(xdotool search --sync --onlyvisible --class "$BEACON_WM_CLASS" 2>/dev/null) || wids=""
         for wid in $wids; do
           xdotool windowunmap "$wid" 2>/dev/null || true
         done

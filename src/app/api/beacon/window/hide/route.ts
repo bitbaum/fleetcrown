@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { spawnSync } from "child_process";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { APP_SLUG } from "@/config/brand";
+
+// WM_CLASS the pre-warmed beacon window is launched with. Must match
+// scripts/cockpit-beacon-window.sh:BEACON_WM_CLASS (also derived from
+// APP_SLUG) and the same constant in window/show/route.ts.
+const BEACON_WM_CLASS = `${APP_SLUG}-beacon`;
 
 /**
  * Hide the pre-warmed beacon window so the user never sees an empty "Standby"
@@ -20,7 +26,7 @@ export async function POST() {
   // "Beacon" title. Skipping the others avoids unmapping invisible splashes.
   const search = spawnSync(
     "xdotool",
-    ["search", "--class", "cockpit-beacon", "--name", "Beacon"],
+    ["search", "--class", BEACON_WM_CLASS, "--name", "Beacon"],
     { timeout: 1500 },
   );
   if (search.status !== 0) {

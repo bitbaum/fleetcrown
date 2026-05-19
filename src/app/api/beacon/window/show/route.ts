@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { spawnSync } from "child_process";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { APP_SLUG } from "@/config/brand";
+
+// WM_CLASS the pre-warmed beacon window is launched with. Must match
+// scripts/cockpit-beacon-window.sh:BEACON_WM_CLASS (also derived from
+// APP_SLUG) and the same constant in window/hide/route.ts.
+const BEACON_WM_CLASS = `${APP_SLUG}-beacon`;
 
 /**
  * Show the pre-warmed beacon window — maps it, moves it on-screen, raises
@@ -34,13 +40,14 @@ function getScreenWidth(): number {
 export async function POST() {
   if (!isRuntimeAvailable()) return NextResponse.json({ ok: false, reason: "no-runtime" }, { status: 503 });
 
-  // Match the actual /beacon/live app window only. `--class cockpit-beacon` would
-  // also match brave's internal splash subwindows (typically 2–3 of them); chaining
-  // windowmap --sync + windowactivate --sync across all of them was costing ~3s on
-  // KDE Plasma Wayland because each --sync waits for KWin to confirm.
+  // Match the actual /beacon/live app window only. `--class ${APP_SLUG}-beacon`
+  // would also match brave's internal splash subwindows (typically 2–3 of them);
+  // chaining windowmap --sync + windowactivate --sync across all of them was
+  // costing ~3s on KDE Plasma Wayland because each --sync waits for KWin to
+  // confirm.
   const search = spawnSync(
     "xdotool",
-    ["search", "--class", "cockpit-beacon", "--name", "Beacon"],
+    ["search", "--class", BEACON_WM_CLASS, "--name", "Beacon"],
     { timeout: 1500 },
   );
   if (search.status !== 0) {
