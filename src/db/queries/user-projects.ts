@@ -19,12 +19,15 @@ export async function getUserProjects(userId: string): Promise<UserProject[]> {
  * regardless of whether projects have been explicitly org-tagged.
  */
 export async function getOrgProjects(userId: string): Promise<UserProject[]> {
+  // Include the caller themselves — getOrgPeerIds excludes self by design (it
+  // answers "who else is in my orgs"), but the caller's own projects belong in
+  // the visible set too. Without this, a solo user with no org peers gets [].
   const peerIds = await getOrgPeerIds(userId);
-  if (peerIds.length === 0) return [];
+  const memberIds = [userId, ...peerIds];
   return db
     .select()
     .from(userProjects)
-    .where(and(inArray(userProjects.userId, peerIds), eq(userProjects.isActive, true)))
+    .where(and(inArray(userProjects.userId, memberIds), eq(userProjects.isActive, true)))
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
