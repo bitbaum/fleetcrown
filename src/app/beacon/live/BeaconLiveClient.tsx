@@ -33,6 +33,18 @@ export function BeaconLiveClient({ initialSession = null }: { initialSession?: B
     return () => esRef.current?.close();
   }, []);
 
+  // Reactive window show/hide — the pre-warmed window spawns off-screen and
+  // only moves on-screen when there's an actual session to display. This is
+  // what makes the popup feel PyQt-instant: the user never sees an empty
+  // "Standby" placeholder, only the fully populated Ready UI. The endpoints
+  // no-op gracefully when xdotool isn't installed or the pre-warm window
+  // isn't running (e.g., when this page is opened in a regular browser tab).
+  const hasSession = !!session;
+  useEffect(() => {
+    const action = hasSession ? "show" : "hide";
+    fetch(`/api/beacon/window/${action}`, { method: "POST", keepalive: true }).catch(() => {});
+  }, [hasSession]);
+
   const handleClose = () => {
     setTimeout(() => setSession(null), 1500);
   };

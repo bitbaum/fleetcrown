@@ -36,6 +36,13 @@ done
 mkdir -p "$PROFILE_DIR"
 mkdir -p "/tmp/cockpit-beacon"
 
+# --class=cockpit-beacon: lets /api/beacon/window/{show,hide} target this window
+#   specifically via xdotool, so a user's regular browser tab at the same URL is
+#   never accidentally moved.
+# --window-position=-32000,-32000: spawn off-screen. The page loads, SSE connects,
+#   BeaconLiveClient mounts — all invisible. When a session arrives the React
+#   useEffect POSTs /api/beacon/window/show and xdotool moves the window
+#   on-screen fully populated. No "Standby" flash, ever.
 for browser in chromium chromium-browser brave-browser google-chrome; do
   if command -v "$browser" >/dev/null 2>&1; then
     # Write PID file so beacon.py can focus this window without xdotool on every call.
@@ -43,6 +50,9 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
     exec "$browser" \
       --app="$URL" \
       --user-data-dir="$PROFILE_DIR" \
+      --class=cockpit-beacon \
+      --window-position=-32000,-32000 \
+      --window-size=560,720 \
       --no-first-run \
       --no-default-browser-check
   fi
