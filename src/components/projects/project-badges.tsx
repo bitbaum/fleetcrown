@@ -1,7 +1,83 @@
-/**
- * Shared badge components for project health display.
- * Used in both ProjectGrid cards and ProjectDetail panel.
- */
+import { ShieldAlert, AlertTriangle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+export type HealthSignalKind = "security" | "broken" | "deployment";
+
+export type HealthSignalConfig = {
+  kind: HealthSignalKind;
+  key: string;
+  /** Short label for grid badges */
+  label: string;
+  /** Heading used in the detail panel issue card */
+  cardLabel: string;
+  icon: LucideIcon;
+  /** className for the compact grid badge */
+  badgeCls: string;
+  /** classNames for the detail panel issue card */
+  cardBorder: string;
+  cardBg: string;
+  cardText: string;
+  cardBody: string;
+};
+
+/** Single source of truth for all project health signals. */
+export const HEALTH_SIGNAL_CONFIG: HealthSignalConfig[] = [
+  {
+    kind: "security",
+    key: "security_vulnerability",
+    label: "Security risk",
+    cardLabel: "Security Risk",
+    icon: ShieldAlert,
+    badgeCls: "bg-status-negative-subtle text-status-negative border-status-negative/25",
+    cardBorder: "border-status-negative/25",
+    cardBg: "bg-status-negative-subtle",
+    cardText: "text-status-negative",
+    cardBody: "text-status-negative/70",
+  },
+  {
+    kind: "broken",
+    key: "broken_features",
+    label: "Broken",
+    cardLabel: "Broken Features",
+    icon: AlertTriangle,
+    badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+    cardBorder: "border-status-warning/25",
+    cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning",
+    cardBody: "text-status-warning/70",
+  },
+  {
+    kind: "deployment",
+    key: "deployment_issue",
+    label: "Deploy issue",
+    cardLabel: "Deployment Issue",
+    icon: AlertTriangle,
+    badgeCls: "bg-status-warning-subtle text-status-warning border-status-warning/25",
+    cardBorder: "border-status-warning/25",
+    cardBg: "bg-status-warning-subtle",
+    cardText: "text-status-warning",
+    cardBody: "text-status-warning/70",
+  },
+];
+
+export type HealthSignal = {
+  kind: HealthSignalKind;
+  label: string;
+};
+
+export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] {
+  const signals: HealthSignal[] = [];
+  for (const cfg of HEALTH_SIGNAL_CONFIG) {
+    if (!attrs[cfg.key]) continue;
+    if (cfg.kind === "broken") {
+      const count = attrs[cfg.key].split(",").length;
+      signals.push({ kind: cfg.kind, label: `${count} broken feature${count > 1 ? "s" : ""}` });
+    } else {
+      signals.push({ kind: cfg.kind, label: cfg.label });
+    }
+  }
+  return signals;
+}
 
 export function MaturityBar({ value }: { value: string }) {
   const match = value.match(/^(\d+)\/10/);
@@ -42,39 +118,12 @@ export function StatusBadge({ value }: { value: string }) {
   );
 }
 
-export type HealthSignal = {
-  kind: "security" | "broken" | "deployment";
-  label: string;
-};
-
-/** Extract health signals from a project's attrs map */
-export function getHealthSignals(attrs: Record<string, string>): HealthSignal[] {
-  const signals: HealthSignal[] = [];
-  if (attrs["security_vulnerability"]) signals.push({ kind: "security", label: "Security risk" });
-  if (attrs["broken_features"]) {
-    const count = attrs["broken_features"].split(",").length;
-    signals.push({ kind: "broken", label: `${count} broken feature${count > 1 ? "s" : ""}` });
-  }
-  if (attrs["deployment_issue"]) signals.push({ kind: "deployment", label: "Deploy issue" });
-  return signals;
-}
-
-const HEALTH_BADGE_STYLE: Record<HealthSignal["kind"], string> = {
-  security:   "bg-status-negative-subtle text-status-negative border-status-negative/25",
-  broken:     "bg-status-warning-subtle text-status-warning border-status-warning/25",
-  deployment: "bg-status-warning-subtle text-status-warning border-status-warning/25",
-};
-
-const HEALTH_BADGE_ICON: Record<HealthSignal["kind"], string> = {
-  security:   "🔒",
-  broken:     "⚠",
-  deployment: "🔸",
-};
-
 export function HealthBadge({ signal }: { signal: HealthSignal }) {
+  const cfg = HEALTH_SIGNAL_CONFIG.find((c) => c.kind === signal.kind)!;
+  const Icon = cfg.icon;
   return (
-    <span className={`ui-micro-badge gap-1 ${HEALTH_BADGE_STYLE[signal.kind]}`}>
-      <span>{HEALTH_BADGE_ICON[signal.kind]}</span>
+    <span className={`ui-micro-badge gap-1 ${cfg.badgeCls}`}>
+      <Icon className="h-3 w-3 shrink-0" />
       {signal.label}
     </span>
   );

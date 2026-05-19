@@ -210,7 +210,7 @@ export function MaturityEditor({
           max={10}
           value={ie.draft}
           onChange={(e) => ie.setDraft(Number(e.target.value))}
-          className="w-24 accent-[var(--status-positive)]"
+          className="w-24 ui-range-accent"
         />
         <span className="text-micro text-text-secondary w-8">{ie.draft}/10</span>
         <button
@@ -220,7 +220,7 @@ export function MaturityEditor({
         >
           {ie.saving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
         </button>
-        <button onClick={ie.cancel} className="text-micro text-text-muted hover:text-text-secondary">✕</button>
+        <button onClick={ie.cancel} className="text-micro text-text-muted hover:text-text-secondary">Cancel</button>
       </div>
     );
   }

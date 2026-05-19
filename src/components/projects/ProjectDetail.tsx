@@ -19,35 +19,45 @@ export function ProjectDetail({
 }) {
   const [data, setData] = useState<ProjectData | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [refetching, setRefetching] = useState(false);
   const [jobs, setJobs] = useState<LinkedJob[]>([]);
   const [tab, setTab] = useState<Tab>("overview");
-
-  const loading = data?.id !== projectId;
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
     let cancelled = false;
-    // Defer setRefetching off the synchronous effect path to avoid
-    // react-hooks/set-state-in-effect cascading-render warning.
-    Promise.resolve().then(() => { if (!cancelled) setRefetching(true); });
+    setLoadFailed(false);
+    // Defer setRefetching to avoid cascading-render warning when data is already present.
+    if (!data) setInitialLoading(true);
+    else Promise.resolve().then(() => { if (!cancelled) setRefetching(true); });
     getJson<ProjectData>(`/api/projects/${projectId}`)
       .then((d) => {
         if (cancelled) return;
         setData(d);
         setJobs(d.linkedJobs ?? []);
       })
-      .catch(() => { if (!cancelled) setData(null); })
-      .finally(() => { if (!cancelled) setRefetching(false); });
+      .catch(() => {
+        if (cancelled) return;
+        setData(null);
+        setLoadFailed(true);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setInitialLoading(false);
+        setRefetching(false);
+      });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, reloadKey]);
 
   return (
     <Drawer onClose={onClose} size="xl" surface="drawer">
       <ProjectDetailHeader
         data={data}
-        loading={loading}
+        loading={initialLoading}
         projectId={projectId}
         tab={tab}
         setTab={setTab}
@@ -65,12 +75,12 @@ export function ProjectDetail({
       )}
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
-        {loading ? (
+        {initialLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-border-subtle border-t-white/30" />
+            <div className="ui-loading-ring" />
           </div>
-        ) : !data ? (
-          <p className="text-sm text-text-secondary">Project not found</p>
+        ) : loadFailed || !data ? (
+          <p className="text-sm text-status-negative">Failed to load project — check your connection and try again.</p>
         ) : tab === "overview" ? (
           <OverviewTab data={data} projectId={projectId} onReload={reload} />
         ) : tab === "prompts" ? (

@@ -1,34 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, MessageSquare, AlertTriangle, ShieldAlert, Loader2 } from "lucide-react";
+import { Plus, Users, MessageSquare, Loader2 } from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, PROJECT_CHANNELS,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
 } from "./project-detail-types";
+import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, ProjectHistorySection, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
 import { toLocalDateStr } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { APP_LOCALE } from "@/lib/constants";
-import type { LucideProps } from "lucide-react";
-
-type IssueConfig = {
-  key: string;
-  icon: React.ComponentType<LucideProps>;
-  label: string;
-  border: string; bg: string; text: string; body: string;
-};
-
-const ISSUE_DISPLAY: IssueConfig[] = [
-  { key: "security_vulnerability", icon: ShieldAlert, label: "Security Risk",
-    border: "border-status-negative/25",    bg: "bg-status-negative-subtle",    text: "text-status-negative",    body: "text-status-negative/70" },
-  { key: "broken_features",        icon: AlertTriangle, label: "Broken Features",
-    border: "border-status-warning/25", bg: "bg-status-warning-subtle", text: "text-status-warning", body: "text-status-warning/70" },
-  { key: "deployment_issue",       icon: AlertTriangle, label: "Deployment Issue",
-    border: "border-status-warning/25", bg: "bg-status-warning-subtle", text: "text-status-warning", body: "text-status-warning/70" },
-];
 
 export function OverviewTab({
   data,
@@ -85,12 +69,12 @@ export function OverviewTab({
 
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
-          {ISSUE_DISPLAY.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, label, border, bg, text, body }) => (
-            <div key={key} className={`ui-card-shell ${border} ${bg} p-3`}>
-              <div className={`flex items-center gap-1.5 ui-micro-label font-semibold ${text} mb-1.5`}>
-                <Icon className="h-3.5 w-3.5" /> {label}
+          {HEALTH_SIGNAL_CONFIG.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, cardLabel, cardBorder, cardBg, cardText, cardBody }) => (
+            <div key={key} className={`ui-card-shell ${cardBorder} ${cardBg} p-3`}>
+              <div className={`flex items-center gap-1.5 ui-micro-label font-semibold ${cardText} mb-1.5`}>
+                <Icon className="h-3.5 w-3.5" /> {cardLabel}
               </div>
-              <p className={`text-xs ${body} leading-relaxed`}>{attrs[key]}</p>
+              <p className={`text-xs ${cardBody} leading-relaxed`}>{attrs[key]}</p>
             </div>
           ))}
         </div>

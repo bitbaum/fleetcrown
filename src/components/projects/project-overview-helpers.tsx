@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Pencil, Save, Trash2, Terminal, X, Bot, History } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Pencil, Save, Trash2, Terminal, X, Bot, History } from "lucide-react";
 import { DevLogList } from "@/components/shared/DevLogList";
 import type { ProjectData, DevLogEntry } from "./project-detail-types";
 import { APP_LOCALE } from "@/lib/constants";
@@ -178,7 +178,7 @@ export function ProjectHistorySection({ events }: { events: ProjectData["activit
       >
         <Bot className="h-3.5 w-3.5" />
         Agent History ({events.length})
-        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
       </button>
       {open && (
         <div className="mt-2 space-y-2">
@@ -221,7 +221,7 @@ export function DevLogSection({ entries }: { entries: DevLogEntry[] }) {
       >
         <History className="h-3.5 w-3.5" />
         Session Log ({entries.length})
-        <span className="ml-0.5">{open ? "▾" : "▸"}</span>
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
       </button>
       {open && (
         <div className="mt-2">

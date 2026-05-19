@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { GitBranch, Globe, ShieldAlert, AlertTriangle, Zap, Search } from "lucide-react";
+import { GitBranch, Globe, ShieldAlert, AlertTriangle, Search } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ProjectDetail } from "./ProjectDetail";
@@ -13,6 +13,8 @@ import {
   getHealthSignals,
 } from "./project-badges";
 import { getProjectLinks, RESERVED } from "./project-detail-types";
+
+const CHIP_MAX_CHARS = 28;
 
 type Project = {
   id: string;
@@ -51,7 +53,9 @@ function ProjectCard({
     <div
       onClick={onOpen}
       className={`ui-card-shell ui-panel-interactive group relative flex cursor-pointer flex-col gap-3 p-4 sm:p-5 ${
-        hasIssues ? "border-status-warning/20 bg-status-warning/[0.04]" : "border-border-subtle bg-surface-base"
+        hasIssues
+          ? "border-status-warning/20 bg-status-warning-subtle"
+          : "border-border-subtle bg-surface-base"
       }`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -131,10 +135,6 @@ function ProjectCard({
             ))}
         </div>
       )}
-
-      <div className="absolute bottom-3 right-3 opacity-30 transition-opacity group-hover:opacity-100">
-        <Zap className="h-3 w-3 text-text-muted" />
-      </div>
     </div>
   );
 }
@@ -145,7 +145,8 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
-  useEscapeKey(() => { setQuery(""); setStatusFilter(null); });
+  // Only clear grid state when no drawer is open — the Drawer handles its own Escape.
+  useEscapeKey(() => { if (!selectedId) { setQuery(""); setStatusFilter(null); } });
 
   const statuses = useMemo(
     () => [...new Set(projects.map((p) => p.attrs["status"]).filter(Boolean))].sort() as string[],
@@ -154,7 +155,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return projects.filter((p) => {
+    const result = projects.filter((p) => {
       if (statusFilter && p.attrs["status"] !== statusFilter) return false;
       if (!q) return true;
       return (
@@ -162,6 +163,15 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
         (p.description ?? "").toLowerCase().includes(q) ||
         Object.values(p.attrs).some((v) => v.toLowerCase().includes(q))
       );
+    });
+
+    // Sort: issues first → own before team → alphabetically
+    return result.sort((a, b) => {
+      const aHasIssues = getHealthSignals(a.attrs).length > 0;
+      const bHasIssues = getHealthSignals(b.attrs).length > 0;
+      if (aHasIssues !== bHasIssues) return aHasIssues ? -1 : 1;
+      if (a.readonly !== b.readonly) return a.readonly ? 1 : -1;
+      return a.name.localeCompare(b.name);
     });
   }, [projects, query, statusFilter]);
 
@@ -189,15 +199,19 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
 
       {statuses.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
-          {statuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-              className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
-            >
-              {s}
-            </button>
-          ))}
+          {statuses.map((s) => {
+            const truncated = s.length > CHIP_MAX_CHARS ? s.slice(0, CHIP_MAX_CHARS) + "…" : s;
+            return (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                title={s}
+                className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+              >
+                {truncated}
+              </button>
+            );
+          })}
           {statusFilter && (
             <button onClick={() => setStatusFilter(null)} className="shrink-0 ui-chip-filter">
               Clear
@@ -216,7 +230,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
           )}
           <span className="flex items-center gap-1.5 text-status-warning/80">
             <AlertTriangle className="h-3.5 w-3.5" />
-            {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need attention
+            {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need{withIssues.length === 1 ? "s" : ""} attention
           </span>
           <span className="ml-auto text-text-tertiary">
             {projects.length - withIssues.length}/{projects.length} healthy

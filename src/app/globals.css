@@ -454,6 +454,13 @@
   .ui-spinner-sm   { @apply h-3.5 w-3.5 animate-spin; }
   .ui-spinner-xs   { @apply h-3 w-3 animate-spin; }
   .ui-spinner-2xs  { @apply h-2.5 w-2.5 animate-spin; }
+  /* Div-based border-ring spinner (used in full-panel loading states) */
+  .ui-loading-ring {
+    @apply h-5 w-5 animate-spin rounded-full border-2 border-border-subtle;
+    border-top-color: color-mix(in oklch, var(--text-primary) 20%, transparent);
+  }
+  /* Range input accent colour aligned to the design token system */
+  .ui-range-accent { accent-color: var(--status-positive); }
 
   /* Typography */
   .ui-kicker {
@@ -616,6 +623,19 @@
   }
   .ui-btn-save:hover { background-color: var(--accent-primary); }
   .ui-btn-save:disabled { opacity: 0.4; }
+  /* Drawer tab bar — shared by all entity detail drawers */
+  .ui-tab {
+    @apply flex items-center gap-1.5 border-b-2 border-transparent px-5 py-2.5 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary;
+  }
+  .ui-tab-active {
+    @apply border-status-positive text-text-primary;
+  }
+  .ui-tab-badge {
+    @apply rounded-full px-1.5 py-0.5 text-micro bg-surface-overlay text-text-muted;
+  }
+  .ui-tab-badge-active {
+    @apply bg-status-positive-subtle text-status-positive;
+  }
   /* Text + icon "add" link button */
   .ui-btn-add {
     @apply flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-accent-text;
