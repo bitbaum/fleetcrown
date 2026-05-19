@@ -53,15 +53,34 @@ for browser in chromium chromium-browser brave-browser google-chrome; do
     #   so a Wayland-native window is invisible to it and our show/hide endpoints
     #   silently no-op. Unsetting WAYLAND_DISPLAY routes everything through
     #   XWayland — xdotool can then find, move, and raise the window.
-    exec env -u WAYLAND_DISPLAY "$browser" \
+    env -u WAYLAND_DISPLAY "$browser" \
       --app="$URL" \
       --user-data-dir="$PROFILE_DIR" \
       --class=cockpit-beacon \
       --ozone-platform=x11 \
-      --window-position=-32000,-32000 \
       --window-size=560,720 \
       --no-first-run \
-      --no-default-browser-check
+      --no-default-browser-check &
+    browser_pid=$!
+
+    # Background watcher: as soon as the window appears, unmap it so the user
+    # never sees an empty "Standby" flash. The React useEffect then drives
+    # show/hide based on session state. We poll for up to ~10s.
+    (
+      for _ in $(seq 1 20); do
+        if command -v xdotool >/dev/null 2>&1; then
+          wids=$(xdotool search --class cockpit-beacon 2>/dev/null) || wids=""
+          if [ -n "$wids" ]; then
+            echo "$wids" | xargs -n1 xdotool windowunmap 2>/dev/null || true
+            exit 0
+          fi
+        fi
+        sleep 0.5
+      done
+    ) &
+
+    wait "$browser_pid"
+    exit $?
   fi
 done
 

@@ -3,13 +3,14 @@ import { spawnSync } from "child_process";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
 /**
- * Hide the pre-warmed beacon window — moves it off-screen so the user
- * never sees an empty "Standby" placeholder. Called by BeaconLiveClient
- * when there's no active session.
+ * Hide the pre-warmed beacon window so the user never sees an empty "Standby"
+ * placeholder. Called by BeaconLiveClient when there's no active session.
  *
- * Uses windowmove to a far-offscreen coordinate rather than windowunmap,
- * because unmap can drop the window from the WM's task list in unhelpful
- * ways under some KDE versions. The window stays alive and SSE-connected.
+ * Uses windowunmap (X11 invisibility). windowmove to negative coordinates
+ * doesn't work under KDE Plasma Wayland — KWin clamps offscreen positions
+ * back onto the visible screen. unmap is the only reliable hide on this stack.
+ * The window stays alive in memory and SSE-connected; the next show endpoint
+ * windowmaps it back.
  */
 export async function POST() {
   if (!isRuntimeAvailable()) return NextResponse.json({ ok: false, reason: "no-runtime" }, { status: 503 });
@@ -24,7 +25,7 @@ export async function POST() {
   }
 
   for (const wid of wids) {
-    spawnSync("xdotool", ["windowmove", wid, "-32000", "-32000"], { timeout: 1500 });
+    spawnSync("xdotool", ["windowunmap", wid], { timeout: 1500 });
   }
 
   return NextResponse.json({ ok: true, wids });

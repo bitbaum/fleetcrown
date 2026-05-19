@@ -66,8 +66,13 @@ export async function GET() {
 
       // Deliver the most recently created pending session at connect time so a
       // pre-warmed /beacon/live window picks up sessions written before it opened.
-      // All other pre-existing files are seeded into `seen` so they're not replayed.
+      // Only sessions younger than 5 min are considered pending — older files
+      // in /tmp are abandoned (agent that wrote them is gone) and replaying
+      // them ghost-populates the popup with stale content. All other
+      // pre-existing files are seeded into `seen` so they're not replayed.
       try {
+        const PENDING_TTL_MS = 5 * 60_000;
+        const minCreatedAt = Date.now() - PENDING_TTL_MS;
         type Entry = { file: string; raw: string; createdAt: number };
         let newest: Entry | null = null;
         for (const file of fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json"))) {
@@ -75,7 +80,7 @@ export async function GET() {
           try {
             const raw = fs.readFileSync(path.join(BEACON_DIR, file), "utf-8");
             const s = JSON.parse(raw) as BeaconSession;
-            if (s.choice === null) {
+            if (s.choice === null && s.createdAt >= minCreatedAt) {
               if (!newest || s.createdAt > newest.createdAt) newest = { file, raw, createdAt: s.createdAt };
             }
           } catch { /* skip */ }

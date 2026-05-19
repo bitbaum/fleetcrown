@@ -29,8 +29,9 @@ export async function POST() {
   const x = Math.max(0, screenW - 600);
 
   for (const wid of wids) {
+    // map FIRST, then move/activate/raise — moving an unmapped window can be ignored.
+    spawnSync("xdotool", ["windowmap", "--sync", wid], { timeout: 2000 });
     spawnSync("xdotool", ["windowmove", wid, String(x), "80"], { timeout: 1500 });
-    spawnSync("xdotool", ["windowmap", wid], { timeout: 1500 });
     spawnSync("xdotool", ["windowactivate", "--sync", wid], { timeout: 1500 });
     spawnSync("xdotool", ["windowraise", wid], { timeout: 1500 });
   }

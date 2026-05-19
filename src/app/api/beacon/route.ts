@@ -57,15 +57,25 @@ export function readBeaconSession(id: string): BeaconSession | null {
  * Return the most recently created pending session, if any. Used by the
  * /beacon/live page to SSR-preload the popup state so the first paint
  * already shows the Ready UI instead of the Standby placeholder.
+ *
+ * Only sessions younger than 5 minutes are considered pending. Older entries
+ * in /tmp/cockpit-beacon are abandoned (the agent process that wrote them is
+ * almost certainly gone) — surfacing them as "pending" makes the popup look
+ * empty / show stale content. A separate purge happens on the POST path.
  */
+const PENDING_TTL_MS = 5 * 60_000;
+
 export function readLatestPendingSession(): BeaconSession | null {
   try {
+    const minCreatedAt = Date.now() - PENDING_TTL_MS;
     let best: BeaconSession | null = null;
     for (const file of fs.readdirSync(BEACON_DIR)) {
       if (!file.endsWith(".json")) continue;
       try {
         const s = JSON.parse(fs.readFileSync(path.join(BEACON_DIR, file), "utf-8")) as BeaconSession;
-        if (s.choice === null && (!best || s.createdAt > best.createdAt)) best = s;
+        if (s.choice !== null) continue;
+        if (s.createdAt < minCreatedAt) continue;
+        if (!best || s.createdAt > best.createdAt) best = s;
       } catch { /* skip unreadable */ }
     }
     return best;
