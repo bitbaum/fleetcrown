@@ -29,16 +29,60 @@ export async function GET() {
         }
       };
 
-      // Seed the seen-set so we only push sessions that arrive AFTER this
-      // connection opened — prevents replaying stale sessions on reconnect.
-      let seen = new Set<string>();
-      try {
-        seen = new Set(
-          fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json")),
-        );
-      } catch { /* dir missing — start empty */ }
-
       send(": keepalive\n\n");
+
+      // Seed seen-set with already-resolved sessions so we never replay them on
+      // reconnect. Active (choice=null) sessions are NOT seeded — they get pushed
+      // immediately below and again on any reconnect until the user responds.
+      const seen = new Set<string>();
+      try {
+        for (const file of fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json"))) {
+          try {
+            const raw = fs.readFileSync(path.join(BEACON_DIR, file), "utf-8");
+            const s = JSON.parse(raw) as BeaconSession;
+            if (s.choice !== null) seen.add(file);
+          } catch { /* skip unreadable */ }
+        }
+      } catch { /* dir missing */ }
+
+      function pushSession(file: string, raw: string) {
+        try {
+          const session = JSON.parse(raw) as BeaconSession;
+          if (session.choice !== null) { seen.add(file); return; }
+          if (isRuntimeAvailable() && !session.gitBranch) {
+            try {
+              const projects = parseProjectsConf();
+              const match = projects.find((p) => p.tab.toLowerCase() === session.project.toLowerCase());
+              if (match) {
+                session.gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+                  cwd: match.dir, encoding: "utf-8", timeout: 2000,
+                }).trim() || null;
+              }
+            } catch { /* not a git repo or dir missing */ }
+          }
+          send(`data: ${JSON.stringify(session)}\n\n`);
+        } catch { /* malformed JSON */ }
+      }
+
+      // Deliver the most recently created pending session at connect time so a
+      // pre-warmed /beacon/live window picks up sessions written before it opened.
+      // All other pre-existing files are seeded into `seen` so they're not replayed.
+      try {
+        type Entry = { file: string; raw: string; createdAt: number };
+        let newest: Entry | null = null;
+        for (const file of fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json"))) {
+          if (seen.has(file)) continue;
+          try {
+            const raw = fs.readFileSync(path.join(BEACON_DIR, file), "utf-8");
+            const s = JSON.parse(raw) as BeaconSession;
+            if (s.choice === null) {
+              if (!newest || s.createdAt > newest.createdAt) newest = { file, raw, createdAt: s.createdAt };
+            }
+          } catch { /* skip */ }
+          seen.add(file);
+        }
+        if (newest) pushSession(newest.file, newest.raw);
+      } catch { /* dir missing */ }
 
       pollTimer = setInterval(() => {
         if (closed) return;
@@ -49,32 +93,11 @@ export async function GET() {
           for (const file of current) {
             if (!seen.has(file)) {
               try {
-                const raw = fs.readFileSync(
-                  path.join(BEACON_DIR, file),
-                  "utf-8",
-                );
-                const session = JSON.parse(raw) as BeaconSession;
-                // Only push fresh sessions — ignore ones already resolved.
-                // gitBranch is written into the JSON by beacon.py at session creation;
-                // fall back to a server-side lookup only if the JSON predates that change.
-                if (session.choice === null) {
-                  if (isRuntimeAvailable() && !session.gitBranch) {
-                    try {
-                      const projects = parseProjectsConf();
-                      const match = projects.find((p) => p.tab.toLowerCase() === session.project.toLowerCase());
-                      if (match) {
-                        session.gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
-                          cwd: match.dir, encoding: "utf-8", timeout: 2000,
-                        }).trim() || null;
-                      }
-                    } catch { /* not a git repo or dir missing */ }
-                  }
-                  send(`data: ${JSON.stringify(session)}\n\n`);
-                }
+                pushSession(file, fs.readFileSync(path.join(BEACON_DIR, file), "utf-8"));
               } catch { /* file deleted between readdir and readFile */ }
+              seen.add(file);
             }
           }
-          seen = current;
         } catch { /* BEACON_DIR deleted — nothing to push */ }
       }, POLL_MS);
 
