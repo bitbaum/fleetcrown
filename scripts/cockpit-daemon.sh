@@ -146,7 +146,7 @@ health: <good | needs attention | critical>"
 }
 
 execute_inject() {
-  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}"
+  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}"
 
   # If a promptKey was queued (cloud mode sends key string as prompt fallback),
   # resolve it to the actual expanded prompt text with session context.
@@ -196,6 +196,20 @@ execute_inject() {
   if inject_prompt "$tab" "$prompt" 2>/dev/null; then
     mark_done "$id" "true"
     log "inject done ✓"
+    # Write current-prompt file so the UI shows the running banner.
+    # Skipped for lifecycle intents (hard_stop/close_session) — those are ending,
+    # not starting, a tracked prompt. Mirrors what the local inject/run routes write.
+    if [ "$prompt_key" != "hard_stop" ] && [ "$prompt_key" != "close_session" ]; then
+      local cp_label="${prompt_label:-${prompt_key:-custom}}"
+      local cp_key="${prompt_key:-custom}"
+      local now_s
+      now_s=$(date +%s)
+      printf '{"key":%s,"label":%s,"startedAt":%s,"source":"inject","adapter":"claude"}' \
+        "$(printf '%s' "$cp_key"   | jq -Rs .)" \
+        "$(printf '%s' "$cp_label" | jq -Rs .)" \
+        "$now_s" \
+        > "/tmp/agent-current-prompt-${tab}"
+    fi
   else
     mark_done "$id" "false" "inject_prompt failed"
     log "inject failed ✗"
@@ -556,7 +570,8 @@ while true; do
       tab=$(echo "$payload" | jq -r '.tab')
       prompt=$(echo "$payload" | jq -r '.prompt')
       prompt_key=$(echo "$payload" | jq -r '.promptKey // empty')
-      execute_inject "$id" "$tab" "$prompt" "$prompt_key"
+      prompt_label=$(echo "$payload" | jq -r '.promptLabel // empty')
+      execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label"
       ;;
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')
