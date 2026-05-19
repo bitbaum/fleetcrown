@@ -153,6 +153,17 @@ export async function POST(req: NextRequest) {
         // Mirrors the same logic in /api/inject for close_session.
         fs.writeFileSync(stateFile.sentinel(effectiveKey), "");
         fs.writeFileSync(stateFile.closing(effectiveKey), String(nowS));
+      } else {
+        // Write current-prompt so the UI shows the running banner.
+        // Mirrors the codex/gemini adapter paths and the inject route.
+        // Excluded for lifecycle intents (hard_stop/close_session) which end sessions.
+        fs.writeFileSync(stateFile.prompt(effectiveKey), JSON.stringify({
+          key: request.intent,
+          label: intent.name,
+          startedAt: nowS,
+          source: "run",
+          adapter: "claude",
+        }));
       }
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
