@@ -63,6 +63,58 @@ beacon_launch() {
     python3 "$SCRIPT_DIR/beacon.py" "$@"
 }
 
+# M4 — emit a worker.finished event directly to the local JSONL log so the
+# new home/ Brain learns about completed runs without depending on the
+# Vercel finish endpoint round-trip. Mirrors the inferOutcome v1 logic from
+# src/lib/orchestration/infer-outcome.ts. Fire-and-forget; never blocks.
+infer_outcome_v1() {
+  local done_text="$1" tests_text="$2" health_text="$3" duration_ms="$4"
+  local h t
+  h=$(printf '%s' "$health_text" | tr 'A-Z' 'a-z')
+  t=$(printf '%s' "$tests_text"  | tr 'A-Z' 'a-z')
+  if [[ "$h" == *critical* ]]; then echo error; return; fi
+  if (( duration_ms > 1800000 )) && [ -z "$done_text" ]; then echo hang; return; fi
+  if [[ "$t" == *fail* ]] || [[ "$h" == *"needs attention"* ]]; then echo partial; return; fi
+  if [[ "$h" == *good* ]] && [ -n "$done_text" ]; then echo success; return; fi
+  echo partial
+}
+
+emit_worker_finished() {
+  local tab_name="$1" session_file="$2"
+  command -v jq >/dev/null 2>&1 || return 0   # silently skip if jq missing
+  local log_path="$HOME/.${APP_SLUG}/events.jsonl"
+  mkdir -p "$(dirname "$log_path")"
+  local done_line next_line tests_line todos_line health_line
+  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
+  if [ -f "$session_file" ]; then
+    done_line=$(grep   -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//')
+    next_line=$(grep   -m1 '^next:'   "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//')
+    tests_line=$(grep  -m1 '^tests:'  "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//')
+    todos_line=$(grep  -m1 '^todos:'  "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//')
+    health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//')
+  fi
+  # Duration from /tmp/<slug>-run-<tab> sentinel mtime if present, else 0.
+  local duration_ms=0 run_sentinel
+  run_sentinel="$(_brand_tmp "run-${tab_name}")"
+  if [ -f "$run_sentinel" ]; then
+    local start_s now_s
+    start_s=$(stat -c %Y "$run_sentinel" 2>/dev/null || echo 0)
+    now_s=$(date +%s)
+    if [ "$start_s" -gt 0 ]; then duration_ms=$(( (now_s - start_s) * 1000 )); fi
+  fi
+  local outcome id ts
+  outcome=$(infer_outcome_v1 "$done_line" "$tests_line" "$health_line" "$duration_ms")
+  id=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "00000000-0000-4000-8000-000000000000")
+  ts=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+  jq -nc \
+    --arg id "$id" --arg ts "$ts" --arg project "$tab_name" \
+    --argjson durationMs "$duration_ms" --arg outcome "$outcome" \
+    --arg done "$done_line" --arg next "$next_line" --arg tests "$tests_line" \
+    --arg todos "$todos_line" --arg health "$health_line" \
+    '{v:1, id:$id, ts:$ts, kind:"worker.finished", project:$project, outcome:$outcome, durationMs:$durationMs, handoff:{done:$done, next:$next, tests:$tests, todos:$todos, health:$health}}' \
+    >> "$log_path" 2>/dev/null || true
+}
+
 patch_project_state() {
   local tab_name="$1"
   local field="$2"
@@ -207,8 +259,12 @@ handle_stop() {
   patch_project_state "$TAB_NAME" "readyAt"
   # Close out the tracked orchestration run with the handoff from the session
   # file the agent just wrote. Done before the popup so the next dispatch can
-  # see this outcome via getRecentOutcomes() if Cockpit fetches mid-popup.
+  # see this outcome via getRecentOutcomes() if the app fetches mid-popup.
   finish_orchestration_run "$TAB_NAME" "$HOME/.claude/sessions/${TAB_NAME}.md"
+  # M4 — also emit worker.finished to the new local JSONL log so home/'s Brain
+  # gets a complete edge for the run. Parallel to finish_orchestration_run; both
+  # consume the same session.md, but this path has no cloud round-trip.
+  emit_worker_finished "$TAB_NAME" "$HOME/.claude/sessions/${TAB_NAME}.md"
 
   play_sound "complete"
 
