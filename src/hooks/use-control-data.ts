@@ -7,6 +7,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { queueKey } from "@/lib/control-storage";
 import type { Agent } from "@/lib/agent-registry";
+import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 export interface ControlDataHook {
@@ -94,10 +95,16 @@ export function useControlData(): ControlDataHook {
 
     const onVisibilityChange = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
+    // Listen for global refresh (PullToRefresh, RefreshOnFocus) so fleet state
+    // catches up at the same moment server-component data and other useFetch
+    // polls do — without waiting for the 30s tick.
+    const onCockpitRefresh = () => { poll(); };
+    window.addEventListener(COCKPIT_REFRESH_EVENT, onCockpitRefresh);
     const id = setInterval(poll, 30_000);
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener(COCKPIT_REFRESH_EVENT, onCockpitRefresh);
     };
   }, [refresh]);
 
