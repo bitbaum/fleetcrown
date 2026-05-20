@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { haptic } from "@/lib/haptics";
 
 /**
  * Shared state machine for inline-edit toggles (display ↔ <input>).
@@ -39,6 +40,10 @@ export function useInlineEdit<T>(initial: T) {
      * losing their input.
      */
     commit: async (action: () => Promise<void> | void): Promise<boolean> => {
+      // Caller's equality / validation checks run before commit() is called
+      // (see the usage example above — they short-circuit via ie.cancel()),
+      // so the tick only fires on real save attempts.
+      haptic();
       setSaving(true);
       try {
         await action();
