@@ -152,10 +152,21 @@ const proposals = new Map();
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// If a dispatched chip has been showing this long without the brain seeing
+// a corresponding currentRun (worker.started never arrived), the worker
+// almost certainly isn't running. Stop showing the optimistic "dispatched"
+// and surface a diagnostic instead.
+const DISPATCH_ACK_TIMEOUT_MS = 10000;
 function renderProposal(p) {
   const prop = proposals.get(p.project);
   if (!prop) return '';
   if (prop.dispatched) {
+    const age = Date.now() - (prop.postedAt ?? Date.now());
+    if (age > DISPATCH_ACK_TIMEOUT_MS) {
+      return '<div class="proposal" style="border-left-color:#dc2626;color:#f87171"><span class="label">unacked</span>' +
+        'dispatched ' + Math.round(age / 1000) + 's ago but worker.started never arrived · runId ' +
+        escapeHtml(prop.runId.slice(0, 8)) + ' · is the worker running?</div>';
+    }
     return '<div class="proposal"><span class="label">dispatched</span>' +
       escapeHtml(prop.decision.action.intent) + ' · runId ' + escapeHtml(prop.runId.slice(0, 8)) + '</div>';
   }
@@ -179,7 +190,7 @@ async function dispatch(project, autonomy, btn) {
     if (!r.ok) {
       proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: j.error || ('HTTP ' + r.status) }, confidence: 0 } });
     } else {
-      proposals.set(project, j);
+      proposals.set(project, { ...j, postedAt: Date.now() });
     }
   } catch (e) {
     proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: String(e) }, confidence: 0 } });
