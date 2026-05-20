@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Play, Focus, Trash2, X } from "lucide-react";
+import { Loader2, Play, Focus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectState } from "@/lib/control-types";
 import { getProjectDisplayState } from "./control-presenter";
