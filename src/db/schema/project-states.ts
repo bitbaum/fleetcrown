@@ -1,4 +1,5 @@
-import { pgTable, text, timestamp, uuid, index, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, index, uniqueIndex, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
 
@@ -30,6 +31,11 @@ export const projectStates = pgTable("project_states", {
   primaryKey({ columns: [table.userId, table.projectKey] }),
   index("idx_project_states_user_id").on(table.userId),
   index("idx_project_states_project_id").on(table.projectId),
+  // Case-insensitive uniqueness: the composite PK above is case-sensitive,
+  // so 'cockpit' and 'Cockpit' would otherwise create duplicate rows. See
+  // drizzle/0012_project_states_unique_lower_key.sql for the migration that
+  // backfilled this on existing data.
+  uniqueIndex("idx_project_states_user_lower_key").on(table.userId, sql`lower(${table.projectKey})`),
 ]);
 
 export type ProjectState    = typeof projectStates.$inferSelect;
