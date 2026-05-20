@@ -22,6 +22,7 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { PLAN_DAY_PROMPT, WRAP_UP_PROMPT } from "@/lib/constants/today";
+import { PullToRefresh } from "@/components/shared/PullToRefresh";
 
 export const metadata = { title: "Today" };
 
@@ -35,6 +36,7 @@ export default async function TodayPage() {
   const hour = new Date().getHours();
   const isEvening = hour >= 17;
   return (
+    <PullToRefresh>
     <div className="app-page max-w-4xl space-y-6">
       <div>
         <Greeting name={name} />
@@ -121,5 +123,6 @@ export default async function TodayPage() {
         </Suspense>
       </div>
     </div>
+    </PullToRefresh>
   );
 }
