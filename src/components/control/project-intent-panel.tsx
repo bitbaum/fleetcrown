@@ -11,6 +11,7 @@ import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
 import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
+import { haptic } from "@/lib/haptics";
 
 export function IntentButtonPanel({
   project,
@@ -71,10 +72,11 @@ export function IntentButtonPanel({
     onEnqueueAfterRecording: (text) => { if (onEnqueueCustom) { onEnqueueCustom(text); onCustomChange(""); } },
   });
 
-  const handleSendCustom = useCallback(() => wrapSend(onSendCustom), [wrapSend, onSendCustom]);
+  const handleSendCustom = useCallback(() => wrapSend(() => { haptic(); onSendCustom(); }), [wrapSend, onSendCustom]);
   const handleEnqueue = useCallback(() => wrapEnqueue(() => {
-    if (custom.trim() && onEnqueueCustom) { onEnqueueCustom(custom.trim()); onCustomChange(""); }
+    if (custom.trim() && onEnqueueCustom) { haptic(); onEnqueueCustom(custom.trim()); onCustomChange(""); }
   }), [wrapEnqueue, custom, onEnqueueCustom, onCustomChange]);
+  const handleSendIntent = useCallback((id: OrchestrationTaskIntentId) => { haptic(); onSendIntent(id); }, [onSendIntent]);
 
   const inputProps = {
     custom, listening, processing, micError, sending, waveformBars, recordingSeconds, maxRecordingSeconds,
@@ -135,7 +137,7 @@ export function IntentButtonPanel({
         <div className="space-y-2 border-t border-border-subtle pt-3">
           {/* Primary CTA: Next best — full width, visually elevated */}
           <button
-            onClick={() => onSendIntent(primary.id)}
+            onClick={() => handleSendIntent(primary.id)}
             disabled={sending !== null}
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
@@ -147,7 +149,7 @@ export function IntentButtonPanel({
             {ACTION_INTENTS.map(({ id, label }) => (
               <button
                 key={id}
-                onClick={() => onSendIntent(id)}
+                onClick={() => handleSendIntent(id)}
                 disabled={sending !== null}
                 className="ui-chip-action-compact text-text-secondary"
               >
@@ -168,7 +170,7 @@ export function IntentButtonPanel({
               {MORE_INTENTS.map(({ id, label }) => (
                 <button
                   key={id}
-                  onClick={() => onSendIntent(id)}
+                  onClick={() => handleSendIntent(id)}
                   disabled={sending !== null}
                   className="ui-chip-action-compact text-text-tertiary"
                 >
