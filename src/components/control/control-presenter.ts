@@ -90,17 +90,31 @@ export type ControlPageState = {
   /** Subset of idleProjects with uncommitted local changes — surfaces to a
    *  separate "Needs attention" subgroup so the long quiet list doesn't bury them. */
   idleNeedsAttention: ProjectState[];
-  /** Idle projects with a clean working tree — the long tail. */
+  /** Idle projects with a clean working tree, touched within IDLE_STALE_S. */
   idleQuiet: ProjectState[];
+  /** Idle projects with no session OR session.mtime older than IDLE_STALE_S — the dormant tail. */
+  idleStale: ProjectState[];
   sortedProjects: ProjectState[];
   dashboard: ControlDashboardState;
   attention: AttentionItem[];
 };
 
+/** Idle projects with session.mtime older than this (seconds) drop into the
+ *  "Stale" bucket — 30 days matches the threshold at which a project usually
+ *  needs a fresh `gog` / re-orient pass before any agent dispatch makes sense. */
+const IDLE_STALE_S = 30 * 86_400;
+
 /** True when an idle project has uncommitted local work — the simplest signal
  *  that the project is mid-something and shouldn't blend into the quiet pile. */
 function idleNeedsAttention(project: ProjectState): boolean {
   return !!project.git && (project.git.dirty || project.git.dirtyCount > 0);
+}
+
+/** True when an idle project hasn't been touched in IDLE_STALE_S — by mtime,
+ *  with no-session falling through to stale (a never-touched project IS dormant). */
+function idleIsStale(project: ProjectState, nowS: number): boolean {
+  if (!project.session) return true;
+  return nowS - project.session.mtime > IDLE_STALE_S;
 }
 
 function attentionScore(project: ProjectState): { score: number; reason: string } {
@@ -294,7 +308,9 @@ export function buildControlPageState(
     return !state.isActive && !expandedTabs.has(project.tab);
   });
   const idleNeedsAttn = idleProjects.filter(idleNeedsAttention);
-  const idleQuietList = idleProjects.filter((p) => !idleNeedsAttention(p));
+  const idleRest = idleProjects.filter((p) => !idleNeedsAttention(p));
+  const idleQuietList = idleRest.filter((p) => !idleIsStale(p, nowS));
+  const idleStaleList = idleRest.filter((p) => idleIsStale(p, nowS));
 
   const runningCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
@@ -324,6 +340,7 @@ export function buildControlPageState(
     idleProjects,
     idleNeedsAttention: idleNeedsAttn,
     idleQuiet: idleQuietList,
+    idleStale: idleStaleList,
     sortedProjects,
     attention,
     dashboard: {

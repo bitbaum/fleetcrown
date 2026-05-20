@@ -18,8 +18,10 @@ interface ProjectFleetViewProps {
   idleProjects: ProjectState[];
   /** Idle projects with pending uncommitted work — surfaced as a separate subsection above the quiet pile. */
   idleNeedsAttention: ProjectState[];
-  /** Idle projects with a clean tree. */
+  /** Idle projects with a clean tree, recently touched. */
   idleQuiet: ProjectState[];
+  /** Dormant idle projects — session.mtime > 30 days old or no session. */
+  idleStale: ProjectState[];
   focusedTab: string | null;
   setFocusedTab: (tab: string | null) => void;
   expandedTabs: Set<string>;
@@ -43,6 +45,7 @@ export function ProjectFleetView({
   idleProjects,
   idleNeedsAttention,
   idleQuiet,
+  idleStale,
   focusedTab,
   setFocusedTab,
   expandedTabs,
@@ -217,7 +220,7 @@ export function ProjectFleetView({
               )}
               {idleQuiet.length > 0 && (
                 <div className="space-y-2">
-                  {idleNeedsAttention.length > 0 && (
+                  {(idleNeedsAttention.length > 0 || idleStale.length > 0) && (
                     <div className="sticky top-0 z-10 -mx-1 bg-surface-page/95 px-1 py-1 backdrop-blur-sm">
                       <p className="ui-kicker text-text-tertiary">
                         Quiet · {idleQuiet.length}
@@ -226,6 +229,28 @@ export function ProjectFleetView({
                   )}
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {idleQuiet.map((project) => (
+                      <ProjectTile
+                        key={project.tab}
+                        project={project}
+                        currentAdapter={selectedAgent}
+                        zellijTabs={zellijTabs}
+                        onExpand={() => expandTab(project.tab)}
+                        onLaunch={() => openLaunchModal(project)}
+                        onFocus={() => { expandTab(project.tab); setFocusedTab(project.tab); }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {idleStale.length > 0 && (
+                <div className="space-y-2">
+                  <div className="sticky top-0 z-10 -mx-1 bg-surface-page/95 px-1 py-1 backdrop-blur-sm">
+                    <p className="ui-kicker text-text-muted">
+                      Stale · {idleStale.length}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {idleStale.map((project) => (
                       <ProjectTile
                         key={project.tab}
                         project={project}

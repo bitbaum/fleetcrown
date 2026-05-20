@@ -69,6 +69,7 @@ export function ControlPanel() {
   const idleProjects = pageState?.idleProjects ?? [];
   const idleNeedsAttention = pageState?.idleNeedsAttention ?? [];
   const idleQuiet = pageState?.idleQuiet ?? [];
+  const idleStale = pageState?.idleStale ?? [];
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
 
@@ -119,6 +120,7 @@ export function ControlPanel() {
   const fleetIdle   = daemonStateUnknown ? [] : idleProjects;
   const fleetIdleNeedsAttention = daemonStateUnknown ? [] : idleNeedsAttention;
   const fleetIdleQuiet = daemonStateUnknown ? [] : idleQuiet;
+  const fleetIdleStale = daemonStateUnknown ? [] : idleStale;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -304,6 +306,7 @@ export function ControlPanel() {
         idleProjects={fleetIdle}
         idleNeedsAttention={fleetIdleNeedsAttention}
         idleQuiet={fleetIdleQuiet}
+        idleStale={fleetIdleStale}
         focusedTab={focusedTab}
         setFocusedTab={setFocusedTab}
         expandedTabs={expandedTabs}
