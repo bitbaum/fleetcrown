@@ -30,6 +30,8 @@ import { tailLog } from "./log";
 import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
 import { appendEvent } from "./emit";
+import { renderPromptForDispatch } from "./render";
+import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
 const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
@@ -183,7 +185,7 @@ const server = http.createServer((req, res) => {
   // either emit a bridge.dispatch event (when autonomy + confidence say "go")
   // or return the proposed action for a confirm-mode UI to render.
   //
-  // Body: { project: string, queueHead?: string, autonomy?: Autonomy }
+  // Body: { project: string, queueHead?: string, autonomy?: Autonomy, projectPath?: string }
   // Response on auto-execute: { dispatched: true,  decision, runId }
   // Response on hold:         { dispatched: false, decision }
   if (url === "/api/dispatch" && req.method === "POST") {
@@ -223,7 +225,8 @@ const server = http.createServer((req, res) => {
 
         // Auto-execute: emit a bridge.dispatch event with a fresh run id.
         const runId = randomUUID();
-        const prompt = buildPromptForDispatch(decision, projectState);
+        const projectPath = typeof parsed.projectPath === "string" ? parsed.projectPath : undefined;
+        const prompt = buildPromptForDispatch(decision, projectState, projectPath);
         const intent = decision.action.intent;
         appendEvent({
           kind: "bridge.dispatch",
@@ -252,22 +255,45 @@ const server = http.createServer((req, res) => {
 });
 
 /**
- * Stub prompt builder for M6. When the decision carries an explicit prompt
- * (queue-drain case where the queue item IS the prompt), passes it through.
- * Otherwise emits a placeholder that names the intent — the real renderer
- * lands in M7 along with the cutover from /api/control/dispatch.
+ * Build the dispatch prompt for a decision.
+ *
+ * M7: replaces the M6 stub. Reuses the existing src/lib/orchestration
+ * renderer via home/render.ts (single SSOT for prompt text). If the
+ * decision carries an explicit prompt string (queue-drain case), that's
+ * passed through as a 'custom' intent so the queue item itself becomes
+ * the prompt body — same behavior as today's queue→intent="custom" flip.
  */
-function buildPromptForDispatch(decision: Decision, project: ProjectState): string {
-  if (decision.action.kind === "dispatch" && decision.action.prompt) {
-    return decision.action.prompt;
+function buildPromptForDispatch(
+  decision: Decision,
+  project: ProjectState,
+  projectPath?: string,
+): string {
+  if (decision.action.kind === "wait") {
+    // Caller is supposed to short-circuit on wait — never dispatch one.
+    throw new Error("buildPromptForDispatch called on a wait decision");
   }
+  const intentRaw = decision.action.intent;
+  // Decision.action.intent is a free-form string in the home types; gate
+  // it against the canonical id set before handing to the renderer.
   const intent =
-    decision.action.kind === "dispatch" || decision.action.kind === "recovery"
-      ? decision.action.intent
-      : "unknown";
-  return `[m6 dispatch stub] intent=${intent} project=${project.project} — reason: ${
-    decision.action.kind === "wait" ? "n/a" : decision.action.reason
-  }`;
+    (ORCHESTRATION_TASK_INTENT_IDS as readonly string[]).includes(intentRaw)
+      ? (intentRaw as OrchestrationTaskIntentId)
+      : "next_best";
+  // Queue-drain case: the queue item IS the prompt. Pass it through as
+  // intent="custom" so renderTaskForAdapter echoes it verbatim.
+  if (decision.action.kind === "dispatch" && decision.action.prompt) {
+    return renderPromptForDispatch({
+      project: project.project,
+      projectPath,
+      intent: "custom",
+      customInstructions: decision.action.prompt,
+    });
+  }
+  return renderPromptForDispatch({
+    project: project.project,
+    projectPath,
+    intent,
+  });
 }
 
 server.listen(PORT, () => {
