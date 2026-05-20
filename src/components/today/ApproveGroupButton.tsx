@@ -3,6 +3,7 @@
 import { Check, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { handleApproveAll } from "@/app/actions";
+import { haptic } from "@/lib/haptics";
 
 export function ApproveGroupButton({ ids }: { ids: string[] }) {
   const [busy, setBusy] = useState(false);
@@ -20,6 +21,7 @@ export function ApproveGroupButton({ ids }: { ids: string[] }) {
   return (
     <button
       onClick={async () => {
+        haptic();
         setBusy(true);
         setError(false);
         try {

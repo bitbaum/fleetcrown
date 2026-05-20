@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { handleApprove, handleReject } from "@/app/actions";
 import { useState } from "react";
 import { ACTION_STATUS } from "@/lib/constants/statuses";
+import { haptic } from "@/lib/haptics";
 
 type DoneStatus = typeof ACTION_STATUS.APPROVED | typeof ACTION_STATUS.REJECTED;
 
@@ -19,6 +20,7 @@ export function ActionButtons({
   const [error, setError] = useState<string | null>(null);
 
   async function onApprove() {
+    haptic();
     setBusy(true);
     setError(null);
     try {
@@ -32,6 +34,7 @@ export function ActionButtons({
   }
 
   async function onReject() {
+    haptic();
     setBusy(true);
     setError(null);
     try {

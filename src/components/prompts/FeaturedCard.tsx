@@ -4,6 +4,7 @@ import { Zap, Clock } from "lucide-react";
 import { usePromptModals } from "./use-prompt-modals";
 import { CATEGORY_META, type PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
+import { haptic } from "@/lib/haptics";
 
 /** Larger card used in the Quick Access grid above category sections. */
 export function FeaturedCard({
@@ -30,7 +31,7 @@ export function FeaturedCard({
         </div>
         <div className="flex gap-2 mt-auto">
           <button
-            onClick={openRun}
+            onClick={() => { haptic(); openRun(); }}
             className="ui-btn-lg flex flex-1 items-center justify-center gap-2"
           >
             <Zap className="h-4 w-4" /> Run Now
