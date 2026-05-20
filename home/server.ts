@@ -26,7 +26,7 @@ import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
 import type { Autonomy, Adapter } from "@/lib/events";
-import { ADAPTERS } from "@/lib/events";
+import { ADAPTERS, parseEvent } from "@/lib/events";
 import { tailLog } from "./log";
 import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
@@ -202,7 +202,12 @@ const server = http.createServer((req, res) => {
   }
 
   // Convenience: POST a JSONL event body to append to the log. Used for manual
-  // testing during M2; the real producer is the worker hook layer in M4.
+  // testing; the real producers are home/watcher.ts, home/worker.ts, and the
+  // emit_worker_finished function in scripts/agent-hook-bridge.sh.
+  //
+  // Validated against the v=1 schema before append — otherwise a typo or
+  // half-built event leaves a permanent garbled line in the log that
+  // parseEvent on the read side has to skip on every boot.
   if (url === "/api/events" && req.method === "POST") {
     let body = "";
     req.on("data", (chunk) => { body += String(chunk); });
@@ -215,9 +220,18 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: false, error: "empty body" }));
           return;
         }
+        const parsed = parseEvent(line);
+        if (!parsed.ok) {
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: false, error: parsed.error, raw: parsed.raw }));
+          return;
+        }
+        // Append the original line (preserves caller's field ordering /
+        // formatting) — parsed.event is just the validation product.
         fs.appendFileSync(LOG_PATH, line + "\n");
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ ok: true }));
+        res.end(JSON.stringify({ ok: true, kind: parsed.event.kind }));
       } catch (e) {
         res.statusCode = 500;
         res.setHeader("Content-Type", "application/json");
