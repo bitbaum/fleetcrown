@@ -49,8 +49,9 @@ export function renderPromptForDispatch(input: RenderInput): string {
 
 // ── Self-test ────────────────────────────────────────────────────────────────
 // Run with: npx tsx home/render.ts
-// Asserts every canonical intent produces a non-empty string and "custom"
-// echoes its customInstructions.
+// Asserts every canonical intent produces a non-empty string, "custom"
+// echoes its customInstructions, and the queue field threads through to
+// renderQueueBlock in the underlying renderTaskForAdapter.
 
 function selfTest() {
   let pass = 0, fail = 0;
@@ -66,6 +67,59 @@ function selfTest() {
     if (ok) { console.log(`  ✓ ${intent}`); pass++; }
     else    { console.log(`  ✗ ${intent} → got: ${JSON.stringify(out).slice(0, 100)}`); fail++; }
   }
+
+  // Queue-block regression coverage — pins the contract that 1cacfd2 +
+  // e6bd03b rely on. If a future change to renderQueueBlock breaks the
+  // "User's prompt queue" header or the item ordering, these tests fail.
+  const queueCases: { name: string; check: () => boolean }[] = [
+    {
+      name: "queue items render under 'User's prompt queue for this project'",
+      check: () => {
+        const out = renderPromptForDispatch({
+          project: "Cockpit",
+          intent: "next_best",
+          queue: ["fix tests", "ship the docs"],
+        });
+        return out.includes("User's prompt queue for this project")
+            && out.includes("1. fix tests")
+            && out.includes("2. ship the docs");
+      },
+    },
+    {
+      name: "empty queue → no queue block rendered",
+      check: () => {
+        const out = renderPromptForDispatch({
+          project: "Cockpit",
+          intent: "next_best",
+          queue: [],
+        });
+        return !out.includes("User's prompt queue");
+      },
+    },
+    {
+      name: "undefined queue → no queue block rendered (back-compat)",
+      check: () => {
+        const out = renderPromptForDispatch({ project: "Cockpit", intent: "next_best" });
+        return !out.includes("User's prompt queue");
+      },
+    },
+    {
+      name: "queue > 10 items shows the first 10 plus an overflow indicator",
+      check: () => {
+        const items = Array.from({ length: 13 }, (_, i) => `item ${i + 1}`);
+        const out = renderPromptForDispatch({ project: "Cockpit", intent: "next_best", queue: items });
+        return out.includes("1. item 1")
+            && out.includes("10. item 10")
+            && !out.includes("11. item 11")
+            && out.includes("…and 3 more");
+      },
+    },
+  ];
+  for (const c of queueCases) {
+    if (c.check()) { console.log(`  ✓ ${c.name}`); pass++; }
+    else           { console.log(`  ✗ ${c.name}`); fail++; }
+  }
+
   console.log(`\n${pass}/${pass + fail} intents render`);
   if (fail > 0) process.exit(1);
 }
