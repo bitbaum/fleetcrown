@@ -12,6 +12,7 @@
     "lint": "eslint",
     "check:design": "bash scripts/check-design-system.sh",
     "smoke": "bash scripts/smoke.sh",
+    "test:home": "bash scripts/test-home.sh",
     "prepare": "husky"
   },
   "dependencies": {
