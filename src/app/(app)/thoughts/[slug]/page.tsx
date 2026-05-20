@@ -37,7 +37,26 @@ export async function generateMetadata({
   const { slug } = await params;
   const article = getThought(slug);
   if (!article) return { title: "Not Found" };
-  return { title: article.title, description: article.summary };
+  // type=article + publishedTime + tags turn the OG preview into a recognized
+  // article card on Facebook/LinkedIn/Slack. Image falls back to the root
+  // layout's /opengraph-image (generic Cockpit card) until a per-essay
+  // image generator exists.
+  return {
+    title: article.title,
+    description: article.summary,
+    openGraph: {
+      type: "article",
+      title: article.title,
+      description: article.summary,
+      publishedTime: article.publishedAt || undefined,
+      tags: article.tags,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.summary,
+    },
+  };
 }
 
 export default async function ThoughtArticlePage({
