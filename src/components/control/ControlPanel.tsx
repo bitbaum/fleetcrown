@@ -94,15 +94,29 @@ export function ControlPanel() {
           setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
           setTimeout(() => setQueuedNotice(null), 6000);
         }
-      } catch (err) { setError(err instanceof Error ? err.message : "Injection failed"); }
+      } catch (err) {
+        // Set the global error (renders at the top of the page) AND re-throw
+        // so the per-card sendError state in useProjectCardActions can render
+        // an inline error near the send button. The global banner is invisible
+        // when a mobile user is scrolled down to a project card — the inline
+        // error is the surface they're guaranteed to see.
+        setError(err instanceof Error ? err.message : "Injection failed");
+        throw err;
+      }
     },
     onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
       try { await runWithBrain(projectState, intent); }
-      catch (err) { setError(err instanceof Error ? err.message : "Failed to run task"); }
+      catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to run task");
+        throw err;
+      }
     },
     onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
       try { await runCustomPrompt(projectState, prompt, ag); }
-      catch (err) { setError(err instanceof Error ? err.message : "Failed to run prompt"); }
+      catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to run prompt");
+        throw err;
+      }
     },
     onDeleted: () => { refresh(true); },
     onProfileSaved: () => { refresh(true); },

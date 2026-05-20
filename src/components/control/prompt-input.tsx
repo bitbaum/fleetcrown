@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Send, Mic, ListPlus, Pause, Play } from "lucide-react";
+import { AlertCircle, Loader2, Send, Mic, ListPlus, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function PromptInput({
@@ -9,6 +9,8 @@ export function PromptInput({
   processing,
   micError,
   sending,
+  sendError,
+  onClearSendError,
   placeholder,
   showQueue,
   waveformBars,
@@ -29,6 +31,12 @@ export function PromptInput({
   processing: boolean;
   micError: string;
   sending: string | null;
+  /** Inline error banner shown above the input when the last send attempt
+   *  failed. The draft text is preserved (custom state survives), so the user
+   *  can retry from the same input. */
+  sendError?: string | null;
+  /** Dismiss the inline error banner. */
+  onClearSendError?: () => void;
   placeholder: string;
   showQueue?: boolean;
   waveformBars?: number[];
@@ -63,6 +71,30 @@ export function PromptInput({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border-default bg-surface-raised">
+      {sendError && (
+        <div className="flex items-start gap-2 border-b border-status-negative/30 bg-status-negative-subtle px-3 py-2">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-negative" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-status-negative">Send failed</p>
+            <p className="mt-0.5 truncate text-xs text-status-negative/80" title={sendError}>
+              {sendError}
+            </p>
+            <p className="mt-1 text-micro text-text-tertiary">
+              Your text is preserved below — fix the issue and tap Send again.
+            </p>
+          </div>
+          {onClearSendError && (
+            <button
+              type="button"
+              onClick={onClearSendError}
+              aria-label="Dismiss error"
+              className="ui-icon-action shrink-0 hover:text-text-primary"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
       <div className="relative">
           <textarea
             ref={textareaRef}

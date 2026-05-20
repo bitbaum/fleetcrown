@@ -8,6 +8,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import { isAutoContinueEnabledSync } from "@/lib/control-storage";
 import type { DispatchResult } from "@/app/api/control/dispatch/route";
+import { clearDraft, getDraft, setDraft } from "@/lib/draft-storage";
 
 export function useProjectCardActions({
   project,
@@ -35,10 +36,24 @@ export function useProjectCardActions({
   isOnlyReady: boolean;
 }) {
   const [sending, setSending] = useState<string | null>(null);
-  const [custom, setCustom] = useState("");
+  // Lazy-init from localStorage draft so a failed send / page reload / tab
+  // close doesn't drop the user's typed prompt. clearDraft is called only on
+  // confirmed-successful sendCustom / sendText. See incident 2026-05-20:
+  // mobile user sent from phone, request errored, draft lost.
+  const [custom, _setCustom] = useState<string>(() => getDraft(project.tab));
+  const setCustom = useCallback((next: string) => {
+    _setCustom(next);
+    setDraft(project.tab, next);
+  }, [project.tab]);
   const [customFocused, setCustomFocused] = useState(false);
   const [merging, setMerging] = useState(false);
   const [preloadedDispatch, setPreloadedDispatch] = useState<DispatchResult | null>(null);
+  // sendError surfaces dispatch failures inline near the send button — the
+  // global ControlPanel error renders above the project cards and is invisible
+  // on mobile when the user is scrolled down to a specific card. Inline error
+  // means a failed send is impossible to miss.
+  const [sendError, setSendError] = useState<string | null>(null);
+  const clearSendError = useCallback(() => setSendError(null), []);
 
   // Pre-fetch dispatch decision as soon as the ready banner appears.
   // Note 2026-05-20: previously gated on queue.length > 0, which short-
@@ -81,10 +96,17 @@ export function useProjectCardActions({
   const sendCustom = async () => {
     if (!custom.trim()) return;
     setSending("custom");
+    setSendError(null);
     setDismissed(true);
     try {
       await onInject(project.tab, undefined, custom.trim());
+      // Only clear input + draft AFTER confirmed success. If onInject throws
+      // (the parent in ControlPanel re-throws via setError), the text stays.
       setCustom("");
+    } catch (err) {
+      // onInject from ControlPanel already swallows + calls setError(global).
+      // We still defensively capture here in case the wrapper path changes.
+      setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
@@ -93,9 +115,15 @@ export function useProjectCardActions({
   const sendText = useCallback(async (text: string) => {
     if (!text.trim()) return;
     setSending("custom");
+    setSendError(null);
     setDismissed(true);
     try {
       await onInject(project.tab, undefined, text.trim());
+      // Belt-and-suspenders: sendText bypasses setCustom (the draft auto-clear
+      // path), so explicit clearDraft after successful send.
+      clearDraft(project.tab);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
@@ -221,7 +249,7 @@ export function useProjectCardActions({
     } catch { /* ignore */ } finally {
       setMerging(false);
     }
-  }, [queue, clearQueue]);
+  }, [queue, clearQueue, setCustom]);
 
   // Keyboard: 1–9 dispatch prompt slots when this is the sole ready project on the page.
   const sendRef = useRef(send);
@@ -258,6 +286,8 @@ export function useProjectCardActions({
     setCustomFocused,
     merging,
     preloadedDispatch,
+    sendError,
+    clearSendError,
     sendCustom,
     sendText,
     sessionHealthBlocksQueue,

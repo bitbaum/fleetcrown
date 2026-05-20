@@ -94,7 +94,7 @@ export function ProjectCard({
 
   const {
     sending, custom, setCustom, customFocused, setCustomFocused,
-    merging, preloadedDispatch,
+    merging, preloadedDispatch, sendError, clearSendError,
     sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
     handleAutoInject, handleSendFromQueue, handleMergeQueue,
   } = useProjectCardActions({
@@ -189,6 +189,8 @@ export function ProjectCard({
             isRunning={display.isRunning}
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}
+            sendError={sendError}
+            onClearSendError={clearSendError}
             custom={custom}
             queue={queue}
             bannerActive={display.isClosed || display.isReady || display.isOrchestrationReady}

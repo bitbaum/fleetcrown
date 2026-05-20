@@ -19,6 +19,8 @@ export function IntentButtonPanel({
   isRunning,
   autoContinueEnabled,
   sending,
+  sendError,
+  onClearSendError,
   custom,
   queue = [],
   bannerActive,
@@ -42,6 +44,10 @@ export function IntentButtonPanel({
   isRunning: boolean;
   autoContinueEnabled: boolean;
   sending: string | null;
+  /** Inline error from the last sendCustom/sendText/sendIntent attempt — surfaced near the send button. */
+  sendError?: string | null;
+  /** Dismiss the inline error (called from the dismiss button on PromptInput). */
+  onClearSendError?: () => void;
   custom: string;
   queue?: string[];
   bannerActive?: boolean;
@@ -80,6 +86,7 @@ export function IntentButtonPanel({
 
   const inputProps = {
     custom, listening, processing, micError, sending, waveformBars, recordingSeconds, maxRecordingSeconds,
+    sendError, onClearSendError,
     onCustomChange, onCustomFocusChange, toggleMic,
     showQueue: !!onEnqueueCustom,
     onSendCustom: handleSendCustom,
