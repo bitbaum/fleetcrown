@@ -77,6 +77,12 @@ export function ClosingBanner({ startedAt }: { startedAt: number }) {
 
 export function RunningBanner({ label, promptKey, startedAt }: { label: string; promptKey: string; startedAt: number }) {
   const [elapsed, setElapsed] = useState(() => Math.floor(Date.now() / 1000) - startedAt);
+  // Click-to-expand: the prompt label is truncated by default (1 line for
+  // canned prompts, 3 lines for custom) so cards stay scannable. The
+  // browser title="" tooltip wasn't surfacing long prompts well; clicking
+  // the label now toggles full-text display so the user can read what the
+  // agent is actually working on without leaving the card.
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     const id = setInterval(() => setElapsed(Math.floor(Date.now() / 1000) - startedAt), 1000);
     return () => clearInterval(id);
@@ -91,16 +97,38 @@ export function RunningBanner({ label, promptKey, startedAt }: { label: string; 
   const timerClass = elapsed > 900 ? "text-status-warning" : "text-text-muted";
   const isCustom = promptKey === "custom";
 
+  // Truncation classes differ per prompt kind; clearing them when expanded
+  // lets the full text render with whitespace preserved.
+  const truncatedClass = isCustom
+    ? "mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary"
+    : "truncate text-sm font-medium text-text-primary";
+  const expandedClass = isCustom
+    ? "mt-0.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-text-secondary"
+    : "whitespace-pre-wrap break-words text-sm font-medium text-text-primary";
+
   return (
     <div className="border-t border-accent-primary/25 bg-accent-primary/[0.05] px-5 py-3.5">
       <div className="flex items-start gap-2.5">
         <Loader2 className="ui-spinner-sm mt-[3px] text-accent-text shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">Working</p>
-          {isCustom
-            ? <p className="mt-0.5 line-clamp-3 text-xs leading-relaxed text-text-secondary" title={label}>{label}</p>
-            : <p className="truncate text-sm font-medium text-text-primary" title={label}>{label}</p>
-          }
+          <p className="text-micro font-semibold uppercase tracking-caps text-accent-text/60">
+            Working
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="ml-2 text-accent-text/60 hover:text-accent-text underline-offset-2 hover:underline"
+              aria-label={expanded ? "Collapse prompt" : "Show full prompt"}
+            >
+              {expanded ? "less" : "more"}
+            </button>
+          </p>
+          <p
+            className={cn("cursor-pointer", expanded ? expandedClass : truncatedClass)}
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? "Click to collapse" : "Click to expand"}
+          >
+            {label}
+          </p>
         </div>
         <span className={cn("shrink-0 pt-[3px] text-xs tabular-nums", timerClass)}>{elapsedStr}</span>
       </div>
