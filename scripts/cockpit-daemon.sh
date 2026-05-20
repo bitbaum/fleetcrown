@@ -634,13 +634,22 @@ push_runtime_state() {
 
 _push_loop() {
   local _last_hash=""
+  local _last_push_ts=0
+  # Heartbeat: even when the state hash is unchanged, force a push every
+  # HEARTBEAT_S so the cloud UI's "daemon offline" threshold (90 s in
+  # ControlPanel.tsx:daemonOffline) never trips on a healthy idle daemon.
+  # 60 s comfortably stays under that 90 s window with one missed-push slack.
+  local _heartbeat_s="$(_brand_env DAEMON_HEARTBEAT_S 60)"
   while true; do
-    local _s _h
+    local _s _h _now _age
     _s=$(_build_state_json 2>/dev/null) || true
     if [ -n "$_s" ]; then
       _h=$(printf '%s' "$_s" | md5sum | cut -d' ' -f1)
-      if [ "$_h" != "$_last_hash" ]; then
+      _now=$(date +%s)
+      _age=$(( _now - _last_push_ts ))
+      if [ "$_h" != "$_last_hash" ] || [ "$_age" -ge "$_heartbeat_s" ]; then
         _last_hash="$_h"
+        _last_push_ts="$_now"
         curl -sf --max-time 8 -X POST \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: application/json" \
