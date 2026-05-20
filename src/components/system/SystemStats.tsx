@@ -39,7 +39,10 @@ function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) 
 }
 
 export function SystemStats() {
-  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: 30_000 });
+  // 10s ceiling = 2× the server's 5s runTool cap; covers network jitter while
+  // ensuring a hung /api/system call surfaces FetchErrorState instead of
+  // pinning the panel on stale data for the full 30s poll interval.
+  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: 30_000, timeoutMs: 10_000 });
 
   if (loading) {
     return <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>;
