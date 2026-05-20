@@ -79,7 +79,7 @@ export function ProfileSettings({ user }: Props) {
         <div className="space-y-1.5">
           <label className="ui-kicker">Username</label>
           <div className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-base px-3 py-2.5">
-            <span className="text-sm text-text-tertiary">{typeof window !== "undefined" ? window.location.host : APP_DOMAIN}/u/</span>
+            <span className="text-sm text-text-tertiary">{APP_DOMAIN}/u/</span>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
