@@ -119,6 +119,7 @@ const INDEX_HTML = `<!doctype html>
   .status-pill { font-size: 11px; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 500; }
   .status-pill.ready   { background: #16a34a33; color: #4ade80; }
   .status-pill.working { background: #eab30833; color: #fbbf24; }
+  .queue-pill  { font-size: 11px; padding: 0.1rem 0.4rem; border-radius: 4px; background: #3b82f633; color: #93c5fd; font-weight: 500; }
   .outcomes { display: inline-flex; gap: 0.25rem; }
   .o { font-size: 13px; padding: 0 0.4rem; border-radius: 4px; font-weight: 600; line-height: 1.4; }
   .o.success { background: #16a34a33; color: #4ade80; }
@@ -301,6 +302,7 @@ async function refresh() {
               if (st === 'working') return '<span class="status-pill working">working</span>';
               return '';
             })()}
+            \${p.queueLen > 0 ? '<span class="queue-pill">' + p.queueLen + ' queued</span>' : ''}
             <span class="ts">\${compact(p.lastEventTs)}</span>
           </h2>
           \${reasonLine}
@@ -340,8 +342,23 @@ const server = http.createServer((req, res) => {
 
   if (url === "/api/state") {
     res.setHeader("Content-Type", "application/json");
+    // Annotate each project with the local /tmp/agent-queue-<tab> length so
+    // the /control UI can surface a "Nqueued" badge. The file mirror is
+    // written by both the cloud route (via /api/beacon/queue/[tab] PUT) and
+    // home's own /api/dispatch when the cloud route can't reach this
+    // machine. Reading the file lets home/ show queue depth without taking
+    // a DB dep — keeping home/ local-first.
+    const projects = assembleProjectList().map((p) => {
+      let queueLen = 0;
+      try {
+        const raw = fs.readFileSync(path.join("/tmp", `agent-queue-${p.project.toLowerCase()}`), "utf8");
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) queueLen = arr.length;
+      } catch { /* file missing or unreadable → no badge */ }
+      return { ...p, queueLen };
+    });
     res.end(JSON.stringify({
-      projects: assembleProjectList(),
+      projects,
       logPath: LOG_PATH,
       position: handle.position(),
       lastError,
