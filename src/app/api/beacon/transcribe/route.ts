@@ -64,8 +64,30 @@ export async function POST(req: NextRequest) {
       if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
       return NextResponse.json({ text });
     } catch (err) {
+      // Surface auth/quota problems with actionable status codes + hints so a
+      // user seeing "STT not working" sees the real cause in the network tab
+      // instead of a generic 500. callGroqTranscribe throws messages shaped
+      // "groq transcribe 401: <body>" — match on the status segment.
       const msg = err instanceof Error ? err.message : String(err);
-      return NextResponse.json({ error: msg }, { status: 500 });
+      if (/groq transcribe 401/i.test(msg) || /invalid.*api.*key/i.test(msg)) {
+        return NextResponse.json({
+          error: "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY in your env.",
+          detail: msg,
+        }, { status: 502 });
+      }
+      if (/groq transcribe 429/i.test(msg) || /rate.?limit/i.test(msg)) {
+        return NextResponse.json({
+          error: "Groq rate-limited this transcription — retry in a moment or switch to local transcription.",
+          detail: msg,
+        }, { status: 429 });
+      }
+      if (/abort|timeout/i.test(msg)) {
+        return NextResponse.json({
+          error: "Groq transcription timed out (>30s) — try a shorter recording.",
+          detail: msg,
+        }, { status: 504 });
+      }
+      return NextResponse.json({ error: msg }, { status: 502 });
     }
   }
 
