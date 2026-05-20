@@ -123,6 +123,32 @@ the set of `runId`s that already have a `worker.started` event downstream
 in the log that *don't* yet have a matching `worker.started` are treated
 as crash-recovery and re-injected after replay completes.
 
+## Inline self-tests
+
+Every module in `home/` ships with an inline test suite — no separate test
+runner, no framework, no external deps. Each suite runs in <1s. Run them
+individually while iterating, or all at once before committing:
+
+```bash
+npx tsx home/state.ts                # 15 tests — event projection
+npx tsx home/decide.ts               # 11 tests — autonomy + confidence
+npx tsx home/projects.ts             #  7 tests — agent-projects.conf parser
+npx tsx home/render.ts               # 12 tests — every intent renders
+npx tsx home/emit.ts    --self-test  #  5 tests — append-only writer
+npx tsx home/log.ts     --self-test  #  6 tests — JSONL tailer (replay path)
+npx tsx home/watcher.ts --self-test  #  8 tests — parseHandoff + tabFromFilename
+npx tsx home/worker.ts  --self-test  # 12 tests — applyEvent pure-function path
+```
+
+`server.ts` is currently exercised only by `npm run smoke` (boots the dev
+server and curls every route) — its HTTP route handlers are tightly bound
+to req/res streams, so unit-testing them in isolation would require
+mocking infrastructure not worth the cost yet.
+
+Counts above are accurate as of e85e249 and grow over time as new bugs
+are caught with regression cases — `tail` the test output to see the
+exact `N/M passed` line.
+
 ## What's not here yet
 
 - **Persistence beyond the log**: state is in-memory. Restart replays.
