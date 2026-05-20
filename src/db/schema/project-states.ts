@@ -14,6 +14,7 @@ export const projectStates = pgTable("project_states", {
   lockAt:                 timestamp("lock_at",    { withTimezone: true }),
   closingAt:              timestamp("closing_at", { withTimezone: true }),
   closedAt:               timestamp("closed_at",  { withTimezone: true }),
+  sessionStatus:          text("session_status"),     // 'ready' | 'working' | null. Drives auto-inject gating — only 'ready' fires.
   sessionDone:            text("session_done"),
   sessionNext:            text("session_next"),
   sessionTests:           text("session_tests"),
