@@ -17,6 +17,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { parseEvent, type Event } from "@/lib/events";
 
 export type TailHandle = {
@@ -107,15 +109,12 @@ export function tailLog(
 // fs.watch live-append behavior is async; tested by integration only.
 
 function selfTest() {
-  const os   = require("node:os")  as typeof import("node:os");
-  const cryp = require("node:crypto") as typeof import("node:crypto");
-
   // Each test gets a fresh tmp file so state doesn't leak between cases.
   function makeLogPath(): string {
-    return path.join(os.tmpdir(), `cockpit-log-test-${cryp.randomUUID()}.jsonl`);
+    return path.join(os.tmpdir(), `cockpit-log-test-${randomUUID()}.jsonl`);
   }
   const validEvent = (project: string) =>
-    `{"v":1,"id":"${cryp.randomUUID()}","ts":"2026-01-01T00:00:00Z","kind":"worker.idle","project":"${project}","handoff":{"done":"","next":"","tests":"","todos":"","health":"good"}}`;
+    `{"v":1,"id":"${randomUUID()}","ts":"2026-01-01T00:00:00Z","kind":"worker.idle","project":"${project}","handoff":{"done":"","next":"","tests":"","todos":"","health":"good"}}`;
 
   type Case = { name: string; run: () => boolean };
   const cases: Case[] = [
@@ -154,7 +153,7 @@ function selfTest() {
     {
       name: "missing file is created at the path (parent dir included)",
       run: () => {
-        const log = path.join(os.tmpdir(), `cockpit-log-test-${cryp.randomUUID()}/nested/log.jsonl`);
+        const log = path.join(os.tmpdir(), `cockpit-log-test-${randomUUID()}/nested/log.jsonl`);
         const h = tailLog(log, () => undefined);
         h.close();
         const exists = fs.existsSync(log);

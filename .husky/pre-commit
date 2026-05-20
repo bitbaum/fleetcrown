@@ -7,5 +7,5 @@ set -e
 echo "→ tsc --noEmit"
 npx tsc --noEmit
 
-echo "→ eslint src/"
-npx eslint src/
+echo "→ eslint src/ home/"
+npx eslint src/ home/
