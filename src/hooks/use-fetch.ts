@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getJson } from "@/lib/api/fetch";
+import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
 
 /**
  * Default abort ceiling for every useFetch call. Individual sites can pass
@@ -66,6 +67,16 @@ export function useFetch<T>(
     const id = setInterval(() => setRevision((v) => v + 1), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs, url]);
+
+  // Listen for the global refresh event (currently fired by PullToRefresh).
+  // Lets a single user gesture refresh both server-component data
+  // (router.refresh) and every client-side useFetch poll at once.
+  useEffect(() => {
+    if (!url) return;
+    const handler = () => setRevision((v) => v + 1);
+    window.addEventListener(COCKPIT_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(COCKPIT_REFRESH_EVENT, handler);
+  }, [url]);
 
   return { data, loading, error, refetch };
 }
