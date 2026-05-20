@@ -86,6 +86,19 @@ const handle = tailLog(
 );
 
 // ── HTML page (vanilla JS, polls /api/state every 2s) ────────────────────────
+//
+// Editing trap: the entire HTML+JS body lives inside the backtick template
+// literal below. Two characters need careful handling when adding content
+// here that don't matter in a normal .ts file:
+//   • Backticks (`) close the literal — escape as \` or avoid in comments
+//     and strings. A stray ` mid-comment produces opaque TS1005 errors
+//     pointing at the surrounding line, not the backtick itself.
+//   • ${expr} interpolates at server-render time. Use \${ in any JS that
+//     should evaluate in the browser (we already do this for refresh's
+//     template strings — see the renderProposal returns).
+//
+// If a tsc syntax error points at a line that "looks fine," grep for an
+// unescaped backtick or ${ in the surrounding template body.
 
 const INDEX_HTML = `<!doctype html>
 <html lang="en">
