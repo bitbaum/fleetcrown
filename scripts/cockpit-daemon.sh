@@ -87,6 +87,18 @@ _init_base_url() {
     if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
       echo "$(date +%s) $_LOCAL_URL" > "$_URL_CACHE"
       log "local server detected — using $_LOCAL_URL"
+      # Loud warning: if the configured remote URL is a real production
+      # endpoint (anything that isn't localhost / 127.0.0.1), the user
+      # almost certainly has a deployed app + a local dev server running
+      # side-by-side. Polling local means dispatches from the production
+      # /control page never reach this daemon — they queue silently on
+      # the remote DB. This exact trap cost a real session before the
+      # warning was added.
+      if [[ "$_REMOTE_URL" != *localhost* && "$_REMOTE_URL" != *127.0.0.1* ]]; then
+        log "WARN: ${APP_SLUG^^}_BASE_URL=$_REMOTE_URL but daemon picked LOCAL —"
+        log "WARN: dispatches from $_REMOTE_URL/control will NOT reach this daemon."
+        log "WARN: set ${APP_SLUG^^}_DAEMON_FORCE_REMOTE=1 in your daemon.env to poll $_REMOTE_URL instead."
+      fi
       return
     fi
     (( i++ )) || true
