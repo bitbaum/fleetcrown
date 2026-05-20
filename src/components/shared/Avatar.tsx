@@ -2,6 +2,11 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { getInitials } from "@/lib/initials";
+
+// Re-export so existing `from "@/components/shared/Avatar"` imports keep working.
+// New server-side callers should import directly from "@/lib/initials".
+export { getInitials };
 
 /**
  * Avatar with an initials-circle fallback when the image fails to load
@@ -20,13 +25,6 @@ const SIZE_CLASS: Record<Size, string> = {
   md: "h-12 w-12 text-sm",
   lg: "h-18 w-18 text-2xl",
 };
-
-export function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
 
 export function Avatar({
   src,
