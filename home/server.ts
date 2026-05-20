@@ -213,13 +213,28 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ error: "missing 'project' string in body" }));
           return;
         }
-        const projectState = state.get(projectName);
-        if (!projectState) {
+        // Look up the project — first in the live event-projected state, then
+        // fall back to the agent-projects.conf registry so a brand-new project
+        // (no events yet) can still receive its first dispatch. Last resort:
+        // accept the name verbatim; the brain has nothing to reason about so
+        // decide() defaults to "next_best" with neutral confidence, but that's
+        // a valid first run.
+        const liveState = state.get(projectName);
+        const registered = resolveProjectPath(projectName);
+        if (!liveState && !registered) {
           res.statusCode = 404;
           res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ error: `unknown project: ${projectName}` }));
+          res.end(JSON.stringify({
+            error: `unknown project: ${projectName}`,
+            hint: "Add it to ~/.config/agent-projects.conf (TabName|/absolute/path), or POST a worker.* event first.",
+          }));
           return;
         }
+        const projectState: ProjectState = liveState ?? {
+          project: projectName,
+          lastEventTs: new Date().toISOString(),
+          recentOutcomes: [],
+        };
         const decision = decide({
           project: projectState,
           queueHead: typeof parsed.queueHead === "string" ? parsed.queueHead : undefined,
