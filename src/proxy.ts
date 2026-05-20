@@ -22,6 +22,7 @@ export const config = {
      *   favicon.ico                – browser icon request
      *   icon\.svg, manifest\.json  – PWA / browser-tab static assets
      *   opengraph-image, twitter-image – social card crawlers (FB, Twitter, Slack, LinkedIn)
+     *   robots\.txt, sitemap\.xml  – search engines
      *   /                          – public landing page (.+ not .*)
      *   sign-in, sign-up           – public auth pages
      *   forgot-password, reset-password, verify-email, setup, invite
@@ -35,6 +36,6 @@ export const config = {
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
   ],
 };
