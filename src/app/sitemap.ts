@@ -1,17 +1,23 @@
 import type { MetadataRoute } from "next";
 import { APP_URL } from "@/config/brand";
 import { listThoughts } from "@/lib/thoughts-content";
+import { getDefaultUser } from "@/db/queries/users";
 
-// Next.js file-convention sitemap. Covers the static marketing surface +
-// each filesystem-backed essay. /u/[username] is omitted intentionally — the
-// list is per-user and would require a DB scan; can be added later if profile
-// discoverability becomes a priority.
+// Next.js file-convention sitemap. Covers:
+//   - Static marketing surface (/, /whitepaper, /thoughts, /sign-up, /sign-in)
+//   - Each filesystem-backed essay (listThoughts)
+//   - The default user's public profile (the single canonical site-owner)
+//
+// Other users' /u/[username] URLs stay OUT — in a multi-tenant deployment a
+// public sitemap enumerating every account is a privacy leak. Site owner is
+// the only intentional public profile.
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const thoughts = listThoughts();
+  const defaultUser = await getDefaultUser();
 
-  return [
+  const base: MetadataRoute.Sitemap = [
     { url: `${APP_URL}/`,           lastModified: now, changeFrequency: "weekly",  priority: 1.0 },
     { url: `${APP_URL}/whitepaper`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${APP_URL}/thoughts`,   lastModified: now, changeFrequency: "weekly",  priority: 0.8 },
@@ -24,4 +30,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     })),
   ];
+
+  if (defaultUser?.username) {
+    base.push({
+      url: `${APP_URL}/u/${defaultUser.username}`,
+      lastModified: defaultUser.updatedAt ?? now,
+      changeFrequency: "weekly",
+      priority: 0.9,
+    });
+  }
+
+  return base;
 }
