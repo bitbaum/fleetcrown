@@ -33,12 +33,15 @@ bash scripts/home-start.sh
 ```
 
 Or run them individually in separate terminals (useful when iterating on
-one process at a time):
+one process at a time). All three require an explicit `--start` flag —
+naked invocations print a usage banner and exit 0 so accidental
+`| tail -N` pipes don't leave orphaned watchers behind:
 
 ```bash
-npx tsx home/server.ts     # Brain — http://localhost:3001
-npx tsx home/watcher.ts    # Bridge — emits worker.idle when sessions change
-npx tsx home/worker.ts     # Consumer — injects bridge.dispatch into zellij
+npx tsx home/server.ts  --start   # Brain — http://localhost:3001
+npx tsx home/watcher.ts --start   # Bridge — emits worker.idle when sessions change
+npx tsx home/worker.ts  --start   # Consumer — injects bridge.dispatch into zellij
+npx tsx home/worker.ts  --self-test   # Inline tests, no I/O
 ```
 
 Override the Brain port with `APP_HOME_PORT=3801`. Override the watcher
@@ -59,28 +62,58 @@ EOF
 
 ## Smoke test — dispatch via the API
 
+The four autonomy modes gate auto-execution differently:
+
+| Mode      | Threshold | Use case                                                |
+|-----------|-----------|---------------------------------------------------------|
+| `manual`  | 0 (none)  | Human clicked Dispatch — fires on receipt               |
+| `confirm` | ∞ (never) | Show the proposal so the human can review               |
+| `auto`    | 0.55      | Autonomous scheduler (cron, queue drain), moderate gate |
+| `sleep`   | 0.75      | Autonomous while-away, high-confidence gate             |
+
+A fresh project has `confidence = 0.5`, so only `manual` fires immediately.
+Use `confirm` to see the proposed action without firing:
+
 ```bash
-# In a third terminal — auto-mode triggers the worker if confidence allows.
+# Fire now (human-initiated).
 curl -s -X POST http://localhost:3001/api/dispatch \
   -H 'Content-Type: application/json' \
-  -d '{"project":"Demo","autonomy":"auto","queueHead":"run the smoke test"}'
+  -d '{"project":"Demo","autonomy":"manual","queueHead":"run the smoke test"}'
 
-# worker.ts injects "run the smoke test" into the Demo zellij tab and
-# appends a worker.started event. The UI reflects it on the next poll.
+# See what the brain would do, without firing.
+curl -s -X POST http://localhost:3001/api/dispatch \
+  -H 'Content-Type: application/json' \
+  -d '{"project":"Demo","autonomy":"confirm"}'
+```
+
+When fired, `worker.ts` injects "run the smoke test" into the `Demo`
+zellij tab and appends a `worker.started` event. The UI reflects it on
+the next 2s poll.
+
+## Smoke test — cancel an in-flight run
+
+```bash
+# Sends Ctrl+C to the project's zellij tab via the worker, and tags the
+# eventual worker.finished's outcome as user_abort in recentOutcomes
+# (the bash stop hook can only infer success/partial/error/hang).
+curl -s -X POST http://localhost:3001/api/cancel \
+  -H 'Content-Type: application/json' \
+  -d '{"project":"Demo","reason":"changed my mind"}'
 ```
 
 ## Files
 
 | File          | Purpose                                                                          |
 |---------------|----------------------------------------------------------------------------------|
-| `state.ts`    | Pure `applyEvent(state, event) → state`.                                         |
+| `state.ts`    | Pure `applyEvent(state, event) → state`. Re-labels cancelled runs as `user_abort`. |
 | `log.ts`      | Tail one JSONL file, parse via `@/lib/events`. Phase flag (replay/live).         |
 | `emit.ts`     | Single append-only writer. Stamps `v` + `id` + `ts` at write time.               |
 | `render.ts`   | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.         |
 | `decide.ts`   | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.    |
-| `server.ts`   | HTTP server — `/control` HTML + `/api/state` + `/api/health` + `POST /api/dispatch`. |
-| `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`.               |
-| `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch`, injects via zellij, emits `worker.started`. |
+| `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path SSOT.                      |
+| `server.ts`   | HTTP server — `/control` HTML + `/api/state` + `/api/health` + `POST /api/dispatch` + `POST /api/cancel` + `POST /api/events`. |
+| `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
+| `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch` (inject) and `bridge.cancel` (Ctrl+C), emits `worker.started` / `worker.crashed`. |
 
 ## Idempotency
 
