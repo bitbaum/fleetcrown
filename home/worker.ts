@@ -28,9 +28,12 @@
 
 import { tailLog, type EventPhase } from "./log";
 import { appendEvent, LOG_PATH } from "./emit";
-import { injectIntoTab } from "@/lib/zellij";
+import { injectIntoTab, sendRawKey } from "@/lib/zellij";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
 import type { Event } from "@/lib/events";
+
+/** Linux Ctrl+C raw key code. Same value used by switch-agent for hard interrupt. */
+const CTRL_C = 3;
 
 // ── State held by the worker process ────────────────────────────────────────
 
@@ -55,7 +58,7 @@ export function applyEvent(
   state: WorkerState,
   event: Event,
   phase: EventPhase,
-): { dispatch?: Event } {
+): { dispatch?: Event; cancel?: Event } {
   // worker.started AND worker.crashed both terminate a runId from the
   // worker's POV — one succeeded, the other failed permanently. Either
   // way, don't re-inject. Without crashed-as-terminator, a failed
@@ -65,6 +68,14 @@ export function applyEvent(
     state.startedRunIds.add(event.runId);
     state.pendingDispatches.delete(event.runId);
     return {};
+  }
+  // bridge.cancel ALSO terminates a runId: drop it from pendingDispatches so
+  // crash-recovery on next boot doesn't re-fire a dispatch the user already
+  // killed. Live cancels also signal the caller to send Ctrl+C to the tab.
+  if (event.kind === "bridge.cancel") {
+    state.startedRunIds.add(event.runId);
+    state.pendingDispatches.delete(event.runId);
+    return phase === "live" ? { cancel: event } : {};
   }
   if (event.kind !== "bridge.dispatch") return {};
   if (state.startedRunIds.has(event.runId)) return {};   // already handled
@@ -83,6 +94,26 @@ export function applyEvent(
 }
 
 // ── Side-effect: actually inject + emit worker.started ──────────────────────
+
+/**
+ * Side-effect: send Ctrl+C to the project's tab. Symmetric to executeDispatch —
+ * worker is the only process that touches zellij, regardless of intent.
+ *
+ * The stop hook that runs when the agent shuts down will still emit a
+ * worker.finished event with whatever outcome infer_outcome_v1 derives from
+ * the session.md at that moment (typically "partial" when done is empty),
+ * so the brain's state catches up naturally without us forging a finish here.
+ */
+function executeCancel(event: Event) {
+  if (event.kind !== "bridge.cancel") return;
+  try {
+    sendRawKey(event.project, CTRL_C);
+    console.log(`[worker] sent Ctrl+C to project=${event.project} runId=${event.runId} reason=${event.reason}`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[worker] cancel failed runId=${event.runId}: ${msg}`);
+  }
+}
 
 function executeDispatch(state: WorkerState, event: Event) {
   if (event.kind !== "bridge.dispatch") return;
@@ -119,8 +150,9 @@ function start() {
   const handle = tailLog(
     LOG_PATH,
     (event, phase) => {
-      const { dispatch } = applyEvent(state, event, phase);
+      const { dispatch, cancel } = applyEvent(state, event, phase);
       if (dispatch) executeDispatch(state, dispatch);
+      if (cancel)   executeCancel(cancel);
     },
     (err) => console.error("[worker]", err.message),
   );
@@ -167,6 +199,10 @@ function selfTest() {
     v: 1, id: `crashed-${runId}`, ts: "2026-01-01T00:01:00Z",
     kind: "worker.crashed", project: "Test", runId,
     error: "inject failed: tab not found",
+  });
+  const cancelEvent = (runId: string): Event => ({
+    v: 1, id: `cancel-${runId}`, ts: "2026-01-01T00:02:00Z",
+    kind: "bridge.cancel", project: "Test", runId, reason: "user clicked Cancel",
   });
 
   type Case = { name: string; run: () => boolean };
@@ -232,6 +268,41 @@ function selfTest() {
       run: () => {
         const s = fresh();
         applyEvent(s, crashedEvent("a"), "replay");
+        const r = applyEvent(s, dispatchEvent("a"), "live");
+        return r.dispatch === undefined;
+      },
+    },
+    {
+      name: "live bridge.cancel returns the event so caller sends Ctrl+C",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, startedEvent("a"), "live");
+        const r = applyEvent(s, cancelEvent("a"), "live");
+        return r.cancel?.kind === "bridge.cancel" && r.cancel.runId === "a";
+      },
+    },
+    {
+      name: "replay bridge.cancel does NOT emit a Ctrl+C (history, not now)",
+      run: () => {
+        const s = fresh();
+        const r = applyEvent(s, cancelEvent("a"), "replay");
+        return r.cancel === undefined && s.startedRunIds.has("a");
+      },
+    },
+    {
+      name: "bridge.cancel during replay drops a pending dispatch (don't crash-recover a cancelled run)",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, dispatchEvent("a"), "replay");
+        applyEvent(s, cancelEvent("a"),   "replay");
+        return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
+      },
+    },
+    {
+      name: "live dispatch is skipped when a prior cancel already terminated the runId",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, cancelEvent("a"), "live");
         const r = applyEvent(s, dispatchEvent("a"), "live");
         return r.dispatch === undefined;
       },

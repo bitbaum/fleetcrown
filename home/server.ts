@@ -109,6 +109,8 @@ const INDEX_HTML = `<!doctype html>
   .actions button:disabled { opacity: 0.4; cursor: not-allowed; }
   .actions button.primary { border-color: #16a34a55; color: #4ade80; }
   .actions button.primary:hover:not(:disabled) { background: #16a34a22; }
+  .actions button.danger { border-color: #dc262655; color: #f87171; }
+  .actions button.danger:hover:not(:disabled) { background: #dc262622; }
   .proposal { font-size: 11px; color: #a3a3a3; margin-top: 0.5rem; padding: 0.4rem 0.6rem; border-left: 2px solid #525252; background: #0f0f0f; line-height: 1.5; word-break: break-word; }
   .proposal .label { color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; margin-right: 0.4rem; }
   pre { color: #525252; font-size: 11px; background: #050505; padding: 1rem; border-radius: 4px; margin-top: 2rem; overflow-x: auto; }
@@ -175,10 +177,36 @@ async function dispatch(project, autonomy, btn) {
     refresh();
   }
 }
+async function cancelRun(project, btn) {
+  const buttons = btn.parentElement.querySelectorAll('button');
+  buttons.forEach(b => b.disabled = true);
+  try {
+    const r = await fetch('/api/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project, reason: 'cancelled from /control' }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: j.error || ('HTTP ' + r.status) }, confidence: 0 } });
+    } else {
+      proposals.set(project, { dispatched: false, decision: { action: { kind: 'cancelled', intent: '', reason: 'Ctrl+C sent · runId ' + (j.runId || '').slice(0, 8) }, confidence: 0 } });
+    }
+  } catch (e) {
+    proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: String(e) }, confidence: 0 } });
+  } finally {
+    buttons.forEach(b => b.disabled = false);
+    refresh();
+  }
+}
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-project][data-autonomy]');
+  const btn = e.target.closest('button[data-action]');
   if (!btn) return;
-  dispatch(btn.dataset.project, btn.dataset.autonomy, btn);
+  if (btn.dataset.action === 'dispatch') {
+    dispatch(btn.dataset.project, btn.dataset.autonomy, btn);
+  } else if (btn.dataset.action === 'cancel') {
+    cancelRun(btn.dataset.project, btn);
+  }
 });
 async function refresh() {
   try {
@@ -205,10 +233,12 @@ async function refresh() {
           : '';
         const projAttr = escapeHtml(p.project);
         const actions = cr
-          ? ''
+          ? '<div class="actions">' +
+              '<button class="danger" data-action="cancel" data-project="' + projAttr + '">Cancel</button>' +
+            '</div>'
           : '<div class="actions">' +
-              '<button data-project="' + projAttr + '" data-autonomy="confirm">Propose</button>' +
-              '<button class="primary" data-project="' + projAttr + '" data-autonomy="auto">Dispatch</button>' +
+              '<button data-action="dispatch" data-project="' + projAttr + '" data-autonomy="confirm">Propose</button>' +
+              '<button class="primary" data-action="dispatch" data-project="' + projAttr + '" data-autonomy="auto">Dispatch</button>' +
             '</div>';
         return \`
         <div class="project\${cr ? ' running' : ''}">
@@ -304,6 +334,58 @@ const server = http.createServer((req, res) => {
         res.statusCode = 500;
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ ok: false, error: String(e) }));
+      }
+    });
+    return;
+  }
+
+  // Cancel an in-flight run. Emits a bridge.cancel event that:
+  //  1) the worker tails and turns into a Ctrl+C sent to the project's tab
+  //  2) state.ts projects into "currentRun = undefined" once the runId matches
+  //  3) the worker treats as a terminator so a never-started dispatch sitting
+  //     in pendingDispatches doesn't fire on next worker restart
+  //
+  // Body: { project: string, runId?: string, reason?: string }
+  // If runId is omitted, the live currentRun.runId is used. 404 if there's
+  // no active run for the project.
+  if (url === "/api/cancel" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => { body += String(chunk); });
+    req.on("end", () => {
+      try {
+        const parsed = body.trim() ? JSON.parse(body) : {};
+        const projectName: string | undefined = parsed.project;
+        if (typeof projectName !== "string" || !projectName) {
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: "missing 'project' string in body" }));
+          return;
+        }
+        const liveState = state.get(projectName);
+        const runId: string | undefined =
+          (typeof parsed.runId === "string" && parsed.runId) || liveState?.currentRun?.runId;
+        if (!runId) {
+          res.statusCode = 404;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({
+            error: `no active run for project: ${projectName}`,
+            hint: "POST body can include a runId to cancel a specific run; otherwise the project must have a currentRun.",
+          }));
+          return;
+        }
+        const reason = (typeof parsed.reason === "string" && parsed.reason.slice(0, 200)) || "user cancel";
+        appendEvent({
+          kind: "bridge.cancel",
+          project: projectName,
+          runId,
+          reason,
+        });
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: true, runId, reason }));
+      } catch (e) {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ error: String(e) }));
       }
     });
     return;
