@@ -23,7 +23,17 @@ all tailing the same append-only JSONL event log:
 
 ## Run
 
-Three terminals (or one tmux/zellij with three panes):
+One command starts all three processes, tags each line of output with its
+source, and shuts them down together on Ctrl-C:
+
+```bash
+bash scripts/home-start.sh
+# UI at http://localhost:3001
+# Logs merged into /tmp/<APP_SLUG>-home.log — tail -f to see all three.
+```
+
+Or run them individually in separate terminals (useful when iterating on
+one process at a time):
 
 ```bash
 npx tsx home/server.ts     # Brain — http://localhost:3001
