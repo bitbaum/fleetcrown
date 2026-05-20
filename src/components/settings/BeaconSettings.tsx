@@ -11,7 +11,7 @@ import {
   DEFAULT_BEACON_MIN_IDLE_S,
   MAX_BEACON_MIN_IDLE_S,
 } from "@/lib/constants/control";
-import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES } from "@/config/beacon";
+import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES, AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
 
 export function BeaconSettings() {
   const [data, setData]         = useState<BeaconSettingsData | null>(null);
@@ -20,6 +20,7 @@ export function BeaconSettings() {
   const [minIdle, setMinIdle]       = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel]           = useState("base");
   const [provider, setProvider]     = useState("auto");
+  const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>("strategist");
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [error, setError]           = useState("");
@@ -33,6 +34,7 @@ export function BeaconSettings() {
       setMinIdle(d.min_idle_seconds);
       setModel(d.whisper_model);
       setProvider(d.transcription_provider);
+      setAutoInjectMode(d.auto_inject_mode);
     }).catch(() => setLoadError(true));
   }, []);
 
@@ -41,7 +43,8 @@ export function BeaconSettings() {
     countdown !== data.countdown_seconds ||
     minIdle !== data.min_idle_seconds ||
     model !== data.whisper_model ||
-    provider !== data.transcription_provider
+    provider !== data.transcription_provider ||
+    autoInjectMode !== data.auto_inject_mode
   );
 
   const save = async () => {
@@ -55,12 +58,10 @@ export function BeaconSettings() {
         min_idle_seconds: minIdle,
         whisper_model: model,
         transcription_provider: provider,
+        auto_inject_mode: autoInjectMode,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      // Preserve auto_inject_mode through saves until this component grows a
-      // UI for it; without the carryover the new field reverts to default
-      // on every patch.
-      setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider, auto_inject_mode: data?.auto_inject_mode ?? "strategist" });
+      setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider, auto_inject_mode: autoInjectMode });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -89,6 +90,32 @@ export function BeaconSettings() {
         </div>
       ) : (
         <div className="space-y-6">
+
+          {/* ── Auto-inject mode ── */}
+          <div className="space-y-2">
+            <label className="ui-kicker">Auto-inject mode</label>
+            <div className="grid grid-cols-2 gap-2">
+              {AUTO_INJECT_MODES.map((m) => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setAutoInjectMode(m.value)}
+                  className={[
+                    "text-left rounded-lg border p-3 transition-colors",
+                    autoInjectMode === m.value
+                      ? "border-accent-primary bg-accent-muted"
+                      : "border-border-default bg-surface-base hover:border-border-interactive",
+                  ].join(" ")}
+                >
+                  <div className="font-medium text-sm text-text-primary">{m.label}</div>
+                  <div className="mt-1 text-xs text-text-tertiary">{m.description}</div>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-text-muted">
+              Decides what gets injected when a session ends and the queue/handoff combine to suggest a next move. Strategist is the default and uses Groq; switch to Queue only if you want strictly explicit prompts, or Off to dispatch every prompt by hand.
+            </p>
+          </div>
 
           {/* ── Popup mode ── */}
           <div className="space-y-2">

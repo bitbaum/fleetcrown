@@ -25,6 +25,36 @@ export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; l
   { value: "groq",  label: "Groq cloud",   note: "whisper-large-v3-turbo via API — rate limited" },
 ];
 
+export const AUTO_INJECT_MODE_VALUES = ["strategist", "queue_only", "next_best", "off"] as const;
+export type AutoInjectMode = (typeof AUTO_INJECT_MODE_VALUES)[number];
+
+export const AUTO_INJECT_MODES: readonly {
+  value: AutoInjectMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "strategist",
+    label: "Strategist",
+    description: "Groq composes a context-aware prompt from handoff, queue, and recent commits. Best signal-to-noise; needs a working Groq key.",
+  },
+  {
+    value: "queue_only",
+    label: "Queue only",
+    description: "Fire the next queue item verbatim, or stay quiet when queue is empty. Predictable, never surprises.",
+  },
+  {
+    value: "next_best",
+    label: "Canned next-best",
+    description: "Skip Groq, fire the static next-best template. Works offline; same prompt every time.",
+  },
+  {
+    value: "off",
+    label: "Off",
+    description: "Disable auto-inject entirely. You dispatch every prompt by hand.",
+  },
+];
+
 export const POPUP_MODE_VALUES = ["web", "disabled"] as const;
 export type PopupMode = (typeof POPUP_MODE_VALUES)[number];
 

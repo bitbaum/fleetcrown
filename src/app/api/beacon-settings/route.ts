@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { MIN_BEACON_COUNTDOWN_S, MAX_BEACON_COUNTDOWN_S, MAX_BEACON_MIN_IDLE_S } from "@/lib/constants/control";
-import { WHISPER_MODEL_VALUES, TRANSCRIPTION_PROVIDER_VALUES, POPUP_MODE_VALUES } from "@/config/beacon";
+import { WHISPER_MODEL_VALUES, TRANSCRIPTION_PROVIDER_VALUES, POPUP_MODE_VALUES, AUTO_INJECT_MODE_VALUES } from "@/config/beacon";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings, upsertBeaconSettings } from "@/db/queries/beacon-settings";
 
@@ -13,6 +13,7 @@ const PatchBody = z.object({
   whisper_model:          z.enum(WHISPER_MODEL_VALUES).optional(),
   transcription_provider: z.enum(TRANSCRIPTION_PROVIDER_VALUES).optional(),
   min_idle_seconds:       z.number().int().min(0).max(MAX_BEACON_MIN_IDLE_S).optional(),
+  auto_inject_mode:       z.enum(AUTO_INJECT_MODE_VALUES).optional(),
 });
 
 export async function GET() {
