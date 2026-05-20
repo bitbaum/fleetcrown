@@ -103,6 +103,14 @@ const INDEX_HTML = `<!doctype html>
   .conf { color: #71717a; font-size: 11px; }
   .proj-err { color: #f87171; font-size: 12px; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border-left: 2px solid #dc2626; background: #dc262611; word-break: break-word; line-height: 1.5; }
   .ts { color: #525252; font-size: 11px; margin-left: auto; }
+  .actions { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
+  .actions button { font: inherit; font-size: 11px; padding: 0.25rem 0.6rem; border: 1px solid #404040; background: #1a1a1a; color: #d4d4d8; border-radius: 4px; cursor: pointer; transition: background .12s, border-color .12s; }
+  .actions button:hover:not(:disabled) { background: #262626; border-color: #525252; }
+  .actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .actions button.primary { border-color: #16a34a55; color: #4ade80; }
+  .actions button.primary:hover:not(:disabled) { background: #16a34a22; }
+  .proposal { font-size: 11px; color: #a3a3a3; margin-top: 0.5rem; padding: 0.4rem 0.6rem; border-left: 2px solid #525252; background: #0f0f0f; line-height: 1.5; word-break: break-word; }
+  .proposal .label { color: #71717a; text-transform: uppercase; letter-spacing: 0.05em; font-size: 10px; margin-right: 0.4rem; }
   pre { color: #525252; font-size: 11px; background: #050505; padding: 1rem; border-radius: 4px; margin-top: 2rem; overflow-x: auto; }
   .err { color: #f87171; font-size: 12px; margin-top: 1rem; padding: 0.5rem 1rem; border-left: 2px solid #dc2626; background: #dc262611; }
 </style>
@@ -125,6 +133,53 @@ function compact(iso) {
     return isNaN(d.getTime()) ? 'idle' : d.toLocaleTimeString();
   } catch { return 'idle'; }
 }
+// Per-project transient UI: last /api/dispatch response shown until the next
+// refresh succeeds or a new run starts. Keyed by project name.
+const proposals = new Map();
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderProposal(p) {
+  const prop = proposals.get(p.project);
+  if (!prop) return '';
+  if (prop.dispatched) {
+    return '<div class="proposal"><span class="label">dispatched</span>' +
+      escapeHtml(prop.decision.action.intent) + ' · runId ' + escapeHtml(prop.runId.slice(0, 8)) + '</div>';
+  }
+  const a = prop.decision.action;
+  const reason = a.reason ?? '';
+  return '<div class="proposal"><span class="label">proposed</span>' +
+    escapeHtml(a.kind) + (a.intent ? ' · ' + escapeHtml(a.intent) : '') +
+    (reason ? ' — ' + escapeHtml(reason) : '') +
+    ' <span class="conf">· ' + Math.round(prop.decision.confidence * 100) + '% confidence</span></div>';
+}
+async function dispatch(project, autonomy, btn) {
+  const buttons = btn.parentElement.querySelectorAll('button');
+  buttons.forEach(b => b.disabled = true);
+  try {
+    const r = await fetch('/api/dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project, autonomy }),
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: j.error || ('HTTP ' + r.status) }, confidence: 0 } });
+    } else {
+      proposals.set(project, j);
+    }
+  } catch (e) {
+    proposals.set(project, { dispatched: false, decision: { action: { kind: 'error', intent: '', reason: String(e) }, confidence: 0 } });
+  } finally {
+    buttons.forEach(b => b.disabled = false);
+    refresh();
+  }
+}
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-project][data-autonomy]');
+  if (!btn) return;
+  dispatch(btn.dataset.project, btn.dataset.autonomy, btn);
+});
 async function refresh() {
   try {
     const r = await fetch('/api/state');
@@ -135,32 +190,45 @@ async function refresh() {
     if (j.projects.length === 0) {
       root.innerHTML = '<div class="empty">no events yet — append one to ~/.${APP_SLUG}/events.jsonl</div>';
     } else {
+      // Clear stale proposals once the project actually starts a run.
+      for (const p of j.projects) {
+        if (p.currentRun && proposals.has(p.project)) proposals.delete(p.project);
+      }
       root.innerHTML = j.projects.map(p => {
         const cr = p.currentRun;
         const confPct = cr && typeof cr.confidence === 'number' ? Math.round(cr.confidence * 100) + '%' : null;
         const reasonLine = cr && cr.reason
-          ? '<div class="reason">' + cr.reason + (confPct ? ' <span class="conf">· ' + confPct + ' confidence</span>' : '') + '</div>'
+          ? '<div class="reason">' + escapeHtml(cr.reason) + (confPct ? ' <span class="conf">· ' + confPct + ' confidence</span>' : '') + '</div>'
           : '';
         const errorLine = p.lastError
-          ? '<div class="proj-err">last error @ ' + compact(p.lastError.ts) + ': ' + p.lastError.message + '</div>'
+          ? '<div class="proj-err">last error @ ' + compact(p.lastError.ts) + ': ' + escapeHtml(p.lastError.message) + '</div>'
           : '';
+        const projAttr = escapeHtml(p.project);
+        const actions = cr
+          ? ''
+          : '<div class="actions">' +
+              '<button data-project="' + projAttr + '" data-autonomy="confirm">Propose</button>' +
+              '<button class="primary" data-project="' + projAttr + '" data-autonomy="auto">Dispatch</button>' +
+            '</div>';
         return \`
         <div class="project\${cr ? ' running' : ''}">
           <h2>
-            \${p.project}
-            \${cr ? '<span class="running-pill">' + cr.intent + (cr.adapter && cr.adapter !== 'claude' ? ' · ' + cr.adapter : '') + '</span>' : ''}
+            \${escapeHtml(p.project)}
+            \${cr ? '<span class="running-pill">' + escapeHtml(cr.intent) + (cr.adapter && cr.adapter !== 'claude' ? ' · ' + escapeHtml(cr.adapter) : '') + '</span>' : ''}
             <span class="ts">\${compact(p.lastEventTs)}</span>
           </h2>
           \${reasonLine}
           \${(p.recentOutcomes ?? []).length > 0 ? '<div class="outcomes">' + p.recentOutcomes.map(o => '<span class="o ' + o + '">' + (GLYPH[o] ?? '?') + '</span>').join('') + '</div>' : ''}
           \${errorLine}
-          \${p.lastHandoff && p.lastHandoff.done ? '<div class="handoff">' + p.lastHandoff.done + '</div>' : ''}
+          \${p.lastHandoff && p.lastHandoff.done ? '<div class="handoff">' + escapeHtml(p.lastHandoff.done) + '</div>' : ''}
+          \${renderProposal(p)}
+          \${actions}
         </div>
         \`;
       }).join('');
     }
     document.getElementById('err').innerHTML = j.lastError
-      ? '<div class="err">last parse error @ ' + compact(j.lastError.ts) + ': ' + j.lastError.message + '</div>'
+      ? '<div class="err">last parse error @ ' + compact(j.lastError.ts) + ': ' + escapeHtml(j.lastError.message) + '</div>'
       : '';
     document.getElementById('raw').textContent = JSON.stringify(j, null, 2);
   } catch (e) {
