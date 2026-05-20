@@ -87,10 +87,11 @@ export function computeConfidence(outcomes: Outcome[]): number {
 // Threshold per mode: below this, hold and ask. At/above, fire.
 
 const AUTONOMY_THRESHOLD: Record<Autonomy, number> = {
-  manual:  Infinity,   // never auto-execute, regardless of confidence
-  confirm: 0.0,        // always proposes; UI countdown gates the actual fire
-  auto:    0.55,       // moderate confidence required
-  sleep:   0.75,       // high confidence required to fire while user away
+  manual:  Infinity,   // never auto-execute — UI shows the proposal, user clicks
+  confirm: Infinity,   // never auto-execute — UI runs a countdown then re-POSTs
+                       // with autonomy="auto" to fire, OR user clicks now
+  auto:    0.55,       // moderate confidence — fires immediately when in this mode
+  sleep:   0.75,       // high confidence — fires while user away IF healthy
 };
 
 export function shouldAutoExecute(
@@ -245,6 +246,18 @@ function selfTest() {
       input: {
         project: { ...baseProject, recentOutcomes: ["success", "success", "success", "success", "success"] },
         autonomy: "manual",
+      },
+      expect: (d) => !d.autoExecute,
+    },
+    {
+      name: "BUG FIX — confirm autonomy never auto-executes (UI countdown gates the fire)",
+      input: {
+        project: {
+          ...baseProject,
+          recentOutcomes: ["success", "success", "success", "success", "success"],
+          lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" },
+        },
+        autonomy: "confirm",
       },
       expect: (d) => !d.autoExecute,
     },
