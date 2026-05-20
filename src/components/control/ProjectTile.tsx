@@ -23,54 +23,64 @@ type Props = {
   onRemoved?: () => void;
 };
 
-function TileRemoveButton({ projectId, onRemoved }: { projectId: string; onRemoved: () => void }) {
-  const [stage, setStage] = useState<"idle" | "confirm" | "removing">("idle");
-  const [error, setError] = useState<string | null>(null);
+type RemoveStage = "idle" | "confirm" | "removing";
 
-  if (stage === "confirm" || stage === "removing") {
-    const handleConfirm = async (e: React.MouseEvent) => {
-      e.stopPropagation();
-      haptic();
-      setStage("removing");
-      setError(null);
-      try {
-        const res = await deleteJson(`/api/user-projects/${projectId}`);
-        if (!res.ok) await throwApiError(res, "Failed to remove");
-        onRemoved();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to remove");
-        setStage("confirm");
-      }
-    };
-    return (
-      <div className="flex items-center gap-1.5 text-xs" onClick={(e) => e.stopPropagation()}>
-        <span className="text-text-tertiary">Remove?</span>
-        <button
-          onClick={handleConfirm}
-          disabled={stage === "removing"}
-          className="text-status-negative transition-colors hover:opacity-80 disabled:opacity-50"
-        >
-          {stage === "removing" ? <Loader2 className="ui-spinner-xs" /> : "Yes"}
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); setStage("idle"); setError(null); }}
-          className="text-text-muted transition-colors hover:text-text-secondary"
-        >
-          <X className="h-3 w-3" />
-        </button>
-        {error && <span className="ui-error-xs">{error}</span>}
-      </div>
-    );
-  }
+/** Trash icon used in the action row when stage === "idle". */
+function RemoveTriggerIcon({ onClick }: { onClick: (e: React.MouseEvent) => void }) {
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); setStage("confirm"); }}
+      onClick={onClick}
       title="Remove from fleet"
       aria-label="Remove from fleet"
       className="ui-icon-action hover:text-status-negative"
     >
       <Trash2 className="h-3.5 w-3.5" />
     </button>
+  );
+}
+
+/** Full-row confirm strip — replaces the entire chips+icons row while
+ *  stage !== "idle" so narrow tiles don't need to squeeze Yes/No alongside Launch. */
+function RemoveConfirmStrip({
+  projectName,
+  removing,
+  error,
+  onConfirm,
+  onCancel,
+}: {
+  projectName: string;
+  removing: boolean;
+  error: string | null;
+  onConfirm: (e: React.MouseEvent) => void;
+  onCancel: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-2"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span className="text-xs text-text-tertiary truncate">
+        Remove <span className="text-text-secondary">{projectName}</span>?
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onConfirm}
+          disabled={removing}
+          className="inline-flex items-center gap-1 text-xs font-medium text-status-negative transition-colors hover:opacity-80 disabled:opacity-50"
+        >
+          {removing ? <Loader2 className="ui-spinner-xs" /> : null}
+          Yes, remove
+        </button>
+        <button
+          onClick={onCancel}
+          disabled={removing}
+          className="text-xs text-text-muted transition-colors hover:text-text-secondary disabled:opacity-50"
+        >
+          No
+        </button>
+      </div>
+      {error && <p className="ui-error-xs w-full">{error}</p>}
+    </div>
   );
 }
 
@@ -91,11 +101,33 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;
 
+  // Lift remove-confirm state into the tile so the strip can replace the whole
+  // action row instead of squeezing Yes/No alongside Focus + Launch on narrow widths.
+  const [removeStage, setRemoveStage] = useState<RemoveStage>("idle");
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const removeEnabled = !!onRemoved && !!project.id;
+
   const handleLaunch = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!canLaunch || launching) return;
     setLaunching(true);
     try { onLaunch(); } finally { setLaunching(false); }
+  };
+
+  const handleRemoveConfirm = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRemoved || !project.id) return;
+    haptic();
+    setRemoveStage("removing");
+    setRemoveError(null);
+    try {
+      const res = await deleteJson(`/api/user-projects/${project.id}`);
+      if (!res.ok) await throwApiError(res, "Failed to remove");
+      onRemoved();
+    } catch (err) {
+      setRemoveError(err instanceof Error ? err.message : "Failed to remove");
+      setRemoveStage("confirm");
+    }
   };
 
   return (
@@ -135,34 +167,46 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-        <ProjectStatusChips project={project} tabOpen={tabOpen} compact isAgentWorking={display.isAgentWorking} />
+      <div className="border-t border-border-subtle pt-3">
+        {removeStage !== "idle" ? (
+          <RemoveConfirmStrip
+            projectName={tab}
+            removing={removeStage === "removing"}
+            error={removeError}
+            onConfirm={handleRemoveConfirm}
+            onCancel={(e) => { e.stopPropagation(); setRemoveStage("idle"); setRemoveError(null); }}
+          />
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <ProjectStatusChips project={project} tabOpen={tabOpen} compact isAgentWorking={display.isAgentWorking} />
 
-        <div className="flex items-center gap-1.5">
-          {onRemoved && project.id && (
-            <TileRemoveButton projectId={project.id} onRemoved={onRemoved} />
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onFocus(); }}
-            title="Focus on this project"
-            className="ui-icon-action"
-          >
-            <Focus className="h-3.5 w-3.5" />
-          </button>
-          {canLaunch && !agentRunning && (
-            <button
-              onClick={handleLaunch}
-              disabled={launching}
-              title={project.agentPref
-                ? `Launch ${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""} in ${tab}`
-                : `Launch ${currentAdapter} in ${tab}`}
-              className="ui-chip-action-compact inline-flex items-center gap-1.5"
-            >
-              {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
-              {project.agentPref ?? "Launch"}
-            </button>
-          )}
-        </div>
+            <div className="flex items-center gap-1.5">
+              {removeEnabled && (
+                <RemoveTriggerIcon onClick={(e) => { e.stopPropagation(); setRemoveStage("confirm"); }} />
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); onFocus(); }}
+                title="Focus on this project"
+                className="ui-icon-action"
+              >
+                <Focus className="h-3.5 w-3.5" />
+              </button>
+              {canLaunch && !agentRunning && (
+                <button
+                  onClick={handleLaunch}
+                  disabled={launching}
+                  title={project.agentPref
+                    ? `Launch ${project.agentPref}${project.modelPref ? ` · ${project.modelPref}` : ""} in ${tab}`
+                    : `Launch ${currentAdapter} in ${tab}`}
+                  className="ui-chip-action-compact inline-flex items-center gap-1.5"
+                >
+                  {launching ? <Loader2 className="ui-spinner-xs" /> : <Play className="h-3 w-3" />}
+                  {project.agentPref ?? "Launch"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
