@@ -119,6 +119,9 @@ export const BridgeDispatch = Common.extend({
   prompt:     z.string().min(1).max(40000),
   runId:      RunId,
   autonomy:   Autonomy,
+  /** Adapter the brain decided to use. Worker echoes onto worker.started so
+   *  analytics + decide() see the truth instead of a hardcoded "claude". */
+  adapter:    Adapter.optional(),
   /** Human-readable reason the brain chose this dispatch (audit + UI). */
   reason:     z.string().max(500).optional(),
   /** [0,1] confidence the dispatch is the right call. Sleep mode gates on this. */

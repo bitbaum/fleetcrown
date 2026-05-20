@@ -90,7 +90,9 @@ function executeDispatch(state: WorkerState, event: Event) {
     appendEvent({
       kind: "worker.started",
       project: event.project,
-      adapter: "claude",
+      // Echo the brain's adapter choice if it set one, else claude default
+      // (matches the existing default agent in src/lib/agent-preferences.ts).
+      adapter: event.adapter ?? "claude",
       intent: event.intent,
       runId: event.runId,
     });

@@ -25,7 +25,8 @@ import path from "node:path";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
-import type { Autonomy } from "@/lib/events";
+import type { Autonomy, Adapter } from "@/lib/events";
+import { ADAPTERS } from "@/lib/events";
 import { tailLog } from "./log";
 import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
@@ -235,6 +236,10 @@ const server = http.createServer((req, res) => {
           resolveProjectPath(projectName);
         const prompt = buildPromptForDispatch(decision, projectState, projectPath);
         const intent = decision.action.intent;
+        const adapter: Adapter | undefined =
+          typeof parsed.adapter === "string" && (ADAPTERS as readonly string[]).includes(parsed.adapter)
+            ? (parsed.adapter as Adapter)
+            : undefined;
         appendEvent({
           kind: "bridge.dispatch",
           project: projectName,
@@ -242,6 +247,7 @@ const server = http.createServer((req, res) => {
           prompt,
           runId,
           autonomy: (parsed.autonomy as Autonomy | undefined) ?? "confirm",
+          adapter,
           reason: decision.action.reason,
           confidence: decision.confidence,
         });
