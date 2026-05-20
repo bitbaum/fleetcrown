@@ -31,7 +31,7 @@ export const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 type EventPayload = DistributiveOmit<Event, "id" | "ts" | "v">;
 
-export function appendEvent(payload: EventPayload, logPath: string = LOG_PATH): void {
+export function appendEvent(payload: EventPayload, logPath: string = LOG_PATH): Event {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   const event = {
     v: EVENT_VERSION,
@@ -40,6 +40,12 @@ export function appendEvent(payload: EventPayload, logPath: string = LOG_PATH): 
     ...payload,
   } as Event;
   fs.appendFileSync(logPath, serializeEvent(event));
+  // Return the stamped event so callers can eagerly project it into their
+  // own state without waiting for tailLog to consume the write. Closes a
+  // race in server.ts's /api/dispatch where back-to-back concurrent
+  // requests both read pre-dispatch state because fs.watch hadn't fired
+  // yet.
+  return event;
 }
 
 // ── Self-test ────────────────────────────────────────────────────────────────

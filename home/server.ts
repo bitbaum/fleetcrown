@@ -396,12 +396,20 @@ const server = http.createServer((req, res) => {
           return;
         }
         const reason = (typeof parsed.reason === "string" && parsed.reason.slice(0, 200)) || "user cancel";
-        appendEvent({
+        const cancelled = appendEvent({
           kind: "bridge.cancel",
           project: projectName,
           runId,
           reason,
         });
+        // Eager projection — match the /api/dispatch pattern. Closes the
+        // same race: a follow-up dispatch arriving before fs.watch fires
+        // would see stale currentRun and refuse to proceed; with eager
+        // apply, currentRun is already cleared (bridge.cancel projection
+        // matches runId and unsets it). Idempotent re-application by
+        // tailLog: cancelledRunIds.filter() dedupes, currentRun stays
+        // undefined.
+        state = applyEvent(state, cancelled);
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ ok: true, runId, reason }));
       } catch (e) {
@@ -485,7 +493,7 @@ const server = http.createServer((req, res) => {
           typeof parsed.adapter === "string" && (ADAPTERS as readonly string[]).includes(parsed.adapter)
             ? (parsed.adapter as Adapter)
             : undefined;
-        appendEvent({
+        const dispatched = appendEvent({
           kind: "bridge.dispatch",
           project: projectName,
           intent,
@@ -496,6 +504,11 @@ const server = http.createServer((req, res) => {
           reason: decision.action.reason,
           confidence: decision.confidence,
         });
+        // Eagerly project so a concurrent /api/dispatch reads the post-state
+        // and decide() returns "wait" instead of firing a second dispatch.
+        // tailLog will re-apply the same event when fs.watch fires; that's
+        // idempotent for bridge.dispatch (just overwrites currentRun).
+        state = applyEvent(state, dispatched);
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ dispatched: true, decision, runId }));
       } catch (e) {
