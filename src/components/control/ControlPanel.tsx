@@ -67,6 +67,8 @@ export function ControlPanel() {
   const sorted = pageState?.sortedProjects ?? null;
   const activeProjects = pageState?.activeProjects ?? [];
   const idleProjects = pageState?.idleProjects ?? [];
+  const idleNeedsAttention = pageState?.idleNeedsAttention ?? [];
+  const idleQuiet = pageState?.idleQuiet ?? [];
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
 
@@ -115,6 +117,8 @@ export function ControlPanel() {
   const daemonStateUnknown = daemonOffline || daemonNeverSeen;
   const fleetActive = daemonStateUnknown ? (sorted ?? []) : activeProjects;
   const fleetIdle   = daemonStateUnknown ? [] : idleProjects;
+  const fleetIdleNeedsAttention = daemonStateUnknown ? [] : idleNeedsAttention;
+  const fleetIdleQuiet = daemonStateUnknown ? [] : idleQuiet;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -298,6 +302,8 @@ export function ControlPanel() {
         sorted={sorted}
         activeProjects={fleetActive}
         idleProjects={fleetIdle}
+        idleNeedsAttention={fleetIdleNeedsAttention}
+        idleQuiet={fleetIdleQuiet}
         focusedTab={focusedTab}
         setFocusedTab={setFocusedTab}
         expandedTabs={expandedTabs}

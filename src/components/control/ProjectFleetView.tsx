@@ -16,6 +16,10 @@ interface ProjectFleetViewProps {
   sorted: ProjectState[] | null;
   activeProjects: ProjectState[];
   idleProjects: ProjectState[];
+  /** Idle projects with pending uncommitted work — surfaced as a separate subsection above the quiet pile. */
+  idleNeedsAttention: ProjectState[];
+  /** Idle projects with a clean tree. */
+  idleQuiet: ProjectState[];
   focusedTab: string | null;
   setFocusedTab: (tab: string | null) => void;
   expandedTabs: Set<string>;
@@ -37,6 +41,8 @@ export function ProjectFleetView({
   sorted,
   activeProjects,
   idleProjects,
+  idleNeedsAttention,
+  idleQuiet,
   focusedTab,
   setFocusedTab,
   expandedTabs,
@@ -186,18 +192,53 @@ export function ProjectFleetView({
             {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>
           {idleOpen && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {idleProjects.map((project) => (
-                <ProjectTile
-                  key={project.tab}
-                  project={project}
-                  currentAdapter={selectedAgent}
-                  zellijTabs={zellijTabs}
-                  onExpand={() => expandTab(project.tab)}
-                  onLaunch={() => openLaunchModal(project)}
-                  onFocus={() => { expandTab(project.tab); setFocusedTab(project.tab); }}
-                />
-              ))}
+            <div className="space-y-4">
+              {idleNeedsAttention.length > 0 && (
+                <div className="space-y-2">
+                  <div className="sticky top-0 z-10 -mx-1 bg-surface-page/95 px-1 py-1 backdrop-blur-sm">
+                    <p className="ui-kicker text-status-warning">
+                      Needs attention · {idleNeedsAttention.length}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {idleNeedsAttention.map((project) => (
+                      <ProjectTile
+                        key={project.tab}
+                        project={project}
+                        currentAdapter={selectedAgent}
+                        zellijTabs={zellijTabs}
+                        onExpand={() => expandTab(project.tab)}
+                        onLaunch={() => openLaunchModal(project)}
+                        onFocus={() => { expandTab(project.tab); setFocusedTab(project.tab); }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {idleQuiet.length > 0 && (
+                <div className="space-y-2">
+                  {idleNeedsAttention.length > 0 && (
+                    <div className="sticky top-0 z-10 -mx-1 bg-surface-page/95 px-1 py-1 backdrop-blur-sm">
+                      <p className="ui-kicker text-text-tertiary">
+                        Quiet · {idleQuiet.length}
+                      </p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {idleQuiet.map((project) => (
+                      <ProjectTile
+                        key={project.tab}
+                        project={project}
+                        currentAdapter={selectedAgent}
+                        zellijTabs={zellijTabs}
+                        onExpand={() => expandTab(project.tab)}
+                        onLaunch={() => openLaunchModal(project)}
+                        onFocus={() => { expandTab(project.tab); setFocusedTab(project.tab); }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

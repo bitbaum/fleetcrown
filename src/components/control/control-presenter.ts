@@ -87,10 +87,21 @@ export type AttentionItem = {
 export type ControlPageState = {
   activeProjects: ProjectState[];
   idleProjects: ProjectState[];
+  /** Subset of idleProjects with uncommitted local changes — surfaces to a
+   *  separate "Needs attention" subgroup so the long quiet list doesn't bury them. */
+  idleNeedsAttention: ProjectState[];
+  /** Idle projects with a clean working tree — the long tail. */
+  idleQuiet: ProjectState[];
   sortedProjects: ProjectState[];
   dashboard: ControlDashboardState;
   attention: AttentionItem[];
 };
+
+/** True when an idle project has uncommitted local work — the simplest signal
+ *  that the project is mid-something and shouldn't blend into the quiet pile. */
+function idleNeedsAttention(project: ProjectState): boolean {
+  return !!project.git && (project.git.dirty || project.git.dirtyCount > 0);
+}
 
 function attentionScore(project: ProjectState): { score: number; reason: string } {
   let score = 0;
@@ -282,6 +293,8 @@ export function buildControlPageState(
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
     return !state.isActive && !expandedTabs.has(project.tab);
   });
+  const idleNeedsAttn = idleProjects.filter(idleNeedsAttention);
+  const idleQuietList = idleProjects.filter((p) => !idleNeedsAttention(p));
 
   const runningCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
@@ -309,6 +322,8 @@ export function buildControlPageState(
   return {
     activeProjects,
     idleProjects,
+    idleNeedsAttention: idleNeedsAttn,
+    idleQuiet: idleQuietList,
     sortedProjects,
     attention,
     dashboard: {
