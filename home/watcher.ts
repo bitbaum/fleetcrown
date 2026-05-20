@@ -28,6 +28,16 @@ import { appendEvent } from "./emit";
 import { loadProjects, projectsConfPath } from "./projects";
 import type { Handoff } from "@/lib/events";
 
+// Boot-mode gate — symmetric with server.ts + worker.ts. Naked
+// `npx tsx home/watcher.ts` is a help banner; --start opens the fs.watch.
+if (!process.argv.includes("--start")) {
+  console.log(`${APP_NAME} watcher — Bridge layer of the home/ stack.
+Watches ~/.claude/sessions/*.md and emits worker.idle events into ~/.${APP_SLUG}/events.jsonl.
+Usage:  npx tsx home/watcher.ts --start
+Env:    APP_SESSIONS_DIR  override sessions dir (default ~/.claude/sessions)`);
+  process.exit(0);
+}
+
 // Override via APP_SESSIONS_DIR for testing — production tails Claude's real dir.
 const SESSIONS_DIR =
   process.env.APP_SESSIONS_DIR ?? path.join(os.homedir(), ".claude", "sessions");

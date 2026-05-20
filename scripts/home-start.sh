@@ -51,11 +51,13 @@ trap shutdown SIGINT SIGTERM EXIT
 cd "$REPO_ROOT"
 
 # Each process tags its output so the merged log is readable when grepped.
+# --start is required by all three since 2026-05 — naked `npx tsx home/X.ts`
+# now exits with a usage banner so accidental one-shots don't leave orphans.
 launch() {
   local name="$1" cmd="$2"
-  ( exec npx tsx "$cmd" 2>&1 | sed -u "s/^/[${name}] /" >> "$LOG_FILE" ) &
+  ( exec npx tsx "$cmd" --start 2>&1 | sed -u "s/^/[${name}] /" >> "$LOG_FILE" ) &
   PIDS+=("$!")
-  log "started $name (pid $!) → $cmd"
+  log "started $name (pid $!) → $cmd --start"
 }
 
 launch server  home/server.ts

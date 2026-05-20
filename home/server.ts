@@ -35,6 +35,17 @@ import { renderPromptForDispatch } from "./render";
 import { resolveProjectPath, loadProjects } from "./projects";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
+// Boot-mode gate. Naked `npx tsx home/server.ts` (no flags) should NOT spin
+// up the HTTP server + fs.watch — otherwise a one-shot test invocation
+// (e.g. inside a `tail -3` pipe) leaves an orphan server eating port 3001
+// + watching the event log forever. Require an explicit --start.
+if (!process.argv.includes("--start")) {
+  console.log(`${APP_NAME} brain — local HTTP server (Brain layer of the home/ stack).
+Usage:  npx tsx home/server.ts --start
+Env:    APP_HOME_PORT  port to bind (default 3001)`);
+  process.exit(0);
+}
+
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
 const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
 

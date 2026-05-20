@@ -331,8 +331,19 @@ function selfTest() {
   if (fail > 0) process.exit(1);
 }
 
-// Dispatch on argv
+// Dispatch on argv. Naked `npx tsx home/worker.ts` is the foot-gun that
+// started this whole pile-on of strays — a test loop piping its output
+// through `tail -3` would leave a hot worker injecting random prompts
+// into zellij tabs hours later. Require an explicit flag so accidental
+// one-shot invocations exit cleanly.
 if (import.meta.url === `file://${process.argv[1]}`) {
   if (process.argv.includes("--self-test")) selfTest();
-  else start();
+  else if (process.argv.includes("--start")) start();
+  else {
+    console.log(`${APP_NAME} worker — Consumer layer of the home/ stack.
+Tails ~/.${APP_SLUG}/events.jsonl and injects bridge.dispatch prompts into zellij tabs.
+Usage:  npx tsx home/worker.ts --start       (boot the consumer)
+        npx tsx home/worker.ts --self-test   (run inline tests, no I/O)`);
+    process.exit(0);
+  }
 }
