@@ -572,6 +572,23 @@ _build_state_json() {
       [[ "$mts" =~ ^[0-9]+$ ]] && sess_mtime="$mts"
     fi
 
+    # Stale-prompt cleanup: Codex has no Stop hook (interactive TUI), so
+    # /tmp/agent-current-prompt-<tab> lingers indefinitely after the agent
+    # returns to idle. Without this gate the control UI shows "Codex working
+    # 61h" on dead tabs. Two signals fire the cleanup: (1) the session file
+    # was rewritten after the prompt started — the agent wrote a handoff so
+    # the cycle closed; (2) the prompt is older than 30 min (hard cap for
+    # agents that never write a session file).
+    if [ "$cpsat" != "null" ]; then
+      local _now_s
+      _now_s=$(date +%s)
+      if { [ "$sess_mtime" != "null" ] && [ "$sess_mtime" -gt "$((cpsat + 5))" ]; } \
+         || [ "$((_now_s - cpsat))" -gt 1800 ]; then
+        rm -f "$pf"
+        cpk="" cpl="" cpsat="null"
+      fi
+    fi
+
     local proj
     proj=$(jq -n \
       --arg      tab       "$tab" \
