@@ -30,10 +30,11 @@ import type { Handoff } from "@/lib/events";
 
 // Boot-mode gate — symmetric with server.ts + worker.ts. Naked
 // `npx tsx home/watcher.ts` is a help banner; --start opens the fs.watch.
-if (!process.argv.includes("--start")) {
+if (!process.argv.includes("--start") && !process.argv.includes("--self-test")) {
   console.log(`${APP_NAME} watcher — Bridge layer of the home/ stack.
 Watches ~/.claude/sessions/*.md and emits worker.idle events into ~/.${APP_SLUG}/events.jsonl.
-Usage:  npx tsx home/watcher.ts --start
+Usage:  npx tsx home/watcher.ts --start       (boot the watcher)
+        npx tsx home/watcher.ts --self-test   (run inline tests, no I/O)
 Env:    APP_SESSIONS_DIR  override sessions dir (default ~/.claude/sessions)`);
   process.exit(0);
 }
@@ -185,4 +186,91 @@ function start() {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-start();
+// ── Self-test ────────────────────────────────────────────────────────────────
+// Run with: npx tsx home/watcher.ts --self-test
+// Pure unit tests for the parsers — no fs.watch, no real session dir.
+
+function selfTest() {
+  type Case = { name: string; run: () => boolean };
+  const cases: Case[] = [
+    {
+      name: "parseHandoff extracts all five fields from a well-formed session.md",
+      run: () => {
+        const h = parseHandoff([
+          "done: Built thing X",
+          "next: Test thing X",
+          "tests: 3 pass · 0 fail",
+          "todos: 0 TODOs",
+          "health: good",
+          "",
+        ].join("\n"));
+        return h.done === "Built thing X"
+            && h.next === "Test thing X"
+            && h.tests === "3 pass · 0 fail"
+            && h.todos === "0 TODOs"
+            && h.health === "good";
+      },
+    },
+    {
+      name: "parseHandoff handles missing fields gracefully (empty string default)",
+      run: () => {
+        const h = parseHandoff("done: only this one\n");
+        return h.done === "only this one" && h.next === "" && h.health === "";
+      },
+    },
+    {
+      name: "parseHandoff trims trailing whitespace from values",
+      run: () => {
+        const h = parseHandoff("health: good   \n");
+        return h.health === "good";
+      },
+    },
+    {
+      name: "parseHandoff doesn't get fooled by field names embedded inside other values",
+      run: () => {
+        // "done: implementing next: foo behavior" — next regex shouldn't
+        // match because the line starts with 'done:', not 'next:'.
+        const h = parseHandoff([
+          "done: implementing next: foo behavior",
+          "next: actually do it",
+          "",
+        ].join("\n"));
+        return h.done === "implementing next: foo behavior"
+            && h.next === "actually do it";
+      },
+    },
+    {
+      name: "parseHandoff returns all-empty Handoff for a blank session.md",
+      run: () => {
+        const h = parseHandoff("");
+        return h.done === "" && h.next === "" && h.tests === ""
+            && h.todos === "" && h.health === "";
+      },
+    },
+    {
+      name: "tabFromFilename strips the .md extension",
+      run: () => tabFromFilename("Cockpit.md") === "Cockpit",
+    },
+    {
+      name: "tabFromFilename returns null for non-.md files",
+      run: () => tabFromFilename("README.txt") === null
+              && tabFromFilename("noextension") === null,
+    },
+    {
+      name: "tabFromFilename preserves multi-word tab names verbatim",
+      run: () => tabFromFilename("Tab #1.md") === "Tab #1"
+              && tabFromFilename("Revamp-Info.md") === "Revamp-Info",
+    },
+  ];
+
+  let pass = 0, fail = 0;
+  for (const c of cases) {
+    if (c.run()) { console.log(`  ✓ ${c.name}`); pass++; }
+    else         { console.log(`  ✗ ${c.name}`); fail++; }
+  }
+  console.log(`\n${pass}/${pass + fail} passed`);
+  if (fail > 0) process.exit(1);
+}
+
+if (process.argv.includes("--self-test")) selfTest();
+else start();
