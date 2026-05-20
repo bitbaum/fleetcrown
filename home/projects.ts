@@ -8,6 +8,12 @@
  *   # comments allowed
  *   TabName|/absolute/path
  *   Another Tab|/home/g/dev/foo
+ *   CodexProject|/home/g/dev/foo|codex          ← optional 3rd field: adapter
+ *
+ * The third field declares which adapter the brain should default the
+ * dispatch to. Existing two-field entries keep their meaning (adapter
+ * stays undefined; downstream defaults to claude). Recognised values
+ * match @/lib/events ADAPTERS — claude | codex | gemini | openclaw.
  *
  * Lookup is case-insensitive, matching the convention in
  * scripts/agent-hook-lib.sh:_find_session_for_tab and elsewhere.
@@ -16,10 +22,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { ADAPTERS, type Adapter } from "@/lib/events";
 
 export type ProjectConfig = {
   name: string;
   dirPath: string;
+  /** Optional third field from the conf file. Undefined when absent or
+   *  when the value isn't a recognised adapter — callers fall back to
+   *  the brain's default ("claude"). */
+  adapter?: Adapter;
 };
 
 /**
@@ -49,14 +60,27 @@ export function loadProjects(confPath: string = projectsConfPath()): Map<string,
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
-    const sep = trimmed.indexOf("|");
-    if (sep < 1) continue;
-    const name = trimmed.slice(0, sep).trim();
-    const dirPath = trimmed.slice(sep + 1).trim();
+    const parts = trimmed.split("|").map((s) => s.trim());
+    const [name, dirPath, adapterRaw] = parts;
     if (!name || !dirPath) continue;
-    result.set(name.toLowerCase(), { name, dirPath });
+    // Only accept the 3rd field if it matches a known adapter. An unknown
+    // value silently degrades to undefined so a typo doesn't poison
+    // dispatches — the brain falls back to "claude" downstream.
+    const adapter = adapterRaw && (ADAPTERS as readonly string[]).includes(adapterRaw)
+      ? (adapterRaw as Adapter)
+      : undefined;
+    result.set(name.toLowerCase(), { name, dirPath, adapter });
   }
   return result;
+}
+
+/** Case-insensitive lookup of the declared adapter for a project, or
+ *  undefined if the conf entry didn't include one. */
+export function resolveProjectAdapter(
+  name: string,
+  projects: Map<string, ProjectConfig> = loadProjects(),
+): Adapter | undefined {
+  return projects.get(name.toLowerCase())?.adapter;
 }
 
 /** Case-insensitive lookup of the dirPath for a given project name. */
@@ -77,19 +101,20 @@ function selfTest() {
   fs.writeFileSync(tmpConf, [
     "# top-level comment",
     "Cockpit|/home/g/dev/cockpit",
-    "OrangeCat|/home/g/dev/orangecat",
-    "   ",                                  // blank line — should be skipped
+    "OrangeCat|/home/g/dev/orangecat|codex",      // 3rd field: codex adapter
+    "   ",                                          // blank line — should be skipped
     "# inline comment",
     "Tab With Spaces|/some/where",
-    "broken-line-no-separator",             // should be skipped silently
+    "broken-line-no-separator",                    // should be skipped silently
+    "Bogus|/path|notarealadapter",                  // unknown 3rd field — silently dropped
   ].join("\n"));
 
   try {
     const projects = loadProjects(tmpConf);
 
     const cases: { name: string; check: () => boolean }[] = [
-      { name: "loads 3 valid entries, skips comments and malformed lines",
-        check: () => projects.size === 3 },
+      { name: "loads 4 valid entries, skips comments and malformed lines",
+        check: () => projects.size === 4 },
       { name: "case-insensitive lookup matches mixed-case names",
         check: () => resolveProjectPath("COCKPIT", projects) === "/home/g/dev/cockpit" },
       { name: "lowercase lookup also works",
@@ -102,6 +127,15 @@ function selfTest() {
         check: () => projects.get("orangecat")?.name === "OrangeCat" },
       { name: "missing conf file returns empty map without throwing",
         check: () => loadProjects("/no/such/path").size === 0 },
+      { name: "3rd field 'codex' becomes ProjectConfig.adapter (per-project adapter override)",
+        check: () => projects.get("orangecat")?.adapter === "codex" },
+      { name: "resolveProjectAdapter returns the declared adapter",
+        check: () => resolveProjectAdapter("OrangeCat", projects) === "codex" },
+      { name: "two-field entries (no adapter declared) have adapter=undefined",
+        check: () => projects.get("cockpit")?.adapter === undefined },
+      { name: "unknown adapter value silently degrades to undefined (typo defence)",
+        check: () => projects.get("bogus")?.adapter === undefined
+                  && projects.get("bogus")?.dirPath === "/path" },
     ];
 
     let pass = 0, fail = 0;

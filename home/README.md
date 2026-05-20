@@ -110,7 +110,7 @@ curl -s -X POST http://localhost:3001/api/cancel \
 | `emit.ts`     | Single append-only writer. Stamps `v` + `id` + `ts` at write time.               |
 | `render.ts`   | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.         |
 | `decide.ts`   | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.    |
-| `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path SSOT.                      |
+| `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.            |
 | `server.ts`   | HTTP server — `/control` HTML + `/api/state` + `/api/health` + `POST /api/dispatch` + `POST /api/cancel` + `POST /api/events`. |
 | `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
 | `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch` (inject) and `bridge.cancel` (Ctrl+C), emits `worker.started` / `worker.crashed`. |

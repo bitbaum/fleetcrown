@@ -32,7 +32,7 @@ import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
 import { appendEvent } from "./emit";
 import { renderPromptForDispatch } from "./render";
-import { resolveProjectPath, loadProjects } from "./projects";
+import { resolveProjectPath, resolveProjectAdapter, loadProjects } from "./projects";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 // Boot-mode gate. Naked `npx tsx home/server.ts` (no flags) should NOT spin
@@ -515,10 +515,15 @@ const server = http.createServer((req, res) => {
           resolveProjectPath(projectName);
         const prompt = buildPromptForDispatch(decision, projectState, projectPath);
         const intent = decision.action.intent;
+        // Adapter resolution: caller-supplied wins (lets the UI override per
+        // dispatch), otherwise fall back to the project's declared adapter
+        // from agent-projects.conf's 3rd field. Worker defaults to "claude"
+        // downstream if both are absent.
         const adapter: Adapter | undefined =
-          typeof parsed.adapter === "string" && (ADAPTERS as readonly string[]).includes(parsed.adapter)
+          (typeof parsed.adapter === "string" && (ADAPTERS as readonly string[]).includes(parsed.adapter)
             ? (parsed.adapter as Adapter)
-            : undefined;
+            : undefined)
+          ?? resolveProjectAdapter(projectName);
         const dispatched = appendEvent({
           kind: "bridge.dispatch",
           project: projectName,
