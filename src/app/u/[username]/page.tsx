@@ -5,7 +5,7 @@ import { ExternalLink, BookOpen, Folder, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shared/Avatar";
-import { ROUTES } from "@/config/auth";
+import { ROUTES, PUBLIC_NAV_LINKS } from "@/config/auth";
 import { APP_TAGLINE } from "@/config/brand";
 
 // Deduplicate the user lookup across generateMetadata + the page component.
@@ -59,6 +59,26 @@ export default async function PublicProfilePage({
         >
           <BrandMark showWordmark={false} />
         </Link>
+        {/* Desktop-only — anonymous share-target visitors get a path to the rest
+            of the marketing site without typing URLs. Mobile users have the
+            footer CTA + the brand-home link instead. */}
+        <div className="hidden items-center gap-6 md:flex">
+          {PUBLIC_NAV_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-text-secondary transition-colors hover:text-text-primary"
+            >
+              {link.label}
+            </Link>
+          ))}
+          <Link
+            href={ROUTES.SIGN_IN}
+            className="text-sm font-medium text-text-primary transition-opacity hover:opacity-80"
+          >
+            Sign in
+          </Link>
+        </div>
       </nav>
 
       <main className="mx-auto w-full max-w-2xl px-6 py-10 pb-20">
