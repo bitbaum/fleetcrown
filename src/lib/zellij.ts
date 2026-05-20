@@ -44,16 +44,24 @@ function getCurrentTab(): string | null {
   }
 }
 
-/** Poll dump-layout until the named tab has focus, up to maxWaitMs. */
-function waitForTabFocus(tab: string, maxWaitMs = 1000): void {
+/**
+ * Poll dump-layout until the named tab has focus, up to maxWaitMs.
+ * Returns true on success, false on timeout. Callers that mutate the
+ * focused pane (write-chars, etc.) MUST check the return value — if the
+ * tab doesn't exist or zellij isn't reachable, the polled focus never
+ * matches and writing characters then types into whatever pane IS focused,
+ * which can be the user's private terminal session.
+ */
+function waitForTabFocus(tab: string, maxWaitMs = 1000): boolean {
   const deadline = Date.now() + maxWaitMs;
   while (Date.now() < deadline) {
     try {
       const active = execFileSync("bash", ["-c", DUMP_CMD], { timeout: 2000 }).toString().trim();
-      if (active === tab) return;
+      if (active === tab) return true;
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
     execSync("sleep 0.05");
   }
+  return false;
 }
 
 /**
@@ -85,7 +93,9 @@ export function isUserTypingInTab(tab: string): boolean {
 export function sendRawKey(tab: string, keyCode: number): void {
   const originalTab = getCurrentTab();
   execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
-  waitForTabFocus(tab);
+  if (!waitForTabFocus(tab)) {
+    throw new Error(`sendRawKey: zellij tab "${tab}" did not gain focus within 1s — is the tab open?`);
+  }
   execSync(`zellij action write ${keyCode}`);
   if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
     try { execSync(`zellij action go-to-tab-name ${shellEscape(originalTab)}`); } catch { /* best effort */ }
@@ -101,7 +111,13 @@ export function injectIntoTab(tab: string, prompt: string): void {
   // go-to-tab-name is fire-and-forget; confirm the switch landed before
   // sending characters so write-chars never types into the wrong pane.
   execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
-  waitForTabFocus(tab);
+  if (!waitForTabFocus(tab)) {
+    // Hard fail — typing into the wrong pane would garble the user's
+    // private terminal. Surface this so the caller (home/worker.ts or
+    // any of the API routes) emits a worker.crashed event / 500 instead
+    // of silently corrupting whatever pane is focused.
+    throw new Error(`injectIntoTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
+  }
   execSync(`zellij action write-chars ${shellEscape(prompt)}`);
   execSync("sleep 0.1");
   execSync("zellij action write 13");
