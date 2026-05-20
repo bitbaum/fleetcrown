@@ -47,13 +47,14 @@ const DEBOUNCE_MS = 250;
 
 // ── Parse the session.md handoff format ──────────────────────────────────────
 // Format (per project CLAUDE.md):
+//   status: <ready | working>     # 'ready' = done, auto-inject may fire
 //   done: <one sentence>
 //   next: <one sentence>
 //   tests: <N pass · N fail, or 'no suite'>
 //   todos: <count> TODOs
 //   health: <good | needs attention | critical>
 
-const FIELDS = ["done", "next", "tests", "todos", "health"] as const;
+const FIELDS = ["status", "done", "next", "tests", "todos", "health"] as const;
 
 function parseHandoff(content: string): Handoff {
   const result: Record<string, string> = {};

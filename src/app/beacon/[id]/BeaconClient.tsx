@@ -158,7 +158,18 @@ function BeaconBody({
 
   // Auto-fire logic: picks the right choice based on queue / capacity issue state.
   // Called by ReadyBanner when the countdown reaches zero (and auto-continue is on).
+  //
+  // Agent-driven gate: handoff.status must say "ready" before any auto-fire
+  // happens. Anything else (empty, "working", any other value) suppresses.
+  // Model-agnostic — any adapter that writes the standard handoff fields
+  // gets the same gating. Capacity-issue (agent quota hit) bypasses since
+  // that's a recovery dispatch the user explicitly asked for.
   const handleAutoInject = useCallback(() => {
+    // BeaconSession carries raw sessionContent — parse it here to extract
+    // the handoff status. Capacity-issue dispatches bypass since the user
+    // explicitly asked for the agent switch.
+    const status = (parseSessionText(session.sessionContent).status ?? "").toLowerCase();
+    if (status !== "ready" && !session.capacityIssue) return;
     const all = promptsRef.current;
     const primary = all.find((p) => p.style === "primary");
     const choice = session.capacityIssue && session.nextAgent
@@ -168,7 +179,7 @@ function BeaconBody({
       : primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
     if (!session.capacityIssue && queue.length > 0) remove(0);
     submitRef.current(choice);
-  }, [session.capacityIssue, session.nextAgent, queue, remove]);
+  }, [session.sessionContent, session.capacityIssue, session.nextAgent, queue, remove]);
 
   const morePrompts = prompts.filter((p) => p.style === "more");
 

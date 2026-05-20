@@ -65,7 +65,7 @@ function selfTest() {
         appendEvent({
           kind: "worker.idle",
           project: "TestProject",
-          handoff: { done: "", next: "", tests: "", todos: "", health: "good" },
+          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "good" },
         }, tmpLog);
         const line = fs.readFileSync(tmpLog, "utf8").trim();
         const parsed = parseEvent(line);
@@ -83,9 +83,9 @@ function selfTest() {
       run: () => {
         const log = path.join(tmpDir, "distinct.jsonl");
         appendEvent({ kind: "worker.idle", project: "A",
-          handoff: { done: "", next: "", tests: "", todos: "", health: "" }}, log);
+          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "" }}, log);
         appendEvent({ kind: "worker.idle", project: "A",
-          handoff: { done: "", next: "", tests: "", todos: "", health: "" }}, log);
+          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "" }}, log);
         const lines = fs.readFileSync(log, "utf8").trim().split("\n");
         if (lines.length !== 2) return false;
         const r1 = parseEvent(lines[0]); const r2 = parseEvent(lines[1]);
@@ -97,7 +97,7 @@ function selfTest() {
       run: () => {
         const nested = path.join(tmpDir, "deeply/nested/path/log.jsonl");
         appendEvent({ kind: "worker.idle", project: "Nest",
-          handoff: { done: "", next: "", tests: "", todos: "", health: "" }}, nested);
+          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "" }}, nested);
         return fs.existsSync(nested) && fs.statSync(nested).size > 0;
       },
     },

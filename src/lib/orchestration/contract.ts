@@ -75,10 +75,21 @@ export type OrchestrationTaskRequest = {
   customInstructions?: string;
 };
 
-export const ORCHESTRATION_TASK_SUMMARY_FIELDS = ["done", "next", "tests", "todos", "health"] as const;
+// `status` is the agent's self-reported lifecycle state for this handoff:
+//   ready    — task fully done, auto-inject may proceed
+//   working  — agent is mid-task, suppress auto-inject
+// Missing/empty defaults to working (conservative — auto-inject only fires
+// when the agent explicitly signals it's done with everything). This is
+// model-agnostic: any adapter that writes the standard handoff format
+// gets the same auto-inject suppression.
+export const ORCHESTRATION_TASK_SUMMARY_FIELDS = ["status", "done", "next", "tests", "todos", "health"] as const;
 export type OrchestrationTaskSummaryField = (typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number];
 
-export type OrchestrationTaskSummary = Record<OrchestrationTaskSummaryField, string>;
+// status is optional for back-compat — older summaries on the wire don't have
+// it. Downstream readers treat missing/undefined as "not ready" (suppress).
+export type OrchestrationTaskSummary =
+  & { [K in Exclude<OrchestrationTaskSummaryField, "status">]: string }
+  & { status?: string };
 
 export type OrchestrationTaskStatus = {
   state: OrchestrationState;

@@ -27,8 +27,18 @@ const RunId = z.string().uuid();
 const PaneId = z.string().min(1).max(120);
 const Project = z.string().min(1).max(200);
 
-/** Five session-handoff fields the agent writes to ~/.claude/sessions/<tab>.md */
+/**
+ * Six session-handoff fields the agent writes to ~/.claude/sessions/<tab>.md.
+ *
+ * `status` (added 2026-05) is the agent's self-reported lifecycle state for
+ * the run — "ready" means done with everything (auto-inject may proceed),
+ * "working" means mid-task (auto-inject suppressed). Missing/empty defaults
+ * to "working" downstream — auto-inject only fires when the agent EXPLICITLY
+ * signals it's done. Model-agnostic: every adapter that writes this handoff
+ * format gets the same gating.
+ */
 export const Handoff = z.object({
+  status: z.string().default(""),
   done:   z.string().default(""),
   next:   z.string().default(""),
   tests:  z.string().default(""),

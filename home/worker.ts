@@ -356,7 +356,7 @@ function selfTest() {
         const idle: Event = {
           v: 1, id: "i1", ts: "2026-01-01T00:00:00Z",
           kind: "worker.idle", project: "Test",
-          handoff: { done: "", next: "", tests: "", todos: "", health: "good" },
+          handoff: { status: "", done:"", next: "", tests: "", todos: "", health: "good" },
         };
         applyEvent(s, idle, "live");
         return s.startedRunIds.size === 0 && s.pendingDispatches.size === 0;

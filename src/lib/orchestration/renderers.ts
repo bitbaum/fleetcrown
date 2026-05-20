@@ -4,6 +4,7 @@ import type { AdapterId, OrchestrationTaskRequest } from "./contract";
 function renderSharedHandoffBlock(): string {
   return [
     "When done, update the session handoff with exactly these lines:",
+    "status: <ready | working>     # 'ready' = task fully done; 'working' = still more to do. Auto-inject only fires when 'ready'.",
     "done: <one sentence what you completed>",
     "next: <one sentence what remains>",
     "tests: <N pass · N fail, or 'no suite'>",

@@ -204,7 +204,7 @@ function selfTest() {
   });
   const finished = (runId: string, outcome: Outcome = "success"): Event => ({
     v: 1, id: `f-${runId}`, ts: baseTs, kind: "worker.finished",
-    project: "T", runId, handoff: { done: "x", next: "", tests: "", todos: "", health: "good" },
+    project: "T", runId, handoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "good" },
     outcome, durationMs: 1000,
   });
   const cancel = (runId: string): Event => ({

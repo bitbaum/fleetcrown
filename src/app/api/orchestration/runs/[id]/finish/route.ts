@@ -35,10 +35,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const summary = body.summary
     ? {
-        done:  body.summary.done  ?? "",
-        next:  body.summary.next  ?? "",
-        tests: body.summary.tests ?? "",
-        todos: body.summary.todos ?? "",
+        status: body.summary.status ?? "",
+        done:   body.summary.done   ?? "",
+        next:   body.summary.next   ?? "",
+        tests:  body.summary.tests  ?? "",
+        todos:  body.summary.todos  ?? "",
         health: body.summary.health ?? "",
       }
     : null;

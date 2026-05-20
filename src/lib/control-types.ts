@@ -21,6 +21,13 @@ export type CurrentPrompt = {
 };
 
 export type SessionState = {
+  /** Agent's self-reported lifecycle state: 'ready' = done, auto-inject may
+   *  proceed; 'working' = mid-task, suppress auto-inject. Missing/undefined
+   *  is treated as NOT ready by the auto-inject gates (conservative). Optional
+   *  so legacy construction sites that don't yet plumb session_status can
+   *  omit it during the back-compat window — they'll just suppress auto-fire
+   *  which matches the user's stated intent. */
+  status?: string;
   done: string;
   next: string;
   tests: string;

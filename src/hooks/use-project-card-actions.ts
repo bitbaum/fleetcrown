@@ -148,6 +148,14 @@ export function useProjectCardActions({
 
   const handleAutoInject = useCallback(async () => {
     if (!isAutoContinueEnabledSync(project.tab)) return;
+    // Agent-driven gate: handoff.status must explicitly say "ready" before
+    // auto-inject can fire. Anything else (empty, "working", or any other
+    // value) suppresses. This is the model-agnostic signal — any adapter
+    // that writes the standard handoff format gets the same gating.
+    // Health-critical bypasses the gate so recovery dispatches still fire.
+    const status = (project.session?.status ?? "").toLowerCase();
+    const healthCritical = (project.session?.health ?? "").toLowerCase().includes("critical");
+    if (status !== "ready" && !healthCritical) return;
     if (sessionHealthBlocksQueue()) {
       await sendIntent("next_best");
       return;
@@ -166,7 +174,7 @@ export function useProjectCardActions({
     }
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preloadedDispatch, shiftQueue, queue.length, project.tab, onInject, setDismissed, project.session?.health, project.session?.tests]);
+  }, [preloadedDispatch, shiftQueue, queue.length, project.tab, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
 
   const handleSendFromQueue = useCallback(async (index: number) => {
     const item = queue[index];

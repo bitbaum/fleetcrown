@@ -173,6 +173,7 @@ export function buildPromptWithSession(base: string, tab: string): string {
   const sessionFile = path.join(SESSIONS_DIR(), `${tab}.md`);
   const sessionUpdateBlock = [
     `When done, update ${sessionFile} with exactly these lines:`,
+    "status: <ready | working>     # 'ready' = task fully done; 'working' = still more to do on this task. Auto-inject only fires when 'ready'.",
     "done: <one sentence what you completed>",
     "next: <one sentence what remains>",
     "tests: <N pass · N fail, or 'no suite'>",

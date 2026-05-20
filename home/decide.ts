@@ -214,7 +214,7 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { done: "x", next: "", tests: "", todos: "", health: "critical — auth broken" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "critical — auth broken" },
         },
       },
       expect: (d) => d.action.kind === "recovery" && d.action.intent === "unblock",
@@ -224,7 +224,7 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { done: "x", next: "", tests: "3/5 pass, 2 fail", todos: "", health: "good" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "3/5 pass, 2 fail", todos: "", health: "good" },
         },
       },
       expect: (d) => d.action.kind === "recovery" && d.action.intent === "test_and_fix",
@@ -232,7 +232,7 @@ function selfTest() {
     {
       name: "queue head dispatched when present and health OK",
       input: {
-        project: { ...baseProject, lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" } },
+        project: { ...baseProject, lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" } },
         queueHead: "Run security audit",
       },
       expect: (d) => d.action.kind === "dispatch" && d.action.intent === "custom",
@@ -240,7 +240,7 @@ function selfTest() {
     {
       name: "empty queue + healthy → next_best",
       input: {
-        project: { ...baseProject, lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" } },
+        project: { ...baseProject, lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" } },
       },
       expect: (d) => d.action.kind === "dispatch" && d.action.intent === "next_best",
     },
@@ -249,7 +249,7 @@ function selfTest() {
       input: {
         // Fresh project, zero history. The UI Dispatch button hits this path —
         // it must fire even when computeConfidence is still neutral 0.5.
-        project: { ...baseProject, lastHandoff: { done: "", next: "", tests: "", todos: "", health: "good" } },
+        project: { ...baseProject, lastHandoff: { status: "", done:"", next: "", tests: "", todos: "", health: "good" } },
         autonomy: "manual",
       },
       expect: (d) => d.autoExecute,
@@ -259,7 +259,7 @@ function selfTest() {
       input: {
         project: {
           ...baseProject,
-          lastHandoff: { done: "x", next: "", tests: "", todos: "", health: "critical — auth broken" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "", todos: "", health: "critical — auth broken" },
         },
         autonomy: "manual",
       },
@@ -271,7 +271,7 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
         },
         autonomy: "confirm",
       },
@@ -283,7 +283,7 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
-          lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
         },
         autonomy: "sleep",
       },
@@ -295,7 +295,7 @@ function selfTest() {
         project: {
           ...baseProject,
           recentOutcomes: ["error", "error", "success"],
-          lastHandoff: { done: "x", next: "", tests: "all pass", todos: "0", health: "good" },
+          lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
         },
         autonomy: "sleep",
       },
