@@ -1,10 +1,10 @@
 import { cache } from "react";
 import { getUserByUsername } from "@/db/queries/users";
-import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, BookOpen, Folder } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Avatar } from "@/components/shared/Avatar";
 
 // Deduplicate the user lookup across generateMetadata + the page component.
 // Both run in the same request; React cache() collapses them to one DB query.
@@ -61,19 +61,7 @@ export default async function PublicProfilePage({
       <main className="mx-auto w-full max-w-2xl px-6 py-10 pb-20">
         {/* Profile header */}
         <div className="flex items-center gap-4">
-          {user.image ? (
-            <Image
-              src={user.image}
-              alt={user.name ?? username}
-              width={72}
-              height={72}
-              className="h-18 w-18 rounded-full"
-            />
-          ) : (
-            <div className="flex h-18 w-18 shrink-0 items-center justify-center rounded-full bg-accent-muted text-2xl font-semibold text-accent-primary">
-              {(user.name ?? username)[0]?.toUpperCase()}
-            </div>
-          )}
+          <Avatar src={user.image} name={user.name ?? username} size="lg" />
           <div>
             <h1 className="text-2xl font-semibold">{user.name ?? username}</h1>
             <p className="text-sm text-text-secondary">@{username}</p>
