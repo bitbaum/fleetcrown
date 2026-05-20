@@ -133,24 +133,24 @@ the pre-push hook (`.husky/pre-push`) which calls `test:home` automatically:
 ```bash
 npm run test:home                     # all eight suites, ~14s — used by pre-push
 
-npx tsx home/state.ts                # 15 tests — event projection
-npx tsx home/decide.ts               # 11 tests — autonomy + confidence
-npx tsx home/projects.ts             #  7 tests — agent-projects.conf parser
-npx tsx home/render.ts               # 12 tests — every intent renders
-npx tsx home/emit.ts    --self-test  #  5 tests — append-only writer
-npx tsx home/log.ts     --self-test  #  6 tests — JSONL tailer (replay path)
-npx tsx home/watcher.ts --self-test  #  8 tests — parseHandoff + tabFromFilename
-npx tsx home/worker.ts  --self-test  # 12 tests — applyEvent pure-function path
+npx tsx home/state.ts                # event projection
+npx tsx home/decide.ts               # autonomy + confidence
+npx tsx home/projects.ts             # agent-projects.conf parser
+npx tsx home/render.ts               # every intent renders
+npx tsx home/emit.ts    --self-test  # append-only writer
+npx tsx home/log.ts     --self-test  # JSONL tailer (replay path)
+npx tsx home/watcher.ts --self-test  # parseHandoff + tabFromFilename
+npx tsx home/worker.ts  --self-test  # applyEvent pure-function path
 ```
+
+Each suite prints its own `N/M passed` footer; `npm run test:home`
+aggregates them into a total. Counts grow as regression cases are
+added — don't hardcode them anywhere.
 
 `server.ts` is currently exercised only by `npm run smoke` (boots the dev
 server and curls every route) — its HTTP route handlers are tightly bound
 to req/res streams, so unit-testing them in isolation would require
 mocking infrastructure not worth the cost yet.
-
-Counts above are accurate as of e85e249 and grow over time as new bugs
-are caught with regression cases — `tail` the test output to see the
-exact `N/M passed` line.
 
 ## What's not here yet
 

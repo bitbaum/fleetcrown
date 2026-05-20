@@ -52,7 +52,7 @@ home/              → Local-first agent orchestration stack — runs on the use
                      — injects bridge.dispatch into zellij, sends Ctrl+C on
                      bridge.cancel). UI at http://localhost:3001. Run with
                      `bash scripts/home-start.sh`; test with `npm run test:home`
-                     (76 inline tests, no framework, also runs on pre-push).
+                     (inline tests, no framework, also runs on pre-push).
                      Full docs: home/README.md.
 ```
 
@@ -193,7 +193,7 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 npm run dev          # Start dev server (default port 3000)
 npm run build        # Production build
 npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3xx
-npm run test:home    # Run all eight home/ inline self-test suites (76 tests, ~14s)
+npm run test:home    # Run all eight home/ inline self-test suites (~14s)
 npx drizzle-kit push # Push schema changes to Postgres
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
 bash scripts/home-start.sh  # Boot the local home/ Brain+Bridge+Worker stack
