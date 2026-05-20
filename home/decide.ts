@@ -101,11 +101,19 @@ export function shouldAutoExecute(
   autonomy: Autonomy,
   confidence: number,
   health: string,
+  status: string = "",
 ): boolean {
   // Critical health blocks autoExecute in every mode except manual (which is
   // already false). The brain must surface a recovery prompt, not bury it
   // under sleep-mode autonomy.
   if (health.toLowerCase().includes("critical")) return false;
+  // Agent-driven gate: autonomous dispatches (auto, sleep) only fire when
+  // the latest handoff EXPLICITLY signals status="ready". Missing, empty,
+  // "working", or any other value suppresses. Manual mode bypasses — user
+  // clicked Dispatch explicitly, they ARE the gate. Mirrors the cloud
+  // /control auto-inject gate from 27f31cb (handleAutoInject) so home/ and
+  // cloud agree on when to fire.
+  if (autonomy !== "manual" && status.toLowerCase() !== "ready") return false;
   return confidence >= AUTONOMY_THRESHOLD[autonomy];
 }
 
@@ -134,6 +142,7 @@ export function decide(input: DecideInput): Decision {
   const { project, queueHead, autonomy = "confirm" } = input;
   const confidence = computeConfidence(project.recentOutcomes);
   const health = project.lastHandoff?.health ?? "";
+  const status = project.lastHandoff?.status ?? "";
 
   // 1. If a run is currently active, decide() has nothing to do — let it
   //    finish. The next call after worker.finished will produce the next move.
@@ -153,7 +162,7 @@ export function decide(input: DecideInput): Decision {
     return {
       action: { kind: "recovery", intent: recovery.intent, reason: recovery.reason },
       confidence,
-      autoExecute: shouldAutoExecute(autonomy, confidence, health),
+      autoExecute: shouldAutoExecute(autonomy, confidence, health, status),
     };
   }
 
@@ -171,7 +180,7 @@ export function decide(input: DecideInput): Decision {
         reason: "Draining queue head.",
       },
       confidence,
-      autoExecute: shouldAutoExecute(autonomy, confidence, health),
+      autoExecute: shouldAutoExecute(autonomy, confidence, health, status),
     };
   }
 
@@ -183,7 +192,7 @@ export function decide(input: DecideInput): Decision {
       reason: "Queue empty, health good — let the agent pick next.",
     },
     confidence,
-    autoExecute: shouldAutoExecute(autonomy, confidence, health),
+    autoExecute: shouldAutoExecute(autonomy, confidence, health, status),
   };
 }
 
@@ -278,16 +287,51 @@ function selfTest() {
       expect: (d) => !d.autoExecute,
     },
     {
-      name: "sleep mode auto-fires on high confidence + healthy",
+      name: "sleep mode auto-fires on high confidence + healthy + status=ready",
+      input: {
+        project: {
+          ...baseProject,
+          recentOutcomes: ["success", "success", "success", "success", "success"],
+          lastHandoff: { status: "ready", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
+        },
+        autonomy: "sleep",
+      },
+      expect: (d) => d.autoExecute && d.confidence > 0.75,
+    },
+    {
+      name: "sleep mode does NOT fire when status='working' (mirrors cloud auto-inject gate)",
+      input: {
+        project: {
+          ...baseProject,
+          recentOutcomes: ["success", "success", "success", "success", "success"],
+          lastHandoff: { status: "working", done:"x", next: "more to do", tests: "all pass", todos: "0", health: "good" },
+        },
+        autonomy: "sleep",
+      },
+      expect: (d) => !d.autoExecute,
+    },
+    {
+      name: "auto mode does NOT fire when status is missing (default-suppress)",
       input: {
         project: {
           ...baseProject,
           recentOutcomes: ["success", "success", "success", "success", "success"],
           lastHandoff: { status: "", done:"x", next: "", tests: "all pass", todos: "0", health: "good" },
         },
-        autonomy: "sleep",
+        autonomy: "auto",
       },
-      expect: (d) => d.autoExecute && d.confidence > 0.75,
+      expect: (d) => !d.autoExecute,
+    },
+    {
+      name: "manual mode ignores status (user clicked Dispatch, they ARE the gate)",
+      input: {
+        project: {
+          ...baseProject,
+          lastHandoff: { status: "working", done:"x", next: "more to do", tests: "all pass", todos: "0", health: "good" },
+        },
+        autonomy: "manual",
+      },
+      expect: (d) => d.autoExecute,
     },
     {
       name: "sleep mode holds when recent errors drop confidence",
