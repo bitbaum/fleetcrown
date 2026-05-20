@@ -25,6 +25,7 @@ import path from "node:path";
 import os from "node:os";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
 import { appendEvent } from "./emit";
+import { loadProjects, projectsConfPath } from "./projects";
 import type { Handoff } from "@/lib/events";
 
 // Override via APP_SESSIONS_DIR for testing — production tails Claude's real dir.
@@ -58,14 +59,38 @@ function parseHandoff(content: string): Handoff {
 const lastMtime = new Map<string, number>();
 const pendingFlush = new Map<string, NodeJS.Timeout>();
 
+/**
+ * Lowercase project names from agent-projects.conf, loaded at boot. Anything
+ * outside this set (Tab #1.md, Logo.md, ad-hoc scratch sessions) is ignored
+ * so the brain's state stays a curated view, not a junk drawer. User
+ * restarts the watcher after editing the conf file.
+ */
+let registeredLower: Set<string> = new Set();
+
 function tabFromFilename(filename: string): string | null {
   if (!filename.endsWith(".md")) return null;
   return filename.slice(0, -3);
 }
 
+/** Skip-emit reasons surfaced via console for first-run debuggability. */
+const skipLogged = new Set<string>();
+function logSkipOnce(filename: string, reason: string) {
+  if (skipLogged.has(filename)) return;
+  skipLogged.add(filename);
+  console.log(`[watcher] skipping ${filename} — ${reason}`);
+}
+
 function readAndEmit(filename: string) {
   const tab = tabFromFilename(filename);
   if (!tab) return;
+
+  // Filter to registered projects only — strips scratch tabs like Tab #1.md
+  // and prevents the brain's state map from accumulating ad-hoc entries.
+  if (!registeredLower.has(tab.toLowerCase())) {
+    logSkipOnce(filename, `not in ${projectsConfPath()}`);
+    return;
+  }
+
   const filePath = path.join(SESSIONS_DIR, filename);
   let stat: fs.Stats;
   try { stat = fs.statSync(filePath); } catch { return; }
@@ -109,6 +134,11 @@ function start() {
     process.exit(1);
   }
 
+  // Load the registry. Empty registry isn't fatal — it just means nothing
+  // will ever pass the filter; first run gets a clear log line.
+  const projects = loadProjects();
+  registeredLower = new Set(Array.from(projects.keys()));
+
   // Seed lastMtime from existing files without emitting — only react to changes
   // from this process forward. (We don't want every boot to re-emit the last
   // handoff of every project.)
@@ -121,8 +151,12 @@ function start() {
   }
 
   console.log(`[watcher] ${APP_NAME} bridge watching ${SESSIONS_DIR}`);
+  console.log(`[watcher] registry: ${registeredLower.size} project(s) from ${projectsConfPath()}`);
   console.log(`[watcher] seeded ${lastMtime.size} session files; emitting on change`);
   console.log(`[watcher] events → ~/.${APP_SLUG}/events.jsonl`);
+  if (registeredLower.size === 0) {
+    console.log(`[watcher] WARN: empty registry — no session.md changes will emit. Add entries to ${projectsConfPath()}.`);
+  }
 
   const w = fs.watch(SESSIONS_DIR, (eventType, filename) => {
     if (!filename) return;
