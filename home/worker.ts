@@ -171,6 +171,15 @@ function executeDispatch(state: WorkerState, event: Event) {
       runId: event.runId,
       error: `inject failed: ${msg}`,
     });
+    // Inject failed → no agent is running → no stop hook will ever fire to
+    // consume this sentinel. Without cleanup, the stale runId sits in /tmp
+    // forever; the next manual claude session in this tab would write a
+    // session.md, the stop hook would read this sentinel, and tag an
+    // unrelated worker.finished with our crashed runId. Same trap that
+    // motivated agent-hook-bridge.sh:finish_orchestration_run's rm — apply
+    // it here too so the dispatch-fail path doesn't leak state.
+    try { fs.rmSync(runSentinelPath(event.project), { force: true }); }
+    catch { /* sentinel write may have failed too; nothing to clean up */ }
     console.error(`[worker] inject failed runId=${event.runId}: ${msg}`);
   }
 }
