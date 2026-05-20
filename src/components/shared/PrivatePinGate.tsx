@@ -54,12 +54,15 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
           <input
             ref={inputRef}
             type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
             placeholder="PIN"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
             className="ui-input text-center text-xl tracking-widest"
             disabled={loading}
-            autoComplete="current-password"
+            autoComplete="one-time-code"
+            maxLength={20}
           />
           {error && (
             <p className="ui-error text-center">{error}</p>

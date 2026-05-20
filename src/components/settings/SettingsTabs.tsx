@@ -51,7 +51,7 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
   return (
     <div>
       {/* Tab nav */}
-      <div className="border-b border-border-subtle -mx-4 px-4 mb-6 overflow-x-auto">
+      <div className="border-b border-border-subtle -mx-4 px-4 mb-6 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-max">
           {TABS.map((tab) => (
             <button

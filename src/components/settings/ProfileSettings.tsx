@@ -12,9 +12,17 @@ type Props = {
   user: { id: string; name: string; username: string; image: string };
 };
 
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
+}
+
 export function ProfileSettings({ user }: Props) {
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
+  const [imgFailed, setImgFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -40,8 +48,22 @@ export function ProfileSettings({ user }: Props) {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Profile</h2>
 
-      {user.image && (
-        <Image src={user.image} alt={name} width={48} height={48} className="h-12 w-12 rounded-full" />
+      {user.image && !imgFailed ? (
+        <Image
+          src={user.image}
+          alt={name}
+          width={48}
+          height={48}
+          className="h-12 w-12 rounded-full"
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <div
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-accent-muted text-sm font-semibold text-accent-text"
+          aria-label={`Avatar for ${name}`}
+        >
+          {getInitials(name)}
+        </div>
       )}
 
       <div className="space-y-3">

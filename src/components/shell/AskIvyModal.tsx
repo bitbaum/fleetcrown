@@ -224,7 +224,8 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
             <p className="mt-1.5 text-center ui-error-xs">{micError}</p>
           )}
           <div className="mt-1.5 text-center text-micro text-text-tertiary">
-            Enter to send · Shift+Enter for new line · Esc to close · ? to reopen · 🎤 Whisper
+            <span className="hidden sm:inline">Enter to send · Shift+Enter for new line · Esc to close · ? to reopen · </span>
+            <span className="sm:hidden">Tap </span>🎤<span className="sm:hidden"> for voice</span><span className="hidden sm:inline"> Whisper</span>
           </div>
         </div>
     </Modal>

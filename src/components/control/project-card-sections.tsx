@@ -168,6 +168,7 @@ export function ProjectCardHeader({
             <button
               onClick={onFocus}
               title="Focus on this project"
+              aria-label="Focus on this project"
               className="ui-icon-action"
             >
               <Focus className="h-4 w-4" />
@@ -177,6 +178,7 @@ export function ProjectCardHeader({
             <button
               onClick={onCollapse}
               title="Collapse"
+              aria-label="Collapse this project card"
               className="ui-icon-action"
             >
               <ChevronsDown className="h-4 w-4" />

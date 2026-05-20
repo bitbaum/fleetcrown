@@ -9,7 +9,7 @@ import { APP_LOCALE } from "@/lib/constants";
 export function SummaryBarSkeleton() {
   const widths = ["5rem", "7rem", "6rem", "5rem", "5rem"];
   return (
-    <div className="flex gap-3 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+    <div className="flex gap-3 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
       {widths.map((w, i) => (
         <div
           key={i}
@@ -44,7 +44,7 @@ export async function SummaryBar() {
   ].filter(Boolean).join("\n");
 
   return (
-    <div className="flex gap-3 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+    <div className="flex gap-3 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
       {s.activeGoals > 0 && (
         <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
       )}

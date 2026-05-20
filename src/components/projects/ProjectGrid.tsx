@@ -203,7 +203,7 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       </div>
 
       {statuses.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+        <div className="flex gap-1.5 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
           {statuses.map((s) => {
             const truncated = s.length > CHIP_MAX_CHARS ? s.slice(0, CHIP_MAX_CHARS) + "…" : s;
             return (

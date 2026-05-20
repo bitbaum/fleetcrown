@@ -296,7 +296,8 @@
 
   /* Shell */
   .app-shell-frame { @apply min-h-screen text-text-primary; }
-  .app-main        { @apply min-w-0 flex-1 overflow-y-auto pb-20 md:pb-0; }
+  /* pb-32 mobile leaves clearance for the bottom nav (~82px) + Ask Ivy FAB top edge (152px from bottom) */
+  .app-main        { @apply min-w-0 flex-1 overflow-y-auto pb-40 md:pb-0; }
   .app-page {
     width: min(100%, var(--shell-max));
     @apply mx-auto px-5 py-6 md:px-8 md:py-8;
@@ -717,6 +718,16 @@
   /* Small meta badge pill (scope, schedule indicator, etc.) */
   .ui-badge {
     @apply inline-flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary;
+  }
+
+  /* Mobile-only right-edge fade — visual hint that a horizontally-scrolling row has more content off-screen.
+     Applied to scroll containers; vanishes at sm: when the row wraps naturally. */
+  .ui-scroll-fade-right {
+    mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+  }
+  @media (min-width: 640px) {
+    .ui-scroll-fade-right { mask-image: none; -webkit-mask-image: none; }
   }
 
   /* Prompt-library category chip colors — applied alongside .ui-chip or as filter-chip active state */
