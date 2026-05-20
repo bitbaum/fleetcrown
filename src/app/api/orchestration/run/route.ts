@@ -358,6 +358,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     await updateOrchestrationRun(run.id, {
       state: "error",
+      outcome: "error",
       finishedAt: new Date(),
       payload: {
         projectId: request.projectId ?? null,
