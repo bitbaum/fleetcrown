@@ -51,7 +51,7 @@ export function SystemStats() {
     return (
       <Card>
         <CardHeader icon={Cpu} title="System" />
-        <FetchErrorState message="Couldn't load system stats" onRetry={refetch} />
+        <FetchErrorState message="Couldn't load system stats" detail={error} onRetry={refetch} />
       </Card>
     );
   }

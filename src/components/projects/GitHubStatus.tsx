@@ -44,7 +44,7 @@ export function GitHubStatus() {
           ))}
         </div>
       ) : error || (data?.error && repos.length === 0) ? (
-        <FetchErrorState message="Couldn't load GitHub status" onRetry={refetch} />
+        <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>
       ) : (

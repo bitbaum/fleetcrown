@@ -35,7 +35,7 @@ export function CalendarCard() {
           ))}
         </div>
       ) : error || (data?.error && events.length === 0) ? (
-        <FetchErrorState message="Couldn't load calendar" onRetry={refetch} />
+        <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (

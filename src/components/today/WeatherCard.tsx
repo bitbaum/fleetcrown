@@ -64,7 +64,7 @@ export function WeatherCard() {
     return (
       <Card>
         <CardHeader icon={Sun} title="Weather" />
-        <FetchErrorState message="Couldn't load weather" onRetry={refetch} />
+        <FetchErrorState message="Couldn't load weather" detail={error ?? data?.error} onRetry={refetch} />
       </Card>
     );
   }
