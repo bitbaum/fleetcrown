@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { debugLogs, type NewDebugLog } from "@/db/schema/debug-logs";
-import { desc } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 
 /**
  * Fire-and-forget logger. Never throws — a telemetry failure must not break
@@ -17,4 +17,33 @@ export function logDebug(entry: Omit<NewDebugLog, "id" | "createdAt">): Promise<
 /** Most-recent N debug log entries, newest first. UI helper for a future admin view. */
 export async function getRecentDebugLogs(limit = 50) {
   return db.select().from(debugLogs).orderBy(desc(debugLogs.createdAt)).limit(limit);
+}
+
+/**
+ * Prune old debug log rows so the table doesn't grow unbounded. Two
+ * thresholds because error rows are more valuable for postmortems and
+ * deserve a longer retention window.
+ *
+ * Default: warn/info → 30 days, error → 90 days.
+ *
+ * Returns the count of rows deleted (Postgres rowCount via `.rowCount` is
+ * surfaced by postgres-js as the array length of the returning() result,
+ * which we use here for portability).
+ */
+export async function pruneDebugLogs({
+  nonErrorOlderThanDays = 30,
+  errorOlderThanDays = 90,
+}: { nonErrorOlderThanDays?: number; errorOlderThanDays?: number } = {}): Promise<number> {
+  const now = Date.now();
+  const nonErrorCutoff = new Date(now - nonErrorOlderThanDays * 86_400_000);
+  const errorCutoff = new Date(now - errorOlderThanDays * 86_400_000);
+
+  const deleted = await db.delete(debugLogs).where(
+    or(
+      and(sql`${debugLogs.level} <> 'error'`, lt(debugLogs.createdAt, nonErrorCutoff)),
+      and(eq(debugLogs.level, "error"), lt(debugLogs.createdAt, errorCutoff)),
+    ),
+  ).returning({ id: debugLogs.id });
+
+  return deleted.length;
 }

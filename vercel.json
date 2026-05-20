@@ -3,5 +3,8 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "alias": ["cockpitapp.vercel.app"]
+  "alias": ["cockpitapp.vercel.app"],
+  "crons": [
+    { "path": "/api/crons/prune-debug-logs", "schedule": "0 3 * * *" }
+  ]
 }
