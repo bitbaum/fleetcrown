@@ -310,7 +310,12 @@ export function buildControlPageState(
   const idleNeedsAttn = idleProjects.filter(idleNeedsAttention);
   const idleRest = idleProjects.filter((p) => !idleNeedsAttention(p));
   const idleQuietList = idleRest.filter((p) => !idleIsStale(p, nowS));
-  const idleStaleList = idleRest.filter((p) => idleIsStale(p, nowS));
+  // Sort Stale oldest-first so the most-prunable candidates surface at the
+  // top. No-session is treated as -∞ (never touched → most prunable). Stable
+  // sort: same-mtime ties preserve the upstream rank.
+  const idleStaleList = idleRest
+    .filter((p) => idleIsStale(p, nowS))
+    .sort((a, b) => (a.session?.mtime ?? -Infinity) - (b.session?.mtime ?? -Infinity));
 
   const runningCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS);
