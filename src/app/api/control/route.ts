@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
+import fs from "fs";
 import { getZellijTabs, shellEscape } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
@@ -262,6 +263,23 @@ export async function GET() {
     // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
     const session = parseSession(liveTab);
+
+    // Mirror DB-backed prompt queue → /tmp/agent-queue-<tab> on local
+    // cockpit-app boxes ONLY (runtime present means we're on the user's
+    // machine, not Vercel). Closes the drift home/'s /control queue
+    // badge surfaces: when the queue is PUT to Vercel, the /tmp mirror
+    // on Vercel goes nowhere, so the local /tmp stays stale even though
+    // Neon has the truth. Refreshing on every /api/control GET keeps the
+    // local file in sync while the UI is open — long enough that home/
+    // and the bash hook (agent-hook-bridge.sh:413,607) see fresh queue
+    // data.
+    if (!readonly && isRuntimeAvailable() && dbState?.promptQueue) {
+      try {
+        const p = stateFile.queue(tab.toLowerCase());
+        fs.writeFileSync(p + ".tmp", JSON.stringify(dbState.promptQueue));
+        fs.renameSync(p + ".tmp", p);
+      } catch { /* mirror failure is non-fatal — DB is source of truth */ }
+    }
 
     // Only the project's owner writes to project_states. A viewer reading a team
     // (readonly) project's session would otherwise create a row under their own
