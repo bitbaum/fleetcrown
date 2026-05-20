@@ -1,10 +1,12 @@
 import { cache } from "react";
 import { getUserByUsername } from "@/db/queries/users";
 import Link from "next/link";
-import { ExternalLink, BookOpen, Folder } from "lucide-react";
+import { ExternalLink, BookOpen, Folder, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shared/Avatar";
+import { ROUTES } from "@/config/auth";
+import { APP_TAGLINE } from "@/config/brand";
 
 // Deduplicate the user lookup across generateMetadata + the page component.
 // Both run in the same request; React cache() collapses them to one DB query.
@@ -159,6 +161,19 @@ export default async function PublicProfilePage({
             )}
           </section>
         )}
+
+        {/* Branded footer CTA — always visible so empty-state profiles still
+            offer the share-target visitor a path forward. */}
+        <footer className="mt-16 border-t border-border-subtle pt-8">
+          <p className="text-sm text-text-tertiary">{APP_NAME} · {APP_TAGLINE}</p>
+          <Link
+            href={ROUTES.SIGN_UP}
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-primary transition-opacity hover:opacity-80"
+          >
+            Build your own command center
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </footer>
       </main>
     </div>
   );
