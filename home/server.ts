@@ -31,6 +31,7 @@ import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
 import { appendEvent } from "./emit";
 import { renderPromptForDispatch } from "./render";
+import { resolveProjectPath } from "./projects";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
@@ -225,7 +226,13 @@ const server = http.createServer((req, res) => {
 
         // Auto-execute: emit a bridge.dispatch event with a fresh run id.
         const runId = randomUUID();
-        const projectPath = typeof parsed.projectPath === "string" ? parsed.projectPath : undefined;
+        // Resolve the project's filesystem path so the rendered prompt reads
+        // "Work on the project at /home/g/dev/<x>" instead of the project
+        // name as fallback. Caller-supplied wins; otherwise look up the
+        // existing ~/.config/agent-projects.conf SSOT.
+        const projectPath =
+          (typeof parsed.projectPath === "string" && parsed.projectPath) ||
+          resolveProjectPath(projectName);
         const prompt = buildPromptForDispatch(decision, projectState, projectPath);
         const intent = decision.action.intent;
         appendEvent({
