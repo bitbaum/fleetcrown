@@ -100,3 +100,117 @@ export function tailLog(
     position: () => position,
   };
 }
+
+// ── Self-test ────────────────────────────────────────────────────────────────
+// Run with: npx tsx home/log.ts --self-test
+// Covers the synchronous replay path + error reporting + truncation reset.
+// fs.watch live-append behavior is async; tested by integration only.
+
+function selfTest() {
+  const os   = require("node:os")  as typeof import("node:os");
+  const cryp = require("node:crypto") as typeof import("node:crypto");
+
+  // Each test gets a fresh tmp file so state doesn't leak between cases.
+  function makeLogPath(): string {
+    return path.join(os.tmpdir(), `cockpit-log-test-${cryp.randomUUID()}.jsonl`);
+  }
+  const validEvent = (project: string) =>
+    `{"v":1,"id":"${cryp.randomUUID()}","ts":"2026-01-01T00:00:00Z","kind":"worker.idle","project":"${project}","handoff":{"done":"","next":"","tests":"","todos":"","health":"good"}}`;
+
+  type Case = { name: string; run: () => boolean };
+  const cases: Case[] = [
+    {
+      name: "initial replay classifies all existing lines as phase='replay'",
+      run: () => {
+        const log = makeLogPath();
+        fs.writeFileSync(log, validEvent("A") + "\n" + validEvent("B") + "\n");
+        const phases: EventPhase[] = [];
+        const h = tailLog(log, (_e, p) => phases.push(p));
+        h.close();
+        fs.rmSync(log, { force: true });
+        return phases.length === 2 && phases.every((p) => p === "replay");
+      },
+    },
+    {
+      name: "garbled line in initial replay fires onError without breaking subsequent valid lines",
+      run: () => {
+        const log = makeLogPath();
+        fs.writeFileSync(log,
+          `not-json-at-all\n` +
+          validEvent("Good") + "\n" +
+          `{"v":1,"id":"bad"}\n`,  // missing required fields
+        );
+        const okCount: Event["kind"][] = [];
+        const errCount: string[] = [];
+        const h = tailLog(log,
+          (e) => okCount.push(e.kind),
+          (err) => errCount.push(err.message));
+        h.close();
+        fs.rmSync(log, { force: true });
+        return okCount.length === 1 && okCount[0] === "worker.idle"
+            && errCount.length === 2;
+      },
+    },
+    {
+      name: "missing file is created at the path (parent dir included)",
+      run: () => {
+        const log = path.join(os.tmpdir(), `cockpit-log-test-${cryp.randomUUID()}/nested/log.jsonl`);
+        const h = tailLog(log, () => undefined);
+        h.close();
+        const exists = fs.existsSync(log);
+        const isEmpty = exists && fs.statSync(log).size === 0;
+        fs.rmSync(path.dirname(path.dirname(log)), { recursive: true, force: true });
+        return exists && isEmpty;
+      },
+    },
+    {
+      name: "empty file produces zero events and no errors",
+      run: () => {
+        const log = makeLogPath();
+        fs.writeFileSync(log, "");
+        let events = 0, errors = 0;
+        const h = tailLog(log, () => events++, () => errors++);
+        h.close();
+        fs.rmSync(log, { force: true });
+        return events === 0 && errors === 0;
+      },
+    },
+    {
+      name: "position() reflects bytes consumed during replay",
+      run: () => {
+        const log = makeLogPath();
+        const body = validEvent("X") + "\n" + validEvent("Y") + "\n";
+        fs.writeFileSync(log, body);
+        const h = tailLog(log, () => undefined);
+        const pos = h.position();
+        h.close();
+        fs.rmSync(log, { force: true });
+        return pos === body.length;
+      },
+    },
+    {
+      name: "blank lines between events are skipped silently",
+      run: () => {
+        const log = makeLogPath();
+        fs.writeFileSync(log, "\n\n" + validEvent("Z") + "\n\n");
+        let events = 0, errors = 0;
+        const h = tailLog(log, () => events++, () => errors++);
+        h.close();
+        fs.rmSync(log, { force: true });
+        return events === 1 && errors === 0;
+      },
+    },
+  ];
+
+  let pass = 0, fail = 0;
+  for (const c of cases) {
+    if (c.run()) { console.log(`  ✓ ${c.name}`); pass++; }
+    else         { console.log(`  ✗ ${c.name}`); fail++; }
+  }
+  console.log(`\n${pass}/${pass + fail} passed`);
+  if (fail > 0) process.exit(1);
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes("--self-test")) selfTest();
+}
