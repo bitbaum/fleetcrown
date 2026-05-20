@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
-import { APP_DESCRIPTION, APP_NAME } from "@/config/brand";
+import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -22,6 +22,7 @@ const spaceGroteskDisplay = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: { default: APP_NAME, template: `%s — ${APP_NAME}` },
   description: APP_DESCRIPTION,
   manifest: "/manifest.json",
@@ -34,6 +35,22 @@ export const metadata: Metadata = {
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icon.svg" }],
+  },
+  // OpenGraph + Twitter pick up the file-convention opengraph-image.tsx
+  // (served at /opengraph-image) and twitter-image.tsx automatically once the
+  // openGraph / twitter blocks are declared here.
+  openGraph: {
+    type: "website",
+    siteName: APP_NAME,
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    url: APP_URL,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
   },
 };
 
