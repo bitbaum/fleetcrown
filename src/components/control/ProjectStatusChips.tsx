@@ -37,6 +37,7 @@ export function ProjectStatusChips({
   localAgentId,
   switchingAgent = false,
   onSwitchAgent,
+  isAgentWorking,
 }: {
   project: ProjectState;
   tabOpen: boolean;
@@ -46,7 +47,14 @@ export function ProjectStatusChips({
   localAgentId?: string | null;
   switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
+  /** Derived from getProjectDisplayState — SSOT for "working" badge/chip. When
+   *  omitted, falls back to raw currentPrompt for backward-compat. */
+  isAgentWorking?: boolean;
 }) {
+  // SSOT for chip tone + label. When the parent passes the derived flag, we use
+  // it (so staleness gating in getProjectDisplayState propagates to the chip);
+  // otherwise fall back to the raw signal.
+  const working = isAgentWorking ?? Boolean(project.currentPrompt);
   const [gitHelpOpen, setGitHelpOpen] = useState(false);
   const [agentPopoverOpen, setAgentPopoverOpen] = useState(false);
   const [workspaceState, setWorkspaceState] = useState<"idle" | "loading" | "done">("idle");
@@ -119,11 +127,11 @@ export function ProjectStatusChips({
               disabled={switchingAgent}
               className={compact
                 ? "flex items-center gap-1 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-60"
-                : cn(statusChipClass(switchingAgent ? "neutral" : project.currentPrompt ? "warning" : "neutral", !switchingAgent), "cursor-pointer disabled:cursor-default disabled:opacity-70")}
+                : cn(statusChipClass(switchingAgent ? "neutral" : working ? "warning" : "neutral", !switchingAgent), "cursor-pointer disabled:cursor-default disabled:opacity-70")}
             >
               {switchingAgent
                 ? <><Loader2 className="h-3 w-3 shrink-0 animate-spin" /><span>Switching…</span></>
-                : <><span>{project.currentPrompt ? `${runtimeLabel} working` : `${runtimeLabel} ready`}</span>
+                : <><span>{working ? `${runtimeLabel} working` : `${runtimeLabel} ready`}</span>
                    <ChevronDown className={cn("h-3 w-3 shrink-0 opacity-50 transition-transform", agentPopoverOpen && "rotate-180")} /></>
               }
             </button>
@@ -138,10 +146,10 @@ export function ProjectStatusChips({
           </div>
         ) : (
           <span
-            className={compact ? undefined : statusChipClass(project.currentPrompt ? "warning" : "neutral")}
+            className={compact ? undefined : statusChipClass(working ? "warning" : "neutral")}
             title={`${runtimeLabel} is currently detected in this project workspace. This comes from local process detection, not a cloud status API.`}
           >
-            {project.currentPrompt ? `${runtimeLabel} working` : `${runtimeLabel} ready`}
+            {working ? `${runtimeLabel} working` : `${runtimeLabel} ready`}
           </span>
         )
       )}

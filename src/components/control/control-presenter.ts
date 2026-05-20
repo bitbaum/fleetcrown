@@ -7,6 +7,40 @@ import {
 } from "@/lib/constants/control";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
+/**
+ * Hard cap on how old a currentPrompt can be before we declare it stale.
+ * Codex has no Stop hook (interactive TUI) so the /tmp/agent-current-prompt-<tab>
+ * sentinel can linger forever after the agent finishes — without this gate the
+ * UI shows "Codex working 61h" on a dead tab. 30 minutes is the longest a single
+ * agent task should plausibly run; longer real work writes intermediate session
+ * files so the mtime-based signal below fires first.
+ */
+const STALE_PROMPT_S = 30 * 60;
+
+/**
+ * True when the recorded currentPrompt is no longer trustworthy. Layered
+ * signals (positive → time-based fallback):
+ *  1. Agent self-reported `session.status === "ready"` (Claude path).
+ *  2. Session file rewritten after the prompt started — the agent wrote a
+ *     handoff so the work cycle closed even if the Stop hook never cleared
+ *     the sentinel (Codex path).
+ *  3. Hard time cap. Catches agents that never write a session file at all.
+ */
+export function isCurrentPromptStale(project: ProjectState, nowS: number): boolean {
+  if (!project.currentPrompt) return false;
+  const startedAt = project.currentPrompt.startedAt;
+  if (!startedAt) return false;
+
+  if (project.session?.status === "ready") return true;
+
+  const sessionMtime = project.session?.mtime ?? 0;
+  if (sessionMtime > startedAt + 5) return true;
+
+  if (nowS - startedAt > STALE_PROMPT_S) return true;
+
+  return false;
+}
+
 export type ProjectDisplayState = {
   isClosed: boolean;
   isClosing: boolean;
@@ -14,6 +48,8 @@ export type ProjectDisplayState = {
   isOrchestrationReady: boolean;
   isBeaconActive: boolean;
   isRunning: boolean;
+  /** SSOT for "is the agent actively working right now?" — chip + badge read this. */
+  isAgentWorking: boolean;
   isSessionOpen: boolean;
   isActive: boolean;
   showRunningBanner: boolean;
@@ -85,7 +121,10 @@ export function getProjectDisplayState(
 ): ProjectDisplayState {
   // "agentRunning" means an agent process/session exists. It does not prove
   // active work: Claude/Codex can sit open at an input prompt after a task.
-  const currentPrompt = project.agentRunning ? project.currentPrompt : null;
+  // The staleness gate covers the Codex-no-Stop-hook case where the
+  // /tmp/agent-current-prompt-<tab> sentinel lingers past the work cycle.
+  const stale = isCurrentPromptStale(project, nowS);
+  const currentPrompt = project.agentRunning && !stale ? project.currentPrompt : null;
   const promptRunning = Boolean(currentPrompt);
   const isSessionOpen = project.agentRunning;
 
@@ -186,6 +225,7 @@ export function getProjectDisplayState(
     isOrchestrationReady,
     isBeaconActive,
     isRunning,
+    isAgentWorking: isRunning,
     isSessionOpen,
     isActive,
     showRunningBanner,

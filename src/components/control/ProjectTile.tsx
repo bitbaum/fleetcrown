@@ -79,7 +79,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle pt-3">
-        <ProjectStatusChips project={project} tabOpen={tabOpen} compact />
+        <ProjectStatusChips project={project} tabOpen={tabOpen} compact isAgentWorking={display.isAgentWorking} />
 
         <div className="flex items-center gap-1.5">
           <button

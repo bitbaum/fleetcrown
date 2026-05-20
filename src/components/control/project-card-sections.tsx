@@ -106,6 +106,7 @@ export function ProjectCardHeader({
             localAgentId={localAgentId}
             switchingAgent={switchingAgent}
             onSwitchAgent={onSwitchAgent}
+            isAgentWorking={isRunning}
           />
           {git && git.behindRemote > 0 && (
             <div className="ui-control-card-header-meta">
