@@ -32,7 +32,7 @@ import { applyEvent, type GlobalState, type ProjectState } from "./state";
 import { decide, type Decision } from "./decide";
 import { appendEvent } from "./emit";
 import { renderPromptForDispatch } from "./render";
-import { resolveProjectPath } from "./projects";
+import { resolveProjectPath, loadProjects } from "./projects";
 import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
@@ -40,6 +40,29 @@ const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.COCKPIT_HOME_PORT
 
 let state: GlobalState = new Map();
 let lastError: { ts: string; message: string; raw?: string } | null = null;
+
+/**
+ * Union live event-projected state with registered-but-eventless projects
+ * from agent-projects.conf so the UI can show every project the user has
+ * registered, even ones that have never emitted an event yet (fresh boot,
+ * new project just added, etc.). Live state always wins on name collision.
+ *
+ * Lowercase-keyed dedup matches the registry's case-insensitive lookup.
+ */
+function assembleProjectList(): ProjectState[] {
+  const live = Array.from(state.values());
+  const liveLower = new Set(live.map((p) => p.project.toLowerCase()));
+  const idleRegistered: ProjectState[] = [];
+  for (const cfg of loadProjects().values()) {
+    if (liveLower.has(cfg.name.toLowerCase())) continue;
+    idleRegistered.push({
+      project: cfg.name,
+      lastEventTs: "",            // empty signals "never seen an event" to the UI
+      recentOutcomes: [],
+    });
+  }
+  return [...live, ...idleRegistered];
+}
 
 const handle = tailLog(
   LOG_PATH,
@@ -94,7 +117,13 @@ const INDEX_HTML = `<!doctype html>
 <pre id="raw"></pre>
 <script>
 const GLYPH = { success: '✓', partial: '~', error: '✗', hang: '✗', timeout: '✗', user_abort: '✕' };
-function compact(iso) { try { return new Date(iso).toLocaleTimeString(); } catch { return iso; } }
+function compact(iso) {
+  if (!iso) return 'idle';
+  try {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? 'idle' : d.toLocaleTimeString();
+  } catch { return 'idle'; }
+}
 async function refresh() {
   try {
     const r = await fetch('/api/state');
@@ -153,7 +182,7 @@ const server = http.createServer((req, res) => {
   if (url === "/api/state") {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({
-      projects: Array.from(state.values()),
+      projects: assembleProjectList(),
       logPath: LOG_PATH,
       position: handle.position(),
       lastError,
