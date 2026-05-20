@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Worker — M8.
+ * Worker — M8 + M9 fix.
  *
  * Tails the same JSONL log the Brain reads, but with a different lens: when
  * a bridge.dispatch event arrives that hasn't already been started, inject
@@ -23,6 +23,7 @@
  * never re-injects.
  *
  * Run:    npx tsx home/worker.ts
+ * Test:   npx tsx home/worker.ts --self-test
  */
 
 import { tailLog, type EventPhase } from "./log";
@@ -31,39 +32,58 @@ import { injectIntoTab } from "@/lib/zellij";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
 import type { Event } from "@/lib/events";
 
-const startedRunIds = new Set<string>();
+// ── State held by the worker process ────────────────────────────────────────
 
-function handleEvent(event: Event, phase: EventPhase) {
-  // Build the started-set during replay so live dispatches we've already
-  // handled don't re-fire after a restart.
-  if (event.kind === "worker.started" && event.runId) {
-    startedRunIds.add(event.runId);
-    return;
-  }
-  if (event.kind !== "bridge.dispatch") return;
-  if (startedRunIds.has(event.runId)) return;     // already handled
+export type WorkerState = {
+  /** runIds that have a worker.started event downstream — already handled. */
+  startedRunIds: Set<string>;
+  /** bridge.dispatch events seen during replay with no matching worker.started yet.
+   *  Anything still here after replay completes is genuine crash recovery. */
+  pendingDispatches: Map<string, Event>;
+};
 
-  if (phase === "replay") {
-    // Don't inject during replay — only build state. If we see a
-    // bridge.dispatch with no matching worker.started downstream in the
-    // replay, it'll get picked up by the live handler the moment we hit
-    // EOF and the same event re-appears via the next fs.watch fire.
-    // But: dispatches in the log that never got a worker.started are a
-    // crash-recovery case we want to handle. Pick those up on entering
-    // live mode (handled below via the deferred-dispatch list).
-    pendingDispatches.set(event.runId, event);
-    return;
-  }
-
-  // Live event — inject now.
-  pendingDispatches.delete(event.runId);
-  executeDispatch(event);
+export function makeWorkerState(): WorkerState {
+  return { startedRunIds: new Set(), pendingDispatches: new Map() };
 }
 
-/** Dispatches seen during replay that don't yet have a worker.started. */
-const pendingDispatches = new Map<string, Event>();
+/**
+ * Pure state-transition for an incoming event. No I/O, no injection.
+ * Replay events build state. Live events return a `dispatch` request
+ * the caller is supposed to execute.
+ */
+export function applyEvent(
+  state: WorkerState,
+  event: Event,
+  phase: EventPhase,
+): { dispatch?: Event } {
+  if (event.kind === "worker.started" && event.runId) {
+    state.startedRunIds.add(event.runId);
+    // Critical: a bridge.dispatch we tracked earlier in the replay has now
+    // been resolved by a downstream worker.started — pull it from the
+    // crash-recovery queue. Without this, the replay-end scan re-injects
+    // every historical run on every restart.
+    state.pendingDispatches.delete(event.runId);
+    return {};
+  }
+  if (event.kind !== "bridge.dispatch") return {};
+  if (state.startedRunIds.has(event.runId)) return {};   // already handled
 
-function executeDispatch(event: Event) {
+  if (phase === "replay") {
+    // Track dispatches without a matching worker.started yet. If one
+    // appears later in the replay, the branch above clears it; what's
+    // left at replay's end is genuine crash recovery.
+    state.pendingDispatches.set(event.runId, event);
+    return {};
+  }
+
+  // Live event — caller should inject now.
+  state.pendingDispatches.delete(event.runId);
+  return { dispatch: event };
+}
+
+// ── Side-effect: actually inject + emit worker.started ──────────────────────
+
+function executeDispatch(state: WorkerState, event: Event) {
   if (event.kind !== "bridge.dispatch") return;
   try {
     injectIntoTab(event.project, event.prompt);
@@ -74,7 +94,7 @@ function executeDispatch(event: Event) {
       intent: event.intent,
       runId: event.runId,
     });
-    startedRunIds.add(event.runId);
+    state.startedRunIds.add(event.runId);
     console.log(`[worker] injected runId=${event.runId} intent=${event.intent} project=${event.project}`);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -88,30 +108,132 @@ function executeDispatch(event: Event) {
   }
 }
 
-const handle = tailLog(
-  LOG_PATH,
-  handleEvent,
-  (err) => console.error("[worker]", err.message),
-);
+// ── Main boot ────────────────────────────────────────────────────────────────
 
-// After replay completes, any pending dispatches (bridge.dispatch with no
-// matching worker.started in the log) are crashes the previous worker run
-// didn't get to. fs.watch fires async, so use a microtask to defer this
-// until the synchronous replay in tailLog has finished. setImmediate is
-// the cleanest signal that the event loop has rolled past replay.
-setImmediate(() => {
-  if (pendingDispatches.size === 0) return;
-  console.log(`[worker] ${pendingDispatches.size} dispatch(es) pending from previous boot — executing`);
-  for (const event of pendingDispatches.values()) executeDispatch(event);
-  pendingDispatches.clear();
-});
+function start() {
+  const state = makeWorkerState();
 
-console.log(`[worker] ${APP_NAME} dispatch consumer tailing ~/.${APP_SLUG}/events.jsonl`);
+  const handle = tailLog(
+    LOG_PATH,
+    (event, phase) => {
+      const { dispatch } = applyEvent(state, event, phase);
+      if (dispatch) executeDispatch(state, dispatch);
+    },
+    (err) => console.error("[worker]", err.message),
+  );
 
-const shutdown = (sig: string) => {
-  console.log(`[worker] ${sig} — shutting down`);
-  handle.close();
-  process.exit(0);
-};
-process.on("SIGINT",  () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+  // After replay completes, fire any pending dispatches (genuine crash
+  // recovery). tailLog's replay is synchronous, so by the time this runs
+  // the state map is settled.
+  setImmediate(() => {
+    if (state.pendingDispatches.size === 0) return;
+    console.log(`[worker] ${state.pendingDispatches.size} dispatch(es) pending from previous boot — executing`);
+    for (const event of state.pendingDispatches.values()) executeDispatch(state, event);
+    state.pendingDispatches.clear();
+  });
+
+  console.log(`[worker] ${APP_NAME} dispatch consumer tailing ~/.${APP_SLUG}/events.jsonl`);
+
+  const shutdown = (sig: string) => {
+    console.log(`[worker] ${sig} — shutting down`);
+    handle.close();
+    process.exit(0);
+  };
+  process.on("SIGINT",  () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+// ── Self-test ────────────────────────────────────────────────────────────────
+// Run with: npx tsx home/worker.ts --self-test
+// Drives applyEvent() with canned event sequences and asserts on the state.
+// Doesn't boot the tail or call injectIntoTab — pure state-transition only.
+
+function selfTest() {
+  const fresh = () => makeWorkerState();
+  const dispatchEvent = (runId: string): Event => ({
+    v: 1, id: runId, ts: "2026-01-01T00:00:00Z",
+    kind: "bridge.dispatch", project: "Test", intent: "next_best",
+    prompt: "go", runId, autonomy: "confirm",
+  });
+  const startedEvent = (runId: string): Event => ({
+    v: 1, id: `started-${runId}`, ts: "2026-01-01T00:01:00Z",
+    kind: "worker.started", project: "Test", adapter: "claude",
+    intent: "next_best", runId,
+  });
+
+  type Case = { name: string; run: () => boolean };
+  const cases: Case[] = [
+    {
+      name: "live dispatch returns the event for caller to execute",
+      run: () => {
+        const s = fresh();
+        const r = applyEvent(s, dispatchEvent("a"), "live");
+        return r.dispatch?.kind === "bridge.dispatch" && s.pendingDispatches.size === 0;
+      },
+    },
+    {
+      name: "replay dispatch goes to pending, not executed",
+      run: () => {
+        const s = fresh();
+        const r = applyEvent(s, dispatchEvent("a"), "replay");
+        return r.dispatch === undefined && s.pendingDispatches.has("a");
+      },
+    },
+    {
+      name: "BUG FIX — replayed dispatch followed by replayed worker.started is cleared from pending",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, dispatchEvent("a"), "replay");
+        applyEvent(s, startedEvent("a"),  "replay");
+        return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
+      },
+    },
+    {
+      name: "replayed dispatch without a worker.started stays in pending (crash recovery)",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, dispatchEvent("a"), "replay");
+        applyEvent(s, dispatchEvent("b"), "replay");
+        applyEvent(s, startedEvent("a"),  "replay");
+        // 'a' resolved, 'b' is the crash-recovery candidate.
+        return s.pendingDispatches.size === 1 && s.pendingDispatches.has("b");
+      },
+    },
+    {
+      name: "live dispatch is skipped if startedRunIds already has it",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, startedEvent("a"), "replay");
+        const r = applyEvent(s, dispatchEvent("a"), "live");
+        return r.dispatch === undefined;
+      },
+    },
+    {
+      name: "unrelated event types are no-ops on state",
+      run: () => {
+        const s = fresh();
+        const idle: Event = {
+          v: 1, id: "i1", ts: "2026-01-01T00:00:00Z",
+          kind: "worker.idle", project: "Test",
+          handoff: { done: "", next: "", tests: "", todos: "", health: "good" },
+        };
+        applyEvent(s, idle, "live");
+        return s.startedRunIds.size === 0 && s.pendingDispatches.size === 0;
+      },
+    },
+  ];
+
+  let pass = 0, fail = 0;
+  for (const c of cases) {
+    if (c.run()) { console.log(`  ✓ ${c.name}`); pass++; }
+    else         { console.log(`  ✗ ${c.name}`); fail++; }
+  }
+  console.log(`\n${pass}/${pass + fail} passed`);
+  if (fail > 0) process.exit(1);
+}
+
+// Dispatch on argv
+if (import.meta.url === `file://${process.argv[1]}`) {
+  if (process.argv.includes("--self-test")) selfTest();
+  else start();
+}
