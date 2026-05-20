@@ -24,6 +24,7 @@ import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState, getProjectState } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 
 const RunOrchestrationBody = z.object({
@@ -240,6 +241,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      logDebug({
+        source: "api/orchestration/run",
+        level: "error",
+        message: `claude inject failed: ${message}`,
+        meta: { userId, adapter: request.adapter, intent: request.intent, projectKey: request.projectKey, projectPath: request.projectPath },
+      });
       return NextResponse.json({ error: `Inject failed: ${message}` }, { status: 500 });
     }
   }
@@ -325,6 +332,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      logDebug({
+        source: "api/orchestration/run",
+        level: "error",
+        message: `${request.adapter} inject failed: ${message}`,
+        meta: { userId, adapter: request.adapter, intent: request.intent, projectKey: request.projectKey, projectPath: request.projectPath },
+      });
       return NextResponse.json({ error: `Inject failed: ${message}` }, { status: 500 });
     }
   }
@@ -356,6 +369,7 @@ export async function POST(req: NextRequest) {
   try {
     await scheduleOpenClawWorker(run.id, request);
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     await updateOrchestrationRun(run.id, {
       state: "error",
       outcome: "error",
@@ -364,8 +378,14 @@ export async function POST(req: NextRequest) {
         projectId: request.projectId ?? null,
         projectKey: request.projectKey,
         projectPath: request.projectPath,
-        error: `Failed to start worker: ${err instanceof Error ? err.message : String(err)}`,
+        error: `Failed to start worker: ${message}`,
       },
+    });
+    logDebug({
+      source: "api/orchestration/run",
+      level: "error",
+      message: `openclaw worker start failed: ${message}`,
+      meta: { userId, runId: run.id, adapter: request.adapter, intent: request.intent, projectKey: request.projectKey, projectPath: request.projectPath },
     });
     return NextResponse.json({ error: "Worker failed to start" }, { status: 500 });
   }

@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { callGroqText } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
+import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 
@@ -281,6 +282,12 @@ export async function POST(req: NextRequest) {
               : /timeout|abort/i.test(raw)           ? "Groq timed out"
               : raw;
     console.error("[dispatch] groq fallback:", raw);
+    logDebug({
+      source: "api/control/dispatch",
+      level: "warn",
+      message: `Groq fallback (${hint}): ${raw}`,
+      meta: { userId, projectKey, hint, queueLen: queue.length },
+    });
     return NextResponse.json({
       action: "queue",
       reason: `Groq unavailable (${hint}) — using queue order.${streakSuffix}`,
