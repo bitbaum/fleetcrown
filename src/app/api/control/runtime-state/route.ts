@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { upsertProjectState } from "@/db/queries/project-states";
+import fs from "fs";
+import { upsertProjectState, getProjectStatesByUserId } from "@/db/queries/project-states";
+import { stateFile } from "@/lib/agent-config";
 import { getApiUserId } from "@/lib/session";
+import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
 
 interface ProjectRuntimePatch {
@@ -81,6 +84,30 @@ export async function POST(req: NextRequest) {
   );
 
   emitStateChanged(userId);
+
+  // Background queue sync: every daemon push (every ~60s via heartbeat or
+  // sooner on state change) mirrors each project's DB prompt_queue out to
+  // /tmp/agent-queue-<tab>. Closes the gap left by 58e4366 — that fix only
+  // synced during /api/control GET (the UI poll), so /tmp went stale once
+  // the user closed the browser tab. Now the daemon keeps the local
+  // mirror warm independently of whether anyone's looking at the page.
+  // Gated on isRuntimeAvailable() so Vercel serverless never touches /tmp
+  // (no point — its /tmp is ephemeral and there's no bash hook there).
+  if (isRuntimeAvailable()) {
+    try {
+      const states = await getProjectStatesByUserId(userId);
+      for (const s of states) {
+        if (!s.projectKey) continue;
+        try {
+          const p = stateFile.queue(s.projectKey.toLowerCase());
+          fs.writeFileSync(p + ".tmp", JSON.stringify(s.promptQueue ?? []));
+          fs.renameSync(p + ".tmp", p);
+        } catch { /* per-file failure is non-fatal */ }
+      }
+    } catch (err) {
+      console.error("[runtime-state] queue mirror sync failed:", err);
+    }
+  }
 
   return NextResponse.json({ ok: true, count: projects.length });
 }
