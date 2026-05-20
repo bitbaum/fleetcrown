@@ -22,6 +22,10 @@ export type ProjectState = {
     adapter: Adapter;
     startedAt: string;
     pane?: string;
+    /** Why the brain chose this dispatch (from bridge.dispatch). */
+    reason?: string;
+    /** [0,1] confidence the brain had in this dispatch. */
+    confidence?: number;
   };
   lastHandoff?: Handoff;
   lastOutcome?: Outcome;
@@ -53,15 +57,23 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
   ps.lastEventTs = event.ts;
 
   switch (event.kind) {
-    case "worker.started":
+    case "worker.started": {
+      // Preserve reason + confidence if bridge.dispatch set them earlier
+      // for this run — the worker layer doesn't carry them, and overwriting
+      // the whole currentRun would lose the brain's "why this dispatch"
+      // by the time the UI catches up.
+      const carry = ps.currentRun?.runId === event.runId ? ps.currentRun : undefined;
       ps.currentRun = {
         runId: event.runId,
         intent: event.intent,
         adapter: event.adapter,
         startedAt: event.ts,
         pane: event.pane,
+        reason: carry?.reason,
+        confidence: carry?.confidence,
       };
       break;
+    }
 
     case "worker.progress":
       // marker advances the heartbeat but doesn't change run identity.
@@ -86,16 +98,16 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
 
     case "bridge.dispatch":
       // Pre-populate currentRun so the UI reflects a dispatched run
-      // immediately. worker.started overwrites this with the (same-shape)
-      // confirmed version once the inject lands. The gap between
-      // bridge.dispatch and worker.started is usually < 200ms, but during
-      // a slow zellij focus or a crashed worker the UI would otherwise
-      // look idle for the whole interval.
+      // immediately. worker.started later overwrites with the confirmed
+      // shape — keep reason + confidence around since the worker layer
+      // doesn't know them, and the UI needs to surface "why this run."
       ps.currentRun = {
         runId: event.runId,
         intent: event.intent,
         adapter: event.adapter ?? "claude",
         startedAt: event.ts,
+        reason: event.reason,
+        confidence: event.confidence,
       };
       break;
 
@@ -132,6 +144,8 @@ function selfTest() {
   const dispatch = (runId: string, intent = "next_best"): Event => ({
     v: 1, id: `d-${runId}`, ts: baseTs, kind: "bridge.dispatch",
     project: "T", intent, prompt: "go", runId, autonomy: "auto", adapter: "codex",
+    reason: "queue head related to recent commits",
+    confidence: 0.8,
   });
   const started = (runId: string): Event => ({
     v: 1, id: `s-${runId}`, ts: baseTs, kind: "worker.started",
@@ -161,6 +175,22 @@ function selfTest() {
       check: () => {
         const s = applyAll([dispatch("a"), started("a")]);
         return s.get("T")?.currentRun?.runId === "a";
+      },
+    },
+    {
+      name: "worker.started preserves reason + confidence from prior bridge.dispatch",
+      check: () => {
+        const s = applyAll([dispatch("a"), started("a")]);
+        const cr = s.get("T")?.currentRun;
+        return cr?.reason === "queue head related to recent commits" && cr?.confidence === 0.8;
+      },
+    },
+    {
+      name: "worker.started for a DIFFERENT runId does NOT inherit reason/confidence from a stale dispatch",
+      check: () => {
+        const s = applyAll([dispatch("a"), started("b")]);
+        const cr = s.get("T")?.currentRun;
+        return cr?.runId === "b" && cr?.reason === undefined && cr?.confidence === undefined;
       },
     },
     {

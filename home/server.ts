@@ -76,6 +76,8 @@ const INDEX_HTML = `<!doctype html>
   .o.error, .o.hang, .o.timeout { background: #dc262633; color: #f87171; }
   .o.user_abort { background: #eab30833; color: #fbbf24; }
   .handoff { color: #a3a3a3; font-size: 12px; margin-top: 0.5rem; word-break: break-word; }
+  .reason { color: #d4d4d8; font-size: 12px; margin: 0.4rem 0 0.5rem; word-break: break-word; line-height: 1.5; }
+  .conf { color: #71717a; font-size: 11px; }
   .ts { color: #525252; font-size: 11px; margin-left: auto; }
   pre { color: #525252; font-size: 11px; background: #050505; padding: 1rem; border-radius: 4px; margin-top: 2rem; overflow-x: auto; }
   .err { color: #f87171; font-size: 12px; margin-top: 1rem; padding: 0.5rem 1rem; border-left: 2px solid #dc2626; background: #dc262611; }
@@ -103,17 +105,25 @@ async function refresh() {
     if (j.projects.length === 0) {
       root.innerHTML = '<div class="empty">no events yet — append one to ~/.${APP_SLUG}/events.jsonl</div>';
     } else {
-      root.innerHTML = j.projects.map(p => \`
-        <div class="project\${p.currentRun ? ' running' : ''}">
+      root.innerHTML = j.projects.map(p => {
+        const cr = p.currentRun;
+        const confPct = cr && typeof cr.confidence === 'number' ? Math.round(cr.confidence * 100) + '%' : null;
+        const reasonLine = cr && cr.reason
+          ? '<div class="reason">' + cr.reason + (confPct ? ' <span class="conf">· ' + confPct + ' confidence</span>' : '') + '</div>'
+          : '';
+        return \`
+        <div class="project\${cr ? ' running' : ''}">
           <h2>
             \${p.project}
-            \${p.currentRun ? '<span class="running-pill">' + p.currentRun.intent + '</span>' : ''}
+            \${cr ? '<span class="running-pill">' + cr.intent + (cr.adapter && cr.adapter !== 'claude' ? ' · ' + cr.adapter : '') + '</span>' : ''}
             <span class="ts">\${compact(p.lastEventTs)}</span>
           </h2>
+          \${reasonLine}
           \${(p.recentOutcomes ?? []).length > 0 ? '<div class="outcomes">' + p.recentOutcomes.map(o => '<span class="o ' + o + '">' + (GLYPH[o] ?? '?') + '</span>').join('') + '</div>' : ''}
           \${p.lastHandoff && p.lastHandoff.done ? '<div class="handoff">' + p.lastHandoff.done + '</div>' : ''}
         </div>
-      \`).join('');
+        \`;
+      }).join('');
     }
     document.getElementById('err').innerHTML = j.lastError
       ? '<div class="err">last parse error @ ' + compact(j.lastError.ts) + ': ' + j.lastError.message + '</div>'
