@@ -6,10 +6,11 @@ import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
 import { HEALTH_THRESHOLDS } from "@/config/ui";
+import { formatBytes } from "@/lib/format";
 
 type MemInfo = { totalMiB: number; usedMiB: number; availMiB: number };
 type SwapInfo = { totalMiB: number; usedMiB: number };
-type DiskInfo = { size: string; used: string; avail: string; pct: string };
+type DiskInfo = { totalMiB: number; usedMiB: number; availMiB: number; pct: number };
 
 type SystemData = {
   mem: MemInfo | null;
@@ -18,10 +19,6 @@ type SystemData = {
   uptime: string | null;
   gatewayStatus: "ok" | "down";
 };
-
-function mibToGib(mib: number) {
-  return (mib / 1024).toFixed(1);
-}
 
 function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) {
   const pct = totalMiB > 0 ? Math.round((usedMiB / totalMiB) * 100) : 0;
@@ -80,7 +77,7 @@ export function SystemStats() {
             <div>
               <div className="ui-label-row">
                 <span>RAM</span>
-                <span>{mibToGib(mem.usedMiB)} / {mibToGib(mem.totalMiB)} GiB</span>
+                <span>{formatBytes(mem.usedMiB, "MiB")} / {formatBytes(mem.totalMiB, "MiB")}</span>
               </div>
               <UsageBar usedMiB={mem.usedMiB} totalMiB={mem.totalMiB} />
             </div>
@@ -88,7 +85,7 @@ export function SystemStats() {
               <div>
                 <div className="ui-label-row">
                   <span>Swap</span>
-                  <span>{mibToGib(swap.usedMiB)} / {mibToGib(swap.totalMiB)} GiB</span>
+                  <span>{formatBytes(swap.usedMiB, "MiB")} / {formatBytes(swap.totalMiB, "MiB")}</span>
                 </div>
                 <UsageBar usedMiB={swap.usedMiB} totalMiB={swap.totalMiB} />
               </div>
@@ -105,20 +102,21 @@ export function SystemStats() {
           <div className="space-y-2">
             <div className="ui-label-row">
               <span>/</span>
-              <span>{disk.used} / {disk.size} ({disk.avail} free)</span>
+              <span>{formatBytes(disk.usedMiB, "MiB")} / {formatBytes(disk.totalMiB, "MiB")}</span>
             </div>
             <div className="flex items-center gap-2">
               <ProgressBar
-                value={parseInt(disk.pct, 10) || 0}
-                tone={getProgressTone(parseInt(disk.pct, 10) || 0, {
+                value={disk.pct}
+                tone={getProgressTone(disk.pct, {
                   negativeAt: HEALTH_THRESHOLDS.criticalPct,
                   warningAt: HEALTH_THRESHOLDS.warningPct,
                   lowTone: "positive",
                 })}
                 className="h-2 flex-1"
               />
-              <span className="w-10 text-right text-sm text-text-tertiary">{disk.pct}</span>
+              <span className="w-10 text-right text-sm text-text-tertiary">{disk.pct}%</span>
             </div>
+            <div className="text-xs text-text-tertiary">{formatBytes(disk.availMiB, "MiB")} free</div>
           </div>
         ) : (
           <p className="text-base text-text-secondary">n/a</p>

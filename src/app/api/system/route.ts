@@ -9,10 +9,16 @@ export async function GET() {
       mem: null, swap: null, disk: null, uptime: null, gatewayStatus: "down", runtime: false,
     });
   }
-  // Use LC_ALL=C to force English column headers for reliable parsing
+  // LC_ALL=C forces English column headers and reliable awk parsing.
+  // df -BM emits values like "238444M" — gsub strips the M and % so the
+  // client receives pure MiB integers and can defer all display rounding to
+  // lib/format#formatBytes.
   const [memRaw, diskRaw, uptime, gateway] = await Promise.all([
     runTool("LC_ALL=C free -m | awk 'NR==2{print $2,$3,$7} NR==3{print $2,$3}'", 5000),
-    runTool("LC_ALL=C df -h / | awk 'NR==2{print $2,$3,$4,$5}'", 5000),
+    runTool(
+      "LC_ALL=C df -BM / | awk 'NR==2{ gsub(/[M%]/,\"\"); print $2,$3,$4,$5 }'",
+      5000,
+    ),
     runTool("uptime -p", 5000),
     runTool(
       `curl -s -o /dev/null -w '%{http_code}' ${OPENCLAW_GATEWAY_URL}/health 2>/dev/null || echo 'down'`,
@@ -20,19 +26,22 @@ export async function GET() {
     ),
   ]);
 
-  // Parse memory: "total used avail\nswapTotal swapUsed" in MiB
+  // Memory: "total used avail\nswapTotal swapUsed" in MiB
   const memLines = (memRaw.data ?? "").trim().split("\n");
   const [memTotal, memUsed, memAvail] = (memLines[0] ?? "").split(" ").map(Number);
   const [swapTotal, swapUsed] = (memLines[1] ?? "").split(" ").map(Number);
 
-  // Parse disk: "Size Used Avail Use%" e.g. "233G 175G 47G 80%"
-  const diskParts = (diskRaw.data ?? "").trim().split(/\s+/);
-  const [diskSize, diskUsed, diskAvail, diskPct] = diskParts;
+  // Disk: "totalMiB usedMiB availMiB pct"
+  const [dTotal, dUsed, dAvail, dPct] = (diskRaw.data ?? "")
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+  const diskOk = [dTotal, dUsed, dAvail, dPct].every((n) => Number.isFinite(n));
 
   return NextResponse.json({
     mem: { totalMiB: memTotal, usedMiB: memUsed, availMiB: memAvail },
     swap: { totalMiB: swapTotal, usedMiB: swapUsed },
-    disk: { size: diskSize, used: diskUsed, avail: diskAvail, pct: diskPct },
+    disk: diskOk ? { totalMiB: dTotal, usedMiB: dUsed, availMiB: dAvail, pct: dPct } : null,
     uptime: uptime.data?.trim() ?? null,
     gatewayStatus: gateway.data === "200" ? "ok" : "down",
   });
