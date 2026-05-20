@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { getJson } from "@/lib/api/fetch";
 
-export function useFetch<T>(url: string | null, { intervalMs }: { intervalMs?: number } = {}) {
+export function useFetch<T>(
+  url: string | null,
+  { intervalMs, timeoutMs }: { intervalMs?: number; timeoutMs?: number } = {},
+) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -16,21 +19,34 @@ export function useFetch<T>(url: string | null, { intervalMs }: { intervalMs?: n
     setLoading(true);
     setError(null);
 
-    getJson<T>(url)
+    const controller = timeoutMs ? new AbortController() : null;
+    const timeoutId = timeoutMs && controller
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : null;
+
+    getJson<T>(url, controller ? { signal: controller.signal } : undefined)
       .then((json) => {
         if (!cancelled) setData(json);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load");
+        if (cancelled) return;
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setError(`Timed out after ${Math.round((timeoutMs ?? 0) / 1000)}s`);
+        } else {
+          setError(err instanceof Error ? err.message : "Failed to load");
+        }
       })
       .finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
         if (!cancelled) setLoading(false);
       });
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      controller?.abort();
     };
-  }, [url, revision]);
+  }, [url, revision, timeoutMs]);
 
   // Silent background refresh — setRevision is stable so no ref needed.
   useEffect(() => {
