@@ -14,7 +14,14 @@ export const projectStates = pgTable("project_states", {
   lockAt:                 timestamp("lock_at",    { withTimezone: true }),
   closingAt:              timestamp("closing_at", { withTimezone: true }),
   closedAt:               timestamp("closed_at",  { withTimezone: true }),
-  sessionStatus:          text("session_status"),     // 'ready' | 'working' | null. Drives auto-inject gating — only 'ready' fires.
+  // sessionStatus column is declared in drizzle/0009_project_states_session_status.sql
+  // but NOT in this schema yet — needs `npx drizzle-kit push` against prod
+  // before the Drizzle SELECT can reference it without 500ing. Re-add this
+  // line after the migration runs in production. Until then, control/stream
+  // route.ts and control/route.ts fall back to "" for session.status, which
+  // the auto-inject gates treat as "not ready" (suppress — the user's stated
+  // default).
+  // sessionStatus:          text("session_status"),
   sessionDone:            text("session_done"),
   sessionNext:            text("session_next"),
   sessionTests:           text("session_tests"),

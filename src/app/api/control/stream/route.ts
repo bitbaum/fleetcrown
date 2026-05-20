@@ -35,7 +35,7 @@ function dbToFastState(
       tabOpen: r.tabOpen,
       activeAgents: r.activeAgents,
       session: r.sessionDone || r.sessionNext
-        ? { status: r.sessionStatus ?? "", done: r.sessionDone ?? "", next: r.sessionNext ?? "", tests: r.sessionTests ?? "", todos: r.sessionTodos ?? "", health: r.sessionHealth ?? "", mtime: r.sessionUpdatedAt?.getTime() ?? 0 }
+        ? { status: "", done: r.sessionDone ?? "", next: r.sessionNext ?? "", tests: r.sessionTests ?? "", todos: r.sessionTodos ?? "", health: r.sessionHealth ?? "", mtime: r.sessionUpdatedAt?.getTime() ?? 0 }
         : null,
       currentPrompt: r.currentPromptKey
         ? { key: r.currentPromptKey, label: r.currentPromptLabel ?? r.currentPromptKey, startedAt: r.currentPromptStartedAt ? Math.floor(r.currentPromptStartedAt.getTime() / 1000) : 0, source: "inject" as const }

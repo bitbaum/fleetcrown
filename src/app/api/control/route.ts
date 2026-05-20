@@ -275,7 +275,6 @@ export async function GET() {
           projectId,
           userId: ownerUserId,
           tabName: liveTab,
-          sessionStatus: session.status,
           sessionDone:   session.done,
           sessionNext:   session.next,
           sessionTests:  session.tests,
