@@ -7,7 +7,6 @@ import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import { postJson } from "@/lib/api/fetch";
 import type { CreateSubscriptionInput } from "@/db/queries/money";
-import { haptic } from "@/lib/haptics";
 
 export function NewSubscriptionButton() {
   const [name, setName] = useState("");
@@ -29,19 +28,16 @@ export function NewSubscriptionButton() {
     setError(null);
   };
 
-  const onSubmit = () => {
-    haptic();
-    return create({
-      name: name.trim(),
-      vendor: vendor.trim() || undefined,
-      amount: amount ? parseFloat(amount) : undefined,
-      currency,
-      frequency,
-      nextDue: nextDue || undefined,
-      paymentMethod: paymentMethod.trim() || undefined,
-      notes: notes.trim() || undefined,
-    });
-  };
+  const onSubmit = () => create({
+    name: name.trim(),
+    vendor: vendor.trim() || undefined,
+    amount: amount ? parseFloat(amount) : undefined,
+    currency,
+    frequency,
+    nextDue: nextDue || undefined,
+    paymentMethod: paymentMethod.trim() || undefined,
+    notes: notes.trim() || undefined,
+  });
 
   return (
     <ModalForm

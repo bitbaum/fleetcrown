@@ -7,7 +7,6 @@ import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { Field } from "@/components/ui/form";
 import { ModalForm } from "@/components/ui/modal-form";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
-import { haptic } from "@/lib/haptics";
 
 export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
   const [title, setTitle] = useState("");
@@ -23,15 +22,12 @@ export function NewGoalButton({ goals }: { goals: GoalWithChildren[] }) {
     setTitle(""); setDescription(""); setTargetDate(""); setParentGoalId(""); setError(null);
   };
 
-  const onSubmit = () => {
-    haptic();
-    return create({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      targetDate: targetDate || undefined,
-      parentGoalId: parentGoalId || undefined,
-    });
-  };
+  const onSubmit = () => create({
+    title: title.trim(),
+    description: description.trim() || undefined,
+    targetDate: targetDate || undefined,
+    parentGoalId: parentGoalId || undefined,
+  });
 
   // Flatten goal tree for parent selector (exclude completed goals)
   const flatGoals: Array<{ id: string; title: string; depth: number }> = [];
