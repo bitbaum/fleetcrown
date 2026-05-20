@@ -172,6 +172,19 @@ function renderProposal(p) {
   }
   const a = prop.decision.action;
   const reason = a.reason ?? '';
+  // Cancel and error chips carry their full message in the reason field —
+  // don't tack on the meaningless 0% confidence pill or the "proposed"
+  // prefix (Cancel isn't a proposal, Error wasn't a brain decision). Only
+  // real decide()-produced proposals (wait/dispatch/recovery) get the
+  // confidence footer.
+  if (a.kind === 'cancelled') {
+    return '<div class="proposal"><span class="label">cancelled</span>' +
+      (reason ? escapeHtml(reason) : 'Ctrl+C sent') + '</div>';
+  }
+  if (a.kind === 'error') {
+    return '<div class="proposal" style="border-left-color:#dc2626;color:#f87171"><span class="label">error</span>' +
+      escapeHtml(reason || 'unknown') + '</div>';
+  }
   return '<div class="proposal"><span class="label">proposed</span>' +
     escapeHtml(a.kind) + (a.intent ? ' · ' + escapeHtml(a.intent) : '') +
     (reason ? ' — ' + escapeHtml(reason) : '') +
