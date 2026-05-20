@@ -35,7 +35,17 @@ export type ProjectState = {
    *  failed (e.g. "zellij tab X did not gain focus") instead of a bare ✗.
    *  Cleared on the next non-error worker.finished. */
   lastError?: { ts: string; message: string };
+  /** runIds that were terminated by bridge.cancel. When the stop hook later
+   *  emits worker.finished for one of these, we override its outcome with
+   *  "user_abort" — infer_outcome_v1 in the bash hook can't distinguish a
+   *  human Ctrl+C from a genuine partial/error finish, so the brain has to
+   *  do it. Bounded to recent cancels only to avoid unbounded growth.
+   *  Optional so callers that build a synthetic ProjectState (registry idle
+   *  rows, decide() test fixtures) don't have to seed an empty array. */
+  cancelledRunIds?: string[];
 };
+
+const CANCEL_HISTORY_LIMIT = 10;
 
 export type GlobalState = Map<string, ProjectState>;
 
@@ -43,7 +53,11 @@ const RECENT_OUTCOME_LIMIT = 5;
 
 function getOrInit(state: GlobalState, project: string, ts: string): ProjectState {
   const existing = state.get(project);
-  if (existing) return { ...existing, recentOutcomes: [...existing.recentOutcomes] };
+  if (existing) return {
+    ...existing,
+    recentOutcomes:   [...existing.recentOutcomes],
+    cancelledRunIds: existing.cancelledRunIds ? [...existing.cancelledRunIds] : undefined,
+  };
   return { project, lastEventTs: ts, recentOutcomes: [] };
 }
 
@@ -87,17 +101,28 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       ps.lastHandoff = event.handoff;
       break;
 
-    case "worker.finished":
+    case "worker.finished": {
       ps.currentRun = undefined;
       ps.lastHandoff = event.handoff;
-      ps.lastOutcome = event.outcome;
-      ps.recentOutcomes = [event.outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
+      // If this runId was previously cancelled via bridge.cancel, override
+      // whatever outcome infer_outcome_v1 produced — the bash stop hook can't
+      // tell a human Ctrl+C apart from a normal partial finish, but the
+      // brain knows because it processed the cancel. Drop the runId from
+      // the cancelled list so it can't accidentally affect a future finish.
+      const cancelled = ps.cancelledRunIds?.includes(event.runId ?? "") ?? false;
+      const outcome: Outcome = cancelled ? "user_abort" : event.outcome;
+      if (cancelled && ps.cancelledRunIds) {
+        ps.cancelledRunIds = ps.cancelledRunIds.filter((id) => id !== event.runId);
+      }
+      ps.lastOutcome = outcome;
+      ps.recentOutcomes = [outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
       // Clear the last-error breadcrumb on a non-error finish — the project
       // has moved past the failure.
-      if (event.outcome !== "error" && event.outcome !== "hang" && event.outcome !== "timeout") {
+      if (outcome !== "error" && outcome !== "hang" && outcome !== "timeout") {
         ps.lastError = undefined;
       }
       break;
+    }
 
     case "worker.crashed":
       ps.currentRun = undefined;
@@ -121,11 +146,16 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       };
       break;
 
-    case "bridge.cancel":
+    case "bridge.cancel": {
       // Only clear if this cancel matches the active run — don't drop a
       // currentRun set by a later dispatch that the cancel doesn't apply to.
       if (ps.currentRun?.runId === event.runId) ps.currentRun = undefined;
+      // Remember this runId so the upcoming worker.finished (from the stop
+      // hook) gets relabelled user_abort instead of partial/error.
+      const history = [event.runId, ...(ps.cancelledRunIds ?? []).filter((id) => id !== event.runId)];
+      ps.cancelledRunIds = history.slice(0, CANCEL_HISTORY_LIMIT);
       break;
+    }
 
     case "brain.outcome":
       // Derived event for analytics — worker.finished already updates
@@ -223,6 +253,31 @@ function selfTest() {
       check: () => {
         const s = applyAll([dispatch("a"), cancel("b")]);
         return s.get("T")?.currentRun?.runId === "a";
+      },
+    },
+    {
+      name: "BUG FIX — cancel→finished rewrites outcome to user_abort (stop hook's partial is misleading)",
+      check: () => {
+        // User clicks Cancel, worker sends Ctrl+C, agent stops, stop hook
+        // fires worker.finished with outcome=partial (its best guess). The
+        // brain knows the truth and overrides.
+        const s = applyAll([dispatch("a"), started("a"), cancel("a"), finished("a", "partial")]);
+        const ps = s.get("T")!;
+        return ps.lastOutcome === "user_abort"
+            && ps.recentOutcomes[0] === "user_abort"
+            && (ps.cancelledRunIds?.length ?? 0) === 0;   // consumed by the finish
+      },
+    },
+    {
+      name: "cancel for runId 'a' does NOT relabel a later finished for runId 'b'",
+      check: () => {
+        const s = applyAll([
+          dispatch("a"), started("a"), cancel("a"), finished("a", "partial"),
+          dispatch("b"), started("b"), finished("b", "success"),
+        ]);
+        const ps = s.get("T")!;
+        // Most recent first: success (b), then user_abort (a)
+        return ps.recentOutcomes[0] === "success" && ps.recentOutcomes[1] === "user_abort";
       },
     },
     {
