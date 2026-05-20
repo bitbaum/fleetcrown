@@ -1,9 +1,12 @@
 #!/usr/bin/env sh
-# Run smoke tests before push IF the local server is already running.
-# Skips silently when the server is down — never blocks a push.
+# Run the home/ inline self-tests every push (~14s, no external deps),
+# plus the dev-server smoke when the server is already up.
 # To run fully authenticated: COCKPIT_SESSION_TOKEN=<token> git push
 
 set -e
+
+echo "→ test:home"
+npm run test:home
 
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 

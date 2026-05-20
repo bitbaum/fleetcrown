@@ -127,9 +127,12 @@ as crash-recovery and re-injected after replay completes.
 
 Every module in `home/` ships with an inline test suite — no separate test
 runner, no framework, no external deps. Each suite runs in <1s. Run them
-individually while iterating, or all at once before committing:
+individually while iterating, all at once via the chained runner, or rely on
+the pre-push hook (`.husky/pre-push`) which calls `test:home` automatically:
 
 ```bash
+npm run test:home                     # all eight suites, ~14s — used by pre-push
+
 npx tsx home/state.ts                # 15 tests — event projection
 npx tsx home/decide.ts               # 11 tests — autonomy + confidence
 npx tsx home/projects.ts             #  7 tests — agent-projects.conf parser
