@@ -56,12 +56,13 @@ export function applyEvent(
   event: Event,
   phase: EventPhase,
 ): { dispatch?: Event } {
-  if (event.kind === "worker.started" && event.runId) {
+  // worker.started AND worker.crashed both terminate a runId from the
+  // worker's POV — one succeeded, the other failed permanently. Either
+  // way, don't re-inject. Without crashed-as-terminator, a failed
+  // dispatch (e.g. wrong tab name) gets retried on every worker restart
+  // and emits a fresh worker.crashed each time.
+  if ((event.kind === "worker.started" || event.kind === "worker.crashed") && event.runId) {
     state.startedRunIds.add(event.runId);
-    // Critical: a bridge.dispatch we tracked earlier in the replay has now
-    // been resolved by a downstream worker.started — pull it from the
-    // crash-recovery queue. Without this, the replay-end scan re-injects
-    // every historical run on every restart.
     state.pendingDispatches.delete(event.runId);
     return {};
   }
@@ -162,6 +163,11 @@ function selfTest() {
     kind: "worker.started", project: "Test", adapter: "claude",
     intent: "next_best", runId,
   });
+  const crashedEvent = (runId: string): Event => ({
+    v: 1, id: `crashed-${runId}`, ts: "2026-01-01T00:01:00Z",
+    kind: "worker.crashed", project: "Test", runId,
+    error: "inject failed: tab not found",
+  });
 
   type Case = { name: string; run: () => boolean };
   const cases: Case[] = [
@@ -206,6 +212,26 @@ function selfTest() {
       run: () => {
         const s = fresh();
         applyEvent(s, startedEvent("a"), "replay");
+        const r = applyEvent(s, dispatchEvent("a"), "live");
+        return r.dispatch === undefined;
+      },
+    },
+    {
+      name: "BUG FIX — worker.crashed terminates the runId so replay doesn't re-inject failed dispatches",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, dispatchEvent("a"), "replay");
+        applyEvent(s, crashedEvent("a"),  "replay");
+        // After a crashed event, the run is done — no pending recovery, no
+        // chance of a live re-dispatch firing again.
+        return s.pendingDispatches.size === 0 && s.startedRunIds.has("a");
+      },
+    },
+    {
+      name: "live bridge.dispatch is skipped when a prior crash already terminated the runId",
+      run: () => {
+        const s = fresh();
+        applyEvent(s, crashedEvent("a"), "replay");
         const r = applyEvent(s, dispatchEvent("a"), "live");
         return r.dispatch === undefined;
       },
