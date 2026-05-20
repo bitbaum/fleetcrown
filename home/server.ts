@@ -101,6 +101,7 @@ const INDEX_HTML = `<!doctype html>
   .handoff { color: #a3a3a3; font-size: 12px; margin-top: 0.5rem; word-break: break-word; }
   .reason { color: #d4d4d8; font-size: 12px; margin: 0.4rem 0 0.5rem; word-break: break-word; line-height: 1.5; }
   .conf { color: #71717a; font-size: 11px; }
+  .proj-err { color: #f87171; font-size: 12px; margin-top: 0.5rem; padding: 0.3rem 0.6rem; border-left: 2px solid #dc2626; background: #dc262611; word-break: break-word; line-height: 1.5; }
   .ts { color: #525252; font-size: 11px; margin-left: auto; }
   pre { color: #525252; font-size: 11px; background: #050505; padding: 1rem; border-radius: 4px; margin-top: 2rem; overflow-x: auto; }
   .err { color: #f87171; font-size: 12px; margin-top: 1rem; padding: 0.5rem 1rem; border-left: 2px solid #dc2626; background: #dc262611; }
@@ -140,6 +141,9 @@ async function refresh() {
         const reasonLine = cr && cr.reason
           ? '<div class="reason">' + cr.reason + (confPct ? ' <span class="conf">· ' + confPct + ' confidence</span>' : '') + '</div>'
           : '';
+        const errorLine = p.lastError
+          ? '<div class="proj-err">last error @ ' + compact(p.lastError.ts) + ': ' + p.lastError.message + '</div>'
+          : '';
         return \`
         <div class="project\${cr ? ' running' : ''}">
           <h2>
@@ -149,6 +153,7 @@ async function refresh() {
           </h2>
           \${reasonLine}
           \${(p.recentOutcomes ?? []).length > 0 ? '<div class="outcomes">' + p.recentOutcomes.map(o => '<span class="o ' + o + '">' + (GLYPH[o] ?? '?') + '</span>').join('') + '</div>' : ''}
+          \${errorLine}
           \${p.lastHandoff && p.lastHandoff.done ? '<div class="handoff">' + p.lastHandoff.done + '</div>' : ''}
         </div>
         \`;

@@ -31,6 +31,10 @@ export type ProjectState = {
   lastOutcome?: Outcome;
   /** Newest-first, capped at 5 — drives the streak chip on the UI. */
   recentOutcomes: Outcome[];
+  /** Set on worker.crashed so the UI can surface *why* the last dispatch
+   *  failed (e.g. "zellij tab X did not gain focus") instead of a bare ✗.
+   *  Cleared on the next non-error worker.finished. */
+  lastError?: { ts: string; message: string };
 };
 
 export type GlobalState = Map<string, ProjectState>;
@@ -88,12 +92,18 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       ps.lastHandoff = event.handoff;
       ps.lastOutcome = event.outcome;
       ps.recentOutcomes = [event.outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
+      // Clear the last-error breadcrumb on a non-error finish — the project
+      // has moved past the failure.
+      if (event.outcome !== "error" && event.outcome !== "hang" && event.outcome !== "timeout") {
+        ps.lastError = undefined;
+      }
       break;
 
     case "worker.crashed":
       ps.currentRun = undefined;
       ps.lastOutcome = "error";
       ps.recentOutcomes = ["error" as Outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
+      ps.lastError = { ts: event.ts, message: event.error };
       break;
 
     case "bridge.dispatch":
@@ -213,6 +223,40 @@ function selfTest() {
       check: () => {
         const s = applyAll([dispatch("a"), cancel("b")]);
         return s.get("T")?.currentRun?.runId === "a";
+      },
+    },
+    {
+      name: "worker.crashed sets lastError with the event message",
+      check: () => {
+        const crashed: Event = {
+          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
+          project: "T", runId: "a", error: "inject failed: tab not found",
+        };
+        const s = applyAll([dispatch("a"), crashed]);
+        const ps = s.get("T")!;
+        return ps.lastError?.message === "inject failed: tab not found" && ps.lastOutcome === "error";
+      },
+    },
+    {
+      name: "successful worker.finished clears lastError (project moved past failure)",
+      check: () => {
+        const crashed: Event = {
+          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
+          project: "T", runId: "a", error: "first run died",
+        };
+        const s = applyAll([dispatch("a"), crashed, dispatch("b"), started("b"), finished("b", "success")]);
+        return s.get("T")?.lastError === undefined;
+      },
+    },
+    {
+      name: "worker.finished with outcome=error PRESERVES lastError from prior crash",
+      check: () => {
+        const crashed: Event = {
+          v: 1, id: "c1", ts: baseTs, kind: "worker.crashed",
+          project: "T", runId: "a", error: "first crash",
+        };
+        const s = applyAll([dispatch("a"), crashed, dispatch("b"), started("b"), finished("b", "error")]);
+        return s.get("T")?.lastError?.message === "first crash";
       },
     },
     {
