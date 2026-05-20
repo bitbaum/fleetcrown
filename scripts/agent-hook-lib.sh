@@ -234,8 +234,15 @@ write_inject_state() {
   local tab="$1" key="$2" label="$3"
   local now
   now=$(date +%s)
-  # Current-prompt sentinel — TypeScript reads this to show the running task
-  printf '{"key":"%s","label":"%s","startedAt":%s}\n' "$key" "$label" "$now" \
+  # Current-prompt sentinel — TypeScript reads this to show the running task.
+  # Use jq -Rs to JSON-escape key/label: user-supplied custom prompts can
+  # contain newlines or quotes which otherwise break the JSON, then the
+  # daemon's parser falls back to empty and the cleanup gate can't fire.
+  # Match the daemon's other sentinel writer (cockpit-daemon.sh execute_inject).
+  printf '{"key":%s,"label":%s,"startedAt":%s}\n' \
+    "$(printf '%s' "$key"   | jq -Rs .)" \
+    "$(printf '%s' "$label" | jq -Rs .)" \
+    "$now" \
     > "/tmp/agent-current-prompt-${tab}"
   # Clear ready/closed state so the UI transitions to "running"
   rm -f "/tmp/agent-ready-${tab}"      "/tmp/claude-ready-${tab}"

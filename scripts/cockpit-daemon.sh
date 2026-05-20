@@ -587,6 +587,19 @@ _build_state_json() {
         rm -f "$pf"
         cpk="" cpl="" cpsat="null"
       fi
+    elif [ -f "$pf" ]; then
+      # Belt-and-suspenders: the file exists but cpsat parsed as "null". That
+      # means jq rejected the JSON (e.g. unescaped newlines in label — fixed
+      # at the write site in agent-hook-lib.sh but legacy stale files may
+      # remain). If the file mtime is older than 30 min, sweep it — there's
+      # no startedAt to gate on, so use the filesystem timestamp as the
+      # staleness signal. Stale-by-corruption files never become live again.
+      local _pf_mtime _now_s
+      _pf_mtime=$(stat -c '%Y' "$pf" 2>/dev/null || echo 0)
+      _now_s=$(date +%s)
+      if [ "$((_now_s - _pf_mtime))" -gt 1800 ]; then
+        rm -f "$pf"
+      fi
     fi
 
     local proj
