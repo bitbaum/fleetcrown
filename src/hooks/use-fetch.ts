@@ -3,6 +3,15 @@
 import { useState, useEffect } from "react";
 import { getJson } from "@/lib/api/fetch";
 
+/**
+ * Default abort ceiling for every useFetch call. Individual sites can pass
+ * `timeoutMs` to tighten (8_000 for weather, 12_000 for calendar, 10_000 for
+ * system, 15_000 for GitHub) or pass `timeoutMs: 0` to disable entirely.
+ * 20s is intentionally generous — it catches genuinely-hung calls without
+ * tripping cold serverless paths.
+ */
+const DEFAULT_TIMEOUT_MS = 20_000;
+
 export function useFetch<T>(
   url: string | null,
   { intervalMs, timeoutMs }: { intervalMs?: number; timeoutMs?: number } = {},
@@ -13,15 +22,18 @@ export function useFetch<T>(
   const [revision, setRevision] = useState(0);
   const refetch = () => setRevision((v) => v + 1);
 
+  // Resolve timeout: explicit number wins, including 0 (disable). Undefined → default.
+  const effectiveTimeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
   useEffect(() => {
     if (!url) { setLoading(false); return; } // eslint-disable-line react-hooks/set-state-in-effect
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    const controller = timeoutMs ? new AbortController() : null;
-    const timeoutId = timeoutMs && controller
-      ? setTimeout(() => controller.abort(), timeoutMs)
+    const controller = effectiveTimeoutMs > 0 ? new AbortController() : null;
+    const timeoutId = effectiveTimeoutMs > 0 && controller
+      ? setTimeout(() => controller.abort(), effectiveTimeoutMs)
       : null;
 
     getJson<T>(url, controller ? { signal: controller.signal } : undefined)
@@ -31,7 +43,7 @@ export function useFetch<T>(
       .catch((err: unknown) => {
         if (cancelled) return;
         if (err instanceof DOMException && err.name === "AbortError") {
-          setError(`Timed out after ${Math.round((timeoutMs ?? 0) / 1000)}s`);
+          setError(`Timed out after ${Math.round(effectiveTimeoutMs / 1000)}s`);
         } else {
           setError(err instanceof Error ? err.message : "Failed to load");
         }
@@ -46,7 +58,7 @@ export function useFetch<T>(
       if (timeoutId) clearTimeout(timeoutId);
       controller?.abort();
     };
-  }, [url, revision, timeoutMs]);
+  }, [url, revision, effectiveTimeoutMs]);
 
   // Silent background refresh — setRevision is stable so no ref needed.
   useEffect(() => {
