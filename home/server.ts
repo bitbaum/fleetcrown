@@ -116,6 +116,9 @@ const INDEX_HTML = `<!doctype html>
   .project.running { border-left-color: #4ade80; }
   .project h2 { font-size: 14px; font-weight: 500; margin: 0 0 0.5rem; color: #fafafa; display: flex; align-items: center; gap: 0.5rem; }
   .running-pill { font-size: 11px; padding: 0.1rem 0.4rem; border-radius: 4px; background: #16a34a33; color: #4ade80; font-weight: 500; }
+  .status-pill { font-size: 11px; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 500; }
+  .status-pill.ready   { background: #16a34a33; color: #4ade80; }
+  .status-pill.working { background: #eab30833; color: #fbbf24; }
   .outcomes { display: inline-flex; gap: 0.25rem; }
   .o { font-size: 13px; padding: 0 0.4rem; border-radius: 4px; font-weight: 600; line-height: 1.4; }
   .o.success { background: #16a34a33; color: #4ade80; }
@@ -292,7 +295,12 @@ async function refresh() {
         <div class="project\${cr ? ' running' : ''}">
           <h2>
             \${escapeHtml(p.project)}
-            \${cr ? '<span class="running-pill">' + escapeHtml(cr.intent) + (cr.adapter && cr.adapter !== 'claude' ? ' · ' + escapeHtml(cr.adapter) : '') + '</span>' : ''}
+            \${cr ? '<span class="running-pill">' + escapeHtml(cr.intent) + (cr.adapter && cr.adapter !== 'claude' ? ' · ' + escapeHtml(cr.adapter) : '') + '</span>' : (() => {
+              const st = (p.lastHandoff && p.lastHandoff.status || '').toLowerCase();
+              if (st === 'ready')   return '<span class="status-pill ready">ready</span>';
+              if (st === 'working') return '<span class="status-pill working">working</span>';
+              return '';
+            })()}
             <span class="ts">\${compact(p.lastEventTs)}</span>
           </h2>
           \${reasonLine}
