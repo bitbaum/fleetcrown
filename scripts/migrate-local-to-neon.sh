@@ -5,17 +5,41 @@
 # Uses COPY format (binary-safe, fast) and imports in FK dependency order.
 # Tables with no rows are skipped. Re-runnable: skips tables already populated.
 #
-# Usage: ./scripts/migrate-local-to-neon.sh [--dry-run] [--force]
+# Usage:
+#   LOCAL_DATABASE_URL=... NEON_DATABASE_URL=... NEON_USER_ID=<uuid> \
+#     ./scripts/migrate-local-to-neon.sh [--dry-run] [--force]
 #
-# Prerequisites: psql + pg_dump in PATH, local Postgres running
+# Env vars:
+#   LOCAL_DATABASE_URL   Source (defaults to local cockpit Postgres on 5432)
+#   NEON_DATABASE_URL    Target (also accepts NEON_DATABASE_URL_DIRECT — same
+#                        resolution as drizzle.config.ts). REQUIRED.
+#   LOCAL_USER_ID        Source user_id to rewrite (defaults to the dev seed
+#                        UUID 00000000-0000-0000-0000-000000000001).
+#   NEON_USER_ID         Target user_id (the GitHub OAuth row in Neon). REQUIRED.
+#
+# Prerequisites: psql + pg_dump in PATH, local Postgres running.
+#
+# Security note: NEVER hardcode connection strings here. Prior versions of
+# this file leaked the Neon password into git history; rotate the password
+# on Neon if you pulled this repo before the refactor that removed it.
 
 set -euo pipefail
 
-LOCAL_URL="postgresql://cockpit:cockpit_local@127.0.0.1:5432/cockpit"
-NEON_URL="postgresql://neondb_owner:npg_ISu3RN0TCikE@ep-bold-shape-al8whvba.c-3.eu-central-1.aws.neon.tech/neondb?sslmode=require"
+LOCAL_URL="${LOCAL_DATABASE_URL:-postgresql://cockpit:cockpit_local@127.0.0.1:5432/cockpit}"
+NEON_URL="${NEON_DATABASE_URL:-${NEON_DATABASE_URL_DIRECT:-}}"
+LOCAL_USER_ID="${LOCAL_USER_ID:-00000000-0000-0000-0000-000000000001}"
 
-LOCAL_USER_ID="00000000-0000-0000-0000-000000000001"
-NEON_USER_ID="b94a359d-4a68-469e-9f8b-8abd254e2106"
+if [ -z "$NEON_URL" ]; then
+  echo "ERROR: set NEON_DATABASE_URL (or NEON_DATABASE_URL_DIRECT) before running." >&2
+  echo "Get one via: neonctl connection-string --project-id <id> --pooled false" >&2
+  exit 2
+fi
+
+if [ -z "${NEON_USER_ID:-}" ]; then
+  echo "ERROR: set NEON_USER_ID to the target user's UUID in Neon." >&2
+  echo "Find it via: psql \"\$NEON_DATABASE_URL\" -c \"SELECT id, email FROM users\"" >&2
+  exit 2
+fi
 
 DRY_RUN=false
 FORCE=false
