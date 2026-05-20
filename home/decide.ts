@@ -87,10 +87,13 @@ export function computeConfidence(outcomes: Outcome[]): number {
 // Threshold per mode: below this, hold and ask. At/above, fire.
 
 const AUTONOMY_THRESHOLD: Record<Autonomy, number> = {
-  manual:  Infinity,   // never auto-execute — UI shows the proposal, user clicks
-  confirm: Infinity,   // never auto-execute — UI runs a countdown then re-POSTs
-                       // with autonomy="auto" to fire, OR user clicks now
-  auto:    0.55,       // moderate confidence — fires immediately when in this mode
+  manual:  0,          // human clicked Dispatch — fire on receipt, no gate. The
+                       // confidence value still flows through for display, but
+                       // it never blocks; the user is the gate.
+  confirm: Infinity,   // never auto-execute — UI shows the proposal so the
+                       // human can override or click Dispatch (manual) to fire
+  auto:    0.55,       // moderate confidence — autonomous scheduler (cron,
+                       // queue drain) fires when the gate clears
   sleep:   0.75,       // high confidence — fires while user away IF healthy
 };
 
@@ -242,9 +245,22 @@ function selfTest() {
       expect: (d) => d.action.kind === "dispatch" && d.action.intent === "next_best",
     },
     {
-      name: "manual autonomy never auto-executes",
+      name: "manual autonomy ALWAYS auto-executes (human clicked, no gate)",
       input: {
-        project: { ...baseProject, recentOutcomes: ["success", "success", "success", "success", "success"] },
+        // Fresh project, zero history. The UI Dispatch button hits this path —
+        // it must fire even when computeConfidence is still neutral 0.5.
+        project: { ...baseProject, lastHandoff: { done: "", next: "", tests: "", todos: "", health: "good" } },
+        autonomy: "manual",
+      },
+      expect: (d) => d.autoExecute,
+    },
+    {
+      name: "manual autonomy still blocks when health is critical (recovery first)",
+      input: {
+        project: {
+          ...baseProject,
+          lastHandoff: { done: "x", next: "", tests: "", todos: "", health: "critical — auth broken" },
+        },
         autonomy: "manual",
       },
       expect: (d) => !d.autoExecute,

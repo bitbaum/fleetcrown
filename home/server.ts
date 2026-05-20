@@ -238,7 +238,7 @@ async function refresh() {
             '</div>'
           : '<div class="actions">' +
               '<button data-action="dispatch" data-project="' + projAttr + '" data-autonomy="confirm">Propose</button>' +
-              '<button class="primary" data-action="dispatch" data-project="' + projAttr + '" data-autonomy="auto">Dispatch</button>' +
+              '<button class="primary" data-action="dispatch" data-project="' + projAttr + '" data-autonomy="manual">Dispatch</button>' +
             '</div>';
         return \`
         <div class="project\${cr ? ' running' : ''}">
