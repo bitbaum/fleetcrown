@@ -27,6 +27,13 @@ export type RenderInput = {
   adapter?: AdapterId;
   /** Free-form prompt body when intent === 'custom' (queue items, ad-hoc text). */
   customInstructions?: string;
+  /** Optional snapshot of the user's prompt queue for this project. Threaded
+   *  through to renderTaskForAdapter so the dispatched prompt body surfaces
+   *  "User's prompt queue for this project" — symmetric with the cloud
+   *  /api/orchestration/run path (RunOrchestrationBody.queue). Without this,
+   *  home/'s autonomous dispatches would render the bare next_best scan
+   *  instruction with no queue context. */
+  queue?: string[];
 };
 
 export function renderPromptForDispatch(input: RenderInput): string {
@@ -36,6 +43,7 @@ export function renderPromptForDispatch(input: RenderInput): string {
     adapter:     input.adapter ?? "claude",
     intent:      input.intent,
     customInstructions: input.customInstructions,
+    queue:       input.queue,
   });
 }
 

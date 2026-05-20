@@ -521,7 +521,24 @@ const server = http.createServer((req, res) => {
         const projectPath =
           (typeof parsed.projectPath === "string" && parsed.projectPath) ||
           resolveProjectPath(projectName);
-        const prompt = buildPromptForDispatch(decision, projectState, projectPath);
+        // Pick up the user's prompt queue if present: caller-supplied (request
+        // body) wins, else read /tmp/agent-queue-<tab> — the file mirror the
+        // cloud /api/beacon/queue/[tab] PUT writes (best-effort) for bash-hook
+        // and home/ compat. Either source flows through buildPromptForDispatch
+        // → renderTaskForAdapter → renderQueueBlock so the dispatched prompt
+        // body shows the agent what's pending. Empty/missing queue → no block.
+        const queue: string[] = (() => {
+          if (Array.isArray(parsed.queue)) {
+            return parsed.queue.filter((s: unknown): s is string => typeof s === "string");
+          }
+          try {
+            const file = path.join("/tmp", `agent-queue-${projectName.toLowerCase()}`);
+            const raw = fs.readFileSync(file, "utf8");
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) ? arr.filter((s: unknown): s is string => typeof s === "string") : [];
+          } catch { return []; }
+        })();
+        const prompt = buildPromptForDispatch(decision, projectState, projectPath, queue);
         const intent = decision.action.intent;
         // Adapter resolution: caller-supplied wins (lets the UI override per
         // dispatch), otherwise fall back to the project's declared adapter
@@ -577,6 +594,7 @@ function buildPromptForDispatch(
   decision: Decision,
   project: ProjectState,
   projectPath?: string,
+  queue?: string[],
 ): string {
   if (decision.action.kind === "wait") {
     // Caller is supposed to short-circuit on wait — never dispatch one.
@@ -590,19 +608,23 @@ function buildPromptForDispatch(
       ? (intentRaw as OrchestrationTaskIntentId)
       : "next_best";
   // Queue-drain case: the queue item IS the prompt. Pass it through as
-  // intent="custom" so renderTaskForAdapter echoes it verbatim.
+  // intent="custom" so renderTaskForAdapter echoes it verbatim. The
+  // remaining queue (everything after the drained head) still flows so
+  // the agent sees what's coming after this run.
   if (decision.action.kind === "dispatch" && decision.action.prompt) {
     return renderPromptForDispatch({
       project: project.project,
       projectPath,
       intent: "custom",
       customInstructions: decision.action.prompt,
+      queue,
     });
   }
   return renderPromptForDispatch({
     project: project.project,
     projectPath,
     intent,
+    queue,
   });
 }
 
