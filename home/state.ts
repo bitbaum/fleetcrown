@@ -222,6 +222,35 @@ function selfTest() {
       },
     },
     {
+      name: "applying the SAME bridge.dispatch twice is idempotent (server.ts eager-apply contract)",
+      check: () => {
+        // /api/dispatch eagerly applies the freshly-appended event to close
+        // a race with fs.watch (bd143e2). tailLog then re-applies the same
+        // event when the watcher catches up. Both states must be identical.
+        const evt = dispatch("a");
+        const s1 = applyAll([evt]);
+        const s2 = applyAll([evt, evt]);
+        const a = s1.get("T")!.currentRun;
+        const b = s2.get("T")!.currentRun;
+        return a?.runId === b?.runId
+            && a?.intent === b?.intent
+            && a?.adapter === b?.adapter
+            && a?.reason === b?.reason
+            && a?.confidence === b?.confidence;
+      },
+    },
+    {
+      name: "applying the SAME bridge.cancel twice doesn't duplicate the runId in cancelledRunIds",
+      check: () => {
+        // Same eager-apply path for /api/cancel. cancelledRunIds.filter()
+        // in the projection dedupes — verify with an explicit twice-apply.
+        const c = cancel("a");
+        const s = applyAll([dispatch("a"), c, c]);
+        const ids = s.get("T")?.cancelledRunIds ?? [];
+        return ids.length === 1 && ids[0] === "a";
+      },
+    },
+    {
       name: "worker.started overwrites currentRun (idempotent same-shape)",
       check: () => {
         const s = applyAll([dispatch("a"), started("a")]);
