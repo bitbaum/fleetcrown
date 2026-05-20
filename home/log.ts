@@ -26,9 +26,17 @@ export type TailHandle = {
   position: () => number;
 };
 
+/**
+ * Phase passed to onEvent so consumers can distinguish initial replay from
+ * subsequent live events. The Brain projection treats them the same — both
+ * just update state. The Worker treats them differently — replay builds the
+ * set of already-handled runIds; live events trigger new injections.
+ */
+export type EventPhase = "replay" | "live";
+
 export function tailLog(
   filePath: string,
-  onEvent: (event: Event) => void,
+  onEvent: (event: Event, phase: EventPhase) => void,
   onError?: (err: Error, raw?: string) => void,
 ): TailHandle {
   // Make sure the file exists so fs.watch has a target. Parent dir too.
@@ -38,6 +46,7 @@ export function tailLog(
   let position = 0;
   let buffer = "";
   let closed = false;
+  let replaying = true;
 
   function consume() {
     if (closed) return;
@@ -64,11 +73,12 @@ export function tailLog(
       // Keep the final (possibly-partial) line in the buffer.
       buffer = lines.pop() ?? "";
 
+      const phase: EventPhase = replaying ? "replay" : "live";
       for (const line of lines) {
         if (!line.trim()) continue;
         const result = parseEvent(line);
         if (result.ok) {
-          onEvent(result.event);
+          onEvent(result.event, phase);
         } else if (onError) {
           onError(new Error(`parse: ${result.error}`), result.raw);
         }
@@ -78,8 +88,9 @@ export function tailLog(
     }
   }
 
-  // Initial replay of existing content.
+  // Initial replay of existing content (synchronous — replaying stays true).
   consume();
+  replaying = false;
 
   const watcher = fs.watch(filePath, () => consume());
   watcher.on("error", (err) => { if (onError) onError(err); });

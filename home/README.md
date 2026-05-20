@@ -1,56 +1,89 @@
-# `home/` — local Brain
+# `home/` — local Brain + Bridge + Worker
 
-The Brain runs as a small Node HTTP server on the user's machine.
-It tails an append-only JSONL event log, projects events into per-project
-state, and serves a status view at `http://localhost:3001`.
+The new system runs as three small Node processes on the user's machine,
+all tailing the same append-only JSONL event log:
 
-This is **M2** of the greenfield rewrite — the smallest possible thing that
-proves the event-log → state projection → UI loop. No agent dispatch yet,
-no decisions, no React. M3 wires the Bridge that feeds real events in.
+```
+~/.${APP_SLUG}/events.jsonl     ←  every event ever, version-stamped, one per line
+
+  ┌─────────────┐    ┌───────────┐    ┌──────────────┐
+  │  watcher.ts │    │ server.ts │    │  worker.ts   │
+  │   (Bridge)  │    │  (Brain)  │    │  (Consumer)  │
+  ├─────────────┤    ├───────────┤    ├──────────────┤
+  │ session.md  │    │ tails log │    │ tails log    │
+  │ changes     │    │ projects  │    │ filters for  │
+  │ → worker.   │    │  state    │    │ bridge.      │
+  │   idle      │    │ serves    │    │   dispatch   │
+  │   events    │    │  /api/*   │    │ → injects    │
+  └─────────────┘    │ runs      │    │   via zellij │
+                     │  decide() │    │ → worker.    │
+                     └───────────┘    │   started    │
+                                      └──────────────┘
+```
 
 ## Run
 
+Three terminals (or one tmux/zellij with three panes):
+
 ```bash
-npx tsx home/server.ts
+npx tsx home/server.ts     # Brain — http://localhost:3001
+npx tsx home/watcher.ts    # Bridge — emits worker.idle when sessions change
+npx tsx home/worker.ts     # Consumer — injects bridge.dispatch into zellij
 ```
 
-Open `http://localhost:3001` — the UI polls `/api/state` every 2s.
+Override the Brain port with `APP_HOME_PORT=3801`. Override the watcher
+sessions dir with `APP_SESSIONS_DIR=/tmp/test-sessions` (for testing).
 
-Override the port with `APP_HOME_PORT=3801`.
-
-## Test it
+## Smoke test — append a worker.started event manually
 
 ```bash
-# In another terminal — derive the slug from brand.ts
 SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
 mkdir -p ~/.$SLUG
 
-# Simulate a run starting
 cat <<EOF >> ~/.$SLUG/events.jsonl
 {"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"worker.started","project":"Demo","adapter":"claude","intent":"next_best"}
 EOF
 
-# The Demo project shows up on the UI with a green "next_best" pill within 1s.
+# UI at http://localhost:3001 shows a Demo project with a green next_best pill.
+```
 
-# Simulate it finishing
-cat <<EOF >> ~/.$SLUG/events.jsonl
-{"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"worker.finished","project":"Demo","outcome":"success","durationMs":60000,"handoff":{"done":"shipped a thing","next":"","tests":"","todos":"","health":"good"}}
-EOF
+## Smoke test — dispatch via the API
 
-# The pill clears, a ✓ glyph appears in the outcome streak.
+```bash
+# In a third terminal — auto-mode triggers the worker if confidence allows.
+curl -s -X POST http://localhost:3001/api/dispatch \
+  -H 'Content-Type: application/json' \
+  -d '{"project":"Demo","autonomy":"auto","queueHead":"run the smoke test"}'
+
+# worker.ts injects "run the smoke test" into the Demo zellij tab and
+# appends a worker.started event. The UI reflects it on the next poll.
 ```
 
 ## Files
 
-| File         | Purpose                                                            |
-|--------------|--------------------------------------------------------------------|
-| `state.ts`   | Pure `applyEvent(state, event) → state`. Tested by replaying logs. |
-| `log.ts`     | Tail one JSONL file, parse via `@/lib/events`, handle file resets. |
-| `server.ts`  | Node HTTP server. `/control` HTML + `/api/state` + `/api/health`.  |
+| File          | Purpose                                                                          |
+|---------------|----------------------------------------------------------------------------------|
+| `state.ts`    | Pure `applyEvent(state, event) → state`.                                         |
+| `log.ts`      | Tail one JSONL file, parse via `@/lib/events`. Phase flag (replay/live).         |
+| `emit.ts`     | Single append-only writer. Stamps `v` + `id` + `ts` at write time.               |
+| `render.ts`   | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.         |
+| `decide.ts`   | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.    |
+| `server.ts`   | HTTP server — `/control` HTML + `/api/state` + `/api/health` + `POST /api/dispatch`. |
+| `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`.               |
+| `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch`, injects via zellij, emits `worker.started`. |
+
+## Idempotency
+
+The worker is safe to restart. On boot, it replays the entire log to build
+the set of `runId`s that already have a `worker.started` event downstream
+— those dispatches are considered handled and won't fire again. Dispatches
+in the log that *don't* yet have a matching `worker.started` are treated
+as crash-recovery and re-injected after replay completes.
 
 ## What's not here yet
 
-- **Bridge** (M3): worker hooks emit events to the log. Today you append manually.
-- **decide()** (M5): pure function turning state into next action. Today the brain only watches.
-- **Dispatch wire-back** (M6): brain commands flow into workers. Today nothing acts on `bridge.dispatch`.
-- **Persistence**: state is in-memory. Restart replays the full log to rebuild. This is by design — the log is the only durable thing.
+- **Persistence beyond the log**: state is in-memory. Restart replays.
+  This is by design — the log is the only durable thing.
+- **Cutover from `/api/control/dispatch`**: the existing Vercel route still
+  exists. Once this loop is exercised against real agents, M9 retires it
+  and the daemon stops shipping pending_commands rows.
