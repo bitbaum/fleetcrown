@@ -57,7 +57,10 @@ export function BeaconSettings() {
         transcription_provider: provider,
       });
       if (!res.ok) await throwApiError(res, "Failed to save");
-      setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider });
+      // Preserve auto_inject_mode through saves until this component grows a
+      // UI for it; without the carryover the new field reverts to default
+      // on every patch.
+      setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider, auto_inject_mode: data?.auto_inject_mode ?? "strategist" });
       setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");

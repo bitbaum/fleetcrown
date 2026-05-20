@@ -26,14 +26,21 @@ function renderSharedExecutionRules(): string {
 function renderIntentBody(request: OrchestrationTaskRequest): string {
   switch (request.intent) {
     case "next_best":
+      // SSOT'd 2026-05-20 against ~/.config/agent-prompts.json (bash hook's
+      // slot 1). The bash hook's version was sharper — concrete gates first,
+      // then session-handoff awareness, then "find the adjacent broken
+      // thing." The previous TS text was an abstract scan ladder that
+      // produced drift. Model-agnostic shape: no assumed tech stack.
       return [
         `Work on the project at ${request.projectPath}.`,
-        "Before choosing work, scan in order:",
-        "1. interrupted or uncommitted work to resume",
-        "2. failing tests or broken flows",
-        "3. SSOT / DRY / quality violations",
-        "4. mission or product misalignment",
-        "Pick the highest-impact item and execute it fully.",
+        "",
+        "Verify health first:",
+        "1. Are there type/lint/compile errors? Fix them before anything else.",
+        "2. Is there uncommitted or merge-conflicted work? Resolve and commit.",
+        "3. Does the session handoff's `next:` field name a specific task? Execute it exactly.",
+        "4. If `next:` is vague or missing, find the single most impactful gap: scan recent commits for what was just built and look for the adjacent broken thing — a silent error, a flow that doesn't close, a feature half-wired.",
+        "",
+        "One thing. Done and committed.",
       ].join("\n");
     case "test_and_fix":
       return [

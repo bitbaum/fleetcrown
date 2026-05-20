@@ -96,10 +96,23 @@ export async function POST(req: NextRequest) {
   if (isRuntimeAvailable()) {
     try {
       const states = await getProjectStatesByUserId(userId);
+      // Defensive against duplicate rows that share the same lowercase
+      // project_key (e.g. 'cockpit' vs 'Cockpit' — caught on 2026-05-20
+      // because the iteration order let an empty-queue dup overwrite the
+      // real queue's mirror file). Group by lowercase key and pick the
+      // row with the longest prompt_queue; ties keep first-seen.
+      const byKey = new Map<string, typeof states[number]>();
       for (const s of states) {
         if (!s.projectKey) continue;
+        const k = s.projectKey.toLowerCase();
+        const cur = byKey.get(k);
+        const sLen = s.promptQueue?.length ?? 0;
+        const curLen = cur?.promptQueue?.length ?? 0;
+        if (!cur || sLen > curLen) byKey.set(k, s);
+      }
+      for (const [k, s] of byKey) {
         try {
-          const p = stateFile.queue(s.projectKey.toLowerCase());
+          const p = stateFile.queue(k);
           fs.writeFileSync(p + ".tmp", JSON.stringify(s.promptQueue ?? []));
           fs.renameSync(p + ".tmp", p);
         } catch { /* per-file failure is non-fatal */ }

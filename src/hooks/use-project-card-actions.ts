@@ -41,8 +41,12 @@ export function useProjectCardActions({
   const [preloadedDispatch, setPreloadedDispatch] = useState<DispatchResult | null>(null);
 
   // Pre-fetch dispatch decision as soon as the ready banner appears.
+  // Note 2026-05-20: previously gated on queue.length > 0, which short-
+  // circuited the strategist for the most-valuable case (empty queue,
+  // smart-nudge needed). Now fires whenever ready — server decides what
+  // to do based on auto_inject_mode + queue + handoff.
   useEffect(() => {
-    if (!isReadyNow || queue.length === 0) {
+    if (!isReadyNow) {
       setPreloadedDispatch(null);
       return;
     }
@@ -162,6 +166,8 @@ export function useProjectCardActions({
     }
     const decision = preloadedDispatch;
     const action = decision?.action ?? (queue.length > 0 ? "queue" : "nextbest");
+    // mode_gate may have returned "off" — suppress auto-inject entirely.
+    if (action === "off") return;
     if (action === "queue") {
       const queued = shiftQueue();
       if (queued) {
@@ -171,6 +177,19 @@ export function useProjectCardActions({
         finally { setSending(null); }
         return;
       }
+    }
+    // Strategist v1: when /api/control/dispatch composed a context-aware
+    // body, inject that directly as a custom prompt instead of falling
+    // back to the canned next_best template. Closes the "auto-inject is
+    // generic and unrelated to what I last asked for" gap. The composed
+    // body is constructed from session handoff, queue tail, recent
+    // commits, and outcome streak by Groq — see /api/control/dispatch.
+    if (action === "composed" && decision?.prompt && decision.prompt.length > 10) {
+      setSending("custom");
+      setDismissed(true);
+      try { await onInject(project.tab, undefined, decision.prompt); }
+      finally { setSending(null); }
+      return;
     }
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps

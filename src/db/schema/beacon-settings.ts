@@ -9,6 +9,9 @@ export const beaconSettings = pgTable("beacon_settings", {
   minIdleSeconds:        integer("min_idle_seconds").notNull().default(0),
   whisperModel:          text("whisper_model").notNull().default("base"),
   transcriptionProvider: text("transcription_provider").notNull().default("auto"),
+  // strategist | queue_only | next_best | off — drives handleAutoInject's
+  // behavior. Defaults to strategist (Groq composes context-aware prompts).
+  autoInjectMode:        text("auto_inject_mode").notNull().default("strategist"),
   updatedAt:             timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_beacon_settings_user_id").on(t.userId),
