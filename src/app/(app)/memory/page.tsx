@@ -7,6 +7,7 @@ import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { PullToRefresh } from "@/components/shared/PullToRefresh";
 
 export const metadata = { title: "Memory" };
 
@@ -41,6 +42,7 @@ export default async function MemoryPage() {
   ]);
 
   return (
+    <PullToRefresh>
     <PageLayout title="Memory" subtitle="What Ivy knows — the knowledge graph">
 
       {/* Top stats */}
@@ -140,5 +142,6 @@ export default async function MemoryPage() {
         </div>
       </Card>
     </PageLayout>
+    </PullToRefresh>
   );
 }

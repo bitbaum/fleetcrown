@@ -5,6 +5,7 @@ import { AutopilotCard } from "@/components/system/AutopilotCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { CardSkeleton } from "@/components/ui/card";
 import { readCronJobs } from "@/lib/crons";
+import { PullToRefresh } from "@/components/shared/PullToRefresh";
 
 export const metadata = { title: "System" };
 
@@ -12,12 +13,14 @@ export default function SystemPage() {
   const jobs = readCronJobs();
 
   return (
-    <PageLayout title="System" subtitle="Infrastructure health and Ivy autopilot">
-      <SystemStats />
-      <AutopilotCard initialJobs={jobs} />
-      <Suspense fallback={<CardSkeleton />}>
-        <MemorySummaryCard />
-      </Suspense>
-    </PageLayout>
+    <PullToRefresh>
+      <PageLayout title="System" subtitle="Infrastructure health and Ivy autopilot">
+        <SystemStats />
+        <AutopilotCard initialJobs={jobs} />
+        <Suspense fallback={<CardSkeleton />}>
+          <MemorySummaryCard />
+        </Suspense>
+      </PageLayout>
+    </PullToRefresh>
   );
 }
