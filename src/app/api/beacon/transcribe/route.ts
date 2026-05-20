@@ -10,6 +10,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { enqueuePendingCommand } from "@/db/queries/pending-commands";
 
 const execFileAsync = promisify(execFile);
 
@@ -52,7 +53,17 @@ export async function POST(req: NextRequest) {
     Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
   ]);
 
-  const useGroq = provider === "groq" || (provider !== "local" && !isRuntimeAvailable());
+  // Routing:
+  //   provider="groq"           → call Groq directly (cloud paid opt-in)
+  //   provider="local"/"auto" + runtime available → run local Whisper in-process
+  //   provider="local"/"auto" + runtime missing   → enqueue for the user's daemon
+  //                                                  to pick up and run on their
+  //                                                  machine. This is what makes
+  //                                                  cockpitapp.vercel.app's /control
+  //                                                  use the user's local STT by
+  //                                                  default — Vercel has no whisper.
+  const useGroq = provider === "groq";
+  const enqueueForDaemon = !useGroq && !isRuntimeAvailable();
 
   if (useGroq) {
     // Cloud transcription via Groq Whisper.
@@ -91,8 +102,43 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: "Local transcription unavailable — runtime not active" }, { status: 503 });
+  if (enqueueForDaemon) {
+    // No local runtime here (we're on Vercel) — enqueue a transcribe command for
+    // the user's daemon to claim. Daemon already handles type="transcribe" with
+    // payload { audio: <base64>, model? } and posts result via /api/control/commands.
+    // The [id] route serves status from pending_commands.result on completion.
+    const userId = await getApiUserId();
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const buf = Buffer.from(await audio.arrayBuffer());
+    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
+    // Cap at ~6 MB raw (~8 MB base64) so a runaway recording doesn't blow up
+    // the pending_commands jsonb column or the daemon's claim payload.
+    if (buf.length > 6 * 1024 * 1024) {
+      return NextResponse.json({
+        error: "Recording too large for daemon bridge (>6 MB) — record a shorter clip or sign up for Groq cloud STT.",
+      }, { status: 413 });
+    }
+    try {
+      // Field names must match the daemon's jq selectors in
+      // scripts/cockpit-daemon.sh:701-704 — `audio_b64` and `mime_type`.
+      // `model` is included for forward compatibility but today's daemon
+      // reads its whisper model from ~/.config/cockpit/beacon.json, not
+      // the payload. (Future: daemon should prefer payload.model when set
+      // so the user's DB-stored setting flows through end-to-end.)
+      const id = await enqueuePendingCommand({
+        userId,
+        type: "transcribe",
+        payload: {
+          audio_b64: buf.toString("base64"),
+          mime_type: audio.type || "audio/webm",
+          model,
+        },
+      });
+      return NextResponse.json({ transcriptionId: id });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ error: `enqueue failed: ${msg}` }, { status: 500 });
+    }
   }
 
   // Local path: run Whisper directly.
