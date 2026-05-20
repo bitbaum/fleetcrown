@@ -8,7 +8,8 @@ import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 
 export const metadata: Metadata = {
-  title: `Whitepaper — ${APP_NAME}`,
+  // Root layout's title template appends "— Cockpit" — don't double it here.
+  title: "Whitepaper",
   description: "A technical architecture for sustained autonomous execution across many projects simultaneously.",
 };
 
