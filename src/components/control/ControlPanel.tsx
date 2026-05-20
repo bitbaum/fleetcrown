@@ -307,6 +307,7 @@ export function ControlPanel() {
         idleNeedsAttention={fleetIdleNeedsAttention}
         idleQuiet={fleetIdleQuiet}
         idleStale={fleetIdleStale}
+        onProjectRemoved={() => refresh(true)}
         focusedTab={focusedTab}
         setFocusedTab={setFocusedTab}
         expandedTabs={expandedTabs}

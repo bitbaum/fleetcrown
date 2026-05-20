@@ -36,6 +36,8 @@ interface ProjectFleetViewProps {
   cardProps: (project: ProjectState) => CardBaseProps;
   onBootstrap: () => void;
   onNewProject: () => void;
+  /** Fired after a Stale tile's inline Remove succeeds — caller refreshes the fleet. */
+  onProjectRemoved: () => void;
 }
 
 export function ProjectFleetView({
@@ -60,6 +62,7 @@ export function ProjectFleetView({
   cardProps,
   onBootstrap,
   onNewProject,
+  onProjectRemoved,
 }: ProjectFleetViewProps) {
   const collapseTab = (tab: string) =>
     setExpandedTabs((tabs) => {
@@ -259,6 +262,7 @@ export function ProjectFleetView({
                         onExpand={() => expandTab(project.tab)}
                         onLaunch={() => openLaunchModal(project)}
                         onFocus={() => { expandTab(project.tab); setFocusedTab(project.tab); }}
+                        onRemoved={onProjectRemoved}
                       />
                     ))}
                   </div>
