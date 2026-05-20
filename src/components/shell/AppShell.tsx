@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { AskIvyButton } from "./AskIvyButton";
+import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
 import {
   SIDEBAR_COLLAPSE_BREAKPOINT,
   SIDEBAR_COLLAPSE_STORAGE_KEY,
@@ -41,6 +42,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <MobileNav />
       <AskIvyButton />
+      <RefreshOnFocus />
     </div>
   );
 }
