@@ -106,25 +106,39 @@ emit_worker_finished() {
     todos_line=$(grep  -m1 '^todos:'  "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//')
     health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//')
   fi
-  # Duration from /tmp/<slug>-run-<tab> sentinel mtime if present, else 0.
-  local duration_ms=0 run_sentinel
+  # Read duration AND runId from the /tmp/<slug>-run-<tab> sentinel that
+  # cockpit-daemon.sh:execute_inject wrote at dispatch time. The runId is
+  # required for state.applyEvent's cancelledRunIds → user_abort relabel
+  # to match (otherwise a user-cancelled run gets recorded as partial in
+  # recentOutcomes and drags computeConfidence down). Sentinel file
+  # contains the runId on a single line; mtime is the start time.
+  local duration_ms=0 run_id="" run_sentinel
   run_sentinel="$(_brand_tmp "run-${tab_name}")"
   if [ -f "$run_sentinel" ]; then
     local start_s now_s
     start_s=$(stat -c %Y "$run_sentinel" 2>/dev/null || echo 0)
     now_s=$(date +%s)
     if [ "$start_s" -gt 0 ]; then duration_ms=$(( (now_s - start_s) * 1000 )); fi
+    run_id=$(cat "$run_sentinel" 2>/dev/null | tr -d '[:space:]')
   fi
   local outcome id ts
   outcome=$(infer_outcome_v1 "$done_line" "$tests_line" "$health_line" "$duration_ms")
   id=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "00000000-0000-4000-8000-000000000000")
   ts=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+  # runId is optional in the schema (parseEvent accepts missing). Build the
+  # event with or without it via jq's `+` so an empty run_id (no sentinel)
+  # produces a valid event sans runId — matches the legacy stop-hook shape.
+  local runid_obj="{}"
+  if [ -n "$run_id" ]; then
+    runid_obj=$(jq -nc --arg runId "$run_id" '{runId:$runId}')
+  fi
   jq -nc \
     --arg id "$id" --arg ts "$ts" --arg project "$tab_name" \
     --argjson durationMs "$duration_ms" --arg outcome "$outcome" \
     --arg done "$done_line" --arg next "$next_line" --arg tests "$tests_line" \
     --arg todos "$todos_line" --arg health "$health_line" \
-    '{v:1, id:$id, ts:$ts, kind:"worker.finished", project:$project, outcome:$outcome, durationMs:$durationMs, handoff:{done:$done, next:$next, tests:$tests, todos:$todos, health:$health}}' \
+    --argjson runid "$runid_obj" \
+    '{v:1, id:$id, ts:$ts, kind:"worker.finished", project:$project, outcome:$outcome, durationMs:$durationMs, handoff:{done:$done, next:$next, tests:$tests, todos:$todos, health:$health}} + $runid' \
     >> "$log_path" 2>/dev/null || true
 }
 

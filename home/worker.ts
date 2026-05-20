@@ -26,6 +26,8 @@
  * Test:   npx tsx home/worker.ts --self-test
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { tailLog, type EventPhase } from "./log";
 import { appendEvent, LOG_PATH } from "./emit";
 import { injectIntoTab, sendRawKey } from "@/lib/zellij";
@@ -34,6 +36,19 @@ import type { Event } from "@/lib/events";
 
 /** Linux Ctrl+C raw key code. Same value used by switch-agent for hard interrupt. */
 const CTRL_C = 3;
+
+/**
+ * /tmp/<slug>-run-<tab> sentinel: agent-hook-bridge.sh:emit_worker_finished
+ * reads the runId from this file at session-stop time and includes it on
+ * the worker.finished event. Without that, state.applyEvent has no runId
+ * to match against cancelledRunIds, so a user-cancelled run gets recorded
+ * as whatever infer_outcome_v1 inferred (typically "partial") instead of
+ * user_abort — confidence drops on every cancel. Mirror the legacy
+ * cockpit-daemon.sh write so the home/ stack speaks the same protocol.
+ */
+function runSentinelPath(project: string): string {
+  return path.join("/tmp", `${APP_SLUG}-run-${project}`);
+}
 
 // ── State held by the worker process ────────────────────────────────────────
 
@@ -130,6 +145,12 @@ function executeCancel(event: Event) {
 function executeDispatch(state: WorkerState, event: Event) {
   if (event.kind !== "bridge.dispatch") return;
   try {
+    // Drop the runId where the stop hook will read it. Fire-and-forget —
+    // failure here doesn't block the inject; the stop hook just falls
+    // back to a runId-less worker.finished and the relabel doesn't match
+    // (degraded mode, not broken).
+    try { fs.writeFileSync(runSentinelPath(event.project), event.runId); }
+    catch { /* read-only /tmp or weird filesystem — keep going */ }
     injectIntoTab(event.project, event.prompt);
     appendEvent({
       kind: "worker.started",
