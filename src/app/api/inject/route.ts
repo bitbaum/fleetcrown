@@ -9,6 +9,7 @@ import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { upsertProjectState } from "@/db/queries/project-states";
+import { logDebug } from "@/db/queries/debug-logs";
 
 const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
@@ -35,6 +36,12 @@ export async function POST(req: NextRequest) {
     dbProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase()) ??
     dbTeamProjects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
   if (!dbMatch) {
+    logDebug({
+      source: "api/inject",
+      level: "warn",
+      message: `Unknown tab: ${tab}`,
+      meta: { userId, tab, hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
+    });
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
 
@@ -161,6 +168,25 @@ export async function POST(req: NextRequest) {
   );
 
   if (!result.ok) {
+    // Per pattern_vercel_log_fallback: journalctl on Vercel is unreliable.
+    // Capture failures in debug_logs so post-incident forensics can answer
+    // "what actually broke" without depending on log retention.
+    logDebug({
+      source: "api/inject",
+      level: "error",
+      message: `Injection failed: ${result.error}`,
+      meta: {
+        userId,
+        tab: effectiveTab,
+        canonical,
+        mode: result.mode,
+        adapter: eventAdapter,
+        promptKey: promptKey ?? null,
+        promptLabel,
+        customPromptLen: customPrompt?.length ?? 0,
+        runtimeAvailable: isRuntimeAvailable(),
+      },
+    });
     return NextResponse.json({ error: `Injection failed: ${result.error}` }, { status: 500 });
   }
 

@@ -26,3 +26,4 @@ export * from "./captures";
 export * from "./habit-goals";
 export * from "./beacon-settings";
 export * from "./user-preferences";
+export * from "./debug-logs";
