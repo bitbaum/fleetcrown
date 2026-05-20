@@ -110,7 +110,19 @@ function executeCancel(event: Event) {
     sendRawKey(event.project, CTRL_C);
     console.log(`[worker] sent Ctrl+C to project=${event.project} runId=${event.runId} reason=${event.reason}`);
   } catch (e) {
+    // Symmetric with executeDispatch's inject-failure branch: emit
+    // worker.crashed so the brain's state.applyEvent sets lastError and
+    // the UI surfaces a red error message. Without this, a failed cancel
+    // is silent — state.applyEvent already cleared currentRun
+    // optimistically on the bridge.cancel, so the UI would show the
+    // project as idle while the agent might still be running.
     const msg = e instanceof Error ? e.message : String(e);
+    appendEvent({
+      kind: "worker.crashed",
+      project: event.project,
+      runId: event.runId,
+      error: `cancel failed: ${msg}`,
+    });
     console.error(`[worker] cancel failed runId=${event.runId}: ${msg}`);
   }
 }
