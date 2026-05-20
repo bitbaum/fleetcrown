@@ -3,6 +3,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { getUpcomingSubscriptions } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { format, startOfDay } from "date-fns";
+import { formatMoney } from "@/lib/format";
 
 export async function SubscriptionsCard() {
   const userId = await requirePageUserId();
@@ -28,7 +29,7 @@ export async function SubscriptionsCard() {
                 </div>
               </div>
               <div className={`text-sm md:text-base font-mono ${overdue ? "text-status-negative" : "text-text-secondary"}`}>
-                {item.amount} {item.currency}
+                {formatMoney(item.amount, item.currency)}
               </div>
             </div>
           );

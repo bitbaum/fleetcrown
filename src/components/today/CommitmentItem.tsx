@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Pencil, X, Check, Loader2 } from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import { FulfillCommitmentButton } from "./FulfillCommitmentButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { deadlineLabel } from "@/lib/dates";
 
 type CommitmentItemProps = {
   id: string;
@@ -24,7 +25,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const isOverdue = dueDate && new Date(dueDate) < new Date();
+  const { label: deadline, overdue: isOverdue } = deadlineLabel(dueDate);
 
   const save = async () => {
     if (!desc.trim()) { setError("Description required"); return; }
@@ -115,8 +116,7 @@ export function CommitmentItem({ id, description, dueDate, financialImpact }: Co
         <div className="text-sm md:text-base">{description}</div>
         {dueDate && (
           <div className={`text-xs md:text-sm ${isOverdue ? "text-status-negative" : "text-text-tertiary"}`}>
-            {isOverdue ? "Overdue" : "Due"}{" "}
-            {formatDistanceToNow(new Date(dueDate), { addSuffix: true })}
+            {deadline}
           </div>
         )}
         {financialImpact && (

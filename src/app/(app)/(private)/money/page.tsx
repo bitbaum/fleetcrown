@@ -13,6 +13,7 @@ import {
 } from "@/db/queries/money";
 import { requirePageUserId } from "@/lib/session";
 import { format, isPast } from "date-fns";
+import { formatMoney } from "@/lib/format";
 
 export const metadata = { title: "Money" };
 
@@ -101,10 +102,10 @@ export default async function MoneyPage() {
         <StatCard
           label="Monthly Burn"
           value={[
-            burn.totalChf > 0 ? `${burn.totalChf} CHF` : null,
-            burn.totalUsd > 0 ? `${burn.totalUsd} USD` : null,
-            burn.totalEur > 0 ? `${burn.totalEur} EUR` : null,
-            burn.totalGbp > 0 ? `${burn.totalGbp} GBP` : null,
+            burn.totalChf > 0 ? formatMoney(burn.totalChf, "CHF") : null,
+            burn.totalUsd > 0 ? formatMoney(burn.totalUsd, "USD") : null,
+            burn.totalEur > 0 ? formatMoney(burn.totalEur, "EUR") : null,
+            burn.totalGbp > 0 ? formatMoney(burn.totalGbp, "GBP") : null,
           ].filter(Boolean).join(" + ") || "—"}
           sub={`${burn.count} active subscriptions`}
         />
@@ -116,9 +117,9 @@ export default async function MoneyPage() {
         <StatCard
           label="Non-CHF /mo"
           value={[
-            burn.totalUsd > 0 ? `${burn.totalUsd} USD` : null,
-            burn.totalEur > 0 ? `${burn.totalEur} EUR` : null,
-            burn.totalGbp > 0 ? `${burn.totalGbp} GBP` : null,
+            burn.totalUsd > 0 ? formatMoney(burn.totalUsd, "USD") : null,
+            burn.totalEur > 0 ? formatMoney(burn.totalEur, "EUR") : null,
+            burn.totalGbp > 0 ? formatMoney(burn.totalGbp, "GBP") : null,
           ].filter(Boolean).join(", ") || "—"}
           sub="other currencies"
         />
