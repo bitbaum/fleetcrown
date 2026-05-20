@@ -73,6 +73,12 @@ export type OrchestrationTaskRequest = {
   intent: OrchestrationTaskIntentId;
   model?: string;
   customInstructions?: string;
+  /** Optional snapshot of the user's prompt queue for this project at
+   *  dispatch time. The renderer surfaces these to the agent as "Pending
+   *  queue items" so the agent can weigh them against other scanning
+   *  candidates. Model-agnostic: the same context lands in every
+   *  adapter's prompt body via renderTaskForAdapter. */
+  queue?: string[];
 };
 
 // `status` is the agent's self-reported lifecycle state for this handoff:

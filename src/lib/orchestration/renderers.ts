@@ -95,14 +95,36 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
   }
 }
 
+// Surface the user's prompt queue in the dispatched prompt. The agent now
+// sees what's pending and can weigh queue items against other scanning
+// candidates (interrupted work, failing tests, etc). Without this block,
+// the queue is invisible to the agent — the renderer only fires queue[0]
+// AS the prompt when handleAutoInject drains it, but the rest of the
+// queue (and any context about "the user explicitly queued X, Y, Z")
+// never reaches the model. Model-agnostic: every adapter that calls
+// renderTaskForAdapter gets the same context block.
+function renderQueueBlock(queue?: string[]): string | null {
+  if (!queue || queue.length === 0) return null;
+  const lines = queue.slice(0, 10).map((item, i) => `${i + 1}. ${item}`);
+  const overflow = queue.length > 10 ? `\n…and ${queue.length - 10} more` : "";
+  return [
+    `User's prompt queue for this project (in priority order):`,
+    ...lines,
+    overflow,
+    `Weigh these against the scanning candidates below — pick what's truly highest-impact right now.`,
+  ].filter(Boolean).join("\n");
+}
+
 export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter: AdapterId = request.adapter): string {
   const intent = getOrchestrationIntent(request.intent);
+  const queueBlock = renderQueueBlock(request.queue);
 
   // Claude adapter: CLAUDE.md is always loaded in the session and already contains
   // execution rules and project context. Emit only the intent body — no redundant
   // header or rules. buildPromptWithSession appends the session file + update instruction.
   if (adapter === "claude") {
     const sections: string[] = [renderIntentBody(request)];
+    if (queueBlock) sections.push(queueBlock);
     // For "custom" intent the body IS customInstructions — don't append it again
     if (request.intent !== "custom" && request.customInstructions?.trim()) {
       sections.push(`Additional instructions:\n${request.customInstructions.trim()}`);
@@ -116,6 +138,8 @@ export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter:
     renderIntentBody(request),
     renderSharedExecutionRules(),
   ];
+
+  if (queueBlock) sections.push(queueBlock);
 
   // For "custom" intent the body IS customInstructions — don't append it again
   if (request.intent !== "custom" && request.customInstructions?.trim()) {

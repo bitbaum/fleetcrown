@@ -34,6 +34,11 @@ const RunOrchestrationBody = z.object({
   intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
+  // Optional queue snapshot from the client's localStorage. Plumbed
+  // straight into the prompt body via renderTaskForAdapter so the agent
+  // can weigh queue items against other candidates. Max 200 items × 4kB
+  // matches the persistence limit in /api/beacon/queue/[tab].
+  queue: z.array(z.string().max(4000)).max(200).optional(),
 });
 
 async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest) {
