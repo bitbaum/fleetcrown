@@ -82,6 +82,19 @@ infer_outcome_v1() {
 emit_worker_finished() {
   local tab_name="$1" session_file="$2"
   command -v jq >/dev/null 2>&1 || return 0   # silently skip if jq missing
+  # Symmetric to home/watcher.ts: filter to registered projects so scratch
+  # tabs (Tab #1, ad-hoc shells, etc.) don't pollute the brain's state.
+  # Reads the existing tab→path SSOT used everywhere else in the system.
+  local projects_conf="${APP_PROJECTS_CONF:-${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}}"
+  if [ -f "$projects_conf" ]; then
+    local lower_tab; lower_tab=$(printf '%s' "$tab_name" | tr 'A-Z' 'a-z')
+    local match
+    match=$(awk -v t="$lower_tab" -F'|' '
+      /^[[:space:]]*#/ {next}
+      NF >= 2 {n=tolower($1); gsub(/^[[:space:]]+|[[:space:]]+$/, "", n); if (n==t) print "1"}
+    ' "$projects_conf")
+    [ -z "$match" ] && return 0   # tab not registered — skip
+  fi
   local log_path="$HOME/.${APP_SLUG}/events.jsonl"
   mkdir -p "$(dirname "$log_path")"
   local done_line next_line tests_line todos_line health_line
