@@ -5,6 +5,7 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 import { useCreateMutation } from "@/hooks/use-create-mutation";
 import type { CreateCommitmentInput } from "@/db/queries/today";
+import { haptic } from "@/lib/haptics";
 
 export function AddCommitmentButton() {
   const [open, setOpen] = useState(false);
@@ -28,6 +29,7 @@ export function AddCommitmentButton() {
       setError("Description is required");
       return;
     }
+    haptic();
     const ok = await create({
       description,
       dueDate: dueDate || undefined,
