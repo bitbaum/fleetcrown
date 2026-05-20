@@ -124,12 +124,23 @@ export function applyEvent(state: GlobalState, event: Event): GlobalState {
       break;
     }
 
-    case "worker.crashed":
+    case "worker.crashed": {
       ps.currentRun = undefined;
-      ps.lastOutcome = "error";
-      ps.recentOutcomes = ["error" as Outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
       ps.lastError = { ts: event.ts, message: event.error };
+      // If this runId was cancelled, the crash is about the cancel attempt
+      // failing (executeCancel emits worker.crashed on sendRawKey throw),
+      // not the run itself. Don't pollute recentOutcomes / lastOutcome with
+      // an "error" signal — the underlying run may still be alive in the
+      // tab and a later worker.finished will record the truth (relabelled
+      // to user_abort via cancelledRunIds). Surface lastError so the user
+      // sees why cancel failed; leave outcomes alone.
+      const wasCancelled = ps.cancelledRunIds?.includes(event.runId ?? "") ?? false;
+      if (!wasCancelled) {
+        ps.lastOutcome = "error";
+        ps.recentOutcomes = ["error" as Outcome, ...ps.recentOutcomes].slice(0, RECENT_OUTCOME_LIMIT);
+      }
       break;
+    }
 
     case "bridge.dispatch":
       // Pre-populate currentRun so the UI reflects a dispatched run
@@ -253,6 +264,40 @@ function selfTest() {
       check: () => {
         const s = applyAll([dispatch("a"), cancel("b")]);
         return s.get("T")?.currentRun?.runId === "a";
+      },
+    },
+    {
+      name: "BUG FIX — worker.crashed from a cancel failure surfaces lastError but does NOT pollute recentOutcomes",
+      check: () => {
+        // User cancels → worker tries sendRawKey → zellij throws → worker
+        // emits worker.crashed. The cancel attempt failed but the actual
+        // run might still be alive. recentOutcomes should stay clean so
+        // confidence isn't dragged down by an unrelated infra failure.
+        const cancelFailCrash: Event = {
+          v: 1, id: "cf1", ts: baseTs, kind: "worker.crashed",
+          project: "T", runId: "a", error: "cancel failed: zellij tab 'T' did not gain focus",
+        };
+        const s = applyAll([dispatch("a"), started("a"), cancel("a"), cancelFailCrash]);
+        const ps = s.get("T")!;
+        return (ps.lastError?.message.startsWith("cancel failed:") ?? false)
+            && ps.recentOutcomes.length === 0
+            && ps.lastOutcome === undefined;
+      },
+    },
+    {
+      name: "worker.crashed from a NON-cancel scenario still records an error outcome",
+      check: () => {
+        // Distinct from the case above — a genuine inject failure (no prior
+        // cancel) is a real run-level error and SHOULD shift confidence.
+        const injectFailCrash: Event = {
+          v: 1, id: "if1", ts: baseTs, kind: "worker.crashed",
+          project: "T", runId: "a", error: "inject failed: tab not found",
+        };
+        const s = applyAll([dispatch("a"), injectFailCrash]);
+        const ps = s.get("T")!;
+        return (ps.lastError?.message.startsWith("inject failed:") ?? false)
+            && ps.recentOutcomes[0] === "error"
+            && ps.lastOutcome === "error";
       },
     },
     {
