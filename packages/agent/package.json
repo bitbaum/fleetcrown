@@ -1,0 +1,15 @@
+{
+  "name": "@cockpit/agent",
+  "version": "0.1.0",
+  "description": "Connect your machine to the Cockpit cloud control plane",
+  "license": "MIT",
+  "bin": {
+    "cockpit-agent": "bin/cockpit-agent.js"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -187,6 +187,10 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 - Validate/clamp input length and ranges at API boundary
 - `runTool` in `lib/tools.ts` must never accept user-derived input
 
+## Cloud vs local
+
+See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run in the browser vs require the local daemon (`npx @cockpit/agent init`, Zellij, agent CLIs).
+
 ## Dev Commands
 
 ```bash

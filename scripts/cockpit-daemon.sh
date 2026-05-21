@@ -353,14 +353,12 @@ execute_switch_agent() {
 
   log "switch_agent → tab=$tab from=${from_agent:-?} to=$to_agent"
 
-  # Step 1: quit the current agent if known and different.
   if [ -n "$from_agent" ] && [ "$from_agent" != "$to_agent" ]; then
     local quit_cmd
     quit_cmd=$(_agent_quit_cmd "$from_agent")
     if [ -n "$quit_cmd" ]; then
       inject_prompt "$tab" "$quit_cmd" 2>/dev/null || true
 
-      # Poll /proc for up to 2s to confirm the process exited cleanly.
       local gone=0 deadline
       deadline=$(( $(date +%s) + 2 ))
       while (( $(date +%s) < deadline )); do
@@ -370,8 +368,6 @@ execute_switch_agent() {
         fi
       done
 
-      # Quit command didn't land — agent stuck on a prompt or permission dialog.
-      # Send Ctrl+C as a harder interrupt and give it 600ms to clean up.
       if [ "$gone" = "0" ]; then
         log "switch_agent: quit didn't land, sending Ctrl+C to $tab"
         send_raw_key_to_tab "$tab" 3 2>/dev/null || true
@@ -380,7 +376,6 @@ execute_switch_agent() {
     fi
   fi
 
-  # Step 2: launch the new agent.
   if inject_prompt "$tab" "$launch_cmd" 2>/dev/null; then
     mark_done "$id" "true"
     log "switch_agent done ✓ ($from_agent → $to_agent)"
@@ -388,6 +383,26 @@ execute_switch_agent() {
     mark_done "$id" "false" "inject launch command failed"
     log "switch_agent failed ✗"
   fi
+}
+
+execute_auto_continue() {
+  local id="$1" tab="$2" enabled="$3"
+  local sentinel="/tmp/${APP_SLUG}-auto-continue-${tab,,}"
+
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN auto_continue → tab=$tab enabled=$enabled"
+    mark_done "$id" "true"
+    return 0
+  fi
+
+  log "auto_continue → tab=$tab enabled=$enabled"
+  if [ "$enabled" = "true" ]; then
+    rm -f "$sentinel" 2>/dev/null || true
+  else
+    echo "off" > "$sentinel"
+  fi
+  mark_done "$id" "true"
+  log "auto_continue done ✓"
 }
 
 execute_transcription() {
@@ -741,6 +756,11 @@ while true; do
       audio_b64=$(echo "$payload" | jq -r '.audio_b64')
       mime_type=$(echo "$payload" | jq -r '.mime_type // "audio/webm"')
       execute_transcription "$id" "$audio_b64" "$mime_type"
+      ;;
+    auto_continue)
+      tab=$(echo "$payload" | jq -r '.tab')
+      enabled=$(echo "$payload" | jq -r '.enabled')
+      execute_auto_continue "$id" "$tab" "$enabled"
       ;;
     *)
       log "unknown command type: $type — marking done"

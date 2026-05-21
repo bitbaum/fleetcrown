@@ -109,6 +109,7 @@ substantive changes.
 
 For orchestration architecture and migration direction, also read:
 
+- `docs/development/cloud-local-workflows.md` — what works in the browser vs on your machine
 - `docs/architecture-first-principles.md`
 - `docs/debt-reduction-roadmap.md`
 - `docs/openclaw-orchestration-plan.md`

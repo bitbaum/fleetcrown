@@ -66,10 +66,11 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               </li>
             </ol>
             <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-              APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
+              npx @{APP_SLUG}/agent init
             </code>
             <p className="text-xs text-text-muted">
-              Until the daemon connects, dispatches are queued and will fire once it pings in.
+              Or: <code className="font-mono">set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh</code>
+              {" "}· Until the daemon connects, dispatches are queued and will fire once it pings in.
             </p>
           </>
         ) : (
@@ -80,10 +81,10 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               Commands will queue until the daemon reconnects. Restart it on your local machine:
             </p>
             <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-              APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
+              set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh
             </code>
             <p className="text-xs text-text-muted">
-              The token is the value of <code className="text-text-tertiary">APP_DAEMON_TOKEN</code> (or legacy <code className="text-text-tertiary">COCKPIT_DAEMON_TOKEN</code>) in your local <code className="text-text-tertiary">.env.local</code>.
+              Config from <code className="font-mono">npx @{APP_SLUG}/agent init</code> or Settings → Agent tokens.
             </p>
           </>
         )}

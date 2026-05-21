@@ -4,11 +4,11 @@ import { getUpcomingSubscriptions } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { format, startOfDay } from "date-fns";
 import { formatMoney } from "@/lib/format";
+import { PrivateZoneDataGate } from "@/components/shared/PrivateZoneDataGate";
 
-export async function SubscriptionsCard() {
+async function SubscriptionsCardInner() {
   const userId = await requirePageUserId();
   const items = await getUpcomingSubscriptions(userId);
-
   if (items.length === 0) return null;
 
   const today = startOfDay(new Date());
@@ -36,5 +36,13 @@ export async function SubscriptionsCard() {
         })}
       </div>
     </Card>
+  );
+}
+
+export async function SubscriptionsCard() {
+  return (
+    <PrivateZoneDataGate label="upcoming bills">
+      <SubscriptionsCardInner />
+    </PrivateZoneDataGate>
   );
 }

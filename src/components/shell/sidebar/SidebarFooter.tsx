@@ -15,7 +15,7 @@ export function SidebarFooter({
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }) {
-  const { unlocked, lock } = usePrivateZone();
+  const { unlocked, lock, configured } = usePrivateZone();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- standard next-themes SSR hydration guard
@@ -39,7 +39,7 @@ export function SidebarFooter({
           ? <PanelLeftOpen className="h-4 w-4" />
           : <><PanelLeftClose className="h-4 w-4 shrink-0" /><span>Collapse</span></>}
       </button>
-      {unlocked && (
+      {configured && unlocked && (
         <button
           onClick={lock}
           className={cn(

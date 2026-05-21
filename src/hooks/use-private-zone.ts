@@ -1,61 +1,33 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { deleteJson } from "@/lib/api/fetch";
 
-const STORAGE_KEY = "pz_unlocked";
-const TTL_MS = 30 * 60 * 1000;
-
-type StoredState = { expiresAt: number };
-
-function readStorage(): boolean {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-    const { expiresAt } = JSON.parse(raw) as StoredState;
-    return Date.now() < expiresAt;
-  } catch {
-    return false;
-  }
-}
-
-function writeStorage() {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ expiresAt: Date.now() + TTL_MS }));
-  } catch {}
-}
-
-function clearStorage() {
-  try {
-    sessionStorage.removeItem(STORAGE_KEY);
-  } catch {}
-}
-
-// Module-level listener set so unlock/lock triggers re-render across all consumers.
-const listeners = new Set<() => void>();
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => { listeners.delete(listener); };
-}
-
-function notify() {
-  listeners.forEach((l) => l());
-}
+type PinStatus = { configured: boolean; unlocked: boolean };
 
 export function usePrivateZone() {
-  // useSyncExternalStore: server snapshot → false (always locked server-side).
-  // Client snapshot reads sessionStorage synchronously — no useEffect needed.
-  const unlocked = useSyncExternalStore(subscribe, readStorage, () => false);
+  const router = useRouter();
+  const [status, setStatus] = useState<PinStatus>({ configured: false, unlocked: true });
 
-  const unlock = useCallback(() => {
-    writeStorage();
-    notify();
+  useEffect(() => {
+    fetch("/api/auth/pin")
+      .then((r) => r.json())
+      .then((d: PinStatus) => setStatus(d))
+      .catch(() => {});
   }, []);
 
-  const lock = useCallback(() => {
-    clearStorage();
-    notify();
-  }, []);
+  const lock = useCallback(async () => {
+    await deleteJson("/api/auth/pin").catch(() => {});
+    setStatus((s) => ({ ...s, unlocked: false }));
+    router.refresh();
+  }, [router]);
 
-  return { unlocked, checking: false, unlock, lock };
+  return {
+    unlocked: !status.configured || status.unlocked,
+    checking: false,
+    unlock: () => router.refresh(),
+    lock,
+    configured: status.configured,
+  };
 }

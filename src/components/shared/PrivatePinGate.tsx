@@ -1,24 +1,40 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { usePrivateZone } from "@/hooks/use-private-zone";
-import { postJson } from "@/lib/api/fetch";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { postJson, deleteJson } from "@/lib/api/fetch";
 
-export function PrivatePinGate({ children }: { children: React.ReactNode }) {
-  const { unlocked, checking, unlock } = usePrivateZone();
+type PinStatus = {
+  configured: boolean;
+  unlocked: boolean;
+};
+
+export function PrivatePinGate({ children }: { children?: React.ReactNode }) {
+  const router = useRouter();
+  const [status, setStatus] = useState<PinStatus | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!checking && !unlocked) {
+    fetch("/api/auth/pin")
+      .then((r) => r.json())
+      .then((d: PinStatus) => setStatus(d))
+      .catch(() => setStatus({ configured: true, unlocked: false }));
+  }, []);
+
+  useEffect(() => {
+    if (status && !status.unlocked) {
       inputRef.current?.focus();
     }
-  }, [checking, unlocked]);
+  }, [status]);
 
-  if (checking) return null;
-  if (unlocked) return <>{children}</>;
+  if (!status) return null;
+
+  if (!status.configured || status.unlocked) {
+    return <>{children}</>;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,9 +43,10 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
     setError("");
     try {
       const res = await postJson("/api/auth/pin", { pin });
-      const data = await res.json() as { ok: boolean; error?: string; unconfigured?: boolean };
+      const data = await res.json() as { ok: boolean; error?: string };
       if (data.ok) {
-        unlock();
+        setStatus({ configured: true, unlocked: true });
+        router.refresh();
       } else {
         setError(data.error ?? "Incorrect PIN");
         setPin("");
@@ -48,7 +65,7 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
         <p className="ui-kicker mb-4">Private Zone</p>
         <h1 className="ui-page-title mb-2">Enter PIN</h1>
         <p className="text-text-secondary mb-6 text-sm">
-          This section is PIN-protected.
+          This section is PIN-protected. Your unlock lasts 30 minutes.
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
@@ -78,4 +95,10 @@ export function PrivatePinGate({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
+}
+
+/** Call from sidebar lock button — clears httpOnly cookie and refreshes RSC tree. */
+export async function lockPrivateZone(router: { refresh: () => void }) {
+  await deleteJson("/api/auth/pin");
+  router.refresh();
 }

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchPeople, createPerson, SORT_MODE, type SortMode, CreatePersonBody } from "@/db/queries/people";
-import { getSessionUserId } from "@/lib/session";
 import { type RelationshipHealth, RELATIONSHIP_HEALTH_VALUES } from "@/lib/constants/people";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
+import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 
 const VALID_SORTS: SortMode[] = Object.values(SORT_MODE);
 
 export async function POST(req: NextRequest) {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
   const dataOrResp = await readJsonBody(req, CreatePersonBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(request: Request) {
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
+
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").slice(0, 200);
   const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "50", 10) || 50, 1), 200);
@@ -36,8 +41,6 @@ export async function GET(request: Request) {
     .map((h) => h.trim())
     .filter((h): h is RelationshipHealth => (RELATIONSHIP_HEALTH_VALUES as readonly string[]).includes(h));
 
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const result = await searchPeople(userId, q, limit, offset, sort, health);
   return NextResponse.json(result);
 }

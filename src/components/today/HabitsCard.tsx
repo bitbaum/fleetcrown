@@ -4,8 +4,9 @@ import { getTodayHabits } from "@/db/queries/habits";
 import { requirePageUserId } from "@/lib/session";
 import Link from "next/link";
 import { HabitsList } from "./HabitsList";
+import { PrivateZoneDataGate } from "@/components/shared/PrivateZoneDataGate";
 
-export async function HabitsCard() {
+async function HabitsCardContent() {
   const userId = await requirePageUserId();
   const habits = await getTodayHabits(userId);
 
@@ -13,7 +14,7 @@ export async function HabitsCard() {
   const allDone = habits.length > 0 && done === habits.length;
 
   return (
-    <Card id="habits">
+    <>
       <CardHeader
         icon={Repeat2}
         title="Habits"
@@ -31,6 +32,16 @@ export async function HabitsCard() {
           </Link>
         </div>
       )}
+    </>
+  );
+}
+
+export async function HabitsCard() {
+  return (
+    <Card id="habits">
+      <PrivateZoneDataGate label="habits">
+        <HabitsCardContent />
+      </PrivateZoneDataGate>
     </Card>
   );
 }

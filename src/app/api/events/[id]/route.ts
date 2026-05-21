@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { patchEvent, deleteEvent, PatchEventBody } from "@/db/queries/events";
-import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
+import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
@@ -24,8 +25,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 

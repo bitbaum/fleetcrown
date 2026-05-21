@@ -6,7 +6,7 @@ import { users } from "./users";
 export const pendingCommands = pgTable("pending_commands", {
   id:          uuid("id").primaryKey().defaultRandom(),
   userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  type:        text("type").notNull(),           // "inject" | "focus_tab" | "launch_agent" | "switch_agent"
+  type:        text("type").notNull(),           // "inject" | "focus_tab" | "switch_agent" | "transcribe" | "auto_continue"
   payload:     jsonb("payload").notNull(),        // command-specific fields
   createdAt:   timestamp("created_at",  { withTimezone: true }).defaultNow().notNull(),
   claimedAt:   timestamp("claimed_at",  { withTimezone: true }),
@@ -43,4 +43,9 @@ export type SwitchAgentPayload = {
   toAgent: string;
   fromAgent?: string;
   model?: string;
+};
+
+export type AutoContinuePayload = {
+  tab: string;
+  enabled: boolean;
 };
