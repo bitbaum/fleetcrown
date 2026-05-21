@@ -12,6 +12,29 @@ import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
 import { getDefaultUser, getUserById, getUserByEmail, updateUser } from "@/db/queries/users";
 import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
+import { logDebug } from "@/db/queries/debug-logs";
+
+/**
+ * Auth.js wraps every authorize()→null return in a generic CredentialsSignin
+ * error whose message is just "Read more at https://errors.authjs.dev/...",
+ * which makes debug_logs forensics worthless when a user can't sign in.
+ * This helper records the actual failure reason (provider + reason + identifier
+ * minus password) BEFORE returning null, so the operator can tell apart
+ * brute-force vs forgotten-password vs missing-account at a glance.
+ */
+function logAuthReject(
+  provider: "local" | "email-password" | "user-password",
+  reason: "missing-input" | "user-not-found" | "no-password-hash" | "wrong-password",
+  identifier?: string | null,
+): null {
+  logDebug({
+    source: "auth.authorize",
+    level: "warn",
+    message: `credentials rejected: ${provider} / ${reason}`,
+    meta: { provider, reason, identifier: identifier ?? null },
+  });
+  return null;
+}
 
 declare module "next-auth" {
   interface Session {
@@ -127,10 +150,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const supplied = credentials.password as string | undefined;
-        if (!supplied) return null;
+        if (!supplied) return logAuthReject("local", "missing-input");
 
         const user = await getDefaultUser();
-        if (!user) return null;
+        if (!user) return logAuthReject("local", "user-not-found");
 
         // Env var takes priority (quick local dev). Falls back to DB hash (packaged installs).
         const envPassword = process.env.LOCAL_AUTH_PASSWORD;
@@ -140,7 +163,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? await verifyPassword(supplied, user.passwordHash)
             : false;
 
-        if (!ok) return null;
+        if (!ok) return logAuthReject("local", envPassword || user.passwordHash ? "wrong-password" : "no-password-hash", user.email);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
       },
     }),
@@ -155,13 +178,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         const email    = credentials.email    as string | undefined;
         const password = credentials.password as string | undefined;
-        if (!email || !password) return null;
+        if (!email || !password) return logAuthReject("email-password", "missing-input", email);
 
         const user = await getUserByEmail(email);
-        if (!user?.passwordHash) return null;
+        if (!user) return logAuthReject("email-password", "user-not-found", email);
+        if (!user.passwordHash) return logAuthReject("email-password", "no-password-hash", email);
 
         const ok = await verifyPassword(password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) return logAuthReject("email-password", "wrong-password", email);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
       },
     }),
@@ -176,13 +200,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         const userId   = credentials.userId   as string | undefined;
         const password = credentials.password as string | undefined;
-        if (!userId || !password) return null;
+        if (!userId || !password) return logAuthReject("user-password", "missing-input", userId);
 
         const user = await getUserById(userId);
-        if (!user?.passwordHash) return null;
+        if (!user) return logAuthReject("user-password", "user-not-found", userId);
+        if (!user.passwordHash) return logAuthReject("user-password", "no-password-hash", userId);
 
         const ok = await verifyPassword(password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) return logAuthReject("user-password", "wrong-password", userId);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
       },
     }),
