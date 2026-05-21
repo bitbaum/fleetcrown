@@ -186,6 +186,7 @@ export function ProjectCard({
           <IntentButtonPanel
             project={project}
             currentAdapter={currentAdapter}
+            runtimeAvailable={runtimeAvailable}
             isRunning={display.isRunning}
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}

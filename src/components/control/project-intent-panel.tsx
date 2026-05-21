@@ -38,6 +38,7 @@ export function IntentButtonPanel({
   onSendText,
   onCustomChange,
   onCustomFocusChange,
+  runtimeAvailable = true,
 }: {
   project: ProjectState;
   currentAdapter: string;
@@ -66,6 +67,9 @@ export function IntentButtonPanel({
   onSendText?: (text: string) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
+  /** False on cockpitapp (cloud) — gates buttons whose endpoints require a
+   *  local zellij/CLI runtime and would 503 silently otherwise. */
+  runtimeAvailable?: boolean;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
@@ -184,7 +188,11 @@ export function IntentButtonPanel({
                   {sending === id ? "…" : label}
                 </button>
               ))}
-              {currentAdapter === "claude" && (
+              {/* Hide on cloud — /api/project/clear-context calls
+                  injectIntoTab() which requires the local zellij binary
+                  and 503s otherwise; the click handler ignored failure
+                  so cloud users saw a brief spinner with no feedback. */}
+              {currentAdapter === "claude" && runtimeAvailable && (
                 <button
                   onClick={async () => {
                     setClearingContext(true);

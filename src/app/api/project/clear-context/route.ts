@@ -5,6 +5,7 @@ import { injectIntoTab } from "@/lib/zellij";
 import { auth } from "@/auth";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { isRuntimeAvailable } from "@/lib/runtime";
 
 const ClearBody = z.object({
   tab: z.string().min(1).max(80),
@@ -13,6 +14,14 @@ const ClearBody = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Cloud mode has no zellij and no agent panes to clear. Before this guard
+  // the call landed at injectIntoTab which threw a generic "zellij not found"
+  // 500 that the UI didn't surface — silent no-op for the user. Returning
+  // a clear 503 lets the caller (and any future caller) react properly.
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ ok: false, reason: "runtime_offline", error: "Clear context requires the local daemon" }, { status: 503 });
+  }
 
   const dataOrResp = await readJsonBody(req, ClearBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
