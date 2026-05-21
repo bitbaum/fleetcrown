@@ -61,7 +61,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               </li>
               <li>
                 Mint a daemon token in{" "}
-                <Link href="/settings#tokens" className="text-accent-text underline-offset-2 hover:underline">Settings → Agent tokens</Link>
+                <Link href="/settings#agent" className="text-accent-text underline-offset-2 hover:underline">Settings → Agent tokens</Link>
                 {" "}and run:
               </li>
             </ol>

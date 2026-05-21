@@ -45,8 +45,33 @@ const TABS = [
 
 type TabId = typeof TABS[number]["id"];
 
+// URL-hash aliases for incoming deep links — keeps existing URLs working
+// even if the tab id changes. Direct tab id matches are auto-included.
+const HASH_TO_TAB: Record<string, TabId> = {
+  tokens: "agent",       // /control's DaemonStatusBanner deep-links to #tokens
+  "agent-token": "agent",
+  "agent-tokens": "agent",
+};
+
+// Resolve the initial tab from window.location.hash. Pure function so it can
+// run inside a useState lazy initializer — avoids the cascading-render lint
+// hit from a post-mount setState in useEffect.
+function resolveInitialTab(): TabId {
+  if (typeof window === "undefined") return "profile";
+  const raw = window.location.hash.slice(1).toLowerCase();
+  if (!raw) return "profile";
+  const directMatch = TABS.find((t) => t.id === raw);
+  if (directMatch) return directMatch.id;
+  return HASH_TO_TAB[raw] ?? "profile";
+}
+
 export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectLimit, invitations }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  // Lazy initializer reads the URL hash once at first render so deep links
+  // like /settings#agent or /settings#tokens (from DaemonStatusBanner's
+  // onboarding link) open the right tab. Without this, the banner landed
+  // the user on Profile and they had to discover the Agent tab themselves
+  // — a silent dead-end in the new-user funnel.
+  const [activeTab, setActiveTab] = useState<TabId>(resolveInitialTab);
 
   return (
     <div>
