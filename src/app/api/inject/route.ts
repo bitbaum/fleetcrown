@@ -25,7 +25,30 @@ export async function POST(req: NextRequest) {
   const eventAdapter: AgentOption = adapter ?? "claude";
 
   const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) {
+    // Session-expiry / unauthenticated path. This is the most likely
+    // server-side root cause of the "I sent something but it isn't here"
+    // mobile incident — a long-lived mobile tab whose JWT lapsed, the
+    // client throws and surfaces the inline error (post-9c2525c), and
+    // forensics need the server-side counterpart to correlate. Body has
+    // already parsed at this point, so a 401 here is a real user attempt
+    // (random bots fail readJsonBody → 400 above, never reach this line).
+    logDebug({
+      source: "api/inject",
+      level: "warn",
+      message: "Unauthenticated inject attempt — likely session expiry",
+      meta: {
+        tab,
+        adapter: eventAdapter,
+        hasPromptKey: !!promptKey,
+        hasCustomPrompt: !!customPrompt,
+        customPromptLen: customPrompt?.length ?? 0,
+        userAgent: req.headers.get("user-agent")?.slice(0, 200) ?? null,
+        referer: req.headers.get("referer") ?? null,
+      },
+    });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // Resolve canonical tab name and project path — own projects first, then org team projects.
   const [dbProjects, dbTeamProjects] = await Promise.all([
