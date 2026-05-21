@@ -710,12 +710,23 @@
   .ui-chip-filter-active {
     @apply rounded-xl border border-accent-primary/30 bg-accent-muted px-4 py-3 text-sm font-medium text-text-primary transition-colors;
   }
-  /* Rounded-pill toggle — agent/health/category selector chips */
+  /* Rounded-pill toggle — agent/health/category selector chips.
+     inline-flex + min-h-11 sm:min-h-0 enforces a 44px mobile tap target
+     (WCAG 2.5.5 / iOS HIG) while staying compact on desktop. */
   .ui-chip-toggle {
-    @apply rounded-full border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-border-subtle px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40;
   }
   .ui-chip-toggle-active {
-    @apply rounded-full border border-accent-primary/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-text-primary transition-colors;
+    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-accent-primary/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-text-primary transition-colors;
+  }
+  /* Compact variant — tighter padding + text-xs for dense pickers like
+     the per-project LLM model selector (sonnet/haiku/opus). Same
+     mobile-tap-target trick keeps it usable on touch. */
+  .ui-chip-toggle-compact {
+    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-border-subtle px-2.5 py-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
+  }
+  .ui-chip-toggle-compact-active {
+    @apply inline-flex items-center min-h-11 sm:min-h-0 rounded-full border border-accent-primary bg-accent-muted px-2.5 py-1 text-xs text-text-primary transition-colors;
   }
   /* Inline category/scope chip — shape only; caller adds color classes */
   .ui-chip {

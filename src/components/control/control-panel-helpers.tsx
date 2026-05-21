@@ -3,7 +3,6 @@
 import React from "react";
 import { Bot, ChevronUp, ChevronDown } from "lucide-react";
 import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
-import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlData } from "@/lib/control-types";
 
@@ -158,12 +157,7 @@ export function BrainConfigPanel({
                 key={option}
                 type="button"
                 onClick={() => onModelChange(option)}
-                className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                  model === option
-                    ? "border-accent-primary bg-accent-muted text-text-primary"
-                    : "border-border-subtle text-text-tertiary hover:text-text-secondary",
-                )}
+                className={model === option ? "ui-chip-toggle-compact-active" : "ui-chip-toggle-compact"}
               >
                 {option}
               </button>

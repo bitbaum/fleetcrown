@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, X, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Modal } from "@/components/ui/modal";
 import type { ControlData } from "@/lib/control-types";
 
@@ -163,12 +162,7 @@ export function LaunchTabModal({
                   key={option}
                   type="button"
                   onClick={() => onModelChange(option)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                    selectedModel === option
-                      ? "border-accent-primary bg-accent-muted text-text-primary"
-                      : "border-border-subtle text-text-tertiary hover:text-text-secondary",
-                  )}
+                  className={selectedModel === option ? "ui-chip-toggle-compact-active" : "ui-chip-toggle-compact"}
                 >
                   {option}
                 </button>
