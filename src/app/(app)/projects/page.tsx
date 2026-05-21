@@ -8,6 +8,7 @@ import { ProjectGrid } from "@/components/projects/ProjectGrid";
 import { NewProjectButton } from "@/components/projects/NewProjectButton";
 import { requirePageUserId } from "@/lib/session";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
+import { AutoRefresh } from "@/components/shared/AutoRefresh";
 
 export const metadata = { title: "Projects" };
 
@@ -29,6 +30,7 @@ export default async function ProjectsPage() {
             <ProjectGrid projects={projects} />
           </Suspense>
         </Card>
+        <AutoRefresh intervalMs={60_000} />
       </PageLayout>
     </PullToRefresh>
   );

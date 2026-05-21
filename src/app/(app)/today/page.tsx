@@ -23,6 +23,7 @@ import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { PLAN_DAY_PROMPT, WRAP_UP_PROMPT } from "@/lib/constants/today";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
+import { AutoRefresh } from "@/components/shared/AutoRefresh";
 
 export const metadata = { title: "Today" };
 
@@ -122,6 +123,7 @@ export default async function TodayPage() {
           <SubscriptionsCard />
         </Suspense>
       </div>
+      <AutoRefresh intervalMs={60_000} />
     </div>
     </PullToRefresh>
   );

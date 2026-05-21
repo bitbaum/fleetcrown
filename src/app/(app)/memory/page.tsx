@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/constants/statuses";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
+import { AutoRefresh } from "@/components/shared/AutoRefresh";
 
 export const metadata = { title: "Memory" };
 
@@ -141,6 +142,7 @@ export default async function MemoryPage() {
           })}
         </div>
       </Card>
+      <AutoRefresh intervalMs={60_000} />
     </PageLayout>
     </PullToRefresh>
   );
