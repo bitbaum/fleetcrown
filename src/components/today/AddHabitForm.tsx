@@ -86,11 +86,7 @@ export function AddHabitForm({
   return (
     <button
       onClick={() => setOpen(true)}
-      className={
-        emptyState
-          ? "flex items-center gap-1.5 text-xs text-text-muted hover:text-status-positive transition-colors"
-          : "flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-1"
-      }
+      className={emptyState ? "ui-btn-add-success" : "ui-btn-add-success mt-1"}
     >
       <Plus className="h-3.5 w-3.5" />
       {emptyState ? "Add first habit" : "Add habit"}

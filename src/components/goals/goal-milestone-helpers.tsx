@@ -39,7 +39,7 @@ export function AddMilestoneInline({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-1"
+        className="ui-btn-add-success mt-1"
       >
         <Plus className="h-3 w-3" /> Add milestone
       </button>

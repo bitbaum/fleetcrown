@@ -663,9 +663,16 @@
   .ui-tab-badge-active {
     @apply bg-status-positive-subtle text-status-positive;
   }
-  /* Text + icon "add" link button */
+  /* Text + icon "add" link button.
+     min-h-11 (44px) on mobile gives a real WCAG 2.5.5 tap target;
+     sm:min-h-0 collapses to natural line height on desktop where hover is reliable. */
   .ui-btn-add {
-    @apply flex items-center gap-1.5 text-xs text-text-muted transition-colors hover:text-accent-text;
+    @apply flex items-center gap-1.5 min-h-11 sm:min-h-0 text-xs text-text-muted transition-colors hover:text-accent-text;
+  }
+  /* Same shape, but achievement-flavored sites (habits, commitments, milestones, goals)
+     hover green to read as "create something good" rather than generic accent. */
+  .ui-btn-add-success {
+    @apply flex items-center gap-1.5 min-h-11 sm:min-h-0 text-xs text-text-tertiary transition-colors hover:text-status-positive;
   }
   /* Full-width accent submit button (modal forms) */
   .ui-btn-submit {

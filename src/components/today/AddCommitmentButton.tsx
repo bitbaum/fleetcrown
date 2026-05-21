@@ -40,7 +40,7 @@ export function AddCommitmentButton() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors mt-2"
+        className="ui-btn-add-success mt-2"
       >
         <Plus className="h-3.5 w-3.5" /> Add commitment
       </button>

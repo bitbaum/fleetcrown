@@ -92,7 +92,7 @@ function NewJobForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-status-positive transition-colors"
+        className="ui-btn-add-success"
       >
         <Plus className="h-3.5 w-3.5" /> New autopilot job for this project
       </button>
