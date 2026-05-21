@@ -156,14 +156,14 @@ export function ControlPanel() {
       <button
         onClick={toggleSleepMode}
         title={sleepMode ? "Sleep mode on — countdown is 0; any keypress wakes" : "Sleep mode — auto-fire every ready banner with no countdown"}
-        className={cn("ui-icon-btn rounded p-0.5 transition-colors hover:text-text-primary", sleepMode && "text-accent-text")}
+        className={cn("ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary", sleepMode && "text-accent-text")}
       >
         <Moon className={cn("h-3.5 w-3.5", sleepMode && "fill-current")} />
       </button>
       <button
         onClick={() => setViewMode((v) => v === "full" ? "commander" : "full")}
         title={viewMode === "full" ? "Switch to commander view" : "Switch to full view"}
-        className={cn("ui-icon-btn rounded p-0.5 transition-colors hover:text-text-primary", viewMode === "commander" && "text-accent-text")}
+        className={cn("ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary", viewMode === "commander" && "text-accent-text")}
       >
         {viewMode === "full" ? <LayoutList className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
       </button>
@@ -171,14 +171,14 @@ export function ControlPanel() {
         onClick={() => refresh(true)}
         disabled={refreshing}
         title="Refresh"
-        className="ui-icon-btn rounded p-0.5 transition-colors hover:text-text-primary disabled:opacity-50"
+        className="ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary disabled:opacity-50"
       >
         <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
       </button>
       <button
         onClick={() => setBootstrapOpen(true)}
         title="Bootstrap new project"
-        className="inline-flex min-h-11 sm:min-h-0 items-center gap-1 transition-colors hover:text-text-primary"
+        className="inline-flex min-h-11 lg:min-h-0 items-center gap-1 transition-colors hover:text-text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">New</span>

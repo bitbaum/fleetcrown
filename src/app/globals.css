@@ -394,6 +394,15 @@
   .ui-icon-btn {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center;
   }
+  /* Touch-friendly variant — keeps the 44×44 tap target through tablet
+     widths (iPad portrait 768×1024 has no mouse). Only collapses at lg+
+     (≥1024px) where a pointer is the dominant input. Use for toolbar
+     icons that sit in dense header strips on /control and similar
+     command surfaces, where the regular ui-icon-btn collapses to 18×18
+     on sm+ and becomes hard to tap. */
+  .ui-icon-btn-touch {
+    @apply inline-flex min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 items-center justify-center;
+  }
   .ui-public-pricing-card {
     @apply rounded-2xl border border-white/[0.07] bg-white/[0.03] p-7 text-left;
   }
