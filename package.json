@@ -13,6 +13,8 @@
     "check:design": "bash scripts/check-design-system.sh",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
+    "wait:vercel": "bash scripts/wait-for-vercel.sh",
+    "ship": "git push origin main && bash scripts/wait-for-vercel.sh",
     "prepare": "husky"
   },
   "dependencies": {
