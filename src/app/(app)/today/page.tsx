@@ -61,7 +61,7 @@ export default async function TodayPage() {
             <SummaryBar />
           </div>
         </Suspense>
-        <div className="mt-3 ui-quick-actions-row">
+        <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
           {isEvening ? (
             <IvyDispatchButton
               prompt={WRAP_UP_PROMPT}

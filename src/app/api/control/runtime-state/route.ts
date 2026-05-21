@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import { upsertProjectState, getProjectStatesByUserId } from "@/db/queries/project-states";
+import { upsertRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { stateFile } from "@/lib/agent-config";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
@@ -42,11 +43,16 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (Array.isArray(body.openTabs)) {
+    const openTabs = body.openTabs.filter((tab): tab is string => typeof tab === "string" && tab.trim().length > 0);
+    await upsertRuntimeSnapshot(userId, openTabs).catch((err) => console.error("[runtime-state] openTabs write failed:", err));
   }
 
   if (!Array.isArray(body.projects)) {

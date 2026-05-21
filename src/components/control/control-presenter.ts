@@ -84,6 +84,103 @@ export type AttentionItem = {
   reason: string;
 };
 
+export type LiveTabRow = {
+  tabName: string;
+  project: ProjectState | null;
+  agentLabel: string | null;
+  stateLabel: ProjectDisplayState["stateLabel"] | "Open";
+  stateTagClass: string;
+  activity: string;
+  isWorking: boolean;
+  isWaiting: boolean;
+  registered: boolean;
+};
+
+type LiveTabRankLabel = LiveTabRow["stateLabel"];
+
+const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
+  Working: 0,
+  Ready: 1,
+  Waiting: 1,
+  Closing: 2,
+  Closed: 3,
+  Idle: 4,
+  Open: 5,
+};
+
+/** Map an open Zellij tab name back to a registered fleet project. */
+export function findProjectForOpenTab(openTab: string, projects: ProjectState[]): ProjectState | null {
+  const lower = openTab.toLowerCase();
+  const exact = projects.find(
+    (p) => p.tab.toLowerCase() === lower || p.liveTab.toLowerCase() === lower,
+  );
+  if (exact) return exact;
+
+  const prefix = projects.find((p) => {
+    const base = p.tab.toLowerCase();
+    return lower === base || lower.startsWith(`${base} `) || lower.startsWith(`${base}-`);
+  });
+  return prefix ?? null;
+}
+
+export function getTabActivityText(
+  project: ProjectState | null,
+  display: ProjectDisplayState | null,
+): string {
+  if (!project) return "Tab open — not registered in fleet";
+  if (display?.isRunning && project.currentPrompt?.label) {
+    return project.currentPrompt.label;
+  }
+  if ((display?.isReady || display?.isOrchestrationReady) && project.session?.next?.trim()) {
+    return project.session.next.trim();
+  }
+  if (display?.isReady || display?.isOrchestrationReady) {
+    return "Waiting for next prompt";
+  }
+  if (project.session?.next?.trim()) return project.session.next.trim();
+  if (project.session?.done?.trim()) {
+    return project.session.done.trim().slice(0, 140);
+  }
+  if (project.agentRunning) return "Agent session open";
+  return "Idle — no active task";
+}
+
+export function buildLiveTabRows(
+  zellijTabs: string[],
+  projects: ProjectState[],
+  nowS: number,
+): LiveTabRow[] {
+  const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
+  return uniqueTabs
+    .map((tabName) => {
+      const project = findProjectForOpenTab(tabName, projects);
+      const display = project ? getProjectDisplayState(project, uniqueTabs, nowS) : null;
+      const agentLabel = project?.activeAgents.length
+        ? formatAgentRuntimeLabel(project)
+        : project?.agentPref
+          ? project.agentPref[0]?.toUpperCase() + project.agentPref.slice(1)
+          : null;
+      const stateLabel: LiveTabRow["stateLabel"] = display?.stateLabel ?? "Open";
+      const stateTagClass = display?.stateTagClass ?? "ui-tag ui-tag-neutral";
+      return {
+        tabName,
+        project,
+        agentLabel: agentLabel || null,
+        stateLabel,
+        stateTagClass,
+        activity: getTabActivityText(project, display),
+        isWorking: display?.isRunning ?? false,
+        isWaiting: display?.isReady || display?.isOrchestrationReady || false,
+        registered: project != null,
+      } satisfies LiveTabRow;
+    })
+    .sort((a, b) => {
+      const rankDelta = LIVE_TAB_RANK[a.stateLabel] - LIVE_TAB_RANK[b.stateLabel];
+      if (rankDelta !== 0) return rankDelta;
+      return a.tabName.localeCompare(b.tabName);
+    });
+}
+
 export type ControlPageState = {
   activeProjects: ProjectState[];
   idleProjects: ProjectState[];

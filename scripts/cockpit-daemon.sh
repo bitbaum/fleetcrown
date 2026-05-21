@@ -661,7 +661,7 @@ _build_state_json() {
 
   done < "$CONF_FILE"
 
-  echo "{\"projects\":$projects_arr}"
+  echo "{\"projects\":$projects_arr,\"openTabs\":$(printf '%s\n' "$all_open_tabs" | sed '/^[[:space:]]*$/d' | sort -fu | jq -R . | jq -s . 2>/dev/null || echo '[]')}"
 }
 
 # Push the current runtime state to the API immediately.

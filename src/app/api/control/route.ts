@@ -30,6 +30,7 @@ import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands } from "@/db/queries/pending-commands";
+import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta, ActivityItem };
@@ -52,16 +53,19 @@ let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
 async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
-  const [gitMap, zellijTabsLocal, dbStates] = await Promise.all([
+  const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshot] = await Promise.all([
     fetchAllGitStates(dirs),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
     isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => { console.error("[control/slowData] projectStates failed:", e); return []; }),
+    isRuntimeAvailable() ? Promise.resolve(null) : getRuntimeSnapshot(userId).catch((e) => { console.error("[control/slowData] runtimeSnapshot failed:", e); return null; }),
   ]);
-  // On Vercel, zellijTabs comes from the daemon-pushed tabOpen field in project_states.
-  // Locally, getZellijTabs() reads from the live Zellij process.
+  // Locally: live Zellij query. On cloud: daemon-pushed openTabs (full session list),
+  // falling back to per-project tabOpen flags from project_states.
   const zellijTabs = isRuntimeAvailable()
     ? zellijTabsLocal
-    : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName);
+    : (runtimeSnapshot?.openTabs?.length
+      ? runtimeSnapshot.openTabs
+      : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName));
   return { gitMap, zellijTabs, dirs, builtAt: Date.now() };
 }
 

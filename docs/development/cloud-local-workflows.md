@@ -3,7 +3,7 @@
 ---
 created_date: 2026-05-21
 last_modified_date: 2026-05-21
-last_modified_summary: Initial matrix documenting which Cockpit workflows run in the browser-only cloud plane vs which require a local daemon, agent CLIs, and Zellij.
+last_modified_summary: Document runtime_snapshots openTabs push for cloud Live Zellij panel; note Control fleet-first layout.
 ---
 
 Cockpit is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -63,6 +63,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Workflow | Local dependency |
 |----------|------------------|
 | Agent dispatch (Control) | Daemon + Zellij + agent CLI |
+| Live Zellij tab list on Control (cloud) | Daemon pushes `openTabs` → `runtime_snapshots` table |
 | Claude orchestration (cloud queues; daemon injects) | Same |
 | Codex / Gemini / OpenClaw orchestration | Local runtime only (503 in cloud) |
 | Bootstrap with AI, AI brief | Local `claude` CLI |
