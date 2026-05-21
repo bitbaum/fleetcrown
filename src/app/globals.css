@@ -625,9 +625,11 @@
   .ui-btn-chip {
     @apply inline-flex items-center justify-center gap-2 rounded-xl border border-border-default bg-surface-overlay px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
   }
-  /* Inline-edit cancel/close — rounded (no radius), text-only hover */
+  /* Inline-edit cancel/close — paired next to ui-btn-confirm-icon in
+     edit rows; lifted to 44px tall on mobile so both buttons in the
+     pair are equally thumb-sized. */
   .ui-btn-inline-cancel {
-    @apply shrink-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center justify-center shrink-0 min-h-11 sm:min-h-0 rounded p-1.5 text-text-muted transition-colors hover:text-text-secondary;
   }
   /* Small inline text cancel link (no bg, no border, px-1 spacing) */
   .ui-btn-text-cancel {
@@ -944,8 +946,15 @@
   .ui-btn-confirm-sm:hover {
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
+  /* Icon-only confirm — only height gets the 44px mobile tap target,
+     not width, because these buttons sit in inline-edit flex rows
+     (HabitRow, GoalCard, AddHabitForm, project-overview-helpers, etc.)
+     where adding min-w-11 would squeeze the adjacent text input below
+     readability on a 390px viewport. The 44px-tall row makes the whole
+     control strip vertically thumb-sized; the narrow icon width is fine
+     when the height is right. */
   .ui-btn-confirm-icon {
-    @apply inline-flex items-center justify-center rounded-lg p-1.5 transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center min-h-11 sm:min-h-0 rounded-lg p-1.5 transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
