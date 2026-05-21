@@ -1,0 +1,103 @@
+name: Vercel Deploy
+
+# Watches the Vercel production deploy triggered by a push to main and
+# fails the workflow if it ends in Error/Canceled — so a bad deploy
+# surfaces as a red check in the GitHub commit UI instead of sitting
+# silently until someone runs `vercel ls`.
+#
+# Setup (one-time): add three repo secrets via Settings → Secrets:
+#   VERCEL_TOKEN        — personal token from vercel.com/account/tokens
+#   VERCEL_PROJECT_ID   — prj_… (get with `vercel project ls`)
+#   VERCEL_ORG_ID       — team_… (vercel.com/teams)
+#
+# Without those, the job logs a notice and exits cleanly — never breaks CI.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+    steps:
+      - name: Check secrets configured
+        id: check
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::notice::VERCEL_TOKEN and/or VERCEL_PROJECT_ID secrets not configured — skipping deploy watch. Set them in repo Settings → Secrets to enable."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Watch Vercel deploy for this commit
+        if: steps.check.outputs.configured == 'true'
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -u
+          PROJ="${VERCEL_PROJECT_ID}"
+          TEAM_PARAM=""
+          if [ -n "${VERCEL_ORG_ID:-}" ]; then
+            TEAM_PARAM="&teamId=${VERCEL_ORG_ID}"
+          fi
+
+          # Poll up to 8 minutes — Vercel typically takes 60-120s for a build.
+          DEADLINE=$(( $(date +%s) + 480 ))
+          INTERVAL=10
+          PREV=""
+
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            # Most recent production deployment for the linked project.
+            RESP=$(curl -sf -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              "https://api.vercel.com/v6/deployments?limit=1&projectId=${PROJ}&target=production${TEAM_PARAM}" \
+              || echo '{}')
+
+            STATE=$(jq -r '.deployments[0].state // ""' <<<"$RESP")
+            SHA=$(jq -r '.deployments[0].meta.githubCommitSha // ""' <<<"$RESP")
+            URL=$(jq -r '.deployments[0].url // ""' <<<"$RESP")
+            URL="https://${URL}"
+
+            # Wait for Vercel to register a deployment for THIS commit. The
+            # first ~30s after push the API still returns the previous deploy.
+            if [ -n "$SHA" ] && [ "$SHA" != "$COMMIT_SHA" ]; then
+              if [ "$PREV" != "waiting-for-deploy" ]; then
+                echo "Waiting for Vercel to register deploy for ${COMMIT_SHA:0:7} (currently showing ${SHA:0:7})…"
+                PREV="waiting-for-deploy"
+              fi
+              sleep "$INTERVAL"
+              continue
+            fi
+
+            MSG="state=${STATE} sha=${SHA:0:7} url=${URL}"
+            if [ "$MSG" != "$PREV" ]; then
+              echo "[$(date -u +%H:%M:%S)] ${MSG}"
+              PREV="$MSG"
+            fi
+
+            case "$STATE" in
+              READY)
+                echo "::notice::Vercel deploy succeeded — ${URL}"
+                exit 0
+                ;;
+              ERROR|CANCELED)
+                echo "::error::Vercel deploy ${STATE} — ${URL}"
+                echo "Inspect logs with: vercel inspect ${URL} --logs"
+                exit 1
+                ;;
+            esac
+
+            sleep "$INTERVAL"
+          done
+
+          echo "::error::Timed out after 8 minutes waiting for deploy to finish"
+          exit 2
