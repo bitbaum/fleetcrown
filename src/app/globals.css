@@ -608,15 +608,18 @@
   }
   .ui-input-inline:focus { @apply border-border-strong; }
 
-  /* Buttons */
+  /* Buttons.
+     min-h-11 sm:min-h-0 gives a real 44px tap target on mobile (WCAG 2.5.5 /
+     iOS HIG) while keeping the desktop py-2 (≈36px) compact look. Same trick
+     already used by ui-btn-add, ui-chip-toggle, ui-link-subtle. */
   .ui-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-text-inverted transition-colors hover:opacity-90 active:opacity-80 disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-text-inverted transition-colors hover:opacity-90 active:opacity-80 disabled:opacity-40;
   }
   .ui-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
   }
   .ui-btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-2 text-sm text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary disabled:opacity-40;
   }
   /* Small overlay button — card action chips (e.g. PersonCard quick-log) */
   .ui-btn-chip {
