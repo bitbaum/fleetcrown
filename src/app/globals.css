@@ -921,9 +921,13 @@
     border: 1px solid color-mix(in oklch, var(--status-positive) 20%, transparent);
   }
 
-  /* Confirm/destructive action buttons */
+  /* Confirm/destructive action buttons.
+     min-h-11 sm:min-h-0 gives a 44px mobile tap target while keeping the
+     compact py-1.5 desktop look. Icon-only sibling (ui-btn-confirm-icon)
+     is intentionally not lifted — adding min-w-11 there would push adjacent
+     inputs in inline-edit rows; track separately. */
   .ui-btn-confirm {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
@@ -932,7 +936,7 @@
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
   .ui-btn-confirm-sm {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-1.5 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40;
     color: var(--status-positive);
     background-color: var(--status-positive-subtle);
     border: 1px solid color-mix(in oklch, var(--status-positive) 25%, transparent);
@@ -950,7 +954,7 @@
     background-color: color-mix(in oklch, var(--status-positive) 18%, transparent);
   }
   .ui-btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-40;
     color: var(--status-negative);
     background-color: var(--status-negative-subtle);
     border: 1px solid color-mix(in oklch, var(--status-negative) 25%, transparent);
