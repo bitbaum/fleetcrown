@@ -23,7 +23,7 @@ export type NavItem = {
   href: string;
   icon: LucideIcon;
   active: boolean;
-  /** Show in the mobile bottom tab bar (max 5 for readability) */
+  /** Show in the mobile bottom tab bar (3 routes + Ask Ivy + More) */
   mobile: boolean;
 };
 
@@ -31,8 +31,8 @@ export const NAV_ITEMS: NavItem[] = [
   { id: "today",    label: "Today",    description: "Daily overview & action queue",    href: "/today",    icon: Sun,          active: true,  mobile: true  },
   { id: "control",  label: "Control",  description: "Dispatch agents across projects",  href: "/control",  icon: Terminal,     active: true,  mobile: true  },
   { id: "projects", label: "Projects", description: "Repo health & project context",    href: "/projects", icon: FolderKanban, active: true,  mobile: true  },
-  { id: "goals",    label: "Goals",    description: "Active goals & milestones",         href: "/goals",    icon: Target,       active: true,  mobile: true  },
-  { id: "people",   label: "People",   description: "Social graph & contact health",    href: "/people",   icon: Users,        active: true,  mobile: true  },
+  { id: "goals",    label: "Goals",    description: "Active goals & milestones",         href: "/goals",    icon: Target,       active: true,  mobile: false },
+  { id: "people",   label: "People",   description: "Social graph & contact health",    href: "/people",   icon: Users,        active: true,  mobile: false },
   { id: "habits",   label: "Habits",   description: "Daily streaks & 30-day heatmap",   href: "/habits",   icon: Repeat2,      active: true,  mobile: false },
   { id: "events",   label: "Events",   description: "Deadlines & opportunities",         href: "/events",   icon: Calendar,     active: true,  mobile: false },
   { id: "money",    label: "Money",    description: "Subscriptions & monthly burn",      href: "/money",    icon: Wallet,       active: true,  mobile: false },

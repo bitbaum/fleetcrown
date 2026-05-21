@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { RefreshCw, FolderKanban, Sparkles, PanelsTopLeft, Activity, GitCommitHorizontal, LayoutList, LayoutGrid, Plus, Moon } from "lucide-react";
+import { RefreshCw, FolderKanban, Sparkles, PanelsTopLeft, Activity, GitCommitHorizontal, LayoutList, LayoutGrid, Plus, Moon, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
@@ -43,6 +43,7 @@ export function ControlPanel() {
     (raw) => raw === "commander" ? "commander" : "full",
   );
   const [activityOpen, setActivityOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
   const [focusedTab, setFocusedTab] = useState<string | null>(null);
@@ -197,7 +198,7 @@ export function ControlPanel() {
     <div className="space-y-6">
       {!focusedTab && (
         <div className="grid gap-4 xl:items-start xl:grid-cols-[minmax(0,1.45fr)_minmax(22rem,0.95fr)]">
-          <section className="ui-control-hero order-2 xl:order-none xl:sticky xl:top-6">
+          <section className="ui-control-hero order-1 xl:order-none xl:sticky xl:top-6">
             <BrainConfigPanel
               selectedAgent={selectedAgent}
               switchableRegistry={switchableRegistry}
@@ -214,11 +215,11 @@ export function ControlPanel() {
             />
           </section>
 
-          <section className="ui-control-sidepanel order-1 xl:order-none">
+          <section className="ui-control-sidepanel order-2 xl:order-none">
             {!dashboard ? (
               <div className="animate-pulse space-y-2">
                 <div className="h-2.5 w-20 rounded bg-border-default" />
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="ui-control-metrics-grid">
                   {[0, 1, 2, 3].map((i) => (
                     <div key={i} className="ui-control-metric-card space-y-3">
                       <div className="h-2.5 w-24 rounded bg-border-default" />
@@ -231,19 +232,34 @@ export function ControlPanel() {
             ) : (
               <>
                 <div className="space-y-2">
-                  <p className="ui-kicker">Control inventory</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={daemonStateUnknown ? undefined : `${dashboard.idleCount} idle`} />
-                    <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
-                    <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
-                    <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={daemonStateUnknown ? "—" : dashboard.openTabCount} note={daemonStateUnknown ? "daemon offline" : "Zellij-backed project tabs"} />
-                  </div>
-                  {dashboard.commitsToday > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-text-tertiary">
-                      <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
-                      <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits today across the fleet</span>
+                  <button
+                    type="button"
+                    onClick={() => setInventoryOpen((v) => !v)}
+                    className="ui-control-inventory-toggle md:hidden"
+                    aria-expanded={inventoryOpen}
+                  >
+                    <span className="ui-kicker">Control inventory</span>
+                    {inventoryOpen ? (
+                      <ChevronUp className="h-4 w-4 shrink-0 text-text-tertiary" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-text-tertiary" />
+                    )}
+                  </button>
+                  <p className="ui-kicker hidden md:block">Control inventory</p>
+                  <div className={cn(!inventoryOpen && "max-md:hidden")}>
+                    <div className="ui-control-metrics-grid">
+                      <ControlMetricCard icon={FolderKanban} label="Projects in control" value={dashboard.controlProjectCount} note={daemonStateUnknown ? undefined : `${dashboard.idleCount} idle`} />
+                      <ControlMetricCard icon={Activity} label="Running now" value={dashboard.runningCount} note="Live agent execution" />
+                      <ControlMetricCard icon={Sparkles} label="Needs input" value={dashboard.waitingCount} note="Ready for the next prompt" />
+                      <ControlMetricCard icon={PanelsTopLeft} label="Open tabs" value={daemonStateUnknown ? "—" : dashboard.openTabCount} note={daemonStateUnknown ? "daemon offline" : "Zellij-backed project tabs"} />
                     </div>
-                  )}
+                    {dashboard.commitsToday > 0 && (
+                      <div className="mt-2 flex items-center gap-1.5 text-sm text-text-tertiary">
+                        <GitCommitHorizontal className="h-3.5 w-3.5 shrink-0 text-status-positive/70" />
+                        <span><span className="font-medium text-status-positive">{dashboard.commitsToday}</span> commits today across the fleet</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {data && data.recentActivity.length > 0 && (

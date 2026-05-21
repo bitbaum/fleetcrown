@@ -61,7 +61,7 @@ export default async function TodayPage() {
             <SummaryBar />
           </div>
         </Suspense>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 ui-quick-actions-row">
           {isEvening ? (
             <IvyDispatchButton
               prompt={WRAP_UP_PROMPT}

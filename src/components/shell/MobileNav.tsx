@@ -10,6 +10,10 @@ import { cn } from "@/lib/utils";
 
 const OVERFLOW_ITEMS = NAV_ITEMS.filter((item) => !item.mobile);
 
+function openAskIvy() {
+  window.dispatchEvent(new CustomEvent("ivy:open", { detail: { prompt: "" } }));
+}
+
 export function MobileNav() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -18,7 +22,7 @@ export function MobileNav() {
 
   return (
     <>
-      <nav className="fixed bottom-3 inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-2 py-2 backdrop-blur-xl shadow-panel-strong">
+      <nav className="ui-mobile-nav" aria-label="Primary">
         {MOBILE_NAV_ITEMS.map((item) => {
           const isActive = isCurrentPath(pathname, item.href);
           const Icon = item.icon;
@@ -26,23 +30,37 @@ export function MobileNav() {
             <Link
               key={item.id}
               href={item.href}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "relative flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-3 text-xs font-medium transition-colors",
-                isActive ? "bg-accent-muted text-text-primary" : "text-text-muted hover:text-text-secondary",
+                "ui-mobile-nav-item",
+                isActive ? "ui-mobile-nav-item-active" : "ui-mobile-nav-item-idle",
               )}
             >
               <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span className="max-w-full truncate px-0.5">{item.label}</span>
             </Link>
           );
         })}
+
+        <div className="ui-mobile-nav-ivy">
+          <button
+            type="button"
+            onClick={openAskIvy}
+            className="ui-mobile-nav-ivy-btn"
+            aria-label="Ask Ivy"
+            title="Ask Ivy"
+          >
+            🌿
+          </button>
+        </div>
 
         <button
           type="button"
           onClick={() => setMoreOpen((v) => !v)}
           className={cn(
-            "relative flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-3 text-xs font-medium transition-colors",
-            isMoreActive || moreOpen ? "bg-accent-muted text-text-primary" : "text-text-muted hover:text-text-secondary",
+            "ui-mobile-nav-item",
+            isMoreActive || moreOpen ? "ui-mobile-nav-item-active" : "ui-mobile-nav-item-idle",
           )}
           aria-expanded={moreOpen}
           aria-label="More navigation"
@@ -52,14 +70,13 @@ export function MobileNav() {
         </button>
       </nav>
 
-      {/* Bottom sheet — all views not in the main tab bar */}
       {moreOpen && (
         <>
           <div
             className="fixed inset-0 z-40 bg-black/48 backdrop-blur-sm md:hidden"
             onClick={() => setMoreOpen(false)}
           />
-          <div className="fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border-default bg-surface-base shadow-panel-strong md:hidden">
+          <div className="ui-mobile-nav-sheet">
             <div className="flex items-center justify-between px-5 pt-4 pb-3">
               <span className="text-sm font-semibold text-text-primary">All views</span>
               <button
@@ -71,7 +88,7 @@ export function MobileNav() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-1 px-3 pb-10">
+            <div className="grid grid-cols-3 gap-1 px-3">
               {OVERFLOW_ITEMS.map((item) => {
                 const isActive = isCurrentPath(pathname, item.href);
                 const Icon = item.icon;

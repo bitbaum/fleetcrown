@@ -108,12 +108,12 @@ export function BrainConfigPanel({
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4">
         <div className="min-w-0 flex-1 space-y-2">
           <p className="ui-kicker">Default launch agent</p>
           <div className="flex items-center gap-2 text-text-primary">
             <Bot className="h-4 w-4 shrink-0 text-accent-text" />
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
               {selectedDefinition?.label ?? getAdapterLabel(selectedAgent)}
             </h2>
           </div>
@@ -121,7 +121,11 @@ export function BrainConfigPanel({
             Saved preference for new Control launches and continuation prompts. Live execution is shown per project below.
           </p>
         </div>
-        {headerRight && <div className="shrink-0">{headerRight}</div>}
+        {headerRight && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+            {headerRight}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2">

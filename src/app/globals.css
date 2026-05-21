@@ -147,6 +147,11 @@
   --shadow-panel: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
   --shadow-panel-strong: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
   --shell-max: 90rem;
+  /* Mobile chrome — bottom nav + safe area (Layer 1) */
+  --mobile-nav-height: 3.25rem;
+  --mobile-nav-offset: 0.75rem;
+  --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-chrome-bottom: calc(var(--mobile-nav-offset) + var(--mobile-nav-height) + var(--mobile-safe-bottom));
   --public-nav-height: 76px;
   --public-backdrop-primary-width: 900px;
   --public-backdrop-primary-height: 700px;
@@ -296,11 +301,36 @@
 
   /* Shell */
   .app-shell-frame { @apply min-h-screen text-text-primary; }
-  /* pb-32 mobile leaves clearance for the bottom nav (~82px) + Ask Ivy FAB top edge (152px from bottom) */
-  .app-main        { @apply min-w-0 flex-1 overflow-y-auto pb-40 md:pb-0; }
+  .app-main {
+    @apply min-w-0 flex-1 overflow-y-auto md:pb-0;
+    padding-bottom: calc(var(--mobile-chrome-bottom) + 1rem);
+  }
   .app-page {
     width: min(100%, var(--shell-max));
-    @apply mx-auto px-5 py-6 md:px-8 md:py-8;
+    @apply mx-auto px-4 py-5 sm:px-5 sm:py-6 md:px-8 md:py-8;
+  }
+  .ui-mobile-nav {
+    bottom: calc(var(--mobile-nav-offset) + var(--mobile-safe-bottom));
+    @apply fixed inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-xl shadow-panel-strong;
+  }
+  .ui-mobile-nav-item {
+    @apply relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-micro font-medium transition-colors min-h-11;
+  }
+  .ui-mobile-nav-item-active {
+    @apply bg-accent-muted text-text-primary;
+  }
+  .ui-mobile-nav-item-idle {
+    @apply text-text-muted hover:text-text-secondary;
+  }
+  .ui-mobile-nav-ivy {
+    @apply relative flex flex-1 flex-col items-center justify-center rounded-2xl min-h-11;
+  }
+  .ui-mobile-nav-ivy-btn {
+    @apply flex h-11 w-11 items-center justify-center rounded-full bg-text-primary text-lg text-text-inverted shadow-panel-strong transition-transform active:scale-95;
+  }
+  .ui-mobile-nav-sheet {
+    padding-bottom: max(2.5rem, var(--mobile-safe-bottom));
+    @apply fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border-default bg-surface-base shadow-panel-strong md:hidden;
   }
   .ui-sidebar {
     position: sticky;
@@ -483,7 +513,7 @@
   /* Inline error messages — use ui-error for form-level, ui-error-xs for tight row contexts */
   .ui-error    { @apply text-sm text-status-negative; }
   .ui-error-xs { @apply text-xs text-status-negative; }
-  .ui-page-header   { @apply flex items-start justify-between gap-4; }
+  .ui-page-header   { @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4; }
   .ui-page-title    { @apply text-xl sm:text-2xl font-semibold text-text-primary; }
   .ui-page-subtitle { @apply mt-1.5 max-w-2xl text-sm text-text-tertiary; }
 
@@ -525,8 +555,8 @@
   .ui-btn-pill {
     @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay min-h-11 sm:min-h-0;
   }
-  .ui-btn-pill-muted    { @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary min-h-11 sm:min-h-0; }
-  .ui-btn-pill-positive { @apply flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30 min-h-11 sm:min-h-0; }
+  .ui-btn-pill-muted    { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary min-h-11 sm:min-h-0; }
+  .ui-btn-pill-positive { @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-overlay hover:text-status-positive hover:border-status-positive/30 min-h-11 sm:min-h-0; }
   .ui-empty-panel {
     @apply flex flex-col items-center gap-3 rounded-2xl border border-border-subtle bg-surface-base py-14 text-center text-text-tertiary;
     box-shadow: var(--shadow-panel);
@@ -829,27 +859,33 @@
 
   /* Control */
   .ui-control-hero {
-    @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-5 sm:p-6;
+    @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6;
     box-shadow: var(--shadow-panel);
     background-image:
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
       linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent);
   }
   .ui-control-sidepanel {
-    @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-5 sm:p-6 xl:sticky xl:top-6;
+    @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6 xl:sticky xl:top-6;
     box-shadow: var(--shadow-panel);
   }
+  .ui-control-metrics-grid {
+    @apply grid grid-cols-2 gap-2 sm:gap-3;
+  }
   .ui-control-metric-card {
-    @apply rounded-2xl border border-border-subtle bg-surface-base px-4 py-4;
+    @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-3 sm:rounded-2xl sm:px-4 sm:py-4;
   }
   .ui-control-metric-label {
-    @apply flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary;
+    @apply flex items-center gap-1.5 text-micro font-semibold uppercase tracking-[0.12em] text-text-tertiary sm:gap-2 sm:text-xs sm:tracking-[0.14em];
   }
   .ui-control-metric-value {
-    @apply mt-3 text-3xl font-semibold tracking-tight text-text-primary;
+    @apply mt-2 text-2xl font-semibold tracking-tight text-text-primary sm:mt-3 sm:text-3xl;
   }
   .ui-control-metric-note {
-    @apply mt-2 text-xs leading-relaxed text-text-tertiary;
+    @apply mt-1 text-micro leading-relaxed text-text-tertiary sm:mt-2 sm:text-xs;
+  }
+  .ui-control-inventory-toggle {
+    @apply flex w-full items-center justify-between gap-2 rounded-xl px-1 py-1 text-left transition-colors hover:text-text-primary md:pointer-events-none md:cursor-default;
   }
   .ui-control-activity-item {
     @apply rounded-2xl border border-border-subtle bg-surface-base p-3.5;
@@ -870,9 +906,12 @@
     @apply flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm text-accent-text;
   }
 
-  /* FAB */
+  /* FAB — desktop only; mobile uses ui-mobile-nav-ivy in the bottom bar */
   .ui-fab {
     @apply rounded-full bg-text-primary text-text-inverted transition-opacity hover:opacity-90;
+  }
+  .ui-quick-actions-row {
+    @apply flex gap-2 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden;
   }
 
   /* Misc */

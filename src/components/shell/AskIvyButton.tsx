@@ -40,7 +40,7 @@ export function AskIvyButton() {
     <>
       <button
         onClick={() => { setPrefill(""); setOpen(true); }}
-        className="ui-fab fixed bottom-24 right-4 z-40 flex h-14 w-14 items-center justify-center text-xl active:scale-95 md:bottom-7 md:right-7 focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        className="ui-fab fixed bottom-7 right-7 z-40 hidden h-14 w-14 items-center justify-center text-xl active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         title="Ask Ivy (press ?)"
       >
         🌿

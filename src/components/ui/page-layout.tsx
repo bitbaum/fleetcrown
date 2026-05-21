@@ -20,7 +20,7 @@ export function PageLayout({
           <h1 className="ui-page-title">{title}</h1>
           {subtitle && <p className="ui-page-subtitle">{subtitle}</p>}
         </div>
-        {right && <div className="shrink-0 mt-1">{right}</div>}
+        {right && <div className="shrink-0 sm:mt-1">{right}</div>}
       </div>
       {children}
     </div>
