@@ -16,7 +16,7 @@ type CalendarEvent = {
 };
 
 export function CalendarCard() {
-  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string }>("/api/calendar", { intervalMs: 5 * 60_000, timeoutMs: 12_000 });
+  const { data, loading, error, refetch } = useFetch<{ events: CalendarEvent[]; error?: string; runtimeOnly?: boolean }>("/api/calendar", { intervalMs: 5 * 60_000, timeoutMs: 12_000 });
   const events = data?.events ?? [];
 
   return (
@@ -36,6 +36,10 @@ export function CalendarCard() {
         </div>
       ) : error || (data?.error && events.length === 0) ? (
         <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
+      ) : data?.runtimeOnly ? (
+        // Cloud mode — `gog calendar list` is local-only, no events stream.
+        // Tell the user instead of pretending they have an empty calendar.
+        <EmptyState>Calendar shows here once the local daemon is connected.</EmptyState>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (

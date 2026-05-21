@@ -4,7 +4,11 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { CALENDAR_LOOKAHEAD_DAYS } from "@/lib/constants/today";
 
 export async function GET() {
-  if (!isRuntimeAvailable()) return NextResponse.json({ events: [] });
+  // Cloud mode: the calendar source is `gog calendar list` (local Google CLI),
+  // so there's no events stream in cloud. Surface `runtimeOnly: true` so the
+  // UI can show a meaningful empty state instead of "No events today" which
+  // misleads users into thinking their calendar is genuinely empty.
+  if (!isRuntimeAvailable()) return NextResponse.json({ events: [], runtimeOnly: true });
 
   const result = await runTool(
     `gog calendar list --json --days ${CALENDAR_LOOKAHEAD_DAYS} 2>/dev/null || echo "[]"`,
