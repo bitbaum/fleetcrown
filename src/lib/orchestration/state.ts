@@ -65,7 +65,19 @@ export function collectRuntimeLifecycleEvents(runtime: RuntimeLifecycleFacts): R
   const events: RuntimeEventCandidate[] = [];
 
   if (runtime.readyAt !== null) {
+    // The "ready" sentinel means the agent is done with the current task
+    // AND is waiting for the next input. Both terms are true at the same
+    // instant, so emit both events from the single sentinel:
+    //   • input_requested — what the UI ready-banner / deriveLifecycleState consume
+    //   • task_completed  — closes the task_started lifecycle pair so
+    //                       orchestration_events queries can count
+    //                       started vs. completed without double-bookkeeping
+    // Prior to this, task_completed was a defined event type in the
+    // contract but never written — across all-time the table had 336
+    // task_started rows and zero task_completed, leaving every dispatch
+    // in an indeterminate end-state from a telemetry POV.
     events.push({ type: "input_requested", at: runtime.readyAt, source: "runtime-sentinel" });
+    events.push({ type: "task_completed", at: runtime.readyAt, source: "runtime-sentinel" });
   }
   if (runtime.closingAt !== null) {
     events.push({ type: "close_requested", at: runtime.closingAt, source: "runtime-sentinel" });
