@@ -68,9 +68,12 @@ async function main() {
       finishedAt: new Date(),
     });
     log("after updateOrchestrationRun success/error");
+    // Canonical detail shape across all task_completed/task_failed emit sites:
+    //   success → "<intent>"            (no trailing " done" — redundant with eventType)
+    //   failure → "<intent>: <error>"   (colon separator, not em-dash)
     await emitLifecycleEvent(
       result.ok ? "task_completed" : "task_failed",
-      result.ok ? `${request.intent} done` : `${request.intent}: ${result.error ?? "openclaw returned not-ok"}`,
+      result.ok ? request.intent : `${request.intent}: ${result.error ?? "openclaw returned not-ok"}`,
     );
   } catch (error) {
     log(`catch error=${error instanceof Error ? error.stack ?? error.message : String(error)}`);
@@ -85,7 +88,7 @@ async function main() {
       finishedAt: new Date(),
     });
     log("after updateOrchestrationRun catch");
-    await emitLifecycleEvent("task_failed", error instanceof Error ? error.message : "OpenClaw run crashed");
+    await emitLifecycleEvent("task_failed", `${request.intent}: ${error instanceof Error ? error.message : "OpenClaw run crashed"}`);
     throw error;
   }
 }

@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
       source: "api-inject",
       adapter: eventAdapter,
       intent: eventIntent,
-      detail: `${promptLabel} — ${result.error}`.slice(0, 400),
+      detail: `${promptLabel}: ${result.error}`.slice(0, 400),
       happenedAt: new Date(nowS * 1000),
     }).catch((err) => console.error("[inject] db write failed:", err));
     return NextResponse.json({ error: `Injection failed: ${result.error}` }, { status: 500 });

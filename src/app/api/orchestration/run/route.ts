@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
         source: "api-orchestration",
         adapter: request.adapter,
         intent: request.intent,
-        detail: `${intent.name} — ${message}`.slice(0, 400),
+        detail: `${intent.name}: ${message}`.slice(0, 400),
         happenedAt: new Date(),
       }).catch((e) => console.error("[orchestration/run] task_failed write failed:", e));
       return NextResponse.json({ error: `Inject failed: ${message}` }, { status: 500 });
@@ -433,7 +433,11 @@ export async function POST(req: NextRequest) {
       source: "api-orchestration",
       adapter: request.adapter,
       intent: request.intent,
-      detail: `openclaw worker start failed: ${message}`.slice(0, 400),
+      // Canonical shape: "<intent_or_label>: <error>" — matches the other
+      // task_failed emit sites so downstream queries don't need to parse
+      // multiple separator formats. Source field 'api-orchestration' already
+      // carries the "openclaw worker start failed" context.
+      detail: `${intent.name}: ${message}`.slice(0, 400),
       happenedAt: new Date(),
     }).catch((e) => console.error("[orchestration/run] task_failed write failed:", e));
     return NextResponse.json({ error: "Worker failed to start" }, { status: 500 });
