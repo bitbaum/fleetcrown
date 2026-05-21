@@ -49,12 +49,12 @@ PAGE_ROUTES=(
 # Set COCKPIT_SESSION_TOKEN=<token> to run them fully authenticated.
 PUBLIC_API_ROUTES=(
   "/api/health"
-  "/api/crons"
   "/api/system"
   "/api/setup"
 )
 AUTH_API_ROUTES=(
   "/api/me"
+  "/api/crons"
   "/api/goals"
   "/api/habits"
   "/api/people"
