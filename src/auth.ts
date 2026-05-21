@@ -83,6 +83,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   logger: {
     error: (err) => {
       console.error("[auth.logger.error]", err?.name, err?.message, err);
+      // Suppress the redundant catch-all row for CredentialsSignin — the
+      // authorize() helpers already wrote a structured warn row with
+      // provider/reason/identifier via logAuthReject; this row would only
+      // add the useless "Read more at https://errors.authjs.dev/..."
+      // message we replaced. Other error types (MissingCSRF, AccessDenied,
+      // OAuthCallbackError, system errors) still flow through — they have
+      // no dedicated logger and this is their only debug_logs surface.
+      // Halves the row count on credentials brute-force bursts; verified
+      // live by triggering a credentials reject and observing only the
+      // auth.authorize row land.
+      if ((err as { type?: string })?.type === "CredentialsSignin") return;
       const unwrapCause = (c: unknown, depth = 0): unknown => {
         if (!c || depth > 4) return c;
         if (c instanceof Error) {
