@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
+import Link from "next/link";
 import { timeAgo } from "@/lib/dates";
-import { APP_SLUG } from "@/config/brand";
+import { APP_NAME, APP_SLUG } from "@/config/brand";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -33,26 +34,59 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
       <div className="min-w-0 flex-1 space-y-2">
         <div>
           <span className="font-medium text-text-primary">
-            {daemonNeverSeen ? "Local daemon not connected" : "Local daemon offline"}
+            {daemonNeverSeen ? `Finish setup to dispatch agents` : "Local daemon offline"}
           </span>
           {!daemonNeverSeen && lastSeen && (
             <span className="ml-2 text-xs text-text-tertiary">last seen {lastSeen}</span>
           )}
         </div>
 
-        <p className="text-text-secondary leading-relaxed">
-          {daemonNeverSeen
-            ? "Commands are queued and will run once the daemon connects. Start it on your local machine:"
-            : "Commands will queue until the daemon reconnects. Restart it on your local machine:"}
-        </p>
-
-        <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-          APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
-        </code>
-
-        <p className="text-xs text-text-muted">
-          The token is the value of <code className="text-text-tertiary">APP_DAEMON_TOKEN</code> (or legacy <code className="text-text-tertiary">COCKPIT_DAEMON_TOKEN</code>) in your local <code className="text-text-tertiary">.env.local</code>.
-        </p>
+        {daemonNeverSeen ? (
+          // First-time setup. A new web user discovers the local-runtime
+          // requirement here for the first time — the docs path was
+          // previously a single "start the daemon" command with no mention
+          // of the three prerequisites (daemon binary, Zellij, ≥1 agent
+          // CLI). Spell them out so the user can install before hitting
+          // the wall on first dispatch.
+          <>
+            <p className="text-text-secondary leading-relaxed">
+              {APP_NAME} dispatches agents from your machine. Three pieces are needed:
+            </p>
+            <ol className="ml-4 list-decimal space-y-1.5 text-sm text-text-secondary">
+              <li>
+                Install <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">Zellij</a> — the terminal multiplexer the daemon injects prompts into.
+              </li>
+              <li>
+                Install at least one agent CLI you want to dispatch (Claude Code, Codex, Gemini, or openclaw) and confirm it&apos;s on your <code className="text-text-tertiary">$PATH</code>.
+              </li>
+              <li>
+                Mint a daemon token in{" "}
+                <Link href="/settings#tokens" className="text-accent-text underline-offset-2 hover:underline">Settings → Agent tokens</Link>
+                {" "}and run:
+              </li>
+            </ol>
+            <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
+              APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
+            </code>
+            <p className="text-xs text-text-muted">
+              Until the daemon connects, dispatches are queued and will fire once it pings in.
+            </p>
+          </>
+        ) : (
+          // Returning user with a dropped daemon — they already have the
+          // prerequisites; surface only the restart command.
+          <>
+            <p className="text-text-secondary leading-relaxed">
+              Commands will queue until the daemon reconnects. Restart it on your local machine:
+            </p>
+            <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
+              APP_DAEMON_TOKEN=&lt;your-token&gt; ./scripts/{APP_SLUG}-daemon.sh
+            </code>
+            <p className="text-xs text-text-muted">
+              The token is the value of <code className="text-text-tertiary">APP_DAEMON_TOKEN</code> (or legacy <code className="text-text-tertiary">COCKPIT_DAEMON_TOKEN</code>) in your local <code className="text-text-tertiary">.env.local</code>.
+            </p>
+          </>
+        )}
       </div>
 
       <button
