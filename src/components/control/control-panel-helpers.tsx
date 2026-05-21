@@ -139,19 +139,26 @@ export function BrainConfigPanel({
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="space-y-3">
-          <input
-            list={`model-options-${selectedAgent}`}
-            value={model}
-            onChange={(e) => onModelChange(e.target.value)}
-            className="ui-input min-w-0"
-            placeholder={selectedDefinition?.defaultModel ?? "Model"}
-          />
+          {/* Hide the input when the value matches one of the chip suggestions
+              — duplicating "sonnet" in both the input and the active chip read
+              as a bug rather than a redundancy. When the user wants a model
+              that isn't in the chip list, the input renders so they can edit
+              their custom value. */}
+          {!modelSuggestions.includes(model) && (
+            <input
+              list={`model-options-${selectedAgent}`}
+              value={model}
+              onChange={(e) => onModelChange(e.target.value)}
+              className="ui-input min-w-0"
+              placeholder={selectedDefinition?.defaultModel ?? "Model"}
+            />
+          )}
           <datalist id={`model-options-${selectedAgent}`}>
             {modelSuggestions.map((option) => (
               <option key={option} value={option} />
             ))}
           </datalist>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5 items-center">
             {modelSuggestions.map((option) => (
               <button
                 key={option}
@@ -162,6 +169,19 @@ export function BrainConfigPanel({
                 {option}
               </button>
             ))}
+            {/* Lets the user reveal the input to type a model name not in
+                the suggestion list. Hidden when the input is already visible
+                (i.e. model is already a custom value). */}
+            {modelSuggestions.includes(model) && (
+              <button
+                type="button"
+                onClick={() => onModelChange("")}
+                className="ui-chip-toggle-compact"
+                title="Type a custom model name"
+              >
+                Custom…
+              </button>
+            )}
           </div>
         </div>
 
