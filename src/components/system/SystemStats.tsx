@@ -7,6 +7,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import { ProgressBar, getProgressTone } from "@/components/ui/progress-bar";
 import { HEALTH_THRESHOLDS } from "@/config/ui";
 import { formatBytes } from "@/lib/format";
+import { REFRESH_CADENCE } from "@/config/refresh";
 
 type MemInfo = { totalMiB: number; usedMiB: number; availMiB: number };
 type SwapInfo = { totalMiB: number; usedMiB: number };
@@ -41,8 +42,10 @@ function UsageBar({ usedMiB, totalMiB }: { usedMiB: number; totalMiB: number }) 
 export function SystemStats() {
   // 10s ceiling = 2× the server's 5s runTool cap; covers network jitter while
   // ensuring a hung /api/system call surfaces FetchErrorState instead of
-  // pinning the panel on stale data for the full 30s poll interval.
-  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: 30_000, timeoutMs: 10_000 });
+  // pinning the panel on stale data for the full poll interval. Cadence
+  // shared with the server-card AutoRefresh on /system so the surface has
+  // one consistent freshness story.
+  const { data, loading, error, refetch } = useFetch<SystemData>("/api/system", { intervalMs: REFRESH_CADENCE.system, timeoutMs: 10_000 });
 
   if (loading) {
     return <div className="animate-pulse text-base text-text-secondary">Loading system status...</div>;
