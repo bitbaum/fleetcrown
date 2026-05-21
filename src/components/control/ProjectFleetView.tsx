@@ -38,6 +38,10 @@ interface ProjectFleetViewProps {
   onNewProject: () => void;
   /** Fired after a Stale tile's inline Remove succeeds — caller refreshes the fleet. */
   onProjectRemoved: () => void;
+  /** True iff the server reports RUNTIME_AVAILABLE=true (local dev). False on
+   *  the cloud control plane (cockpitapp.vercel.app), where AI-bootstrap is
+   *  unavailable because /api/project/ai-brief requires the local claude CLI. */
+  runtimeAvailable: boolean;
 }
 
 export function ProjectFleetView({
@@ -62,6 +66,7 @@ export function ProjectFleetView({
   cardProps,
   onBootstrap,
   onNewProject,
+  runtimeAvailable,
   onProjectRemoved,
 }: ProjectFleetViewProps) {
   const collapseTab = (tab: string) =>
@@ -95,15 +100,26 @@ export function ProjectFleetView({
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-3">
-          <button onClick={onBootstrap} className="ui-btn-primary gap-2">
-            <Sparkles className="h-3.5 w-3.5" />
-            Bootstrap new project →
-          </button>
-          <button onClick={onNewProject} className="ui-btn-secondary gap-1.5">
+          {/* Bootstrap calls /api/project/ai-brief which requires the local
+              claude CLI; it always 503s in cloud mode. Hide the button on
+              cockpitapp so new users don't hit a meaningless error — they
+              get the Register flow instead, which works DB-side. */}
+          {runtimeAvailable && (
+            <button onClick={onBootstrap} className="ui-btn-primary gap-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              Bootstrap new project →
+            </button>
+          )}
+          <button onClick={onNewProject} className={runtimeAvailable ? "ui-btn-secondary gap-1.5" : "ui-btn-primary gap-1.5"}>
             <Plus className="h-3.5 w-3.5" />
             Register existing project
           </button>
         </div>
+        {!runtimeAvailable && (
+          <p className="max-w-sm text-xs leading-relaxed text-text-muted">
+            Bootstrap-with-AI is available once the local daemon + claude CLI are installed (see the &ldquo;Finish setup&rdquo; banner above).
+          </p>
+        )}
       </div>
     );
   }

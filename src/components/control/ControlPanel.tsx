@@ -336,6 +336,7 @@ export function ControlPanel() {
         cardProps={cardProps}
         onBootstrap={() => setBootstrapOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}
+        runtimeAvailable={runtimeAvailable}
       />
     </div>
   );
