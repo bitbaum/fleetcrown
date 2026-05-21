@@ -22,7 +22,7 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
 };
 
 export function GitHubStatus() {
-  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string }>("/api/github", { intervalMs: 2 * 60_000, timeoutMs: 15_000 });
+  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string; runtimeOnly?: boolean }>("/api/github", { intervalMs: 2 * 60_000, timeoutMs: 15_000 });
   const repos = data?.repos ?? [];
 
   return (
@@ -45,6 +45,10 @@ export function GitHubStatus() {
         </div>
       ) : error || (data?.error && repos.length === 0) ? (
         <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
+      ) : data?.runtimeOnly ? (
+        // Cloud mode — github-status.sh is local-only (`gh` CLI). Tell the
+        // user instead of pretending they have no repos.
+        <EmptyState>CI status shows here once the local daemon is connected.</EmptyState>
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>
       ) : (
