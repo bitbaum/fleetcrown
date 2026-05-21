@@ -96,7 +96,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (typeof c === "object") {
           try {
             return JSON.parse(JSON.stringify(c, (_, v) => (v instanceof Error ? { name: v.name, message: v.message, stack: v.stack } : v)));
-          } catch { return String(c); }
+          } catch {
+            // JSON.stringify can throw on circular references (Auth.js internal
+            // errors carry context refs that loop), BigInt values, etc. The old
+            // fallback was `String(c)` which gave a useless "[object Object]"
+            // and erased every signal — verified live in a 2026-05-19 accessdenied
+            // entry whose only diagnostic was that literal string. Extract a
+            // best-effort shape: constructor name plus the string/number/boolean
+            // own-properties, plus any nested Error message.
+            try {
+              const o = c as Record<string, unknown>;
+              const shape: Record<string, unknown> = {
+                __ctor: (o?.constructor as { name?: string })?.name ?? "Object",
+              };
+              for (const k of Object.keys(o)) {
+                const v = o[k];
+                if (v instanceof Error) shape[k] = { name: v.name, message: v.message };
+                else if (typeof v === "string" || typeof v === "number" || typeof v === "boolean" || v === null) shape[k] = v;
+              }
+              return shape;
+            } catch { return String(c); }
+          }
         }
         return c;
       };
