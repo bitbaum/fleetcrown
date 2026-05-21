@@ -42,9 +42,11 @@ const RunOrchestrationBody = z.object({
   queue: z.array(z.string().max(4000)).max(200).optional(),
 });
 
-async function scheduleOpenClawWorker(runId: string, request: OrchestrationTaskRequest) {
+async function scheduleOpenClawWorker(runId: string, userId: string, request: OrchestrationTaskRequest) {
   const workerPath = path.join(process.cwd(), "scripts", "run-openclaw-orchestration.ts");
-  const payload = Buffer.from(JSON.stringify({ runId, request }), "utf8").toString("base64url");
+  // userId in the payload so the worker can emit task_completed/task_failed
+  // to orchestration_events (user_id is NOT NULL on that table).
+  const payload = Buffer.from(JSON.stringify({ runId, userId, request }), "utf8").toString("base64url");
   const command = `cd ${JSON.stringify(process.cwd())} && set -a && source .env.local >/dev/null 2>&1 && npx tsx ${JSON.stringify(workerPath)} ${JSON.stringify(payload)}`;
   const child = spawn("bash", ["-lc", command], {
     cwd: process.cwd(),
@@ -380,8 +382,25 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Emit task_started for openclaw too — until now this branch had no
+  // lifecycle event of any kind on success (the codex/gemini branch at
+  // line ~296 emits task_started but this branch skipped it), so every
+  // successful openclaw run was invisible in orchestration_events. The
+  // matching task_completed/task_failed is emitted by the worker script.
+  createOrchestrationEvent({
+    userId,
+    projectId: request.projectId ?? null,
+    projectKey: request.projectKey,
+    eventType: "task_started",
+    source: "api-orchestration",
+    adapter: request.adapter,
+    intent: request.intent,
+    detail: intent.name,
+    happenedAt: new Date(),
+  }).catch((e) => console.error("[orchestration/run] task_started write failed:", e));
+
   try {
-    await scheduleOpenClawWorker(run.id, request);
+    await scheduleOpenClawWorker(run.id, userId, request);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await updateOrchestrationRun(run.id, {
