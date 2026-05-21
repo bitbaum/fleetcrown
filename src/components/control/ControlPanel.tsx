@@ -175,9 +175,16 @@ export function ControlPanel() {
       >
         <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
       </button>
+      {/* On cloud (runtimeAvailable=false) Bootstrap-with-AI 503s because
+          /api/project/ai-brief requires the local claude CLI — same gap the
+          /control empty state already gates on (commit 3b2fbad). Route the
+          toolbar "+ New" button to NewProjectModal (Register existing
+          project) instead so the affordance stays useful in cloud mode
+          instead of leading to the same dead-end. On local it still opens
+          Bootstrap as before. */}
       <button
-        onClick={() => setBootstrapOpen(true)}
-        title="Bootstrap new project"
+        onClick={() => runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true)}
+        title={runtimeAvailable ? "Bootstrap new project" : "Register existing project"}
         className="inline-flex min-h-11 lg:min-h-0 items-center gap-1 transition-colors hover:text-text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
