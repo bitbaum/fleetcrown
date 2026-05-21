@@ -125,7 +125,7 @@ export function HabitRow({
             )}
             <button
               onClick={startEdit}
-              className="ui-btn-row-action opacity-0 group-hover:opacity-100"
+              className="ui-btn-row-action ui-hover-reveal"
               title="Edit habit"
               aria-label="Edit habit"
             >
@@ -133,7 +133,7 @@ export function HabitRow({
             </button>
             <button
               onClick={() => onRemove(habit.id)}
-              className="p-1.5 rounded text-text-muted hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded text-text-muted hover:text-status-negative/60 hover:bg-status-negative/5 transition-colors ui-hover-reveal"
               title="Remove habit"
               aria-label="Remove habit"
             >

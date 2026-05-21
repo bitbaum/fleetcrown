@@ -80,7 +80,7 @@ export function HabitGoalLinks({
           <button
             onClick={() => handleUnlink(goal.id)}
             disabled={saving === goal.id}
-            className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5"
+            className="ui-hover-reveal transition-opacity ml-0.5"
             title="Unlink"
           >
             {saving === goal.id

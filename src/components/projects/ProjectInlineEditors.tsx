@@ -130,7 +130,7 @@ export function DescriptionEditor({
       <span className="flex-1">
         {value ?? <span className="italic text-text-muted">Add a description…</span>}
       </span>
-      <Pencil className="h-3 w-3 shrink-0 mt-0.5 text-text-muted opacity-0 group-hover/desc:opacity-100 transition-opacity" />
+      <Pencil className="h-3 w-3 shrink-0 mt-0.5 text-text-muted sm:opacity-0 sm:group-hover/desc:opacity-100 transition-opacity" />
     </button>
   );
 }
