@@ -8,6 +8,7 @@ import { CardSkeleton } from "@/components/ui/card";
 import { readCronJobs } from "@/lib/crons";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
+import { REFRESH_CADENCE } from "@/config/refresh";
 
 export const metadata = { title: "System" };
 
@@ -26,7 +27,7 @@ export default function SystemPage() {
           <RecentFailuresCard />
         </Suspense>
         {/* 30s revalidation so debug_logs rows that land NOW appear without manual refresh. */}
-        <AutoRefresh intervalMs={30_000} />
+        <AutoRefresh intervalMs={REFRESH_CADENCE.system} />
       </PageLayout>
     </PullToRefresh>
   );

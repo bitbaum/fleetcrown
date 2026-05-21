@@ -9,6 +9,7 @@ import { ENTITY_TYPE, INTERACTION_DIRECTION, type EntityType } from "@/lib/const
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
+import { REFRESH_CADENCE } from "@/config/refresh";
 
 export const metadata = { title: "Memory" };
 
@@ -142,7 +143,7 @@ export default async function MemoryPage() {
           })}
         </div>
       </Card>
-      <AutoRefresh intervalMs={60_000} />
+      <AutoRefresh intervalMs={REFRESH_CADENCE.memory} />
     </PageLayout>
     </PullToRefresh>
   );
