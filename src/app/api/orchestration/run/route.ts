@@ -338,6 +338,20 @@ export async function POST(req: NextRequest) {
         message: `${request.adapter} inject failed: ${message}`,
         meta: { userId, adapter: request.adapter, intent: request.intent, projectKey: request.projectKey, projectPath: request.projectPath },
       });
+      // Close the started/failed pair — task_started was emitted at line ~296
+      // before injectIntoTab; if that throws, record the failed counterpart
+      // here so orchestration_events doesn't carry an orphan start.
+      createOrchestrationEvent({
+        userId,
+        projectId: request.projectId ?? null,
+        projectKey: request.projectKey,
+        eventType: "task_failed",
+        source: "api-orchestration",
+        adapter: request.adapter,
+        intent: request.intent,
+        detail: `${intent.name} — ${message}`.slice(0, 400),
+        happenedAt: new Date(),
+      }).catch((e) => console.error("[orchestration/run] task_failed write failed:", e));
       return NextResponse.json({ error: `Inject failed: ${message}` }, { status: 500 });
     }
   }
@@ -387,6 +401,22 @@ export async function POST(req: NextRequest) {
       message: `openclaw worker start failed: ${message}`,
       meta: { userId, runId: run.id, adapter: request.adapter, intent: request.intent, projectKey: request.projectKey, projectPath: request.projectPath },
     });
+    // Worker never started → the orchestration_runs row was just marked
+    // outcome:'error' above, but orchestration_events still had nothing
+    // for the openclaw failure path. Emit task_failed so the dispatch-
+    // outcome timeline shows the attempt regardless of which adapter
+    // failed.
+    createOrchestrationEvent({
+      userId,
+      projectId: request.projectId ?? null,
+      projectKey: request.projectKey,
+      eventType: "task_failed",
+      source: "api-orchestration",
+      adapter: request.adapter,
+      intent: request.intent,
+      detail: `openclaw worker start failed: ${message}`.slice(0, 400),
+      happenedAt: new Date(),
+    }).catch((e) => console.error("[orchestration/run] task_failed write failed:", e));
     return NextResponse.json({ error: "Worker failed to start" }, { status: 500 });
   }
 

@@ -210,6 +210,21 @@ export async function POST(req: NextRequest) {
         runtimeAvailable: isRuntimeAvailable(),
       },
     });
+    // Mirror the task_started emit on the failure branch so the
+    // started/failed pair closes in orchestration_events — without this,
+    // every failed inject left an orphan task_started with no paired
+    // completion of any kind (task_completed OR task_failed).
+    createOrchestrationEvent({
+      userId,
+      projectId,
+      projectKey: canonical,
+      eventType: "task_failed",
+      source: "api-inject",
+      adapter: eventAdapter,
+      intent: eventIntent,
+      detail: `${promptLabel} — ${result.error}`.slice(0, 400),
+      happenedAt: new Date(nowS * 1000),
+    }).catch((err) => console.error("[inject] db write failed:", err));
     return NextResponse.json({ error: `Injection failed: ${result.error}` }, { status: 500 });
   }
 
