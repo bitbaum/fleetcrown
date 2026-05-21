@@ -36,6 +36,25 @@ function logAuthReject(
   return null;
 }
 
+/**
+ * Companion to logAuthReject — records the matching success event so that
+ * a 5-reject / 1-accept burst reads as "forgotten password recovered" and
+ * a 5-reject / 0-accept burst reads as "locked out OR attacker bailed".
+ * Without this, reject events float alone and the pair correlation is lost.
+ */
+function logAuthAccept(
+  provider: "local" | "email-password" | "user-password",
+  identifier: string | null | undefined,
+  userId: string,
+): void {
+  logDebug({
+    source: "auth.authorize",
+    level: "info",
+    message: `credentials accepted: ${provider}`,
+    meta: { provider, identifier: identifier ?? null, userId },
+  });
+}
+
 declare module "next-auth" {
   interface Session {
     user: {
@@ -164,6 +183,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             : false;
 
         if (!ok) return logAuthReject("local", envPassword || user.passwordHash ? "wrong-password" : "no-password-hash", user.email);
+        logAuthAccept("local", user.email, user.id);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "Local user" };
       },
     }),
@@ -186,6 +206,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const ok = await verifyPassword(password, user.passwordHash);
         if (!ok) return logAuthReject("email-password", "wrong-password", email);
+        logAuthAccept("email-password", email, user.id);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
       },
     }),
@@ -208,6 +229,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const ok = await verifyPassword(password, user.passwordHash);
         if (!ok) return logAuthReject("user-password", "wrong-password", userId);
+        logAuthAccept("user-password", userId, user.id);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
       },
     }),
