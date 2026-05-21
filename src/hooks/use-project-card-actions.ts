@@ -134,16 +134,21 @@ export function useProjectCardActions({
       const queued = shiftQueue();
       if (queued) {
         setSending("custom");
+        setSendError(null);
         setDismissed(true);
         try { await onInject(project.tab, undefined, queued); }
+        catch (err) { setSendError(err instanceof Error ? err.message : "Send failed"); }
         finally { setSending(null); }
         return;
       }
     }
     setSending(intent);
+    setSendError(null);
     setDismissed(true);
     try {
       await onRunWithBrain(project, intent);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
@@ -151,6 +156,7 @@ export function useProjectCardActions({
 
   const send = async (promptKey?: string, customPrompt?: string) => {
     setSending(promptKey ?? "custom");
+    setSendError(null);
     setDismissed(true);
     try {
       if (customPrompt) {
@@ -172,7 +178,11 @@ export function useProjectCardActions({
           await onInject(project.tab, promptKey);
         }
       }
+      // Only clear input on confirmed-successful custom send. setCustom("")
+      // triggers setDraft(tab, "") which clears the localStorage draft too.
       if (!promptKey) setCustom("");
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
@@ -226,11 +236,19 @@ export function useProjectCardActions({
   const handleSendFromQueue = useCallback(async (index: number) => {
     const item = queue[index];
     if (!item) return;
-    removeFromQueue(index);
+    // CRITICAL: do not remove from the queue until the send has confirmed
+    // success. The previous order (remove → await → finally) destroyed the
+    // queue item on any send failure (network drop, auth expiry, 5xx) —
+    // same class as the 9c2525c sendCustom incident, but on the per-project
+    // prompt queue instead of the custom input.
     setSending("custom");
+    setSendError(null);
     setDismissed(true);
     try {
       await onInject(project.tab, undefined, item);
+      removeFromQueue(index);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
