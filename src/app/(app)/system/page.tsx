@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { SystemStats } from "@/components/system/SystemStats";
 import { AutopilotCard } from "@/components/system/AutopilotCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
+import { RecentFailuresCard } from "@/components/system/RecentFailuresCard";
 import { CardSkeleton } from "@/components/ui/card";
 import { readCronJobs } from "@/lib/crons";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
@@ -19,6 +20,9 @@ export default function SystemPage() {
         <AutopilotCard initialJobs={jobs} />
         <Suspense fallback={<CardSkeleton />}>
           <MemorySummaryCard />
+        </Suspense>
+        <Suspense fallback={<CardSkeleton />}>
+          <RecentFailuresCard />
         </Suspense>
       </PageLayout>
     </PullToRefresh>
