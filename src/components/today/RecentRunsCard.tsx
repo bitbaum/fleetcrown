@@ -1,4 +1,4 @@
-import { Bot, ArrowRight } from "lucide-react";
+import { Bot, ArrowRight, Repeat } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getRecentOrchestrationRuns } from "@/db/queries/today";
@@ -8,6 +8,11 @@ import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
+
+// Adjacent runs on the same project that finished within this window collapse
+// into a single row (with a "× N" badge). 1 hour matches the rough duration
+// of a back-to-back session burst — anything longer feels like distinct work.
+const CLUSTER_WINDOW_MS = 60 * 60 * 1000;
 
 export async function RecentRunsCard() {
   const userId = await requirePageUserId();
@@ -22,6 +27,27 @@ export async function RecentRunsCard() {
     );
   }
 
+  // Cluster adjacent same-project runs. Iterates the (already finishedAt-desc)
+  // list once; each row either extends the last cluster (incrementing count)
+  // or starts a new one. Caught during a live audit at mobile width where
+  // five "Cockpit · 5h ago" rows in a row dominated the card.
+  type Run = (typeof runs)[number];
+  type Cluster = { latest: Run; count: number };
+  const clusters: Cluster[] = [];
+  for (const run of runs) {
+    const last = clusters[clusters.length - 1];
+    if (
+      last &&
+      last.latest.projectKey === run.projectKey &&
+      last.latest.finishedAt && run.finishedAt &&
+      last.latest.finishedAt.getTime() - run.finishedAt.getTime() <= CLUSTER_WINDOW_MS
+    ) {
+      last.count += 1;
+    } else {
+      clusters.push({ latest: run, count: 1 });
+    }
+  }
+
   return (
     <Card>
         <CardHeader
@@ -34,7 +60,7 @@ export async function RecentRunsCard() {
           }
         />
         <div className="space-y-2">
-          {runs.map((run) => {
+          {clusters.map(({ latest: run, count }) => {
             const health = run.summary?.health ?? "";
             const healthShort = health ? getHealthShort(health) : "";
             const tagCls = HEALTH_TAG_STYLE[healthShort];
@@ -46,6 +72,12 @@ export async function RecentRunsCard() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-text-secondary">{run.projectKey}</span>
+                    {count > 1 && (
+                      <span className="ui-badge inline-flex items-center gap-1" title={`${count} runs clustered`}>
+                        <Repeat className="h-2.5 w-2.5" />
+                        ×{count}
+                      </span>
+                    )}
                     {tagCls && healthShort && (
                       <span className={tagCls}>{healthShort}</span>
                     )}
