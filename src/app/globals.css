@@ -563,8 +563,11 @@
   .ui-code-surface {
     @apply max-h-56 overflow-y-auto whitespace-pre-wrap rounded-xl border border-border-subtle bg-surface-overlay p-4 font-mono text-sm leading-relaxed text-text-secondary;
   }
+  /* Card-header "→" links and small secondary links.
+     inline-flex items-center + min-h-11 sm:min-h-0 gives a 44px tap target on
+     mobile (WCAG 2.5.5 / iOS HIG) while keeping the desktop one-liner tight. */
   .ui-link-subtle {
-    @apply text-xs text-text-tertiary transition-colors hover:text-text-secondary;
+    @apply inline-flex items-center min-h-11 sm:min-h-0 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
   }
   .ui-link-subtle-button {
     @apply px-1 text-xs text-text-tertiary transition-colors hover:text-text-secondary;
