@@ -1,14 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { existsSync } from "fs";
+import { execSync } from "child_process";
 import { HOME } from "@/lib/constants";
 import { shellEscape } from "@/lib/zellij";
 
 const CLAUDE_SETTINGS_FILE = path.join(HOME, ".claude", "settings.json");
 const DOTFILES_CLAUDE_SETTINGS_FILE = path.join(HOME, "dev", "dotfiles", ".claude", "settings.json");
 
-export const AGENT_IDS = ["codex", "claude", "gemini"] as const;
-export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "codex", "gemini"];
+export const AGENT_IDS = ["codex", "claude", "gemini", "cursor"] as const;
+export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "codex", "gemini"];
 export type Agent = (typeof AGENT_IDS)[number];
 export type AgentOption = Agent | "openclaw";
 
@@ -16,6 +17,7 @@ export const AGENT_DEFAULT_MODELS: Record<Agent, string> = {
   claude: "sonnet",
   codex:  "gpt-5.4",
   gemini: "auto",
+  cursor: "auto",
 };
 
 export type AgentRegistryEntry = {
@@ -151,12 +153,46 @@ function getGeminiAvailability(): Pick<AgentRegistryEntry, "available" | "availa
   };
 }
 
+/** Cursor Agent CLI (`agent`) — verify PATH binary is Cursor's, not a generic `agent`. */
+function getCursorAvailability(): Pick<AgentRegistryEntry, "available" | "availabilityReason"> {
+  if (!commandExistsInPath("agent")) {
+    return {
+      available: false,
+      availabilityReason: "Cursor Agent CLI is not installed. Run: curl https://cursor.com/install -fsS | bash",
+    };
+  }
+
+  try {
+    const version = execSync("agent --version 2>&1", { encoding: "utf-8", timeout: 3000 }).trim();
+    if (/\d{4}\.\d{2}\.\d{2}/.test(version)) {
+      return { available: true };
+    }
+  } catch {
+    // Fall through — still allow if binary exists under Cursor's typical path.
+  }
+
+  const pathValue = process.env.PATH ?? "";
+  for (const dir of pathValue.split(":")) {
+    if (!dir) continue;
+    const candidate = `${dir}/agent`;
+    if (candidate.includes(".local/bin/agent") || candidate.includes(".cursor")) {
+      return { available: true };
+    }
+  }
+
+  return {
+    available: false,
+    availabilityReason: "An `agent` binary exists but does not look like Cursor Agent CLI.",
+  };
+}
+
 export function listAgentRegistry(): AgentRegistryEntry[] {
   const codexDefaultModel = readConfiguredCodexModel() ?? AGENT_DEFAULT_MODELS.codex;
   const claudeDefaultModel = readClaudeSettingsModel() ?? AGENT_DEFAULT_MODELS.claude;
   const codexAvailability = getCodexAvailability();
   const openclawAvailability = getOpenClawAvailability();
   const geminiAvailability = getGeminiAvailability();
+  const cursorAvailability = getCursorAvailability();
 
   return [
     {
@@ -173,6 +209,22 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
         manualPromptInjection: true,
         autonomousPromptLoop: true,
         sessionLifecycleSignals: true,
+      },
+    },
+    {
+      id: "cursor",
+      label: "Cursor",
+      defaultModel: AGENT_DEFAULT_MODELS.cursor,
+      modelSuggestions: ["auto", "composer-1", "gpt-5.4", "claude-sonnet-4"],
+      processMatchers: ["agent"],
+      switchable: true,
+      quitCommand: "",
+      ...cursorAvailability,
+      capabilities: {
+        tabSwitching: true,
+        manualPromptInjection: true,
+        autonomousPromptLoop: false,
+        sessionLifecycleSignals: false,
       },
     },
     {
@@ -229,11 +281,12 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
 export function sanitizeAgentId(value: string | undefined): Agent {
   if (value === "claude") return "claude";
   if (value === "gemini") return "gemini";
+  if (value === "cursor") return "cursor";
   return "codex";
 }
 
 export function isAgentId(value: string | undefined | null): value is Agent {
-  return value === "claude" || value === "codex" || value === "gemini";
+  return value === "claude" || value === "codex" || value === "gemini" || value === "cursor";
 }
 
 export function looksLikeAgentCapacityIssue(text: string): boolean {
@@ -300,6 +353,8 @@ export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; mode
     }
     case "openclaw":
       return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && openclaw tui`;
+    case "cursor":
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && agent`;
     case "codex":
     default: {
       const escapedModel = shellEscape(model || AGENT_DEFAULT_MODELS.codex);

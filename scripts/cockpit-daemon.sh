@@ -488,21 +488,31 @@ _sentinel() {
   echo "null"
 }
 
-# Scan /proc once; output lines of "<cwd> <agent_basename>" for all running agents.
+# Scan /proc once; output lines of "<cwd> <agent_id>" for all running agents.
 _scan_agents() {
   for pd in /proc/[0-9]*/; do
     pd="${pd%/}"
     [ -f "$pd/cmdline" ] || continue
-    local argv0 basename
+    local argv0 basename agent_id
     argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
     basename="${argv0##*/}"
     case "$basename" in
-      claude|codex|gemini|openclaw) ;;
+      claude|codex|gemini|openclaw)
+        agent_id="$basename"
+        ;;
+      agent)
+        # Cursor Agent CLI — skip unrelated `agent` binaries on PATH.
+        if [[ "$argv0" == *".local/bin/agent"* ]] || [[ "$argv0" == *"/.cursor/"* ]]; then
+          agent_id="cursor"
+        else
+          continue
+        fi
+        ;;
       *) continue ;;
     esac
     local cwd
     cwd=$(readlink "$pd/cwd" 2>/dev/null) || continue
-    echo "$cwd $basename"
+    echo "$cwd $agent_id"
   done
 }
 

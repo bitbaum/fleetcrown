@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocalStorageState } from "@/hooks/use-local-storage-state";
 import { RefreshCw, Sparkles, Plus, Moon, LayoutList, LayoutGrid } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,16 @@ export function ControlPanel() {
     (v) => v,
     (raw) => raw === "commander" ? "commander" : "full",
   );
+
+  // First mobile visit: default to commander (live tabs + fleet) instead of full metrics wall.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("control:view-mode") !== null) return;
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        setViewMode("commander");
+      }
+    } catch { /* ignore */ }
+  }, [setViewMode]);
   const [activityOpen, setActivityOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(true);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());

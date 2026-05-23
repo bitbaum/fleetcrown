@@ -54,6 +54,7 @@ PUBLIC_API_ROUTES=(
 )
 AUTH_API_ROUTES=(
   "/api/me"
+  "/api/onboarding"
   "/api/crons"
   "/api/goals"
   "/api/habits"

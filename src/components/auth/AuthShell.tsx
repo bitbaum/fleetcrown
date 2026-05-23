@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PUBLIC_SURFACE } from "@/config/ui";
 import { PUBLIC_NAV_LINKS } from "@/config/auth";
@@ -92,7 +93,7 @@ export function AuthShell({
         className="relative z-10 flex items-center justify-center px-4 pb-16"
         style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}
       >
-        <div className="w-full max-w-[400px]">{children}</div>
+        <div className="ui-auth-container">{children}</div>
       </main>
     </PublicSurface>
   );
@@ -143,5 +144,79 @@ export function AuthSecondaryButton({
     >
       {children}
     </button>
+  );
+}
+
+export function AuthProgressBar({ activeStep, steps = 3 }: { activeStep: number; steps?: number }) {
+  return (
+    <div className="ui-auth-progress-row">
+      {Array.from({ length: steps }, (_, i) => (
+        <div
+          key={i}
+          className={`ui-auth-progress-segment${i <= activeStep ? " ui-auth-progress-segment-active" : ""}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function AuthPrefixField({
+  prefix,
+  value,
+  onChange,
+  onEnter,
+  placeholder,
+}: {
+  prefix: string;
+  value: string;
+  onChange: (value: string) => void;
+  onEnter?: () => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="ui-auth-prefix-field">
+      <span className="ui-auth-prefix-label">{prefix}</span>
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
+        placeholder={placeholder}
+        className="ui-auth-prefix-input"
+      />
+    </div>
+  );
+}
+
+export function AuthLoadingCenter({ size = "md" }: { size?: "sm" | "md" }) {
+  return (
+    <div className="ui-auth-loading">
+      <Loader2 className={size === "sm" ? "ui-auth-spinner-sm" : "ui-auth-spinner"} />
+    </div>
+  );
+}
+
+export function AuthModeTabs({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: Array<{ id: string; label: string }>;
+  active: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="ui-auth-mode-tabs">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => onChange(tab.id)}
+          className={active === tab.id ? "ui-auth-mode-tab ui-auth-mode-tab-active" : "ui-auth-mode-tab"}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
   );
 }

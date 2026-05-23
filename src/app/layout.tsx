@@ -64,6 +64,9 @@ export const viewport: Viewport = {
   ],
 };
 
+// Client auth/onboarding pages use hooks; avoid static prerender failures (Next 16 + React 19).
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

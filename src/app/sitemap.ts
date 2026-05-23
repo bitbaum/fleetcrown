@@ -15,7 +15,12 @@ import { getDefaultUser } from "@/db/queries/users";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const thoughts = listThoughts();
-  const defaultUser = await getDefaultUser();
+  let defaultUser: Awaited<ReturnType<typeof getDefaultUser>> | undefined;
+  try {
+    defaultUser = await getDefaultUser();
+  } catch {
+    // Build/CI may run without a reachable DB — static routes still ship.
+  }
 
   const base: MetadataRoute.Sitemap = [
     { url: `${APP_URL}/`,           lastModified: now, changeFrequency: "weekly",  priority: 1.0 },

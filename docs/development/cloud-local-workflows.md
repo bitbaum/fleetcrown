@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-05-21
-last_modified_summary: Document runtime_snapshots openTabs push for cloud Live Zellij panel; note Control fleet-first layout.
+last_modified_date: 2026-05-22
+last_modified_summary: Link to thoughts article on database kill switch and studio trunk strategy.
 ---
 
 Cockpit is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -14,16 +14,17 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 
 | Step | Where | Install required? |
 |------|-------|-----------------|
-| 1. Sign in (GitHub OAuth) | Browser | No |
-| 2. Onboarding (username, optional project) | Browser | No |
+| 1. Sign in (GitHub OAuth or email) | Browser | No |
+| 2. Onboarding — username, optional first project, connect machine | Browser | No (runtime step skippable) |
 | 3. Use goals, projects metadata, prompts library, settings | Browser | No |
-| 4. Dispatch agents from Control | Browser + **local setup** | Yes — see below |
+| 4. Dispatch agents from Control | Browser + **local setup** | Yes — onboarding step 3 or Settings |
 
 ### Local setup (agent dispatch only)
 
 1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; Cockpit injects prompts into tabs.
 2. **At least one agent CLI** on `$PATH` — not all of them:
    - Claude Code (`claude`)
+   - Cursor Agent (`agent` — [install](https://cursor.com/docs/cli))
    - Codex (`codex`)
    - Gemini CLI (`gemini`)
    - openclaw
@@ -105,5 +106,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 ## Related docs
 
 - `CLAUDE.md` — engineering conventions
+- `docs/infrastructure/postgres-portability.md` — vendor-neutral DB env vars, dump/restore, future Oracle/Hetzner migration
+- [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack) — postmortem, egress, Neon vs Oracle vs Hetzner
 - `home/README.md` — experimental local Brain+Bridge+Worker stack (`:3001`), separate from SaaS default path
 - `docs/debt-reduction-roadmap.md` — orchestration consolidation plan

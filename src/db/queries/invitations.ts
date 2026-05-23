@@ -48,7 +48,6 @@ export async function acceptInvitation(
         name,
         email: invite.email ?? email ?? null,
         passwordHash,
-        onboardedAt: new Date(),
       })
       .returning({ id: users.id });
 

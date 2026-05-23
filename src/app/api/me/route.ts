@@ -10,7 +10,6 @@ const PatchBody = z.object({
     z.string().min(2).max(40).regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only"),
   ).optional(),
   name: z.string().trim().min(1).max(120).optional(),
-  onboardedAt: z.string().datetime().optional(),
 });
 
 export async function GET() {
@@ -26,7 +25,7 @@ export async function PATCH(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const dataOrResp = await readJsonBody(req, PatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { username, name, onboardedAt } = dataOrResp;
+  const { username, name } = dataOrResp;
 
   if (username) {
     const existing = await getUserByUsername(username);
@@ -38,7 +37,6 @@ export async function PATCH(req: NextRequest) {
   const updated = await updateUser(userId, {
     username,
     name,
-    onboardedAt: onboardedAt ? new Date(onboardedAt) : undefined,
   });
 
   return NextResponse.json(updated);

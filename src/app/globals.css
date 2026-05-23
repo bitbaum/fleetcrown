@@ -439,6 +439,139 @@
   .ui-public-pricing-card-highlighted {
     @apply border-white/[0.18] bg-white/[0.06];
   }
+  .ui-public-primary-action-compact {
+    @apply rounded-full bg-white !py-2 !px-5 text-sm font-semibold text-black transition-opacity hover:opacity-85;
+  }
+  .ui-public-section-kicker {
+    @apply mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25;
+  }
+  .ui-public-section-title {
+    @apply text-2xl font-bold tracking-tight text-white/80;
+  }
+  .ui-public-section-title-spaced {
+    @apply mb-8 text-2xl font-bold tracking-tight text-white/80 sm:mb-12;
+  }
+  .ui-public-section-note {
+    @apply mb-8 sm:mb-12 text-sm text-white/30;
+  }
+  .ui-public-pricing-popular {
+    @apply mb-4 inline-flex items-center rounded-full bg-white/[0.08] px-2.5 py-1 text-micro font-semibold uppercase tracking-widest text-white/50;
+  }
+  .ui-public-pricing-plan {
+    @apply mb-1 text-xs font-semibold uppercase tracking-widest text-white/30;
+  }
+  .ui-public-pricing-price-row {
+    @apply flex items-baseline gap-1;
+  }
+  .ui-public-pricing-price {
+    @apply text-4xl font-bold tracking-tight text-white/90;
+  }
+  .ui-public-pricing-period {
+    @apply text-sm text-white/30;
+  }
+  .ui-public-pricing-annual {
+    @apply mb-1 text-xs text-white/40;
+  }
+  .ui-public-pricing-tagline {
+    @apply mb-6 mt-3 text-sm leading-relaxed text-white/40;
+  }
+  .ui-public-pricing-divider {
+    @apply border-t border-white/[0.06] pt-5;
+  }
+  .ui-public-pricing-features {
+    @apply space-y-2.5 text-left;
+  }
+  .ui-public-pricing-feature {
+    @apply flex items-start gap-2.5 text-sm text-white/40;
+  }
+  .ui-public-pricing-check {
+    @apply mt-0.5 shrink-0 text-white/20;
+  }
+  .ui-public-doc-header {
+    @apply mb-16 border-b border-white/[0.08] pb-12;
+  }
+  .ui-public-doc-meta-row {
+    @apply mb-6 flex flex-wrap items-center gap-3;
+  }
+  .ui-public-doc-badge {
+    @apply rounded-full border border-white/[0.12] bg-white/[0.06] px-3 py-1 font-mono text-xs text-white/40;
+  }
+  .ui-public-doc-meta {
+    @apply font-mono text-xs text-white/25;
+  }
+  .ui-public-doc-title {
+    @apply mb-5 font-bold tracking-tight text-white;
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+  .ui-public-doc-subtitle {
+    @apply text-lg leading-relaxed text-white/40 sm:text-xl;
+  }
+  .ui-public-prose {
+    @apply space-y-8;
+  }
+  .ui-public-prose-h2 {
+    @apply pt-6 text-2xl font-semibold tracking-tight text-white/90;
+    letter-spacing: -0.02em;
+  }
+  .ui-public-prose-h3 {
+    @apply pt-2 text-lg font-semibold text-white/80;
+  }
+  .ui-public-prose-p {
+    @apply text-base leading-[1.8] text-white/50;
+  }
+  .ui-public-prose-blockquote {
+    @apply border-l-2 border-white/20 pl-6;
+  }
+  .ui-public-prose-blockquote-p {
+    @apply text-base italic leading-relaxed text-white/35;
+  }
+  .ui-public-prose-li {
+    @apply flex items-start gap-3 text-base leading-relaxed text-white/45;
+  }
+  .ui-public-prose-bullet {
+    @apply mt-2.5 h-1 w-1 shrink-0 rounded-full bg-white/25;
+  }
+  .ui-public-prose-ol-index {
+    @apply mt-1 shrink-0 font-mono text-xs text-white/25;
+  }
+  .ui-public-code-block {
+    @apply overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.04] p-5;
+  }
+  .ui-public-code-lang {
+    @apply mb-3 font-mono text-micro uppercase tracking-widest text-white/20;
+  }
+  .ui-public-code-pre {
+    @apply font-mono text-sm leading-relaxed text-white/60;
+  }
+  .ui-public-doc-footer {
+    @apply mt-24 border-t border-white/[0.08] pt-16 text-center;
+  }
+  .ui-public-doc-footer-title {
+    @apply mb-2 text-sm font-medium text-white/60;
+  }
+  .ui-public-doc-footer-note {
+    @apply mb-8 text-sm text-white/30;
+  }
+  .ui-brand-mark {
+    @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay;
+  }
+  .ui-brand-mark-inverted {
+    @apply flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.03];
+  }
+  .ui-brand-mark-compact {
+    @apply h-10 w-10;
+  }
+  .ui-brand-mark-default {
+    @apply h-11 w-11;
+  }
+  .ui-brand-kicker-inverted {
+    @apply text-xs font-semibold uppercase tracking-[0.12em] text-white/38;
+  }
+  .ui-brand-wordmark-inverted {
+    @apply mt-1 block text-2xl font-medium tracking-display text-white;
+  }
   .ui-auth-label {
     @apply block text-sm font-medium text-white/[0.55];
   }
@@ -487,6 +620,123 @@
   }
   .ui-auth-input-disabled {
     @apply cursor-not-allowed text-white/[0.60] opacity-50;
+  }
+  .ui-auth-container {
+    @apply w-full max-w-[400px];
+  }
+  .ui-auth-progress-row {
+    @apply mb-8 flex items-center gap-1.5;
+  }
+  .ui-auth-progress-segment {
+    @apply h-0.5 flex-1 rounded-full bg-white/[0.12] transition-all;
+  }
+  .ui-auth-progress-segment-active {
+    @apply bg-white/50;
+  }
+  .ui-auth-body {
+    @apply text-sm leading-relaxed text-white/40;
+  }
+  .ui-auth-list {
+    @apply ml-4 list-decimal space-y-2 text-sm text-white/50;
+  }
+  .ui-auth-link {
+    @apply text-white/70 underline-offset-2 hover:underline;
+  }
+  .ui-auth-inline-code {
+    @apply rounded bg-white/[0.06] px-1 py-0.5 text-xs text-white/60;
+  }
+  .ui-auth-inset-panel {
+    @apply rounded-xl border border-white/[0.12] bg-white/[0.04] p-3;
+  }
+  .ui-auth-inset-label {
+    @apply mb-1.5 text-xs font-medium text-white/40;
+  }
+  .ui-auth-mono {
+    @apply min-w-0 truncate font-mono text-xs text-white/70;
+  }
+  .ui-auth-mono-wrap {
+    @apply min-w-0 break-all font-mono text-xs leading-relaxed text-white/70;
+  }
+  .ui-auth-selectable-card {
+    @apply w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-3 text-left transition-all hover:border-white/[0.14] hover:bg-white/[0.06];
+  }
+  .ui-auth-selectable-card-selected {
+    @apply border-white/30 bg-white/10;
+  }
+  .ui-auth-confirmation-row {
+    @apply flex items-center gap-2.5 rounded-xl border border-white/[0.14] bg-white/[0.06] px-3.5 py-3;
+  }
+  .ui-auth-status-banner {
+    @apply flex items-center gap-2 rounded-xl border border-white/[0.14] bg-white/[0.06] px-3.5 py-3 text-sm text-white/70;
+  }
+  .ui-auth-muted-link {
+    @apply text-xs text-white/30 transition-colors hover:text-white/55;
+  }
+  .ui-auth-hint {
+    @apply text-center text-sm text-white/35;
+  }
+  .ui-auth-hint-emphasis {
+    @apply text-center text-sm text-white/50;
+  }
+  .ui-auth-hint-link {
+    @apply text-white/60 underline underline-offset-2 transition-colors hover:text-white/80;
+  }
+  .ui-auth-mode-tabs {
+    @apply mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1;
+  }
+  .ui-auth-mode-tab {
+    @apply flex-1 rounded-lg py-2 text-sm font-medium text-white/30 transition-colors hover:text-white/55;
+  }
+  .ui-auth-mode-tab-active {
+    @apply bg-white/[0.09] text-white/80;
+  }
+  .ui-auth-prefix-field {
+    @apply flex w-full items-center gap-0 rounded-xl border border-white/[0.10] bg-white/[0.06] !py-0 px-4 text-sm text-white outline-none transition-colors focus:border-white/[0.30];
+  }
+  .ui-auth-prefix-label {
+    @apply shrink-0 select-none py-3 text-sm text-white/30;
+  }
+  .ui-auth-prefix-input {
+    @apply flex-1 bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/[0.20];
+  }
+  .ui-auth-loading {
+    @apply flex items-center justify-center py-16;
+  }
+  .ui-auth-spinner {
+    @apply h-6 w-6 animate-spin text-white/30;
+  }
+  .ui-auth-spinner-sm {
+    @apply h-5 w-5 animate-spin text-white/30;
+  }
+  .ui-auth-repo-hint {
+    @apply text-xs text-white/40;
+  }
+  .ui-auth-repo-scroll {
+    @apply max-h-60 space-y-1.5 overflow-y-auto pr-1;
+  }
+  .ui-auth-repo-name {
+    @apply truncate text-sm font-medium text-white/80;
+  }
+  .ui-auth-repo-desc {
+    @apply mt-1 truncate text-xs text-white/35;
+  }
+  .ui-auth-icon-muted {
+    @apply shrink-0 text-white/40;
+  }
+  .ui-auth-icon-faint {
+    @apply h-3 w-3 shrink-0 text-white/30;
+  }
+  .ui-auth-status-meta {
+    @apply text-xs text-white/35;
+  }
+  .ui-auth-meta-inline {
+    @apply flex shrink-0 items-center gap-1 text-xs text-white/30;
+  }
+  .ui-auth-owner-note {
+    @apply text-sm text-white/35;
+  }
+  .ui-auth-row-actions {
+    @apply flex gap-2;
   }
 
   /* Loading spinners — applied to Loader2 icon className */
@@ -550,6 +800,9 @@
   }
   .ui-chip-action-compact {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
+  }
+  .ui-chip-truncate-label {
+    @apply inline-flex min-h-11 max-w-[18rem] items-center truncate rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-left text-xs text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary sm:min-h-0 disabled:opacity-40;
   }
   /* Pill action button — Today page quick-action chips (Log, Capture, Plan day, etc.) */
   .ui-btn-pill {
@@ -847,6 +1100,7 @@
   .ui-lang-rb   { @apply bg-red-500/20 text-red-300; }
   .ui-lang-cs   { @apply bg-purple-500/20 text-purple-300; }
   .ui-lang-java { @apply bg-amber-500/20 text-amber-300; }
+  .ui-lang-default { @apply bg-white/10 text-white/50; }
 
   /* ── End brand / category colors ─────────────────────────────────────────── */
 

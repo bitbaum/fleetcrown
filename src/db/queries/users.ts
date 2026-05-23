@@ -22,7 +22,7 @@ export async function createUser(data: { name: string; email: string; passwordHa
       name: data.name,
       email: data.email.toLowerCase().trim(),
       passwordHash: data.passwordHash,
-      // onboardedAt intentionally left null — set by the /onboarding flow
+      // onboardedAt set server-side by POST /api/onboarding when username is valid
     })
     .returning({ id: users.id });
   return user;

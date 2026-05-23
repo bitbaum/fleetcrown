@@ -61,13 +61,18 @@ src/
 Set these required environment variables in `.env.local`:
 
 ```bash
-DATABASE_URL=postgresql://localhost/cockpit
+DATABASE_URL=postgresql://cockpit:changeme@localhost:5432/cockpit
 AUTH_SECRET=replace-me
-AUTH_GITHUB_ID=replace-me
-AUTH_GITHUB_SECRET=replace-me
+GITHUB_CLIENT_ID=replace-me
+GITHUB_CLIENT_SECRET=replace-me
 ```
 
-Postgres needs a local `cockpit` database. Then push the schema:
+**Local dev only** — never point `.env.local` at a cloud Postgres URL. Production uses
+`DATABASE_URL` (direct) + `DATABASE_POOL_URL` (pooled) on Vercel. See
+[`docs/infrastructure/postgres-portability.md`](docs/infrastructure/postgres-portability.md)
+for switching hosts (Neon → Oracle/Hetzner) without code changes.
+
+Postgres needs a local `cockpit` database (`docker compose up db -d`). Then push the schema:
 
 ```bash
 DATABASE_URL=$YOUR_URL npx drizzle-kit push
@@ -91,6 +96,8 @@ data, either:
 npm run dev          # Start the dev server on :3000
 npm run build        # Production build (uses real DB connection)
 npm run smoke        # Curl every page + DB-backed GET API and assert 2xx/3xx
+npm run test:db-url  # Postgres URL resolution (portability)
+npm run db:dump      # pg_dump backup (DATABASE_URL=direct)
 npm run lint         # ESLint
 ```
 

@@ -55,7 +55,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
 
       const result = await signIn("user-password", { userId: data.userId, password, redirect: false });
       if (result?.ok) {
-        router.push(ROUTES.APP_HOME);
+        router.push(ROUTES.ONBOARDING);
       } else {
         router.push(ROUTES.SIGN_IN);
       }

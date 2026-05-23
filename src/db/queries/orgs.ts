@@ -61,7 +61,6 @@ export async function addOrgMember(orgId: string, userId: string, role: "admin" 
     });
 }
 
-/** Returns the org owned by this user (their primary team). */
 export async function getOwnerOrgId(userId: string): Promise<string | null> {
   const [row] = await db
     .select({ id: orgs.id })
@@ -69,4 +68,14 @@ export async function getOwnerOrgId(userId: string): Promise<string | null> {
     .where(eq(orgs.ownerId, userId))
     .limit(1);
   return row?.id ?? null;
+}
+
+/** True when the user belongs to someone else's org (team invite), not just their personal org. */
+export async function isTeamInvitee(userId: string): Promise<boolean> {
+  const memberships = await db
+    .select({ ownerId: orgs.ownerId })
+    .from(orgMemberships)
+    .innerJoin(orgs, eq(orgs.id, orgMemberships.orgId))
+    .where(eq(orgMemberships.userId, userId));
+  return memberships.some((row) => row.ownerId !== userId);
 }

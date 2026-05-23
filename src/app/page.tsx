@@ -18,7 +18,9 @@ export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
 
   const session = await auth();
-  if (session?.user) redirect(ROUTES.APP_HOME);
+  if (session?.user) {
+    redirect(session.user.onboardedAt ? ROUTES.APP_HOME : ROUTES.ONBOARDING);
+  }
 
   const stripeReady = isStripeReady();
 
@@ -30,7 +32,7 @@ export default async function LandingPage() {
           <Link href={ROUTES.SIGN_IN} className="ui-public-nav-link hidden sm:block">
             Sign in
           </Link>
-          <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action !py-2 !px-5 text-sm">
+          <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action-compact">
             Get started →
           </Link>
         </div>
@@ -38,7 +40,6 @@ export default async function LandingPage() {
     >
       <main className="relative z-10 flex flex-col items-center px-6 pb-16 pt-16 text-center sm:pb-32 sm:pt-28">
 
-        {/* Hero */}
         <h1 className="ui-public-title max-w-5xl">
           {LANDING_HEADLINE[0]}
           <br />
@@ -58,14 +59,9 @@ export default async function LandingPage() {
           </Link>
         </div>
 
-        {/* Features */}
         <div id="features" className="mt-16 sm:mt-32 w-full max-w-4xl scroll-mt-24">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25">
-            What it does
-          </p>
-          <h2 className="mb-8 sm:mb-12 text-2xl font-bold tracking-tight text-white/80">
-            One surface. Every system.
-          </h2>
+          <p className="ui-public-section-kicker">What it does</p>
+          <h2 className="ui-public-section-title-spaced">One surface. Every system.</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             {LANDING_FEATURES.map(({ icon, title, body }) => (
               <div key={title} className="ui-public-feature-card">
@@ -77,15 +73,10 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Pricing */}
         <div id="pricing" className="mt-16 sm:mt-32 w-full max-w-4xl scroll-mt-24">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25">
-            Pricing
-          </p>
-          <h2 className="mb-2 text-2xl font-bold tracking-tight text-white/80">
-            Simple, honest pricing
-          </h2>
-          <p className="mb-8 sm:mb-12 text-sm text-white/30">Billed annually · cancel any time</p>
+          <p className="ui-public-section-kicker">Pricing</p>
+          <h2 className="ui-public-section-title mb-2">Simple, honest pricing</h2>
+          <p className="ui-public-section-note">Billed annually · cancel any time</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {LANDING_PRICING.map((tier) => (
               <div
@@ -93,21 +84,15 @@ export default async function LandingPage() {
                 className={`ui-public-pricing-card${tier.highlighted ? " ui-public-pricing-card-highlighted" : ""}`}
               >
                 {tier.highlighted && (
-                  <div className="mb-4 inline-flex items-center rounded-full bg-white/[0.08] px-2.5 py-1 text-micro font-semibold uppercase tracking-widest text-white/50">
-                    Most popular
-                  </div>
+                  <div className="ui-public-pricing-popular">Most popular</div>
                 )}
-                <div className="mb-1 text-xs font-semibold uppercase tracking-widest text-white/30">
-                  {tier.name}
+                <div className="ui-public-pricing-plan">{tier.name}</div>
+                <div className="ui-public-pricing-price-row">
+                  <span className="ui-public-pricing-price">${tier.monthly}</span>
+                  <span className="ui-public-pricing-period">/mo</span>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold tracking-tight text-white/90">
-                    ${tier.monthly}
-                  </span>
-                  <span className="text-sm text-white/30">/mo</span>
-                </div>
-                <p className="mb-1 text-xs text-white/40">${tier.annual}/yr billed annually</p>
-                <p className="mb-6 mt-3 text-sm leading-relaxed text-white/40">{tier.tagline}</p>
+                <p className="ui-public-pricing-annual">${tier.annual}/yr billed annually</p>
+                <p className="ui-public-pricing-tagline">{tier.tagline}</p>
                 <Link
                   href={
                     stripeReady
@@ -122,11 +107,11 @@ export default async function LandingPage() {
                 >
                   {tier.cta}
                 </Link>
-                <div className="border-t border-white/[0.06] pt-5">
-                  <ul className="space-y-2.5 text-left">
+                <div className="ui-public-pricing-divider">
+                  <ul className="ui-public-pricing-features">
                     {tier.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2.5 text-sm text-white/40">
-                        <span className="mt-0.5 shrink-0 text-white/20">✓</span>
+                      <li key={feature} className="ui-public-pricing-feature">
+                        <span className="ui-public-pricing-check">✓</span>
                         {feature}
                       </li>
                     ))}

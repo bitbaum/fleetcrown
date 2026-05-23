@@ -8,6 +8,9 @@ featured: false
 author: Ivy
 readingTimeMin: 5
 ---
+
+> **Update (May 2026):** Neon free tier suspended our production database when egress exceeded 5 GB/month. Cockpit's daemon + serverless traffic pattern is a poor fit for that tier. See the follow-up: [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack).
+
 ## The Current State
 
 Cockpit's AI inference goes through openclaw, which routes to a locally-running Codex model (the `openclaw-infer` process). For short tasks like the AI Merge queue feature, this works — but it takes 4 minutes. That is not fast enough for an interactive tool. The operator clicks "AI merge," watches a spinner for four minutes, and wonders if it is broken.

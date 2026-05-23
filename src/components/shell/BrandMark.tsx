@@ -9,20 +9,12 @@ export function BrandMark({
   showWordmark?: boolean;
   inverted?: boolean;
 }) {
+  const markSize = compact ? "ui-brand-mark-compact" : "ui-brand-mark-default";
+  const markSurface = inverted ? "ui-brand-mark-inverted" : "ui-brand-mark";
+
   return (
     <div className="flex items-center gap-3">
-      <div
-        className={
-          compact
-            ? `flex h-10 w-10 items-center justify-center rounded-2xl border ${
-                inverted ? "border-white/12 bg-white/[0.03]" : "border-border-default bg-surface-overlay"
-              }`
-            : `flex h-11 w-11 items-center justify-center rounded-2xl border ${
-                inverted ? "border-white/12 bg-white/[0.03]" : "border-border-default bg-surface-overlay"
-              }`
-        }
-        aria-hidden
-      >
+      <div className={`${markSurface} ${markSize}`} aria-hidden>
         <svg
           width={compact ? 22 : 24}
           height={compact ? 22 : 24}
@@ -39,8 +31,10 @@ export function BrandMark({
       </div>
       {showWordmark && !compact && (
         <div className="min-w-0">
-          <p className={inverted ? "ui-kicker text-white/38" : "ui-kicker"}>{APP_KICKER}</p>
-          <span className={inverted ? "mt-1 block text-2xl font-medium tracking-display text-white" : "mt-1 block text-2xl font-medium tracking-display text-text-primary"}>{APP_NAME}</span>
+          <p className={inverted ? "ui-brand-kicker-inverted" : "ui-kicker"}>{APP_KICKER}</p>
+          <span className={inverted ? "ui-brand-wordmark-inverted" : "mt-1 block text-2xl font-medium tracking-display text-text-primary"}>
+            {APP_NAME}
+          </span>
         </div>
       )}
     </div>

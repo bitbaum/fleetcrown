@@ -17,13 +17,20 @@ const LaunchAgentBody = z.object({
 
 const AGENT_BASENAMES = new Set(["claude", "codex", "gemini", "openclaw"]);
 
+function isCursorAgentArgv0(argv0: string): boolean {
+  return argv0.includes(".local/bin/agent") || argv0.includes("/.cursor/");
+}
+
 function isAgentRunningIn(dir: string): boolean {
   try {
     for (const entry of fs.readdirSync("/proc")) {
       if (!/^\d+$/.test(entry)) continue;
       try {
         const argv0 = fs.readFileSync(`/proc/${entry}/cmdline`, "utf8").split("\0")[0] ?? "";
-        if (!AGENT_BASENAMES.has(argv0.split("/").pop() ?? "")) continue;
+        const basename = argv0.split("/").pop() ?? "";
+        const isKnownAgent = AGENT_BASENAMES.has(basename)
+          || (basename === "agent" && isCursorAgentArgv0(argv0));
+        if (!isKnownAgent) continue;
         if (fs.readlinkSync(`/proc/${entry}/cwd`) === dir) return true;
       } catch { /* skip */ }
     }

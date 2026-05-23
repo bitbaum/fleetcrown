@@ -8,7 +8,6 @@ import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 
 export const metadata: Metadata = {
-  // Root layout's title template appends "— Cockpit" — don't double it here.
   title: "Whitepaper",
   description: "A technical architecture for sustained autonomous execution across many projects simultaneously.",
 };
@@ -53,56 +52,40 @@ export default function WhitepaperPage() {
       )}
     >
       <div className="relative z-10 mx-auto max-w-3xl px-6 pb-32 pt-16 sm:px-10">
-        {/* Header */}
-        <div className="mb-16 border-b border-white/[0.08] pb-12">
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-white/[0.12] bg-white/[0.06] px-3 py-1 font-mono text-xs text-white/40">
-              WHITEPAPER
-            </span>
-            <span className="font-mono text-xs text-white/25">v{version}</span>
+        <div className="ui-public-doc-header">
+          <div className="ui-public-doc-meta-row">
+            <span className="ui-public-doc-badge">WHITEPAPER</span>
+            <span className="ui-public-doc-meta">v{version}</span>
             {publishedAt && (
-              <span className="font-mono text-xs text-white/25">{publishedAt}</span>
+              <span className="ui-public-doc-meta">{publishedAt}</span>
             )}
           </div>
-          <h1 className="mb-5 font-bold tracking-tight text-white" style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)", lineHeight: 1.05, letterSpacing: "-0.03em" }}>
-            {title}
-          </h1>
+          <h1 className="ui-public-doc-title">{title}</h1>
           {subtitle && (
-            <p className="text-lg leading-relaxed text-white/40 sm:text-xl">
-              {subtitle}
-            </p>
+            <p className="ui-public-doc-subtitle">{subtitle}</p>
           )}
         </div>
 
-        {/* Body */}
-        <article className="space-y-8">
+        <article className="ui-public-prose">
           {blocks.map((block, i) => {
             switch (block.type) {
               case "h2":
-                return (
-                  <h2 key={i} className="pt-6 text-2xl font-semibold tracking-tight text-white/90" style={{ letterSpacing: "-0.02em" }}>
-                    {block.text}
-                  </h2>
-                );
+                return <h2 key={i} className="ui-public-prose-h2">{block.text}</h2>;
               case "h3":
-                return (
-                  <h3 key={i} className="pt-2 text-lg font-semibold text-white/80">
-                    {block.text}
-                  </h3>
-                );
+                return <h3 key={i} className="ui-public-prose-h3">{block.text}</h3>;
               case "p":
                 return (
                   <p
                     key={i}
-                    className="text-base leading-[1.8] text-white/50"
+                    className="ui-public-prose-p"
                     dangerouslySetInnerHTML={{ __html: renderInline(block.text) }}
                   />
                 );
               case "blockquote":
                 return (
-                  <blockquote key={i} className="border-l-2 border-white/20 pl-6">
+                  <blockquote key={i} className="ui-public-prose-blockquote">
                     {block.text.map((line, j) => (
-                      <p key={j} className="text-base italic leading-relaxed text-white/35">{line}</p>
+                      <p key={j} className="ui-public-prose-blockquote-p">{line}</p>
                     ))}
                   </blockquote>
                 );
@@ -110,8 +93,8 @@ export default function WhitepaperPage() {
                 return (
                   <ul key={i} className="space-y-2 pl-4">
                     {block.items.map((item, j) => (
-                      <li key={j} className="flex items-start gap-3 text-base leading-relaxed text-white/45">
-                        <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-white/25" />
+                      <li key={j} className="ui-public-prose-li">
+                        <span className="ui-public-prose-bullet" />
                         <span dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
                       </li>
                     ))}
@@ -121,8 +104,8 @@ export default function WhitepaperPage() {
                 return (
                   <ol key={i} className="space-y-2 pl-4">
                     {block.items.map((item, j) => (
-                      <li key={j} className="flex items-start gap-3 text-base leading-relaxed text-white/45">
-                        <span className="shrink-0 font-mono text-xs text-white/25 mt-1">{j + 1}.</span>
+                      <li key={j} className="ui-public-prose-li">
+                        <span className="ui-public-prose-ol-index">{j + 1}.</span>
                         <span dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
                       </li>
                     ))}
@@ -130,11 +113,11 @@ export default function WhitepaperPage() {
                 );
               case "code":
                 return (
-                  <div key={i} className="overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.04] p-5">
+                  <div key={i} className="ui-public-code-block">
                     {block.lang && (
-                      <p className="mb-3 font-mono text-micro uppercase tracking-widest text-white/20">{block.lang}</p>
+                      <p className="ui-public-code-lang">{block.lang}</p>
                     )}
-                    <pre className="font-mono text-sm leading-relaxed text-white/60">
+                    <pre className="ui-public-code-pre">
                       <code>{block.text}</code>
                     </pre>
                   </div>
@@ -145,10 +128,9 @@ export default function WhitepaperPage() {
           })}
         </article>
 
-        {/* Footer CTA */}
-        <div className="mt-24 border-t border-white/[0.08] pt-16 text-center">
-          <p className="mb-2 text-sm font-medium text-white/60">Ready to close the execution gap?</p>
-          <p className="mb-8 text-sm text-white/30">Start using {APP_NAME} as your builder operating system.</p>
+        <div className="ui-public-doc-footer">
+          <p className="ui-public-doc-footer-title">Ready to close the execution gap?</p>
+          <p className="ui-public-doc-footer-note">Start using {APP_NAME} as your builder operating system.</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action">
               Get started →

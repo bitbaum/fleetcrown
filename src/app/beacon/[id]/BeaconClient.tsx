@@ -294,7 +294,7 @@ function BeaconBody({
                 key={r.customPrompt}
                 onClick={() => setCustom(r.customPrompt)}
                 title={r.customPrompt}
-                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+                className="ui-chip-truncate-label"
               >
                 {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
                 {r.customPrompt.length > 60 ? r.customPrompt.slice(0, 60) + "…" : r.customPrompt}

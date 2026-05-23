@@ -121,7 +121,7 @@ export function IntentButtonPanel({
                 key={r.customPrompt}
                 onClick={() => onCustomChange(r.customPrompt)}
                 title={`Reuse this prompt: ${r.customPrompt}`}
-                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+                className="ui-chip-truncate-label"
               >
                 {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 50 ? t.slice(0, 50) + "…" : t; })()}
               </button>
@@ -224,7 +224,7 @@ export function IntentButtonPanel({
                 key={r.customPrompt}
                 onClick={() => onCustomChange(r.customPrompt)}
                 title={`Reuse this prompt: ${r.customPrompt}`}
-                className="ui-chip-action-compact max-w-[18rem] truncate text-left text-text-tertiary hover:text-text-secondary"
+                className="ui-chip-truncate-label"
               >
                 {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
                 {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 60 ? t.slice(0, 60) + "…" : t; })()}

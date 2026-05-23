@@ -16,6 +16,13 @@
     "check:design": "bash scripts/check-design-system.sh",
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
+    "test:control-presenter": "npx tsx scripts/test/control-presenter.ts",
+    "test:onboarding": "npx tsx scripts/test/onboarding.ts",
+    "test:db-url": "npx tsx scripts/test/db-url.ts",
+    "db:dump": "bash scripts/db/dump.sh",
+    "db:restore": "bash scripts/db/restore.sh",
+    "db:oracle-bootstrap": "bash scripts/db/oracle-bootstrap.sh",
+    "db:oracle-cutover": "bash scripts/db/oracle-cutover.sh",
     "wait:vercel": "bash scripts/wait-for-vercel.sh",
     "ship": "git push origin main && bash scripts/wait-for-vercel.sh",
     "prepare": "husky"

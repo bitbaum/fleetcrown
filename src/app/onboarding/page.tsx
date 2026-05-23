@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, GitBranch, Star, Lock } from "lucide-react";
+import { GitBranch } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
-import { postJson, patchJson, throwApiError } from "@/lib/api/fetch";
+import { postJson, patchJson, throwApiError, getJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
 import { APP_DOMAIN } from "@/config/brand";
 import {
@@ -15,113 +15,77 @@ import {
   AuthInput,
   AuthSubmitButton,
   AuthHeading,
+  AuthProgressBar,
+  AuthPrefixField,
+  AuthLoadingCenter,
 } from "@/components/auth/AuthShell";
+import { ConnectMachineStep } from "@/components/onboarding/ConnectMachineStep";
+import { RepoPicker } from "@/components/onboarding/RepoPicker";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
 
-// ── Repo picker ───────────────────────────────────────────────────────────────
+type OnboardingStep = "username" | "project" | "connect";
 
-const LANG_COLORS: Record<string, string> = {
-  TypeScript: "ui-lang-ts",
-  JavaScript: "ui-lang-js",
-  Python:     "ui-lang-py",
-  Go:         "ui-lang-go",
-  Rust:       "ui-lang-rs",
-  Ruby:       "ui-lang-rb",
-  "C#":       "ui-lang-cs",
-  Java:       "ui-lang-java",
+type OnboardingBootstrap = {
+  complete?: boolean;
+  suggestedUsername?: string;
+  isTeamInvitee?: boolean;
 };
 
-function RepoPicker({
-  onSelect,
-}: {
-  onSelect: (repo: GitHubRepo) => void;
-}) {
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
-  const [hasGithub, setHasGithub] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("/api/github/repos")
-      .then((r) => r.json())
-      .then((d: { repos?: GitHubRepo[]; hasGithub?: boolean }) => {
-        setRepos(d.repos ?? []);
-        setHasGithub(d.hasGithub ?? false);
-      })
-      .catch(() => setHasGithub(false))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-white/30" />
-      </div>
-    );
-  }
-
-  if (!hasGithub || repos.length === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      <p className="text-xs text-white/40">Your GitHub repos — pick one to start</p>
-      <div className="max-h-60 space-y-1.5 overflow-y-auto pr-1">
-        {repos.map((repo) => {
-          const isSelected = selected === repo.id;
-          const langColor = repo.language ? (LANG_COLORS[repo.language] ?? "bg-white/10 text-white/50") : null;
-          return (
-            <button
-              key={repo.id}
-              type="button"
-              onClick={() => {
-                setSelected(repo.id);
-                onSelect(repo);
-              }}
-              className={`w-full rounded-xl border px-3.5 py-3 text-left transition-all ${
-                isSelected
-                  ? "border-white/30 bg-white/10"
-                  : "border-white/[0.07] bg-white/[0.03] hover:border-white/[0.14] hover:bg-white/[0.06]"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                {repo.private && <Lock className="h-3 w-3 shrink-0 text-white/30" />}
-                <span className="truncate text-sm font-medium text-white/80">{repo.name}</span>
-                {langColor && (
-                  <span className={`ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ${langColor}`}>
-                    {repo.language}
-                  </span>
-                )}
-                {repo.stargazers_count > 0 && (
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-white/30">
-                    <Star className="h-3 w-3" />
-                    {repo.stargazers_count}
-                  </span>
-                )}
-              </div>
-              {repo.description && (
-                <p className="mt-1 truncate text-xs text-white/35">{repo.description}</p>
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+function stepIndex(step: OnboardingStep): number {
+  if (step === "username") return 0;
+  if (step === "project") return 1;
+  return 2;
 }
-
-// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { update } = useSession();
-  const [step, setStep]               = useState<"username" | "project">("username");
-  const [username, setUsername]       = useState("");
+  const [bootstrapping, setBootstrapping] = useState(true);
+  const [step, setStep] = useState<OnboardingStep>("username");
+  const [isTeamInvitee, setIsTeamInvitee] = useState(false);
+  const [username, setUsername] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [dirPath, setDirPath]         = useState("");
-  const [gitUrl, setGitUrl]           = useState("");
-  const [showManual, setShowManual]   = useState(false);
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState("");
+  const [dirPath, setDirPath] = useState("");
+  const [gitUrl, setGitUrl] = useState("");
+  const [showManual, setShowManual] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getJson<OnboardingBootstrap>("/api/onboarding")
+      .then((data) => {
+        if (data.complete) {
+          router.replace(ROUTES.APP_HOME);
+          return;
+        }
+        if (data.suggestedUsername) {
+          setUsername((prev) => prev || data.suggestedUsername || "");
+        }
+        if (data.isTeamInvitee) {
+          setIsTeamInvitee(true);
+        }
+      })
+      .catch(() => { /* stay on page */ })
+      .finally(() => setBootstrapping(false));
+  }, [router]);
+
+  async function finishOnboarding() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await postJson("/api/onboarding", {});
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to complete onboarding");
+      }
+      await update();
+      router.push(ROUTES.APP_HOME);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function saveUsername() {
     if (!username.trim()) return;
@@ -132,18 +96,10 @@ export default function OnboardingPage() {
       if (!res.ok) await throwApiError(res, "Failed to save username");
       await update();
 
-      // Team members already have org projects — skip the project step for them.
-      const orgsData: { orgs?: { id: string }[] } = await fetch("/api/orgs")
-        .then((r) => r.json())
-        .catch(() => ({ orgs: [] }));
-      if (orgsData.orgs && orgsData.orgs.length > 0) {
-        await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
-        await update();
-        router.push(ROUTES.APP_HOME);
-        return;
-      }
-
-      setStep("project");
+      const status = await getJson<OnboardingBootstrap>("/api/onboarding");
+      const teamInvitee = status.isTeamInvitee ?? false;
+      setIsTeamInvitee(teamInvitee);
+      setStep(teamInvitee ? "connect" : "project");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -168,9 +124,7 @@ export default function OnboardingPage() {
           gitUrl: gitUrl.trim() || undefined,
         });
       }
-      await patchJson("/api/me", { onboardedAt: new Date().toISOString() });
-      await update();
-      router.push(ROUTES.APP_HOME);
+      setStep("connect");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -178,13 +132,17 @@ export default function OnboardingPage() {
     }
   }
 
+  if (bootstrapping) {
+    return (
+      <AuthShell>
+        <AuthLoadingCenter />
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell>
-      {/* Step progress */}
-      <div className="mb-8 flex items-center gap-1.5">
-        <div className="h-0.5 flex-1 rounded-full bg-white/50" />
-        <div className={`h-0.5 flex-1 rounded-full transition-all ${step === "project" ? "bg-white/50" : "bg-white/[0.12]"}`} />
-      </div>
+      <AuthProgressBar activeStep={stepIndex(step)} />
 
       {step === "username" ? (
         <>
@@ -194,17 +152,13 @@ export default function OnboardingPage() {
           />
           <AuthCard>
             <AuthField label="Username">
-              <div className="ui-auth-input flex items-center gap-0 !py-0">
-                <span className="shrink-0 py-3 text-sm text-white/30 select-none">{APP_DOMAIN}/u/</span>
-                <input
-                  autoFocus
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && saveUsername()}
-                  placeholder="yourname"
-                  className="flex-1 bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/[0.20]"
-                />
-              </div>
+              <AuthPrefixField
+                prefix={`${APP_DOMAIN}/u/`}
+                value={username}
+                onChange={setUsername}
+                onEnter={saveUsername}
+                placeholder="yourname"
+              />
             </AuthField>
             {error && <p className="ui-error">{error}</p>}
             <AuthSubmitButton
@@ -216,7 +170,7 @@ export default function OnboardingPage() {
             />
           </AuthCard>
         </>
-      ) : (
+      ) : step === "project" ? (
         <>
           <AuthHeading
             title="Add your first project"
@@ -225,20 +179,19 @@ export default function OnboardingPage() {
           <AuthCard>
             <RepoPicker onSelect={handleRepoSelect} />
 
-            {/* Selected repo confirmation or manual entry */}
             {projectName && !showManual ? (
               <div className="space-y-3">
-                <div className="flex items-center gap-2.5 rounded-xl border border-white/[0.14] bg-white/[0.06] px-3.5 py-3">
-                  <GitBranch className="h-4 w-4 shrink-0 text-white/40" />
+                <div className="ui-auth-confirmation-row">
+                  <GitBranch className="h-4 w-4 ui-auth-icon-muted" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-white/80">{projectName}</p>
-                    {gitUrl && <p className="truncate text-xs text-white/35">{gitUrl}</p>}
+                    <p className="ui-auth-repo-name">{projectName}</p>
+                    {gitUrl && <p className="ui-auth-repo-desc">{gitUrl}</p>}
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowManual(true)}
-                  className="text-xs text-white/30 transition-colors hover:text-white/55"
+                  className="ui-auth-muted-link"
                 >
                   Enter details manually instead
                 </button>
@@ -274,7 +227,7 @@ export default function OnboardingPage() {
 
             {error && <p className="ui-error">{error}</p>}
 
-            <div className="flex gap-2">
+            <div className="ui-auth-row-actions">
               <button
                 type="button"
                 onClick={() => saveProject(true)}
@@ -289,9 +242,28 @@ export default function OnboardingPage() {
                 disabled={saving || !projectName.trim()}
                 className="ui-auth-submit-btn flex-1"
               >
-                {saving ? "Saving…" : "Let's go →"}
+                {saving ? "Saving…" : "Continue →"}
               </button>
             </div>
+          </AuthCard>
+        </>
+      ) : (
+        <>
+          <AuthHeading
+            title="Connect your machine"
+            description={
+              isTeamInvitee
+                ? "Dispatch agents from your local runtime when you're ready."
+                : "Last step — link the computer where your agents run."
+            }
+          />
+          <AuthCard>
+            <ConnectMachineStep
+              saving={saving}
+              onComplete={finishOnboarding}
+              onSkip={finishOnboarding}
+            />
+            {error && <p className="ui-error mt-3">{error}</p>}
           </AuthCard>
         </>
       )}

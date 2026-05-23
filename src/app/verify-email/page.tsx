@@ -55,7 +55,7 @@ function VerifyEmailInner() {
           description="This verification link is invalid or has expired. Enter your email to get a new one."
         />
         {sent ? (
-          <p className="text-center text-sm text-white/50">
+          <p className="ui-auth-hint-emphasis">
             Check your inbox — a new verification link is on the way.
           </p>
         ) : (
@@ -87,7 +87,6 @@ function VerifyEmailInner() {
     );
   }
 
-  // Default: verify-email landing for users who registered but haven't clicked yet
   return (
     <AuthShell>
       <AuthHeading
@@ -95,34 +94,36 @@ function VerifyEmailInner() {
         description="We sent you a verification link. Click it to activate your account."
       />
       {sent ? (
-        <p className="text-center text-sm text-white/50">
+        <p className="ui-auth-hint-emphasis">
           New link sent — check your inbox (and spam folder).
         </p>
       ) : (
-        <AuthCard>
-          <p className="mb-4 text-sm text-white/50">
-            Didn&apos;t get the email? Enter your address to resend it.
+        <>
+          <p className="ui-auth-hint-emphasis mb-4">
+            Didn&apos;t get it? Enter your email and we&apos;ll send another.
           </p>
-          <form onSubmit={handleResend} className="space-y-3">
-            <AuthField label="Email">
-              <AuthInput
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-                required
+          <AuthCard>
+            <form onSubmit={handleResend} className="space-y-3">
+              <AuthField label="Email">
+                <AuthInput
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                />
+              </AuthField>
+              {reqError && <p className="ui-error">{reqError}</p>}
+              <AuthSubmitButton
+                loading={loading}
+                disabled={!email}
+                label="Resend link →"
+                loadingLabel="Sending…"
               />
-            </AuthField>
-            {reqError && <p className="ui-error">{reqError}</p>}
-            <AuthSubmitButton
-              loading={loading}
-              disabled={!email}
-              label="Resend verification →"
-              loadingLabel="Sending…"
-            />
-          </form>
-        </AuthCard>
+            </form>
+          </AuthCard>
+        </>
       )}
       <AuthFooterLink href={ROUTES.SIGN_IN}>← Back to sign in</AuthFooterLink>
     </AuthShell>

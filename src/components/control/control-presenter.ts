@@ -230,8 +230,12 @@ function attentionScore(project: ProjectState): { score: number; reason: string 
 }
 
 export function formatAgentRuntimeLabel(project: ProjectState): string {
+  const labels: Record<string, string> = {
+    cursor: "Cursor",
+    agent: "Cursor",
+  };
   return project.activeAgents
-    .map((name) => name[0]?.toUpperCase() + name.slice(1))
+    .map((name) => labels[name] ?? (name[0]?.toUpperCase() + name.slice(1)))
     .join(", ");
 }
 

@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import { APP_SLUG } from "@/config/brand";
+import { getDatabaseDirectUrl } from "@/lib/db-url";
 
 // Postgres identifier (function + channel) names derived from APP_SLUG so a
 // brand rename moves all three contract sites together: this file, the LISTEN
@@ -10,9 +11,9 @@ export const NOTIFY_FN_NAME = `${_slug}_notify_project_state`;
 export const NOTIFY_CHANNEL = `${_slug}_state`;
 
 // Installs a Postgres NOTIFY trigger on project_states (idempotent — safe to run on every boot).
-// Must use DATABASE_URL (direct connection) — Neon pooler doesn't support DDL + NOTIFY.
+// Must use a direct connection — poolers (Neon, PgBouncer transaction mode) break DDL + NOTIFY.
 export async function setupNotifyTrigger(): Promise<void> {
-  const url = process.env.DATABASE_URL;
+  const url = getDatabaseDirectUrl();
   if (!url) return;
   const sql = postgres(url, { max: 1 });
   try {

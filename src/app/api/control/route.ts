@@ -46,6 +46,7 @@ type SlowCache = {
   zellijTabs: string[];
   dirs: string[];        // dirs list used to build this cache
   builtAt: number;
+  runtimeSnapshotUpdatedAt: Date | null;
 };
 
 let slowCache: SlowCache | null = null;
@@ -66,7 +67,13 @@ async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache>
     : (runtimeSnapshot?.openTabs?.length
       ? runtimeSnapshot.openTabs
       : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName));
-  return { gitMap, zellijTabs, dirs, builtAt: Date.now() };
+  return {
+    gitMap,
+    zellijTabs,
+    dirs,
+    builtAt: Date.now(),
+    runtimeSnapshotUpdatedAt: runtimeSnapshot?.updatedAt ?? null,
+  };
 }
 
 async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
@@ -224,7 +231,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt } = await getSlowData(userId, dirs);
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
@@ -473,8 +480,14 @@ export async function GET() {
     zellijTabs,
     recentActivity: recentActivity ?? [],
     runtimeAvailable: isRuntimeAvailable(),
-    daemonLastPushedAt: !isRuntimeAvailable() && dbStatesArr.length > 0
-      ? dbStatesArr.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, dbStatesArr[0].updatedAt).toISOString()
+    daemonLastPushedAt: !isRuntimeAvailable()
+      ? (() => {
+          let maxAt: Date | null = runtimeSnapshotUpdatedAt;
+          for (const s of dbStatesArr) {
+            if (!maxAt || s.updatedAt > maxAt) maxAt = s.updatedAt;
+          }
+          return maxAt?.toISOString() ?? null;
+        })()
       : null,
     failedCommands: failedCommands ?? [],
   } satisfies ControlData);

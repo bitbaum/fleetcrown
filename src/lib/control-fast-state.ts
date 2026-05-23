@@ -74,9 +74,13 @@ export function getAgentProcesses(
         const argv0 = cmdline.split("\0")[0] ?? "";
         const basename = argv0.includes("/") ? argv0.split("/").pop()! : argv0;
         const agent = agents.find((candidate) =>
-          candidate.processMatchers.some(
-            (m) => basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`),
-          )
+          candidate.processMatchers.some((m) => {
+            if (m === "agent" && candidate.id === "cursor") {
+              return basename === "agent"
+                && (argv0.includes(".local/bin/agent") || argv0.includes("/.cursor/"));
+            }
+            return basename === m || basename === `${m}.exe` || basename.startsWith(`${m}-`);
+          }),
         );
         if (!agent) continue;
         const cwd = fs.readlinkSync(`/proc/${entry}/cwd`);

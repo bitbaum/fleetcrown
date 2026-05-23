@@ -1,13 +1,9 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
+import { getDatabasePoolUrl } from "@/lib/db-url";
 import * as schema from "./schema";
 
-// NEON_DATABASE_URL = pooler endpoint (for API routes in serverless)
-// DATABASE_URL = direct connection (local dev / migrations)
-const DATABASE_URL = process.env.NEON_DATABASE_URL ?? process.env.DATABASE_URL;
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL or NEON_DATABASE_URL environment variable is required");
-}
+const DATABASE_URL = getDatabasePoolUrl();
 
 /**
  * Hot-reload-safe singleton client.

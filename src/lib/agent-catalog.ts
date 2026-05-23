@@ -12,7 +12,7 @@ export type AgentCatalog = {
 };
 
 function isSwitchableAgent(id: AgentOption): id is SwitchableAgent {
-  return id === "claude" || id === "codex" || id === "gemini";
+  return id === "claude" || id === "codex" || id === "gemini" || id === "cursor";
 }
 
 export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAgent, string>>, defaultAgent: SwitchableAgent): AgentCatalog {

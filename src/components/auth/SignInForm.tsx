@@ -7,7 +7,7 @@ import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 import {
   AuthShell, AuthCard, AuthField, AuthInput, AuthSubmitButton,
-  AuthDivider, AuthHeading, AuthSecondaryButton,
+  AuthDivider, AuthHeading, AuthSecondaryButton, AuthModeTabs,
 } from "@/components/auth/AuthShell";
 import Link from "next/link";
 
@@ -117,30 +117,14 @@ function FormInner({
 
       {/* Mode tabs — only show owner key tab when LOCAL_AUTH_PASSWORD is configured */}
       {localAuthEnabled && (
-        <div className="mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
-          <button
-            type="button"
-            onClick={() => switchMode("email")}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              mode === "email"
-                ? "bg-white/[0.09] text-white/80"
-                : "text-white/30 hover:text-white/55"
-            }`}
-          >
-            Email
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode("owner")}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              mode === "owner"
-                ? "bg-white/[0.09] text-white/80"
-                : "text-white/30 hover:text-white/55"
-            }`}
-          >
-            Owner key
-          </button>
-        </div>
+        <AuthModeTabs
+          tabs={[
+            { id: "email", label: "Email" },
+            { id: "owner", label: "Owner key" },
+          ]}
+          active={mode}
+          onChange={(id) => switchMode(id as Mode)}
+        />
       )}
 
       {mode === "email" ? (
@@ -226,9 +210,9 @@ function FormInner({
               label="Sign in →"
               loadingLabel="Signing in…"
             />
-            <p className="text-center text-sm text-white/35">
+            <p className="ui-auth-hint">
               No account?{" "}
-              <Link href={ROUTES.SIGN_UP} className="text-white/60 underline underline-offset-2 hover:text-white/80 transition-colors">
+              <Link href={ROUTES.SIGN_UP} className="ui-auth-hint-link">
                 Create one free →
               </Link>
             </p>
@@ -236,8 +220,8 @@ function FormInner({
         </AuthCard>
       ) : (
         <AuthCard>
-          <p className="text-sm text-white/35">
-            Use the owner password set in <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-xs text-white/50">LOCAL_AUTH_PASSWORD</code>.
+          <p className="ui-auth-owner-note">
+            Use the owner password set in <code className="ui-auth-inline-code">LOCAL_AUTH_PASSWORD</code>.
           </p>
           <form onSubmit={handleOwnerPassword} className="space-y-3">
             <AuthField label="Owner password">

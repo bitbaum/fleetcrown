@@ -2,8 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import { useEffect } from "react";
-import { AuthShell, AuthHeading } from "@/components/auth/AuthShell";
-import { Loader2 } from "lucide-react";
+import { AuthShell, AuthHeading, AuthLoadingCenter } from "@/components/auth/AuthShell";
 import { ROUTES } from "@/config/auth";
 
 export default function SignOutPage() {
@@ -17,9 +16,7 @@ export default function SignOutPage() {
         title="Signing out…"
         description="You'll be redirected to the sign-in page."
       />
-      <div className="flex justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-white/30" />
-      </div>
+      <AuthLoadingCenter />
     </AuthShell>
   );
 }

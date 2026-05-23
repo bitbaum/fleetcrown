@@ -11,6 +11,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
+import { getDatabaseDirectUrl } from "@/lib/db-url";
 import postgres from "postgres";
 
 export const dynamic = "force-dynamic";
@@ -190,10 +191,11 @@ export async function GET() {
       sseBus.on("sentinel-changed", onSentinelChanged);
 
       // Vercel-only: Postgres LISTEN/NOTIFY for sub-second state propagation.
-      // Must use DATABASE_URL (direct), not NEON_DATABASE_URL (pooler — no persistent LISTEN).
+      // Must use a direct URL — poolers do not support persistent LISTEN.
       let pgListener: ReturnType<typeof postgres> | null = null;
-      if (!isRuntimeAvailable() && process.env.DATABASE_URL) {
-        pgListener = postgres(process.env.DATABASE_URL, { max: 1 });
+      const directDatabaseUrl = getDatabaseDirectUrl();
+      if (!isRuntimeAvailable() && directDatabaseUrl) {
+        pgListener = postgres(directDatabaseUrl, { max: 1 });
         pgListener.listen(NOTIFY_CHANNEL, (notifyUserId) => {
           if (notifyUserId === userId) scheduledTick();
         }).catch((err) => console.warn("[control/stream] LISTEN setup failed:", err));

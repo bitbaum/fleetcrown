@@ -32,6 +32,7 @@ function normalizePreferences(raw: Partial<AgentPreferences & LegacyAgentConfig>
     claude: sanitizeModel("claude", currentModels.claude),
     codex: sanitizeModel("codex", currentModels.codex),
     gemini: sanitizeModel("gemini", currentModels.gemini),
+    cursor: sanitizeModel("cursor", currentModels.cursor),
   };
 
   if (!currentModels[defaultAgent] && raw.model) {
