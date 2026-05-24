@@ -16,6 +16,7 @@ const readline = require("readline");
 const DEFAULT_BASE_URL = "https://cockpitapp.vercel.app";
 const CONFIG_DIR = path.join(os.homedir(), ".config", "cockpit");
 const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
+const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "cockpit");
 
 function parseArgs(argv) {
   const args = { command: argv[2], token: "", baseUrl: DEFAULT_BASE_URL, install: false };
@@ -64,6 +65,40 @@ function writeEnvFile(token, baseUrl) {
     "",
   ].join("\n");
   fs.writeFileSync(ENV_FILE, content, { mode: 0o600 });
+}
+
+/**
+ * Download the daemon scripts tarball from the cloud and extract into
+ * ~/.local/share/cockpit/. Uses the system `tar` binary (universal on
+ * Linux/macOS; on Windows requires WSL/git-bash). Idempotent — overwrites
+ * existing files on re-run. Returns the install dir on success, or null
+ * on soft failure so init can still complete with just the env file.
+ */
+async function downloadDaemon(baseUrl) {
+  console.log(`Downloading daemon scripts from ${baseUrl}/api/agent/daemon…`);
+  const res = await fetch(`${baseUrl}/api/agent/daemon`);
+  if (!res.ok) throw new Error(`Daemon download failed (HTTP ${res.status})`);
+  const tarball = Buffer.from(await res.arrayBuffer());
+
+  fs.mkdirSync(DAEMON_DIR, { recursive: true });
+
+  const { spawn } = require("child_process");
+  await new Promise((resolve, reject) => {
+    const child = spawn("tar", ["-xz", "-C", DAEMON_DIR], {
+      stdio: ["pipe", "inherit", "inherit"],
+    });
+    child.on("error", reject);
+    child.on("close", (code) => code === 0 ? resolve() : reject(new Error(`tar exited ${code}`)));
+    child.stdin.end(tarball);
+  });
+
+  // chmod +x the executables so the user can run them directly without
+  // having to remember `bash ...`.
+  for (const name of ["cockpit-daemon.sh", "agent-hook-bridge.sh"]) {
+    try { fs.chmodSync(path.join(DAEMON_DIR, name), 0o755); } catch {}
+  }
+
+  return DAEMON_DIR;
 }
 
 function printHelp() {
@@ -116,15 +151,28 @@ async function main() {
   const profile = await verifyToken(args.baseUrl, token);
   writeEnvFile(token, args.baseUrl);
 
+  let daemonInstalledAt = null;
+  try {
+    daemonInstalledAt = await downloadDaemon(args.baseUrl);
+  } catch (err) {
+    console.warn(`\n⚠️  Daemon install failed: ${err.message}`);
+    console.warn(`   Token is saved (${ENV_FILE}). Re-run this command to retry the daemon download.`);
+  }
+
   console.log(`\n✓ Connected as ${profile.user?.name ?? profile.user?.email ?? profile.user?.id}`);
   console.log(`✓ Config saved to ${ENV_FILE}`);
+  if (daemonInstalledAt) {
+    console.log(`✓ Daemon scripts installed to ${daemonInstalledAt}`);
+  }
   console.log("\nNext steps:");
   console.log("  1. Install Zellij + at least one agent CLI (claude, codex, gemini, or openclaw)");
   console.log("  2. Register projects in Cockpit with local directory paths");
-  console.log(`  3. Start the daemon — currently requires a Cockpit repo clone`);
-  console.log(`     (one-line public installer is coming; for now, from a clone:)`);
-  console.log(`     set -a && source ${ENV_FILE} && ./scripts/cockpit-daemon.sh`);
-  console.log(`     # optional: bash scripts/install-daemon.sh (systemd user service)`);
+  if (daemonInstalledAt) {
+    console.log(`  3. Start the daemon:`);
+    console.log(`     set -a && source ${ENV_FILE} && ${daemonInstalledAt}/cockpit-daemon.sh`);
+  } else {
+    console.log(`  3. Re-run \`npx @cockpit/agent init\` once you're online to install the daemon scripts.`);
+  }
 
   if (args.install) {
     const { spawnSync } = require("child_process");

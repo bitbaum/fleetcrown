@@ -85,11 +85,10 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
           </a>{" "}
           and at least one agent CLI (Claude, Cursor, Codex, …).
         </li>
-        <li>Generate a token and run the init command below.</li>
+        <li>Generate a token and run the init command below. It saves the token and installs the daemon scripts to <code className="ui-auth-inline-code">~/.local/share/cockpit/</code>.</li>
         <li>
-          Start the daemon — currently requires a {APP_NAME} repo clone
-          (one-line public installer coming soon). Skip below to explore
-          the cloud surface without it.
+          Start the daemon:{" "}
+          <code className="ui-auth-inline-code">~/.local/share/cockpit/cockpit-daemon.sh</code>
         </li>
       </ol>
 

@@ -32,12 +32,14 @@ export const config = {
      *   api/auth                   – NextAuth internal endpoints
      *   api/agent/install          – serves the @cockpit/agent CLI for curl|node install
      *                                (public so new customers can run it before they sign in)
+     *   api/agent/daemon           – serves the gzipped daemon-scripts tarball for the
+     *                                CLI's install step (same pre-auth rationale as /install)
      *   api/health, api/setup      – infrastructure endpoints (pre-auth)
      *   api/crons, api/system      – GET excluded for daemon/monitoring; write methods enforce auth in-handler
      *   api/invitations/           – token-scoped invitation routes (GET validate, POST accept);
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/agent/install|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|whitepaper|thoughts|u/|beacon|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
   ],
 };
