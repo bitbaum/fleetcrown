@@ -304,9 +304,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       const email = user?.email ?? (token.email as string | undefined);
       const userId = user?.id ?? (token.id as string | undefined);
+
+      // Only refresh from the DB on sign-in or an explicit session.update().
+      // Every other request reuses the cached token — otherwise every
+      // Node-runtime hit costs getUserById + countActiveProjects (+ a possible
+      // updateUser from heal), turning a 1-user app into a per-request DB
+      // amplifier when traffic scales. The places that actually need fresh
+      // state (post-onboarding finish, /onboarding mount) all call update()
+      // explicitly, so this is correctness-preserving.
+      if (!user?.id && trigger !== "update") return token;
 
       let dbUser = userId && isValidUuid(userId) ? await getUserById(userId) : null;
       if (!dbUser && email) {

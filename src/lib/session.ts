@@ -4,23 +4,21 @@ import { auth } from "@/auth";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
 import { ROUTES } from "@/config/auth";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
-import { getUserByEmail, getUserById } from "@/db/queries/users";
+import { getUserByEmail } from "@/db/queries/users";
 import { envAlias, envAliasBool } from "@/lib/brand-env";
 import { isValidUuid } from "@/lib/utils";
 
 /**
  * Resolve the DB user id from a session. OAuth JWTs may briefly carry the
- * provider id instead of our UUID — fall back to email lookup.
+ * provider id instead of our UUID — fall back to email lookup only then.
+ * Fast path (no DB) for the common case where the JWT already carries our UUID.
  */
 export async function resolveSessionUserId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user) return null;
 
   const id = session.user.id;
-  if (id && isValidUuid(id)) {
-    const byId = await getUserById(id);
-    if (byId) return byId.id;
-  }
+  if (id && isValidUuid(id)) return id;
 
   const email = session.user.email;
   if (email) {
@@ -28,7 +26,7 @@ export async function resolveSessionUserId(): Promise<string | null> {
     if (byEmail) return byEmail.id;
   }
 
-  return id && isValidUuid(id) ? id : null;
+  return null;
 }
 
 /**
