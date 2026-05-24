@@ -6,8 +6,12 @@ import {
   isOnboardingComplete,
   suggestUsername,
 } from "@/lib/onboarding";
+import { decideHealPatch } from "@/lib/onboarding-heal-decision";
 
 type UserRow = typeof users.$inferSelect;
+
+export { decideHealPatch } from "@/lib/onboarding-heal-decision";
+export type { HealPatch } from "@/lib/onboarding-heal-decision";
 
 /**
  * Returning / migrated users: skip onboarding when they already have app data.
@@ -23,27 +27,20 @@ type UserRow = typeof users.$inferSelect;
 export async function healReturningUserOnboarding(user: UserRow): Promise<UserRow> {
   try {
     const projectCount = await countActiveProjects(user.id);
-    const isReturning = projectCount > 0 || user.onboardedAt != null;
-    if (!isReturning) return user;
 
-    let username = user.username;
-    if (!hasValidUsername(username)) {
+    let suggestedUsernameAvailable = false;
+    if (!hasValidUsername(user.username)) {
       const suggested = suggestUsername(user.name, user.email);
       if (suggested) {
         const taken = await getUserByUsername(suggested);
-        if (!taken || taken.id === user.id) username = suggested;
+        suggestedUsernameAvailable = !taken || taken.id === user.id;
       }
     }
 
-    const needsUsername = !hasValidUsername(user.username) && hasValidUsername(username);
-    const needsOnboarded = user.onboardedAt == null;
+    const patch = decideHealPatch(user, projectCount, suggestedUsernameAvailable);
+    if (!patch) return user;
 
-    if (!needsUsername && !needsOnboarded) return user;
-
-    const updated = await updateUser(user.id, {
-      ...(needsUsername && username ? { username } : {}),
-      ...(needsOnboarded ? { onboardedAt: new Date() } : {}),
-    });
+    const updated = await updateUser(user.id, patch);
     return updated ?? user;
   } catch (e) {
     // Stderr (not logDebug) — the DB may be the very thing that's failing,

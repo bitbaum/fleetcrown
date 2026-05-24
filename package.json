@@ -18,6 +18,7 @@
     "test:home": "bash scripts/test-home.sh",
     "test:control-presenter": "npx tsx scripts/test/control-presenter.ts",
     "test:onboarding": "npx tsx scripts/test/onboarding.ts",
+    "test:onboarding-heal": "npx tsx scripts/test/onboarding-heal.ts",
     "test:db-url": "npx tsx scripts/test/db-url.ts",
     "db:dump": "bash scripts/db/dump.sh",
     "db:restore": "bash scripts/db/restore.sh",
