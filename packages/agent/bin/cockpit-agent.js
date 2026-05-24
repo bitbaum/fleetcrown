@@ -34,10 +34,25 @@ function parseArgs(argv) {
 }
 
 function prompt(question) {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  // CRITICAL for the curl|node install path: process.stdin is already EOF'd
+  // because node received the script body through it. Reading from
+  // process.stdin would close readline immediately with no answer and the
+  // user would see only "Paste your ck_* agent token:" with no chance to
+  // type. Open /dev/tty directly so interactive input still works under a
+  // pipe. Standard installer pattern (rustup, brew, nvm). Falls back to
+  // process.stdin on platforms without /dev/tty (Windows) — in that case
+  // --token is the only viable path and the CLI exits cleanly below.
+  let input = process.stdin;
+  let openedTty = null;
+  if (!process.stdin.isTTY) {
+    try { openedTty = fs.createReadStream("/dev/tty"); input = openedTty; }
+    catch { /* fall through to process.stdin (likely Windows) */ }
+  }
+  const rl = readline.createInterface({ input, output: process.stdout });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
+      if (openedTty) { try { openedTty.destroy(); } catch {} }
       resolve(answer.trim());
     });
   });
@@ -138,6 +153,13 @@ async function main() {
 
   let token = args.token;
   if (!token) {
+    // Fail clean in non-interactive contexts (CI, sandboxes, daemons) instead
+    // of printing a hint nobody can act on and then hanging on a prompt that
+    // has no TTY to read from.
+    if (!process.stdin.isTTY && !process.stdout.isTTY) {
+      console.error("Non-interactive environment: pass --token ck_… as an argument.");
+      process.exit(2);
+    }
     console.log("Mint a token in Cockpit → Settings → Agent tokens");
     token = await prompt("Paste your ck_* agent token: ");
   }
