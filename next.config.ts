@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
       "./scripts/agent-hook-bridge.sh",
       "./scripts/run-codex-task.sh",
       "./scripts/run-gemini-task.sh",
+      "./scripts/install-daemon.sh",
       "./scripts/beacon.py",
       "./scripts/_beacon_config.py",
       "./scripts/get-idle-secs.py",

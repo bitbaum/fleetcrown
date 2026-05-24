@@ -39,6 +39,12 @@ const FILES = [
   // when dispatching either agent. The bridge expects $SCRIPT_DIR/run-X-task.sh.
   "run-codex-task.sh",
   "run-gemini-task.sh",
+  // systemd installer — the agent CLI's --install flag spawns this so a new
+  // customer's daemon survives shell exit. Uses $SCRIPT_DIR for service
+  // WorkingDirectory + ExecStart, which resolves correctly under the flat
+  // ~/.local/share/cockpit/ layout (no PROJECT_DIR/.. assumption is hit on
+  // the env-var token path that the CLI feeds in).
+  "install-daemon.sh",
   // Python helpers referenced by agent-hook-bridge.sh. All are wrapped in
   // `|| true` / `2>/dev/null` in the bridge so absence degrades gracefully —
   // but real customers want the full experience (audio beacon, idle detection,

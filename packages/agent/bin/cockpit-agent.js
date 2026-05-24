@@ -198,13 +198,22 @@ async function main() {
 
   if (args.install) {
     const { spawnSync } = require("child_process");
-    const repoScripts = path.join(process.cwd(), "scripts", "install-daemon.sh");
-    if (fs.existsSync(repoScripts)) {
-      console.log("\nRunning install-daemon.sh…");
-      const r = spawnSync("bash", [repoScripts], { stdio: "inherit", env: { ...process.env, COCKPIT_DAEMON_TOKEN: token, COCKPIT_BASE_URL: args.baseUrl } });
+    // Prefer the just-downloaded copy in DAEMON_DIR; fall back to the
+    // repo-clone location for developers running from inside the cockpit tree.
+    const candidates = [
+      path.join(DAEMON_DIR, "install-daemon.sh"),
+      path.join(process.cwd(), "scripts", "install-daemon.sh"),
+    ];
+    const installScript = candidates.find(fs.existsSync);
+    if (installScript) {
+      console.log(`\nRunning install-daemon.sh (${installScript})…`);
+      const r = spawnSync("bash", [installScript], {
+        stdio: "inherit",
+        env: { ...process.env, COCKPIT_DAEMON_TOKEN: token, COCKPIT_BASE_URL: args.baseUrl },
+      });
       process.exit(r.status ?? 1);
     } else {
-      console.warn("\n--install skipped: scripts/install-daemon.sh not found (run from Cockpit repo clone).");
+      console.warn("\n--install skipped: install-daemon.sh not found in DAEMON_DIR or cwd/scripts/.");
     }
   }
 }
