@@ -1,6 +1,15 @@
 import type { NextAuthConfig } from "next-auth";
 import { ROUTES } from "@/config/auth";
 
+function sessionOnboardingDone(user: {
+  onboardingComplete?: boolean;
+  onboardedAt?: Date | string | null;
+  username?: string | null;
+}): boolean {
+  if (user.onboardingComplete === true) return true;
+  return Boolean(user.onboardedAt && user.username);
+}
+
 // Edge-safe auth config — no DB adapter, no Node.js crypto.
 // Used by src/middleware.ts (Edge Runtime).
 // Full auth with DB adapter lives in src/auth.ts.
@@ -16,7 +25,9 @@ export const authConfig = {
     // The jwt() callback in auth.ts stores this field on every sign-in/token refresh.
     session({ session, token }) {
       if (session.user) {
+        session.user.username = (token.username as string | null) ?? null;
         session.user.onboardedAt = (token.onboardedAt as Date | null) ?? null;
+        session.user.onboardingComplete = token.onboardingComplete === true;
       }
       return session;
     },
@@ -63,8 +74,10 @@ export const authConfig = {
       // Redirect authenticated-but-not-onboarded users to the onboarding flow.
       // API routes are excluded so onboarding page API calls (/api/me, /api/user-projects)
       // work normally. Sign-out is excluded to avoid a redirect loop on logout.
+      // Gate until onboarding is complete in JWT (refreshed from DB on sign-in / session.update).
+      const onboardingDone = sessionOnboardingDone(auth.user);
       if (
-        !auth.user.onboardedAt &&
+        !onboardingDone &&
         !pathname.startsWith(ROUTES.ONBOARDING) &&
         !pathname.startsWith("/api/") &&
         !pathname.startsWith(ROUTES.SIGN_OUT)

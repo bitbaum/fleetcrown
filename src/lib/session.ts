@@ -4,7 +4,32 @@ import { auth } from "@/auth";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
 import { ROUTES } from "@/config/auth";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
+import { getUserByEmail, getUserById } from "@/db/queries/users";
 import { envAlias, envAliasBool } from "@/lib/brand-env";
+import { isValidUuid } from "@/lib/utils";
+
+/**
+ * Resolve the DB user id from a session. OAuth JWTs may briefly carry the
+ * provider id instead of our UUID — fall back to email lookup.
+ */
+export async function resolveSessionUserId(): Promise<string | null> {
+  const session = await auth();
+  if (!session?.user) return null;
+
+  const id = session.user.id;
+  if (id && isValidUuid(id)) {
+    const byId = await getUserById(id);
+    if (byId) return byId.id;
+  }
+
+  const email = session.user.email;
+  if (email) {
+    const byEmail = await getUserByEmail(email);
+    if (byEmail) return byEmail.id;
+  }
+
+  return id && isValidUuid(id) ? id : null;
+}
 
 /**
  * Returns the authenticated user's ID, or null if there is no session.
@@ -12,8 +37,7 @@ import { envAlias, envAliasBool } from "@/lib/brand-env";
  * Middleware already blocks browser clients without a session — this is defense-in-depth.
  */
 export async function getSessionUserId(): Promise<string | null> {
-  const session = await auth();
-  return session?.user?.id ?? null;
+  return resolveSessionUserId();
 }
 
 /**
@@ -22,9 +46,9 @@ export async function getSessionUserId(): Promise<string | null> {
  * Use in server components and server actions.
  */
 export async function requirePageUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) redirect(ROUTES.SIGN_IN);
-  return session.user.id;
+  const userId = await resolveSessionUserId();
+  if (!userId) redirect(ROUTES.SIGN_IN);
+  return userId;
 }
 
 export async function getCurrentUserName(): Promise<string> {
@@ -44,8 +68,8 @@ let warnedDeprecatedDaemonToken = false;
  */
 export async function getApiUserId(): Promise<string | null> {
   // Cookie-based session (web UI).
-  const session = await auth();
-  if (session?.user?.id) return session.user.id;
+  const userId = await resolveSessionUserId();
+  if (userId) return userId;
 
   // Bearer token (daemon / CLI agent).
   const headersList = await headers();

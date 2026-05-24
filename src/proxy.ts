@@ -6,7 +6,7 @@ import { authConfig } from "@/auth.config";
 //
 // What this activates:
 //   • Unauthenticated users → redirect to /sign-in with callbackUrl
-//   • Authenticated + onboardedAt null → redirect to /onboarding
+//   • Authenticated + onboarding incomplete → redirect to /onboarding
 //   • Daemon bearer-token requests → pass through to individual routes
 //
 // The matcher intentionally excludes public routes so they stay accessible

@@ -19,7 +19,10 @@ export default async function LandingPage() {
 
   const session = await auth();
   if (session?.user) {
-    redirect(session.user.onboardedAt ? ROUTES.APP_HOME : ROUTES.ONBOARDING);
+    const done =
+      session.user.onboardingComplete === true ||
+      Boolean(session.user.onboardedAt && session.user.username);
+    redirect(done ? ROUTES.APP_HOME : ROUTES.ONBOARDING);
   }
 
   const stripeReady = isStripeReady();

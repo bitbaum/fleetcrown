@@ -13,6 +13,8 @@ import { verifyPassword } from "@/lib/password";
 import { getDefaultUser, getUserById, getUserByEmail, updateUser } from "@/db/queries/users";
 import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 import { logDebug } from "@/db/queries/debug-logs";
+import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboarding-heal";
+import { isValidUuid } from "@/lib/utils";
 
 /**
  * Auth.js wraps every authorize()→null return in a generic CredentialsSignin
@@ -64,7 +66,14 @@ declare module "next-auth" {
       image: string | null;
       username: string | null;
       onboardedAt: Date | null;
+      onboardingComplete?: boolean;
     };
+  }
+}
+
+declare module "@auth/core/jwt" {
+  interface JWT {
+    onboardingComplete?: boolean;
   }
 }
 
@@ -150,6 +159,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // queries that join on uuid columns are safe.
       try {
         if (message.user?.id) {
+          const existing = await getUserById(message.user.id);
+          if (existing) {
+            await healReturningUserOnboarding(existing);
+          }
+
           const memberCount = await getOrgMembershipCount(message.user.id);
           if (memberCount === 0) {
             const displayName = message.user.name ?? message.user.email?.split("@")[0] ?? "user";
@@ -290,15 +304,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true;
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user }) {
+      const email = user?.email ?? (token.email as string | undefined);
       const userId = user?.id ?? (token.id as string | undefined);
-      if (userId && (user?.id || trigger === "update")) {
-        token.id = userId;
-        const dbUser = await getUserById(userId);
-        if (dbUser) {
-          token.username = dbUser.username ?? null;
-          token.onboardedAt = dbUser.onboardedAt ?? null;
-        }
+
+      let dbUser = userId && isValidUuid(userId) ? await getUserById(userId) : null;
+      if (!dbUser && email) {
+        dbUser = await getUserByEmail(email);
+      }
+      if (dbUser) {
+        dbUser = await healReturningUserOnboarding(dbUser);
+        token.id = dbUser.id;
+        token.email = dbUser.email ?? email ?? null;
+        token.username = dbUser.username ?? null;
+        token.onboardedAt = dbUser.onboardedAt ?? null;
+        token.onboardingComplete = onboardingCompleteFlag(dbUser);
+      } else if (email) {
+        token.email = email;
       }
       return token;
     },
@@ -310,6 +332,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: (token.id as string) ?? "",
           username: (token.username as string | null) ?? null,
           onboardedAt: (token.onboardedAt as Date | null) ?? null,
+          onboardingComplete: token.onboardingComplete === true,
         },
       };
     },

@@ -6,6 +6,8 @@ import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { getProjectStatesByUserId } from "@/db/queries/project-states";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { hasValidUsername, isOnboardingComplete, suggestUsername } from "@/lib/onboarding";
+import { healReturningUserOnboarding } from "@/lib/onboarding-heal";
+import { countActiveProjects } from "@/db/queries/user-projects";
 
 async function getDaemonConnectionStatus(userId: string) {
   const [snapshot, states] = await Promise.all([
@@ -29,25 +31,33 @@ export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = await getUserById(userId);
+  let user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const [teamInvitee, daemon] = await Promise.all([
+  user = await healReturningUserOnboarding(user);
+
+  const [teamInvitee, daemon, projectCount] = await Promise.all([
     isTeamInvitee(userId),
     isRuntimeAvailable()
       ? Promise.resolve({ connected: true, live: true, lastPushedAt: new Date().toISOString() })
       : getDaemonConnectionStatus(userId),
+    countActiveProjects(userId),
   ]);
 
+  const complete = isOnboardingComplete(user);
+
   return NextResponse.json({
-    complete: isOnboardingComplete(user),
+    complete,
     username: user.username,
     suggestedUsername: suggestUsername(user.name, user.email),
     isTeamInvitee: teamInvitee,
+    isReturningUser: projectCount > 0,
     runtimeAvailable: isRuntimeAvailable(),
     daemonConnected: daemon.connected,
     daemonLive: daemon.live,
     daemonLastPushedAt: daemon.lastPushedAt,
+    /** Client should call session.update() when true so middleware JWT catches up. */
+    needsSessionRefresh: complete,
   });
 }
 
@@ -55,8 +65,10 @@ export async function POST() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const user = await getUserById(userId);
+  let user = await getUserById(userId);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  user = await healReturningUserOnboarding(user);
 
   if (!hasValidUsername(user.username)) {
     return NextResponse.json(

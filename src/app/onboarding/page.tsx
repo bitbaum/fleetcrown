@@ -29,6 +29,8 @@ type OnboardingBootstrap = {
   complete?: boolean;
   suggestedUsername?: string;
   isTeamInvitee?: boolean;
+  isReturningUser?: boolean;
+  needsSessionRefresh?: boolean;
 };
 
 function stepIndex(step: OnboardingStep): number {
@@ -52,22 +54,48 @@ export default function OnboardingPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getJson<OnboardingBootstrap>("/api/onboarding")
-      .then((data) => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      try {
+        // Sync JWT from DB (fixes migrated accounts with stale cookies).
+        await update();
+        const data = await getJson<OnboardingBootstrap>("/api/onboarding");
+        if (cancelled) return;
+
         if (data.complete) {
+          if (data.needsSessionRefresh) await update();
           router.replace(ROUTES.APP_HOME);
           return;
         }
+
+        if (data.isReturningUser) {
+          await postJson("/api/onboarding", {});
+          await update();
+          router.replace(ROUTES.APP_HOME);
+          return;
+        }
+
         if (data.suggestedUsername) {
           setUsername((prev) => prev || data.suggestedUsername || "");
         }
         if (data.isTeamInvitee) {
           setIsTeamInvitee(true);
         }
-      })
-      .catch(() => { /* stay on page */ })
-      .finally(() => setBootstrapping(false));
-  }, [router]);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Could not load onboarding");
+        }
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    }
+
+    void bootstrap();
+    return () => {
+      cancelled = true;
+    };
+  }, [router, update]);
 
   async function finishOnboarding() {
     setSaving(true);
