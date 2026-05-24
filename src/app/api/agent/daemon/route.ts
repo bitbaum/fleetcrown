@@ -29,10 +29,25 @@ import path from "node:path";
  * outputFileTracingIncludes so they land in the Vercel deployment bundle.
  */
 const FILES = [
+  // Core daemon + shared brand/zellij helpers + bridge entry point.
   "cockpit-daemon.sh",
   "_brand.sh",
   "agent-hook-lib.sh",
   "agent-hook-bridge.sh",
+  // Per-agent task runners. Claude uses an inline command (no runner); codex
+  // and gemini require these wrappers — without them the daemon hard-fails
+  // when dispatching either agent. The bridge expects $SCRIPT_DIR/run-X-task.sh.
+  "run-codex-task.sh",
+  "run-gemini-task.sh",
+  // Python helpers referenced by agent-hook-bridge.sh. All are wrapped in
+  // `|| true` / `2>/dev/null` in the bridge so absence degrades gracefully —
+  // but real customers want the full experience (audio beacon, idle detection,
+  // notifications). beacon imports _beacon_config so both ship together.
+  "beacon.py",
+  "_beacon_config.py",
+  "get-idle-secs.py",
+  "notify-choice.py",
+  "sync-agent-runtime-config.py",
 ] as const;
 
 export async function GET() {
