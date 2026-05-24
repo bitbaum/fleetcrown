@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { gzipSync } from "node:zlib";
 import path from "node:path";
 
 /**
@@ -11,24 +12,34 @@ import path from "node:path";
  *   scripts/agent-hook-lib.sh   — zellij inject_prompt + shared helpers
  *   scripts/agent-hook-bridge.sh — agent CLI bridge (~660 lines)
  *
- * Together: ~1500 lines of bash. Together they are the local execution surface.
+ * Together ~1500 lines of bash. They are the local execution surface.
  *
- * Tarred with `-C scripts/` so the files extract at the destination root with
- * no `scripts/` prefix — the agent CLI then writes them straight into
- * ~/.local/share/cockpit/ and references them by basename.
+ * Tarball is built in pure Node — the first version of this route used
+ * spawn("tar", ...) and 500'd on Vercel because the runtime image may not
+ * carry the tar binary (or spawn can't reach it). The ustar format is
+ * trivial enough (one 512-byte header per file + content padded to 512,
+ * then 1024 zero bytes as end-of-archive) that doing it ourselves avoids
+ * the system-binary dependency entirely.
+ *
+ * Files extract at the destination root (no `scripts/` prefix) so the
+ * agent CLI writes them straight into ~/.local/share/cockpit/.
  *
  * Public (no auth) — matches the matcher exception in src/proxy.ts.
- * Designed to be piped: curl -fsSL ${APP_URL}/api/agent/daemon | tar -xzC ~/.local/share/cockpit
- *
  * next.config.ts includes the 4 source files in this route's
  * outputFileTracingIncludes so they land in the Vercel deployment bundle.
  */
+const FILES = [
+  "cockpit-daemon.sh",
+  "_brand.sh",
+  "agent-hook-lib.sh",
+  "agent-hook-bridge.sh",
+] as const;
+
 export async function GET() {
   const scriptsDir = path.join(process.cwd(), "scripts");
-  const files = ["cockpit-daemon.sh", "_brand.sh", "agent-hook-lib.sh", "agent-hook-bridge.sh"];
 
   try {
-    const tarball = await tarGzip(scriptsDir, files);
+    const tarball = await buildTarball(scriptsDir, FILES);
     return new NextResponse(new Uint8Array(tarball), {
       status: 200,
       headers: {
@@ -38,32 +49,65 @@ export async function GET() {
       },
     });
   } catch (e) {
-    console.error("[agent/daemon] tar failed:", (e as Error)?.message);
+    console.error("[agent/daemon] build failed:", (e as Error)?.message, (e as Error)?.stack);
     return NextResponse.json(
-      { error: "Daemon bundle unavailable" },
+      { error: "Daemon bundle unavailable", detail: (e as Error)?.message },
       { status: 500 },
     );
   }
 }
 
 /**
- * Spawn `tar -czf - -C <cwd> <file...>` and collect stdout into a buffer.
- * Rejects on non-zero exit or stderr. The tarball is small (~60KB raw,
- * smaller compressed) so collecting in memory is fine — no need to stream.
+ * Build a ustar gzip archive in memory. No external binaries, no extra
+ * deps — just Node builtins. ~50 lines of format-spec implementation.
  */
-function tarGzip(cwd: string, files: string[]): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const child = spawn("tar", ["-czf", "-", "-C", cwd, ...files], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    const chunks: Buffer[] = [];
-    let stderr = "";
-    child.stdout.on("data", (c: Buffer) => chunks.push(c));
-    child.stderr.on("data", (c: Buffer) => { stderr += c.toString(); });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      if (code === 0) resolve(Buffer.concat(chunks));
-      else reject(new Error(`tar exited ${code}: ${stderr.trim()}`));
-    });
-  });
+async function buildTarball(dir: string, files: readonly string[]): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for (const name of files) {
+    const content = await readFile(path.join(dir, name));
+    chunks.push(ustarHeader(name, content.length));
+    chunks.push(padTo512(content));
+  }
+  chunks.push(Buffer.alloc(1024)); // end-of-archive: two zeroed 512-byte blocks
+  return gzipSync(Buffer.concat(chunks));
+}
+
+/**
+ * ustar header (512 bytes). Mode 0755 for everything — the .sh files are
+ * either run directly or sourced; making the non-executables executable
+ * too is harmless. The agent CLI re-chmods the two main executables on
+ * extraction regardless.
+ *
+ * Checksum is the sum of all header bytes treating the checksum field
+ * itself as 8 ASCII spaces; written as 6-digit octal + NUL + space.
+ */
+function ustarHeader(name: string, size: number): Buffer {
+  const h = Buffer.alloc(512);
+  h.write(name, 0, Math.min(name.length, 99), "utf8");
+  writeOctal(h, 100, 8, 0o755);
+  writeOctal(h, 108, 8, 0);
+  writeOctal(h, 116, 8, 0);
+  writeOctal(h, 124, 12, size);
+  writeOctal(h, 136, 12, Math.floor(Date.now() / 1000));
+  h.write("        ", 148, 8, "ascii"); // checksum placeholder = 8 spaces
+  h.write("0", 156, 1, "ascii");          // typeflag: regular file
+  h.write("ustar\0", 257, 6, "ascii");
+  h.write("00", 263, 2, "ascii");
+
+  let sum = 0;
+  for (let i = 0; i < 512; i++) sum += h[i];
+  h.write(sum.toString(8).padStart(6, "0") + "\0 ", 148, 8, "ascii");
+
+  return h;
+}
+
+function writeOctal(buf: Buffer, offset: number, len: number, value: number): void {
+  // Format: zero-padded octal of (len-1) digits + trailing NUL.
+  buf.write(value.toString(8).padStart(len - 1, "0") + "\0", offset, len, "ascii");
+}
+
+function padTo512(buf: Buffer): Buffer {
+  const remainder = buf.length % 512;
+  if (remainder === 0) return buf;
+  return Buffer.concat([buf, Buffer.alloc(512 - remainder)]);
 }
