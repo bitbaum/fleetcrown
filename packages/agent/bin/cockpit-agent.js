@@ -105,21 +105,20 @@ function printHelp() {
   console.log(`@cockpit/agent — connect your machine to Cockpit
 
 Commands:
-  init    Save daemon token and verify connectivity
+  init    Verify token, save config, and install daemon scripts to
+          ${DAEMON_DIR}
 
 Options:
   --token <ck_* token>     Agent token from Settings → Agent tokens
   --base-url <url>         Cockpit URL (default: ${DEFAULT_BASE_URL})
   --install                Run systemd install after saving token
+                           (requires a Cockpit repo clone for now)
 
-Examples:
-  npx @cockpit/agent init
-  npx @cockpit/agent init --token ck_abc123...
+Install or upgrade this CLI:
+  curl -fsSL ${DEFAULT_BASE_URL}/api/agent/install | node - init --token ck_…
 
 After init, start the daemon:
-  source ${ENV_FILE} && cockpit-daemon.sh
-  # or from a Cockpit clone:
-  APP_DAEMON_TOKEN=<token> ./scripts/cockpit-daemon.sh
+  set -a && source ${ENV_FILE} && ${DAEMON_DIR}/cockpit-daemon.sh
 `);
 }
 
@@ -171,7 +170,8 @@ async function main() {
     console.log(`  3. Start the daemon:`);
     console.log(`     set -a && source ${ENV_FILE} && ${daemonInstalledAt}/cockpit-daemon.sh`);
   } else {
-    console.log(`  3. Re-run \`npx @cockpit/agent init\` once you're online to install the daemon scripts.`);
+    console.log(`  3. Re-run the install command once you're online to fetch the daemon scripts:`);
+    console.log(`     curl -fsSL ${args.baseUrl}/api/agent/install | node - init --token ${token}`);
   }
 
   if (args.install) {
