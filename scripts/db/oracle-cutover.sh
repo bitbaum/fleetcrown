@@ -67,7 +67,13 @@ done
 
 echo "=== 2/6 Dumping production database ==="
 mkdir -p "${ROOT}/backups"
-DATABASE_URL="$SOURCE_URL" bash "$ROOT/scripts/db/dump.sh" "$BACKUP"
+PRE_DUMP="${ROOT}/backups/pre-oracle-cutover.sql.gz"
+if [ "${SKIP_DUMP:-0}" = "1" ] && [ -f "$PRE_DUMP" ]; then
+  BACKUP="$PRE_DUMP"
+  echo "Using existing dump: $BACKUP"
+else
+  DATABASE_URL="$SOURCE_URL" bash "$ROOT/scripts/db/dump.sh" "$BACKUP"
+fi
 
 echo "=== 3/6 Deploying Postgres stack on VM ==="
 HOST_DIR="/home/${SSH_USER}/cockpit-postgres-host"
@@ -113,13 +119,13 @@ vercel env rm DATABASE_POOL_URL production -y 2>/dev/null || true
 printf '%s' "$POOL" | vercel env add DATABASE_POOL_URL production
 
 echo "=== 6/6 Redeploying production ==="
-if npm run build >/tmp/cockpit-build.log 2>&1; then
-  vercel deploy --prod --yes 2>&1 | tail -5
+if env -u NODE_ENV npm run build >/tmp/cockpit-build.log 2>&1; then
+  env -u NODE_ENV vercel deploy --prod --yes 2>&1 | tail -5
 else
   echo "Build failed — redeploying last known good deployment with new DB env..."
   LAST=$(vercel ls --prod 2>/dev/null | awk '/Ready/ {print $2; exit}')
   if [ -n "$LAST" ]; then
-    vercel redeploy "$LAST" --target production 2>&1 | tail -5
+    env -u NODE_ENV vercel redeploy "$LAST" --target production 2>&1 | tail -5
   else
     echo "Could not redeploy. Update env manually and redeploy from Vercel dashboard." >&2
     exit 1

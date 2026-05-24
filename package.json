@@ -23,6 +23,7 @@
     "db:restore": "bash scripts/db/restore.sh",
     "db:oracle-bootstrap": "bash scripts/db/oracle-bootstrap.sh",
     "db:oracle-cutover": "bash scripts/db/oracle-cutover.sh",
+    "db:oracle-await": "bash scripts/db/oracle-await-cutover.sh",
     "wait:vercel": "bash scripts/wait-for-vercel.sh",
     "ship": "git push origin main && bash scripts/wait-for-vercel.sh",
     "prepare": "husky"
