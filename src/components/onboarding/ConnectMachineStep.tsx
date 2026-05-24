@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Check, Copy, Loader2, Terminal, Wifi } from "lucide-react";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
+import { APP_NAME, APP_URL } from "@/config/brand";
 
 type Props = {
   saving: boolean;
@@ -60,8 +60,12 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
     setTimeout(() => setCopied(null), 2000);
   }
 
+  // @cockpit/agent isn't on npm yet and the repo is private, so the
+  // npx form doesn't work for new customers. The cloud serves the CLI
+  // itself from /api/agent/install — pipe it into node. When the npm
+  // package ships, swap this back to the npx form.
   const initCommand = token
-    ? `npx @${APP_SLUG}/agent init --token ${token} --base-url ${APP_URL}`
+    ? `curl -fsSL ${APP_URL}/api/agent/install | node - init --token ${token} --base-url ${APP_URL}`
     : null;
 
   const connected = status?.daemonConnected ?? false;
