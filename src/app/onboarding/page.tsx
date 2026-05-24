@@ -70,10 +70,18 @@ export default function OnboardingPage() {
         }
 
         if (data.isReturningUser) {
-          await postJson("/api/onboarding", {});
-          await update();
-          router.replace(ROUTES.APP_HOME);
-          return;
+          const res = await postJson("/api/onboarding", {});
+          if (res.ok) {
+            await update();
+            router.replace(ROUTES.APP_HOME);
+            return;
+          }
+          // Heal couldn't auto-finish (typically: no valid username was
+          // suggestable — taken, or unsuggestable from name/email). Fall
+          // through to the normal step so the user can pick one explicitly,
+          // and surface the reason instead of bouncing back here forever.
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          setError(body.error ?? "Pick a username to finish setup.");
         }
 
         if (data.suggestedUsername) {
