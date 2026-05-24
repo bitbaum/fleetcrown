@@ -1,7 +1,8 @@
 node_modules
 .next
-.env.local
 .env
+.env.local
+.env*.local
 .claude/
 *.tsbuildinfo
 .playwright-mcp/
