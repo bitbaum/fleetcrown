@@ -121,7 +121,8 @@ async function main() {
   console.log("\nNext steps:");
   console.log("  1. Install Zellij + at least one agent CLI (claude, codex, gemini, or openclaw)");
   console.log("  2. Register projects in Cockpit with local directory paths");
-  console.log(`  3. Start the daemon:`);
+  console.log(`  3. Start the daemon — currently requires a Cockpit repo clone`);
+  console.log(`     (one-line public installer is coming; for now, from a clone:)`);
   console.log(`     set -a && source ${ENV_FILE} && ./scripts/cockpit-daemon.sh`);
   console.log(`     # optional: bash scripts/install-daemon.sh (systemd user service)`);
 

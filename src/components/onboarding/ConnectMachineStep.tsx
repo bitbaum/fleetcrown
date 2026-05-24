@@ -87,8 +87,9 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
         </li>
         <li>Generate a token and run the init command below.</li>
         <li>
-          Start the daemon:{" "}
-          <code className="ui-auth-inline-code">./scripts/cockpit-daemon.sh</code>
+          Start the daemon — currently requires a {APP_NAME} repo clone
+          (one-line public installer coming soon). Skip below to explore
+          the cloud surface without it.
         </li>
       </ol>
 
