@@ -10,8 +10,12 @@ export const beaconSettings = pgTable("beacon_settings", {
   whisperModel:          text("whisper_model").notNull().default("base"),
   transcriptionProvider: text("transcription_provider").notNull().default("auto"),
   // strategist | queue_only | next_best | off — drives handleAutoInject's
-  // behavior. Defaults to strategist (Groq composes context-aware prompts).
-  autoInjectMode:        text("auto_inject_mode").notNull().default("strategist"),
+  // behavior. Defaults to queue_only: new users must explicitly opt into
+  // autonomous loops via /control settings. Flipped from "strategist" on
+  // 2026-05-25 after the prompt-design conversation identified that
+  // autonomous strategist firing on day one was a closed-loop drift risk
+  // every new customer inherited (see Cockpit.roadmap.md DONE entry).
+  autoInjectMode:        text("auto_inject_mode").notNull().default("queue_only"),
   updatedAt:             timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_beacon_settings_user_id").on(t.userId),

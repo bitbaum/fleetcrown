@@ -20,7 +20,7 @@ export function BeaconSettings() {
   const [minIdle, setMinIdle]       = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel]           = useState("base");
   const [provider, setProvider]     = useState("auto");
-  const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>("strategist");
+  const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>("queue_only");
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [error, setError]           = useState("");

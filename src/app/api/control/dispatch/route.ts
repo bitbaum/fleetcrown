@@ -207,12 +207,12 @@ export async function POST(req: NextRequest) {
 
   // Per-user auto-inject mode (added 2026-05-20). Gates the strategist
   // behavior before any expensive work:
-  //   strategist → current default; queue → composed → next_best fallback
-  //   queue_only → only fire when there's a queue item; else off
+  //   strategist → Groq composes context-aware prompt (opt-in)
+  //   queue_only → only fire when there's a queue item; else off (DEFAULT for new users since 2026-05-25)
   //   next_best  → legacy: skip Groq, fire canned template
   //   off        → auto-inject disabled entirely; user dispatches by hand
   const settings = await getBeaconSettings(userId).catch(() => null);
-  const mode = settings?.auto_inject_mode ?? "strategist";
+  const mode = settings?.auto_inject_mode ?? "queue_only";
 
   if (mode === "off") {
     return NextResponse.json({

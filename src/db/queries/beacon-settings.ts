@@ -24,11 +24,13 @@ const DEFAULTS: BeaconSettingsData = {
   min_idle_seconds:       DEFAULT_BEACON_MIN_IDLE_S,
   whisper_model:          "base",
   transcription_provider: "auto",
-  auto_inject_mode:       "strategist",
+  // queue_only: explicit opt-in required for autonomous strategist firing.
+  // See schema comment + Cockpit.roadmap.md DONE entry (2026-05-25).
+  auto_inject_mode:       "queue_only",
 };
 
 function coerceAutoInjectMode(v: string | null | undefined): AutoInjectMode {
-  return v === "queue_only" || v === "next_best" || v === "off" ? v : "strategist";
+  return v === "strategist" || v === "next_best" || v === "off" ? v : "queue_only";
 }
 
 /** PyQt mode was retired (see scripts/beacon.py). Legacy DB rows with 'both' or
