@@ -213,6 +213,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // Structural gate matching the UI tab in src/app/sign-in/page.tsx.
+        // The "local" provider authenticates against the default-user row
+        // using LOCAL_AUTH_PASSWORD — useful for local cockpit-app installs
+        // (founder dev box, single-tenant deployments) but a brute-force
+        // attack surface on the public cloud where LOCAL_AUTH_PASSWORD also
+        // happens to be set for legacy reasons. Require explicit opt-in via
+        // ENABLE_OWNER_KEY=1 so a stray env var on cloud can't expose this
+        // path. UI gate hides the tab; this runtime gate stops direct POSTs.
+        if (process.env.ENABLE_OWNER_KEY !== "1") {
+          return logAuthReject("local", "user-not-found");
+        }
+
         const supplied = credentials.password as string | undefined;
         if (!supplied) return logAuthReject("local", "missing-input");
 
