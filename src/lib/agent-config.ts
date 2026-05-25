@@ -171,14 +171,23 @@ export function readPrompts(): Record<string, string> {
  */
 export function buildPromptWithSession(base: string, tab: string): string {
   const sessionFile = path.join(SESSIONS_DIR(), `${tab}.md`);
+  // LOOP v2 handoff template (deployed 2026-05-25).
+  // Gravity signals (last-3-same-dir, wip-or-revert) come FIRST so the next
+  // session reads the drift state before any commit-summary narrative.
+  // Replaces the legacy `health:` vanity field (always "good" exactly when
+  // the loop was in trouble) with six auto-computed signals + the resume-
+  // state-not-a-verb `next:` constraint.
   const sessionUpdateBlock = [
     `When done, update ${sessionFile} with exactly these lines:`,
-    "status: <ready | working>     # 'ready' = task fully done; 'working' = still more to do on this task. Auto-inject only fires when 'ready'.",
-    "done: <one sentence what you completed>",
-    "next: <one sentence what remains>",
+    "status: <ready | working>     # 'ready' = task fully done; 'working' = more to do. Auto-inject only fires when 'ready'.",
+    "last-3-same-dir: <yes | no>   # gravity signal — `git log --format= --name-only -3 | grep -v '^$' | xargs -n1 dirname | sort -u | wc -l` == 1",
+    "wip-or-revert-in-last-5: <yes | no>   # `git log --format=%s -5 | grep -ciE '^(wip|revert)'` > 0",
+    "tsc: <pass | fail(N)>",
+    "lint: <pass | fail(N errors, M warnings)>",
     "tests: <N pass · N fail, or 'no suite'>",
-    "todos: <count> TODOs",
-    "health: <good | needs attention | critical>",
+    "todos: <N from `rg -c '(TODO|FIXME|HACK)' src/`>",
+    "done: <one sentence what you completed>",
+    "next: <state to resume from — NOT a verb. EMPTY if nothing mid-flight; empty > lie.>",
   ].join("\n");
 
   try {
