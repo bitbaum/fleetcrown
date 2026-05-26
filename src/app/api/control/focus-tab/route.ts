@@ -4,6 +4,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { shellEscape } from "@/lib/zellij";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
+import { enqueueTabCommand } from "@/db/queries/pending-commands";
 
 const FocusTabBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -48,7 +49,10 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({ ok: false, reason: "runtime_offline" }, { status: 503 });
+    const dataOrResp = await readJsonBody(req, FocusTabBody);
+    if (dataOrResp instanceof NextResponse) return dataOrResp;
+    const commandId = await enqueueTabCommand(userId, "focus_tab", { tab: dataOrResp.tab });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
   }
 
   const dataOrResp = await readJsonBody(req, FocusTabBody);

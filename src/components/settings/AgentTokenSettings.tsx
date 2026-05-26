@@ -70,11 +70,11 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Authenticate the {APP_NAME} agent daemon on any machine. Run{" "}
+        Connect the {APP_NAME} background helper on any machine. Run{" "}
         <code className="rounded bg-surface-raised px-1 py-0.5 font-mono text-xs text-text-secondary">
           {interactiveInitCommand}
         </code>{" "}
-        and paste the token when prompted.
+        and paste the token when prompted. It installs and starts itself as a persistent service.
       </p>
 
       {/* Token creation form */}

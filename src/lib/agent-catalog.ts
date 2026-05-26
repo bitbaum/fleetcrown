@@ -19,9 +19,9 @@ function isSwitchableAgent(id: AgentOption): id is SwitchableAgent {
 
 export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAgent, string>>, defaultAgent: SwitchableAgent): AgentCatalog {
   const agents = listAgentRegistry().map((entry) => {
-    // Use the registry's own switchable flag as the source of truth.
-    // The isSwitchableAgent check is legacy and will be removed.
-    if (entry.switchable) {
+    // Models are user-configured only for the Agent union; openclaw remains
+    // launchable in the catalog but has no per-user model preference.
+    if (entry.switchable && isSwitchableAgent(entry.id)) {
       const model = models[entry.id]?.trim() || entry.defaultModel;
       return {
         ...entry,

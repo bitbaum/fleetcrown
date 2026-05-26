@@ -57,6 +57,21 @@ export const ADAPTER_DEFINITIONS: Record<AdapterId, AdapterDefinition> = {
     }),
     notes: "Local Gemini CLI integration for launched tabs and one-shot Control tasks.",
   },
+  grok: {
+    id: "grok",
+    label: "Grok",
+    capabilities: createCapabilities({
+      launchSession: true,
+      injectTask: true,
+      detectRunning: true,
+      detectWaiting: true,
+      detectDone: true,
+      closeSession: true,
+      autonomousContinue: true,
+      sessionHandoff: true,
+    }),
+    notes: "Local Grok CLI integration with adapter-aware handoffs and hook-driven lifecycle state.",
+  },
 };
 
 export function getAdapterDefinition(adapterId: AdapterId): AdapterDefinition {

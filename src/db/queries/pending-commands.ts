@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload, type AutoContinuePayload } from "@/db/schema/pending-commands";
+import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 
@@ -34,6 +34,14 @@ export async function enqueueAutoContinueCommand(
   payload: AutoContinuePayload,
 ): Promise<string> {
   return enqueuePendingCommand({ userId, type: "auto_continue", payload });
+}
+
+export async function enqueueTabCommand(userId: string, type: "focus_tab" | "close_tab", payload: TabPayload): Promise<string> {
+  return enqueuePendingCommand({ userId, type, payload });
+}
+
+export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchAgentPayload): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "launch_agent", payload });
 }
 
 // Atomically claims the next unclaimed command for one or more already

@@ -98,6 +98,7 @@ mkdir -p "$(dirname "$ENV_FILE")"
 cat > "$ENV_FILE" <<EOF
 COCKPIT_DAEMON_TOKEN=${TOKEN}
 COCKPIT_BASE_URL=${BASE_URL}
+COCKPIT_DAEMON_FORCE_REMOTE=1
 EOF
 chmod 600 "$ENV_FILE"
 ok "Env file written to ${ENV_FILE}"

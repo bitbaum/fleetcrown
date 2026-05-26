@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Enqueue for the daemon to handle (it will open a tab + inject the installer)
-  const commandId = await enqueuePendingCommand(userId, {
+  const commandId = await enqueuePendingCommand({
+    userId,
     type: "install_cli",
     payload: { agent },
   });

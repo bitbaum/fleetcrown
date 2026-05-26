@@ -32,9 +32,13 @@ _token_from_env_or_file() {
 # Falls back to Python file reader when the app is offline.
 _BEACON_TOKEN="$(_token_from_env_or_file DAEMON_TOKEN)"
 _BEACON_SETTINGS_JSON=""
+_BEACON_AUTH_HEADER=""
 if [ -n "$_BEACON_TOKEN" ]; then
+  _BEACON_AUTH_HEADER="$(_brand_tmp "hook-auth")"
+  umask 077
+  printf 'Authorization: Bearer %s\n' "$_BEACON_TOKEN" > "$_BEACON_AUTH_HEADER"
   _BEACON_SETTINGS_JSON=$(curl -sf --max-time 2 \
-    -H "Authorization: Bearer ${_BEACON_TOKEN}" \
+    -H "@$_BEACON_AUTH_HEADER" \
     "${APP_BASE_URL}/api/beacon-settings" 2>/dev/null || true)
 fi
 
@@ -145,12 +149,11 @@ emit_worker_finished() {
 patch_project_state() {
   local tab_name="$1"
   local field="$2"
-  local iso_now token
+  local iso_now
   iso_now=$(date -Iseconds)
-  token="$(_token_from_env_or_file DAEMON_TOKEN)"
   curl -sf -X PATCH "${APP_BASE_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${token}" \
+    -H "@$_BEACON_AUTH_HEADER" \
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
 }
 
@@ -162,10 +165,9 @@ finish_orchestration_run() {
   local session_file="$2"
   local run_sentinel="$(_brand_tmp "run-${tab_name}")"
   [ -f "$run_sentinel" ] || return 0
-  local run_id token done_line next_line tests_line todos_line health_line
+  local run_id done_line next_line tests_line todos_line health_line
   run_id=$(cat "$run_sentinel" 2>/dev/null | tr -d '[:space:]')
   [ -z "$run_id" ] && return 0
-  token="$(_token_from_env_or_file DAEMON_TOKEN)"
   done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
   if [ -f "$session_file" ]; then
     done_line=$(grep -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//')
@@ -181,7 +183,7 @@ finish_orchestration_run() {
     '{summary: {done: $d, next: $n, tests: $t, todos: $td, health: $h}}')
   curl -sf -X POST "${APP_BASE_URL}/api/orchestration/runs/${run_id}/finish" \
     -H "Content-Type: application/json" \
-    -H "Authorization: Bearer ${token}" \
+    -H "@$_BEACON_AUTH_HEADER" \
     -d "$payload" &>/dev/null &
   rm -f "$run_sentinel"
 }
@@ -245,6 +247,7 @@ handle_stop() {
   label="${TAB_NAME:-$(basename "$cwd")}"
   log "fired — label=$label adapter=${ADAPTER:-claude}"
   [ -z "${TAB_NAME:-}" ] && exit 0
+  session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
 
   # Atomically claim the stop-active lock using noclobber so concurrent stop hooks
   # can't both pass the check. A plain test-then-write is a TOCTOU race in bash.
@@ -339,9 +342,6 @@ handle_stop() {
         }')
     [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
   fi
-
-
-  session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
 
   # Two-layer race — both run in parallel; first choice wins.
   #
@@ -534,6 +534,7 @@ handle_notification() {
   cwd=$(echo "$input" | jq -r '.cwd // empty')
 
   resolve_tab "$cwd"
+  resolve_adapter 2>/dev/null || true
   [ -z "${TAB_NAME:-}" ] && exit 0
 
   # Capture rate-limit / capacity messages before any early-exit guard so the

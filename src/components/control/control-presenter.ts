@@ -33,8 +33,10 @@ export function isCurrentPromptStale(project: ProjectState, nowS: number): boole
 
   if (project.session?.status === "ready") return true;
 
-  const sessionMtime = project.session?.mtime ?? 0;
-  if (sessionMtime > startedAt + 5) return true;
+  // SessionState.mtime is used for Date display elsewhere and remains milliseconds;
+  // lifecycle sentinels and prompt startedAt are epoch seconds.
+  const sessionMtimeS = project.session?.mtime ? Math.floor(project.session.mtime / 1000) : 0;
+  if (sessionMtimeS > startedAt + 5) return true;
 
   if (nowS - startedAt > STALE_PROMPT_S) return true;
 
@@ -213,7 +215,7 @@ function idleNeedsAttention(project: ProjectState): boolean {
  *  with no-session falling through to stale (a never-touched project IS dormant). */
 function idleIsStale(project: ProjectState, nowS: number): boolean {
   if (!project.session) return true;
-  return nowS - project.session.mtime > IDLE_STALE_S;
+  return nowS - Math.floor(project.session.mtime / 1000) > IDLE_STALE_S;
 }
 
 function attentionScore(project: ProjectState): { score: number; reason: string } {

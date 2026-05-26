@@ -94,6 +94,23 @@ _agent_session_dir() {
   esac
 }
 
+# Emit "<mtime>|<label>" for a fresh, project-scoped native activity signal,
+# when an adapter provides one. Hooks and /proc remain the universal baseline;
+# this optional capability covers prompts typed directly inside a supported TUI.
+_agent_direct_activity() {
+  local agent="$1" dir="$2" file="" encoded_dir
+  case "$agent" in
+    grok)
+      encoded_dir=$(printf '%s' "$dir" | sed 's#/#%2F#g')
+      file=$(find "$HOME/.grok/sessions/$encoded_dir" -name updates.jsonl -printf '%T@ %p\n' 2>/dev/null \
+        | sort -nr | head -1 | cut -d' ' -f2-)
+      [ -n "$file" ] && printf '%s|Direct terminal activity\n' "$(stat -c '%Y' "$file" 2>/dev/null)"
+      ;;
+    # Add adapters here only when they expose a stable, project-scoped log.
+    # Process detection, handoffs, and web-dispatched prompts work without it.
+  esac
+}
+
 # Returns 0 if the given basename+full argv looks like the Cursor agent (not a random "agent" binary).
 _is_cursor_agent() {
   local basename="$1" argv0="$2"

@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 # cockpit — Friendly local wrapper for Cockpit development and daily use.
-# Run from the cockpit checkout or symlink to ~/bin/cockpit.
-#
-# IMPORTANT: When you are *inside* the cockpit source tree, the project's
-# own ./node_modules/.bin/cockpit will shadow this. Always use the full
-# path or a different name (see below).
+# Valid both in a checkout's scripts/ directory and when extracted flat into
+# ~/.local/share/cockpit/ by the hosted installer.
 #
 # Recommended: symlink as "cpit" instead to avoid conflicts:
 #   ln -s /home/g/dev/cockpit/scripts/cockpit ~/bin/cpit
@@ -18,28 +15,13 @@
 
 set -euo pipefail
 
-REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$REPO_DIR"
-
-# Detect if we're being shadowed by the project's local node_modules/.bin/cockpit
-SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cockpit"
-RESOLVED="$(command -v cockpit 2>/dev/null || echo "")"
-
-if [[ -n "$RESOLVED" && "$RESOLVED" != "$SCRIPT_PATH" && "$RESOLVED" != "$0" ]]; then
-    echo "⚠️  'cockpit' is resolving to:"
-    echo "   $RESOLVED"
-    echo ""
-    echo "   This is almost certainly the project's own binary in"
-    echo "   ./node_modules/.bin/ shadowing your ~/bin/cockpit symlink."
-    echo ""
-    echo "   Recommended fix (run once):"
-    echo "     ln -s $SCRIPT_PATH ~/bin/cpit"
-    echo ""
-    echo "   Then use the non-conflicting name:"
-    echo "     cpit daemon start"
-    echo "     cpit install-agent grok"
-    echo ""
+RUNTIME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ ! -x "$RUNTIME_DIR/cockpit-daemon.sh" ]; then
+  echo "Cockpit helper is incomplete at $RUNTIME_DIR. Re-run the installer from Settings." >&2
+  exit 1
 fi
+DAEMON_SCRIPT="$RUNTIME_DIR/cockpit-daemon.sh"
+INSTALL_SCRIPT="$RUNTIME_DIR/install-daemon.sh"
 
 # Load env if present (the one from the installer)
 if [ -f "$HOME/.config/cockpit/daemon.env" ]; then
@@ -60,7 +42,7 @@ case "${1:-help}" in
         echo "Starting clean daemon (production, forced remote)..."
         pkill -f 'cockpit-daemon.sh' 2>/dev/null || true
         sleep 0.5
-        bash scripts/cockpit-daemon.sh
+        bash "$DAEMON_SCRIPT"
         ;;
       stop)
         pkill -f 'cockpit-daemon.sh' 2>/dev/null || true
@@ -88,10 +70,14 @@ case "${1:-help}" in
       echo "No COCKPIT_DAEMON_TOKEN found. Source your daemon.env first."
       exit 1
     fi
-    curl -s -X POST "https://cockpitapp.vercel.app/api/control/commands" \
-      -H "Authorization: Bearer $COCKPIT_DAEMON_TOKEN" \
+    auth_header="$(mktemp)"
+    chmod 600 "$auth_header"
+    printf 'Authorization: Bearer %s\n' "$COCKPIT_DAEMON_TOKEN" > "$auth_header"
+    trap 'rm -f "$auth_header"' EXIT
+    curl -s -X POST "https://cockpitapp.vercel.app/api/agent/install-cli" \
+      -H "@$auth_header" \
       -H "Content-Type: application/json" \
-      -d "{\"type\":\"install_cli\",\"payload\":{\"agent\":\"$agent\"}}" | jq .
+      -d "{\"agent\":\"$agent\"}" | jq .
     echo "Check your zellij for a new 'Install $agent' tab."
     ;;
   status|s)
@@ -104,14 +90,14 @@ case "${1:-help}" in
     echo "=== Recent runtime state (if any) ==="
     ls -lt /tmp/agent-current-prompt-* /tmp/agent-ready-* 2>/dev/null | head -5 || echo "No recent sentinels"
     echo "=== Your projects ==="
-    cat ~/.config/agent-projects.conf 2>/dev/null | grep -E '^(Cockpit|revamp|OrangeCat)' || echo "No conf"
+    grep -E '^(Cockpit|revamp|OrangeCat)' "$HOME/.config/agent-projects.conf" 2>/dev/null || echo "No conf"
     ;;
   service)
     shift
     case "${1:-status}" in
       enable|install)
         echo "Installing/enabling background service..."
-        ./scripts/install-daemon.sh
+        bash "$INSTALL_SCRIPT"
         ;;
       disable)
         echo "Disabling service..."

@@ -41,6 +41,8 @@ _copy_scripts() {
   cp "$SCRIPT_DIR/_beacon_config.py"            "$dest/"
   cp "$SCRIPT_DIR/agent-hook-bridge.sh"         "$dest/"
   cp "$SCRIPT_DIR/agent-hook-lib.sh"            "$dest/"
+  cp "$SCRIPT_DIR/_agents.sh"                   "$dest/"
+  cp "$SCRIPT_DIR/_brand.sh"                    "$dest/"
   cp "$SCRIPT_DIR/run-codex-task.sh"            "$dest/"
   cp "$SCRIPT_DIR/run-gemini-task.sh"           "$dest/"
   cp "$SCRIPT_DIR/sync-agent-runtime-config.py" "$dest/"

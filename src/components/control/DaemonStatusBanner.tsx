@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
-import { APP_NAME, APP_SLUG } from "@/config/brand";
+import { APP_NAME } from "@/config/brand";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -63,14 +63,8 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               The helper on your computer stopped sending updates (you closed the terminal, it crashed, laptop slept, etc.).
               All agent commands are safely queued on the website until it reconnects.
             </p>
-            <p className="text-sm text-text-secondary">
-              Quick fix (run this in a terminal that stays open):
-            </p>
-            <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-              set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh
-            </code>
             <p className="text-xs text-text-muted">
-              We’re building a proper “Start / Restart Daemon” button + background service installer so you never have to touch the terminal for this again.
+              New installs run as a background service and restart automatically. If an older helper is offline, run the one-line enrollment installer once from Settings to upgrade it; future repairs are available from the Control page.
             </p>
           </>
         )}
@@ -101,7 +95,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
             ))}
           </div>
           <p className="text-[10px] text-text-muted mt-1">
-            When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted. For developers using the source checkout, use the <code>cockpit</code> wrapper for even nicer local commands.
+            When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
           </p>
         </div>
       </div>

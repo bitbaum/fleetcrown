@@ -33,7 +33,7 @@ export type SessionState = {
   tests: string;
   todos: string;
   health: string;
-  mtime: number;
+  mtime: number; // epoch milliseconds
 };
 
 export type GitState = {

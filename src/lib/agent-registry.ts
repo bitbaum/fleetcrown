@@ -36,6 +36,8 @@ export type AgentRegistryEntry = {
   installCommand?: string;
   /** Only for agents with strong native persistent session directories that Cockpit must respect. */
   sessionDir?: string;
+  /** Optional adapter-owned activity feed used to reflect prompts typed directly in the CLI. */
+  directActivitySource?: "hooks" | "native-session-log";
   capabilities: {
     tabSwitching: boolean;
     manualPromptInjection: boolean;
@@ -229,6 +231,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       switchable: true,
       available: true,
       quitCommand: "/exit",
+      directActivitySource: "hooks",
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,
@@ -247,6 +250,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       ...grokAvailability,
       installCommand: "curl -fsSL https://x.ai/cli/install.sh | bash",
       sessionDir: "~/.grok/sessions",
+      directActivitySource: "native-session-log",
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,

@@ -60,6 +60,9 @@ WorkingDirectory=${STANDALONE}
 ExecStart=${SCRIPT_DIR}/cockpit-app.sh
 Restart=on-failure
 RestartSec=5
+# Next's standalone server can hold open instrumentation resources on SIGTERM.
+# Bound unattended deploy restarts instead of blocking postbuild for 90 seconds.
+TimeoutStopSec=5
 
 # Log to journald — view with: journalctl --user -u ${SERVICE_NAME} -f
 StandardOutput=journal

@@ -74,7 +74,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
     <div className="space-y-4">
       <p className="ui-auth-body">
         {APP_NAME} lets you control AI agents (Grok, Claude, etc.) running on *your* machine from this website.
-        We'll get your computer connected in a few guided steps — or skip and do it later in Settings.
+        We&apos;ll get your computer connected in a few guided steps — or skip and do it later in Settings.
       </p>
 
       <div className="space-y-4">
@@ -91,7 +91,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
         <div>
           <p className="ui-auth-inset-label mb-2">2. Choose and install your first AI coding CLI</p>
           <p className="text-sm text-text-secondary mb-3">
-            Pick one. We'll give you the exact command to run in your terminal.
+            Pick one. We&apos;ll give you the exact command to run in your terminal.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
@@ -115,14 +115,14 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
             ))}
           </div>
           <p className="text-[10px] text-text-muted mt-1">
-            After installing your CLI, come back here. (Soon: click a button here and we'll open a terminal tab on your machine with the installer already running.)
+            After the helper connects, Control page install buttons can open a dedicated terminal tab and run these installers for you.
           </p>
         </div>
       </div>
 
       <ol className="ui-auth-list">
-        <li>Generate a token below and run the one-line installer. It sets up the Cockpit helper on your machine.</li>
-        <li>Start the helper (we'll make this a background service with one click in a future update).</li>
+        <li>Generate a token below and run the one-line installer. It installs and starts the Cockpit helper as a background service.</li>
+        <li>After that, agent launches, repairs, and tab controls happen from this website.</li>
       </ol>
 
       {!token ? (

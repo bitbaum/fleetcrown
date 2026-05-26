@@ -7,6 +7,7 @@ import {
   findProjectForOpenTab,
   formatAgentRuntimeLabel,
   getProjectDisplayState,
+  isCurrentPromptStale,
 } from "@/components/control/control-presenter";
 import type { ProjectState } from "@/lib/control-types";
 
@@ -110,6 +111,29 @@ function runTests(): void {
     const state = getProjectDisplayState(project, ["Disconnected"], nowS, false, false);
     assert(state.stateLabel === "Offline", "disconnected card must say Offline");
     assert(!state.isRunning && !state.isReady && !state.tabOpen, "stale live signals must be hidden");
+  });
+
+  check("millisecond handoff mtime does not make a fresh prompt stale", () => {
+    const nowS = 1_700_000_100;
+    const project = stubProject({
+      tab: "Cockpit",
+      agentRunning: true,
+      currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 10 },
+      session: { done: "previous", next: "", tests: "", todos: "", health: "", mtime: (nowS - 20) * 1000 },
+    });
+    assert(!isCurrentPromptStale(project, nowS), "older handoff must not end current work");
+    assert(getProjectDisplayState(project, ["Cockpit"], nowS).stateLabel === "Working", "fresh prompt must show Working");
+  });
+
+  check("handoff written after prompt marks it completed", () => {
+    const nowS = 1_700_000_100;
+    const project = stubProject({
+      tab: "Cockpit",
+      agentRunning: true,
+      currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 20 },
+      session: { done: "finished", next: "", tests: "", todos: "", health: "", mtime: (nowS - 5) * 1000 },
+    });
+    assert(isCurrentPromptStale(project, nowS), "newer handoff should end displayed work");
   });
 
   console.log(`\n${passed}/${passed} passed`);

@@ -273,7 +273,19 @@ export async function GET() {
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
     // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
-    const session = parseSession(liveTab);
+    const runtimeAvailable = isRuntimeAvailable();
+    const localSession = runtimeAvailable ? parseSession(liveTab) : null;
+    const session = localSession ?? (dbState && (dbState.sessionDone || dbState.sessionNext || dbState.sessionStatus)
+      ? {
+          status: dbState.sessionStatus ?? undefined,
+          done: dbState.sessionDone ?? "",
+          next: dbState.sessionNext ?? "",
+          tests: dbState.sessionTests ?? "",
+          todos: dbState.sessionTodos ?? "",
+          health: dbState.sessionHealth ?? "",
+          mtime: dbState.sessionUpdatedAt?.getTime() ?? 0,
+        }
+      : null);
 
     // Mirror DB-backed prompt queue → /tmp/agent-queue-<tab> on local
     // cockpit-app boxes ONLY (runtime present means we're on the user's
@@ -357,7 +369,6 @@ export async function GET() {
     const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
     // On Vercel (no /proc access) fall back to daemon-pushed DB state so the control
     // panel reflects live agent activity on the home machine.
-    const runtimeAvailable = isRuntimeAvailable();
     const agentRunning = runtimeAvailable
       ? projectProcesses.length > 0
       : (dbState?.agentRunning ?? false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { Focus, PanelsTopLeft, RefreshCw, Terminal } from "lucide-react";
+import { Focus, PanelsTopLeft, RefreshCw, Terminal, Trash2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
@@ -26,6 +26,21 @@ export function ZellijLivePanel({
     } catch { /* best effort */ }
   };
 
+  const closeTab = async (tabName: string) => {
+    if (!window.confirm(`Close the Zellij tab "${tabName}"?`)) return;
+    try {
+      const res = await postJson("/api/control/close-tab", { tab: tabName });
+      if (res.ok) setTimeout(onRefresh, 700);
+    } catch { /* best effort */ }
+  };
+
+  const repairHelper = async () => {
+    try {
+      const res = await postJson("/api/agent/repair-helper", {});
+      if (res.ok) setTimeout(onRefresh, 1500);
+    } catch { /* best effort */ }
+  };
+
   return (
     <section className="ui-control-live-panel">
       <div className="ui-control-live-panel-header py-1">
@@ -43,6 +58,17 @@ export function ZellijLivePanel({
             <span className="ui-micro-label text-text-muted text-[9px]">
               {dashboard.runningCount} run · {dashboard.waitingCount} wait
             </span>
+          )}
+          {!daemonStateUnknown && (
+            <button
+              type="button"
+              onClick={repairHelper}
+              className="ui-btn-ghost ui-btn-xs gap-1 text-[10px]"
+              title="Update and repair the local helper"
+            >
+              <Wrench className="h-3 w-3" />
+              <span className="hidden sm:inline">Repair helper</span>
+            </button>
           )}
           <button
             type="button"
@@ -82,7 +108,7 @@ export function ZellijLivePanel({
                   <th>Agent</th>
                   <th>State</th>
                   <th>Activity</th>
-                  <th className="w-20 text-right">Actions</th>
+                  <th className="w-24 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -112,6 +138,14 @@ export function ZellijLivePanel({
                           title={`Focus ${row.tabName}`}
                         >
                           <Terminal className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => closeTab(row.tabName)}
+                          className="ui-icon-action p-0.5"
+                          title={`Close ${row.tabName}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                         {row.project && onFocusProject && (
                           <button
@@ -152,6 +186,14 @@ export function ZellijLivePanel({
                       title="Focus"
                     >
                       <Terminal className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => closeTab(row.tabName)}
+                      className="ui-icon-action p-0.5"
+                      title="Close tab"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                     {row.project && onFocusProject && (
                       <button

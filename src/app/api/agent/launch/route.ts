@@ -5,7 +5,7 @@ import { launchAgentInTab } from "@/lib/agent-runtime";
 import { listAgentRegistry } from "@/lib/agent-registry";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
-import { APP_NAME } from "@/config/brand";
+import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -68,13 +68,6 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json(
-      { error: `Agent launch requires the local runtime — open ${APP_NAME} on your machine to launch tabs.` },
-      { status: 503 },
-    );
-  }
-
   const dataOrResp = await readJsonBody(req, LaunchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
@@ -84,11 +77,16 @@ export async function POST(req: NextRequest) {
   if (!exactEntry) {
     return NextResponse.json({ error: `Unknown agent: ${agent}` }, { status: 400 });
   }
-  if (!exactEntry.available) {
+  if (isRuntimeAvailable() && !exactEntry.available) {
     return NextResponse.json({ error: exactEntry.availabilityReason ?? `${exactEntry.label} is not available on this machine.` }, { status: 400 });
   }
   if (!exactEntry.capabilities.tabSwitching) {
     return NextResponse.json({ error: `${exactEntry.label} does not support launching into a development tab yet.` }, { status: 400 });
+  }
+
+  if (!isRuntimeAvailable()) {
+    const commandId = await enqueueLaunchAgentCommand(userId, { tab, dir, agent, model, initialPrompt });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, tab, agent });
   }
 
   try {

@@ -16,7 +16,9 @@ const nextConfig: NextConfig = {
     // anything not traced here gets tree-shaken out of the deployment.
     "/api/agent/daemon": [
       "./scripts/cockpit-daemon.sh",
+      "./scripts/cockpit",
       "./scripts/_brand.sh",
+      "./scripts/_agents.sh",
       "./scripts/agent-hook-lib.sh",
       "./scripts/agent-hook-bridge.sh",
       "./scripts/run-codex-task.sh",
@@ -27,6 +29,7 @@ const nextConfig: NextConfig = {
       "./scripts/get-idle-secs.py",
       "./scripts/notify-choice.py",
       "./scripts/sync-agent-runtime-config.py",
+      "./scripts/transcribe.py",
     ],
   },
 };

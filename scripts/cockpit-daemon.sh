@@ -38,8 +38,10 @@ PUSH_INTERVAL="$(_brand_env PUSH_INTERVAL 2)"
 DRY_RUN="$(_brand_env DRY_RUN 0)"
 TOKEN="$(_brand_env DAEMON_TOKEN "")"
 CONF_FILE="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
+RESTART_AFTER_COMMAND=0
 # Cache file shared between the main poll loop and the background push loop.
 _URL_CACHE="$(_brand_tmp "daemon-url-$$")"
+_AUTH_HEADER="$(_brand_tmp "daemon-auth-$$")"
 _URL_TTL=30  # re-detect every 30 s
 
 if [ -z "$TOKEN" ]; then
@@ -47,9 +49,28 @@ if [ -z "$TOKEN" ]; then
   exit 1
 fi
 
+umask 077
+printf 'Authorization: Bearer %s\n' "$TOKEN" > "$_AUTH_HEADER"
+
 log() { echo "[${APP_SLUG}-daemon] $(date '+%H:%M:%S') $*"; }
 
-# Returns the best available base URL: local server if reachable, else remote.
+# Hooks installed before the hosted helper lived in a separate cockpit-beacon
+# directory. Keep that active hook target current so direct terminal use and
+# the daemon read the same adapter registry.
+sync_legacy_hook_runtime() {
+  local hook_dir="$HOME/.local/share/${APP_SLUG}-beacon" file
+  [ -d "$hook_dir" ] || return 0
+  for file in _brand.sh _agents.sh agent-hook-lib.sh agent-hook-bridge.sh \
+      beacon.py _beacon_config.py get-idle-secs.py notify-choice.py \
+      run-codex-task.sh run-gemini-task.sh sync-agent-runtime-config.py; do
+    [ -f "$SCRIPT_DIR/$file" ] || continue
+    cp "$SCRIPT_DIR/$file" "$hook_dir/$file" 2>/dev/null || true
+  done
+  chmod +x "$hook_dir/agent-hook-bridge.sh" 2>/dev/null || true
+}
+
+# Returns the configured control plane by default. Development can explicitly
+# opt into localhost with COCKPIT_DAEMON_PREFER_LOCAL=1.
 # Result is cached in $_URL_CACHE for $_URL_TTL seconds so we don't probe on
 # every 2-second push. The file is shared between the main process and the
 # background push-loop subshell.
@@ -68,7 +89,7 @@ _base_url() {
   # a different DB than the remote — without it, the daemon prefers local and
   # remote runtime state goes stale (the cloud control panel shows
   # daemonLastPushedAt frozen).
-  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ]; then
+  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ] || [ "$(_brand_env DAEMON_PREFER_LOCAL 0)" != "1" ]; then
     url="$_REMOTE_URL"
   elif curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
     url="$_LOCAL_URL"
@@ -81,9 +102,9 @@ _base_url() {
 
 # Warm the cache at startup, retrying briefly so the local app has time to boot.
 _init_base_url() {
-  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ]; then
+  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ] || [ "$(_brand_env DAEMON_PREFER_LOCAL 0)" != "1" ]; then
     echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
-    log "DAEMON_FORCE_REMOTE=1 — using $_REMOTE_URL (skipping local probe)"
+    log "using configured control plane $_REMOTE_URL (local probing disabled)"
     return
   fi
   local i=0
@@ -112,7 +133,7 @@ _init_base_url() {
   log "local server not available — using $_REMOTE_URL"
 }
 
-trap 'rm -f "$_URL_CACHE"' EXIT
+trap 'rm -f "$_URL_CACHE" "$_AUTH_HEADER"' EXIT
 
 claim_next() {
   local base wait_secs
@@ -122,7 +143,7 @@ claim_next() {
   [[ "$base" == *"localhost"* ]] || [[ "$base" == *"127.0.0.1"* ]] \
     && wait_secs=25 || wait_secs="$POLL_INTERVAL"
   curl -sf --max-time 30 \
-    -H "Authorization: Bearer $TOKEN" \
+    -H "@$_AUTH_HEADER" \
     "${base}/api/control/commands?wait=${wait_secs}" 2>/dev/null
 }
 
@@ -135,7 +156,7 @@ mark_done() {
     body=$(printf '{"ok":%s}' "$ok")
   fi
   curl -sf --max-time 10 -X PATCH \
-    -H "Authorization: Bearer $TOKEN" \
+    -H "@$_AUTH_HEADER" \
     -H "Content-Type: application/json" \
     -d "$body" \
     "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
@@ -337,13 +358,75 @@ execute_focus_tab() {
     return 0
   fi
 
+  local session
+  session=$(_find_session_for_tab "$tab" 2>/dev/null || true)
   log "focus_tab → $tab"
-  if zellij action go-to-tab-name "$tab" 2>/dev/null; then
+  if [ -n "$session" ] && ZELLIJ_SESSION_NAME="$session" zellij action go-to-tab-name "$tab" 2>/dev/null; then
     mark_done "$id" "true"
     log "focus_tab done ✓"
   else
     mark_done "$id" "false" "go-to-tab-name failed"
     log "focus_tab failed ✗"
+  fi
+}
+
+execute_close_tab() {
+  local id="$1" tab="$2" session
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN close_tab → $tab"
+    mark_done "$id" "true"
+    return 0
+  fi
+  session=$(_find_session_for_tab "$tab" 2>/dev/null || true)
+  if [ -z "$session" ]; then
+    mark_done "$id" "false" "tab not found"
+    return 0
+  fi
+  log "close_tab → $tab"
+  ZELLIJ_SESSION_NAME="$session" zellij action go-to-tab-name "$tab" 2>/dev/null || true
+  sleep 0.15
+  if ZELLIJ_SESSION_NAME="$session" zellij action close-tab 2>/dev/null; then
+    mark_done "$id" "true"
+    log "close_tab done ✓"
+  else
+    mark_done "$id" "false" "close-tab failed"
+    log "close_tab failed ✗"
+  fi
+}
+
+execute_launch_agent() {
+  local id="$1" tab="$2" dir="$3" agent="$4" model="${5:-}" initial_prompt="${6:-}"
+  local session command
+  command=$(_agent_launch_cmd "$agent" "$dir" "$model")
+  if [ -z "$command" ]; then
+    mark_done "$id" "false" "unknown agent: $agent"
+    return 0
+  fi
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN launch_agent → tab=$tab agent=$agent"
+    mark_done "$id" "true"
+    return 0
+  fi
+  session=$(_find_session_for_tab "$tab" 2>/dev/null || true)
+  if [ -z "$session" ]; then
+    session=$(zellij list-sessions -n 2>/dev/null | awk 'NR==1{print $1}')
+    [ -z "$session" ] && { mark_done "$id" "false" "no zellij session found"; return 0; }
+    ZELLIJ_SESSION_NAME="$session" zellij action new-tab --name "$tab" 2>/dev/null || {
+      mark_done "$id" "false" "new-tab failed"; return 0;
+    }
+    sleep 0.5
+  fi
+  log "launch_agent → tab=$tab agent=$agent"
+  if inject_prompt "$tab" "$command" 2>/dev/null; then
+    if [ -n "$initial_prompt" ]; then
+      sleep 2
+      inject_prompt "$tab" "$initial_prompt" 2>/dev/null || true
+    fi
+    mark_done "$id" "true"
+    log "launch_agent done ✓"
+  else
+    mark_done "$id" "false" "agent launch injection failed"
+    log "launch_agent failed ✗"
   fi
 }
 
@@ -500,12 +583,41 @@ execute_install_cli() {
   fi
 }
 
+# Pull the latest hosted helper bundle in place. This is deliberately a daemon
+# command: once enrolled, the user repairs or upgrades from the web UI.
+execute_repair_helper() {
+  local id="$1" install_dir="$HOME/.local/share/$APP_SLUG" tmp tarball
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN repair_helper"
+    mark_done "$id" "true"
+    return 0
+  fi
+  tmp=$(mktemp -d "/tmp/${APP_SLUG}-repair-XXXXXX")
+  tarball="$tmp/helper.tar.gz"
+  log "repair_helper → downloading latest helper bundle"
+  if ! curl -fsS --max-time 30 "$(_base_url)/api/agent/daemon" -o "$tarball" \
+      || ! mkdir -p "$install_dir" \
+      || ! tar -xzf "$tarball" -C "$install_dir"; then
+    rm -rf "$tmp"
+    mark_done "$id" "false" "failed to download or extract helper bundle"
+    log "repair_helper failed ✗"
+    return 0
+  fi
+  chmod +x "$install_dir/cockpit-daemon.sh" "$install_dir/cockpit" \
+    "$install_dir/agent-hook-bridge.sh" "$install_dir/install-daemon.sh" 2>/dev/null || true
+  rm -rf "$tmp"
+  sync_legacy_hook_runtime
+  mark_done "$id" "true"
+  log "repair_helper installed ✓ — restarting runtime"
+  RESTART_AFTER_COMMAND=1
+}
+
 execute_transcription() {
   local id="$1" audio_b64="$2" mime_type="$3"
   if [ "$DRY_RUN" = "1" ]; then
     log "DRY RUN transcribe id=$id"
     curl -sf -X PATCH \
-      -H "Authorization: Bearer $TOKEN" \
+      -H "@$_AUTH_HEADER" \
       -H "Content-Type: application/json" \
       -d '{"ok":true,"text":"dry run transcription"}' \
       "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
@@ -560,7 +672,7 @@ execute_transcription() {
   local body
   body=$(printf '{"ok":true,"text":%s}' "$(printf '%s' "$transcription" | jq -Rs .)")
   curl -sf -X PATCH \
-    -H "Authorization: Bearer $TOKEN" \
+    -H "@$_AUTH_HEADER" \
     -H "Content-Type: application/json" \
     -d "$body" \
     "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
@@ -688,14 +800,45 @@ _build_state_json() {
       resolve_adapter 2>/dev/null || true
       adapter="${ADAPTER:-claude}"
     fi
+    # Adapters may expose a project-scoped native activity feed for work typed
+    # directly in the CLI. Only upload a short label and timestamp, never log
+    # content; web-dispatched prompts and hook lifecycle work for every adapter.
+    if [ "$tab_open" = "true" ] && [ -z "$cpk" ] && type _agent_direct_activity >/dev/null 2>&1; then
+      local activity observation_mtime observation_label observation_age
+      activity=$(_agent_direct_activity "$adapter" "$dir" 2>/dev/null || true)
+      observation_mtime="${activity%%|*}"
+      observation_label="${activity#*|}"
+      if [ -n "$activity" ] && [[ "$observation_mtime" =~ ^[0-9]+$ ]]; then
+        observation_age=$(( $(date +%s) - observation_mtime ))
+        if [ "$observation_age" -ge 0 ] && [ "$observation_age" -lt 45 ]; then
+          cpk="direct_terminal"
+          cpl="$observation_label"
+          cpsat="$observation_mtime"
+          agents_json=$(jq -nc --arg a "$adapter" '[$a]')
+          running="true"
+        fi
+      fi
+    fi
+    # A stop/notification hook is authoritative evidence of the configured
+    # agent in this open tab even when the CLI launches through a wrapper whose
+    # process basename is not recognized by /proc scanning.
+    if [ "$tab_open" = "true" ] && [ "$agents_json" = "[]" ] && [ "$ready_at" != "null" ]; then
+      local ready_age
+      ready_age=$(( $(date +%s) - ready_at ))
+      if [ "$ready_age" -ge 0 ] && [ "$ready_age" -lt 900 ]; then
+        agents_json=$(jq -nc --arg a "$adapter" '[$a]')
+        running="true"
+      fi
+    fi
     local sf
     if type _session_file >/dev/null 2>&1; then
       sf="$(_session_file "$tab" "$adapter")"
     else
       sf="$HOME/.claude/sessions/${tab}.md"
     fi
-    local sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
+    local sess_status="" sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
     if [ -f "$sf" ]; then
+      sess_status=$(grep '^status:' "$sf" 2>/dev/null | head -1 | sed 's/^status:[[:space:]]*//')
       sess_done=$(grep  '^done:'   "$sf" 2>/dev/null | head -1 | sed 's/^done:[[:space:]]*//')
       sess_next=$(grep  '^next:'   "$sf" 2>/dev/null | head -1 | sed 's/^next:[[:space:]]*//')
       sess_tests=$(grep '^tests:'  "$sf" 2>/dev/null | head -1 | sed 's/^tests:[[:space:]]*//')
@@ -750,6 +893,7 @@ _build_state_json() {
       --argjson  closing   "$closing_at" \
       --argjson  closed    "$closed_at" \
       --arg      sdone     "$sess_done" \
+      --arg      sstatus   "$sess_status" \
       --arg      snext     "$sess_next" \
       --arg      stests    "$sess_tests" \
       --arg      stodos    "$sess_todos" \
@@ -769,6 +913,7 @@ _build_state_json() {
         closedAt:               (if $closed  == null then null else ($closed  | tonumber) end)
       }
       + (if $smtime == null then {} else {
+        sessionStatus:    $sstatus,
         sessionDone:      $sdone,
         sessionNext:      $snext,
         sessionTests:     $stests,
@@ -790,7 +935,7 @@ push_runtime_state() {
   _s=$(_build_state_json 2>/dev/null) || return
   [ -z "$_s" ] && return
   _status=$(curl -sS --max-time 8 -X POST \
-    -H "Authorization: Bearer $TOKEN" \
+    -H "@$_AUTH_HEADER" \
     -H "Content-Type: application/json" \
     -d "$_s" \
     -o /dev/null -w '%{http_code}' \
@@ -823,7 +968,7 @@ _push_loop() {
       _age=$(( _now - _last_push_ts ))
       if [ "$_h" != "$_last_hash" ] || [ "$_age" -ge "$_heartbeat_s" ]; then
         _status=$(curl -sS --max-time 8 -X POST \
-          -H "Authorization: Bearer $TOKEN" \
+          -H "@$_AUTH_HEADER" \
           -H "Content-Type: application/json" \
           -d "$_s" \
           -o /dev/null -w '%{http_code}' \
@@ -847,11 +992,12 @@ _push_loop() {
   done
 }
 
+sync_legacy_hook_runtime
 _init_base_url
 log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
 _PUSH_PID=$!
-trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE"; exit' INT TERM
+trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE" "$_AUTH_HEADER"; exit' INT TERM
 
 while true; do
   # Pause / low-power mode support (easy to trigger from web or wrapper later)
@@ -891,6 +1037,18 @@ while true; do
       tab=$(echo "$payload" | jq -r '.tab')
       execute_focus_tab "$id" "$tab"
       ;;
+    close_tab)
+      tab=$(echo "$payload" | jq -r '.tab')
+      execute_close_tab "$id" "$tab"
+      ;;
+    launch_agent)
+      tab=$(echo "$payload" | jq -r '.tab')
+      dir=$(echo "$payload" | jq -r '.dir')
+      agent=$(echo "$payload" | jq -r '.agent')
+      model=$(echo "$payload" | jq -r '.model // empty')
+      initial_prompt=$(echo "$payload" | jq -r '.initialPrompt // empty')
+      execute_launch_agent "$id" "$tab" "$dir" "$agent" "$model" "$initial_prompt"
+      ;;
     switch_agent)
       tab=$(echo "$payload" | jq -r '.tab')
       dir=$(echo "$payload" | jq -r '.dir')
@@ -913,6 +1071,9 @@ while true; do
       agent=$(echo "$payload" | jq -r '.agent')
       execute_install_cli "$id" "$agent"
       ;;
+    repair_helper)
+      execute_repair_helper "$id"
+      ;;
     *)
       log "unknown command type: $type — marking done"
       mark_done "$id" "false" "unknown type: $type"
@@ -921,4 +1082,9 @@ while true; do
 
   # Push updated state immediately so the UI reflects the execution result.
   push_runtime_state &
+  if [ "$RESTART_AFTER_COMMAND" = "1" ]; then
+    kill "$_PUSH_PID" 2>/dev/null || true
+    rm -f "$_URL_CACHE" "$_AUTH_HEADER"
+    exec "$HOME/.local/share/$APP_SLUG/cockpit-daemon.sh"
+  fi
 done

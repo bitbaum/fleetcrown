@@ -19,7 +19,7 @@ const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
 const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "cockpit");
 
 function parseArgs(argv) {
-  const args = { command: argv[2], token: "", baseUrl: DEFAULT_BASE_URL, install: false };
+  const args = { command: argv[2], token: "", baseUrl: DEFAULT_BASE_URL, install: true };
   if (!args.command || args.command === "help" || args.command === "--help") {
     args.command = "help";
     return args;
@@ -29,6 +29,7 @@ function parseArgs(argv) {
     if (a === "--token" && argv[i + 1]) { args.token = argv[++i]; continue; }
     if (a === "--base-url" && argv[i + 1]) { args.baseUrl = argv[++i].replace(/\/$/, ""); continue; }
     if (a === "--install") { args.install = true; continue; }
+    if (a === "--no-install") { args.install = false; continue; }
   }
   return args;
 }
@@ -109,7 +110,7 @@ async function downloadDaemon(baseUrl) {
 
   // chmod +x the executables so the user can run them directly without
   // having to remember `bash ...`.
-  for (const name of ["cockpit-daemon.sh", "agent-hook-bridge.sh"]) {
+  for (const name of ["cockpit-daemon.sh", "cockpit", "agent-hook-bridge.sh", "install-daemon.sh"]) {
     try { fs.chmodSync(path.join(DAEMON_DIR, name), 0o755); } catch {}
   }
 
@@ -126,14 +127,13 @@ Commands:
 Options:
   --token <ck_* token>     Agent token from Settings → Agent tokens
   --base-url <url>         Cockpit URL (default: ${DEFAULT_BASE_URL})
-  --install                Run systemd install after saving token
-                           (requires a Cockpit repo clone for now)
+  --no-install             Download files only; do not install/start the
+                           persistent background helper service
 
 Install or upgrade this CLI:
   curl -fsSL ${DEFAULT_BASE_URL}/api/agent/install | node - init --token ck_…
 
-After init, start the daemon:
-  set -a && source ${ENV_FILE} && ${DAEMON_DIR}/cockpit-daemon.sh
+By default, init installs and starts the persistent background helper.
 `);
 }
 
@@ -188,12 +188,13 @@ async function main() {
   console.log("\nNext steps:");
   console.log("  1. Install Zellij + at least one agent CLI (claude, codex, gemini, or openclaw)");
   console.log("  2. Register projects in Cockpit with local directory paths");
-  if (daemonInstalledAt) {
-    console.log(`  3. Start the daemon:`);
-    console.log(`     set -a && source ${ENV_FILE} && ${daemonInstalledAt}/cockpit-daemon.sh`);
-  } else {
+  if (!daemonInstalledAt) {
     console.log(`  3. Re-run the install command once you're online to fetch the daemon scripts:`);
     console.log(`     curl -fsSL ${args.baseUrl}/api/agent/install | node - init --token ${token}`);
+  } else if (args.install) {
+    console.log("  3. The background helper will start now and reconnect automatically.");
+  } else {
+    console.log("  3. Background service installation was skipped (--no-install).");
   }
 
   if (args.install) {
@@ -213,7 +214,7 @@ async function main() {
       });
       process.exit(r.status ?? 1);
     } else {
-      console.warn("\n--install skipped: install-daemon.sh not found in DAEMON_DIR or cwd/scripts/.");
+      console.warn("\nBackground helper setup skipped: install-daemon.sh not found.");
     }
   }
 }

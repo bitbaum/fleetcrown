@@ -4,7 +4,7 @@ import { gzipSync } from "node:zlib";
 import path from "node:path";
 
 /**
- * Serves a gzipped tarball of the 4 daemon scripts so a new customer can
+ * Serves a gzipped tarball of the local helper runtime so a new customer can
  * install the agent fleet without cloning the cockpit repo:
  *
  *   scripts/cockpit-daemon.sh   — main polling loop (~780 lines)
@@ -25,13 +25,15 @@ import path from "node:path";
  * agent CLI writes them straight into ~/.local/share/cockpit/.
  *
  * Public (no auth) — matches the matcher exception in src/proxy.ts.
- * next.config.ts includes the 4 source files in this route's
+ * next.config.ts includes the source files in this route's
  * outputFileTracingIncludes so they land in the Vercel deployment bundle.
  */
 const FILES = [
   // Core daemon + shared brand/zellij helpers + bridge entry point.
   "cockpit-daemon.sh",
+  "cockpit",
   "_brand.sh",
+  "_agents.sh",
   "agent-hook-lib.sh",
   "agent-hook-bridge.sh",
   // Per-agent task runners. Claude uses an inline command (no runner); codex
@@ -54,6 +56,9 @@ const FILES = [
   "get-idle-secs.py",
   "notify-choice.py",
   "sync-agent-runtime-config.py",
+  // Audio transcription is invoked by cockpit-daemon.sh for recorded prompt
+  // commands and must travel with the flat installed runtime.
+  "transcribe.py",
 ] as const;
 
 export async function GET() {

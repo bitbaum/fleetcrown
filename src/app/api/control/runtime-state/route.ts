@@ -20,6 +20,7 @@ interface ProjectRuntimePatch {
   closingAt?: number | null;
   closedAt?: number | null;
   sessionDone?: string;
+  sessionStatus?: string;
   sessionNext?: string;
   sessionTests?: string;
   sessionTodos?: string;
@@ -79,6 +80,7 @@ export async function POST(req: NextRequest) {
         closedAt:               tsOrNull(p.closedAt),
         // Session content — only included when the daemon read a session file.
         // undefined means "leave DB value as-is"; present string means "update."
+        ...(p.sessionStatus   !== undefined && { sessionStatus:   p.sessionStatus }),
         ...(p.sessionDone     !== undefined && { sessionDone:     p.sessionDone }),
         ...(p.sessionNext     !== undefined && { sessionNext:     p.sessionNext }),
         ...(p.sessionTests    !== undefined && { sessionTests:    p.sessionTests }),
