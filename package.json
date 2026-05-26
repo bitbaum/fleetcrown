@@ -20,6 +20,7 @@
     "test:onboarding": "npx tsx scripts/test/onboarding.ts",
     "test:onboarding-heal": "npx tsx scripts/test/onboarding-heal.ts",
     "test:db-url": "npx tsx scripts/test/db-url.ts",
+    "test:orchestration-summary": "npx tsx scripts/test/orchestration-summary.ts",
     "db:dump": "bash scripts/db/dump.sh",
     "db:restore": "bash scripts/db/restore.sh",
     "db:oracle-bootstrap": "bash scripts/db/oracle-bootstrap.sh",

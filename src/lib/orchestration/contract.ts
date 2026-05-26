@@ -88,14 +88,35 @@ export type OrchestrationTaskRequest = {
 // when the agent explicitly signals it's done with everything). This is
 // model-agnostic: any adapter that writes the standard handoff format
 // gets the same auto-inject suppression.
-export const ORCHESTRATION_TASK_SUMMARY_FIELDS = ["status", "done", "next", "tests", "todos", "health"] as const;
+export const ORCHESTRATION_TASK_SUMMARY_FIELDS = [
+  "status",
+  "last-3-same-dir",
+  "wip-or-revert-in-last-5",
+  "tsc",
+  "lint",
+  "tests",
+  "todos",
+  "done",
+  "next",
+  // Retained for summaries written before LOOP v2.
+  "health",
+] as const;
 export type OrchestrationTaskSummaryField = (typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number];
 
-// status is optional for back-compat — older summaries on the wire don't have
-// it. Downstream readers treat missing/undefined as "not ready" (suppress).
-export type OrchestrationTaskSummary =
-  & { [K in Exclude<OrchestrationTaskSummaryField, "status">]: string }
-  & { status?: string };
+// LOOP v2 evidence fields are optional for back-compat with persisted summaries
+// written before they existed. `health` remains readable during that migration.
+export type OrchestrationTaskSummary = {
+  done: string;
+  next: string;
+  tests: string;
+  todos: string;
+  health: string;
+  status?: string;
+  "last-3-same-dir"?: string;
+  "wip-or-revert-in-last-5"?: string;
+  tsc?: string;
+  lint?: string;
+};
 
 export type OrchestrationTaskStatus = {
   state: OrchestrationState;

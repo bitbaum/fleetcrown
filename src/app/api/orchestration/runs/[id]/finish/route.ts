@@ -36,6 +36,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const summary = body.summary
     ? {
         status: body.summary.status ?? "",
+        "last-3-same-dir": body.summary["last-3-same-dir"] ?? "",
+        "wip-or-revert-in-last-5": body.summary["wip-or-revert-in-last-5"] ?? "",
+        tsc: body.summary.tsc ?? "",
+        lint: body.summary.lint ?? "",
         done:   body.summary.done   ?? "",
         next:   body.summary.next   ?? "",
         tests:  body.summary.tests  ?? "",

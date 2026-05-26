@@ -28,7 +28,7 @@ const PaneId = z.string().min(1).max(120);
 const Project = z.string().min(1).max(200);
 
 /**
- * Six session-handoff fields the agent writes to ~/.claude/sessions/<tab>.md.
+ * Session-handoff fields the agent writes to ~/.claude/sessions/<tab>.md.
  *
  * `status` (added 2026-05) is the agent's self-reported lifecycle state for
  * the run — "ready" means done with everything (auto-inject may proceed),
@@ -39,6 +39,11 @@ const Project = z.string().min(1).max(200);
  */
 export const Handoff = z.object({
   status: z.string().default(""),
+  // Optional until every installed bridge/worker has been upgraded to LOOP v2.
+  "last-3-same-dir": z.string().optional(),
+  "wip-or-revert-in-last-5": z.string().optional(),
+  tsc:    z.string().optional(),
+  lint:   z.string().optional(),
   done:   z.string().default(""),
   next:   z.string().default(""),
   tests:  z.string().default(""),

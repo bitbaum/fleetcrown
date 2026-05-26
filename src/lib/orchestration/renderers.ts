@@ -5,11 +5,14 @@ function renderSharedHandoffBlock(): string {
   return [
     "When done, update the session handoff with exactly these lines:",
     "status: <ready | working>     # 'ready' = task fully done; 'working' = still more to do. Auto-inject only fires when 'ready'.",
-    "done: <one sentence what you completed>",
-    "next: <one sentence what remains>",
+    "last-3-same-dir: <yes | no>   # whether the last 3 commits all modify one directory",
+    "wip-or-revert-in-last-5: <yes | no>   # whether a recent commit subject begins with WIP or revert",
+    "tsc: <pass | fail(N)>",
+    "lint: <pass | fail(N errors, M warnings)>",
     "tests: <N pass · N fail, or 'no suite'>",
-    "todos: <count> TODOs",
-    "health: <good | needs attention | critical>",
+    "todos: <count from TODO/FIXME/HACK scan>",
+    "done: <one sentence what you completed>",
+    "next: <state to resume from; empty when nothing is mid-flight>",
   ].join("\n");
 }
 
