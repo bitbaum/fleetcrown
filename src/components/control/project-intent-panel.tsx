@@ -39,6 +39,7 @@ export function IntentButtonPanel({
   onCustomChange,
   onCustomFocusChange,
   runtimeAvailable = true,
+  runtimeStateKnown = true,
 }: {
   project: ProjectState;
   currentAdapter: string;
@@ -70,6 +71,8 @@ export function IntentButtonPanel({
   /** False on cockpitapp (cloud) — gates buttons whose endpoints require a
    *  local zellij/CLI runtime and would 503 silently otherwise. */
   runtimeAvailable?: boolean;
+  /** False when cached daemon-driven runtime fields cannot be trusted. */
+  runtimeStateKnown?: boolean;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
@@ -97,7 +100,9 @@ export function IntentButtonPanel({
     onEnqueue: handleEnqueue,
     autoContinueEnabled,
     onToggleAutoContinue,
-    statusLabel: autoContinueEnabled
+    statusLabel: !runtimeStateKnown
+      ? "Daemon offline: sends will queue until this computer reconnects."
+      : autoContinueEnabled
       ? `Auto-continue ready: ${APP_NAME} can send the next queued prompt when the agent waits.`
       : `Auto-continue paused: ${APP_NAME} will wait for you before sending more work.`,
   };

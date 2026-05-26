@@ -73,7 +73,13 @@ export function ControlPanel() {
     newName, setNewName, newDir, setNewDir, newGitUrl, setNewGitUrl,
     creatingProject, createError, createAndLaunch,
   } = useCreateProject({ openLaunchModal, refresh });
-  const pageState = data ? buildControlPageState(data, expandedTabs, nowS) : null;
+  const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
+  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
+  const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
+  // Cloud cards cannot truthfully show live agent state without current daemon
+  // heartbeats. Queued commands remain visible as requests, not running work.
+  const daemonStateUnknown = daemonOffline || daemonNeverSeen;
+  const pageState = data ? buildControlPageState(data, expandedTabs, nowS, !daemonStateUnknown) : null;
   const sorted = pageState?.sortedProjects ?? null;
   const activeProjects = pageState?.activeProjects ?? [];
   const idleProjects = pageState?.idleProjects ?? [];
@@ -86,7 +92,7 @@ export function ControlPanel() {
 
   const readyTabs = data
     ? activeProjects.filter((p) => {
-        const s = getProjectDisplayState(p, data.zellijTabs, nowS);
+        const s = getProjectDisplayState(p, data.zellijTabs, nowS, false, !daemonStateUnknown);
         return s.isReady || s.isOrchestrationReady;
       }).map((p) => p.tab)
     : [];
@@ -132,15 +138,12 @@ export function ControlPanel() {
     onDeleted: () => { refresh(true); },
     onProfileSaved: () => { refresh(true); },
     runtimeAvailable,
+    runtimeStateKnown: !daemonStateUnknown,
   });
 
-  const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
-  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
-  const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
   // When daemon is offline or never connected we don't know which projects are actually
   // running — don't label them all "idle". Collapse the idle section and show everything
   // in the main list so nothing falsely appears inactive.
-  const daemonStateUnknown = daemonOffline || daemonNeverSeen;
   const fleetActive = daemonStateUnknown ? (sorted ?? []) : activeProjects;
   const fleetIdle   = daemonStateUnknown ? [] : idleProjects;
   const fleetIdleNeedsAttention = daemonStateUnknown ? [] : idleNeedsAttention;
@@ -335,6 +338,7 @@ export function ControlPanel() {
         onBootstrap={() => setBootstrapOpen(true)}
         onNewProject={() => setNewProjectOpen(true)}
         runtimeAvailable={runtimeAvailable}
+        runtimeStateKnown={!daemonStateUnknown}
       />
     </div>
   );

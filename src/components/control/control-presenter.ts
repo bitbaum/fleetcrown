@@ -56,6 +56,7 @@ export type ProjectDisplayState = {
   showLatestOrchestration: boolean;
   tabOpen: boolean;
   tone:
+    | "offline"
     | "running"
     | "session-open"
     | "ready"
@@ -64,7 +65,7 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "Idle";
+  stateLabel: "Offline" | "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "Idle";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
 };
@@ -99,6 +100,7 @@ export type LiveTabRow = {
 type LiveTabRankLabel = LiveTabRow["stateLabel"];
 
 const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
+  Offline: 0,
   Working: 0,
   Ready: 1,
   Waiting: 1,
@@ -244,7 +246,27 @@ export function getProjectDisplayState(
   zellijTabs: string[],
   nowS: number,
   dismissed = false,
+  runtimeStateKnown = true,
 ): ProjectDisplayState {
+  if (!runtimeStateKnown) {
+    return {
+      isClosed: false,
+      isClosing: false,
+      isReady: false,
+      isOrchestrationReady: false,
+      isBeaconActive: false,
+      isRunning: false,
+      isAgentWorking: false,
+      isSessionOpen: false,
+      isActive: false,
+      showRunningBanner: false,
+      showLatestOrchestration: false,
+      tabOpen: false,
+      tone: "offline",
+      stateLabel: "Offline",
+      stateTagClass: "ui-tag ui-tag-warning",
+    };
+  }
   // "agentRunning" means an agent process/session exists. It does not prove
   // active work: Claude/Codex can sit open at an input prompt after a task.
   // The staleness gate covers the Codex-no-Stop-hook case where the
@@ -326,6 +348,7 @@ export function getProjectDisplayState(
     : "idle";
 
   const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
+    offline:               "Offline",
     running:               "Working",
     "session-open":        "Ready",
     ready:                 "Waiting",
@@ -335,6 +358,7 @@ export function getProjectDisplayState(
     idle:                  "Idle",
   };
   const STATE_TAG: Record<ProjectDisplayState["tone"], string> = {
+    offline:               "ui-tag ui-tag-warning",
     running:               "ui-tag ui-tag-warning",
     "session-open":        "ui-tag ui-tag-neutral",
     ready:                 "ui-tag ui-tag-positive",
@@ -368,9 +392,10 @@ function compareProjects(
   b: ProjectState,
   zellijTabs: string[],
   nowS: number,
+  runtimeStateKnown: boolean,
 ): number {
-  const aState = getProjectDisplayState(a, zellijTabs, nowS);
-  const bState = getProjectDisplayState(b, zellijTabs, nowS);
+  const aState = getProjectDisplayState(a, zellijTabs, nowS, false, runtimeStateKnown);
+  const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown);
 
   const rank = (state: ProjectDisplayState): number => {
     if (state.isClosed) return 0;
@@ -392,20 +417,21 @@ export function buildControlPageState(
   data: ControlData,
   expandedTabs: Set<string>,
   nowS: number,
+  runtimeStateKnown = true,
 ): ControlPageState {
   // Capture DB-order indices so user-defined position is the final tiebreaker.
   // data.projects arrives ordered by user_projects.position from the API.
   const withIndex = data.projects.map((p, i) => ({ p, i }));
   const sortedProjects = withIndex
-    .sort((a, b) => compareProjects(a.p, b.p, data.zellijTabs, nowS) || (a.i - b.i))
+    .sort((a, b) => compareProjects(a.p, b.p, data.zellijTabs, nowS, runtimeStateKnown) || (a.i - b.i))
     .map(({ p }) => p);
 
   const activeProjects = sortedProjects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS);
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return state.isActive || expandedTabs.has(project.tab);
   });
   const idleProjects = sortedProjects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS);
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return !state.isActive && !expandedTabs.has(project.tab);
   });
   const idleNeedsAttn = idleProjects.filter(idleNeedsAttention);
@@ -419,11 +445,11 @@ export function buildControlPageState(
     .sort((a, b) => (a.session?.mtime ?? -Infinity) - (b.session?.mtime ?? -Infinity));
 
   const runningCount = data.projects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS);
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return state.isRunning;
   }).length;
   const waitingCount = data.projects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS);
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return state.isReady || state.isOrchestrationReady;
   }).length;
   const openTabCount = data.projects.filter((project) =>

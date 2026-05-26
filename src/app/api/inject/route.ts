@@ -228,7 +228,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Injection failed: ${result.error}` }, { status: 500 });
   }
 
-  // DB side-effects work in both modes (local and remote).
+  // Prompt history records the user's request in both modes. A queued remote
+  // request is not active work until the daemon actually injects it and pushes
+  // fresh runtime state back to the control plane.
   insertPromptHistory(userId, {
     projectId,
     projectKey: canonical,
@@ -238,15 +240,17 @@ export async function POST(req: NextRequest) {
     customPrompt: customPrompt ?? null,
   }).catch((err) => console.error("[inject] db write failed:", err));
 
-  upsertProjectState({
-    projectKey: canonical,
-    projectId,
-    userId,
-    tabName: effectiveTab,
-    currentPromptKey: promptKey ?? "custom",
-    currentPromptLabel: promptLabel,
-    currentPromptStartedAt: new Date(nowS * 1000),
-  }).catch((err) => console.error("[inject] db write failed:", err));
+  if (result.mode === "direct") {
+    upsertProjectState({
+      projectKey: canonical,
+      projectId,
+      userId,
+      tabName: effectiveTab,
+      currentPromptKey: promptKey ?? "custom",
+      currentPromptLabel: promptLabel,
+      currentPromptStartedAt: new Date(nowS * 1000),
+    }).catch((err) => console.error("[inject] db write failed:", err));
+  }
 
   createOrchestrationEvent({
     userId,
@@ -260,17 +264,19 @@ export async function POST(req: NextRequest) {
     happenedAt: new Date(nowS * 1000),
   }).catch((err) => console.error("[inject] db write failed:", err));
 
-  createOrchestrationEvent({
-    userId,
-    projectId,
-    projectKey: canonical,
-    eventType: "task_started",
-    source: "api-inject",
-    adapter: eventAdapter,
-    intent: eventIntent,
-    detail: promptLabel,
-    happenedAt: new Date(nowS * 1000),
-  }).catch((err) => console.error("[inject] db write failed:", err));
+  if (result.mode === "direct") {
+    createOrchestrationEvent({
+      userId,
+      projectId,
+      projectKey: canonical,
+      eventType: "task_started",
+      source: "api-inject",
+      adapter: eventAdapter,
+      intent: eventIntent,
+      detail: promptLabel,
+      happenedAt: new Date(nowS * 1000),
+    }).catch((err) => console.error("[inject] db write failed:", err));
+  }
 
   return NextResponse.json({
     ok: true,

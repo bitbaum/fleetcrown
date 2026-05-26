@@ -93,7 +93,9 @@ export async function POST(req: NextRequest) {
           projectId: request.projectId ?? null,
           adapter: request.adapter,
           intent: request.intent,
-          state: "running",
+          // The daemon has not executed this command yet. Runtime state will
+          // show active work only after a successful local injection.
+          state: "waiting",
           projectKey: request.projectKey,
           projectPath: request.projectPath,
           payload: {

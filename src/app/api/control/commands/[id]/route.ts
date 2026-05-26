@@ -17,6 +17,7 @@ export async function PATCH(
   const error = typeof body.error === "string" ? body.error : undefined;
   const text = typeof body.text === "string" ? body.text : undefined;
 
-  await markCommandExecuted(id, { ok, text, error });
+  const updated = await markCommandExecuted(id, userId, { ok, text, error });
+  if (!updated) return NextResponse.json({ error: "Command not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

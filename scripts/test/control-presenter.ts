@@ -6,6 +6,7 @@ import {
   buildLiveTabRows,
   findProjectForOpenTab,
   formatAgentRuntimeLabel,
+  getProjectDisplayState,
 } from "@/components/control/control-presenter";
 import type { ProjectState } from "@/lib/control-types";
 
@@ -95,6 +96,20 @@ function runTests(): void {
       activeAgents: ["agent"],
     }));
     assert(label === "Cursor", `expected Cursor, got ${label}`);
+  });
+
+  check("unknown daemon state suppresses cached working and ready signals", () => {
+    const nowS = 1_700_000_000;
+    const project = stubProject({
+      tab: "Disconnected",
+      agentRunning: true,
+      currentPrompt: { key: "custom", label: "Never delivered", startedAt: nowS - 10 },
+      readyAt: nowS - 10,
+      activeAgents: ["claude"],
+    });
+    const state = getProjectDisplayState(project, ["Disconnected"], nowS, false, false);
+    assert(state.stateLabel === "Offline", "disconnected card must say Offline");
+    assert(!state.isRunning && !state.isReady && !state.tabOpen, "stale live signals must be hidden");
   });
 
   console.log(`\n${passed}/${passed} passed`);

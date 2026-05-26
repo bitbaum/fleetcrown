@@ -38,6 +38,7 @@ export function ProjectStatusChips({
   switchingAgent = false,
   onSwitchAgent,
   isAgentWorking,
+  runtimeStateKnown = true,
 }: {
   project: ProjectState;
   tabOpen: boolean;
@@ -50,6 +51,7 @@ export function ProjectStatusChips({
   /** Derived from getProjectDisplayState — SSOT for "working" badge/chip. When
    *  omitted, falls back to raw currentPrompt for backward-compat. */
   isAgentWorking?: boolean;
+  runtimeStateKnown?: boolean;
 }) {
   // SSOT for chip tone + label. When the parent passes the derived flag, we use
   // it (so staleness gating in getProjectDisplayState propagates to the chip);
@@ -60,7 +62,7 @@ export function ProjectStatusChips({
   const [workspaceState, setWorkspaceState] = useState<"idle" | "loading" | "done">("idle");
   const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
   const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
-  const runtimeLabel = formatAgentRuntimeLabel(project);
+  const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project) : "";
   const git = project.git;
   const workspaceTab = project.liveTab ?? project.tab;
   const changesLabel = pendingChangesLabel(project);

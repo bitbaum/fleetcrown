@@ -15,15 +15,17 @@ export function ProjectCommanderCard({
   onInject,
   onRunWithBrain,
   onLaunch,
+  runtimeStateKnown = true,
 }: {
   project: ProjectState;
   zellijTabs: string[];
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
   onRunWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   onLaunch?: () => void;
+  runtimeStateKnown?: boolean;
 }) {
   const nowS = Math.floor(Date.now() / 1000);
-  const display = getProjectDisplayState(project, zellijTabs, nowS);
+  const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(project.tab);
   const { queue, shift: shiftQueue } = usePromptQueue(project.tab);
 
@@ -48,9 +50,11 @@ export function ProjectCommanderCard({
 
   const isReady = display.isReady || display.isOrchestrationReady;
   const isRunning = display.isRunning;
-  const canLaunch = !!project.dir && !project.agentRunning;
+  const canLaunch = runtimeStateKnown && !!project.dir && !project.agentRunning;
 
-  const contextLine = isRunning && project.currentPrompt
+  const contextLine = !runtimeStateKnown
+    ? "Local daemon disconnected; prompts will queue until it reconnects."
+    : isRunning && project.currentPrompt
     ? project.currentPrompt.label
     : queue.length > 0
     ? queue[0]
@@ -58,7 +62,9 @@ export function ProjectCommanderCard({
     ? project.session.next
     : project.session?.done ?? null;
 
-  const stateLabel = display.isClosed
+  const stateLabel = !runtimeStateKnown
+    ? "Offline"
+    : display.isClosed
     ? "Closed"
     : isReady
     ? "Waiting"
@@ -68,7 +74,9 @@ export function ProjectCommanderCard({
     ? "Ready"
     : "Idle";
 
-  const dotClass = isRunning
+  const dotClass = !runtimeStateKnown
+    ? "text-status-warning"
+    : isRunning
     ? "text-accent-text animate-pulse"
     : isReady || display.isClosed
     ? "text-status-positive"
@@ -108,7 +116,7 @@ export function ProjectCommanderCard({
   return (
     <div className={cn(
       "ui-card-shell overflow-hidden",
-      isReady ? "border-status-positive/35" : "border-border-subtle",
+      isReady ? "border-status-positive/35" : !runtimeStateKnown ? "border-status-warning/25" : "border-border-subtle",
     )}>
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3.5">
@@ -121,7 +129,7 @@ export function ProjectCommanderCard({
             <span className="truncate text-sm font-semibold text-text-primary">{project.tab}</span>
             <span className={cn(
               "ui-tag shrink-0",
-              isRunning ? "ui-tag-warning" : isReady || display.isClosed ? "ui-tag-positive" : "ui-tag-neutral",
+              !runtimeStateKnown || isRunning ? "ui-tag-warning" : isReady || display.isClosed ? "ui-tag-positive" : "ui-tag-neutral",
             )}>{stateLabel}</span>
           </div>
           {contextLine && (

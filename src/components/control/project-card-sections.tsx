@@ -32,6 +32,7 @@ export function ProjectCardHeader({
   localAgentId,
   switchingAgent,
   onSwitchAgent,
+  runtimeStateKnown = true,
 }: {
   project: ProjectState;
   tabOpen: boolean;
@@ -50,6 +51,7 @@ export function ProjectCardHeader({
   localAgentId?: string | null;
   switchingAgent?: boolean;
   onSwitchAgent?: (agentId: string | null) => void;
+  runtimeStateKnown?: boolean;
 }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -61,7 +63,9 @@ export function ProjectCardHeader({
     ? compactRelativeDate(new Date(lastActiveMs))
     : git?.lastWhen ?? null;
 
-  const dotColor = isRunning
+  const dotColor = !runtimeStateKnown
+    ? "text-status-warning"
+    : isRunning
     ? "text-accent-text animate-pulse"
     : isClosing
     ? "text-status-warning"
@@ -107,6 +111,7 @@ export function ProjectCardHeader({
             switchingAgent={switchingAgent}
             onSwitchAgent={onSwitchAgent}
             isAgentWorking={isRunning}
+            runtimeStateKnown={runtimeStateKnown}
           />
           {git && git.behindRemote > 0 && (
             <div className="ui-control-card-header-meta">
@@ -200,4 +205,3 @@ export function SessionSummary({
   if (isClosed || !session) return null;
   return <SessionHandoff data={buildSessionHandoffFromProjectSession(session)} />;
 }
-

@@ -33,6 +33,7 @@ export function ProjectCard({
   onProfileSaved,
   isOnlyReady = false,
   runtimeAvailable = true,
+  runtimeStateKnown = true,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -48,6 +49,7 @@ export function ProjectCard({
   onProfileSaved?: () => void;
   isOnlyReady?: boolean;
   runtimeAvailable?: boolean;
+  runtimeStateKnown?: boolean;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -88,7 +90,7 @@ export function ProjectCard({
   }, [project.agentRunning]);
 
   const nowS = Math.floor(Date.now() / 1000);
-  const display = getProjectDisplayState(project, zellijTabs, nowS, dismissed);
+  const display = getProjectDisplayState(project, zellijTabs, nowS, dismissed, runtimeStateKnown);
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow, enableAutoContinue);
 
@@ -117,7 +119,7 @@ export function ProjectCard({
           ? "border-status-warning/25 bg-status-warning/[0.02]"
           : display.isReady || display.isOrchestrationReady
           ? "border-status-positive/40 bg-status-positive/[0.03]"
-          : project.agentRunning
+          : display.isSessionOpen
           ? "border-accent-primary/25 bg-accent-primary/[0.02]"
           : "border-border-subtle bg-surface-base"
       )}
@@ -140,6 +142,7 @@ export function ProjectCard({
         localAgentId={localAgent}
         switchingAgent={switchingAgent}
         onSwitchAgent={handleSwitchAgent}
+        runtimeStateKnown={runtimeStateKnown}
       />
 
       {profileOpen ? (
@@ -187,6 +190,7 @@ export function ProjectCard({
             project={project}
             currentAdapter={currentAdapter}
             runtimeAvailable={runtimeAvailable}
+            runtimeStateKnown={runtimeStateKnown}
             isRunning={display.isRunning}
             autoContinueEnabled={autoContinueEnabled}
             sending={sending}

@@ -36,8 +36,8 @@ export async function enqueueAutoContinueCommand(
   return enqueuePendingCommand({ userId, type: "auto_continue", payload });
 }
 
-// Used by the local daemon: atomically claims the next unclaimed command for any of the given userIds.
-// Accepts an array so the daemon can drain commands for all registered users (not just isDefault).
+// Atomically claims the next unclaimed command for one or more already
+// authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
 export async function claimNextPendingCommand(userIds: string[]) {
   if (userIds.length === 0) return null;
@@ -63,12 +63,15 @@ export async function claimNextPendingCommand(userIds: string[]) {
 
 export async function markCommandExecuted(
   id: string,
+  userId: string,
   result: { ok: boolean; text?: string; error?: string },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const updated = await db
     .update(pendingCommands)
     .set({ executedAt: new Date(), result })
-    .where(eq(pendingCommands.id, id));
+    .where(and(eq(pendingCommands.id, id), eq(pendingCommands.userId, userId)))
+    .returning({ id: pendingCommands.id });
+  return updated.length > 0;
 }
 
 // Poll endpoint: returns pending (unclaimed) commands for a given user.

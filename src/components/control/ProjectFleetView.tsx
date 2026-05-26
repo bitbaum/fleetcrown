@@ -42,6 +42,8 @@ interface ProjectFleetViewProps {
    *  the cloud control plane (cockpitapp.vercel.app), where AI-bootstrap is
    *  unavailable because /api/project/ai-brief requires the local claude CLI. */
   runtimeAvailable: boolean;
+  /** False when cloud has no current daemon heartbeat, so cached live state is stale. */
+  runtimeStateKnown: boolean;
 }
 
 export function ProjectFleetView({
@@ -67,6 +69,7 @@ export function ProjectFleetView({
   onBootstrap,
   onNewProject,
   runtimeAvailable,
+  runtimeStateKnown,
   onProjectRemoved,
 }: ProjectFleetViewProps) {
   const collapseTab = (tab: string) =>
@@ -137,6 +140,7 @@ export function ProjectFleetView({
               onInject={onInject}
               onRunWithBrain={onRunWithBrain}
               onLaunch={() => openLaunchModal(project)}
+              runtimeStateKnown={runtimeStateKnown}
             />
           );
         })}
@@ -165,12 +169,12 @@ export function ProjectFleetView({
           </button>
           <div className="mx-1.5 h-4 w-px shrink-0 bg-border-subtle" />
           {activeProjects.map((project) => {
-            const display = getProjectDisplayState(project, zellijTabs, nowS);
+            const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
             const dotClass = display.isRunning
               ? "text-accent-text animate-pulse"
               : display.isReady || display.isOrchestrationReady || display.isClosed
               ? "text-status-positive"
-              : project.agentRunning
+              : display.isSessionOpen
               ? "text-text-secondary"
               : "text-border-default";
             const isFocused = project.tab === focusedTab;

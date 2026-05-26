@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
-import { getAllDistinctUserIds } from "@/db/queries/user-projects";
 import { getApiUserId } from "@/lib/session";
 
 // Daemon polls this to claim the next pending command.
@@ -14,11 +13,11 @@ export async function GET(request: NextRequest) {
   if (session?.user?.id) {
     userIds = [session.user.id];
   } else {
-    // Bearer-authenticated daemon: services all locally-registered users.
+    // Bearer-authenticated daemons are per-user. A token must never claim
+    // another account's commands, even if projects share the same host.
     const userId = await getApiUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    userIds = await getAllDistinctUserIds().catch(() => [userId]);
-    if (userIds.length === 0) userIds.push(userId);
+    userIds = [userId];
   }
 
   // Long-poll: hold the request until a command arrives or the wait expires.

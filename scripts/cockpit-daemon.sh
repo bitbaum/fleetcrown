@@ -164,11 +164,15 @@ _resolve_prompt() {
   local session_file="$HOME/.claude/sessions/${tab}.md"
   local update_block
   update_block="When done, update ${session_file} with exactly these lines:
-done: <one sentence what you completed>
-next: <one sentence what remains>
+status: <ready | working>     # 'ready' = task fully done; 'working' = more to do. Auto-inject only fires when 'ready'.
+last-3-same-dir: <yes | no>   # whether the last 3 commits all modify one directory
+wip-or-revert-in-last-5: <yes | no>   # whether a recent commit subject begins with WIP or revert
+tsc: <pass | fail(N)>
+lint: <pass | fail(N errors, M warnings)>
 tests: <N pass · N fail, or 'no suite'>
-todos: <count> TODOs
-health: <good | needs attention | critical>"
+todos: <count from TODO/FIXME/HACK scan>
+done: <one sentence what you completed>
+next: <state to resume from; empty when nothing is mid-flight>"
 
   if [ -f "$session_file" ]; then
     printf '%s\n\nSession state from last run:\n%s\n\n%s' \
@@ -677,39 +681,61 @@ _build_state_json() {
 # Push the current runtime state to the API immediately.
 # Used after command execution so the UI reflects the result without waiting for the push loop.
 push_runtime_state() {
-  local _s
+  local _s _status
   _s=$(_build_state_json 2>/dev/null) || return
   [ -z "$_s" ] && return
-  curl -sf --max-time 8 -X POST \
+  _status=$(curl -sS --max-time 8 -X POST \
     -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
     -d "$_s" \
-    "$(_base_url)/api/control/runtime-state" >/dev/null 2>&1 || true
+    -o /dev/null -w '%{http_code}' \
+    "$(_base_url)/api/control/runtime-state" 2>/dev/null) || _status="network-error"
+  if [ "$_status" != "200" ]; then
+    if [ "$_status" = "401" ]; then
+      log "runtime-state push unauthorized (HTTP 401) - renew the Agent token in Settings and restart the daemon"
+    else
+      log "runtime-state push failed (HTTP $_status)"
+    fi
+  fi
 }
 
 _push_loop() {
   local _last_hash=""
   local _last_push_ts=0
+  local _last_error_status=""
+  local _last_error_ts=0
   # Heartbeat: even when the state hash is unchanged, force a push every
   # HEARTBEAT_S so the cloud UI's "daemon offline" threshold (90 s in
   # ControlPanel.tsx:daemonOffline) never trips on a healthy idle daemon.
   # 60 s comfortably stays under that 90 s window with one missed-push slack.
   local _heartbeat_s="$(_brand_env DAEMON_HEARTBEAT_S 60)"
   while true; do
-    local _s _h _now _age
+    local _s _h _now _age _status
     _s=$(_build_state_json 2>/dev/null) || true
     if [ -n "$_s" ]; then
       _h=$(printf '%s' "$_s" | md5sum | cut -d' ' -f1)
       _now=$(date +%s)
       _age=$(( _now - _last_push_ts ))
       if [ "$_h" != "$_last_hash" ] || [ "$_age" -ge "$_heartbeat_s" ]; then
-        _last_hash="$_h"
-        _last_push_ts="$_now"
-        curl -sf --max-time 8 -X POST \
+        _status=$(curl -sS --max-time 8 -X POST \
           -H "Authorization: Bearer $TOKEN" \
           -H "Content-Type: application/json" \
           -d "$_s" \
-          "$(_base_url)/api/control/runtime-state" >/dev/null 2>&1 || true
+          -o /dev/null -w '%{http_code}' \
+          "$(_base_url)/api/control/runtime-state" 2>/dev/null) || _status="network-error"
+        if [ "$_status" = "200" ]; then
+          _last_hash="$_h"
+          _last_push_ts="$_now"
+          _last_error_status=""
+        elif [ "$_status" != "$_last_error_status" ] || [ "$(( _now - _last_error_ts ))" -ge 60 ]; then
+          if [ "$_status" = "401" ]; then
+            log "runtime-state push unauthorized (HTTP 401) - renew the Agent token in Settings and restart the daemon"
+          else
+            log "runtime-state push failed (HTTP $_status)"
+          fi
+          _last_error_status="$_status"
+          _last_error_ts="$_now"
+        fi
       fi
     fi
     sleep "$PUSH_INTERVAL"
