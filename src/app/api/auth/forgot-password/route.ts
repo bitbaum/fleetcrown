@@ -26,8 +26,11 @@ export async function POST(req: NextRequest) {
 
   // Always return 200 — don't reveal whether the email exists.
   const user = await getUserByEmail(email);
-  if (!user?.passwordHash) return NextResponse.json({ ok: true });
+  if (!user) return NextResponse.json({ ok: true });
 
+  // OAuth-created accounts do not initially have a password hash. Sending a
+  // reset link to their stored email lets the account owner establish email
+  // sign-in without creating a duplicate user row.
   const token = await createPasswordReset(user.id);
   const resetUrl = `${appUrl()}/reset-password/${token}`;
 
