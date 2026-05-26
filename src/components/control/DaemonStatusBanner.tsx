@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
-import Link from "next/link";
 import { timeAgo } from "@/lib/dates";
-import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
+import { APP_NAME, APP_SLUG } from "@/config/brand";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -42,52 +41,69 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
         </div>
 
         {daemonNeverSeen ? (
-          // First-time setup. A new web user discovers the local-runtime
-          // requirement here for the first time — the docs path was
-          // previously a single "start the daemon" command with no mention
-          // of the three prerequisites (daemon binary, Zellij, ≥1 agent
-          // CLI). Spell them out so the user can install before hitting
-          // the wall on first dispatch.
           <>
             <p className="text-text-secondary leading-relaxed">
-              {APP_NAME} dispatches agents from your machine. Three pieces are needed:
+              Welcome! {APP_NAME} lets you control AI agents (Grok, Claude, Cursor, etc.) that run on <strong>your own computer</strong> from this website.
             </p>
-            <ol className="ml-4 list-decimal space-y-1.5 text-sm text-text-secondary">
-              <li>
-                Install <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">Zellij</a> — the terminal multiplexer the daemon injects prompts into.
-              </li>
-              <li>
-                Install at least one agent CLI you want to dispatch (Claude Code, Codex, Gemini, or openclaw) and confirm it&apos;s on your <code className="text-text-tertiary">$PATH</code>.
-              </li>
-              <li>
-                Mint a daemon token in{" "}
-                <Link href="/settings#agent" className="text-accent-text underline-offset-2 hover:underline">Settings → Agent tokens</Link>
-                {" "}and run:
-              </li>
-            </ol>
-            <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-              curl -fsSL {APP_URL}/api/agent/install | node - init --base-url {APP_URL}
-            </code>
-            <p className="text-xs text-text-muted">
-              Or: <code className="font-mono">set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh</code>
-              {" "}· Until the daemon connects, dispatches are queued and will fire once it pings in.
+            <p className="text-sm text-text-secondary">
+              A one-time setup is needed so the website can talk to your agents safely. We’re making this as easy as possible.
+            </p>
+            <div className="space-y-2 text-sm text-text-secondary">
+              <div>1. Install <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">Zellij</a> (quick terminal tool).</div>
+              <div>2. Pick an agent CLI (Grok is great for new users) and install it with one command.</div>
+              <div>3. Generate a token below and run the one-line installer. Done.</div>
+            </div>
+            <p className="text-xs text-text-muted mt-2">
+              Once the helper is running (ideally as a background service — run the installer in scripts/install-daemon.sh), these buttons will open a fresh terminal tab with the exact installer already running. After that, the website becomes the magic control plane for all your agents.
             </p>
           </>
         ) : (
-          // Returning user with a dropped daemon — they already have the
-          // prerequisites; surface only the restart command.
           <>
             <p className="text-text-secondary leading-relaxed">
-              Commands will queue until the daemon reconnects. Restart it on your local machine:
+              The helper on your computer stopped sending updates (you closed the terminal, it crashed, laptop slept, etc.).
+              All agent commands are safely queued on the website until it reconnects.
+            </p>
+            <p className="text-sm text-text-secondary">
+              Quick fix (run this in a terminal that stays open):
             </p>
             <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
               set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh
             </code>
             <p className="text-xs text-text-muted">
-              Config from <code className="font-mono">curl -fsSL {APP_URL}/api/agent/install | node - init --base-url {APP_URL}</code> or Settings → Agent tokens.
+              We’re building a proper “Start / Restart Daemon” button + background service installer so you never have to touch the terminal for this again.
             </p>
           </>
         )}
+
+        {/* One-click agent CLI install — the vision the user asked for */}
+        <div className="pt-2 border-t border-border-subtle">
+          <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
+          <div className="flex flex-wrap gap-2">
+            {["grok", "claude", "cursor", "gemini", "codex"].map((a) => (
+              <button
+                key={a}
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/agent/install-cli", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ agent: a }),
+                    });
+                    if (res.ok) {
+                      // Success — daemon will open the tab if connected
+                    }
+                  } catch {}
+                }}
+                className="ui-btn-secondary ui-btn-xs"
+              >
+                Install {a[0].toUpperCase() + a.slice(1)}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-text-muted mt-1">
+            When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted. For developers using the source checkout, use the <code>cockpit</code> wrapper for even nicer local commands.
+          </p>
+        </div>
       </div>
 
       <button

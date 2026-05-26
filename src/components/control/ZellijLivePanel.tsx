@@ -28,36 +28,31 @@ export function ZellijLivePanel({
 
   return (
     <section className="ui-control-live-panel">
-      <div className="ui-control-live-panel-header">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <PanelsTopLeft className="h-4 w-4 shrink-0 text-accent-text" />
-            <h2 className="text-base font-semibold text-text-primary sm:text-lg">Live Zellij workspaces</h2>
-            <span className="ui-tag ui-tag-neutral">
-              {daemonStateUnknown ? "daemon offline" : `${rows.length} open`}
+      <div className="ui-control-live-panel-header py-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <PanelsTopLeft className="h-3.5 w-3.5 shrink-0 text-accent-text" />
+            <h2 className="text-xs font-semibold text-text-primary">Live Zellij</h2>
+            <span className="ui-tag ui-tag-neutral text-[9px]">
+              {daemonStateUnknown ? "offline" : `${rows.length} open`}
             </span>
           </div>
-          <p className="text-sm text-text-tertiary">
-            Open tabs, which agent is in each, and what it is doing right now.
-          </p>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {dashboard && !daemonStateUnknown && (
-            <>
-              <span className="ui-micro-label text-text-muted">
-                {dashboard.runningCount} running · {dashboard.waitingCount} waiting
-              </span>
-            </>
+            <span className="ui-micro-label text-text-muted text-[9px]">
+              {dashboard.runningCount} run · {dashboard.waitingCount} wait
+            </span>
           )}
           <button
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="ui-btn-ghost ui-btn-xs gap-1.5"
-            title="Refresh fleet state"
+            className="ui-btn-ghost ui-btn-xs gap-1 text-[10px]"
+            title="Refresh"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-            Refresh
+            <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
@@ -80,52 +75,52 @@ export function ZellijLivePanel({
       ) : (
         <>
           <div className="hidden md:block overflow-x-auto">
-            <table className="ui-control-live-table">
+            <table className="ui-control-live-table text-xs">
               <thead>
                 <tr>
                   <th>Tab</th>
                   <th>Agent</th>
                   <th>State</th>
                   <th>Activity</th>
-                  <th className="w-24 text-right">Actions</th>
+                  <th className="w-20 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.tabName}>
-                    <td>
+                    <td className="py-0.5">
                       <span className="font-medium text-text-primary">{row.tabName}</span>
                       {!row.registered && (
-                        <span className="ml-2 ui-tag ui-tag-warning">Unregistered</span>
+                        <span className="ml-1.5 ui-tag ui-tag-warning text-[9px]">Unreg</span>
                       )}
                     </td>
-                    <td className="text-text-secondary">{row.agentLabel ?? "—"}</td>
-                    <td>
+                    <td className="py-0.5 text-text-secondary">{row.agentLabel ?? "—"}</td>
+                    <td className="py-0.5">
                       <span className={row.stateTagClass}>{row.stateLabel}</span>
                     </td>
-                    <td className="max-w-md">
-                      <p className="line-clamp-2 text-sm text-text-secondary" title={row.activity}>
+                    <td className="py-0.5 max-w-md">
+                      <p className="line-clamp-1 text-[11px] text-text-secondary" title={row.activity}>
                         {row.activity}
                       </p>
                     </td>
-                    <td className="text-right">
-                      <div className="flex justify-end gap-1">
+                    <td className="py-0.5 text-right">
+                      <div className="flex justify-end gap-0.5">
                         <button
                           type="button"
                           onClick={() => focusTab(row.tabName)}
-                          className="ui-icon-action"
-                          title={`Focus ${row.tabName} in Zellij`}
+                          className="ui-icon-action p-0.5"
+                          title={`Focus ${row.tabName}`}
                         >
-                          <Terminal className="h-4 w-4" />
+                          <Terminal className="h-3.5 w-3.5" />
                         </button>
                         {row.project && onFocusProject && (
                           <button
                             type="button"
                             onClick={() => onFocusProject(row.project!.tab)}
-                            className="ui-icon-action"
-                            title="Expand project in Control"
+                            className="ui-icon-action p-0.5"
+                            title="Expand"
                           >
-                            <Focus className="h-4 w-4" />
+                            <Focus className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </div>
@@ -136,45 +131,45 @@ export function ZellijLivePanel({
             </table>
           </div>
 
-          <div className="space-y-2 md:hidden">
+          <div className="space-y-1.5 md:hidden">
             {rows.map((row) => (
-              <div key={row.tabName} className="ui-control-live-card">
-                <div className="flex items-start justify-between gap-2">
+              <div key={row.tabName} className="ui-control-live-card py-1.5 px-2">
+                <div className="flex items-start justify-between gap-1.5">
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate font-medium text-text-primary">{row.tabName}</span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate font-medium text-text-primary text-sm">{row.tabName}</span>
                       <span className={row.stateTagClass}>{row.stateLabel}</span>
                     </div>
                     {row.agentLabel && (
-                      <p className="mt-1 text-xs text-text-tertiary">{row.agentLabel}</p>
+                      <p className="mt-0.5 text-[10px] text-text-tertiary">{row.agentLabel}</p>
                     )}
                   </div>
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 gap-0.5">
                     <button
                       type="button"
                       onClick={() => focusTab(row.tabName)}
-                      className="ui-icon-action"
-                      title="Focus in Zellij"
+                      className="ui-icon-action p-0.5"
+                      title="Focus"
                     >
-                      <Terminal className="h-4 w-4" />
+                      <Terminal className="h-3.5 w-3.5" />
                     </button>
                     {row.project && onFocusProject && (
                       <button
                         type="button"
                         onClick={() => onFocusProject(row.project!.tab)}
-                        className="ui-icon-action"
-                        title="Expand project"
+                        className="ui-icon-action p-0.5"
+                        title="Expand"
                       >
-                        <Focus className="h-4 w-4" />
+                        <Focus className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-text-secondary line-clamp-3">
+                <p className="mt-1 text-[11px] leading-snug text-text-secondary line-clamp-2">
                   {row.activity}
                 </p>
                 {!row.registered && (
-                  <p className="mt-2 text-xs text-status-warning">Not registered in fleet</p>
+                  <p className="mt-1 text-[10px] text-status-warning">Not registered in fleet</p>
                 )}
               </div>
             ))}

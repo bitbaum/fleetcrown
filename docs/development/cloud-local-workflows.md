@@ -27,6 +27,7 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
    - Cursor Agent (`agent` — [install](https://cursor.com/docs/cli))
    - Codex (`codex`)
    - Gemini CLI (`gemini`)
+   - Grok CLI (`grok` — [x.ai/cli](https://x.ai/cli))
    - openclaw
 3. **Agent token** — Settings → Agent tokens → Generate.
 4. **Connect your machine:**

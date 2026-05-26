@@ -60,6 +60,24 @@ export function ControlPanel() {
   // eslint-disable-next-line react-hooks/purity
   const nowS = Math.floor(Date.now() / 1000);
 
+  // Trigger the hosted one-click installer flow for a specific agent CLI.
+  // Re-uses the same primitive as the DaemonStatusBanner "Install X" buttons.
+  // Shows the existing queuedNotice toast so the user sees immediate feedback.
+  const requestAgentInstall = async (agentId: string) => {
+    const label = switchableRegistry.find((e) => e.id === agentId)?.label ?? agentId;
+    setQueuedNotice(`Opening install tab for ${label}...`);
+    setTimeout(() => setQueuedNotice(null), 6000);
+    try {
+      await fetch("/api/agent/install-cli", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agent: agentId }),
+      });
+    } catch {
+      // Best effort — the daemon (if running) will still open the tab via the command queue.
+    }
+  };
+
   const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
 
   const {
@@ -198,7 +216,7 @@ export function ControlPanel() {
           Bootstrap as before. */}
       <button
         onClick={() => runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true)}
-        title={runtimeAvailable ? "Bootstrap new project" : "Register existing project"}
+        title={`New project using ${selectedDefinition?.label ?? selectedAgent} · ${model || selectedDefinition?.defaultModel || ""}`}
         className="inline-flex min-h-11 lg:min-h-0 items-center gap-1 transition-colors hover:text-text-primary"
       >
         <Plus className="h-3.5 w-3.5" />
@@ -228,9 +246,9 @@ export function ControlPanel() {
 
           <details className="ui-control-launch-defaults">
             <summary className="ui-control-launch-defaults-summary">
-              Launch defaults — default agent &amp; model for new tabs
+              Launch defaults — agent &amp; model for new tabs
             </summary>
-            <div className="ui-control-launch-defaults-body">
+            <div className="ui-control-launch-defaults-body py-2">
               <BrainConfigPanel
                 selectedAgent={selectedAgent}
                 switchableRegistry={switchableRegistry}
@@ -243,6 +261,8 @@ export function ControlPanel() {
                 onAgentSelect={handleAgentSelect}
                 onModelChange={handleModelChange}
                 onSave={saveAgent}
+                onRequestInstall={requestAgentInstall}
+                onLaunchNew={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
                 headerRight={headerRight}
               />
             </div>

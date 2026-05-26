@@ -27,6 +27,10 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
   exit 1
 }
 
+# Source the bash-side agent definitions (derived from src/lib/agent-registry.ts — the real SSOT).
+# shellcheck source=_agents.sh
+source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
+
 _LOCAL_URL="http://localhost:3000"
 _REMOTE_URL="$(_brand_env BASE_URL "https://${APP_DOMAIN}")"
 POLL_INTERVAL="$(_brand_env POLL_INTERVAL 8)"
@@ -155,13 +159,23 @@ _is_user_typing_in_tab() {
 
 # Resolve a promptKey to full prompt text with session context, mirroring
 # buildPromptWithSession() in src/lib/agent-config.ts.
+# Third arg is the adapter (grok | claude | ...); defaults to claude for back-compat.
 _resolve_prompt() {
-  local key="$1" tab="$2"
+  local key="$1" tab="$2" adapter="${3:-claude}"
   local base
   base=$(get_prompt "$key" 2>/dev/null)
   [ -z "$base" ] && return 1
 
-  local session_file="$HOME/.claude/sessions/${tab}.md"
+  # Use per-adapter session dir so grok tabs write to ~/.grok/sessions/ etc.
+  # The lib provides _session_file if sourced (it is).
+  local session_file
+  if type _session_file >/dev/null 2>&1; then
+    session_file="$(_session_file "$tab" "$adapter")"
+  else
+    # Fallback for very old installs
+    session_file="$HOME/.claude/sessions/${tab}.md"
+  fi
+
   local update_block
   update_block="When done, update ${session_file} with exactly these lines:
 status: <ready | working>     # 'ready' = task fully done; 'working' = more to do. Auto-inject only fires when 'ready'.
@@ -186,11 +200,20 @@ next: <state to resume from; empty when nothing is mid-flight>"
 execute_inject() {
   local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}"
 
+  # Look up the project's declared adapter (from agent-projects.conf 3rd field)
+  # so we tell the agent to write its handoff to the right per-adapter session dir.
+  local adapter="claude"
+  if type resolve_adapter >/dev/null 2>&1; then
+    TAB_NAME="$tab"
+    resolve_adapter 2>/dev/null || true
+    adapter="${ADAPTER:-claude}"
+  fi
+
   # If a promptKey was queued (cloud mode sends key string as prompt fallback),
   # resolve it to the actual expanded prompt text with session context.
   if [ -n "$prompt_key" ]; then
     local resolved
-    resolved=$(_resolve_prompt "$prompt_key" "$tab" 2>/dev/null) || true
+    resolved=$(_resolve_prompt "$prompt_key" "$tab" "$adapter" 2>/dev/null) || true
     [ -n "$resolved" ] && prompt="$resolved"
   fi
   if [ "$DRY_RUN" = "1" ]; then
@@ -248,6 +271,40 @@ execute_inject() {
   fi
 
   log "inject → tab=$tab"
+
+  # Robustness fix for "any retard" experience (including custom prompts from the web UI,
+  # old server templates that defaulted to Claude, or mixed adapter usage).
+  # The daemon is the only thing that has the local agent-projects.conf.
+  # We always guarantee the agent is told to write its handoff to the correct
+  # per-adapter file for this tab, no matter what the cloud sent us.
+  local correct_handoff_file
+  if type _session_file >/dev/null 2>&1; then
+    correct_handoff_file="$(_session_file "$tab" "$adapter")"
+  else
+    correct_handoff_file="$HOME/.claude/sessions/${tab}.md"
+  fi
+
+  # Append a clear, high-priority handoff instruction. This overrides any stale
+  # Claude-path instructions that might have come from the server or previous context.
+  prompt="$prompt
+
+[MANDATORY HANDOFF — DO THIS BEFORE YOU STOP]
+When you finish the current task (or need to hand off), write your final status to this exact file:
+$correct_handoff_file
+
+Use exactly this format (one field per line):
+status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
+done: <one clear sentence of what you accomplished in this turn>
+next: <precise next step or exact state to resume from>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count of open TODO/FIXME/HACK items>
+health: good | needs attention | critical
+last-3-same-dir: yes | no
+wip-or-revert-in-last-5: yes | no
+tsc: pass | fail(N)
+lint: pass | fail(N errors, M warnings)
+"
+
   if inject_prompt "$tab" "$prompt" 2>/dev/null; then
     mark_done "$id" "true"
     log "inject done ✓"
@@ -259,10 +316,11 @@ execute_inject() {
       local cp_key="${prompt_key:-custom}"
       local now_s
       now_s=$(date +%s)
-      printf '{"key":%s,"label":%s,"startedAt":%s,"source":"inject","adapter":"claude"}' \
+      printf '{"key":%s,"label":%s,"startedAt":%s,"source":"inject","adapter":%s}' \
         "$(printf '%s' "$cp_key"   | jq -Rs .)" \
         "$(printf '%s' "$cp_label" | jq -Rs .)" \
         "$now_s" \
+        "$(printf '%s' "$adapter" | jq -Rs .)" \
         > "/tmp/agent-current-prompt-${tab}"
     fi
   else
@@ -291,37 +349,12 @@ execute_focus_tab() {
 
 # Returns the quit command for an agent, or empty string if unknown.
 _agent_quit_cmd() {
-  case "$1" in
-    claude)        echo "/exit" ;;
-    codex|gemini)  echo "q" ;;
-    *)             echo "" ;;
-  esac
+  local agent="$1"
+  echo "${AGENT_QUIT_CMD[$agent]:-}"
 }
 
 # Returns the shell command to launch an agent in a directory.
-_agent_launch_cmd() {
-  local agent="$1" dir="$2" model="$3"
-  local esc_dir
-  esc_dir=$(printf '%q' "$dir")
-  case "$agent" in
-    claude)
-      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && claude"
-      ;;
-    gemini)
-      local mflag=""
-      [ -n "$model" ] && mflag=" -m $(printf '%q' "$model")"
-      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && gemini${mflag}"
-      ;;
-    codex)
-      local esc_model
-      esc_model=$(printf '%q' "${model:-gpt-5.4}")
-      echo "source ~/.bashrc >/dev/null 2>&1 || true; cd ${esc_dir} && codex --model ${esc_model} --no-alt-screen"
-      ;;
-    *)
-      echo ""
-      ;;
-  esac
-}
+# Delegates to the single definition in _agents.sh (the bash mirror of the registry).
 
 # Returns 0 (true) if any process matching the agent's basename is running with
 # a cwd equal to or inside dir; 1 otherwise. Delegates to _scan_agents so the
@@ -409,6 +442,64 @@ execute_auto_continue() {
   log "auto_continue done ✓"
 }
 
+# One-click install flow support.
+# When the web UI triggers "Install Grok" etc., the daemon creates a fresh zellij tab
+# and injects the official installer command so the user can just follow along.
+execute_install_cli() {
+  local id="$1" agent="$2"
+
+  local cmd="${AGENT_INSTALL_CMD[$agent]:-}"
+  if [ -z "$cmd" ]; then
+    mark_done "$id" "false" "unknown agent for install: $agent"
+    log "install_cli failed — unknown agent $agent"
+    return 0
+  fi
+
+  # Human label
+  local label
+  case "$agent" in
+    grok)    label="Grok" ;;
+    claude)  label="Claude" ;;
+    codex)   label="Codex" ;;
+    gemini)  label="Gemini" ;;
+    cursor)  label="Cursor" ;;
+    openclaw) label="OpenClaw" ;;
+    *) label="$agent" ;;
+  esac
+
+  log "install_cli → $agent ($label)"
+
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY RUN install_cli → $agent : $cmd"
+    mark_done "$id" "true"
+    return 0
+  fi
+
+  # Find a zellij session the user is likely using
+  local session
+  session=$(zellij list-sessions -n 2>/dev/null | awk 'NR==1{print $1}')
+  if [ -z "$session" ]; then
+    mark_done "$id" "false" "no zellij session found to open installer tab"
+    log "install_cli failed — no zellij session"
+    return 0
+  fi
+
+  local tab_name="Install $label"
+
+  # Create a fresh tab for the installer (user can close it when done)
+  ZELLIJ_SESSION_NAME="$session" zellij action new-tab --name "$tab_name" 2>/dev/null || true
+  sleep 0.6
+
+  # Inject the install command
+  if inject_prompt "$tab_name" "$cmd" 2>/dev/null; then
+    mark_done "$id" "true"
+    log "install_cli done ✓ (tab '$tab_name' opened with installer)"
+  else
+    mark_done "$id" "false" "failed to create tab or inject installer command"
+    log "install_cli failed to inject into new tab"
+  fi
+}
+
 execute_transcription() {
   local id="$1" audio_b64="$2" mime_type="$3"
   if [ "$DRY_RUN" = "1" ]; then
@@ -493,6 +584,7 @@ _sentinel() {
 }
 
 # Scan /proc once; output lines of "<cwd> <agent_id>" for all running agents.
+# Uses the single definition in _agents.sh.
 _scan_agents() {
   for pd in /proc/[0-9]*/; do
     pd="${pd%/}"
@@ -500,20 +592,21 @@ _scan_agents() {
     local argv0 basename agent_id
     argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
     basename="${argv0##*/}"
-    case "$basename" in
-      claude|codex|gemini|openclaw)
-        agent_id="$basename"
-        ;;
-      agent)
-        # Cursor Agent CLI — skip unrelated `agent` binaries on PATH.
-        if [[ "$argv0" == *".local/bin/agent"* ]] || [[ "$argv0" == *"/.cursor/"* ]]; then
-          agent_id="cursor"
-        else
-          continue
+
+    # Check known agents from the centralized table
+    for a in "${AGENTS[@]}"; do
+      local expected="${AGENT_PROCESS_NAMES[$a]}"
+      if [ "$basename" = "$expected" ]; then
+        if [ "$a" = "cursor" ]; then
+          _is_cursor_agent "$basename" "$argv0" || continue
         fi
-        ;;
-      *) continue ;;
-    esac
+        agent_id="$a"
+        break
+      fi
+    done
+
+    [ -z "$agent_id" ] && continue
+
     local cwd
     cwd=$(readlink "$pd/cwd" 2>/dev/null) || continue
     echo "$cwd $agent_id"
@@ -588,7 +681,19 @@ _build_state_json() {
 
     # Session file content (done/next/tests/todos/health) — read and push so the cloud
     # control plane shows current session state without needing a local server connection.
-    local sf="$HOME/.claude/sessions/${tab}.md"
+    # Use the per-adapter path declared in the projects conf (or default claude).
+    local adapter="claude"
+    if type resolve_adapter >/dev/null 2>&1; then
+      TAB_NAME="$tab"
+      resolve_adapter 2>/dev/null || true
+      adapter="${ADAPTER:-claude}"
+    fi
+    local sf
+    if type _session_file >/dev/null 2>&1; then
+      sf="$(_session_file "$tab" "$adapter")"
+    else
+      sf="$HOME/.claude/sessions/${tab}.md"
+    fi
     local sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
     if [ -f "$sf" ]; then
       sess_done=$(grep  '^done:'   "$sf" 2>/dev/null | head -1 | sed 's/^done:[[:space:]]*//')
@@ -749,6 +854,12 @@ _PUSH_PID=$!
 trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE"; exit' INT TERM
 
 while true; do
+  # Pause / low-power mode support (easy to trigger from web or wrapper later)
+  if [ -f "/tmp/cockpit-pause" ] || [ -f "/tmp/cockpit-sleep-mode" ]; then
+    sleep 30
+    continue
+  fi
+
   # claim_next long-polls — returns immediately on command or after wait timeout.
   # Only sleep on curl error (server unreachable) to avoid hammering a dead endpoint.
   response=$(claim_next) || { sleep 1; continue; }
@@ -797,6 +908,10 @@ while true; do
       tab=$(echo "$payload" | jq -r '.tab')
       enabled=$(echo "$payload" | jq -r '.enabled')
       execute_auto_continue "$id" "$tab" "$enabled"
+      ;;
+    install_cli)
+      agent=$(echo "$payload" | jq -r '.agent')
+      execute_install_cli "$id" "$agent"
       ;;
     *)
       log "unknown command type: $type — marking done"

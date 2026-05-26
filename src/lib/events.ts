@@ -62,7 +62,7 @@ export const AUTONOMY = ["manual", "confirm", "auto", "sleep"] as const;
 export const Autonomy = z.enum(AUTONOMY);
 export type Autonomy = z.infer<typeof Autonomy>;
 
-export const ADAPTERS = ["claude", "codex", "gemini", "openclaw"] as const;
+export const ADAPTERS = ["claude", "codex", "gemini", "openclaw", "grok"] as const;
 export const Adapter = z.enum(ADAPTERS);
 export type Adapter = z.infer<typeof Adapter>;
 

@@ -12,12 +12,16 @@ export type AgentCatalog = {
 };
 
 function isSwitchableAgent(id: AgentOption): id is SwitchableAgent {
-  return id === "claude" || id === "codex" || id === "gemini" || id === "cursor";
+  // Driven from the registry's switchable flag where possible; this is a legacy gate
+  // that we are relaxing as the registry becomes the full SSOT.
+  return id === "claude" || id === "codex" || id === "gemini" || id === "cursor" || id === "grok";
 }
 
 export function buildSwitchableAgentCatalog(models: Partial<Record<SwitchableAgent, string>>, defaultAgent: SwitchableAgent): AgentCatalog {
   const agents = listAgentRegistry().map((entry) => {
-    if (entry.switchable && isSwitchableAgent(entry.id)) {
+    // Use the registry's own switchable flag as the source of truth.
+    // The isSwitchableAgent check is legacy and will be removed.
+    if (entry.switchable) {
       const model = models[entry.id]?.trim() || entry.defaultModel;
       return {
         ...entry,

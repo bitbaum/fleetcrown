@@ -6,6 +6,44 @@ _CONF="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projec
 _PROMPTS="${AGENT_PROMPTS_FILE:-${CLAUDE_PROMPTS:-$HOME/.config/agent-prompts.json}}"
 _DBUS="unix:path=/run/user/$(id -u)/bus"
 
+# Source the centralized agent definitions (bash mirror of src/lib/agent-registry.ts)
+# shellcheck source=_agents.sh
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
+
+# Cockpit handoff session directory per adapter.
+# Delegates to the centralized definition in _agents.sh (the bash mirror of the registry).
+_session_dir() {
+  _agent_session_dir "${1:-claude}"
+}
+
+_session_file() {
+  local tab="$1" adapter="${2:-claude}"
+  echo "$(_session_dir "$adapter")/${tab}.md"
+}
+
+# Look up the declared adapter for a tab from the projects conf (3rd field).
+# Falls back to "claude" (the historical default). Case-insensitive tab match.
+resolve_adapter() {
+  ADAPTER="claude"
+  [ -z "${TAB_NAME:-}" ] && return
+  [ -f "$_CONF" ] || return
+  local lower_tab="${TAB_NAME,,}"
+  while IFS='|' read -r t d a || [ -n "$t" ]; do
+    [[ "$t" =~ ^[[:space:]]*# ]] && continue
+    [ -z "$t" ] || [ -z "$d" ] && continue
+    local tl="${t,,}"; tl="${tl%%[[:space:]]}"
+    if [ "$tl" = "$lower_tab" ]; then
+      local aa="$(echo "$a" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+      case "$aa" in
+        grok|claude|codex|gemini|openclaw|cursor) ADAPTER="$aa" ;;
+        *) ADAPTER="claude" ;;
+      esac
+      return
+    fi
+  done < "$_CONF"
+}
+
 resolve_tab() {
   TAB_NAME=""
   local cwd

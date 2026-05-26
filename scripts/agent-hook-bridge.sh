@@ -199,12 +199,8 @@ emit_or_inject_prompt() {
 
 agent_command() {
   local agent="$1" dir="$2"
-  case "$agent" in
-    claude) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && claude" "$dir" ;;
-    codex) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && codex --model gpt-5.4 --no-alt-screen" "$dir" ;;
-    gemini) printf "source ~/.bashrc >/dev/null 2>&1 || true; cd %q && gemini" "$dir" ;;
-    *) return 1 ;;
-  esac
+  # Delegate to the centralized launcher in _agents.sh (sourced via agent-hook-lib.sh)
+  _agent_launch_cmd "$agent" "$dir" ""
 }
 
 switch_agent_and_continue() {
@@ -245,8 +241,9 @@ handle_stop() {
   cwd=$(echo "$input" | jq -r '.cwd // empty')
 
   resolve_tab "$cwd"
+  resolve_adapter 2>/dev/null || true
   label="${TAB_NAME:-$(basename "$cwd")}"
-  log "fired — label=$label"
+  log "fired — label=$label adapter=${ADAPTER:-claude}"
   [ -z "${TAB_NAME:-}" ] && exit 0
 
   # Atomically claim the stop-active lock using noclobber so concurrent stop hooks
@@ -287,11 +284,11 @@ handle_stop() {
   # Close out the tracked orchestration run with the handoff from the session
   # file the agent just wrote. Done before the popup so the next dispatch can
   # see this outcome via getRecentOutcomes() if the app fetches mid-popup.
-  finish_orchestration_run "$TAB_NAME" "$HOME/.claude/sessions/${TAB_NAME}.md"
+  finish_orchestration_run "$TAB_NAME" "$session_file"
   # M4 — also emit worker.finished to the new local JSONL log so home/'s Brain
   # gets a complete edge for the run. Parallel to finish_orchestration_run; both
   # consume the same session.md, but this path has no cloud round-trip.
-  emit_worker_finished "$TAB_NAME" "$HOME/.claude/sessions/${TAB_NAME}.md"
+  emit_worker_finished "$TAB_NAME" "$session_file"
 
   play_sound "complete"
 
@@ -344,7 +341,7 @@ handle_stop() {
   fi
 
 
-  session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+  session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
 
   # Two-layer race — both run in parallel; first choice wins.
   #
@@ -591,7 +588,7 @@ handle_notification() {
   # This mirrors sessionHealthBlocksQueue() on the client and the server-side gate
   # in /api/orchestration/run — all three paths must agree.
   local session_file auto_key _health
-  session_file="$HOME/.claude/sessions/${TAB_NAME}.md"
+  session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
   auto_key="next_best"
   _health=""
   if [ -f "$session_file" ]; then

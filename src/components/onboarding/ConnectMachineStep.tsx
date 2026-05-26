@@ -73,23 +73,56 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
   return (
     <div className="space-y-4">
       <p className="ui-auth-body">
-        {APP_NAME} dispatches agents from your machine. Generate a token, run one command in your terminal,
-        then start the daemon — or skip and set this up later in Settings.
+        {APP_NAME} lets you control AI agents (Grok, Claude, etc.) running on *your* machine from this website.
+        We'll get your computer connected in a few guided steps — or skip and do it later in Settings.
       </p>
 
+      <div className="space-y-4">
+        <div>
+          <p className="ui-auth-inset-label mb-2">1. Install Zellij (the terminal multiplexer)</p>
+          <p className="text-sm text-text-secondary">
+            Follow the official instructions at{" "}
+            <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="ui-auth-link">
+              zellij.dev
+            </a>. It only takes a minute on most systems.
+          </p>
+        </div>
+
+        <div>
+          <p className="ui-auth-inset-label mb-2">2. Choose and install your first AI coding CLI</p>
+          <p className="text-sm text-text-secondary mb-3">
+            Pick one. We'll give you the exact command to run in your terminal.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { id: "grok", label: "Grok (xAI)", cmd: "curl -fsSL https://x.ai/cli/install.sh | bash" },
+              { id: "claude", label: "Claude Code (Anthropic)", cmd: "curl -fsSL https://claude.ai/install.sh | bash" },
+              { id: "cursor", label: "Cursor Agent", cmd: "curl https://cursor.com/install -fsS | bash" },
+              { id: "gemini", label: "Gemini CLI (Google)", cmd: "See https://ai.google.dev/gemini-api/docs/cli for install" },
+            ].map((a) => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(a.cmd);
+                  // In a real flow we could track choice and show the command prominently
+                }}
+                className="ui-auth-secondary-btn text-left p-3 h-auto flex flex-col items-start"
+              >
+                <span className="font-medium">{a.label}</span>
+                <span className="text-[10px] text-text-muted mt-1 font-mono break-all">{a.cmd}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-text-muted mt-1">
+            After installing your CLI, come back here. (Soon: click a button here and we'll open a terminal tab on your machine with the installer already running.)
+          </p>
+        </div>
+      </div>
+
       <ol className="ui-auth-list">
-        <li>
-          Install{" "}
-          <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="ui-auth-link">
-            Zellij
-          </a>{" "}
-          and at least one agent CLI (Claude, Cursor, Codex, …).
-        </li>
-        <li>Generate a token and run the init command below. It saves the token and installs the daemon scripts to <code className="ui-auth-inline-code">~/.local/share/cockpit/</code>.</li>
-        <li>
-          Start the daemon:{" "}
-          <code className="ui-auth-inline-code">~/.local/share/cockpit/cockpit-daemon.sh</code>
-        </li>
+        <li>Generate a token below and run the one-line installer. It sets up the Cockpit helper on your machine.</li>
+        <li>Start the helper (we'll make this a background service with one click in a future update).</li>
       </ol>
 
       {!token ? (

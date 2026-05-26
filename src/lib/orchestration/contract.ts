@@ -36,7 +36,7 @@ export const ORCHESTRATION_CAPABILITIES = [
 
 export type OrchestrationCapability = (typeof ORCHESTRATION_CAPABILITIES)[number];
 
-export const ORCHESTRATION_ADAPTER_IDS = ["claude", "codex", "openclaw", "gemini"] as const;
+export const ORCHESTRATION_ADAPTER_IDS = ["claude", "codex", "openclaw", "gemini", "grok"] as const;
 export type AdapterId = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
 export type AdapterCapabilities = Record<OrchestrationCapability, boolean>;

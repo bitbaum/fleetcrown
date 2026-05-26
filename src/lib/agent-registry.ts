@@ -8,8 +8,8 @@ import { shellEscape } from "@/lib/zellij";
 const CLAUDE_SETTINGS_FILE = path.join(HOME, ".claude", "settings.json");
 const DOTFILES_CLAUDE_SETTINGS_FILE = path.join(HOME, "dev", "dotfiles", ".claude", "settings.json");
 
-export const AGENT_IDS = ["codex", "claude", "gemini", "cursor"] as const;
-export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "codex", "gemini"];
+export const AGENT_IDS = ["codex", "claude", "gemini", "cursor", "grok"] as const;
+export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "codex", "gemini", "grok"];
 export type Agent = (typeof AGENT_IDS)[number];
 export type AgentOption = Agent | "openclaw";
 
@@ -18,6 +18,7 @@ export const AGENT_DEFAULT_MODELS: Record<Agent, string> = {
   codex:  "gpt-5.4",
   gemini: "auto",
   cursor: "auto",
+  grok:   "auto",
 };
 
 export type AgentRegistryEntry = {
@@ -31,6 +32,10 @@ export type AgentRegistryEntry = {
   availabilityReason?: string;
   /** Command to type into the terminal to gracefully exit this agent's CLI. */
   quitCommand: string;
+  /** The exact command a new user should run to install this CLI (used by the web "Install" flow). */
+  installCommand?: string;
+  /** Only for agents with strong native persistent session directories that Cockpit must respect. */
+  sessionDir?: string;
   capabilities: {
     tabSwitching: boolean;
     manualPromptInjection: boolean;
@@ -186,6 +191,25 @@ function getCursorAvailability(): Pick<AgentRegistryEntry, "available" | "availa
   };
 }
 
+/** Grok CLI (`grok`) from x.ai */
+function getGrokAvailability(): Pick<AgentRegistryEntry, "available" | "availabilityReason"> {
+  if (commandExistsInPath("grok")) {
+    return { available: true };
+  }
+
+  if (existsSync(path.join(HOME, ".grok"))) {
+    return {
+      available: false,
+      availabilityReason: "Grok config exists (~/.grok), but the `grok` CLI is not on $PATH. Run the installer from the web UI.",
+    };
+  }
+
+  return {
+    available: false,
+    availabilityReason: "Grok CLI is not installed. Click Install Grok in the Control panel to get the one-click terminal installer.",
+  };
+}
+
 export function listAgentRegistry(): AgentRegistryEntry[] {
   const codexDefaultModel = readConfiguredCodexModel() ?? AGENT_DEFAULT_MODELS.codex;
   const claudeDefaultModel = readClaudeSettingsModel() ?? AGENT_DEFAULT_MODELS.claude;
@@ -193,6 +217,7 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
   const openclawAvailability = getOpenClawAvailability();
   const geminiAvailability = getGeminiAvailability();
   const cursorAvailability = getCursorAvailability();
+  const grokAvailability = getGrokAvailability();
 
   return [
     {
@@ -204,6 +229,24 @@ export function listAgentRegistry(): AgentRegistryEntry[] {
       switchable: true,
       available: true,
       quitCommand: "/exit",
+      capabilities: {
+        tabSwitching: true,
+        manualPromptInjection: true,
+        autonomousPromptLoop: true,
+        sessionLifecycleSignals: true,
+      },
+    },
+    {
+      id: "grok",
+      label: "Grok",
+      defaultModel: "auto",
+      modelSuggestions: ["auto", "grok-3", "grok-4"],
+      processMatchers: ["grok"],
+      switchable: true,
+      quitCommand: "/exit",
+      ...grokAvailability,
+      installCommand: "curl -fsSL https://x.ai/cli/install.sh | bash",
+      sessionDir: "~/.grok/sessions",
       capabilities: {
         tabSwitching: true,
         manualPromptInjection: true,
@@ -282,11 +325,12 @@ export function sanitizeAgentId(value: string | undefined): Agent {
   if (value === "claude") return "claude";
   if (value === "gemini") return "gemini";
   if (value === "cursor") return "cursor";
+  if (value === "grok") return "grok";
   return "codex";
 }
 
 export function isAgentId(value: string | undefined | null): value is Agent {
-  return value === "claude" || value === "codex" || value === "gemini" || value === "cursor";
+  return value === "claude" || value === "codex" || value === "gemini" || value === "cursor" || value === "grok";
 }
 
 export function looksLikeAgentCapacityIssue(text: string): boolean {
@@ -340,6 +384,12 @@ export function buildAgentLaunchCommand(config: { agent: Agent; model: string },
   return buildAgentOptionLaunchCommand(config, dir);
 }
 
+/** Returns the official install command for the given agent (or empty if unknown). */
+export function getAgentInstallCommand(agent: AgentOption): string {
+  const entry = listAgentRegistry().find((e) => e.id === agent);
+  return entry?.installCommand ?? "";
+}
+
 export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; model?: string }, dir: string): string {
   const escapedDir = shellEscape(dir);
   const model = config.model?.trim();
@@ -347,6 +397,8 @@ export function buildAgentOptionLaunchCommand(config: { agent: AgentOption; mode
   switch (config.agent) {
     case "claude":
       return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && claude`;
+    case "grok":
+      return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && grok`;
     case "gemini": {
       const modelFlag = model ? ` -m ${shellEscape(model)}` : "";
       return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${escapedDir} && gemini${modelFlag}`;

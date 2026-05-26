@@ -197,7 +197,7 @@ export function IntentButtonPanel({
                   injectIntoTab() which requires the local zellij binary
                   and 503s otherwise; the click handler ignored failure
                   so cloud users saw a brief spinner with no feedback. */}
-              {currentAdapter === "claude" && runtimeAvailable && (
+              {(currentAdapter === "claude" || currentAdapter === "grok") && runtimeAvailable && (
                 <button
                   onClick={async () => {
                     setClearingContext(true);
@@ -208,7 +208,7 @@ export function IntentButtonPanel({
                     }
                   }}
                   disabled={clearingContext}
-                  title="Send /clear to reset Claude's context window"
+                  title="Send /clear to reset the agent's context window (claude/grok)"
                   className="ui-chip-action-compact inline-flex items-center gap-1.5 text-text-tertiary hover:text-status-warning"
                 >
                   {clearingContext ? <Loader2 className="ui-spinner-sm" /> : <Eraser className="h-3.5 w-3.5" />}

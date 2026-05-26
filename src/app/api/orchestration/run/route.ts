@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
   // an outcome to learn from, not just openclaw worker runs. Lifecycle intents (hard_stop /
   // close_session) end sessions and don't produce work outcomes, so they're skipped.
   const TRACKABLE_INTENTS = (request.intent !== "hard_stop" && request.intent !== "close_session");
-  const TAB_ADAPTERS = (request.adapter === "claude" || request.adapter === "codex" || request.adapter === "gemini");
+  const TAB_ADAPTERS = (request.adapter === "claude" || request.adapter === "codex" || request.adapter === "gemini" || request.adapter === "grok");
   let trackedRunId: string | null = null;
   if (TAB_ADAPTERS && TRACKABLE_INTENTS) {
     try {
