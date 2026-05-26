@@ -2,13 +2,13 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-05-22
-last_modified_summary: Link to thoughts article on database kill switch and studio trunk strategy.
+last_modified_date: 2026-05-26
+last_modified_summary: Use the hosted agent installer while the npm package is unpublished.
 ---
 
 Cockpit is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
 
-This document is the SSOT for onboarding and support — keep it aligned with `DaemonStatusBanner`, `@cockpit/agent`, and `isRuntimeAvailable()`.
+This document is the SSOT for onboarding and support — keep it aligned with `DaemonStatusBanner`, the hosted agent installer, and `isRuntimeAvailable()`.
 
 ## Quick start for new users
 
@@ -31,8 +31,9 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 3. **Agent token** — Settings → Agent tokens → Generate.
 4. **Connect your machine:**
    ```bash
-   npx @cockpit/agent init
-   # or: npx @cockpit/agent init --token ck_...
+   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --base-url https://cockpitapp.vercel.app
+   # or after generating a token:
+   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --token ck_... --base-url https://cockpitapp.vercel.app
    ```
    Config is written to `~/.config/cockpit/daemon.env`.
 5. **Start the daemon:**
@@ -55,7 +56,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Projects (metadata, inline edit) | No live git/CI without local runtime |
 | Weather (Today) | Open-Meteo on cloud |
 | Ask Ivy | Needs `GROQ_API_KEY` and/or local openclaw |
-| Agent token minting | `@cockpit/agent init` runs on your machine |
+| Agent token minting | Settings creates the token; the hosted installer connects your machine |
 | Schedule prompt job (Prompts → Schedule) | Stored in Postgres per user; **execution** still needs local openclaw |
 | Private zone (People, Money, Habits, Events) | PIN enforced server-side when `PRIVATE_ZONE_PIN_HASH` is set |
 

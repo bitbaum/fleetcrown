@@ -2,10 +2,10 @@
 /**
  * @cockpit/agent — CLI to enroll a local machine with the Cockpit cloud control plane.
  *
- * Usage:
- *   npx @cockpit/agent init
- *   npx @cockpit/agent init --token ck_...
- *   npx @cockpit/agent init --base-url https://cockpitapp.vercel.app
+ * Usage while the npm package is unpublished:
+ *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init
+ *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --token ck_...
+ *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --base-url https://cockpitapp.vercel.app
  */
 
 const fs = require("fs");

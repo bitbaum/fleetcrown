@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Copy, Check, Plus, Trash2, Loader2, Terminal } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
-import { APP_NAME, APP_SLUG } from "@/config/brand";
+import { APP_NAME, APP_URL } from "@/config/brand";
 
 type TokenMeta = {
   id: string;
@@ -29,6 +29,7 @@ export function AgentTokenSettings() {
   }, []);
   const [copied, setCopied] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const interactiveInitCommand = `curl -fsSL ${APP_URL}/api/agent/install | node - init --base-url ${APP_URL}`;
 
   const create = async () => {
     if (!label.trim()) return;
@@ -71,7 +72,7 @@ export function AgentTokenSettings() {
       <p className="text-sm text-text-tertiary">
         Authenticate the {APP_NAME} agent daemon on any machine. Run{" "}
         <code className="rounded bg-surface-raised px-1 py-0.5 font-mono text-xs text-text-secondary">
-          npx @{APP_SLUG}/agent init
+          {interactiveInitCommand}
         </code>{" "}
         and paste the token when prompted.
       </p>
@@ -117,7 +118,9 @@ export function AgentTokenSettings() {
           </div>
           <p className="text-xs text-text-tertiary">
             <Terminal className="mr-1 inline-block h-3 w-3" />
-            <code className="font-mono">npx @{APP_SLUG}/agent init --token {revealed.token.slice(0, 12)}…</code>
+            <code className="font-mono">
+              curl -fsSL {APP_URL}/api/agent/install | node - init --token {revealed.token} --base-url {APP_URL}
+            </code>
           </p>
         </div>
       )}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { timeAgo } from "@/lib/dates";
-import { APP_NAME, APP_SLUG } from "@/config/brand";
+import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -66,7 +66,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               </li>
             </ol>
             <code className="block rounded-lg bg-surface-overlay px-3 py-2 font-mono text-xs text-text-primary break-all">
-              npx @{APP_SLUG}/agent init
+              curl -fsSL {APP_URL}/api/agent/install | node - init --base-url {APP_URL}
             </code>
             <p className="text-xs text-text-muted">
               Or: <code className="font-mono">set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh</code>
@@ -84,7 +84,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               set -a && source ~/.config/{APP_SLUG}/daemon.env && ./scripts/{APP_SLUG}-daemon.sh
             </code>
             <p className="text-xs text-text-muted">
-              Config from <code className="font-mono">npx @{APP_SLUG}/agent init</code> or Settings → Agent tokens.
+              Config from <code className="font-mono">curl -fsSL {APP_URL}/api/agent/install | node - init --base-url {APP_URL}</code> or Settings → Agent tokens.
             </p>
           </>
         )}

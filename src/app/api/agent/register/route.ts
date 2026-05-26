@@ -6,7 +6,7 @@ import { getOrgsByUserId } from "@/db/queries/orgs";
 /**
  * GET /api/agent/register
  *
- * Called by `npx @cockpit/agent init` after the user pastes a token.
+ * Called by the hosted agent installer after the user pastes a token.
  * Verifies the token is valid and returns the user + org context the agent
  * should operate under. The CLI stores this response alongside the token.
  */

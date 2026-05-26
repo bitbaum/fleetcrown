@@ -189,7 +189,7 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 
 ## Cloud vs local
 
-See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run in the browser vs require the local daemon (`npx @cockpit/agent init`, Zellij, agent CLIs).
+See `docs/development/cloud-local-workflows.md` — SSOT for which workflows run in the browser vs require the local daemon (hosted agent installer, Zellij, agent CLIs).
 
 ## Dev Commands
 
