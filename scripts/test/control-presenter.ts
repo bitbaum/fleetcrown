@@ -113,6 +113,12 @@ function runTests(): void {
     assert(!state.isRunning && !state.isReady && !state.tabOpen, "stale live signals must be hidden");
   });
 
+  check("no detected process is labeled as an observation, not inferred idleness", () => {
+    const project = stubProject({ tab: "Cockpit" });
+    const state = getProjectDisplayState(project, [], 1_700_000_000);
+    assert(state.stateLabel === "No live agent", "inactive project must describe the absent live signal");
+  });
+
   check("millisecond handoff mtime does not make a fresh prompt stale", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({

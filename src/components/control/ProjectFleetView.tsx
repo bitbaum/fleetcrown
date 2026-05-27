@@ -213,7 +213,7 @@ export function ProjectFleetView({
             onClick={() => setIdleOpen((v) => !v)}
             className="flex items-center gap-1 text-sm text-text-tertiary transition-colors hover:text-text-secondary"
           >
-            <span className="font-medium text-text-secondary">Idle projects</span>
+            <span className="font-medium text-text-secondary">No live agent</span>
             <span className="text-text-muted">({idleProjects.length})</span>
             {idleOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           </button>

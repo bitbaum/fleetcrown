@@ -96,7 +96,7 @@ export function ProjectTile({ project, currentAdapter, zellijTabs, onExpand, onL
     : display.isSessionOpen
     ? "Send a prompt when you want work to start"
     : session?.mtime
-    ? `Last agent handoff: ${new Date(session.mtime).toLocaleString(APP_LOCALE)}`
+    ? `Saved agent handoff: ${new Date(session.mtime).toLocaleString(APP_LOCALE)}`
     : null;
   const [launching, setLaunching] = useState(false);
   const canLaunch = !!dir;

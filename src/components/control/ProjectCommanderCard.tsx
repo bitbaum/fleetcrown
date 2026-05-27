@@ -72,7 +72,7 @@ export function ProjectCommanderCard({
     ? "Working"
     : project.agentRunning
     ? "Ready"
-    : "Idle";
+    : "No live agent";
 
   const dotClass = !runtimeStateKnown
     ? "text-status-warning"

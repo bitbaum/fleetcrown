@@ -67,7 +67,7 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "Idle";
+  stateLabel: "Offline" | "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "No live agent";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
 };
@@ -108,7 +108,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Waiting: 1,
   Closing: 2,
   Closed: 3,
-  Idle: 4,
+  "No live agent": 4,
   Open: 5,
 };
 
@@ -146,7 +146,7 @@ export function getTabActivityText(
     return project.session.done.trim().slice(0, 140);
   }
   if (project.agentRunning) return "Agent session open";
-  return "Idle — no active task";
+  return "No live agent reported";
 }
 
 export function buildLiveTabRows(
@@ -357,7 +357,7 @@ export function getProjectDisplayState(
     "orchestration-ready": "Waiting",
     closing:               "Closing",
     closed:                "Closed",
-    idle:                  "Idle",
+    idle:                  "No live agent",
   };
   const STATE_TAG: Record<ProjectDisplayState["tone"], string> = {
     offline:               "ui-tag ui-tag-warning",

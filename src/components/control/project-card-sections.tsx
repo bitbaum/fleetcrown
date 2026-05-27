@@ -92,8 +92,11 @@ export function ProjectCardHeader({
                 <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>
               {isIdle && lastActiveLabel && (
-                <p className="mt-0.5 text-xs text-text-muted">
-                  last handoff {lastActiveLabel}
+                <p
+                  className="mt-0.5 text-xs text-text-muted"
+                  title="Saved agent handoff timestamp; this is historical context, not live activity."
+                >
+                  saved handoff {lastActiveLabel}
                 </p>
               )}
               {/* Profile status when no health available (any state) */}
