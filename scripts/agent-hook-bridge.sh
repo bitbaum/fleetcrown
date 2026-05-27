@@ -47,6 +47,8 @@ if [ -n "$_BEACON_SETTINGS_JSON" ]; then
     "import sys,json; d=json.load(sys.stdin); print(d.get('min_idle_seconds',0))" 2>/dev/null || echo 0)
   _BEACON_POPUP_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
     "import sys,json; d=json.load(sys.stdin); print(d.get('popup_mode','both'))" 2>/dev/null || echo both)
+  _BEACON_AUTO_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
+    "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','queue_only'))" 2>/dev/null || echo queue_only)
 else
   # Cockpit offline — read from Python config (which reads the legacy file)
   _BEACON_MIN_IDLE=$(python3 -c "
@@ -59,6 +61,11 @@ import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from _beacon_config import get_popup_mode
 print(get_popup_mode())
 " 2>/dev/null || echo both)
+  _BEACON_AUTO_MODE=$(python3 -c "
+import sys; sys.path.insert(0, '$SCRIPT_DIR')
+from _beacon_config import get_auto_inject_mode
+print(get_auto_inject_mode())
+" 2>/dev/null || echo queue_only)
 fi
 export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 
@@ -150,11 +157,39 @@ patch_project_state() {
   local tab_name="$1"
   local field="$2"
   local iso_now
-  iso_now=$(date -Iseconds)
+  iso_now=$(date --iso-8601=milliseconds)
   curl -sf -X PATCH "${APP_BASE_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
     -H "@$_BEACON_AUTH_HEADER" \
     -d "{\"tabName\":\"${tab_name}\",\"${field}\":\"${iso_now}\"}" &>/dev/null &
+}
+
+# DB queue is authoritative; notify it after a local mirror item is consumed.
+# Fire-and-forget so a slow or offline app never blocks the agent hook.
+sync_consumed_queue_item() {
+  local tab_name="$1" consumed="$2"
+  [ -n "${_BEACON_AUTH_HEADER:-}" ] || return 0
+  (
+    local encoded payload
+    encoded=$(printf '%s' "$tab_name" | jq -sRr @uri)
+    payload=$(jq -nc --arg consumed "$consumed" '{consumed:$consumed}')
+    curl -sf --max-time 15 -X POST "${APP_BASE_URL}/api/beacon/queue/${encoded}" \
+      -H "Content-Type: application/json" \
+      -H "@$_BEACON_AUTH_HEADER" \
+      -d "$payload" &>/dev/null || true
+  ) &
+}
+
+dequeue_local_queue_item() {
+  local tab_name="$1" consumed="$2" queue_file tmp_q
+  queue_file="/tmp/agent-queue-${tab_name,,}"
+  [ -f "$queue_file" ] || return 0
+  jq -e --arg consumed "$consumed" 'index($consumed) != null' "$queue_file" >/dev/null 2>&1 || return 0
+  tmp_q="${queue_file}.tmp"
+  if jq --arg consumed "$consumed" 'index($consumed) as $i | del(.[$i])' "$queue_file" > "$tmp_q" 2>/dev/null \
+      && mv "$tmp_q" "$queue_file"; then
+    sync_consumed_queue_item "$tab_name" "$consumed"
+  fi
 }
 
 # Finishes an orchestration_runs row with the captured handoff so dispatch
@@ -409,14 +444,12 @@ handle_stop() {
     if [ -n "$first_item" ]; then
       log "prioritizing queue item over slot 1 choice"
       choice="${CUSTOM_CHOICE_PREFIX}${first_item}"
-      # Remove it from the file to avoid double-firing from the web app
-      local tmp_q="${queue_file}.tmp"
-      jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+      dequeue_local_queue_item "$TAB_NAME" "$first_item"
     fi
   fi
 
   if [[ "$choice" == "${SWITCH_CHOICE_PREFIX}"* ]]; then
-    local target_agent switch_prompt switch_label first_item tmp_q session_update_block session
+    local target_agent switch_prompt switch_label first_item session_update_block session
     target_agent="${choice#"${SWITCH_CHOICE_PREFIX}"}"
     case "$target_agent" in
       claude|codex|gemini) ;;
@@ -428,8 +461,7 @@ handle_stop() {
       first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
       if [ -n "$first_item" ]; then
         switch_prompt="$first_item"
-        tmp_q="${queue_file}.tmp"
-        jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+        dequeue_local_queue_item "$TAB_NAME" "$first_item"
         switch_label="Switch to ${target_agent} · queued prompt"
       fi
     fi
@@ -467,6 +499,7 @@ ${session_update_block}"
     exit 0
   elif [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]]; then
     prompt="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
+    dequeue_local_queue_item "$TAB_NAME" "$prompt"
     inject_key="custom"
     inject_label="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
   else
@@ -571,6 +604,14 @@ handle_notification() {
     log "notification: beacon disabled by user settings — skipping auto-inject"
     exit 0
   fi
+  if [ "${_BEACON_AUTO_MODE:-queue_only}" = "off" ]; then
+    log "notification: automatic continuation policy is manual — skipping auto-inject"
+    exit 0
+  fi
+  if [ -f "/tmp/${APP_SLUG}-auto-continue-${TAB_NAME,,}" ]; then
+    log "notification: automatic continuation paused for ${TAB_NAME} — skipping auto-inject"
+    exit 0
+  fi
   if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_notif_idle:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
     log "notification: user active (idle=${_notif_idle}s < ${_BEACON_MIN_IDLE}s) — skipping auto-inject"
     exit 0
@@ -593,15 +634,58 @@ handle_notification() {
 
   # Dequeue any user-dispatched task first — same logic handle_stop uses for slot 1.
   # Skipped when health is degraded so the agent focuses on recovery before new work.
-  local queue_file
+  local queue_file _auto_action first_item
   queue_file="/tmp/agent-queue-${TAB_NAME,,}"
-  if [ "$auto_key" = "next_best" ] && [ -f "$queue_file" ]; then
-    local first_item tmp_q
-    first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
+  first_item=""
+  [ -f "$queue_file" ] && first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
+  case "${_BEACON_AUTO_MODE:-queue_only}" in
+    queue_only)
+      if [ -z "$first_item" ]; then
+        log "notification: queue-only policy has no queued instruction — skipping auto-inject"
+        exit 0
+      fi
+      _auto_action="queue"
+      ;;
+    next_best) _auto_action="nextbest" ;;
+    strategist)
+      _auto_action="nextbest"
+      if [ "$auto_key" = "next_best" ] && [ -n "${_BEACON_AUTH_HEADER:-}" ]; then
+        local dispatch_payload dispatch_result dispatch_prompt queue_json
+        queue_json=$([ -f "$queue_file" ] && jq -c 'if type == "array" then . else [] end' "$queue_file" 2>/dev/null || printf '[]')
+        dispatch_payload=$(jq -nc \
+          --arg done "$(grep -m1 '^done:' "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//' || true)" \
+          --arg next "$(grep -m1 '^next:' "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' || true)" \
+          --arg health "$_health" \
+          --arg tests "$(grep -m1 '^tests:' "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//' || true)" \
+          --arg todos "$(grep -m1 '^todos:' "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//' || true)" \
+          --arg project "$TAB_NAME" \
+          --argjson queue "$queue_json" \
+          '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos},queue:$queue,projectName:$project,projectKey:$project}')
+        dispatch_result=$(curl -sf --max-time 18 -X POST "${APP_BASE_URL}/api/control/dispatch" \
+          -H "Content-Type: application/json" -H "@$_BEACON_AUTH_HEADER" -d "$dispatch_payload" 2>/dev/null || true)
+        _auto_action=$(printf '%s' "$dispatch_result" | jq -r '.action // "nextbest"' 2>/dev/null || echo nextbest)
+        if [ "$_auto_action" = "composed" ]; then
+          dispatch_prompt=$(printf '%s' "$dispatch_result" | jq -r '.prompt // empty' 2>/dev/null)
+          if [ -n "$dispatch_prompt" ]; then
+            emit_or_inject_prompt "$TAB_NAME" "$dispatch_prompt"
+            write_inject_state "$TAB_NAME" "custom" "Strategist prompt"
+            log "notification: injected strategist-composed prompt"
+            exit 0
+          fi
+          _auto_action="nextbest"
+        elif [ "$_auto_action" = "off" ]; then
+          log "notification: strategist dispatch suppressed automatic continuation"
+          exit 0
+        fi
+      fi
+      ;;
+    *) _auto_action="nextbest" ;;
+  esac
+
+  if [ "$auto_key" = "next_best" ] && [ "$_auto_action" = "queue" ] && [ -n "$first_item" ]; then
     if [ -n "$first_item" ]; then
       log "notification: dequeuing queued prompt instead of next_best"
-      tmp_q="${queue_file}.tmp"
-      jq 'del(.[0])' "$queue_file" > "$tmp_q" 2>/dev/null && mv "$tmp_q" "$queue_file"
+      dequeue_local_queue_item "$TAB_NAME" "$first_item"
       emit_or_inject_prompt "$TAB_NAME" "$first_item"
       write_inject_state "$TAB_NAME" "custom" "Queued prompt"
       exit 0

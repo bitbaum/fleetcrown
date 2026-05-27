@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, index, uniqueIndex, boolean, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, index, uniqueIndex, boolean, integer, primaryKey } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { users } from "./users";
 import { entities } from "./entities";
@@ -18,6 +18,7 @@ export const projectStates = pgTable("project_states", {
   sessionStatus:          text("session_status"),     // 'ready' | 'working' | null. Drives auto-inject gating — only 'ready' fires.
   autoContinueEnabled:    boolean("auto_continue_enabled").notNull().default(true),
   promptQueue:            text("prompt_queue").array().notNull().default([]),  // per-project prompt queue. Replaces the ephemeral /tmp/agent-queue-<tab> mirror.
+  promptQueueRevision:    integer("prompt_queue_revision").notNull().default(0), // CAS version: prevents concurrent clients from losing queue edits.
   sessionDone:            text("session_done"),
   sessionNext:            text("session_next"),
   sessionTests:           text("session_tests"),
@@ -27,6 +28,7 @@ export const projectStates = pgTable("project_states", {
   currentPromptKey:       text("current_prompt_key"),
   currentPromptLabel:     text("current_prompt_label"),
   currentPromptStartedAt: timestamp("current_prompt_started_at", { withTimezone: true }),
+  runtimeObservedAt:      timestamp("runtime_observed_at", { withTimezone: true }),
   updatedAt:              timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   primaryKey({ columns: [table.userId, table.projectKey] }),

@@ -28,6 +28,7 @@ export function ProjectBanners({
   onToggleAutoContinue,
   showKeyHints = false,
   inactiveLabel,
+  countdownSeconds,
 }: {
   tab: string;
   isClosed: boolean;
@@ -51,6 +52,7 @@ export function ProjectBanners({
   onToggleAutoContinue?: () => void;
   showKeyHints?: boolean;
   inactiveLabel?: string;
+  countdownSeconds?: number;
 }) {
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
@@ -81,6 +83,7 @@ export function ProjectBanners({
           dispatchReason={dispatchReason}
           showKeyHints={showKeyHints}
           inactiveLabel={inactiveLabel}
+          countdownSeconds={countdownSeconds}
         />
       )}
       {isOrchReady && (
@@ -100,6 +103,7 @@ export function ProjectBanners({
           dispatchReason={dispatchReason}
           showKeyHints={showKeyHints}
           inactiveLabel={inactiveLabel}
+          countdownSeconds={countdownSeconds}
         />
       )}
       {showRunning && currentPrompt && (

@@ -1,12 +1,13 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import type { AutoInjectMode } from "@/db/queries/beacon-settings";
+import type { AutoInjectMode } from "@/config/beacon";
 
 const MODES: { value: AutoInjectMode; label: string }[] = [
   { value: "off", label: "Manual" },
   { value: "queue_only", label: "Continue queued work" },
   { value: "strategist", label: "Autonomous" },
+  { value: "next_best", label: "Canned next-best" },
 ];
 
 export function AutomationPolicyControl({
@@ -24,7 +25,7 @@ export function AutomationPolicyControl({
       <span className="hidden sm:inline">Automation</span>
       <select
         aria-label="Automation policy"
-        value={mode === "next_best" ? "strategist" : mode}
+        value={mode}
         disabled={saving}
         onChange={(event) => onChange(event.target.value as AutoInjectMode)}
         className="bg-transparent font-medium text-text-primary outline-none disabled:opacity-60"

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import { upsertProjectState, getProjectStatesByUserId } from "@/db/queries/project-states";
-import { upsertRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
-import { stateFile } from "@/lib/agent-config";
+import { getProjectStatesByUserId, persistProjectRuntimeIfNewer, persistProjectSessionIfNewer } from "@/db/queries/project-states";
+import { upsertRuntimeSnapshotIfNewer } from "@/db/queries/runtime-snapshots";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
+import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 
 interface ProjectRuntimePatch {
   tab: string;
+  observedAt?: number;
   agentRunning: boolean;
   tabOpen: boolean;
   activeAgents: string[];
@@ -44,16 +44,20 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown; observedAt?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const observedAt = typeof body.observedAt === "number" && Number.isFinite(body.observedAt)
+    ? new Date(body.observedAt)
+    : new Date();
+
   if (Array.isArray(body.openTabs)) {
     const openTabs = body.openTabs.filter((tab): tab is string => typeof tab === "string" && tab.trim().length > 0);
-    await upsertRuntimeSnapshot(userId, openTabs).catch((err) => console.error("[runtime-state] openTabs write failed:", err));
+    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt).catch((err) => console.error("[runtime-state] openTabs write failed:", err));
   }
 
   if (!Array.isArray(body.projects)) {
@@ -62,12 +66,15 @@ export async function POST(req: NextRequest) {
 
   const projects = body.projects as ProjectRuntimePatch[];
 
-  await Promise.all(
-    projects.map((p) =>
-      upsertProjectState({
+  await Promise.all(projects.map(async (p) => {
+    const projectObservedAt = typeof p.observedAt === "number" && Number.isFinite(p.observedAt)
+      ? new Date(p.observedAt)
+      : observedAt;
+    await persistProjectRuntimeIfNewer({
         projectKey:             p.tab,
         userId,
         tabName:                p.tab,
+        runtimeObservedAt:      projectObservedAt,
         agentRunning:           p.agentRunning,
         tabOpen:                p.tabOpen,
         activeAgents:           p.activeAgents,
@@ -78,52 +85,34 @@ export async function POST(req: NextRequest) {
         lockAt:                 tsOrNull(p.lockAt),
         closingAt:              tsOrNull(p.closingAt),
         closedAt:               tsOrNull(p.closedAt),
-        // Session content — only included when the daemon read a session file.
-        // undefined means "leave DB value as-is"; present string means "update."
-        ...(p.sessionStatus   !== undefined && { sessionStatus:   p.sessionStatus }),
-        ...(p.sessionDone     !== undefined && { sessionDone:     p.sessionDone }),
-        ...(p.sessionNext     !== undefined && { sessionNext:     p.sessionNext }),
-        ...(p.sessionTests    !== undefined && { sessionTests:    p.sessionTests }),
-        ...(p.sessionTodos    !== undefined && { sessionTodos:    p.sessionTodos }),
-        ...(p.sessionHealth   !== undefined && { sessionHealth:   p.sessionHealth }),
-        ...(p.sessionUpdatedAt !== undefined && { sessionUpdatedAt: tsOrNull(p.sessionUpdatedAt) }),
-      }).catch((err) => console.error("[runtime-state] db write failed:", err)),
-    ),
-  );
+      }).catch((err) => console.error("[runtime-state] runtime write failed:", err));
+
+    // Session files are timestamped at their source. Do not allow a delayed
+    // heartbeat to replace newer session content already received.
+    if (p.sessionUpdatedAt != null) {
+      await persistProjectSessionIfNewer({
+        projectKey: p.tab,
+        userId,
+        tabName: p.tab,
+        sessionUpdatedAt: new Date(p.sessionUpdatedAt * 1000),
+        ...(p.sessionStatus !== undefined && { sessionStatus: p.sessionStatus }),
+        ...(p.sessionDone !== undefined && { sessionDone: p.sessionDone }),
+        ...(p.sessionNext !== undefined && { sessionNext: p.sessionNext }),
+        ...(p.sessionTests !== undefined && { sessionTests: p.sessionTests }),
+        ...(p.sessionTodos !== undefined && { sessionTodos: p.sessionTodos }),
+        ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
+      }).catch((err) => console.error("[runtime-state] session write failed:", err));
+    }
+  }));
 
   emitStateChanged(userId);
 
-  // Background queue sync: every daemon push (every ~60s via heartbeat or
-  // sooner on state change) mirrors each project's DB prompt_queue out to
-  // /tmp/agent-queue-<tab>. Closes the gap left by 58e4366 — that fix only
-  // synced during /api/control GET (the UI poll), so /tmp went stale once
-  // the user closed the browser tab. Now the daemon keeps the local
-  // mirror warm independently of whether anyone's looking at the page.
-  // Gated on isRuntimeAvailable() so Vercel serverless never touches /tmp
-  // (no point — its /tmp is ephemeral and there's no bash hook there).
+  // Keep the local hook transport mirror warm independently of the UI.
   if (isRuntimeAvailable()) {
     try {
       const states = await getProjectStatesByUserId(userId);
-      // Defensive against duplicate rows that share the same lowercase
-      // project_key (e.g. 'cockpit' vs 'Cockpit' — caught on 2026-05-20
-      // because the iteration order let an empty-queue dup overwrite the
-      // real queue's mirror file). Group by lowercase key and pick the
-      // row with the longest prompt_queue; ties keep first-seen.
-      const byKey = new Map<string, typeof states[number]>();
       for (const s of states) {
-        if (!s.projectKey) continue;
-        const k = s.projectKey.toLowerCase();
-        const cur = byKey.get(k);
-        const sLen = s.promptQueue?.length ?? 0;
-        const curLen = cur?.promptQueue?.length ?? 0;
-        if (!cur || sLen > curLen) byKey.set(k, s);
-      }
-      for (const [k, s] of byKey) {
-        try {
-          const p = stateFile.queue(k);
-          fs.writeFileSync(p + ".tmp", JSON.stringify(s.promptQueue ?? []));
-          fs.renameSync(p + ".tmp", p);
-        } catch { /* per-file failure is non-fatal */ }
+        writePromptQueueMirror(s.projectKey, s.promptQueue);
       }
     } catch (err) {
       console.error("[runtime-state] queue mirror sync failed:", err);

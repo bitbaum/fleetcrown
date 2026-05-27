@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import path from "path";
-import fs from "fs";
 import { getZellijTabs, shellEscape } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
-import { createOrchestrationEvent, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
+import { createOrchestrationEventOnce, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
-import { getProjectStatesByUserId, getProjectStatesByUserIds, upsertProjectState } from "@/db/queries/project-states";
+import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
@@ -31,6 +30,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands } from "@/db/queries/pending-commands";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
+import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta, ActivityItem };
@@ -42,6 +42,7 @@ const execAsync = promisify(exec);
 // Stale-while-revalidate: return cached data immediately, refresh asynchronously when stale.
 
 type SlowCache = {
+  key: string;
   gitMap: Map<string, GitState>;
   zellijTabs: string[];
   dirs: string[];        // dirs list used to build this cache
@@ -53,7 +54,7 @@ let slowCache: SlowCache | null = null;
 let cacheRefreshing = false;
 const CACHE_TTL_MS = 20_000; // 20s — stale after one 10s poll misses, triggers refresh
 
-async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
+async function buildSlowData(userId: string, dirs: string[], key: string): Promise<SlowCache> {
   const [gitMap, zellijTabsLocal, dbStates, runtimeSnapshot] = await Promise.all([
     fetchAllGitStates(dirs),
     isRuntimeAvailable() ? getZellijTabs() : Promise.resolve([] as string[]),
@@ -68,6 +69,7 @@ async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache>
       ? runtimeSnapshot.openTabs
       : dbStates.filter((s) => s.tabOpen).map((s) => s.tabName));
   return {
+    key,
     gitMap,
     zellijTabs,
     dirs,
@@ -79,28 +81,21 @@ async function buildSlowData(userId: string, dirs: string[]): Promise<SlowCache>
 async function getSlowData(userId: string, dirs: string[]): Promise<SlowCache> {
   const now = Date.now();
   const dirsKey = [...dirs].sort().join(",");
+  const key = `${userId}\0${dirsKey}`;
 
   // Cache hit — return immediately, maybe kick off background refresh
-  if (slowCache && [...slowCache.dirs].sort().join(",") === dirsKey) {
+  if (slowCache?.key === key) {
     if (now - slowCache.builtAt < CACHE_TTL_MS) return slowCache;
     // Stale: return stale immediately, refresh in background
     if (!cacheRefreshing) {
       cacheRefreshing = true;
-      buildSlowData(userId, dirs).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch((e) => { console.error("[control/cache] background refresh failed:", e); cacheRefreshing = false; });
+      buildSlowData(userId, dirs, key).then((fresh) => { slowCache = fresh; cacheRefreshing = false; }).catch((e) => { console.error("[control/cache] background refresh failed:", e); cacheRefreshing = false; });
     }
     return slowCache;
   }
 
-  // Cold cache or dirs changed — must wait for fresh data
-  if (!cacheRefreshing) {
-    cacheRefreshing = true;
-    slowCache = await buildSlowData(userId, dirs);
-    cacheRefreshing = false;
-  } else if (slowCache) {
-    return slowCache; // another request is already building; return whatever we have
-  } else {
-    slowCache = await buildSlowData(userId, dirs); // blocking: no stale fallback
-  }
+  // Cold cache or a different user/project set: never serve mismatched data.
+  slowCache = await buildSlowData(userId, dirs, key);
   return slowCache;
 }
 
@@ -287,49 +282,32 @@ export async function GET() {
         }
       : null);
 
-    // Mirror DB-backed prompt queue → /tmp/agent-queue-<tab> on local
-    // cockpit-app boxes ONLY (runtime present means we're on the user's
-    // machine, not Vercel). Closes the drift home/'s /control queue
-    // badge surfaces: when the queue is PUT to Vercel, the /tmp mirror
-    // on Vercel goes nowhere, so the local /tmp stays stale even though
-    // Neon has the truth. Refreshing on every /api/control GET keeps the
-    // local file in sync while the UI is open — long enough that home/
-    // and the bash hook (agent-hook-bridge.sh:413,607) see fresh queue
-    // data.
+    // The DB is authoritative; the local runtime reads this transport mirror.
     if (!readonly && isRuntimeAvailable() && dbState?.promptQueue) {
-      try {
-        const p = stateFile.queue(tab.toLowerCase());
-        fs.writeFileSync(p + ".tmp", JSON.stringify(dbState.promptQueue));
-        fs.renameSync(p + ".tmp", p);
-      } catch { /* mirror failure is non-fatal — DB is source of truth */ }
+      writePromptQueueMirror(tab, dbState.promptQueue);
     }
 
     // Only the project's owner writes to project_states. A viewer reading a team
     // (readonly) project's session would otherwise create a row under their own
     // userId, which would never be queried again and would drift from the owner's.
-    if (!readonly && session && dbState) {
+    if (!readonly && session && (!dbState || session.mtime > (dbState.sessionUpdatedAt?.getTime() ?? 0))) {
       const sessionMtimeMs = session.mtime;
-      const dbSessionMs = dbState.sessionUpdatedAt?.getTime() ?? 0;
-      if (sessionMtimeMs > dbSessionMs) {
-        upsertProjectState({
-          projectKey: tab,
-          projectId,
-          userId: ownerUserId,
-          tabName: liveTab,
-          sessionStatus: session.status,
-          sessionDone:   session.done,
-          sessionNext:   session.next,
-          sessionTests:  session.tests,
-          sessionTodos:  session.todos,
-          sessionHealth: session.health,
-          sessionUpdatedAt: new Date(sessionMtimeMs),
-        }).catch((err) => console.error("[control] upsertProjectState failed:", err));
-
-        // Capture agent progress to dev log when the "done" section actually changes.
-        // Creates a natural timeline of what each agent accomplished without requiring
-        // the beacon popup — covers auto-continue, direct injections, and all flows.
+      persistProjectSessionIfNewer({
+        projectKey: tab,
+        projectId,
+        userId: ownerUserId,
+        tabName: liveTab,
+        sessionStatus: session.status,
+        sessionDone:   session.done,
+        sessionNext:   session.next,
+        sessionTests:  session.tests,
+        sessionTodos:  session.todos,
+        sessionHealth: session.health,
+        sessionUpdatedAt: new Date(sessionMtimeMs),
+      }).then((updated) => {
+        // Append only for the writer that won the timestamp race.
         const doneTrimmed = session.done?.trim();
-        if (doneTrimmed && doneTrimmed !== dbState.sessionDone?.trim()) {
+        if (updated && dbState && doneTrimmed && doneTrimmed !== dbState.sessionDone?.trim()) {
           const entry = {
             date: new Date(sessionMtimeMs).toISOString(),
             done: doneTrimmed,
@@ -341,21 +319,7 @@ export async function GET() {
           if (projectId) appendProjectDevLogByEntityProjectId(ownerUserId, projectId, entry).catch((err) => console.error("[control] devlog append failed:", err));
           else appendProjectDevLog(ownerUserId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
         }
-      }
-    } else if (!readonly && session && !dbState) {
-      // First time we're seeing this project's session — bootstrap the DB row
-      upsertProjectState({
-        projectKey: tab,
-        projectId,
-        userId: ownerUserId,
-        tabName: liveTab,
-        sessionDone:   session.done,
-        sessionNext:   session.next,
-        sessionTests:  session.tests,
-        sessionTodos:  session.todos,
-        sessionHealth: session.health,
-        sessionUpdatedAt: new Date(session.mtime),
-      }).catch((err) => console.error("[control] upsertProjectState failed:", err));
+      }).catch((err) => console.error("[control] session state write failed:", err));
     }
 
     const nowS = Math.floor(Date.now() / 1000);
@@ -423,14 +387,15 @@ export async function GET() {
       currentPromptStartedAt: currentPrompt?.startedAt ?? null,
     })) {
       if (!shouldPersistLifecycleEvent(event, lifecycleEvents)) continue;
-      createOrchestrationEvent({
+      createOrchestrationEventOnce({
         userId,
         projectKey: tab,
         eventType: event.type,
         source: event.source,
         detail: event.detail,
         happenedAt: new Date(event.at * 1000),
-      }).catch((err) => console.error("[control] createOrchestrationEvent failed:", err));
+      }, `runtime:${userId}:${tab.toLowerCase()}:${event.type}:${event.source}:${event.at}`)
+        .catch((err) => console.error("[control] createOrchestrationEvent failed:", err));
     }
 
     return ({

@@ -6,7 +6,6 @@ export const CLOSING_WINDOW_S = 1800;   // 30 min — "Closing session…" banne
 // Projects with recent ready/closing/closed activity are considered "active" for display.
 // Must be long enough to survive a brief idle gap between sessions on the same project.
 export const ACTIVE_WINDOW_S  = 300;    // 5 min — active vs idle split in control presenter
-export const AUTO_INJECT_S              = 12;  // countdown before auto-inject in control panel (matches Python COUNTDOWN_SECONDS)
 export const DEFAULT_BEACON_COUNTDOWN_S  = 12;  // fallback when settings file is absent — must match Python COUNTDOWN_SECONDS
 export const MIN_BEACON_COUNTDOWN_S      = 5;   // shortest allowed beacon countdown
 export const MAX_BEACON_COUNTDOWN_S      = 300; // longest allowed beacon countdown (5 minutes)

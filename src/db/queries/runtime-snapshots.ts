@@ -1,17 +1,23 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
 import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
 
-export async function upsertRuntimeSnapshot(userId: string, openTabs: string[]) {
-  const [row] = await db
+export async function upsertRuntimeSnapshotIfNewer(userId: string, openTabs: string[], observedAt: Date) {
+  const [inserted] = await db
     .insert(runtimeSnapshots)
-    .values({ userId, openTabs, updatedAt: new Date() })
-    .onConflictDoUpdate({
-      target: runtimeSnapshots.userId,
-      set: { openTabs, updatedAt: new Date() },
-    })
+    .values({ userId, openTabs, observedAt, updatedAt: new Date() })
+    .onConflictDoNothing()
     .returning();
-  return row;
+  if (inserted) return inserted;
+  const [updated] = await db
+    .update(runtimeSnapshots)
+    .set({ openTabs, observedAt, updatedAt: new Date() })
+    .where(and(
+      eq(runtimeSnapshots.userId, userId),
+      or(isNull(runtimeSnapshots.observedAt), lt(runtimeSnapshots.observedAt, observedAt)),
+    ))
+    .returning();
+  return updated ?? null;
 }
 
 export async function getRuntimeSnapshot(userId: string) {

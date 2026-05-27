@@ -46,7 +46,7 @@ export const stateFile = {
   sentinel: (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-session-closed-${tab}`),
   prompt:   (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-current-prompt-${tab}`),
   lock:     (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-stop-active-${tab}`),
-  queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab}`),
+  queue:    (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `agent-queue-${tab.toLowerCase()}`),
   run:      (tab: string) => path.join("/tmp", /*turbopackIgnore: true*/ `${APP_SLUG}-run-${tab}`),
 
   // Legacy names — no new files are written with these names; only used to delete stale on-disk files.

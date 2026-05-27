@@ -344,9 +344,8 @@ const server = http.createServer((req, res) => {
     res.setHeader("Content-Type", "application/json");
     // Annotate each project with the local /tmp/agent-queue-<tab> length so
     // the /control UI can surface a "Nqueued" badge. The file mirror is
-    // written by both the cloud route (via /api/beacon/queue/[tab] PUT) and
-    // home's own /api/dispatch when the cloud route can't reach this
-    // machine. Reading the file lets home/ show queue depth without taking
+    // hydrated by the Cockpit API/daemon bridge from DB authority.
+    // Reading the file lets home/ show queue depth without taking
     // a DB dep — keeping home/ local-first.
     const projects = assembleProjectList().map((p) => {
       let queueLen = 0;

@@ -21,11 +21,12 @@ import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } fr
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
-import { upsertProjectState, getProjectState } from "@/db/queries/project-states";
+import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
+import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -35,8 +36,8 @@ const RunOrchestrationBody = z.object({
   intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
-  // Optional queue snapshot from the client's localStorage. Plumbed
-  // straight into the prompt body via renderTaskForAdapter so the agent
+  // Optional database-backed queue snapshot from the client. Plumbed into
+  // the prompt body via renderTaskForAdapter so the agent
   // can weigh queue items against other candidates. Max 200 items × 4kB
   // matches the persistence limit in /api/beacon/queue/[tab].
   queue: z.array(z.string().max(4000)).max(200).optional(),
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);
   let intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
+  let consumedQueueItem: string | null = null;
 
   // Resolve zellij alias once — "Cockpit" may run as "Cockpit Claude" in this session.
   const activeTabs = await getZellijTabs();
@@ -145,21 +147,25 @@ export async function POST(req: NextRequest) {
       || (projectState?.sessionTests ?? "").toLowerCase().includes("fail");
 
     if (!healthBlocks) {
-      const queueFile = stateFile.queue(effectiveKey);
-      try {
-        if (fs.existsSync(queueFile)) {
-          const queue = JSON.parse(fs.readFileSync(queueFile, "utf-8")) as string[];
-          if (queue.length > 0) {
-            const first = queue.shift()!;
-            fs.writeFileSync(queueFile, JSON.stringify(queue));
-            request.intent = "custom";
-            request.customInstructions = first;
-            intent = getOrchestrationIntent("custom");
-          }
+      const first = projectState?.promptQueue[0];
+      if (first) {
+        const consumed = await consumeProjectPrompt(userId, request.projectKey, first).catch(() => null);
+        if (consumed?.consumed) {
+          writePromptQueueMirror(effectiveKey, consumed.queue);
+          request.intent = "custom";
+          request.customInstructions = first;
+          intent = getOrchestrationIntent("custom");
+          consumedQueueItem = first;
         }
-      } catch { /* fall through to default intent */ }
+      }
     }
   }
+
+  const restoreConsumedQueueItem = async () => {
+    if (!consumedQueueItem) return;
+    const restored = await prependProjectPrompt(userId, request.projectKey, effectiveKey, consumedQueueItem).catch(() => null);
+    if (restored?.applied) writePromptQueueMirror(effectiveKey, restored.queue);
+  };
 
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
   insertPromptHistory(userId, {
@@ -244,6 +250,7 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
+      await restoreConsumedQueueItem();
       const message = err instanceof Error ? err.message : String(err);
       logDebug({
         source: "api/orchestration/run",
@@ -274,16 +281,6 @@ export async function POST(req: NextRequest) {
         source: "runner",
         adapter: request.adapter,
       }));
-
-      upsertProjectState({
-        projectKey: request.projectKey,
-        projectId: request.projectId ?? null,
-        userId,
-        tabName: effectiveKey,
-        currentPromptKey: request.intent,
-        currentPromptLabel: intent.name,
-        currentPromptStartedAt: new Date(nowS * 1000),
-      }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
       createOrchestrationEvent({
         userId,
@@ -333,8 +330,20 @@ export async function POST(req: NextRequest) {
       ].join(" ");
 
       injectIntoTab(effectiveKey, command);
+      persistProjectRuntimeIfNewer({
+        projectKey: request.projectKey,
+        projectId: request.projectId ?? null,
+        userId,
+        tabName: effectiveKey,
+        runtimeObservedAt: new Date(),
+        currentPromptKey: request.intent,
+        currentPromptLabel: intent.name,
+        currentPromptStartedAt: new Date(nowS * 1000),
+      }).catch((err) => console.error("[orchestration/run] db write failed:", err));
       return NextResponse.json({ ok: true, injected: true, adapter: request.adapter, intent: request.intent });
     } catch (err) {
+      await restoreConsumedQueueItem();
+      try { fs.unlinkSync(stateFile.prompt(effectiveKey)); } catch { /* absent */ }
       const message = err instanceof Error ? err.message : String(err);
       logDebug({
         source: "api/orchestration/run",

@@ -107,6 +107,12 @@ def get_popup_mode() -> str:
     return "web"  # legacy 'both' / 'pyqt' both collapse to web
 
 
+def get_auto_inject_mode() -> str:
+    """Return the automatic continuation policy used by every hook surface."""
+    mode = load_settings().get("auto_inject_mode", "queue_only")
+    return mode if mode in {"strategist", "queue_only", "next_best", "off"} else "queue_only"
+
+
 def load_prompt_meta() -> list:
     """Load prompt metadata from SSOT config file."""
     try:

@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { projectStates, type NewProjectState } from "@/db/schema/project-states";
 
@@ -49,6 +49,206 @@ export async function getProjectState(userId: string, projectKey: string) {
     ))
     .limit(1);
   return row ?? null;
+}
+
+type PromptQueueResult = {
+  queue: string[];
+  revision: number;
+  exists: boolean;
+};
+
+type PromptQueueWriteResult = PromptQueueResult & { applied: boolean };
+
+/**
+ * Replaces a prompt queue only if the caller still holds the latest revision.
+ * Browser tabs and the hook bridge may write concurrently; callers must handle
+ * a rejected write by displaying the returned authoritative state.
+ */
+export async function replaceProjectPromptQueue(
+  userId: string,
+  projectKey: string,
+  tabName: string,
+  queue: string[],
+  expectedRevision: number,
+): Promise<PromptQueueWriteResult> {
+  const normalizedKey = projectKey.toLowerCase();
+
+  if (expectedRevision === 0) {
+    const [inserted] = await db
+      .insert(projectStates)
+      .values({
+        userId,
+        projectKey: normalizedKey,
+        tabName,
+        promptQueue: queue,
+        promptQueueRevision: 1,
+        updatedAt: new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (inserted) {
+      return { queue: inserted.promptQueue, revision: inserted.promptQueueRevision, exists: true, applied: true };
+    }
+  }
+
+  const [updated] = await db
+    .update(projectStates)
+    .set({
+      tabName,
+      promptQueue: queue,
+      promptQueueRevision: sql`${projectStates.promptQueueRevision} + 1`,
+      updatedAt: new Date(),
+    })
+    .where(and(
+      eq(projectStates.userId, userId),
+      sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
+      eq(projectStates.promptQueueRevision, expectedRevision),
+    ))
+    .returning();
+  if (updated) {
+    return { queue: updated.promptQueue, revision: updated.promptQueueRevision, exists: true, applied: true };
+  }
+
+  const current = await getProjectState(userId, normalizedKey);
+  return current
+    ? { queue: current.promptQueue, revision: current.promptQueueRevision, exists: true, applied: false }
+    : { queue: [], revision: 0, exists: false, applied: false };
+}
+
+/**
+ * Removes one prompt selected by a local runtime mirror. It is deliberately
+ * item-based, not snapshot-based, so a stale mirror cannot erase new DB work.
+ */
+export async function consumeProjectPrompt(
+  userId: string,
+  projectKey: string,
+  consumedPrompt: string,
+): Promise<PromptQueueWriteResult & { consumed: boolean }> {
+  if (!consumedPrompt) return { queue: [], revision: 0, exists: false, applied: false, consumed: false };
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const row = await getProjectState(userId, projectKey);
+    if (!row) return { queue: [], revision: 0, exists: false, applied: false, consumed: false };
+    const index = row.promptQueue.indexOf(consumedPrompt);
+    if (index < 0) {
+      return { queue: row.promptQueue, revision: row.promptQueueRevision, exists: true, applied: false, consumed: false };
+    }
+    const queue = row.promptQueue.filter((_, itemIndex) => itemIndex !== index);
+    const result = await replaceProjectPromptQueue(userId, projectKey, row.tabName, queue, row.promptQueueRevision);
+    if (result.applied) return { ...result, consumed: true };
+  }
+
+  const row = await getProjectState(userId, projectKey);
+  return row
+    ? { queue: row.promptQueue, revision: row.promptQueueRevision, exists: true, applied: false, consumed: false }
+    : { queue: [], revision: 0, exists: false, applied: false, consumed: false };
+}
+
+/** Restores a queue item when dispatch failed after an atomic dequeue. */
+export async function prependProjectPrompt(
+  userId: string,
+  projectKey: string,
+  tabName: string,
+  prompt: string,
+): Promise<PromptQueueWriteResult> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const row = await getProjectState(userId, projectKey);
+    const result = await replaceProjectPromptQueue(
+      userId,
+      projectKey,
+      row?.tabName ?? tabName,
+      [prompt, ...(row?.promptQueue ?? [])],
+      row?.promptQueueRevision ?? 0,
+    );
+    if (result.applied) return result;
+  }
+
+  const row = await getProjectState(userId, projectKey);
+  return row
+    ? { queue: row.promptQueue, revision: row.promptQueueRevision, exists: true, applied: false }
+    : { queue: [], revision: 0, exists: false, applied: false };
+}
+
+type SessionFields = Pick<
+  NewProjectState,
+  "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth"
+>;
+
+type RuntimeFields = Pick<
+  NewProjectState,
+  "agentRunning" | "tabOpen" | "activeAgents" | "currentPromptKey" | "currentPromptLabel" |
+    "currentPromptStartedAt" | "readyAt" | "lockAt" | "closingAt" | "closedAt"
+>;
+
+/** Accepts runtime presence/lifecycle data only from the newest daemon observation. */
+export async function persistProjectRuntimeIfNewer(
+  patch: Pick<NewProjectState, "userId" | "projectKey" | "tabName"> &
+    Partial<Pick<NewProjectState, "projectId"> & RuntimeFields> & { runtimeObservedAt: Date },
+) {
+  const projectKey = patch.projectKey.toLowerCase();
+  const values = { ...patch, projectKey, updatedAt: new Date() };
+  const [inserted] = await db.insert(projectStates).values(values).onConflictDoNothing().returning();
+  if (inserted) return inserted;
+
+  const updateSet: Partial<NewProjectState> & { updatedAt: Date; runtimeObservedAt: Date } = {
+    updatedAt: new Date(),
+    runtimeObservedAt: patch.runtimeObservedAt,
+  };
+  for (const key of [
+    "projectId", "tabName", "agentRunning", "tabOpen", "activeAgents", "currentPromptKey",
+    "currentPromptLabel", "currentPromptStartedAt", "readyAt", "lockAt", "closingAt", "closedAt",
+  ] as const) {
+    const value = patch[key];
+    if (value !== undefined) (updateSet as Record<string, unknown>)[key] = value;
+  }
+  const [updated] = await db
+    .update(projectStates)
+    .set(updateSet)
+    .where(and(
+      eq(projectStates.userId, patch.userId),
+      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+      or(isNull(projectStates.runtimeObservedAt), lt(projectStates.runtimeObservedAt, patch.runtimeObservedAt)),
+    ))
+    .returning();
+  return updated ?? null;
+}
+
+/**
+ * Accepts session content only when it is newer than the row already stored.
+ * Runtime heartbeats and Control reads can arrive out of order.
+ */
+export async function persistProjectSessionIfNewer(
+  patch: Pick<NewProjectState, "userId" | "projectKey" | "tabName"> &
+    Partial<Pick<NewProjectState, "projectId"> & SessionFields> & { sessionUpdatedAt: Date },
+) {
+  const projectKey = patch.projectKey.toLowerCase();
+  const values = { ...patch, projectKey, updatedAt: new Date() };
+  const [inserted] = await db
+    .insert(projectStates)
+    .values(values)
+    .onConflictDoNothing()
+    .returning();
+  if (inserted) return inserted;
+
+  const updateSet: Partial<NewProjectState> & { updatedAt: Date; sessionUpdatedAt: Date } = {
+    updatedAt: new Date(),
+    sessionUpdatedAt: patch.sessionUpdatedAt,
+  };
+  for (const key of ["projectId", "tabName", "sessionStatus", "sessionDone", "sessionNext", "sessionTests", "sessionTodos", "sessionHealth"] as const) {
+    const value = patch[key];
+    if (value !== undefined) (updateSet as Record<string, unknown>)[key] = value;
+  }
+
+  const [updated] = await db
+    .update(projectStates)
+    .set(updateSet)
+    .where(and(
+      eq(projectStates.userId, patch.userId),
+      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+      or(isNull(projectStates.sessionUpdatedAt), lt(projectStates.sessionUpdatedAt, patch.sessionUpdatedAt)),
+    ))
+    .returning();
+  return updated ?? null;
 }
 
 /**

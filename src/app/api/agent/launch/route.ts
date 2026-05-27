@@ -39,13 +39,9 @@ function isAgentRunningIn(dir: string): boolean {
 }
 
 function scheduleInjectAfterLaunch(tab: string, dir: string, prompt: string): void {
-  const queuePath = `/tmp/agent-queue-${tab.toLowerCase()}`;
-  // Write to queue file immediately as fallback (beacon auto-continue will pick it up)
-  try {
-    fs.writeFileSync(queuePath, JSON.stringify([prompt]));
-  } catch { /* best effort */ }
-
-  // Poll every 3s for the agent process to appear, then inject directly (up to 30s total)
+  // Poll every 3s for the agent process to appear, then inject directly (up to 30s total).
+  // Initial-launch delivery is not a prompt-queue mutation and must never
+  // write the queue transport mirror.
   let attempts = 0;
   const tryInject = async () => {
     attempts++;
@@ -53,13 +49,10 @@ function scheduleInjectAfterLaunch(tab: string, dir: string, prompt: string): vo
       try {
         const { injectIntoTab } = await import("@/lib/zellij");
         injectIntoTab(tab, prompt);
-        // Inject succeeded — clear queue so the same prompt isn't re-fired on next stop
-        try { fs.unlinkSync(queuePath); } catch { /* already gone */ }
-      } catch { /* inject failed — queue file remains for beacon pickup */ }
-      return;
+        return;
+      } catch { /* retry below until the bounded timeout */ }
     }
     if (attempts < 10) setTimeout(tryInject, 3000);
-    // After 10 attempts (~30s) give up; queue file is still there for beacon pickup
   };
   setTimeout(tryInject, 3000);
 }

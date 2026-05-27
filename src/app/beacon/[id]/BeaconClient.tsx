@@ -13,7 +13,7 @@ import { QueueList } from "@/components/control/queue-list";
 import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary";
 import { ReadyBanner } from "@/components/control/ready-banner";
 import { buildSessionHandoffFromBeaconSession, SessionHandoff } from "@/components/control/SessionHandoff";
-import { getJson, patchJson } from "@/lib/api/fetch";
+import { getJson, patchJson, postJson } from "@/lib/api/fetch";
 import { PROMPT_STYLE, CUSTOM_CHOICE_PREFIX, SWITCH_CHOICE_PREFIX } from "@/lib/constants/control";
 import { parseSessionText } from "@/lib/session-content";
 import { beaconComposingKey } from "@/lib/control-storage";
@@ -21,6 +21,7 @@ import { getAdapterLabel } from "@/config/control-intents";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
 import type { RecentCustomPrompt } from "@/db/queries/prompt-history";
+import type { DispatchResult } from "@/app/api/control/dispatch/route";
 
 function agentLabel(agent: string | null | undefined): string {
   return agent ? getAdapterLabel(agent) : "agent";
@@ -187,17 +188,49 @@ function BeaconBody({
     // BeaconSession carries raw sessionContent — parse it here to extract
     // the handoff status. Capacity-issue dispatches bypass since the user
     // explicitly asked for the agent switch.
-    const status = (parseSessionText(session.sessionContent).status ?? "").toLowerCase();
+    const handoff = parseSessionText(session.sessionContent);
+    const status = (handoff.status ?? "").toLowerCase();
     if (status !== "ready" && !session.capacityIssue) return;
     const all = promptsRef.current;
     const primary = all.find((p) => p.style === "primary");
-    const choice = session.capacityIssue && session.nextAgent
+    let removesQueueHead = false;
+    let choice = session.capacityIssue && session.nextAgent
       ? `${SWITCH_CHOICE_PREFIX}${session.nextAgent}`
       : queue.length > 0
       ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
       : primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
-    if (await submitRef.current(choice) && !session.capacityIssue && queue.length > 0) remove(0);
-  }, [automaticContinuationEnabled, session.sessionContent, session.capacityIssue, session.nextAgent, queue, remove]);
+
+    if (!session.capacityIssue) {
+      const response = await postJson("/api/control/dispatch", {
+        handoff: {
+          done: handoff.done ?? "",
+          next: handoff.next ?? "",
+          health: handoff.health ?? "",
+          tests: handoff.tests ?? "",
+          todos: handoff.todos ?? "",
+        },
+        queue,
+        projectName: session.project,
+        projectKey: session.project,
+      }).catch(() => null);
+      if (response?.ok) {
+        const decision = await response.json() as DispatchResult;
+        if (decision.action === "off") return;
+        if (decision.action === "composed" && decision.prompt) {
+          choice = `${CUSTOM_CHOICE_PREFIX}${decision.prompt}`;
+        } else if (decision.action === "queue" && queue[0]) {
+          choice = `${CUSTOM_CHOICE_PREFIX}${queue[0]}`;
+          removesQueueHead = true;
+        } else {
+          choice = primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
+        }
+      } else if (queue.length > 0) {
+        removesQueueHead = true;
+      }
+    }
+
+    if (await submitRef.current(choice) && removesQueueHead) remove(0);
+  }, [automaticContinuationEnabled, session.sessionContent, session.capacityIssue, session.nextAgent, session.project, queue, remove]);
 
   const morePrompts = prompts.filter((p) => p.style === "more");
 
@@ -275,6 +308,7 @@ function BeaconBody({
           queueTotal={queue.length}
           title="Agent ready"
           inactiveLabel={queuePolicyWaiting ? "Queue empty" : undefined}
+          countdownSeconds={session.countdownSeconds}
         />
       )}
 

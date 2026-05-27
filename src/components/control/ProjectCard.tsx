@@ -18,7 +18,7 @@ import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
 import { useProjectCardActions } from "@/hooks/use-project-card-actions";
-import type { AutoInjectMode } from "@/db/queries/beacon-settings";
+import type { AutoInjectMode } from "@/config/beacon";
 
 export function ProjectCard({
   project,
@@ -39,6 +39,7 @@ export function ProjectCard({
   runtimeStateKnown = true,
   snapshot,
   automationMode = "queue_only",
+  countdownSeconds,
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -58,6 +59,7 @@ export function ProjectCard({
   runtimeStateKnown?: boolean;
   snapshot?: ProjectOperationsSnapshot;
   automationMode?: AutoInjectMode;
+  countdownSeconds?: number;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -209,6 +211,7 @@ export function ProjectCard({
             onToggleAutoContinue={automationMode === "off" || queuePolicyWaiting ? undefined : toggleAutoContinue}
             showKeyHints={isOnlyReady}
             inactiveLabel={queuePolicyWaiting ? "Queue empty" : undefined}
+            countdownSeconds={countdownSeconds}
           />
           {(display.isReady || display.isOrchestrationReady) && (
             <SessionSummary session={project.session} isClosed={display.isClosed} />

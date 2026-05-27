@@ -8,7 +8,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
-import { upsertProjectState } from "@/db/queries/project-states";
+import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { logDebug } from "@/db/queries/debug-logs";
 
 const InjectBody = z.object({
@@ -241,11 +241,12 @@ export async function POST(req: NextRequest) {
   }).catch((err) => console.error("[inject] db write failed:", err));
 
   if (result.mode === "direct") {
-    upsertProjectState({
+    persistProjectRuntimeIfNewer({
       projectKey: canonical,
       projectId,
       userId,
       tabName: effectiveTab,
+      runtimeObservedAt: new Date(),
       currentPromptKey: promptKey ?? "custom",
       currentPromptLabel: promptLabel,
       currentPromptStartedAt: new Date(nowS * 1000),

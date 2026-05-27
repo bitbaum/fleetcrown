@@ -1,36 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import { stateFile } from "@/lib/agent-config";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { getApiUserId } from "@/lib/session";
-import { getProjectState, upsertProjectState } from "@/db/queries/project-states";
+import { consumeProjectPrompt, getProjectState, replaceProjectPromptQueue } from "@/db/queries/project-states";
+import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 
 // Queue storage as of migration 0010: project_states.prompt_queue is the
 // source of truth — persists across browsers and Vercel cold starts.
-// /tmp/agent-queue-<tab> is still written so scripts/agent-hook-bridge.sh
-// (which reads /tmp directly and can't easily query the DB from bash)
-// keeps working. User has historically denied edits to that file, so the
-// file mirror stays until that path's been touched separately.
+// /tmp/agent-queue-<tab> remains a local-runtime transport mirror for shell
+// hooks. Mutations are applied to DB first and mirrored only after success.
 
-async function readQueueFromDb(userId: string, tab: string): Promise<{ queue: string[]; exists: boolean }> {
+async function readQueueFromDb(userId: string, tab: string): Promise<{ queue: string[]; revision: number; exists: boolean }> {
   const row = await getProjectState(userId, tab);
-  if (!row) return { queue: [], exists: false };
-  return { queue: row.promptQueue ?? [], exists: true };
-}
-
-function writeQueueFile(tab: string, queue: string[]): void {
-  // Best-effort: file mirror for the bash stop hook. Vercel /tmp is
-  // ephemeral so this is a no-op there; local cockpit-app machines see
-  // the file persist across cockpit-app restarts (until /tmp clears).
-  try {
-    const p = stateFile.queue(tab);
-    fs.writeFileSync(p + ".tmp", JSON.stringify(queue));
-    fs.renameSync(p + ".tmp", p);
-  } catch { /* mirror failure is non-fatal — DB is the source of truth */ }
+  if (!row) return { queue: [], revision: 0, exists: false };
+  return { queue: row.promptQueue ?? [], revision: row.promptQueueRevision, exists: true };
 }
 
 const PutBody = z.object({
   queue: z.array(z.string().max(4000)).max(200),
+  expectedRevision: z.number().int().min(0),
+});
+
+const ConsumeBody = z.object({
+  consumed: z.string().trim().min(1).max(4000),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
@@ -49,13 +40,31 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ tab:
   if (bodyOrResp instanceof NextResponse) return bodyOrResp;
 
   const key = tab.toLowerCase();
-  await upsertProjectState({
-    userId,
-    projectKey: key,
-    tabName: tab,
-    promptQueue: bodyOrResp.queue,
-  });
+  const result = await replaceProjectPromptQueue(userId, key, tab, bodyOrResp.queue, bodyOrResp.expectedRevision);
+  if (!result.applied) {
+    return NextResponse.json({ queue: result.queue, revision: result.revision, exists: result.exists, conflict: true }, { status: 409 });
+  }
 
-  writeQueueFile(key, bodyOrResp.queue);
-  return NextResponse.json({ ok: true });
+  writePromptQueueMirror(key, result.queue);
+  return NextResponse.json({ ok: true, queue: result.queue, revision: result.revision, exists: true });
+}
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
+  const { tab } = await params;
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const bodyOrResp = await readJsonBody(req, ConsumeBody);
+  if (bodyOrResp instanceof NextResponse) return bodyOrResp;
+
+  const key = tab.toLowerCase();
+  const result = await consumeProjectPrompt(userId, key, bodyOrResp.consumed);
+  writePromptQueueMirror(key, result.queue);
+  return NextResponse.json({
+    ok: true,
+    consumed: result.consumed,
+    queue: result.queue,
+    revision: result.revision,
+    exists: result.exists,
+  });
 }

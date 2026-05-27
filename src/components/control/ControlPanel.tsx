@@ -137,6 +137,7 @@ export function ControlPanel() {
     runtimeAvailable,
     runtimeStateKnown: !daemonStateUnknown,
     automationMode: automationPolicy.mode,
+    countdownSeconds: automationPolicy.countdownSeconds,
   });
 
   const headerRight = (

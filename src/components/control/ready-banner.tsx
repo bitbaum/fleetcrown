@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Zap, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
+import { DEFAULT_BEACON_COUNTDOWN_S, PROMPT_STYLE } from "@/lib/constants/control";
 import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
 import type { PromptMeta } from "@/lib/agent-config";
 
@@ -26,6 +26,7 @@ export function ReadyBanner({
   dispatchReason,
   showKeyHints = false,
   inactiveLabel,
+  countdownSeconds = DEFAULT_BEACON_COUNTDOWN_S,
 }: {
   tab?: string;
   prompts: PromptItem[];
@@ -42,6 +43,7 @@ export function ReadyBanner({
   dispatchReason?: string;
   showKeyHints?: boolean;
   inactiveLabel?: string;
+  countdownSeconds?: number;
 }) {
   const [seconds, setSeconds] = useState(() => {
     if (tab) {
@@ -49,11 +51,11 @@ export function ReadyBanner({
         const stored = localStorage.getItem(readyAtKey(tab));
         if (stored) {
           const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
-          return Math.max(0, AUTO_INJECT_S - elapsed);
+          return Math.max(0, countdownSeconds - elapsed);
         }
       } catch {}
     }
-    return AUTO_INJECT_S;
+    return countdownSeconds;
   });
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
   const onAutoInjectRef = useRef(onAutoInject);
@@ -61,12 +63,26 @@ export function ReadyBanner({
   useEffect(() => { onAutoInjectRef.current = onAutoInject; }, [onAutoInject]);
   useEffect(() => { onSendRef.current = onSend; }, [onSend]);
 
+  useEffect(() => {
+    let next = countdownSeconds;
+    if (tab) {
+      try {
+        const stored = localStorage.getItem(readyAtKey(tab));
+        if (stored) {
+          const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
+          next = Math.max(0, countdownSeconds - elapsed);
+        }
+      } catch {}
+    }
+    setSeconds(next); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [countdownSeconds, tab]);
+
   const prevQueueItemRef = useRef(nextQueueItem);
   useEffect(() => {
     const wasEmpty = !prevQueueItemRef.current;
     prevQueueItemRef.current = nextQueueItem;
-    if (wasEmpty && nextQueueItem) setSeconds(AUTO_INJECT_S); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [nextQueueItem]);
+    if (wasEmpty && nextQueueItem) setSeconds(countdownSeconds); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [nextQueueItem, countdownSeconds]);
 
   useEffect(() => {
     // In cloud mode onAutoInject is undefined — the local stop hook handles auto-continue.

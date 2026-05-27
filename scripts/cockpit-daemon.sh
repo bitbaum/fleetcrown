@@ -728,7 +728,8 @@ _scan_agents() {
 _build_state_json() {
   [ -f "$CONF_FILE" ] || return
 
-  local agent_lines
+  local state_observed_at agent_lines
+  state_observed_at=$(date +%s%3N)
   agent_lines=$(_scan_agents 2>/dev/null || true)
 
   # Collect all tab names currently open across every Zellij session (once per push cycle).
@@ -899,8 +900,10 @@ _build_state_json() {
       --arg      stodos    "$sess_todos" \
       --arg      shealth   "$sess_health" \
       --argjson  smtime    "$sess_mtime" \
+      --argjson  observed  "$state_observed_at" \
       '{
         tab:                    $tab,
+        observedAt:             $observed,
         agentRunning:           $running,
         tabOpen:                $tab_open,
         activeAgents:           $agents,
@@ -925,7 +928,7 @@ _build_state_json() {
 
   done < "$CONF_FILE"
 
-  echo "{\"projects\":$projects_arr,\"openTabs\":$(printf '%s\n' "$all_open_tabs" | sed '/^[[:space:]]*$/d' | sort -fu | jq -R . | jq -s . 2>/dev/null || echo '[]')}"
+  echo "{\"observedAt\":${state_observed_at},\"projects\":$projects_arr,\"openTabs\":$(printf '%s\n' "$all_open_tabs" | sed '/^[[:space:]]*$/d' | sort -fu | jq -R . | jq -s . 2>/dev/null || echo '[]')}"
 }
 
 # Push the current runtime state to the API immediately.
@@ -963,7 +966,7 @@ _push_loop() {
     local _s _h _now _age _status
     _s=$(_build_state_json 2>/dev/null) || true
     if [ -n "$_s" ]; then
-      _h=$(printf '%s' "$_s" | md5sum | cut -d' ' -f1)
+      _h=$(printf '%s' "$_s" | jq -c 'del(.observedAt)' 2>/dev/null | md5sum | cut -d' ' -f1)
       _now=$(date +%s)
       _age=$(( _now - _last_push_ts ))
       if [ "$_h" != "$_last_hash" ] || [ "$_age" -ge "$_heartbeat_s" ]; then

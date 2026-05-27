@@ -10,6 +10,16 @@ export async function createOrchestrationEvent(event: NewOrchestrationEvent) {
   return created;
 }
 
+/** Idempotent insertion for events derived repeatedly from the same runtime sentinel. */
+export async function createOrchestrationEventOnce(event: NewOrchestrationEvent, dedupeKey: string) {
+  const [created] = await db
+    .insert(orchestrationEvents)
+    .values({ ...event, dedupeKey })
+    .onConflictDoNothing()
+    .returning();
+  return created ?? null;
+}
+
 export async function getLatestEventsByProjectKeys(
   userId: string,
   projectKeys: string[],
