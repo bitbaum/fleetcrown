@@ -1119,6 +1119,35 @@
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
       linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent);
   }
+  .ui-control-operations-header {
+    @apply flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-control-workspace {
+    @apply grid items-start gap-4 lg:grid-cols-[17.5rem_minmax(0,1fr)];
+  }
+  .ui-control-project-rail {
+    @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised lg:sticky lg:top-6;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-control-project-list {
+    @apply flex gap-2 overflow-x-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1 lg:overflow-y-auto;
+  }
+  @media (min-width: 64rem) {
+    .ui-control-project-list {
+      scrollbar-width: thin;
+    }
+    .ui-control-project-list::-webkit-scrollbar {
+      display: block;
+      width: 0.375rem;
+    }
+  }
+  .ui-control-project-row {
+    @apply flex w-[15rem] shrink-0 gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-overlay lg:w-full;
+  }
+  .ui-control-project-row-active {
+    @apply bg-accent-muted ring-1 ring-accent-primary/20;
+  }
   .ui-control-sidepanel {
     @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6 xl:sticky xl:top-6;
     box-shadow: var(--shadow-panel);

@@ -5,7 +5,6 @@ import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
-import { queueKey } from "@/lib/control-storage";
 import type { Agent } from "@/lib/agent-registry";
 import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
@@ -198,19 +197,14 @@ export function useControlData(): ControlDataHook {
 
   const runWithBrain = async (project: ProjectState, intent: OrchestrationTaskIntentId) => {
     setError(null);
-    // Read the per-project queue from localStorage and pass it through so the
-    // agent's prompt body includes "User's prompt queue for this project" —
-    // otherwise the queue is invisible to the model (it only sees the bare
-    // next_best scan instruction). Best-effort: SSR / private-browsing /
-    // localStorage-disabled → empty queue → no harm, just no context.
     let queue: string[] = [];
     try {
-      const raw = typeof window !== "undefined" ? window.localStorage.getItem(queueKey(project.tab)) : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) queue = parsed.filter((s) => typeof s === "string");
+      const queueRes = await fetch(`/api/beacon/queue/${encodeURIComponent(project.tab)}`);
+      if (queueRes.ok) {
+        const stored = await queueRes.json() as { queue?: unknown };
+        if (Array.isArray(stored.queue)) queue = stored.queue.filter((item): item is string => typeof item === "string");
       }
-    } catch { /* ignore — queue context is best-effort */ }
+    } catch { /* queue context remains best-effort */ }
     const res = await postJson("/api/orchestration/run", {
       projectId: project.projectId,
       projectKey: project.tab,

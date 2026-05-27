@@ -7,6 +7,7 @@ import {
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
+import { useAutomationPolicy } from "@/hooks/use-automation-policy";
 import { PromptInput } from "@/components/control/prompt-input";
 import { QueueList } from "@/components/control/queue-list";
 import { ProjectPromptLibrary } from "@/components/control/ProjectPromptLibrary";
@@ -51,13 +52,15 @@ function BeaconBody({
 }) {
   const { queue, enqueue, remove, reorder, edit } = usePromptQueue(session.project);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(session.project);
+  const { mode: automationMode } = useAutomationPolicy();
   const [custom, setCustom] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [recentPrompts, setRecentPrompts] = useState<RecentCustomPrompt[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const promptsRef = useRef<AgentPrompt[]>([]);
-  const submitRef = useRef<(choice: string) => void>(() => {});
+  const submitRef = useRef<(choice: string) => Promise<boolean>>(async () => false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => { promptsRef.current = prompts; }, [prompts]);
 
@@ -107,7 +110,7 @@ function BeaconBody({
 
   const dismiss = useCallback(() => { if (onClose) onClose(); else window.close(); }, [onClose]);
 
-  const submit = useCallback(async (choice: string) => {
+  const submit = useCallback(async (choice: string): Promise<boolean> => {
     const all = promptsRef.current;
     let label = "";
     if (choice.startsWith(CUSTOM_CHOICE_PREFIX)) {
@@ -119,9 +122,17 @@ function BeaconBody({
       const matched = all.find((p) => p.slot === slot) ?? all.find((p) => p.key === choice);
       label = matched ? `${matched.icon} ${matched.label}` : choice;
     }
-    onSubmitted(label);
-    await patchJson(`/api/beacon/${session.id}`, { choice }).catch(() => {});
-    setTimeout(() => dismiss(), 400);
+    setSubmitError(null);
+    try {
+      const response = await patchJson(`/api/beacon/${session.id}`, { choice });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      onSubmitted(label);
+      setTimeout(() => dismiss(), 400);
+      return true;
+    } catch {
+      setSubmitError("Could not send your instruction. It is still available to retry.");
+      return false;
+    }
   }, [session.id, onSubmitted, dismiss]);
 
   useEffect(() => { submitRef.current = submit; }, [submit]);
@@ -164,7 +175,15 @@ function BeaconBody({
   // Model-agnostic — any adapter that writes the standard handoff fields
   // gets the same gating. Capacity-issue (agent quota hit) bypasses since
   // that's a recovery dispatch the user explicitly asked for.
-  const handleAutoInject = useCallback(() => {
+  const automaticContinuationEnabled = autoContinueEnabled && (
+    automationMode === "strategist" ||
+    automationMode === "next_best" ||
+    (automationMode === "queue_only" && queue.length > 0)
+  );
+  const queuePolicyWaiting = automationMode === "queue_only" && autoContinueEnabled && queue.length === 0;
+
+  const handleAutoInject = useCallback(async () => {
+    if (!automaticContinuationEnabled) return;
     // BeaconSession carries raw sessionContent — parse it here to extract
     // the handoff status. Capacity-issue dispatches bypass since the user
     // explicitly asked for the agent switch.
@@ -177,9 +196,8 @@ function BeaconBody({
       : queue.length > 0
       ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
       : primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
-    if (!session.capacityIssue && queue.length > 0) remove(0);
-    submitRef.current(choice);
-  }, [session.sessionContent, session.capacityIssue, session.nextAgent, queue, remove]);
+    if (await submitRef.current(choice) && !session.capacityIssue && queue.length > 0) remove(0);
+  }, [automaticContinuationEnabled, session.sessionContent, session.capacityIssue, session.nextAgent, queue, remove]);
 
   const morePrompts = prompts.filter((p) => p.style === "more");
 
@@ -193,8 +211,12 @@ function BeaconBody({
     ? "Enter sends · Alt+Enter queues"
     : inputFocused
     ? "Focused - paused"
+    : automationMode === "off"
+    ? "Manual mode - waiting for your instruction"
     : !autoContinueEnabled
-    ? "Paused - click play to resume"
+    ? "Automatic continuation paused for this project"
+    : queuePolicyWaiting
+    ? "Continue queued work - add an instruction to the queue"
     : session.capacityIssue && session.nextAgent
     ? `Switching to ${agentLabel(session.nextAgent)}`
     : queue.length > 0
@@ -208,7 +230,7 @@ function BeaconBody({
       {queue.length > 0 && (
         <QueueList
           queue={queue}
-          onSend={(i) => { remove(i); submit(`${CUSTOM_CHOICE_PREFIX}${queue[i]}`); }}
+          onSend={async (i) => { if (await submit(`${CUSTOM_CHOICE_PREFIX}${queue[i]}`)) remove(i); }}
           onRemove={remove}
           onReorder={reorder}
           onEdit={edit}
@@ -236,6 +258,8 @@ function BeaconBody({
         </div>
       )}
 
+      {submitError && <p className="ui-box-error text-sm">{submitError}</p>}
+
       {/* ReadyBanner is the SSOT for the countdown, auto-continue toggle, and primary/action buttons. */}
       {prompts.length > 0 && (
         <ReadyBanner
@@ -244,12 +268,13 @@ function BeaconBody({
           onSend={(key) => submit(key)}
           onDismiss={dismiss}
           onAutoInject={handleAutoInject}
-          autoContinueEnabled={autoContinueEnabled}
-          onToggleAutoContinue={toggleAutoContinue}
+          autoContinueEnabled={automaticContinuationEnabled}
+          onToggleAutoContinue={automationMode === "off" || queuePolicyWaiting ? undefined : toggleAutoContinue}
           paused={isComposing}
           nextQueueItem={queue.length > 0 ? queue[0] : undefined}
           queueTotal={queue.length}
           title="Agent ready"
+          inactiveLabel={queuePolicyWaiting ? "Queue empty" : undefined}
         />
       )}
 
@@ -274,14 +299,14 @@ function BeaconBody({
         waveformBars={waveformBars}
         recordingSeconds={recordingSeconds}
         maxRecordingSeconds={maxRecordingSeconds}
-        autoContinueEnabled={autoContinueEnabled}
+        autoContinueEnabled={automationMode === "off" ? false : autoContinueEnabled}
         statusLabel={statusLabel}
         textareaRef={inputRef}
         onCustomChange={setCustom}
         onCustomFocusChange={setInputFocused}
         onSendCustom={handleSendCustom}
         onEnqueue={handleEnqueue}
-        onToggleAutoContinue={toggleAutoContinue}
+        onToggleAutoContinue={automationMode === "off" ? undefined : toggleAutoContinue}
         toggleMic={toggleMic}
       />
 

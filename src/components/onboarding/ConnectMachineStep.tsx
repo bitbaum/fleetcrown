@@ -110,11 +110,11 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
                 className="ui-auth-secondary-btn text-left p-3 h-auto flex flex-col items-start"
               >
                 <span className="font-medium">{a.label}</span>
-                <span className="text-[10px] text-text-muted mt-1 font-mono break-all">{a.cmd}</span>
+                <span className="text-micro text-text-muted mt-1 font-mono break-all">{a.cmd}</span>
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-text-muted mt-1">
+          <p className="text-micro text-text-muted mt-1">
             After the helper connects, Control page install buttons can open a dedicated terminal tab and run these installers for you.
           </p>
         </div>

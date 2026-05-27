@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
-import { getProjectDisplayState } from "./control-presenter";
+import { getProjectDisplayState, type ProjectOperationsSnapshot } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import { ProjectCardHeader, SessionSummary } from "./project-card-sections";
@@ -17,6 +18,7 @@ import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
 import { useProjectCardActions } from "@/hooks/use-project-card-actions";
+import type { AutoInjectMode } from "@/db/queries/beacon-settings";
 
 export function ProjectCard({
   project,
@@ -31,9 +33,12 @@ export function ProjectCard({
   onFocus,
   onDeleted,
   onProfileSaved,
+  onLaunch,
   isOnlyReady = false,
   runtimeAvailable = true,
   runtimeStateKnown = true,
+  snapshot,
+  automationMode = "queue_only",
 }: {
   project: ProjectState;
   prompts: PromptMeta[];
@@ -47,9 +52,12 @@ export function ProjectCard({
   onFocus?: () => void;
   onDeleted?: () => void;
   onProfileSaved?: () => void;
+  onLaunch?: () => void;
   isOnlyReady?: boolean;
   runtimeAvailable?: boolean;
   runtimeStateKnown?: boolean;
+  snapshot?: ProjectOperationsSnapshot;
+  automationMode?: AutoInjectMode;
 }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
@@ -79,8 +87,8 @@ export function ProjectCard({
   };
 
   const [dismissed, setDismissed] = useState(false);
-  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue, enable: enableAutoContinue } = useAutoContinue(project.tab);
-  const { queue, enqueue, shift: shiftQueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue, mergeItems: mergeItemsInQueue } = usePromptQueue(project.tab);
+  const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(project.tab);
+  const { queue, enqueue, remove: removeFromQueue, reorder: reorderInQueue, edit: editInQueue, clear: clearQueue, mergeItems: mergeItemsInQueue } = usePromptQueue(project.tab);
 
   // Reset dismissed each time a new agent run begins so the ready banner fires once per cycle.
   const prevAgentRunning = useRef(project.agentRunning);
@@ -90,9 +98,26 @@ export function ProjectCard({
   }, [project.agentRunning]);
 
   const nowS = Math.floor(Date.now() / 1000);
-  const display = getProjectDisplayState(project, zellijTabs, nowS, dismissed, runtimeStateKnown);
+  const display = dismissed
+    ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown)
+    : snapshot?.display ?? getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
   const isReadyNow = display.isReady || display.isOrchestrationReady;
-  useProjectLifecycleSync(project.tab, isReadyNow, enableAutoContinue);
+  useProjectLifecycleSync(project.tab, isReadyNow);
+  const automaticContinuationEnabled = autoContinueEnabled && (
+    automationMode === "strategist" ||
+    automationMode === "next_best" ||
+    (automationMode === "queue_only" && queue.length > 0)
+  );
+  const queuePolicyWaiting = automationMode === "queue_only" && autoContinueEnabled && queue.length === 0;
+  const automationStatusLabel = automationMode === "off"
+    ? "Manual: this project waits for your instruction."
+    : !autoContinueEnabled
+      ? "Automatic continuation paused for this project."
+      : queuePolicyWaiting
+        ? "Continue queued work: add an instruction to run it when the agent waits."
+        : automationMode === "queue_only"
+          ? "Continue queued work: the next queued instruction will send when the agent waits."
+          : "Autonomous: the next task may start when the agent waits.";
 
   const {
     sending, custom, setCustom, customFocused, setCustomFocused,
@@ -100,14 +125,14 @@ export function ProjectCard({
     sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
     handleAutoInject, handleSendFromQueue, handleMergeQueue,
   } = useProjectCardActions({
-    project, queue, shiftQueue, removeFromQueue, clearQueue,
+    project, queue, removeFromQueue, clearQueue,
     onInject, onRunWithBrain,
     setDismissed, isReadyNow,
-    prompts, isOnlyReady,
+    prompts, isOnlyReady, autoContinueEnabled: automaticContinuationEnabled,
   });
 
   const latestOrchRun = project.latestOrchestrationRun;
-  const paused = !autoContinueEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
+  const paused = !automaticContinuationEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
 
   return (
     <div
@@ -134,6 +159,9 @@ export function ProjectCard({
         isRunning={display.isRunning}
         stateLabel={display.stateLabel}
         stateTagClass={display.stateTagClass}
+        evidenceLabel={snapshot?.evidenceLabel}
+        evidenceAt={snapshot?.evidenceAt}
+        evidenceKind={snapshot?.evidenceKind}
         profileOpen={profileOpen}
         onProfileToggle={() => setProfileOpen((v) => !v)}
         onCollapse={onCollapse}
@@ -169,7 +197,7 @@ export function ProjectCard({
             closingAt={project.closingAt}
             currentPrompt={project.currentPrompt}
             prompts={prompts}
-            autoContinueEnabled={autoContinueEnabled}
+            autoContinueEnabled={automaticContinuationEnabled}
             paused={paused}
             nextQueueItem={sessionHealthBlocksQueue() ? undefined : queue[0]}
             queueTotal={sessionHealthBlocksQueue() ? 0 : queue.length}
@@ -178,13 +206,30 @@ export function ProjectCard({
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={runtimeAvailable !== false ? handleAutoInject : undefined}
-            onToggleAutoContinue={toggleAutoContinue}
+            onToggleAutoContinue={automationMode === "off" || queuePolicyWaiting ? undefined : toggleAutoContinue}
             showKeyHints={isOnlyReady}
+            inactiveLabel={queuePolicyWaiting ? "Queue empty" : undefined}
           />
           {(display.isReady || display.isOrchestrationReady) && (
             <SessionSummary session={project.session} isClosed={display.isClosed} />
           )}
+          {display.tone === "idle" && project.session && (
+            <div className="border-t border-border-subtle">
+              <p className="px-4 pt-4 text-xs font-medium text-text-muted sm:px-5 md:px-6">Saved context from the last agent run</p>
+              <SessionSummary session={project.session} isClosed={false} />
+            </div>
+          )}
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
+
+          {display.tone === "idle" && runtimeStateKnown && onLaunch && (
+            <div className="ui-card-section flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-text-secondary">No agent is currently running for this project.</p>
+              <button onClick={onLaunch} className="ui-btn-primary shrink-0 gap-1.5">
+                <Play className="h-3.5 w-3.5" />
+                Launch agent
+              </button>
+            </div>
+          )}
 
           <IntentButtonPanel
             project={project}
@@ -192,7 +237,7 @@ export function ProjectCard({
             runtimeAvailable={runtimeAvailable}
             runtimeStateKnown={runtimeStateKnown}
             isRunning={display.isRunning}
-            autoContinueEnabled={autoContinueEnabled}
+            autoContinueEnabled={automationMode === "off" ? false : autoContinueEnabled}
             sending={sending}
             sendError={sendError}
             onClearSendError={clearSendError}
@@ -200,7 +245,7 @@ export function ProjectCard({
             queue={queue}
             bannerActive={display.isClosed || display.isReady || display.isOrchestrationReady}
             merging={merging}
-            onToggleAutoContinue={toggleAutoContinue}
+            onToggleAutoContinue={automationMode === "off" ? undefined : toggleAutoContinue}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}
             onEnqueueCustom={enqueue}
@@ -213,6 +258,7 @@ export function ProjectCard({
             onMergeItemsInQueue={mergeItemsInQueue}
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
+            automationStatusLabel={automationStatusLabel}
           />
           <ProjectActivitySection injections={project.recentInjections} git={project.git} />
         </>

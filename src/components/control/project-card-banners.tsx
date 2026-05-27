@@ -27,6 +27,7 @@ export function ProjectBanners({
   onAutoInject,
   onToggleAutoContinue,
   showKeyHints = false,
+  inactiveLabel,
 }: {
   tab: string;
   isClosed: boolean;
@@ -49,6 +50,7 @@ export function ProjectBanners({
   onAutoInject?: () => void;
   onToggleAutoContinue?: () => void;
   showKeyHints?: boolean;
+  inactiveLabel?: string;
 }) {
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
 
@@ -78,6 +80,7 @@ export function ProjectBanners({
           healthBypass={healthBypass}
           dispatchReason={dispatchReason}
           showKeyHints={showKeyHints}
+          inactiveLabel={inactiveLabel}
         />
       )}
       {isOrchReady && (
@@ -96,6 +99,7 @@ export function ProjectBanners({
           healthBypass={healthBypass}
           dispatchReason={dispatchReason}
           showKeyHints={showKeyHints}
+          inactiveLabel={inactiveLabel}
         />
       )}
       {showRunning && currentPrompt && (

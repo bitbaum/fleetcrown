@@ -40,6 +40,7 @@ export function IntentButtonPanel({
   onCustomFocusChange,
   runtimeAvailable = true,
   runtimeStateKnown = true,
+  automationStatusLabel,
 }: {
   project: ProjectState;
   currentAdapter: string;
@@ -54,7 +55,7 @@ export function IntentButtonPanel({
   queue?: string[];
   bannerActive?: boolean;
   merging?: boolean;
-  onToggleAutoContinue: () => void;
+  onToggleAutoContinue?: () => void;
   onSendIntent: (intent: OrchestrationTaskIntentId) => void;
   onSendCustom: () => void;
   onEnqueueCustom?: (prompt: string) => void;
@@ -73,6 +74,7 @@ export function IntentButtonPanel({
   runtimeAvailable?: boolean;
   /** False when cached daemon-driven runtime fields cannot be trusted. */
   runtimeStateKnown?: boolean;
+  automationStatusLabel?: string;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
@@ -102,9 +104,11 @@ export function IntentButtonPanel({
     onToggleAutoContinue,
     statusLabel: !runtimeStateKnown
       ? "Daemon offline: sends will queue until this computer reconnects."
+      : automationStatusLabel
+      ? automationStatusLabel
       : autoContinueEnabled
-      ? `Auto-continue ready: ${APP_NAME} can send the next queued prompt when the agent waits.`
-      : `Auto-continue paused: ${APP_NAME} will wait for you before sending more work.`,
+      ? `Automatic continuation allowed for this project: ${APP_NAME} may send queued work when the agent waits.`
+      : `Manual for this project: ${APP_NAME} will wait for you before sending more work.`,
   };
 
   const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : 5);

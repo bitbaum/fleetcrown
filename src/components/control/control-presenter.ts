@@ -67,9 +67,28 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Ready" | "Waiting" | "Closing" | "Closed" | "No live agent";
+  stateLabel: "Offline" | "Working" | "Waiting for you" | "Closing" | "Completed" | "Not running";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
+};
+
+export type ControlPhase =
+  | "offline"
+  | "not_running"
+  | "working"
+  | "waiting_for_user"
+  | "closing"
+  | "completed";
+
+export type ProjectOperationsSnapshot = {
+  project: ProjectState;
+  phase: ControlPhase;
+  display: ProjectDisplayState;
+  evidenceLabel: string;
+  evidenceAt: number | null;
+  evidenceKind: "live" | "historical" | "unknown";
+  contextSummary: string | null;
+  attentionReason: string | null;
 };
 
 export type ControlDashboardState = {
@@ -104,11 +123,10 @@ type LiveTabRankLabel = LiveTabRow["stateLabel"];
 const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Offline: 0,
   Working: 0,
-  Ready: 1,
-  Waiting: 1,
+  "Waiting for you": 1,
   Closing: 2,
-  Closed: 3,
-  "No live agent": 4,
+  Completed: 3,
+  "Not running": 4,
   Open: 5,
 };
 
@@ -139,14 +157,14 @@ export function getTabActivityText(
     return project.session.next.trim();
   }
   if (display?.isReady || display?.isOrchestrationReady) {
-    return "Waiting for next prompt";
+    return "Waiting for your next instruction";
   }
   if (project.session?.next?.trim()) return project.session.next.trim();
   if (project.session?.done?.trim()) {
     return project.session.done.trim().slice(0, 140);
   }
   if (project.agentRunning) return "Agent session open";
-  return "No live agent reported";
+  return "No agent currently running";
 }
 
 export function buildLiveTabRows(
@@ -186,37 +204,9 @@ export function buildLiveTabRows(
 }
 
 export type ControlPageState = {
-  activeProjects: ProjectState[];
-  idleProjects: ProjectState[];
-  /** Subset of idleProjects with uncommitted local changes — surfaces to a
-   *  separate "Needs attention" subgroup so the long quiet list doesn't bury them. */
-  idleNeedsAttention: ProjectState[];
-  /** Idle projects with a clean working tree, touched within IDLE_STALE_S. */
-  idleQuiet: ProjectState[];
-  /** Idle projects with no session OR session.mtime older than IDLE_STALE_S — the dormant tail. */
-  idleStale: ProjectState[];
-  sortedProjects: ProjectState[];
   dashboard: ControlDashboardState;
   attention: AttentionItem[];
 };
-
-/** Idle projects with session.mtime older than this (seconds) drop into the
- *  "Stale" bucket — 30 days matches the threshold at which a project usually
- *  needs a fresh `gog` / re-orient pass before any agent dispatch makes sense. */
-const IDLE_STALE_S = 30 * 86_400;
-
-/** True when an idle project has uncommitted local work — the simplest signal
- *  that the project is mid-something and shouldn't blend into the quiet pile. */
-function idleNeedsAttention(project: ProjectState): boolean {
-  return !!project.git && (project.git.dirty || project.git.dirtyCount > 0);
-}
-
-/** True when an idle project hasn't been touched in IDLE_STALE_S — by mtime,
- *  with no-session falling through to stale (a never-touched project IS dormant). */
-function idleIsStale(project: ProjectState, nowS: number): boolean {
-  if (!project.session) return true;
-  return nowS - Math.floor(project.session.mtime / 1000) > IDLE_STALE_S;
-}
 
 function attentionScore(project: ProjectState): { score: number; reason: string } {
   let score = 0;
@@ -352,16 +342,16 @@ export function getProjectDisplayState(
   const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
     offline:               "Offline",
     running:               "Working",
-    "session-open":        "Ready",
-    ready:                 "Waiting",
-    "orchestration-ready": "Waiting",
+    "session-open":        "Waiting for you",
+    ready:                 "Waiting for you",
+    "orchestration-ready": "Waiting for you",
     closing:               "Closing",
-    closed:                "Closed",
-    idle:                  "No live agent",
+    closed:                "Completed",
+    idle:                  "Not running",
   };
   const STATE_TAG: Record<ProjectDisplayState["tone"], string> = {
     offline:               "ui-tag ui-tag-warning",
-    running:               "ui-tag ui-tag-warning",
+    running:               "ui-tag ui-tag-accent",
     "session-open":        "ui-tag ui-tag-neutral",
     ready:                 "ui-tag ui-tag-positive",
     "orchestration-ready": "ui-tag ui-tag-positive",
@@ -389,6 +379,64 @@ export function getProjectDisplayState(
   };
 }
 
+export function buildProjectOperationsSnapshot(
+  project: ProjectState,
+  zellijTabs: string[],
+  nowS: number,
+  runtimeStateKnown = true,
+): ProjectOperationsSnapshot {
+  const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
+  const phase: ControlPhase = display.tone === "offline"
+    ? "offline"
+    : display.isRunning
+      ? "working"
+      : display.isClosing
+        ? "closing"
+        : display.isClosed
+          ? "completed"
+          : display.isReady || display.isOrchestrationReady || display.isSessionOpen
+            ? "waiting_for_user"
+            : "not_running";
+  const attention = attentionScore(project);
+  const handoffAt = project.session?.mtime ?? null;
+  const contextSummary = display.isRunning && project.currentPrompt?.label
+    ? project.currentPrompt.label
+    : project.session?.next?.trim()
+      ? project.session.next.trim()
+      : project.session?.done?.trim()
+        ? project.session.done.trim()
+        : null;
+  const liveObserved = runtimeStateKnown && (display.isRunning || display.isSessionOpen || display.tabOpen);
+
+  return {
+    project,
+    phase,
+    display,
+    evidenceLabel: !runtimeStateKnown
+      ? "Live status unavailable"
+      : liveObserved
+        ? "Observed on connected computer"
+        : handoffAt
+          ? "Saved agent context"
+          : "No live observation",
+    evidenceAt: liveObserved ? null : handoffAt,
+    evidenceKind: !runtimeStateKnown ? "unknown" : liveObserved ? "live" : "historical",
+    contextSummary,
+    attentionReason: attention.score > 0 ? attention.reason : null,
+  };
+}
+
+export function buildProjectOperationsSnapshots(
+  projects: ProjectState[],
+  zellijTabs: string[],
+  nowS: number,
+  runtimeStateKnown = true,
+): ProjectOperationsSnapshot[] {
+  return projects
+    .map((project) => buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown))
+    .sort((a, b) => compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown));
+}
+
 function compareProjects(
   a: ProjectState,
   b: ProjectState,
@@ -400,11 +448,12 @@ function compareProjects(
   const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown);
 
   const rank = (state: ProjectDisplayState): number => {
-    if (state.isClosed) return 0;
-    if (state.isClosing) return 1;
-    if (state.isReady || state.isOrchestrationReady) return 2;
-    if (state.isRunning) return 3;
-    return 4;
+    if (state.isReady || state.isOrchestrationReady) return 0;
+    if (state.isRunning) return 1;
+    if (state.isClosing) return 2;
+    if (state.isSessionOpen) return 3;
+    if (state.isClosed) return 4;
+    return 5;
   };
 
   const rankDelta = rank(aState) - rank(bState);
@@ -417,35 +466,9 @@ function compareProjects(
 
 export function buildControlPageState(
   data: ControlData,
-  expandedTabs: Set<string>,
   nowS: number,
   runtimeStateKnown = true,
 ): ControlPageState {
-  // Capture DB-order indices so user-defined position is the final tiebreaker.
-  // data.projects arrives ordered by user_projects.position from the API.
-  const withIndex = data.projects.map((p, i) => ({ p, i }));
-  const sortedProjects = withIndex
-    .sort((a, b) => compareProjects(a.p, b.p, data.zellijTabs, nowS, runtimeStateKnown) || (a.i - b.i))
-    .map(({ p }) => p);
-
-  const activeProjects = sortedProjects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
-    return state.isActive || expandedTabs.has(project.tab);
-  });
-  const idleProjects = sortedProjects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
-    return !state.isActive && !expandedTabs.has(project.tab);
-  });
-  const idleNeedsAttn = idleProjects.filter(idleNeedsAttention);
-  const idleRest = idleProjects.filter((p) => !idleNeedsAttention(p));
-  const idleQuietList = idleRest.filter((p) => !idleIsStale(p, nowS));
-  // Sort Stale oldest-first so the most-prunable candidates surface at the
-  // top. No-session is treated as -∞ (never touched → most prunable). Stable
-  // sort: same-mtime ties preserve the upstream rank.
-  const idleStaleList = idleRest
-    .filter((p) => idleIsStale(p, nowS))
-    .sort((a, b) => (a.session?.mtime ?? -Infinity) - (b.session?.mtime ?? -Infinity));
-
   const runningCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return state.isRunning;
@@ -460,7 +483,10 @@ export function buildControlPageState(
     ),
   ).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
-  const idleCount = idleProjects.length;
+  const idleCount = data.projects.filter((project) => {
+    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
+    return !state.isActive;
+  }).length;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
 
   const attention = data.projects
@@ -470,12 +496,6 @@ export function buildControlPageState(
     .slice(0, 6);
 
   return {
-    activeProjects,
-    idleProjects,
-    idleNeedsAttention: idleNeedsAttn,
-    idleQuiet: idleQuietList,
-    idleStale: idleStaleList,
-    sortedProjects,
     attention,
     dashboard: {
       runningCount,

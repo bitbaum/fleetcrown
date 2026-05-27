@@ -94,7 +94,7 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-text-muted mt-1">
+          <p className="text-micro text-text-muted mt-1">
             When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
           </p>
         </div>

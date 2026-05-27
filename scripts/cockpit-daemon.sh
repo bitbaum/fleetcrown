@@ -994,14 +994,17 @@ _push_loop() {
 
 sync_legacy_hook_runtime
 _init_base_url
+# A former UI toggle used a local sleep sentinel outside persisted policy.
+# It is no longer authoritative; discard any stranded value during upgrade.
+rm -f "/tmp/cockpit-sleep-mode" 2>/dev/null || true
 log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
 _PUSH_PID=$!
 trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE" "$_AUTH_HEADER"; exit' INT TERM
 
 while true; do
-  # Pause / low-power mode support (easy to trigger from web or wrapper later)
-  if [ -f "/tmp/cockpit-pause" ] || [ -f "/tmp/cockpit-sleep-mode" ]; then
+  # Local maintenance pause support.
+  if [ -f "/tmp/cockpit-pause" ]; then
     sleep 30
     continue
   fi

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # deploy-local.sh — runs automatically as the npm postbuild hook.
 #
-# Copies the compiled static assets into .next/standalone/ (required for the
-# production server to serve CSS, JS chunks, and public files) then restarts
+# Copies runtime assets into .next/standalone/ (required for the production
+# server to serve CSS, JS chunks, public files, and markdown content) then restarts
 # the cockpit-app systemd service if it is installed on this machine.
 #
 # Skips silently in CI or on machines where the service is not installed, so
@@ -19,13 +19,14 @@ if [ ! -d "$STANDALONE" ]; then
   exit 0
 fi
 
-# ── Copy static assets ────────────────────────────────────────────────────────
-# next build does not copy .next/static or public/ into standalone/.
-# Without this, the production server serves 404 for all CSS/JS chunks.
-rm -rf "$STANDALONE/.next/static" "$STANDALONE/public"
+# ── Copy runtime assets ───────────────────────────────────────────────────────
+# Next standalone tracing does not include client/static assets or markdown
+# loaded from process.cwd() by server-rendered content routes.
+rm -rf "$STANDALONE/.next/static" "$STANDALONE/public" "$STANDALONE/content"
 cp -r "$PROJECT_DIR/.next/static"  "$STANDALONE/.next/static"
 cp -r "$PROJECT_DIR/public"        "$STANDALONE/public"
-echo "→ deploy: static assets copied to standalone"
+cp -r "$PROJECT_DIR/content"       "$STANDALONE/content"
+echo "→ deploy: runtime assets copied to standalone"
 
 # ── Restart systemd service (local machine only) ──────────────────────────────
 SERVICE="cockpit-app"

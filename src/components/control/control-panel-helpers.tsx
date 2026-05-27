@@ -151,7 +151,7 @@ export function BrainConfigPanel({
                     e.stopPropagation();
                     onRequestInstall(entry.id);
                   }}
-                  className="ui-btn-ghost ui-btn-xs text-[10px] px-1.5 py-0.5"
+                  className="ui-btn-ghost ui-btn-xs text-micro px-1.5 py-0.5"
                   title={`Install ${entry.label} — opens a terminal tab with the installer`}
                 >
                   Install
@@ -225,7 +225,7 @@ export function BrainConfigPanel({
       </div>
 
       {lastTabResults.length > 0 && (
-        <div className="rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-[10px] text-text-tertiary">
+        <div className="rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-micro text-text-tertiary">
           Last switch{lastTabResultsAt ? ` · ${timeAgo(lastTabResultsAt)}` : ""}:{" "}
           {lastTabResults.slice(0, 3).map((r, i) => (
             <span key={i}>{r.tab ? `${r.tab} ${r.status}` : r.status}{r.error ? ` (${r.error})` : ""}{i < Math.min(lastTabResults.length, 3) - 1 ? ", " : ""}</span>
@@ -235,4 +235,3 @@ export function BrainConfigPanel({
     </div>
   );
 }
-

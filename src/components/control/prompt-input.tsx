@@ -167,7 +167,7 @@ export function PromptInput({
           <button
             onClick={onToggleAutoContinue}
             disabled={processing}
-            title={autoContinueEnabled ? "Pause auto-continue" : "Resume auto-continue"}
+            title={autoContinueEnabled ? "Pause automatic continuation for this project" : "Allow automatic continuation for this project"}
             className={cn(
               "shrink-0 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 inline-flex items-center justify-center rounded-md p-1 transition-colors",
               autoContinueEnabled

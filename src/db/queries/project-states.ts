@@ -1,15 +1,16 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { projectStates, type NewProjectState } from "@/db/schema/project-states";
 
 /**
- * Upserts the runtime-state row identified by (userId, projectKey).
+ * Upserts the runtime-state row identified by (userId, lower(projectKey)).
  *
- * `patch.userId` and `patch.projectKey` are required by the schema. The conflict
- * target is the composite primary key, so cross-tenant overwrites are impossible:
- * two users with a project named "cockpit" each get their own row.
+ * Runtime reports and UI requests may use display-case variants of the same
+ * tab name. Read/update using the schema's case-insensitive identity and
+ * normalize newly inserted keys to keep a single row per user and project.
  */
 export async function upsertProjectState(patch: NewProjectState) {
+  const projectKey = patch.projectKey.toLowerCase();
   // Only include non-undefined fields in the conflict-update clause.
   // This way a PATCH with {readyAt} doesn't wipe closedAt back to null.
   const updateSet: Partial<NewProjectState> & { updatedAt: Date } = { updatedAt: new Date() };
@@ -19,22 +20,33 @@ export async function upsertProjectState(patch: NewProjectState) {
     }
   }
 
-  const [row] = await db
+  const [inserted] = await db
     .insert(projectStates)
-    .values({ ...patch, updatedAt: new Date() })
-    .onConflictDoUpdate({
-      target: [projectStates.userId, projectStates.projectKey],
-      set: updateSet,
-    })
+    .values({ ...patch, projectKey, updatedAt: new Date() })
+    .onConflictDoNothing()
+    .returning();
+  if (inserted) return inserted;
+
+  const [row] = await db
+    .update(projectStates)
+    .set(updateSet)
+    .where(and(
+      eq(projectStates.userId, patch.userId),
+      sql`lower(${projectStates.projectKey}) = ${projectKey}`,
+    ))
     .returning();
   return row;
 }
 
 export async function getProjectState(userId: string, projectKey: string) {
+  const normalizedKey = projectKey.toLowerCase();
   const [row] = await db
     .select()
     .from(projectStates)
-    .where(and(eq(projectStates.userId, userId), eq(projectStates.projectKey, projectKey)))
+    .where(and(
+      eq(projectStates.userId, userId),
+      sql`lower(${projectStates.projectKey}) = ${normalizedKey}`,
+    ))
     .limit(1);
   return row ?? null;
 }

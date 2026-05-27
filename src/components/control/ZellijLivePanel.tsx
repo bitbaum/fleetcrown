@@ -47,7 +47,7 @@ export function ZellijLivePanel({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <PanelsTopLeft className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-            <h2 className="text-xs font-semibold text-text-primary">Live Zellij</h2>
+            <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>
             <span className="ui-tag ui-tag-neutral text-[9px]">
               {daemonStateUnknown ? "offline" : `${rows.length} open`}
             </span>
@@ -63,18 +63,18 @@ export function ZellijLivePanel({
             <button
               type="button"
               onClick={repairHelper}
-              className="ui-btn-ghost ui-btn-xs gap-1 text-[10px]"
+              className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
               title="Update and repair the local helper"
             >
               <Wrench className="h-3 w-3" />
-              <span className="hidden sm:inline">Repair helper</span>
+              <span className="hidden sm:inline">Repair connection</span>
             </button>
           )}
           <button
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="ui-btn-ghost ui-btn-xs gap-1 text-[10px]"
+            className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
             title="Refresh"
           >
             <RefreshCw className={cn("h-3 w-3", refreshing && "animate-spin")} />
@@ -85,17 +85,17 @@ export function ZellijLivePanel({
 
       {daemonStateUnknown ? (
         <div className="ui-control-live-empty">
-          <p className="font-medium text-text-secondary">No live tab data</p>
+          <p className="font-medium text-text-secondary">No live workspace data</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
             The cloud control plane needs your local daemon running and pushing state.
-            Install Zellij, start an agent tab, then run the daemon from Settings.
+            Start an agent workspace, then check the local connection in Settings.
           </p>
         </div>
       ) : rows.length === 0 ? (
         <div className="ui-control-live-empty">
-          <p className="font-medium text-text-secondary">No Zellij tabs open</p>
+          <p className="font-medium text-text-secondary">No terminal workspaces open</p>
           <p className="mt-1 text-sm text-text-tertiary">
-            Open a project tab in Zellij or launch one from the fleet below.
+            Launch an agent from a project to open its terminal workspace.
           </p>
         </div>
       ) : (
@@ -117,7 +117,7 @@ export function ZellijLivePanel({
                     <td className="py-0.5">
                       <span className="font-medium text-text-primary">{row.tabName}</span>
                       {!row.registered && (
-                        <span className="ml-1.5 ui-tag ui-tag-warning text-[9px]">Unreg</span>
+                        <span className="ml-1.5 ui-tag ui-tag-warning text-[9px]">Unlinked</span>
                       )}
                     </td>
                     <td className="py-0.5 text-text-secondary">{row.agentLabel ?? "—"}</td>
@@ -125,7 +125,7 @@ export function ZellijLivePanel({
                       <span className={row.stateTagClass}>{row.stateLabel}</span>
                     </td>
                     <td className="py-0.5 max-w-md">
-                      <p className="line-clamp-1 text-[11px] text-text-secondary" title={row.activity}>
+                      <p className="line-clamp-1 text-xs text-text-secondary" title={row.activity}>
                         {row.activity}
                       </p>
                     </td>
@@ -175,7 +175,7 @@ export function ZellijLivePanel({
                       <span className={row.stateTagClass}>{row.stateLabel}</span>
                     </div>
                     {row.agentLabel && (
-                      <p className="mt-0.5 text-[10px] text-text-tertiary">{row.agentLabel}</p>
+                      <p className="mt-0.5 text-micro text-text-tertiary">{row.agentLabel}</p>
                     )}
                   </div>
                   <div className="flex shrink-0 gap-0.5">
@@ -207,11 +207,11 @@ export function ZellijLivePanel({
                     )}
                   </div>
                 </div>
-                <p className="mt-1 text-[11px] leading-snug text-text-secondary line-clamp-2">
+                <p className="mt-1 text-xs leading-snug text-text-secondary line-clamp-2">
                   {row.activity}
                 </p>
                 {!row.registered && (
-                  <p className="mt-1 text-[10px] text-status-warning">Not registered in fleet</p>
+                  <p className="mt-1 text-micro text-status-warning">Not linked to a tracked project</p>
                 )}
               </div>
             ))}

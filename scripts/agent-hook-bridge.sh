@@ -311,14 +311,6 @@ handle_stop() {
     log "beacon disabled by user settings — skipping popup"
     exit 0
   fi
-  # Sleep mode — set by POST /api/control/sleep-mode when the user flips the
-  # Moon toggle in the control panel. We skip the popup entirely; the web-app
-  # ReadyBanner already short-circuits its countdown to 0 in sleep mode, so
-  # the auto-inject loop runs from the browser side as long as Cockpit is open.
-  if [ -f "$(_brand_tmp 'sleep-mode')" ]; then
-    log "sleep mode on — skipping popup (web-app ReadyBanner handles auto-inject)"
-    exit 0
-  fi
   if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_idle_secs:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
     log "user active (idle=${_idle_secs}s < ${_BEACON_MIN_IDLE}s) — skipping beacon"
     exit 0

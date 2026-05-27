@@ -8,7 +8,6 @@ import { readyAtKey } from "@/lib/control-storage";
 export function useProjectLifecycleSync(
   tab: string,
   isReady: boolean,
-  enableAutoContinue: () => void,
 ) {
   const prevIsReadyRef = useRef(false);
 
@@ -20,9 +19,6 @@ export function useProjectLifecycleSync(
       } catch {
         // Ignore storage errors
       }
-
-      // Re-enable auto-continue on each new ready cycle (also syncs /tmp sentinel)
-      enableAutoContinue();
     } else if (!isReady && prevIsReadyRef.current) {
       // Session resumed or closed: clear the ready timestamp
       try {
@@ -32,5 +28,5 @@ export function useProjectLifecycleSync(
       }
     }
     prevIsReadyRef.current = isReady;
-  }, [isReady, tab, enableAutoContinue]);
+  }, [isReady, tab]);
 }

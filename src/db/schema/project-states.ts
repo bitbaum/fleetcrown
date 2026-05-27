@@ -16,6 +16,7 @@ export const projectStates = pgTable("project_states", {
   closingAt:              timestamp("closing_at", { withTimezone: true }),
   closedAt:               timestamp("closed_at",  { withTimezone: true }),
   sessionStatus:          text("session_status"),     // 'ready' | 'working' | null. Drives auto-inject gating — only 'ready' fires.
+  autoContinueEnabled:    boolean("auto_continue_enabled").notNull().default(true),
   promptQueue:            text("prompt_queue").array().notNull().default([]),  // per-project prompt queue. Replaces the ephemeral /tmp/agent-queue-<tab> mirror.
   sessionDone:            text("session_done"),
   sessionNext:            text("session_next"),

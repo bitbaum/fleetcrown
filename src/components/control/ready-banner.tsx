@@ -5,7 +5,6 @@ import { Zap, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROMPT_STYLE, AUTO_INJECT_S } from "@/lib/constants/control";
 import { readyAtKey, beaconComposingKey } from "@/lib/control-storage";
-import { useSleepMode } from "@/hooks/use-sleep-mode";
 import type { PromptMeta } from "@/lib/agent-config";
 
 // Minimal shape ReadyBanner actually needs — both PromptMeta and AgentPrompt satisfy this.
@@ -26,6 +25,7 @@ export function ReadyBanner({
   healthBypass,
   dispatchReason,
   showKeyHints = false,
+  inactiveLabel,
 }: {
   tab?: string;
   prompts: PromptItem[];
@@ -41,8 +41,8 @@ export function ReadyBanner({
   healthBypass?: string;
   dispatchReason?: string;
   showKeyHints?: boolean;
+  inactiveLabel?: string;
 }) {
-  const { enabled: sleepMode } = useSleepMode();
   const [seconds, setSeconds] = useState(() => {
     if (tab) {
       try {
@@ -55,11 +55,6 @@ export function ReadyBanner({
     }
     return AUTO_INJECT_S;
   });
-  // Sleep mode short-circuits the countdown: auto-inject the next-best action
-  // immediately so the user can walk away.
-  useEffect(() => {
-    if (sleepMode) setSeconds(0); // eslint-disable-line react-hooks/set-state-in-effect
-  }, [sleepMode]);
   const primaryKey = prompts.find((p) => p.style === "primary")?.key ?? "next_best";
   const onAutoInjectRef = useRef(onAutoInject);
   const onSendRef = useRef(onSend);
@@ -87,13 +82,13 @@ export function ReadyBanner({
     return () => clearTimeout(id);
   }, [seconds, paused, autoContinueEnabled, primaryKey, tab]);
 
-  const timerLabel = sleepMode ? "Sleep" : !autoContinueEnabled ? "Off" : paused ? "Paused" : `${seconds}s`;
+  const timerLabel = inactiveLabel ?? (!autoContinueEnabled ? "Manual" : paused ? "Paused" : `${seconds}s`);
 
   const nextLabel = healthBypass
     ? `AI picks recovery task — ${healthBypass.toLowerCase()}, queue paused`
     : nextQueueItem
     ? `"${nextQueueItem.length > 52 ? nextQueueItem.slice(0, 50) + "…" : nextQueueItem}"${queueTotal > 1 ? ` · +${queueTotal - 1} more` : ""}`
-    : "AI picks next task";
+    : "Select the next instruction";
 
   return (
     <div className="border-t border-status-positive/30 bg-status-positive/[0.06] px-5 py-4">
@@ -107,7 +102,7 @@ export function ReadyBanner({
           {onToggleAutoContinue && (
             <button
               onClick={onToggleAutoContinue}
-              title={autoContinueEnabled && !paused ? "Pause auto-continue" : "Resume auto-continue"}
+              title={autoContinueEnabled && !paused ? "Pause automatic continuation for this project" : "Allow automatic continuation for this project"}
               className={cn(
                 "ui-icon-btn rounded p-0.5 transition-colors",
                 paused || !autoContinueEnabled

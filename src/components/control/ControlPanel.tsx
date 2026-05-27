@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLocalStorageState } from "@/hooks/use-local-storage-state";
-import { RefreshCw, Sparkles, Plus, Moon, LayoutList, LayoutGrid } from "lucide-react";
+import { RefreshCw, Sparkles, Plus, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
@@ -10,8 +9,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
-import { useSleepMode } from "@/hooks/use-sleep-mode";
-import { buildControlPageState, getProjectDisplayState, buildLiveTabRows } from "./control-presenter";
+import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows } from "./control-presenter";
 import { AttentionBar } from "./AttentionBar";
 import { DaemonStatusBanner } from "./DaemonStatusBanner";
 import {
@@ -21,7 +19,9 @@ import {
 import { ZellijLivePanel } from "./ZellijLivePanel";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
-import { ProjectFleetView } from "./ProjectFleetView";
+import { ProjectOperationsView } from "./ProjectOperationsView";
+import { AutomationPolicyControl } from "./AutomationPolicyControl";
+import { useAutomationPolicy } from "@/hooks/use-automation-policy";
 
 export function ControlPanel() {
   const {
@@ -34,28 +34,10 @@ export function ControlPanel() {
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
 
-  const { enabled: sleepMode, toggle: toggleSleepMode } = useSleepMode();
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useLocalStorageState<"full" | "commander">(
-    "control:view-mode",
-    "full",
-    (v) => v,
-    (raw) => raw === "commander" ? "commander" : "full",
-  );
-
-  // First mobile visit: default to commander (live tabs + fleet) instead of full metrics wall.
-  useEffect(() => {
-    try {
-      if (localStorage.getItem("control:view-mode") !== null) return;
-      if (window.matchMedia("(max-width: 767px)").matches) {
-        setViewMode("commander");
-      }
-    } catch { /* ignore */ }
-  }, [setViewMode]);
+  const automationPolicy = useAutomationPolicy();
   const [activityOpen, setActivityOpen] = useState(false);
-  const [idleOpen, setIdleOpen] = useState(true);
-  const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
-  const [focusedTab, setFocusedTab] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<string | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
   // eslint-disable-next-line react-hooks/purity
   const nowS = Math.floor(Date.now() / 1000);
@@ -97,24 +79,20 @@ export function ControlPanel() {
   // Cloud cards cannot truthfully show live agent state without current daemon
   // heartbeats. Queued commands remain visible as requests, not running work.
   const daemonStateUnknown = daemonOffline || daemonNeverSeen;
-  const pageState = data ? buildControlPageState(data, expandedTabs, nowS, !daemonStateUnknown) : null;
-  const sorted = pageState?.sortedProjects ?? null;
-  const activeProjects = pageState?.activeProjects ?? [];
-  const idleProjects = pageState?.idleProjects ?? [];
-  const idleNeedsAttention = pageState?.idleNeedsAttention ?? [];
-  const idleQuiet = pageState?.idleQuiet ?? [];
-  const idleStale = pageState?.idleStale ?? [];
+  const pageState = data ? buildControlPageState(data, nowS, !daemonStateUnknown) : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
   const liveTabRows = data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS) : [];
+  const snapshots = data
+    ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, !daemonStateUnknown)
+    : null;
 
-  const readyTabs = data
-    ? activeProjects.filter((p) => {
-        const s = getProjectDisplayState(p, data.zellijTabs, nowS, false, !daemonStateUnknown);
-        return s.isReady || s.isOrchestrationReady;
-      }).map((p) => p.tab)
-    : [];
-  const soloReadyTab = readyTabs.length === 1 ? readyTabs[0] : null;
+  useEffect(() => {
+    if (!snapshots?.length) return;
+    if (!selectedTab || !snapshots.some((snapshot) => snapshot.project.tab === selectedTab)) {
+      setSelectedTab(snapshots[0].project.tab);
+    }
+  }, [snapshots, selectedTab]);
 
   const cardProps = (project: ProjectState) => ({
     project,
@@ -155,18 +133,11 @@ export function ControlPanel() {
     },
     onDeleted: () => { refresh(true); },
     onProfileSaved: () => { refresh(true); },
+    onLaunch: () => openLaunchModal(project),
     runtimeAvailable,
     runtimeStateKnown: !daemonStateUnknown,
+    automationMode: automationPolicy.mode,
   });
-
-  // When daemon is offline or never connected we don't know which projects are actually
-  // running — don't label them all "idle". Collapse the idle section and show everything
-  // in the main list so nothing falsely appears inactive.
-  const fleetActive = daemonStateUnknown ? (sorted ?? []) : activeProjects;
-  const fleetIdle   = daemonStateUnknown ? [] : idleProjects;
-  const fleetIdleNeedsAttention = daemonStateUnknown ? [] : idleNeedsAttention;
-  const fleetIdleQuiet = daemonStateUnknown ? [] : idleQuiet;
-  const fleetIdleStale = daemonStateUnknown ? [] : idleStale;
 
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
@@ -185,20 +156,11 @@ export function ControlPanel() {
       ) : (
         <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
       )}
-      <button
-        onClick={toggleSleepMode}
-        title={sleepMode ? "Sleep mode on — countdown is 0; any keypress wakes" : "Sleep mode — auto-fire every ready banner with no countdown"}
-        className={cn("ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary", sleepMode && "text-accent-text")}
-      >
-        <Moon className={cn("h-3.5 w-3.5", sleepMode && "fill-current")} />
-      </button>
-      <button
-        onClick={() => setViewMode((v) => v === "full" ? "commander" : "full")}
-        title={viewMode === "full" ? "Switch to commander view" : "Switch to full view"}
-        className={cn("ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary", viewMode === "commander" && "text-accent-text")}
-      >
-        {viewMode === "full" ? <LayoutList className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
-      </button>
+      <AutomationPolicyControl
+        mode={automationPolicy.mode}
+        saving={automationPolicy.saving}
+        onChange={automationPolicy.updateMode}
+      />
       <button
         onClick={() => refresh(true)}
         disabled={refreshing}
@@ -227,28 +189,51 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
+      <section className="ui-control-operations-header">
+        <div>
+          <h2 className="text-base font-semibold text-text-primary">Agent operations</h2>
+          <p className="mt-1 text-sm text-text-secondary">
+            Current work, queued instructions, and saved context by project.
+          </p>
+        </div>
+        {headerRight}
+      </section>
+
       <DaemonStatusBanner
         daemonNeverSeen={daemonNeverSeen}
         daemonOffline={daemonOffline}
         daemonLastPushedAt={daemonLastPushedAt}
       />
 
-      {!focusedTab && (
-        <>
+      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
+
+      <ProjectOperationsView
+        snapshots={snapshots}
+        selectedTab={selectedTab}
+        onSelect={setSelectedTab}
+        cardProps={cardProps}
+        onBootstrap={() => setBootstrapOpen(true)}
+        onNewProject={() => setNewProjectOpen(true)}
+        runtimeAvailable={runtimeAvailable}
+      />
+
+      <details className="ui-control-launch-defaults">
+        <summary className="ui-control-launch-defaults-summary flex items-center gap-2">
+          <Settings2 className="h-3.5 w-3.5" />
+          Diagnostics and launch settings
+        </summary>
+        <div className="ui-control-launch-defaults-body space-y-5">
           <ZellijLivePanel
             rows={liveTabRows}
             daemonStateUnknown={daemonStateUnknown}
             dashboard={dashboard}
             refreshing={refreshing}
             onRefresh={() => refresh(true)}
-            onFocusProject={setFocusedTab}
+            onFocusProject={setSelectedTab}
           />
 
-          <details className="ui-control-launch-defaults">
-            <summary className="ui-control-launch-defaults-summary">
-              Launch defaults — agent &amp; model for new tabs
-            </summary>
-            <div className="ui-control-launch-defaults-body py-2">
+          <section>
+            <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
               <BrainConfigPanel
                 selectedAgent={selectedAgent}
                 switchableRegistry={switchableRegistry}
@@ -263,10 +248,8 @@ export function ControlPanel() {
                 onSave={saveAgent}
                 onRequestInstall={requestAgentInstall}
                 onLaunchNew={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
-                headerRight={headerRight}
               />
-            </div>
-          </details>
+          </section>
 
           {data && data.recentActivity.length > 0 && (
             <ActivityLogPanel
@@ -275,8 +258,8 @@ export function ControlPanel() {
               onToggle={() => setActivityOpen((v) => !v)}
             />
           )}
-        </>
-      )}
+        </div>
+      </details>
 
       {bootstrapOpen && (
         <BootstrapModal
@@ -332,34 +315,6 @@ export function ControlPanel() {
         </div>
       )}
 
-      <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setFocusedTab} />
-
-      <ProjectFleetView
-        viewMode={viewMode}
-        sorted={sorted}
-        activeProjects={fleetActive}
-        idleProjects={fleetIdle}
-        idleNeedsAttention={fleetIdleNeedsAttention}
-        idleQuiet={fleetIdleQuiet}
-        idleStale={fleetIdleStale}
-        onProjectRemoved={() => refresh(true)}
-        focusedTab={focusedTab}
-        setFocusedTab={setFocusedTab}
-        expandedTabs={expandedTabs}
-        setExpandedTabs={setExpandedTabs}
-        idleOpen={idleOpen}
-        setIdleOpen={setIdleOpen}
-        zellijTabs={data?.zellijTabs ?? []}
-        nowS={nowS}
-        selectedAgent={selectedAgent}
-        soloReadyTab={soloReadyTab}
-        openLaunchModal={openLaunchModal}
-        cardProps={cardProps}
-        onBootstrap={() => setBootstrapOpen(true)}
-        onNewProject={() => setNewProjectOpen(true)}
-        runtimeAvailable={runtimeAvailable}
-        runtimeStateKnown={!daemonStateUnknown}
-      />
     </div>
   );
 }

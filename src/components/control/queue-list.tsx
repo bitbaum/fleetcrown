@@ -205,7 +205,7 @@ export function QueueList({
     setActiveId(null);
     const { active, over } = e;
     if (over && active.id !== over.id) {
-      onReorder?.(Number(active.id), Number(over.id));
+      onReorder?.(itemIds.indexOf(String(active.id)), itemIds.indexOf(String(over.id)));
       setSelected(new Set()); // reorder shifts indices — stale selection would pick wrong items
     }
   };
@@ -235,8 +235,13 @@ export function QueueList({
     setEditingIndex(null);
   };
 
-  const activeIndex = activeId !== null ? Number(activeId) : null;
-  const itemIds = queue.map((_, i) => String(i));
+  const itemIds = queue.map((item, index) => {
+    let hash = 0;
+    for (let i = 0; i < item.length; i += 1) hash = ((hash << 5) - hash + item.charCodeAt(i)) | 0;
+    const occurrence = queue.slice(0, index).filter((value) => value === item).length;
+    return `${hash}:${occurrence}`;
+  });
+  const activeIndex = activeId !== null ? itemIds.indexOf(activeId) : null;
 
   const rowProps = (i: number): RowProps => ({
     index: i,
@@ -297,7 +302,7 @@ export function QueueList({
       >
         <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
           {queue.map((_, i) => (
-            <SortableQueueItem key={String(i)} id={String(i)} {...rowProps(i)} />
+            <SortableQueueItem key={itemIds[i]} id={itemIds[i]} {...rowProps(i)} />
           ))}
         </SortableContext>
 

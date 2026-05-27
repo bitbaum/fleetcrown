@@ -4,6 +4,8 @@
  */
 import {
   buildLiveTabRows,
+  buildProjectOperationsSnapshot,
+  buildProjectOperationsSnapshots,
   findProjectForOpenTab,
   formatAgentRuntimeLabel,
   getProjectDisplayState,
@@ -113,10 +115,51 @@ function runTests(): void {
     assert(!state.isRunning && !state.isReady && !state.tabOpen, "stale live signals must be hidden");
   });
 
-  check("no detected process is labeled as an observation, not inferred idleness", () => {
+  check("no detected process is reported as not running, not inferred activity", () => {
     const project = stubProject({ tab: "Cockpit" });
     const state = getProjectDisplayState(project, [], 1_700_000_000);
-    assert(state.stateLabel === "No live agent", "inactive project must describe the absent live signal");
+    assert(state.stateLabel === "Not running", "inactive project must describe the absent live signal");
+  });
+
+  check("snapshot separates saved context from current operational state", () => {
+    const nowS = 1_700_000_000;
+    const snapshot = buildProjectOperationsSnapshot(stubProject({
+      tab: "Cockpit",
+      session: { done: "Done earlier", next: "Continue later", tests: "", todos: "", health: "", mtime: (nowS - 300) * 1000 },
+    }), [], nowS);
+    assert(snapshot.phase === "not_running", "handoff must not imply a running agent");
+    assert(snapshot.evidenceLabel === "Saved agent context", "handoff must be labeled historical");
+    assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
+  });
+
+  check("open session waiting for input has one explicit user-facing label", () => {
+    const state = getProjectDisplayState(stubProject({ tab: "Cockpit", agentRunning: true }), ["Cockpit"], 1_700_000_000);
+    assert(state.stateLabel === "Waiting for you", "open inactive agent must explain the required action");
+  });
+
+  check("operations list prioritizes projects waiting for user action", () => {
+    const nowS = 1_700_000_000;
+    const snapshots = buildProjectOperationsSnapshots([
+      stubProject({
+        tab: "Working",
+        agentRunning: true,
+        currentPrompt: { key: "custom", label: "Implementing", startedAt: nowS - 5 },
+      }),
+      stubProject({ tab: "Waiting", agentRunning: true, readyAt: nowS - 5 }),
+      stubProject({ tab: "Stopped" }),
+    ], ["Working", "Waiting"], nowS);
+    assert(snapshots.map(({ project }) => project.tab).join(",") === "Waiting,Working,Stopped", "actionable ordering expected");
+  });
+
+  check("closing lifecycle takes precedence over an open process in the snapshot", () => {
+    const nowS = 1_700_000_000;
+    const snapshot = buildProjectOperationsSnapshot(stubProject({
+      tab: "Closing",
+      agentRunning: true,
+      closingAt: nowS - 2,
+    }), ["Closing"], nowS);
+    assert(snapshot.display.stateLabel === "Closing", "badge must report closing");
+    assert(snapshot.phase === "closing", "rail phase must agree with the badge");
   });
 
   check("millisecond handoff mtime does not make a fresh prompt stale", () => {

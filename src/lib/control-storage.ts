@@ -1,6 +1,3 @@
-export const autoContinueKey = (tab: string) =>
-  `control:auto-continue:${tab.toLowerCase()}`;
-
 export const queueKey = (tab: string) =>
   `control:queue:${tab.toLowerCase()}`;
 
@@ -15,29 +12,3 @@ export const readyAtKey = (tab: string) =>
 // while the user is mid-sentence — even though the two live in different browser windows.
 export const beaconComposingKey = (tab: string) =>
   `control:beacon-composing:${tab.toLowerCase()}`;
-
-// Synchronous read — safe to call at injection time to bypass stale React state.
-// Returns true (enabled) when no value is stored (default ON).
-export const isAutoContinueEnabledSync = (tab: string): boolean => {
-  if (typeof window === "undefined") return true;
-  try {
-    return localStorage.getItem(autoContinueKey(tab)) !== "off";
-  } catch {
-    return true;
-  }
-};
-
-// Global sleep mode — when "on", every ready banner auto-injects immediately
-// (no countdown) so the user can walk away and have the outcome-tracking loop
-// run on its own. Persisted in localStorage so the toggle survives reloads;
-// synced to a /tmp sentinel so the daemon can skip popup launching too.
-export const SLEEP_MODE_KEY = "control:sleep-mode";
-
-export const isSleepModeEnabledSync = (): boolean => {
-  if (typeof window === "undefined") return false;
-  try {
-    return localStorage.getItem(SLEEP_MODE_KEY) === "on";
-  } catch {
-    return false;
-  }
-};

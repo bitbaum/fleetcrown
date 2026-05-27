@@ -6,14 +6,12 @@ import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
-import { isAutoContinueEnabledSync } from "@/lib/control-storage";
 import type { DispatchResult } from "@/app/api/control/dispatch/route";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-storage";
 
 export function useProjectCardActions({
   project,
   queue,
-  shiftQueue,
   removeFromQueue,
   clearQueue,
   onInject,
@@ -22,10 +20,10 @@ export function useProjectCardActions({
   isReadyNow,
   prompts,
   isOnlyReady,
+  autoContinueEnabled,
 }: {
   project: ProjectState;
   queue: string[];
-  shiftQueue: () => string | null | undefined;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   onInject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<void>;
@@ -34,6 +32,7 @@ export function useProjectCardActions({
   isReadyNow: boolean;
   prompts: PromptMeta[];
   isOnlyReady: boolean;
+  autoContinueEnabled: boolean;
 }) {
   const [sending, setSending] = useState<string | null>(null);
   // Lazy-init from localStorage draft so a failed send / page reload / tab
@@ -131,12 +130,15 @@ export function useProjectCardActions({
 
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
     if (intent === "next_best" && !sessionHealthBlocksQueue()) {
-      const queued = shiftQueue();
+      const queued = queue[0];
       if (queued) {
         setSending("custom");
         setSendError(null);
         setDismissed(true);
-        try { await onInject(project.tab, undefined, queued); }
+        try {
+          await onInject(project.tab, undefined, queued);
+          removeFromQueue(0);
+        }
         catch (err) { setSendError(err instanceof Error ? err.message : "Send failed"); }
         finally { setSending(null); }
         return;
@@ -165,9 +167,10 @@ export function useProjectCardActions({
         const intent = mapClaudePromptToIntent(promptKey);
         if (intent) {
           if (intent === "next_best") {
-            const queued = shiftQueue();
+            const queued = queue[0];
             if (queued) {
               await onInject(project.tab, undefined, queued);
+              removeFromQueue(0);
             } else {
               await onRunWithBrain(project, intent);
             }
@@ -189,7 +192,7 @@ export function useProjectCardActions({
   };
 
   const handleAutoInject = useCallback(async () => {
-    if (!isAutoContinueEnabledSync(project.tab)) return;
+    if (!autoContinueEnabled) return;
     // Agent-driven gate: handoff.status must explicitly say "ready" before
     // auto-inject can fire. Anything else (empty, "working", or any other
     // value) suppresses. This is the model-agnostic signal — any adapter
@@ -207,11 +210,14 @@ export function useProjectCardActions({
     // mode_gate may have returned "off" — suppress auto-inject entirely.
     if (action === "off") return;
     if (action === "queue") {
-      const queued = shiftQueue();
+      const queued = queue[0];
       if (queued) {
         setSending("custom");
         setDismissed(true);
-        try { await onInject(project.tab, undefined, queued); }
+        try {
+          await onInject(project.tab, undefined, queued);
+          removeFromQueue(0);
+        }
         finally { setSending(null); }
         return;
       }
@@ -231,7 +237,7 @@ export function useProjectCardActions({
     }
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preloadedDispatch, shiftQueue, queue.length, project.tab, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
+  }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
 
   const handleSendFromQueue = useCallback(async (index: number) => {
     const item = queue[index];

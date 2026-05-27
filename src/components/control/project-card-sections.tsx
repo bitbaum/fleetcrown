@@ -24,6 +24,9 @@ export function ProjectCardHeader({
   isRunning,
   stateLabel,
   stateTagClass,
+  evidenceLabel,
+  evidenceAt,
+  evidenceKind,
   profileOpen,
   onProfileToggle,
   onCollapse,
@@ -43,6 +46,9 @@ export function ProjectCardHeader({
   isRunning: boolean;
   stateLabel: string;
   stateTagClass: string;
+  evidenceLabel?: string;
+  evidenceAt?: number | null;
+  evidenceKind?: "live" | "historical" | "unknown";
   profileOpen: boolean;
   onProfileToggle: () => void;
   onCollapse?: () => void;
@@ -57,7 +63,6 @@ export function ProjectCardHeader({
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const { git, session, profile } = project;
 
-  const isIdle = !project.agentRunning && !isRunning && !isReady && !isOrchReady && !isClosed && !isClosing;
   const lastActiveMs = session?.mtime ?? (project.closedAt ? project.closedAt * 1000 : null);
   const lastActiveLabel = lastActiveMs
     ? compactRelativeDate(new Date(lastActiveMs))
@@ -91,12 +96,12 @@ export function ProjectCardHeader({
                 </span>
                 <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>
-              {isIdle && lastActiveLabel && (
+              {evidenceLabel && (
                 <p
                   className="mt-0.5 text-xs text-text-muted"
-                  title="Saved agent handoff timestamp; this is historical context, not live activity."
+                  title={evidenceKind === "historical" ? "Historical saved agent context; this is not live activity." : undefined}
                 >
-                  saved handoff {lastActiveLabel}
+                  {evidenceLabel}{evidenceAt && lastActiveLabel ? ` ${lastActiveLabel}` : ""}
                 </p>
               )}
               {/* Profile status when no health available (any state) */}
