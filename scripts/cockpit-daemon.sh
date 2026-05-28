@@ -701,7 +701,7 @@ _scan_agents() {
   for pd in /proc/[0-9]*/; do
     pd="${pd%/}"
     [ -f "$pd/cmdline" ] || continue
-    local argv0 basename agent_id
+    local argv0 basename agent_id=""
     argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
     basename="${argv0##*/}"
 
@@ -725,12 +725,40 @@ _scan_agents() {
   done
 }
 
+_installed_agents_json() {
+  local installed="[]"
+  for agent in "${AGENTS[@]}"; do
+    local ok="false"
+    case "$agent" in
+      cursor)
+        if command -v agent >/dev/null 2>&1; then
+          local agent_path
+          agent_path=$(command -v agent 2>/dev/null || true)
+          if [[ "$agent_path" == *".local/bin/agent"* ]] || [[ "$agent_path" == *"/.cursor/"* ]]; then
+            ok="true"
+          elif agent --version 2>&1 | grep -Eq '[0-9]{4}\.[0-9]{2}\.[0-9]{2}'; then
+            ok="true"
+          fi
+        fi
+        ;;
+      *)
+        command -v "${AGENT_PROCESS_NAMES[$agent]}" >/dev/null 2>&1 && ok="true"
+        ;;
+    esac
+    if [ "$ok" = "true" ]; then
+      installed=$(echo "$installed" | jq --arg a "$agent" '. + [$a] | unique' 2>/dev/null || echo "$installed")
+    fi
+  done
+  echo "$installed"
+}
+
 _build_state_json() {
   [ -f "$CONF_FILE" ] || return
 
-  local state_observed_at agent_lines
+  local state_observed_at agent_lines installed_agents
   state_observed_at=$(date +%s%3N)
   agent_lines=$(_scan_agents 2>/dev/null || true)
+  installed_agents=$(_installed_agents_json 2>/dev/null || echo '[]')
 
   # Collect all tab names currently open across every Zellij session (once per push cycle).
   local all_open_tabs=""
@@ -748,7 +776,9 @@ _build_state_json() {
     [[ "$tab" =~ ^[[:space:]]*# ]] && continue
     tab=$(echo "$tab" | xargs 2>/dev/null)
     dir=$(echo "$dir" | xargs 2>/dev/null)
-    [ -z "$tab" ] || [ -z "$dir" ] && continue
+    if [ -z "$tab" ] || [ -z "$dir" ]; then
+      continue
+    fi
 
     # Determine agent running + active agent names for this dir
     local running="false" agents_json="[]"
@@ -839,12 +869,12 @@ _build_state_json() {
     fi
     local sess_status="" sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
     if [ -f "$sf" ]; then
-      sess_status=$(grep '^status:' "$sf" 2>/dev/null | head -1 | sed 's/^status:[[:space:]]*//')
-      sess_done=$(grep  '^done:'   "$sf" 2>/dev/null | head -1 | sed 's/^done:[[:space:]]*//')
-      sess_next=$(grep  '^next:'   "$sf" 2>/dev/null | head -1 | sed 's/^next:[[:space:]]*//')
-      sess_tests=$(grep '^tests:'  "$sf" 2>/dev/null | head -1 | sed 's/^tests:[[:space:]]*//')
-      sess_todos=$(grep '^todos:'  "$sf" 2>/dev/null | head -1 | sed 's/^todos:[[:space:]]*//')
-      sess_health=$(grep '^health:' "$sf" 2>/dev/null | head -1 | sed 's/^health:[[:space:]]*//')
+      sess_status=$(grep '^status:' "$sf" 2>/dev/null | head -1 | sed 's/^status:[[:space:]]*//' || true)
+      sess_done=$(grep  '^done:'   "$sf" 2>/dev/null | head -1 | sed 's/^done:[[:space:]]*//' || true)
+      sess_next=$(grep  '^next:'   "$sf" 2>/dev/null | head -1 | sed 's/^next:[[:space:]]*//' || true)
+      sess_tests=$(grep '^tests:'  "$sf" 2>/dev/null | head -1 | sed 's/^tests:[[:space:]]*//' || true)
+      sess_todos=$(grep '^todos:'  "$sf" 2>/dev/null | head -1 | sed 's/^todos:[[:space:]]*//' || true)
+      sess_health=$(grep '^health:' "$sf" 2>/dev/null | head -1 | sed 's/^health:[[:space:]]*//' || true)
       local mts
       mts=$(stat -c '%Y' "$sf" 2>/dev/null || true)
       [[ "$mts" =~ ^[0-9]+$ ]] && sess_mtime="$mts"
@@ -928,7 +958,7 @@ _build_state_json() {
 
   done < "$CONF_FILE"
 
-  echo "{\"observedAt\":${state_observed_at},\"projects\":$projects_arr,\"openTabs\":$(printf '%s\n' "$all_open_tabs" | sed '/^[[:space:]]*$/d' | sort -fu | jq -R . | jq -s . 2>/dev/null || echo '[]')}"
+  echo "{\"observedAt\":${state_observed_at},\"projects\":$projects_arr,\"openTabs\":$(printf '%s\n' "$all_open_tabs" | sed '/^[[:space:]]*$/d' | sort -fu | jq -R . | jq -s . 2>/dev/null || echo '[]'),\"installedAgents\":$installed_agents}"
 }
 
 # Push the current runtime state to the API immediately.

@@ -7,6 +7,7 @@ export const runtimeSnapshots = pgTable("runtime_snapshots", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   openTabs: text("open_tabs").array().notNull().default([]),
+  installedAgents: text("installed_agents").array().notNull().default([]),
   observedAt: timestamp("observed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

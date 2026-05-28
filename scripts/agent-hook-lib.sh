@@ -31,7 +31,9 @@ resolve_adapter() {
   local lower_tab="${TAB_NAME,,}"
   while IFS='|' read -r t d a || [ -n "$t" ]; do
     [[ "$t" =~ ^[[:space:]]*# ]] && continue
-    [ -z "$t" ] || [ -z "$d" ] && continue
+    if [ -z "$t" ] || [ -z "$d" ]; then
+      continue
+    fi
     local tl="${t,,}"; tl="${tl%%[[:space:]]}"
     if [ "$tl" = "$lower_tab" ]; then
       local aa="$(echo "$a" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"

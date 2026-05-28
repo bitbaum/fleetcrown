@@ -114,7 +114,7 @@ export function BrainConfigPanel({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="ui-kicker">Launch defaults</p>
+          <p className="ui-kicker">Default agent for new launches</p>
           <div className="flex items-center gap-1.5 text-text-primary">
             <Bot className="h-3.5 w-3.5 shrink-0 text-accent-text" />
             <span className="text-sm font-semibold">
@@ -139,10 +139,10 @@ export function BrainConfigPanel({
                 onClick={() => isAvailable && onAgentSelect(entry.id, entry.defaultModel)}
                 disabled={!isAvailable}
                 className={isSelected ? "ui-chip-toggle-active" : "ui-chip-toggle"}
-                title={isAvailable ? entry.label : `${entry.label} — not installed`}
+                title={isAvailable ? `${entry.label} is available on the connected computer` : entry.availabilityReason ?? `${entry.label} is not available`}
               >
                 {entry.label}
-                {!isAvailable && <span className="ml-1 text-[9px] opacity-60">(install)</span>}
+                {!isAvailable && <span className="ml-1 text-[9px] opacity-60">(missing)</span>}
               </button>
               {!isAvailable && onRequestInstall && (
                 <button

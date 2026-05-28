@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown; observedAt?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
 
   if (Array.isArray(body.openTabs)) {
     const openTabs = body.openTabs.filter((tab): tab is string => typeof tab === "string" && tab.trim().length > 0);
-    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt).catch((err) => console.error("[runtime-state] openTabs write failed:", err));
+    const installedAgents = Array.isArray(body.installedAgents)
+      ? body.installedAgents.filter((agent): agent is string => typeof agent === "string" && agent.trim().length > 0)
+      : undefined;
+    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents)
+      .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 
   if (!Array.isArray(body.projects)) {

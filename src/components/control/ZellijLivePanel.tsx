@@ -52,11 +52,16 @@ export function ZellijLivePanel({
               {daemonStateUnknown ? "offline" : `${rows.length} open`}
             </span>
           </div>
+          {!daemonStateUnknown && (
+            <p className="mt-0.5 text-micro text-text-tertiary">
+              Open tabs come from Zellij. Working and awaiting input come from live agent/process signals.
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {dashboard && !daemonStateUnknown && (
             <span className="ui-micro-label text-text-muted text-[9px]">
-              {dashboard.runningCount} run · {dashboard.waitingCount} wait
+              {dashboard.runningCount} working · {dashboard.waitingCount} awaiting input
             </span>
           )}
           {!daemonStateUnknown && (

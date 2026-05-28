@@ -11,7 +11,7 @@ import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSess
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
-import { buildSwitchableAgentCatalog, type AgentCatalog } from "@/lib/agent-catalog";
+import { buildSwitchableAgentCatalog, type AgentAvailabilityOverride, type AgentCatalog } from "@/lib/agent-catalog";
 import {
   stateFile,
   resolveEffectiveTab,
@@ -48,6 +48,7 @@ type SlowCache = {
   dirs: string[];        // dirs list used to build this cache
   builtAt: number;
   runtimeSnapshotUpdatedAt: Date | null;
+  installedAgents: string[];
 };
 
 let slowCache: SlowCache | null = null;
@@ -75,6 +76,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
     dirs,
     builtAt: Date.now(),
     runtimeSnapshotUpdatedAt: runtimeSnapshot?.updatedAt ?? null,
+    installedAgents: runtimeSnapshot?.installedAgents ?? [],
   };
 }
 
@@ -202,7 +204,6 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const preferences = readAgentPreferences();
   const agentConfig = resolveAgentConfig(preferences);
-  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent);
   const prompts = readPromptMeta();
 
   // Own projects + team projects (org peers). Own take precedence on tab-name collision.
@@ -226,7 +227,19 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents } = await getSlowData(userId, dirs);
+  const runtimeAvailable = isRuntimeAvailable();
+  const daemonAvailability: AgentAvailabilityOverride | undefined = runtimeAvailable
+    ? undefined
+    : installedAgents.length === 0
+      ? Object.fromEntries(
+          ["claude", "codex", "gemini", "cursor", "grok", "openclaw"].map((agent) => [agent, true]),
+        ) as AgentAvailabilityOverride
+    : Object.fromEntries(
+        ["claude", "codex", "gemini", "cursor", "grok", "openclaw"]
+          .map((agent) => [agent, installedAgents.includes(agent)]),
+      ) as AgentAvailabilityOverride;
+  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, daemonAvailability);
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
@@ -268,7 +281,6 @@ export async function GET() {
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
     // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
-    const runtimeAvailable = isRuntimeAvailable();
     const localSession = runtimeAvailable ? parseSession(liveTab) : null;
     const session = localSession ?? (dbState && (dbState.sessionDone || dbState.sessionNext || dbState.sessionStatus)
       ? {

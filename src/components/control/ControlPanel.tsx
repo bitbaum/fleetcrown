@@ -235,6 +235,9 @@ export function ControlPanel() {
 
           <section>
             <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
+            <p className="mb-3 text-xs leading-relaxed text-text-tertiary">
+              These choices are used when Cockpit opens a new terminal tab. CLI availability is reported by the connected computer, not by Vercel.
+            </p>
               <BrainConfigPanel
                 selectedAgent={selectedAgent}
                 switchableRegistry={switchableRegistry}

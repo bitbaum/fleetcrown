@@ -110,7 +110,7 @@ export type LiveTabRow = {
   tabName: string;
   project: ProjectState | null;
   agentLabel: string | null;
-  stateLabel: ProjectDisplayState["stateLabel"] | "Open";
+  stateLabel: ProjectDisplayState["stateLabel"] | "Open" | "Open, idle";
   stateTagClass: string;
   activity: string;
   isWorking: boolean;
@@ -127,6 +127,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Closing: 2,
   Completed: 3,
   "Not running": 4,
+  "Open, idle": 4,
   Open: 5,
 };
 
@@ -159,12 +160,13 @@ export function getTabActivityText(
   if (display?.isReady || display?.isOrchestrationReady) {
     return "Waiting for your next instruction";
   }
-  if (project.session?.next?.trim()) return project.session.next.trim();
+  if (project.session?.next?.trim()) return `Saved handoff: ${project.session.next.trim()}`;
   if (project.session?.done?.trim()) {
-    return project.session.done.trim().slice(0, 140);
+    return `Saved handoff: ${project.session.done.trim().slice(0, 140)}`;
   }
-  if (project.agentRunning) return "Agent session open";
-  return "No agent currently running";
+  if (project.agentRunning) return "Agent CLI process is open";
+  if (display?.tabOpen) return "Tab is open; no agent CLI process detected";
+  return "No live agent process detected";
 }
 
 export function buildLiveTabRows(
@@ -182,7 +184,9 @@ export function buildLiveTabRows(
         : project?.agentPref
           ? project.agentPref[0]?.toUpperCase() + project.agentPref.slice(1)
           : null;
-      const stateLabel: LiveTabRow["stateLabel"] = display?.stateLabel ?? "Open";
+      const stateLabel: LiveTabRow["stateLabel"] = display?.tone === "idle" && display.tabOpen
+        ? "Open, idle"
+        : display?.stateLabel ?? "Open";
       const stateTagClass = display?.stateTagClass ?? "ui-tag ui-tag-neutral";
       return {
         tabName,
