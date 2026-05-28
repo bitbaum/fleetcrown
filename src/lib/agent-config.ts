@@ -131,6 +131,12 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
   const findAlive = (name: string) => activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
   const liveMatch = findAlive(canonical);
   if (liveMatch) return liveMatch;
+  const lower = canonical.toLowerCase();
+  const suffixedMatch = activeTabs.find((tab) => {
+    const active = tab.toLowerCase();
+    return active.startsWith(`${lower} `) || active.startsWith(`${lower}-`);
+  });
+  if (suffixedMatch) return suffixedMatch;
   // Canonical not open; try a conf alias pointing to the same directory
   const all = parseProjectsConf();
   const canonicalDir = all.find((p) => p.tab.toLowerCase() === canonical.toLowerCase())?.dir;

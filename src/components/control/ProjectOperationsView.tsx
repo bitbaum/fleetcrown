@@ -59,6 +59,7 @@ export function ProjectOperationsView({
   const selected = snapshots.find((snapshot) => snapshot.project.tab === selectedTab) ?? snapshots[0];
   const readyCount = snapshots.filter((snapshot) => snapshot.phase === "waiting_for_user").length;
   const workingCount = snapshots.filter((snapshot) => snapshot.phase === "working").length;
+  const openIdleCount = snapshots.filter((snapshot) => snapshot.phase === "open_idle").length;
 
   return (
     <section className="ui-control-workspace">
@@ -66,7 +67,7 @@ export function ProjectOperationsView({
         <div className="border-b border-border-subtle px-4 pb-3 pt-4">
           <h2 className="text-sm font-semibold text-text-primary">Projects</h2>
           <p className="mt-1 text-xs text-text-tertiary">
-            {workingCount} working · {readyCount} waiting for you
+            {workingCount} working · {readyCount} ready · {openIdleCount} open
           </p>
         </div>
         <div className="ui-control-project-list">
@@ -76,6 +77,8 @@ export function ProjectOperationsView({
               ? "bg-accent-primary animate-pulse"
               : snapshot.phase === "waiting_for_user" || snapshot.phase === "completed"
                 ? "bg-status-positive"
+                : snapshot.phase === "open_idle"
+                  ? "bg-border-strong"
                 : snapshot.phase === "offline"
                   ? "bg-status-warning"
                   : "bg-border-default";

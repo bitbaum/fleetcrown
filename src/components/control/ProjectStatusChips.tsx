@@ -63,6 +63,13 @@ export function ProjectStatusChips({
   const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
   const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
   const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project) : "";
+  const runtimeStateLabel = working
+    ? `${runtimeLabel} working`
+    : project.readyAt
+      ? `${runtimeLabel} ready`
+      : project.agentRunning
+        ? `${runtimeLabel} open`
+        : `${runtimeLabel} detected`;
   const git = project.git;
   const workspaceTab = project.liveTab ?? project.tab;
   const changesLabel = pendingChangesLabel(project);
@@ -133,7 +140,7 @@ export function ProjectStatusChips({
             >
               {switchingAgent
                 ? <><Loader2 className="h-3 w-3 shrink-0 animate-spin" /><span>Switching…</span></>
-                : <><span>{working ? `${runtimeLabel} working` : `${runtimeLabel} ready`}</span>
+                : <><span>{runtimeStateLabel}</span>
                    <ChevronDown className={cn("h-3 w-3 shrink-0 opacity-50 transition-transform", agentPopoverOpen && "rotate-180")} /></>
               }
             </button>
@@ -149,9 +156,9 @@ export function ProjectStatusChips({
         ) : (
           <span
             className={compact ? undefined : statusChipClass(working ? "warning" : "neutral")}
-            title={`${runtimeLabel} is currently detected in this project workspace. This comes from local process detection, not a cloud status API.`}
+            title={`${runtimeLabel} is currently detected in this project workspace. "Open" means the agent process exists but no active task is being tracked. This comes from local process detection, not a cloud status API.`}
           >
-            {working ? `${runtimeLabel} working` : `${runtimeLabel} ready`}
+            {runtimeStateLabel}
           </span>
         )
       )}

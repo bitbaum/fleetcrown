@@ -67,7 +67,7 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Waiting for you" | "Closing" | "Completed" | "Not running";
+  stateLabel: "Offline" | "Working" | "Ready for next step" | "Agent shell open" | "Closing" | "Completed" | "Not running";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
 };
@@ -77,6 +77,7 @@ export type ControlPhase =
   | "not_running"
   | "working"
   | "waiting_for_user"
+  | "open_idle"
   | "closing"
   | "completed";
 
@@ -123,7 +124,8 @@ type LiveTabRankLabel = LiveTabRow["stateLabel"];
 const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Offline: 0,
   Working: 0,
-  "Waiting for you": 1,
+  "Ready for next step": 1,
+  "Agent shell open": 3,
   Closing: 2,
   Completed: 3,
   "Not running": 4,
@@ -146,6 +148,14 @@ export function findProjectForOpenTab(openTab: string, projects: ProjectState[])
   return prefix ?? null;
 }
 
+export function isProjectTabOpen(project: ProjectState, zellijTabs: string[]): boolean {
+  const canonical = (project.liveTab ?? project.tab).toLowerCase();
+  return zellijTabs.some((tab) => {
+    const open = tab.toLowerCase();
+    return open === canonical || open.startsWith(`${canonical} `) || open.startsWith(`${canonical}-`);
+  });
+}
+
 export function getTabActivityText(
   project: ProjectState | null,
   display: ProjectDisplayState | null,
@@ -158,7 +168,7 @@ export function getTabActivityText(
     return project.session.next.trim();
   }
   if (display?.isReady || display?.isOrchestrationReady) {
-    return "Waiting for your next instruction";
+    return "Agent finished the last task; choose the next action";
   }
   if (project.session?.next?.trim()) return `Saved handoff: ${project.session.next.trim()}`;
   if (project.session?.done?.trim()) {
@@ -317,9 +327,7 @@ export function getProjectDisplayState(
     !isOrchestrationReady &&
     !isClosing &&
     !isClosed;
-  const tabOpen = zellijTabs.some(
-    (tab) => tab.toLowerCase() === (project.liveTab ?? project.tab).toLowerCase(),
-  );
+  const tabOpen = isProjectTabOpen(project, zellijTabs);
   const isActive =
     isRunning ||
     isOrchestrationReady ||
@@ -346,9 +354,9 @@ export function getProjectDisplayState(
   const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
     offline:               "Offline",
     running:               "Working",
-    "session-open":        "Waiting for you",
-    ready:                 "Waiting for you",
-    "orchestration-ready": "Waiting for you",
+    "session-open":        "Agent shell open",
+    ready:                 "Ready for next step",
+    "orchestration-ready": "Ready for next step",
     closing:               "Closing",
     closed:                "Completed",
     idle:                  "Not running",
@@ -398,8 +406,10 @@ export function buildProjectOperationsSnapshot(
         ? "closing"
         : display.isClosed
           ? "completed"
-          : display.isReady || display.isOrchestrationReady || display.isSessionOpen
+          : display.isReady || display.isOrchestrationReady
             ? "waiting_for_user"
+            : display.isSessionOpen
+              ? "open_idle"
             : "not_running";
   const attention = attentionScore(project);
   const handoffAt = project.session?.mtime ?? null;
@@ -410,7 +420,18 @@ export function buildProjectOperationsSnapshot(
       : project.session?.done?.trim()
         ? project.session.done.trim()
         : null;
-  const liveObserved = runtimeStateKnown && (display.isRunning || display.isSessionOpen || display.tabOpen);
+  const liveObserved = runtimeStateKnown && (display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen);
+  const liveEvidenceLabel = display.isRunning
+    ? "Live agent process detected"
+    : display.isReady
+      ? "Agent signaled ready on connected computer"
+      : display.isOrchestrationReady
+        ? "Last run completed"
+        : display.isSessionOpen
+          ? "Agent shell open; no active task detected"
+          : display.tabOpen
+            ? "Workspace tab open"
+            : "No live observation";
 
   return {
     project,
@@ -419,7 +440,7 @@ export function buildProjectOperationsSnapshot(
     evidenceLabel: !runtimeStateKnown
       ? "Live status unavailable"
       : liveObserved
-        ? "Observed on connected computer"
+        ? liveEvidenceLabel
         : handoffAt
           ? "Saved agent context"
           : "No live observation",
@@ -481,11 +502,7 @@ export function buildControlPageState(
     const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
     return state.isReady || state.isOrchestrationReady;
   }).length;
-  const openTabCount = data.projects.filter((project) =>
-    data.zellijTabs.some(
-      (tab) => tab.toLowerCase() === (project.liveTab ?? project.tab).toLowerCase(),
-    ),
-  ).length;
+  const openTabCount = data.projects.filter((project) => isProjectTabOpen(project, data.zellijTabs)).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
   const idleCount = data.projects.filter((project) => {
     const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);

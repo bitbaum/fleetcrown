@@ -7,7 +7,7 @@ import { postJson, patchJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
-import { getProjectDisplayState, type ProjectOperationsSnapshot } from "./control-presenter";
+import { getProjectDisplayState, isProjectTabOpen, type ProjectOperationsSnapshot } from "./control-presenter";
 import { ProjectProfile } from "./ProjectProfile";
 import { LatestOrchestrationPanel } from "./project-card-helpers";
 import { ProjectCardHeader, SessionSummary } from "./project-card-sections";
@@ -72,7 +72,7 @@ export function ProjectCard({
       patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
     }
     const workspaceTab = project.liveTab ?? project.tab;
-    const tabIsOpen = zellijTabs.some((t) => t.toLowerCase() === workspaceTab.toLowerCase());
+    const tabIsOpen = isProjectTabOpen(project, zellijTabs);
     if (agentId && agentId !== currentAgent && tabIsOpen && project.dir) {
       setSwitchingAgent(true);
       try {

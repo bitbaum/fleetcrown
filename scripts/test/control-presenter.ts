@@ -9,6 +9,7 @@ import {
   findProjectForOpenTab,
   formatAgentRuntimeLabel,
   getProjectDisplayState,
+  isProjectTabOpen,
   isCurrentPromptStale,
 } from "@/components/control/control-presenter";
 import type { ProjectState } from "@/lib/control-types";
@@ -60,6 +61,12 @@ function runTests(): void {
   check("findProjectForOpenTab prefix match (agent suffix tab)", () => {
     const projects = [stubProject({ tab: "Cockpit", liveTab: "Cockpit Claude" })];
     assert(findProjectForOpenTab("Cockpit Claude", projects)?.tab === "Cockpit", "expected prefix match");
+  });
+
+  check("isProjectTabOpen accepts agent-suffixed live tabs", () => {
+    const project = stubProject({ tab: "Cockpit", liveTab: "Cockpit" });
+    assert(isProjectTabOpen(project, ["Cockpit Claude"]), "expected suffix tab to count as open");
+    assert(!isProjectTabOpen(project, ["Cockpit2 Claude"]), "must not match unrelated prefixes");
   });
 
   check("buildLiveTabRows sorts Working before Open", () => {
@@ -132,9 +139,24 @@ function runTests(): void {
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
-  check("open session waiting for input has one explicit user-facing label", () => {
-    const state = getProjectDisplayState(stubProject({ tab: "Cockpit", agentRunning: true }), ["Cockpit"], 1_700_000_000);
-    assert(state.stateLabel === "Waiting for you", "open inactive agent must explain the required action");
+  check("open session is not mislabeled as waiting for input", () => {
+    const nowS = 1_700_000_000;
+    const project = stubProject({ tab: "Cockpit", agentRunning: true });
+    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    assert(state.stateLabel === "Agent shell open", "open inactive agent must describe the observed shell");
+    assert(snapshot.phase === "open_idle", "open inactive agent must not count as waiting for input");
+    assert(snapshot.evidenceLabel === "Agent shell open; no active task detected", "evidence should explain the live signal");
+  });
+
+  check("ready sentinel is a next-step state, not generic waiting", () => {
+    const nowS = 1_700_000_000;
+    const project = stubProject({ tab: "Cockpit", readyAt: nowS - 5 });
+    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    assert(state.stateLabel === "Ready for next step", "ready signal must name the action state");
+    assert(snapshot.phase === "waiting_for_user", "ready signal remains actionable");
+    assert(snapshot.evidenceLabel === "Agent signaled ready on connected computer", "ready evidence should identify the signal");
   });
 
   check("operations list prioritizes projects waiting for user action", () => {

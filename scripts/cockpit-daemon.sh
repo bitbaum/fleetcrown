@@ -780,6 +780,29 @@ _build_state_json() {
       continue
     fi
 
+    # Resolve the canonical project key to the live Zellij tab. Many sessions
+    # run as "Project Claude" / "Project Codex" while the registered project key
+    # remains "Project". Runtime state is stored under the canonical key, but
+    # sentinels, current prompt files, and session handoffs use the live tab.
+    local live_tab="$tab" exact_tab="" suffix_tab=""
+    local tab_lower="${tab,,}"
+    while IFS= read -r open_tab; do
+      [ -z "$open_tab" ] && continue
+      local open_lower="${open_tab,,}"
+      if [ "$open_lower" = "$tab_lower" ]; then
+        exact_tab="$open_tab"
+        break
+      fi
+      if [ -z "$suffix_tab" ] && { [[ "$open_lower" == "$tab_lower "* ]] || [[ "$open_lower" == "$tab_lower-"* ]]; }; then
+        suffix_tab="$open_tab"
+      fi
+    done <<< "$all_open_tabs"
+    if [ -n "$exact_tab" ]; then
+      live_tab="$exact_tab"
+    elif [ -n "$suffix_tab" ]; then
+      live_tab="$suffix_tab"
+    fi
+
     # Determine agent running + active agent names for this dir
     local running="false" agents_json="[]"
     while IFS= read -r line; do
@@ -796,20 +819,20 @@ _build_state_json() {
 
     # Check if this project's Zellij tab is actually open (case-insensitive exact line)
     local tab_open="false"
-    if echo "$all_open_tabs" | grep -qixF "$tab"; then
+    if echo "$all_open_tabs" | grep -qixF "$live_tab"; then
       tab_open="true"
     fi
 
     # Sentinel timestamps
     local ready_at closing_at closed_at lock_at
-    ready_at=$(_sentinel "/tmp/agent-ready-${tab}")
-    closing_at=$(_sentinel "/tmp/agent-closing-${tab}")
-    closed_at=$(_sentinel "/tmp/agent-closed-${tab}")
-    lock_at=$(_sentinel "/tmp/agent-stop-active-${tab}")
+    ready_at=$(_sentinel "/tmp/agent-ready-${live_tab}")
+    closing_at=$(_sentinel "/tmp/agent-closing-${live_tab}")
+    closed_at=$(_sentinel "/tmp/agent-closed-${live_tab}")
+    lock_at=$(_sentinel "/tmp/agent-stop-active-${live_tab}")
 
     # Current prompt JSON
     local cpk="" cpl="" cpsat="null"
-    local pf="/tmp/agent-current-prompt-${tab}"
+    local pf="/tmp/agent-current-prompt-${live_tab}"
     if [ -f "$pf" ]; then
       local pj
       pj=$(cat "$pf" 2>/dev/null)
@@ -850,22 +873,15 @@ _build_state_json() {
         fi
       fi
     fi
-    # A stop/notification hook is authoritative evidence of the configured
-    # agent in this open tab even when the CLI launches through a wrapper whose
-    # process basename is not recognized by /proc scanning.
-    if [ "$tab_open" = "true" ] && [ "$agents_json" = "[]" ] && [ "$ready_at" != "null" ]; then
-      local ready_age
-      ready_age=$(( $(date +%s) - ready_at ))
-      if [ "$ready_age" -ge 0 ] && [ "$ready_age" -lt 900 ]; then
-        agents_json=$(jq -nc --arg a "$adapter" '[$a]')
-        running="true"
-      fi
-    fi
+    # A ready sentinel is lifecycle evidence, not process evidence. Do not
+    # manufacture activeAgents/running from it; otherwise the cloud UI can show
+    # "Codex ready" because Codex is configured even when Claude is the live
+    # process in the tab.
     local sf
     if type _session_file >/dev/null 2>&1; then
-      sf="$(_session_file "$tab" "$adapter")"
+      sf="$(_session_file "$live_tab" "$adapter")"
     else
-      sf="$HOME/.claude/sessions/${tab}.md"
+      sf="$HOME/.claude/sessions/${live_tab}.md"
     fi
     local sess_status="" sess_done="" sess_next="" sess_tests="" sess_todos="" sess_health="" sess_mtime="null"
     if [ -f "$sf" ]; then
