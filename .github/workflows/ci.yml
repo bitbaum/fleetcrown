@@ -28,7 +28,22 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Lint
-        run: npx eslint src/
+        run: npm run lint
+
+      - name: Design system guard
+        run: npm run check:design
+
+      - name: Control presenter tests
+        run: npm run test:control-presenter
+
+      - name: Local orchestration tests
+        run: npm run test:home
+
+      - name: URL resolution tests
+        run: npm run test:db-url
+
+      - name: Orchestration summary tests
+        run: npm run test:orchestration-summary
 
       # `next build` is intentionally NOT here — the App-Router pages do
       # DB queries during static pre-render, so a real Postgres would

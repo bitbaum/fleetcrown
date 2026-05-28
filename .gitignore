@@ -16,3 +16,5 @@ next-env.d.ts
 .vercel
 .env.vercel.production
 /backups/
+/cockpit.service
+/codex-wrapper
