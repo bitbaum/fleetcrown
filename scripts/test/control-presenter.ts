@@ -196,6 +196,29 @@ function runTests(): void {
     assert(getProjectDisplayState(project, ["Cockpit"], nowS).stateLabel === "Working", "fresh prompt must show Working");
   });
 
+  check("direct-terminal observation is surfaced as Working", () => {
+    // Daemon-side path for prompts the user typed directly into Claude (no
+    // Cockpit dispatch sentinel). cockpit-daemon.sh sets currentPrompt.key to
+    // "direct_terminal" with startedAt = the transcript's mtime when the tab is
+    // open, no other prompt is tracked, and the agent has not just signaled
+    // ready. The presenter must treat this exactly like any tracked prompt so
+    // chips/badges read "Working" instead of falling through to "Agent shell
+    // open" (the limitation 6da8d7e called out).
+    const nowS = 1_700_000_100;
+    const project = stubProject({
+      tab: "Cockpit",
+      agentRunning: true,
+      activeAgents: ["claude"],
+      currentPrompt: { key: "direct_terminal", label: "Direct terminal activity", startedAt: nowS - 3 },
+    });
+    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
+    assert(state.stateLabel === "Working", "direct-terminal observation must report Working");
+    assert(state.isAgentWorking, "isAgentWorking is the SSOT chips read");
+    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    assert(snapshot.phase === "working", "snapshot phase must match the badge");
+    assert(snapshot.evidenceLabel === "Live agent process detected", "evidence must read live, not historical");
+  });
+
   check("handoff written after prompt marks it completed", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({

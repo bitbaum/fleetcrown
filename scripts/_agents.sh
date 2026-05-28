@@ -106,6 +106,18 @@ _agent_direct_activity() {
         | sort -nr | head -1 | cut -d' ' -f2-)
       [ -n "$file" ] && printf '%s|Direct terminal activity\n' "$(stat -c '%Y' "$file" 2>/dev/null)"
       ;;
+    claude)
+      # Claude Code stores per-project transcripts at
+      # ~/.claude/projects/<dashed-cwd>/<session_uuid>.jsonl; the dir name is the
+      # absolute path with every "/" replaced by "-". mtime updates on every
+      # appended event, so a fresh mtime is reliable evidence the agent is
+      # actively processing — including prompts the user typed directly into
+      # the TUI (no Cockpit dispatch sentinel exists for those).
+      encoded_dir=$(printf '%s' "$dir" | tr '/' '-')
+      file=$(find "$HOME/.claude/projects/$encoded_dir" -maxdepth 1 -name '*.jsonl' -printf '%T@ %p\n' 2>/dev/null \
+        | sort -nr | head -1 | cut -d' ' -f2-)
+      [ -n "$file" ] && printf '%s|Direct terminal activity\n' "$(stat -c '%Y' "$file" 2>/dev/null)"
+      ;;
     # Add adapters here only when they expose a stable, project-scoped log.
     # Process detection, handoffs, and web-dispatched prompts work without it.
   esac

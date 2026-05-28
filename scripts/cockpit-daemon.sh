@@ -864,7 +864,16 @@ _build_state_json() {
       observation_label="${activity#*|}"
       if [ -n "$activity" ] && [[ "$observation_mtime" =~ ^[0-9]+$ ]]; then
         observation_age=$(( $(date +%s) - observation_mtime ))
-        if [ "$observation_age" -ge 0 ] && [ "$observation_age" -lt 45 ]; then
+        # A just-finished agent writes its last transcript entry milliseconds
+        # before the Stop hook clears cpk and stamps readyAt. Without this
+        # gate, the next daemon tick would re-promote the stale transcript
+        # back to "Working" and overwrite the legitimate "Ready" state.
+        local ready_overrides_observation="false"
+        if [ "$ready_at" != "null" ] && [ "$ready_at" -ge "$observation_mtime" ]; then
+          ready_overrides_observation="true"
+        fi
+        if [ "$observation_age" -ge 0 ] && [ "$observation_age" -lt 45 ] \
+            && [ "$ready_overrides_observation" = "false" ]; then
           cpk="direct_terminal"
           cpl="$observation_label"
           cpsat="$observation_mtime"
