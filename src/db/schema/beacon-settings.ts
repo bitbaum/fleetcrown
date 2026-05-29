@@ -9,13 +9,14 @@ export const beaconSettings = pgTable("beacon_settings", {
   minIdleSeconds:        integer("min_idle_seconds").notNull().default(0),
   whisperModel:          text("whisper_model").notNull().default("base"),
   transcriptionProvider: text("transcription_provider").notNull().default("auto"),
-  // strategist | queue_only | next_best | off — drives handleAutoInject's
-  // behavior. Defaults to queue_only: new users must explicitly opt into
-  // autonomous loops via /control settings. Flipped from "strategist" on
-  // 2026-05-25 after the prompt-design conversation identified that
-  // autonomous strategist firing on day one was a closed-loop drift risk
-  // every new customer inherited (see Cockpit.roadmap.md DONE entry).
-  autoInjectMode:        text("auto_inject_mode").notNull().default("queue_only"),
+  // strategist | queue_only | next_best | off — drives the Stop-hook autopilot
+  // path. Defaults to "strategist": Cockpit's product promise is "agents keep
+  // working when you're away", so new users land in autopilot. Safety rails
+  // remain (health gate, hard_stop, manual override, per-project pause); the
+  // strategist server-side already falls back to queue → next_best → no-op on
+  // composition failures. "queue_only" / "off" remain available as opt-outs
+  // for users who want explicit gating instead of autopilot.
+  autoInjectMode:        text("auto_inject_mode").notNull().default("strategist"),
   updatedAt:             timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_beacon_settings_user_id").on(t.userId),

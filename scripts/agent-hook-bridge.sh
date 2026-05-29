@@ -48,7 +48,7 @@ if [ -n "$_BEACON_SETTINGS_JSON" ]; then
   _BEACON_POPUP_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
     "import sys,json; d=json.load(sys.stdin); print(d.get('popup_mode','both'))" 2>/dev/null || echo both)
   _BEACON_AUTO_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
-    "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','queue_only'))" 2>/dev/null || echo queue_only)
+    "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','strategist'))" 2>/dev/null || echo strategist)
 else
   # Cockpit offline — read from Python config (which reads the legacy file)
   _BEACON_MIN_IDLE=$(python3 -c "
@@ -65,7 +65,7 @@ print(get_popup_mode())
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from _beacon_config import get_auto_inject_mode
 print(get_auto_inject_mode())
-" 2>/dev/null || echo queue_only)
+" 2>/dev/null || echo strategist)
 fi
 export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 

@@ -12,6 +12,9 @@ export const MAX_BEACON_COUNTDOWN_S      = 300; // longest allowed beacon countd
 export const DEFAULT_BEACON_MIN_IDLE_S   = 0;   // 0 = always show popup regardless of keyboard activity
 export const MAX_BEACON_MIN_IDLE_S       = 600; // 10 minutes max
 export const DEFAULT_POPUP_MODE          = "web"; // "web" | "disabled" — "both"/"pyqt" coerced to "web" for legacy rows
+/** New-user autopilot policy. "strategist" delivers Cockpit's promise (agents keep working when you're away).
+ *  Safety rails live server-side in /api/control/dispatch (manual override, health gate, hard_stop, queue priority). */
+export const DEFAULT_AUTO_INJECT_MODE    = "strategist" as const;
 
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).

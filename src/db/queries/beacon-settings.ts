@@ -5,6 +5,7 @@ import {
   DEFAULT_BEACON_COUNTDOWN_S,
   DEFAULT_BEACON_MIN_IDLE_S,
   DEFAULT_POPUP_MODE,
+  DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
 import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
 
@@ -25,13 +26,13 @@ const DEFAULTS: BeaconSettingsData = {
   min_idle_seconds:       DEFAULT_BEACON_MIN_IDLE_S,
   whisper_model:          "base",
   transcription_provider: "auto",
-  // queue_only: explicit opt-in required for autonomous strategist firing.
-  // See schema comment + Cockpit.roadmap.md DONE entry (2026-05-25).
-  auto_inject_mode:       "queue_only",
+  // Autopilot — see DEFAULT_AUTO_INJECT_MODE in src/lib/constants/control.ts for
+  // the rationale. Safety rails live in /api/control/dispatch + the Stop hook.
+  auto_inject_mode:       DEFAULT_AUTO_INJECT_MODE,
 };
 
 function coerceAutoInjectMode(v: string | null | undefined): AutoInjectMode {
-  return AUTO_INJECT_MODE_VALUES.includes(v as AutoInjectMode) ? v as AutoInjectMode : "queue_only";
+  return AUTO_INJECT_MODE_VALUES.includes(v as AutoInjectMode) ? v as AutoInjectMode : DEFAULT_AUTO_INJECT_MODE;
 }
 
 /** PyQt mode was retired (see scripts/beacon.py). Legacy DB rows with 'both' or

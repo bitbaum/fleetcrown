@@ -108,9 +108,15 @@ def get_popup_mode() -> str:
 
 
 def get_auto_inject_mode() -> str:
-    """Return the automatic continuation policy used by every hook surface."""
-    mode = load_settings().get("auto_inject_mode", "queue_only")
-    return mode if mode in {"strategist", "queue_only", "next_best", "off"} else "queue_only"
+    """Return the automatic continuation policy used by every hook surface.
+
+    Default is "strategist": Cockpit's product promise is autopilot. The Stop
+    hook fires this when no per-user override exists. Safety rails live in
+    /api/control/dispatch and Stop-hook gating (manual override, health gate,
+    hard_stop, queue priority).
+    """
+    mode = load_settings().get("auto_inject_mode", "strategist")
+    return mode if mode in {"strategist", "queue_only", "next_best", "off"} else "strategist"
 
 
 def load_prompt_meta() -> list:

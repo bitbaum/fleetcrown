@@ -10,6 +10,7 @@ import {
   MAX_BEACON_COUNTDOWN_S,
   DEFAULT_BEACON_MIN_IDLE_S,
   MAX_BEACON_MIN_IDLE_S,
+  DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
 import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES, AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
 
@@ -20,7 +21,7 @@ export function BeaconSettings() {
   const [minIdle, setMinIdle]       = useState(DEFAULT_BEACON_MIN_IDLE_S);
   const [model, setModel]           = useState("base");
   const [provider, setProvider]     = useState("auto");
-  const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>("queue_only");
+  const [autoInjectMode, setAutoInjectMode] = useState<AutoInjectMode>(DEFAULT_AUTO_INJECT_MODE);
   const [saving, setSaving]         = useState(false);
   const [saved, setSaved]           = useState(false);
   const [error, setError]           = useState("");
