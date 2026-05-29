@@ -61,6 +61,19 @@ function runTests(): void {
     assert(strategistFallbacks >= 2, `expected ≥2 'echo strategist' fallbacks, got ${strategistFallbacks}`);
   });
 
+  check("Stop hook is autopilot — no popup race, no choice-file polling", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(!/beacon_launch/.test(sh), "beacon_launch (Chrome --app popup) must be removed from the bridge");
+    assert(!/notify-choice\.py/.test(sh), "notify-choice.py (KDE action buttons) must not be called");
+    assert(!/_choice_file/.test(sh), "the two-layer choice-file race must be gone");
+    assert(/autopilot_dispatch_and_inject/.test(sh), "autopilot_dispatch_and_inject helper must exist");
+    assert(/push_notify_stop/.test(sh), "push_notify_stop helper (Web Push) must exist");
+    assert(/\/api\/control\/dispatch/.test(sh), "autopilot path must POST /api/control/dispatch");
+    // Ensure handle_stop *calls* the autopilot helper (not only declares it).
+    const stopCalls = sh.match(/autopilot_dispatch_and_inject\s+"\$TAB_NAME"/g) ?? [];
+    assert(stopCalls.length >= 1, "handle_stop must invoke autopilot_dispatch_and_inject");
+  });
+
   console.log(`\n${passed}/${passed} passed`);
 }
 

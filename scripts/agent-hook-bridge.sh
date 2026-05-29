@@ -69,11 +69,6 @@ print(get_auto_inject_mode())
 fi
 export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 
-beacon_launch() {
-  DISPLAY="${DISPLAY:-:1}" DBUS_SESSION_BUS_ADDRESS="$_DBUS" \
-    python3 "$SCRIPT_DIR/beacon.py" "$@"
-}
-
 # M4 — emit a worker.finished event directly to the local JSONL log so the
 # new home/ Brain learns about completed runs without depending on the
 # Vercel finish endpoint round-trip. Mirrors the inferOutcome v1 logic from
@@ -269,11 +264,162 @@ switch_agent_and_continue() {
   esac
 }
 
+# Autopilot — fire when the agent has just signaled ready and we want to
+# auto-continue. Reads /api/control/dispatch (strategist|queue|nextbest|off),
+# composes the resulting prompt with session context, and injects back into the
+# Zellij tab. Returns 0 if a prompt was injected, 1 otherwise.
+#
+# Behavior:
+#   _BEACON_AUTO_MODE = "off"    → no autopilot
+#   _BEACON_AUTO_MODE = anything → POST dispatch; server-side gate decides
+#
+# Cockpit's promise is autopilot. The Stop hook is the moment that promise
+# pays off — agent finished, next prompt composed and running before the user
+# looks. /control + push notifications carry the ambient signal.
+autopilot_dispatch_and_inject() {
+  local tab_name="$1" session_file="$2"
+
+  if [ "${_BEACON_AUTO_MODE:-strategist}" = "off" ]; then
+    log "autopilot: auto_inject_mode=off — staying idle (manual mode)"
+    return 1
+  fi
+
+  if [ -z "${_BEACON_AUTH_HEADER:-}" ]; then
+    log "autopilot: no daemon auth header — skipping dispatch"
+    return 1
+  fi
+
+  local done_line next_line tests_line todos_line health_line
+  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
+  if [ -f "$session_file" ]; then
+    done_line=$(grep   -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//' || true)
+    next_line=$(grep   -m1 '^next:'   "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' || true)
+    tests_line=$(grep  -m1 '^tests:'  "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//' || true)
+    todos_line=$(grep  -m1 '^todos:'  "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//' || true)
+    health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' || true)
+  fi
+
+  local queue_file queue_json
+  queue_file="/tmp/agent-queue-${tab_name,,}"
+  queue_json=$([ -f "$queue_file" ] && jq -c 'if type == "array" then . else [] end' "$queue_file" 2>/dev/null || printf '[]')
+
+  local payload
+  payload=$(jq -nc \
+    --arg done "$done_line" --arg next "$next_line" --arg health "$health_line" \
+    --arg tests "$tests_line" --arg todos "$todos_line" \
+    --arg project "$tab_name" \
+    --argjson queue "$queue_json" \
+    '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos},queue:$queue,projectName:$project,projectKey:$project}')
+
+  local result action prompt reason
+  result=$(curl -sf --max-time 18 -X POST "${APP_BASE_URL}/api/control/dispatch" \
+    -H "Content-Type: application/json" -H "@$_BEACON_AUTH_HEADER" \
+    -d "$payload" 2>/dev/null || true)
+  if [ -z "$result" ]; then
+    log "autopilot: dispatch returned empty (network/auth) — staying idle"
+    return 1
+  fi
+  action=$(printf '%s' "$result" | jq -r '.action // "off"' 2>/dev/null || echo "off")
+  prompt=$(printf '%s' "$result" | jq -r '.prompt // empty' 2>/dev/null || true)
+  reason=$(printf '%s' "$result" | jq -r '.reason // empty' 2>/dev/null || true)
+
+  case "$action" in
+    composed)
+      if [ -n "$prompt" ]; then
+        emit_or_inject_prompt "$tab_name" "$prompt"
+        write_inject_state "$tab_name" "strategist" "${reason:-Strategist autopilot}"
+        log "autopilot: injected COMPOSED — ${reason}"
+        return 0
+      fi
+      log "autopilot: composed action but empty prompt — falling through to next_best"
+      ;;
+    queue)
+      local first_item
+      first_item=$(printf '%s' "$queue_json" | jq -r '.[0] // empty' 2>/dev/null || true)
+      if [ -n "$first_item" ]; then
+        dequeue_local_queue_item "$tab_name" "$first_item"
+        emit_or_inject_prompt "$tab_name" "$first_item"
+        write_inject_state "$tab_name" "custom" "Queued prompt"
+        log "autopilot: injected QUEUE head"
+        return 0
+      fi
+      log "autopilot: queue action but no queue item — staying idle"
+      return 1
+      ;;
+    off)
+      log "autopilot: server gate said OFF (${reason}) — staying idle"
+      return 1
+      ;;
+    nextbest)
+      ;;  # fall through to canned next_best below
+    *)
+      log "autopilot: unknown action=${action} — staying idle"
+      return 1
+      ;;
+  esac
+
+  local base session session_update_block
+  base=$(get_prompt "next_best")
+  if [ -z "$base" ]; then
+    log "autopilot: next_best prompt missing from library — staying idle"
+    return 1
+  fi
+  session_update_block="When done, update ${session_file} with exactly these lines:
+done: <one sentence what you completed>
+next: <one sentence what remains>
+tests: <N pass · N fail, or 'no suite'>
+todos: <count> TODOs
+health: <good | needs attention | critical>"
+
+  if [ -f "$session_file" ]; then
+    session=$(cat "$session_file")
+    prompt="${base}
+
+Session state from last run:
+${session}
+
+${session_update_block}"
+  else
+    prompt="${base}
+
+Before stopping, create ${session_file}.
+${session_update_block}"
+  fi
+
+  emit_or_inject_prompt "$tab_name" "$prompt"
+  write_inject_state "$tab_name" "next_best" "Autopilot next_best"
+  log "autopilot: injected NEXTBEST (canned) — ${reason}"
+  return 0
+}
+
+# Fire-and-forget Web Push to the user's subscribed devices. The endpoint
+# lands in Stage 5 of the autopilot rollout; until it exists, the 404/503 is
+# silently dropped — autopilot is the load-bearing signal, push is additive.
+push_notify_stop() {
+  local tab="$1" project_label="$2" session_file="$3"
+  [ -n "${_BEACON_AUTH_HEADER:-}" ] || return 0
+  [ "${_BEACON_POPUP_MODE:-web}" = "disabled" ] && return 0
+
+  local next_line=""
+  if [ -f "$session_file" ]; then
+    next_line=$(grep -m1 '^next:' "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' | head -c 240 || true)
+  fi
+
+  local payload
+  payload=$(jq -nc \
+    --arg tab "$tab" --arg project "$project_label" --arg next "$next_line" --arg kind "stopped" \
+    '{tab:$tab, projectName:$project, next:$next, kind:$kind}')
+
+  (curl -sf --max-time 4 -X POST "${APP_BASE_URL}/api/push/notify" \
+    -H "Content-Type: application/json" -H "@$_BEACON_AUTH_HEADER" \
+    -d "$payload" >/dev/null 2>&1 || true) &
+}
+
 handle_stop() {
   find /tmp -maxdepth 1 -name "agent-stop-active-*" -mmin +5 -delete 2>/dev/null
   find /tmp -maxdepth 1 -name "claude-stop-active-*" -mmin +5 -delete 2>/dev/null
 
-  local input cwd label sentinel closed_ts ready_ts choice key base prompt session_file
+  local input cwd label sentinel closed_ts ready_ts session_file
   input=$(cat)
   cwd=$(echo "$input" | jq -r '.cwd // empty')
 
@@ -284,26 +430,28 @@ handle_stop() {
   [ -z "${TAB_NAME:-}" ] && exit 0
   session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
 
-  # Atomically claim the stop-active lock using noclobber so concurrent stop hooks
-  # can't both pass the check. A plain test-then-write is a TOCTOU race in bash.
+  # Atomically claim the stop-active lock using noclobber so concurrent stop
+  # hooks can't both pass the check. A plain test-then-write is a TOCTOU race.
   local lock="/tmp/agent-stop-active-${TAB_NAME}"
   if ! ( set -C; : > "$lock" ) 2>/dev/null; then
-    # File exists — skip if recent, overwrite if stale (crashed process left it behind).
     local existing_age
     existing_age=$(( $(date +%s) - $(stat -c %Y "$lock" 2>/dev/null || echo 0) ))
     if [ "$existing_age" -lt 90 ]; then
-      log "skipping popup — another stop is active for ${TAB_NAME} (${existing_age}s old)"
+      log "skipping — another stop is active for ${TAB_NAME} (${existing_age}s old)"
       exit 0
     fi
-    : > "$lock"  # stale — overwrite
+    : > "$lock"
   fi
   trap "rm -f '$lock'" EXIT
 
+  # Clear the tracked prompt; the agent just ended that work cycle.
   rm -f "/tmp/agent-current-prompt-${TAB_NAME}" "/tmp/claude-current-prompt-${TAB_NAME}"
 
+  # User explicitly asked to close the session (via /control hard-stop or the
+  # `close_session` queue entry). Honor it — no autopilot, no push.
   sentinel="/tmp/agent-session-closed-${TAB_NAME}"
   if [ -f "$sentinel" ]; then
-    log "close-session sentinel found — writing closed file and exiting without popup"
+    log "close-session sentinel set — closing session, autopilot suppressed"
     rm -f "$sentinel"
     closed_ts=$(date +%s)
     echo "$closed_ts" > "/tmp/agent-closed-${TAB_NAME}"
@@ -319,238 +467,21 @@ handle_stop() {
   ready_ts=$(date +%s)
   echo "$ready_ts" > "/tmp/agent-ready-${TAB_NAME}"
   patch_project_state "$TAB_NAME" "readyAt"
-  # Close out the tracked orchestration run with the handoff from the session
-  # file the agent just wrote. Done before the popup so the next dispatch can
-  # see this outcome via getRecentOutcomes() if the app fetches mid-popup.
+
+  # Close the orchestration run + emit worker.finished so /control reflects the
+  # handoff before autopilot starts the next cycle.
   finish_orchestration_run "$TAB_NAME" "$session_file"
-  # M4 — also emit worker.finished to the new local JSONL log so home/'s Brain
-  # gets a complete edge for the run. Parallel to finish_orchestration_run; both
-  # consume the same session.md, but this path has no cloud round-trip.
   emit_worker_finished "$TAB_NAME" "$session_file"
 
   play_sound "complete"
 
-  # Skip beacon when user is actively at keyboard.  Uses XScreenSaver idle time via
-  # libXss (or xprintidle if installed).  Returns 9999 when no idle source is available,
-  # which causes the beacon to show as a safe fallback.  Install xprintidle for this gate
-  # to work on systems without the MIT-SCREEN-SAVER X11 extension.
-  _idle_secs=$(
-    if command -v xprintidle >/dev/null 2>&1; then
-      ms=$(DISPLAY="${DISPLAY:-:0}" xprintidle 2>/dev/null || echo 99999999)
-      echo $(( ms / 1000 ))
-    else
-      DISPLAY="${DISPLAY:-:0}" python3 "$SCRIPT_DIR/get-idle-secs.py" 2>/dev/null || echo 9999
-    fi
-  )
-  if [ "${_BEACON_POPUP_MODE:-both}" = "disabled" ]; then
-    log "beacon disabled by user settings — skipping popup"
-    exit 0
-  fi
-  if [ "${_BEACON_MIN_IDLE:-0}" -gt 0 ] && [ "${_idle_secs:-9999}" -lt "$_BEACON_MIN_IDLE" ]; then
-    log "user active (idle=${_idle_secs}s < ${_BEACON_MIN_IDLE}s) — skipping beacon"
-    exit 0
-  fi
+  # Ambient signal — push notification to subscribed devices (phone, desktop).
+  # The /api/push/notify endpoint is delivered in Stage 5; the call is silent
+  # when the endpoint or subscriptions don't exist yet.
+  push_notify_stop "$TAB_NAME" "$label" "$session_file"
 
-  # Ensure the screen-position sentinel exists so beacon.py knows which monitor to
-  # appear on. The claude() bash wrapper writes this at launch, but context-limit
-  # continuations (started with ! or --continue) bypass the wrapper and miss it.
-  # Write primary monitor geometry as a safe fallback — no cursor dependency.
-  if [ -n "${ZELLIJ_PANE_ID:-}" ] && [ ! -f "/tmp/claude-screen-${ZELLIJ_PANE_ID}" ]; then
-    _primary_geo=$(xrandr --query 2>/dev/null \
-      | awk '/ connected primary / {
-          for (i=1;i<=NF;i++) {
-            if ($i ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) {
-              n=split($i,a,/[x+]/);
-              if(n==4) print a[3]","a[4]","a[1]","a[2];
-              break
-            }
-          }
-          exit
-        }')
-    [ -n "$_primary_geo" ] && printf '%s\n' "$_primary_geo" > "/tmp/claude-screen-${ZELLIJ_PANE_ID}"
-  fi
-
-  # Two-layer race — both run in parallel; first choice wins.
-  #
-  # Layer 1 (< 100 ms): OS notification with KDE action buttons.
-  #   notify-choice.py shows a native notification immediately.  When the user
-  #   clicks a button, it writes the slot number to CHOICE_FILE AND patches the
-  #   beacon session JSON so the browser popup sees choice != null and self-closes.
-  #
-  # Layer 2 (1-4 s): browser beacon popup (full React UI).
-  #   beacon_launch opens Chrome/Brave with the full web beacon.  When the user
-  #   clicks there, it writes to CHOICE_FILE.
-  #
-  # If the user ignores both (at keyboard, typing their own prompt) neither
-  # writes to CHOICE_FILE → no injection.
-
-  local _choice_file _nc_pid _bp_pid
-  _choice_file="/tmp/beacon-choice-${TAB_NAME}-$$"
-
-  # Build action args from the first 3 non-"more" slots in _PROMPTS.
-  local -a _notif_actions
-  mapfile -t _notif_actions < <(
-    jq -r '.[] | select(.slot != null and .style != "more") | "\(.slot)=\(.icon) \(.label)"' \
-    "$_PROMPTS" 2>/dev/null | head -3
-  )
-
-  (
-    result=$(python3 "$SCRIPT_DIR/notify-choice.py" \
-      "Claude · ${label}" "Done — click to continue" "$label" \
-      "${_notif_actions[@]}" 2>>"$LOG")
-    if [ -n "$result" ] && [ ! -f "$_choice_file" ]; then
-      printf '%s' "$result" > "${_choice_file}.tmp" \
-        && mv "${_choice_file}.tmp" "$_choice_file" 2>/dev/null || true
-    fi
-  ) &
-  _nc_pid=$!
-
-  (
-    result=$(beacon_launch stop "$label" "$session_file" 2>>"$LOG")
-    if [ -n "$result" ] && [ ! -f "$_choice_file" ]; then
-      printf '%s' "$result" > "${_choice_file}.tmp" \
-        && mv "${_choice_file}.tmp" "$_choice_file" 2>/dev/null || true
-    fi
-  ) &
-  _bp_pid=$!
-
-  # Wait until a choice lands or both layers exit.
-  while kill -0 "$_nc_pid" 2>/dev/null || kill -0 "$_bp_pid" 2>/dev/null; do
-    if [ -f "$_choice_file" ]; then
-      kill "$_nc_pid" "$_bp_pid" 2>/dev/null
-      break
-    fi
-    sleep 0.2
-  done
-
-  choice=""
-  [ -f "$_choice_file" ] && choice=$(cat "$_choice_file")
-  rm -f "$_choice_file" "${_choice_file}.tmp"
-
-  if [ -z "$choice" ]; then
-    log "no choice from either layer — user types manually"
-    exit 0
-  fi
-  log "popup choice=$choice"
-
-  local inject_key inject_label queue_file
-  queue_file="/tmp/agent-queue-${TAB_NAME,,}"
-
-  # If choice is '1' (Next Best Task), check if there's a queue item and fire that instead.
-  # This matches the web beacon logic and handles the race where the OS notification hits 0s first.
-  if [ "$choice" = "1" ] && [ -f "$queue_file" ]; then
-    local first_item
-    first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
-    if [ -n "$first_item" ]; then
-      log "prioritizing queue item over slot 1 choice"
-      choice="${CUSTOM_CHOICE_PREFIX}${first_item}"
-      dequeue_local_queue_item "$TAB_NAME" "$first_item"
-    fi
-  fi
-
-  if [[ "$choice" == "${SWITCH_CHOICE_PREFIX}"* ]]; then
-    local target_agent switch_prompt switch_label first_item session_update_block session
-    target_agent="${choice#"${SWITCH_CHOICE_PREFIX}"}"
-    case "$target_agent" in
-      claude|codex|gemini) ;;
-      *) log "unknown switch target=$target_agent" && exit 0 ;;
-    esac
-
-    switch_label="Switch to ${target_agent}"
-    if [ -f "$queue_file" ]; then
-      first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
-      if [ -n "$first_item" ]; then
-        switch_prompt="$first_item"
-        dequeue_local_queue_item "$TAB_NAME" "$first_item"
-        switch_label="Switch to ${target_agent} · queued prompt"
-      fi
-    fi
-
-    if [ -z "${switch_prompt:-}" ]; then
-      base=$(get_prompt "next_best")
-      [ -z "$base" ] && log "prompt not found for key=next_best" && exit 0
-
-      session_update_block="When done, update ${session_file} with exactly these lines:
-done: <one sentence what you completed>
-next: <one sentence what remains>
-tests: <N pass · N fail, or 'no suite'>
-todos: <count> TODOs
-health: <good | needs attention | critical>"
-
-      if [ -f "$session_file" ]; then
-        session=$(cat "$session_file")
-        switch_prompt="${base}
-
-Session state from last run:
-${session}
-
-${session_update_block}"
-      else
-        switch_prompt="${base}
-
-Before stopping, create ${session_file}.
-${session_update_block}"
-      fi
-    fi
-
-    switch_agent_and_continue "$TAB_NAME" "$cwd" "$target_agent" "$switch_prompt"
-    write_inject_state "$TAB_NAME" "switch_agent" "$switch_label"
-    log "switched target=$target_agent"
-    exit 0
-  elif [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]]; then
-    prompt="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
-    dequeue_local_queue_item "$TAB_NAME" "$prompt"
-    inject_key="custom"
-    inject_label="${choice#"${CUSTOM_CHOICE_PREFIX}"}"
-  else
-    key=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | .key' "$_PROMPTS" 2>/dev/null)
-    [ -z "$key" ] && log "no key for slot=$choice" && exit 0
-
-    base=$(get_prompt "$key")
-    [ -z "$base" ] && log "prompt not found for key=$key" && exit 0
-
-    inject_key="$key"
-    inject_label=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | (.icon + " " + .label)' "$_PROMPTS" 2>/dev/null | head -1)
-    [ -z "$inject_label" ] && inject_label="$key"
-
-    if [ "$key" = "close_session" ]; then
-      touch "/tmp/agent-session-closed-${TAB_NAME}"
-      echo "$(date +%s)" > "/tmp/agent-closing-${TAB_NAME}"
-      rm -f "/tmp/agent-ready-${TAB_NAME}"
-      patch_project_state "$TAB_NAME" "closingAt"
-    fi
-
-    local session_update_block
-    session_update_block="When done, update ${session_file} with exactly these lines:
-done: <one sentence what you completed>
-next: <one sentence what remains>
-tests: <N pass · N fail, or 'no suite'>
-todos: <count> TODOs
-health: <good | needs attention | critical>"
-
-    if [ -f "$session_file" ]; then
-      local session
-      session=$(cat "$session_file")
-      prompt="${base}
-
-Session state from last run:
-${session}
-
-${session_update_block}"
-    else
-      prompt="${base}
-
-Before stopping, create ${session_file}.
-${session_update_block}"
-    fi
-  fi
-
-  emit_or_inject_prompt "$TAB_NAME" "$prompt"
-
-  # Sync state so Control panel and web beacon reflect the running task immediately.
-  # Without this, the UI shows "waiting for input" until the next Claude stop hook fires.
-  write_inject_state "$TAB_NAME" "$inject_key" "$inject_label"
-  log "injected key=$inject_key label=$inject_label"
+  # Autopilot. Cockpit's promise: agents keep working when you're away.
+  autopilot_dispatch_and_inject "$TAB_NAME" "$session_file" || true
 }
 
 handle_notification() {
