@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Zap, FolderOpen, History as HistoryIcon } from "lucide-react";
+import { Search, ArrowRight, Zap, FolderOpen, History as HistoryIcon, Mic, MicOff, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCommandPalette } from "@/hooks/use-command-palette";
+import { useVoiceInput } from "@/hooks/use-voice-input";
 import { NAV_ITEMS, type NavItem } from "@/config/navigation";
 import { PROMPT_TEMPLATES, type PromptTemplate } from "@/config/prompt-library";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
@@ -27,6 +28,13 @@ export function CommandPalette() {
   const [recent, setRecent] = useState<string[]>([]);
 
   const { data: agentPrompts } = useFetch<AgentPrompt[]>(open ? "/api/prompts/agent" : null);
+
+  const onTranscript = useCallback((text: string) => {
+    setQuery(text);
+    setHighlight(0);
+    inputRef.current?.focus();
+  }, []);
+  const voice = useVoiceInput({ onTranscript });
 
   // Hydrate recent on first open so the order survives across sessions.
   useEffect(() => {
@@ -140,13 +148,34 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search prompts, templates, pages…"
+            placeholder={voice.status === "recording" ? "Listening…" : "Search prompts, templates, pages…"}
             className="ui-palette-input"
             spellCheck={false}
             autoComplete="off"
+            disabled={voice.status === "transcribing"}
           />
+          {voice.isSupported && (
+            <button
+              type="button"
+              onClick={voice.status === "recording" ? voice.stop : () => voice.start()}
+              disabled={voice.status === "transcribing"}
+              className={cn(
+                "ui-palette-mic",
+                voice.status === "recording" && "ui-palette-mic-active",
+              )}
+              aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
+              title={voice.status === "recording" ? "Stop" : "Voice (mic)"}
+            >
+              {voice.status === "transcribing" ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : voice.status === "recording" ? <MicOff className="h-3.5 w-3.5" />
+                : <Mic className="h-3.5 w-3.5" />}
+            </button>
+          )}
           <kbd className="ui-palette-kbd">esc</kbd>
         </div>
+        {voice.error && (
+          <div className="ui-palette-voice-error">{voice.error}</div>
+        )}
         <ul className="ui-palette-list" role="listbox">
           {filtered.length === 0 ? (
             <li className="ui-palette-empty">No matches</li>

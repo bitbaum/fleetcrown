@@ -877,6 +877,25 @@
     font-size: var(--text-micro);
     box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
   }
+  .ui-palette-mic {
+    @apply inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary transition-colors;
+    background: oklch(1 0 0 / 0.04);
+  }
+  .ui-palette-mic:hover { @apply text-text-secondary; background: oklch(1 0 0 / 0.08); }
+  .ui-palette-mic:disabled { @apply opacity-60; }
+  .ui-palette-mic-active {
+    color: var(--accent-primary);
+    background: oklch(from var(--accent-primary) l c h / 0.16);
+    animation: ui-palette-mic-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes ui-palette-mic-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(from var(--accent-primary) l c h / 0.35); }
+    50%      { box-shadow: 0 0 0 4px oklch(from var(--accent-primary) l c h / 0.0); }
+  }
+  .ui-palette-voice-error {
+    @apply px-4 py-2 text-xs text-status-negative;
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  }
 
   .ui-card-shell {
     @apply rounded-2xl border border-border-subtle bg-surface-base;
