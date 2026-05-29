@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
 import { AskIvyButton } from "./AskIvyButton";
+import { AppTopBar } from "./AppTopBar";
+import { AppFooter } from "./AppFooter";
+import { CommandPalette } from "./CommandPalette";
 import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
+import {
+  CommandPaletteProvider,
+  useCommandPaletteHotkey,
+  useCommandPaletteState,
+} from "@/hooks/use-command-palette";
 import {
   SIDEBAR_COLLAPSE_BREAKPOINT,
   SIDEBAR_COLLAPSE_STORAGE_KEY,
@@ -12,6 +20,8 @@ import {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const paletteApi = useCommandPaletteState();
+  useCommandPaletteHotkey(paletteApi);
 
   // Hydrate from localStorage on mount — deferred so server and client agree on initial render.
   useEffect(() => {
@@ -32,17 +42,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [sidebarCollapsed]);
 
   return (
-    <div className="app-shell-frame flex min-h-screen bg-surface-page text-text-primary">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
-      />
-      <main className="app-main">
-        {children}
-      </main>
-      <MobileNav />
-      <AskIvyButton />
-      <RefreshOnFocus />
-    </div>
+    <CommandPaletteProvider value={paletteApi}>
+      <div className="app-shell-frame flex min-h-screen bg-surface-page text-text-primary">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+        />
+        <div className="app-main-column">
+          <AppTopBar />
+          <main className="app-main">{children}</main>
+          <AppFooter />
+        </div>
+        <MobileNav />
+        <AskIvyButton />
+        <RefreshOnFocus />
+        <CommandPalette />
+      </div>
+    </CommandPaletteProvider>
   );
 }

@@ -35,7 +35,7 @@ export function SidebarNavItem({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className={cn(
-          "ui-nav-item ui-sidebar-nav-item",
+          "group ui-nav-item ui-sidebar-nav-item",
           collapsed ? "justify-center px-2 py-3" : "",
           current && "ui-nav-item-active",
           !item.active && "opacity-40",
@@ -46,7 +46,16 @@ export function SidebarNavItem({
         {!collapsed && (
           <div className="min-w-0">
             <span className="block">{item.label}</span>
-            <span className="mt-0.5 block text-xs text-text-tertiary">{item.description}</span>
+            {/* Description is calm at rest, revealed on hover or when current.
+                Always rendered so row height never jumps. */}
+            <span
+              className={cn(
+                "mt-0.5 block text-xs text-text-tertiary transition-opacity duration-150",
+                current ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100",
+              )}
+            >
+              {item.description}
+            </span>
           </div>
         )}
         {!collapsed && !item.active && <span className="ml-auto ui-micro-label">soon</span>}

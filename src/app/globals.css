@@ -301,9 +301,49 @@
 
   /* Shell */
   .app-shell-frame { @apply min-h-screen text-text-primary; }
+  .app-main-column {
+    /* The right side of the shell — top bar + main + footer stacked. */
+    @apply flex min-w-0 flex-1 flex-col;
+  }
   .app-main {
     @apply min-w-0 flex-1 overflow-y-auto md:pb-0;
     padding-bottom: calc(var(--mobile-chrome-bottom) + 1rem);
+  }
+
+  /* App top bar — slim, sticky, hosts Cmd-K + global status pills */
+  .ui-app-topbar {
+    @apply sticky top-0 z-30 flex items-center gap-3 px-3 py-2 sm:px-5 sm:py-2.5;
+    background: oklch(from var(--surface-page) l c h / 0.85);
+    backdrop-filter: blur(8px);
+    /* No hard border — soft inset shadow only, mirroring the sidebar treatment. */
+    box-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.04);
+  }
+  .ui-app-topbar-search {
+    @apply flex w-full max-w-md items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm text-text-tertiary transition-colors;
+    background: oklch(from var(--surface-base) l c h / 0.5);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
+  }
+  .ui-app-topbar-search:hover {
+    @apply text-text-secondary;
+    background: oklch(from var(--surface-base) l c h / 0.8);
+  }
+  .ui-app-topbar-search-label { @apply truncate; }
+  .ui-app-topbar-right { @apply ml-auto flex items-center gap-2; }
+
+  /* App footer — desktop only, micro strip */
+  .ui-app-footer {
+    @apply hidden md:flex items-center gap-4 px-5 py-2 text-text-tertiary;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    letter-spacing: 0.04em;
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  }
+  .ui-app-footer-cell {
+    @apply inline-flex items-center gap-1.5 uppercase transition-colors hover:text-text-secondary;
+  }
+  .ui-app-footer-dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full;
+    background: var(--accent-primary);
   }
   .app-page {
     width: min(100%, var(--shell-max));
@@ -311,7 +351,7 @@
   }
   .ui-mobile-nav {
     bottom: calc(var(--mobile-nav-offset) + var(--mobile-safe-bottom));
-    @apply fixed inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-xl shadow-panel-strong;
+    @apply fixed inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-md shadow-panel-strong;
   }
   .ui-mobile-nav-item {
     @apply relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-micro font-medium transition-colors min-h-11;
@@ -336,8 +376,10 @@
     position: sticky;
     top: 0;
     height: 100svh;
-    @apply border-r border-border-subtle bg-sidebar/88 backdrop-blur-xl;
-    transition: width 200ms ease, background-color 250ms ease, border-color 250ms ease;
+    @apply bg-sidebar/92 backdrop-blur-md;
+    /* Soft right separation via inset shadow — no hard 1px border (the x.ai look). */
+    box-shadow: inset -1px 0 0 oklch(1 0 0 / 0.04);
+    transition: width 200ms ease, background-color 250ms ease;
   }
   .ui-sidebar-section {
     @apply px-3 py-4;
@@ -357,7 +399,7 @@
     transform: translate(0, -50%);
   }
   .ui-sidebar-utility {
-    @apply flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
+    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
   .ui-public-surface {
     @apply relative min-h-screen overflow-hidden bg-surface-public text-white;
@@ -775,6 +817,67 @@
   /* Compact list item row — no shadow, tighter padding */
   .ui-list-row { @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-sm; }
   .ui-panel-interactive { @apply transition-colors hover:bg-surface-raised; }
+  /* Command palette — global ⌘K search */
+  .ui-palette-backdrop {
+    @apply fixed inset-0 -z-10;
+    background: oklch(0 0 0 / 0.45);
+    backdrop-filter: blur(4px);
+  }
+  .ui-palette-panel {
+    @apply mt-[12vh] flex w-[min(640px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl bg-surface-overlay;
+    box-shadow: var(--shadow-panel-strong);
+    /* Soft edge instead of a hard border — matches the x.ai restraint. */
+    outline: 1px solid oklch(1 0 0 / 0.06);
+  }
+  .ui-palette-input-row {
+    @apply flex items-center gap-2.5 px-4 py-3;
+    box-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.04);
+  }
+  .ui-palette-input {
+    @apply flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+  }
+  .ui-palette-kbd {
+    @apply inline-flex items-center justify-center rounded-md px-1.5 py-0.5 text-text-tertiary;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    background: oklch(1 0 0 / 0.04);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.06);
+    line-height: 1;
+    min-width: 1.25rem;
+    min-height: 1.25rem;
+  }
+  .ui-palette-list {
+    @apply max-h-[55vh] overflow-y-auto p-1.5;
+  }
+  .ui-palette-empty {
+    @apply px-3 py-6 text-center text-sm text-text-tertiary;
+  }
+  .ui-palette-row {
+    @apply flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors;
+  }
+  .ui-palette-row-active {
+    background: oklch(1 0 0 / 0.05);
+  }
+  .ui-palette-row-icon {
+    @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-text-tertiary;
+    background: oklch(1 0 0 / 0.04);
+  }
+  .ui-palette-row-meta {
+    @apply inline-flex items-center gap-1 text-text-tertiary;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+  }
+  .ui-palette-row-arrow {
+    @apply text-text-tertiary opacity-0 transition-opacity;
+  }
+  .ui-palette-row-active .ui-palette-row-arrow { @apply opacity-100; }
+  .ui-palette-foot {
+    @apply flex items-center gap-4 px-4 py-2 text-text-tertiary;
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.04);
+  }
+
   .ui-card-shell {
     @apply rounded-2xl border border-border-subtle bg-surface-base;
     box-shadow: var(--shadow-panel);
@@ -875,7 +978,9 @@
   }
   .ui-nav-item:hover { @apply bg-surface-raised text-text-secondary; }
   .ui-nav-item-active {
-    @apply bg-surface-raised text-text-primary border border-border-default;
+    /* Subtle bg shift + left-edge accent — x.ai-style restraint, no full border. */
+    @apply bg-surface-raised text-text-primary;
+    box-shadow: inset 2px 0 0 var(--accent-primary);
   }
 
   /* Inputs */
