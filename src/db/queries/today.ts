@@ -7,7 +7,7 @@ import {
 import { STALE_GOALS_DAYS, STUCK_GOALS_LIMIT, RECENT_RUNS_HOURS, RECENT_RUNS_LIMIT } from "@/lib/constants/today";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities } from "@/db/schema";
+import { commitments, subscriptions, goals, alerts, actions, events, projectStates, orchestrationRuns, entities, promptHistory } from "@/db/schema";
 import { eq, and, lt, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
@@ -315,5 +315,32 @@ export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_
       ),
     )
     .orderBy(desc(orchestrationRuns.finishedAt))
+    .limit(limit);
+}
+
+// Recent manual dispatches from /api/inject. Used as a fallback on Today's
+// "Recent Agent Work" card when no orchestration runs have completed yet —
+// without it, a fresh-install user (or one who dispatches via the prompt
+// library / Send box) sees "No agent runs in the past 24 hours" even though
+// they queued five injects today, which destroys trust in the dashboard.
+export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
+  const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  return db
+    .select({
+      id: promptHistory.id,
+      projectKey: promptHistory.projectKey,
+      adapter: promptHistory.adapter,
+      intent: promptHistory.intent,
+      customPrompt: promptHistory.customPrompt,
+      dispatchedAt: promptHistory.dispatchedAt,
+    })
+    .from(promptHistory)
+    .where(
+      and(
+        eq(promptHistory.userId, userId),
+        gte(promptHistory.dispatchedAt, since),
+      ),
+    )
+    .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
 }

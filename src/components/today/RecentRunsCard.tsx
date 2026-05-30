@@ -1,7 +1,7 @@
-import { Bot, ArrowRight, Repeat } from "lucide-react";
+import { Bot, ArrowRight, Repeat, Send } from "lucide-react";
 import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
-import { getRecentOrchestrationRuns } from "@/db/queries/today";
+import { getRecentOrchestrationRuns, getRecentDispatches } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
@@ -16,13 +16,47 @@ const CLUSTER_WINDOW_MS = 60 * 60 * 1000;
 
 export async function RecentRunsCard() {
   const userId = await requirePageUserId();
-  const runs = await getRecentOrchestrationRuns(userId);
+  const [runs, dispatches] = await Promise.all([
+    getRecentOrchestrationRuns(userId),
+    getRecentDispatches(userId),
+  ]);
 
-  if (runs.length === 0) {
+  // No orchestration runs AND no manual dispatches → genuinely quiet day.
+  if (runs.length === 0 && dispatches.length === 0) {
     return (
       <Card>
         <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
         <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
+      </Card>
+    );
+  }
+
+  // Fallback: orchestration runs are empty but the user has dispatched prompts
+  // today (manual injects via /api/inject never write to orchestration_runs).
+  // Show those instead so the dashboard reflects reality.
+  if (runs.length === 0) {
+    return (
+      <Card>
+        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
+        <p className="text-xs text-text-muted mb-2">No completed orchestration runs yet — showing recent dispatches.</p>
+        <div className="space-y-2">
+          {dispatches.map((d) => {
+            const label = d.customPrompt?.trim() || d.intent;
+            return (
+              <div key={d.id} className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0">
+                <Send className="h-3 w-3 mt-1 shrink-0 text-accent-text/70" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-text-secondary">{d.projectKey}</span>
+                    <span className="ui-badge">{d.adapter}</span>
+                    <span className="ml-auto text-xs text-text-muted shrink-0">{timeAgo(d.dispatchedAt.getTime())}</span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{label}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </Card>
     );
   }
