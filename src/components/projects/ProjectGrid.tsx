@@ -166,9 +166,14 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("open"));
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  // "security" → only projects with security_vulnerability set
+  // "attention" → only projects with any getHealthSignals() output
+  // Lets the banner counts at the top of the grid act as one-click filters
+  // instead of dead text.
+  const [healthFilter, setHealthFilter] = useState<"security" | "attention" | null>(null);
 
   // Only clear grid state when no drawer is open — the Drawer handles its own Escape.
-  useEscapeKey(() => { if (!selectedId) { setQuery(""); setStatusFilter(null); } });
+  useEscapeKey(() => { if (!selectedId) { setQuery(""); setStatusFilter(null); setHealthFilter(null); } });
 
   const statuses = useMemo(
     () => [...new Set(projects.map((p) => p.attrs["status"]).filter(Boolean))].sort() as string[],
@@ -179,6 +184,8 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
     const q = query.toLowerCase();
     const result = projects.filter((p) => {
       if (statusFilter && p.attrs["status"] !== statusFilter) return false;
+      if (healthFilter === "security" && !p.attrs["security_vulnerability"]) return false;
+      if (healthFilter === "attention" && getHealthSignals(p.attrs).length === 0) return false;
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
@@ -195,12 +202,12 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       if (a.readonly !== b.readonly) return a.readonly ? 1 : -1;
       return a.name.localeCompare(b.name);
     });
-  }, [projects, query, statusFilter]);
+  }, [projects, query, statusFilter, healthFilter]);
 
   const withIssues = projects.filter((p) => getHealthSignals(p.attrs).length > 0);
   const securityRisks = projects.filter((p) => p.attrs["security_vulnerability"]).length;
 
-  const isFiltered = !!query || !!statusFilter;
+  const isFiltered = !!query || !!statusFilter || !!healthFilter;
 
   return (
     <>
@@ -242,15 +249,27 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       {withIssues.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 px-1 text-xs">
           {securityRisks > 0 && (
-            <span className="flex items-center gap-1.5 text-status-negative">
+            <button
+              type="button"
+              onClick={() => setHealthFilter(healthFilter === "security" ? null : "security")}
+              aria-pressed={healthFilter === "security"}
+              title={healthFilter === "security" ? "Clear security filter" : `Show only the ${securityRisks} project${securityRisks > 1 ? "s" : ""} with security risks`}
+              className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-negative transition-colors hover:bg-status-negative-subtle/50 ${healthFilter === "security" ? "bg-status-negative-subtle ring-1 ring-status-negative/40" : ""}`}
+            >
               <ShieldAlert className="h-3.5 w-3.5" />
               {securityRisks} security risk{securityRisks > 1 ? "s" : ""}
-            </span>
+            </button>
           )}
-          <span className="flex items-center gap-1.5 text-status-warning/80">
+          <button
+            type="button"
+            onClick={() => setHealthFilter(healthFilter === "attention" ? null : "attention")}
+            aria-pressed={healthFilter === "attention"}
+            title={healthFilter === "attention" ? "Clear attention filter" : `Show only the ${withIssues.length} project${withIssues.length > 1 ? "s" : ""} needing attention`}
+            className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-warning/80 transition-colors hover:bg-status-warning-subtle/50 ${healthFilter === "attention" ? "bg-status-warning-subtle ring-1 ring-status-warning/40" : ""}`}
+          >
             <AlertTriangle className="h-3.5 w-3.5" />
             {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need{withIssues.length === 1 ? "s" : ""} attention
-          </span>
+          </button>
           <span className="ml-auto text-text-tertiary">
             {projects.length - withIssues.length}/{projects.length} healthy
           </span>
