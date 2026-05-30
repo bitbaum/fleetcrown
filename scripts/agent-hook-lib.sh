@@ -46,6 +46,51 @@ resolve_adapter() {
   done < "$_CONF"
 }
 
+# Resolve the adapter actually running in a tab — not just the conf default.
+# Priority: /proc scan for project dir → current-prompt JSON adapter → tab suffix → conf field.
+# Sets ADAPTER and returns 0. Requires _agents.sh (sourced above).
+_resolve_live_adapter() {
+  local tab="$1" dir="${2:-}"
+  ADAPTER=""
+
+  if [ -n "$dir" ] && type _scan_agents >/dev/null 2>&1; then
+    while IFS=' ' read -r cwd aname; do
+      [ -z "$cwd" ] && continue
+      if [ "$cwd" = "$dir" ] || [[ "$cwd" == "$dir/"* ]]; then
+        ADAPTER="$aname"
+        return 0
+      fi
+    done < <(_scan_agents 2>/dev/null)
+  fi
+
+  local pf="/tmp/agent-current-prompt-${tab}"
+  if [ -f "$pf" ]; then
+    local from_prompt
+    from_prompt=$(jq -r '.adapter // empty' "$pf" 2>/dev/null || true)
+    case "$from_prompt" in
+      grok|claude|codex|gemini|openclaw|cursor)
+        ADAPTER="$from_prompt"
+        return 0
+        ;;
+    esac
+  fi
+
+  if type _infer_adapter_from_tab_name >/dev/null 2>&1; then
+    local inferred
+    inferred=$(_infer_adapter_from_tab_name "$tab" 2>/dev/null || true)
+    case "$inferred" in
+      grok|claude|codex|gemini|openclaw|cursor)
+        ADAPTER="$inferred"
+        return 0
+        ;;
+    esac
+  fi
+
+  TAB_NAME="$tab"
+  resolve_adapter 2>/dev/null || true
+  ADAPTER="${ADAPTER:-claude}"
+}
+
 resolve_tab() {
   TAB_NAME=""
   local cwd
@@ -207,13 +252,49 @@ get_prompt() {
   jq -r --arg k "$1" '.[] | select(.key == $k) | .prompt' "$_PROMPTS" 2>/dev/null
 }
 
+# Resolve conf/registry tab name to the live Zellij tab (exact or "Cockpit Cursor" suffix).
+_resolve_live_tab_name() {
+  local tab="$1"
+  [ -z "$tab" ] && return 1
+  local all_tabs tab_lower="${tab,,}" exact="" suffix=""
+  all_tabs=$(
+    zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
+      [ -z "$s" ] && continue
+      ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null
+    done
+  )
+  while IFS= read -r open_tab; do
+    [ -z "$open_tab" ] && continue
+    local open_lower="${open_tab,,}"
+    if [ "$open_lower" = "$tab_lower" ]; then
+      exact="$open_tab"
+      break
+    fi
+    if [ -z "$suffix" ] && { [[ "$open_lower" == "${tab_lower} "* ]] || [[ "$open_lower" == "${tab_lower}-"* ]]; }; then
+      suffix="$open_tab"
+    fi
+  done <<< "$all_tabs"
+  if [ -n "$exact" ]; then
+    printf '%s' "$exact"
+    return 0
+  fi
+  if [ -n "$suffix" ]; then
+    printf '%s' "$suffix"
+    return 0
+  fi
+  return 1
+}
+
 # Find the zellij session that has a tab with the given name.
 # Uses ZELLIJ_SESSION_NAME env var (required for zellij action outside a pane).
 _find_session_for_tab() {
-  local tab="$1"
+  local tab="$1" live_tab="$1"
+  if type _resolve_live_tab_name >/dev/null 2>&1; then
+    live_tab=$(_resolve_live_tab_name "$tab" 2>/dev/null) || live_tab="$tab"
+  fi
   zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
     if ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null \
-        | grep -qxF "$tab"; then
+        | grep -qxF "$live_tab"; then
       echo "$s"
       return 0
     fi
@@ -225,25 +306,30 @@ inject_prompt() {
   local prompt="$2"
   [ -z "$tab" ] && return 1
 
+  local live_tab="$tab"
+  if type _resolve_live_tab_name >/dev/null 2>&1; then
+    live_tab=$(_resolve_live_tab_name "$tab" 2>/dev/null) || live_tab="$tab"
+  fi
+
   # When called from outside a zellij session (e.g. systemd daemon), find which
   # session contains this tab — zellij action without ZELLIJ_SESSION_NAME set
   # lists sessions instead of acting, so write-chars goes nowhere.
   local zellij_session="${ZELLIJ_SESSION_NAME:-}"
   if [ -z "$zellij_session" ]; then
-    zellij_session=$(_find_session_for_tab "$tab")
+    zellij_session=$(_find_session_for_tab "$live_tab")
     [ -z "$zellij_session" ] && return 1
   fi
 
   # go-to-tab-name is fire-and-forget — the switch completes asynchronously.
   # Poll dump-layout until the focused tab matches before sending characters,
   # so write-chars never lands in the previously focused pane.
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$tab" 2>/dev/null
+  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$live_tab" 2>/dev/null
   local i active
   for i in $(seq 1 20); do
     active=$(ZELLIJ_SESSION_NAME="$zellij_session" zellij action dump-layout 2>/dev/null \
       | grep 'focus=true' | grep 'tab name=' \
       | sed 's/.*tab name="\([^"]*\)".*/\1/' | head -1)
-    [ "$active" = "$tab" ] && break
+    [ "$active" = "$live_tab" ] && break
     sleep 0.05
   done
 

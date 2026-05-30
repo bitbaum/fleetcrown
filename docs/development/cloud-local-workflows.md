@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-05-26
-last_modified_summary: Use the hosted agent installer while the npm package is unpublished.
+last_modified_date: 2026-05-30
+last_modified_summary: Autopilot loop fix — session-handoff watchdog for agents without Stop hooks, inject queued via /api/inject with daemon bearer token, live tab name resolution.
 ---
 
 Cockpit is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -37,14 +37,33 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
    curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --token ck_... --base-url https://cockpitapp.vercel.app
    ```
    Config is written to `~/.config/cockpit/daemon.env`.
-5. **Start the daemon:**
+5. **Install and start the daemon (recommended — systemd user service):**
    ```bash
-   set -a && source ~/.config/cockpit/daemon.env
-   ./scripts/cockpit-daemon.sh
-   # optional: bash scripts/install-daemon.sh  (systemd user service)
+   bash scripts/install-daemon.sh
+   # after code changes:
+   bash scripts/install-daemon.sh --restart
+   # or: cockpit daemon restart
    ```
+   The service uses `Restart=always`, a singleton file lock (one instance only), push-loop self-healing, and automatic reclaim of stale queued commands after daemon crashes.
 
 Until the daemon connects, Control **queues** dispatches and runs them when the daemon pings in.
+
+### Daemon reliability (2026-05-30)
+
+| Mechanism | What it fixes |
+|-----------|----------------|
+| **systemd `Restart=always`** | Daemon comes back after crash, OOM, or self-heal exit |
+| **Singleton flock lock** | No duplicate daemons fighting over Zellij / queue |
+| **Push-loop supervisor** | Background state pusher restarts if its subshell dies |
+| **Push failure budget** | After 30 consecutive failed runtime pushes, daemon exits cleanly so systemd restarts it |
+| **Stale command reclaim** | Commands claimed but never finished (mid-restart) become pending again after 90s |
+| **Autopilot Stop hook** | On agent stop, loads `~/.config/cockpit/daemon.env` so dispatch hits production (not localhost) with your daemon token; autopilot runs before any other stop-hook step |
+| **Autopilot watchdog** | Daemon push loop fires next_best when (a) fresh `agent-ready-<tab>` exists, or (b) session handoff has `status: ready` within 120s — covers Cursor/Codex without Stop hooks |
+| **Inject via daemon queue** | Autopilot queues `/api/inject` with bearer token; daemon executes Zellij inject reliably (direct hook inject was failing silently) |
+| **`install-daemon.sh --restart`** | Stop service, kill orphans, sync beacon hooks, start fresh — use after pulling daemon changes |
+
+**Logs:** `journalctl --user -u cockpit-daemon -f`  
+**Status:** `systemctl --user status cockpit-daemon` or `cockpit status`
 
 ## Workflow matrix
 
@@ -78,6 +97,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Voice transcription (default) | Daemon + ffmpeg + Whisper; or Groq in cloud |
 | Run cron job now | Local openclaw |
 | Auto-continue pause from web (cloud) | Queued `auto_continue` command → daemon writes `/tmp` sentinel |
+| Push notifications (agent ready) | Browser subscribe + VAPID on server; Stop hook calls `/api/push/notify` |
 
 ### Environment-gated (optional features)
 
@@ -89,6 +109,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Cron Telegram delivery | `TELEGRAM_CHAT_ID` (optional; jobs save without it) |
 | Private zone PIN | `PRIVATE_ZONE_PIN_HASH` |
 | Vercel cron janitors | `CRON_SECRET` |
+| Web Push (agent-ready notifications) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` |
 
 ## Architecture sketch
 

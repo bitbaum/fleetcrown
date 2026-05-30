@@ -39,19 +39,33 @@ case "${1:-help}" in
     shift
     case "${1:-start}" in
       start)
-        echo "Starting clean daemon (production, forced remote)..."
-        pkill -f 'cockpit-daemon.sh' 2>/dev/null || true
-        sleep 0.5
-        bash "$DAEMON_SCRIPT"
+        if systemctl --user is-enabled cockpit-daemon >/dev/null 2>&1; then
+          echo "Starting via systemd (recommended)…"
+          bash "$INSTALL_SCRIPT" --restart 2>/dev/null || systemctl --user restart cockpit-daemon
+        else
+          echo "Starting daemon (no systemd service — run: cockpit service enable)…"
+          pkill -f 'cockpit-daemon.sh' 2>/dev/null || true
+          sleep 0.5
+          nohup bash "$DAEMON_SCRIPT" >> "${HOME}/.local/state/cockpit/daemon.log" 2>&1 &
+          sleep 1
+          pgrep -f 'cockpit-daemon.sh' >/dev/null && echo "Daemon started." || echo "Daemon failed to start — check log."
+        fi
         ;;
       stop)
+        if systemctl --user is-enabled cockpit-daemon >/dev/null 2>&1; then
+          systemctl --user stop cockpit-daemon
+        fi
         pkill -f 'cockpit-daemon.sh' 2>/dev/null || true
         echo "Daemon stopped."
         ;;
       restart)
-        $0 daemon stop
-        sleep 1
-        $0 daemon start
+        if systemctl --user is-enabled cockpit-daemon >/dev/null 2>&1; then
+          bash "$INSTALL_SCRIPT" --restart
+        else
+          $0 daemon stop
+          sleep 1
+          $0 daemon start
+        fi
         ;;
       *)
         echo "Usage: cockpit daemon {start|stop|restart}"

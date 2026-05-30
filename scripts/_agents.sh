@@ -133,3 +133,45 @@ _is_cursor_agent() {
 _agent_all_process_names() {
   printf '%s\n' "${AGENT_PROCESS_NAMES[@]}"
 }
+
+# Scan /proc once; output lines of "<cwd> <agent_id>" for all running agents.
+# Shared by the daemon runtime push and live-adapter resolution in hooks.
+_scan_agents() {
+  for pd in /proc/[0-9]*/; do
+    pd="${pd%/}"
+    [ -f "$pd/cmdline" ] || continue
+    local argv0 basename agent_id=""
+    argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
+    basename="${argv0##*/}"
+
+    for a in "${AGENTS[@]}"; do
+      local expected="${AGENT_PROCESS_NAMES[$a]}"
+      if [ "$basename" = "$expected" ]; then
+        if [ "$a" = "cursor" ]; then
+          _is_cursor_agent "$basename" "$argv0" || continue
+        fi
+        agent_id="$a"
+        break
+      fi
+    done
+
+    [ -z "$agent_id" ] && continue
+
+    local cwd
+    cwd=$(readlink "$pd/cwd" 2>/dev/null) || continue
+    echo "$cwd $agent_id"
+  done
+}
+
+# Infer adapter from Zellij tab suffix: "Cockpit Cursor" → cursor.
+_infer_adapter_from_tab_name() {
+  local tab="$1"
+  local lower="${tab,,}"
+  local suffix
+  for suffix in grok claude codex gemini cursor openclaw; do
+    if [ "$lower" = "$suffix" ] || [[ "$lower" == *" ${suffix}" ]] || [[ "$lower" == *"-${suffix}" ]]; then
+      echo "$suffix"
+      return 0
+    fi
+  done
+}

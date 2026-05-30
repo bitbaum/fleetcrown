@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { AgentOption } from "@/lib/agent-registry";
-import { getSessionUserId } from "@/lib/session";
+import { getApiUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executeInject } from "@/lib/executor";
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const { tab, promptKey, customPrompt, adapter } = dataOrResp;
   const eventAdapter: AgentOption = adapter ?? "claude";
 
-  const userId = await getSessionUserId();
+  const userId = await getApiUserId();
   if (!userId) {
     // Session-expiry / unauthenticated path. This is the most likely
     // server-side root cause of the "I sent something but it isn't here"

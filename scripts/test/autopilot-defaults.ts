@@ -48,6 +48,18 @@ function runTests(): void {
       "coerceAutoInjectMode must return DEFAULT_AUTO_INJECT_MODE on miss");
   });
 
+  check("Dispatch Groq fallback uses nextbest when queue empty", () => {
+    const route = readFileSync("src/app/api/control/dispatch/route.ts", "utf8");
+    assert(/queue\.length > 0 \? "queue" : "nextbest"/.test(route),
+      "Groq fallback must return nextbest when queue is empty");
+  });
+
+  check("Automation policy hook seeds from DEFAULT_AUTO_INJECT_MODE", () => {
+    const hook = readFileSync("src/hooks/use-automation-policy.ts", "utf8");
+    assert(/useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(hook),
+      "useAutomationPolicy must not default to off before settings load");
+  });
+
   check("Settings UI initial state seeds from the constant", () => {
     const ui = readFileSync("src/components/settings/BeaconSettings.tsx", "utf8");
     assert(/useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(ui),
@@ -69,6 +81,79 @@ function runTests(): void {
     assert(strategistFallbacks >= 2, `expected ≥2 'echo strategist' fallbacks, got ${strategistFallbacks}`);
   });
 
+  check("patch_project_state uses portable ISO date (not milliseconds)", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(!/iso_now=\$\(date --iso-8601=milliseconds\)/.test(sh),
+      "patch_project_state must not call date --iso-8601=milliseconds — GNU date rejects it and set -e kills the stop hook before autopilot");
+    assert(/patch_project_state[\s\S]*date -u \+%Y-%m-%dT%H:%M:%S/.test(sh),
+      "patch_project_state must use portable UTC ISO timestamp");
+  });
+
+  check("Stop hook queue-empty falls through to next_best", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(/queue action but no queue item — falling through to next_best/.test(sh),
+      "autopilot must fall through to next_best when dispatch says queue but queue is empty");
+  });
+
+  check("autopilot reads DB queue via beacon API", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(/_fetch_prompt_queue_json/.test(sh), "_fetch_prompt_queue_json helper must exist");
+    assert(/\/api\/beacon\/queue\//.test(sh), "autopilot must fetch authoritative DB queue");
+  });
+
+  check("Stop hook loads daemon.env for production URL and token", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(/_load_cockpit_daemon_env/.test(sh), "hook must load ~/.config/cockpit/daemon.env");
+    assert(/COCKPIT_BASE_URL/.test(sh), "hook must honor COCKPIT_BASE_URL");
+    assert(/daemon\.env.*COCKPIT_\$\{key\}/.test(sh.replace(/\n/g, " ")),
+      "token helper must read COCKPIT_DAEMON_TOKEN from daemon.env");
+  });
+
+  check("Daemon autopilot watchdog backs up Stop hook", () => {
+    const sh = readFileSync("scripts/cockpit-daemon.sh", "utf8");
+    assert(/_autopilot_watchdog/.test(sh), "daemon must include autopilot watchdog");
+    assert(/agent-hook-bridge\.sh" autopilot/.test(sh), "watchdog must delegate to hook bridge");
+  });
+
+  check("Hook bridge exposes autopilot CLI mode", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(/autopilot\)/.test(sh), "agent-hook-bridge must support autopilot mode");
+  });
+
+  check("Stop hook runs autopilot before patch_project_state", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    const stopBlock = sh.slice(sh.indexOf("handle_stop()"), sh.indexOf("handle_notification()"));
+    const autopilotIdx = stopBlock.indexOf("autopilot_dispatch_and_inject");
+    const patchIdx = stopBlock.indexOf('patch_project_state "$TAB_NAME" "readyAt"');
+    assert(autopilotIdx >= 0 && patchIdx >= 0 && autopilotIdx < patchIdx,
+      "autopilot must run immediately after ready sentinel — before patch_project_state");
+  });
+
+  check("Autopilot queues inject via /api/inject when daemon token present", () => {
+    const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
+    assert(/queue_inject_via_api/.test(sh), "queue_inject_via_api helper must exist");
+    assert(/\/api\/inject/.test(sh), "autopilot must queue through /api/inject");
+  });
+
+  check("Inject route accepts daemon bearer token", () => {
+    const route = readFileSync("src/app/api/inject/route.ts", "utf8");
+    assert(/getApiUserId/.test(route), "/api/inject must use getApiUserId for daemon auth");
+    assert(!/getSessionUserId/.test(route), "/api/inject must not require browser session only");
+  });
+
+  check("Daemon watchdog detects session handoff without Stop hook", () => {
+    const sh = readFileSync("scripts/cockpit-daemon.sh", "utf8");
+    assert(/ready_source="handoff"/.test(sh), "watchdog must detect status:ready handoff files");
+    assert(/handoff:\$\{ready_at\}/.test(sh), "handoff dedupe key must prevent re-fire loops");
+  });
+
+  check("inject_prompt resolves suffixed Zellij tab names", () => {
+    const sh = readFileSync("scripts/agent-hook-lib.sh", "utf8");
+    assert(/_resolve_live_tab_name/.test(sh), "live tab resolver must exist");
+    assert(/_find_session_for_tab[\s\S]*_resolve_live_tab_name/.test(sh),
+      "_find_session_for_tab must use live tab resolution");
+  });
+
   check("Stop hook is autopilot — no popup race, no choice-file polling", () => {
     const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
     assert(!/beacon_launch/.test(sh), "beacon_launch (Chrome --app popup) must be removed from the bridge");
@@ -78,7 +163,6 @@ function runTests(): void {
     assert(/push_notify_stop/.test(sh), "push_notify_stop helper (Web Push) must exist");
     assert(/\/api\/control\/dispatch/.test(sh), "autopilot path must POST /api/control/dispatch");
     assert(/status: ready \| working/.test(sh), "autopilot prompts must require the status handoff field");
-    // Ensure handle_stop *calls* the autopilot helper (not only declares it).
     const stopCalls = sh.match(/autopilot_dispatch_and_inject\s+"\$TAB_NAME"/g) ?? [];
     assert(stopCalls.length >= 1, "handle_stop must invoke autopilot_dispatch_and_inject");
   });

@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODE="${1:-}"
 if [ -z "$MODE" ]; then
-  echo "usage: agent-hook-bridge.sh <stop|notification>" >&2
+  echo "usage: agent-hook-bridge.sh <stop|notification|autopilot> [tab session_file]" >&2
   exit 2
 fi
 
@@ -11,11 +11,34 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source brand SSOT (APP_NAME, APP_SLUG, _brand_env, _brand_tmp).
 # shellcheck source=_brand.sh
 source "$SCRIPT_DIR/_brand.sh"
+
+_load_cockpit_daemon_env() {
+  local f="${HOME}/.config/cockpit/daemon.env"
+  [ -f "$f" ] || return 0
+  set -a
+  # shellcheck source=/dev/null
+  . "$f"
+  set +a
+}
+
+_resolve_app_base_url() {
+  if [ -n "${COCKPIT_BASE_URL:-}" ]; then
+    printf '%s' "${COCKPIT_BASE_URL}"
+    return
+  fi
+  if [ -n "${APP_BASE_URL:-}" ]; then
+    printf '%s' "${APP_BASE_URL}"
+    return
+  fi
+  _brand_env URL "https://${APP_DOMAIN}"
+}
+
+_load_cockpit_daemon_env
+APP_BASE_URL="$(_resolve_app_base_url)"
+readonly APP_BASE_URL
 # Wire-format prefixes — must match CUSTOM_CHOICE_PREFIX / SWITCH_CHOICE_PREFIX in src/lib/constants/control.ts
 readonly CUSTOM_CHOICE_PREFIX="custom:"
 readonly SWITCH_CHOICE_PREFIX="switch:"
-# Override via APP_URL / APP_BASE_URL env var for non-default ports or remote deployments.
-readonly APP_BASE_URL="$(_brand_env URL "http://localhost:3000")"
 python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/agent-hook-lib.sh"
@@ -25,7 +48,20 @@ log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
 _token_from_env_or_file() {
   local key="$1"
-  echo "$(_brand_env "$key" "$(grep -m1 "^COCKPIT_${key}=" "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2-)")"
+  local val="" f="${HOME}/.config/cockpit/daemon.env"
+  val="$(_brand_env "$key" "")"
+  if [ -n "$val" ]; then
+    printf '%s' "$val"
+    return
+  fi
+  if [ -f "$f" ]; then
+    val=$(grep -m1 "^COCKPIT_${key}=" "$f" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs 2>/dev/null || true)
+    if [ -n "$val" ]; then
+      printf '%s' "$val"
+      return
+    fi
+  fi
+  grep -m1 "^COCKPIT_${key}=" "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs 2>/dev/null || true
 }
 
 # Read per-user beacon settings from the API (uses daemon token for auth).
@@ -151,8 +187,11 @@ emit_worker_finished() {
 patch_project_state() {
   local tab_name="$1"
   local field="$2"
+  # Portable ISO-8601 — GNU date rejects --iso-8601=milliseconds (only ns|seconds|…).
+  # A failing date under set -e previously killed handle_stop before autopilot ran.
   local iso_now
-  iso_now=$(date --iso-8601=milliseconds)
+  iso_now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z 2>/dev/null || date --iso-8601=seconds 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
+  [ -n "${_BEACON_AUTH_HEADER:-}" ] || return 0
   curl -sf -X PATCH "${APP_BASE_URL}/api/project-states/${tab_name}" \
     -H "Content-Type: application/json" \
     -H "@$_BEACON_AUTH_HEADER" \
@@ -187,6 +226,28 @@ dequeue_local_queue_item() {
   fi
 }
 
+# DB queue (project_states.prompt_queue) is authoritative; /tmp mirror is for
+# local hooks. Autopilot must read the API when the daemon token is present.
+_fetch_prompt_queue_json() {
+  local tab_name="$1"
+  local queue_file="/tmp/agent-queue-${tab_name,,}"
+  local queue_json="[]"
+  if [ -n "${_BEACON_AUTH_HEADER:-}" ]; then
+    local encoded api_resp
+    encoded=$(printf '%s' "$tab_name" | jq -sRr @uri)
+    api_resp=$(curl -sf --max-time 4 \
+      -H "@$_BEACON_AUTH_HEADER" \
+      "${APP_BASE_URL}/api/beacon/queue/${encoded}" 2>/dev/null || true)
+    if [ -n "$api_resp" ]; then
+      queue_json=$(printf '%s' "$api_resp" | jq -c '.queue // []' 2>/dev/null || printf '[]')
+    fi
+  fi
+  if [ "$queue_json" = "[]" ] && [ -f "$queue_file" ]; then
+    queue_json=$(jq -c 'if type == "array" then . else [] end' "$queue_file" 2>/dev/null || printf '[]')
+  fi
+  printf '%s' "$queue_json"
+}
+
 # Finishes an orchestration_runs row with the captured handoff so dispatch
 # can learn from outcomes. The run id was written to $(_brand_tmp "run-<tab>")
 # at dispatch time. Fire-and-forget — never blocks the stop hook.
@@ -219,14 +280,67 @@ finish_orchestration_run() {
 }
 
 
+queue_inject_via_api() {
+  local tab_name="$1" prompt_key="${2:-}" custom_prompt="${3:-}"
+  [ -n "${_BEACON_AUTH_HEADER:-}" ] || return 1
+  local live_tab="$tab_name"
+  if type _resolve_live_tab_name >/dev/null 2>&1; then
+    live_tab=$(_resolve_live_tab_name "$tab_name" 2>/dev/null) || live_tab="$tab_name"
+  fi
+  local payload http_code resp
+  if [ -n "$custom_prompt" ]; then
+    payload=$(jq -nc --arg tab "$live_tab" --arg p "$custom_prompt" '{tab:$tab,customPrompt:$p}')
+  elif [ -n "$prompt_key" ]; then
+    payload=$(jq -nc --arg tab "$live_tab" --arg key "$prompt_key" '{tab:$tab,promptKey:$key}')
+  else
+    return 1
+  fi
+  resp=$(curl -sS --max-time 20 -X POST "${APP_BASE_URL}/api/inject" \
+    -H "Content-Type: application/json" \
+    -H "@$_BEACON_AUTH_HEADER" \
+    -d "$payload" \
+    -w $'\n%{http_code}' 2>/dev/null || true)
+  http_code=$(printf '%s' "$resp" | tail -1)
+  resp=$(printf '%s' "$resp" | sed '$d')
+  [ "$http_code" = "200" ] || return 1
+  printf '%s' "$resp" | jq -e '.ok == true' >/dev/null 2>&1
+}
+
 emit_or_inject_prompt() {
   local tab_name="$1"
   local prompt="$2"
+  local prompt_key="${3:-custom}"
+  local label="${4:-Autopilot}"
   if [ "${AGENT_BRIDGE_EMIT_PROMPT:-0}" = "1" ]; then
     printf '%s' "$prompt"
-  else
-    inject_prompt "$tab_name" "$prompt"
+    return 0
   fi
+  local live_tab="$tab_name"
+  if type _resolve_live_tab_name >/dev/null 2>&1; then
+    live_tab=$(_resolve_live_tab_name "$tab_name" 2>/dev/null) || live_tab="$tab_name"
+  fi
+  if [ -n "${_BEACON_AUTH_HEADER:-}" ]; then
+    if [ -n "$prompt" ] && { [ "$prompt_key" = "custom" ] || [ "$prompt_key" = "strategist" ]; }; then
+      local truncated
+      truncated=$(printf '%s' "$prompt" | head -c 3900)
+      if queue_inject_via_api "$live_tab" "" "$truncated"; then
+        write_inject_state "$live_tab" "$prompt_key" "$label"
+        return 0
+      fi
+    elif [ -n "$prompt_key" ] && [ "$prompt_key" != "custom" ]; then
+      if queue_inject_via_api "$live_tab" "$prompt_key" ""; then
+        write_inject_state "$live_tab" "$prompt_key" "$label"
+        return 0
+      fi
+    fi
+    log "autopilot: API queue failed — falling back to direct inject for ${live_tab}"
+  fi
+  if [ -z "$prompt" ] && [ -n "$prompt_key" ] && [ "$prompt_key" != "custom" ]; then
+    prompt=$(get_prompt "$prompt_key" 2>/dev/null || true)
+  fi
+  [ -n "$prompt" ] || return 1
+  inject_prompt "$live_tab" "$prompt" || return 1
+  write_inject_state "$live_tab" "$prompt_key" "$label"
 }
 
 agent_command() {
@@ -299,9 +413,8 @@ autopilot_dispatch_and_inject() {
     health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' || true)
   fi
 
-  local queue_file queue_json
-  queue_file="/tmp/agent-queue-${tab_name,,}"
-  queue_json=$([ -f "$queue_file" ] && jq -c 'if type == "array" then . else [] end' "$queue_file" 2>/dev/null || printf '[]')
+  local queue_json
+  queue_json=$(_fetch_prompt_queue_json "$tab_name")
 
   local payload
   payload=$(jq -nc \
@@ -326,8 +439,7 @@ autopilot_dispatch_and_inject() {
   case "$action" in
     composed)
       if [ -n "$prompt" ]; then
-        emit_or_inject_prompt "$tab_name" "$prompt"
-        write_inject_state "$tab_name" "strategist" "${reason:-Strategist autopilot}"
+        emit_or_inject_prompt "$tab_name" "$prompt" "strategist" "${reason:-Strategist autopilot}"
         log "autopilot: injected COMPOSED — ${reason}"
         return 0
       fi
@@ -338,13 +450,11 @@ autopilot_dispatch_and_inject() {
       first_item=$(printf '%s' "$queue_json" | jq -r '.[0] // empty' 2>/dev/null || true)
       if [ -n "$first_item" ]; then
         dequeue_local_queue_item "$tab_name" "$first_item"
-        emit_or_inject_prompt "$tab_name" "$first_item"
-        write_inject_state "$tab_name" "custom" "Queued prompt"
+        emit_or_inject_prompt "$tab_name" "$first_item" "custom" "Queued prompt"
         log "autopilot: injected QUEUE head"
         return 0
       fi
-      log "autopilot: queue action but no queue item — staying idle"
-      return 1
+      log "autopilot: queue action but no queue item — falling through to next_best"
       ;;
     off)
       log "autopilot: server gate said OFF (${reason}) — staying idle"
@@ -357,6 +467,11 @@ autopilot_dispatch_and_inject() {
       return 1
       ;;
   esac
+
+  if emit_or_inject_prompt "$tab_name" "" "next_best" "Autopilot next_best"; then
+    log "autopilot: injected NEXTBEST — ${reason}"
+    return 0
+  fi
 
   local base session session_update_block
   base=$(get_prompt "next_best")
@@ -387,9 +502,8 @@ Before stopping, create ${session_file}.
 ${session_update_block}"
   fi
 
-  emit_or_inject_prompt "$tab_name" "$prompt"
-  write_inject_state "$tab_name" "next_best" "Autopilot next_best"
-  log "autopilot: injected NEXTBEST (canned) — ${reason}"
+  emit_or_inject_prompt "$tab_name" "$prompt" "next_best" "Autopilot next_best"
+  log "autopilot: injected NEXTBEST (local fallback) — ${reason}"
   return 0
 }
 
@@ -425,8 +539,12 @@ handle_stop() {
   cwd=$(echo "$input" | jq -r '.cwd // empty')
 
   resolve_tab "$cwd"
-  resolve_adapter 2>/dev/null || true
   label="${TAB_NAME:-$(basename "$cwd")}"
+  if type _resolve_live_adapter >/dev/null 2>&1; then
+    _resolve_live_adapter "${TAB_NAME:-}" "$cwd" 2>/dev/null || true
+  else
+    resolve_adapter 2>/dev/null || true
+  fi
   log "fired — label=$label adapter=${ADAPTER:-claude}"
   [ -z "${TAB_NAME:-}" ] && exit 0
   session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
@@ -467,22 +585,21 @@ handle_stop() {
 
   ready_ts=$(date +%s)
   echo "$ready_ts" > "/tmp/agent-ready-${TAB_NAME}"
+
+  # Autopilot first — must run before any step that could fail under set -e.
+  autopilot_dispatch_and_inject "$TAB_NAME" "$session_file" || true
+
   patch_project_state "$TAB_NAME" "readyAt"
 
   # Close the orchestration run + emit worker.finished so /control reflects the
-  # handoff before autopilot starts the next cycle.
+  # handoff before the next cycle starts.
   finish_orchestration_run "$TAB_NAME" "$session_file"
   emit_worker_finished "$TAB_NAME" "$session_file"
 
   play_sound "complete"
 
   # Ambient signal — push notification to subscribed devices (phone, desktop).
-  # The /api/push/notify endpoint is delivered in Stage 5; the call is silent
-  # when the endpoint or subscriptions don't exist yet.
   push_notify_stop "$TAB_NAME" "$label" "$session_file"
-
-  # Autopilot. Cockpit's promise: agents keep working when you're away.
-  autopilot_dispatch_and_inject "$TAB_NAME" "$session_file" || true
 }
 
 handle_notification() {
@@ -536,7 +653,7 @@ handle_notification() {
     log "notification: beacon disabled by user settings — skipping auto-inject"
     exit 0
   fi
-  if [ "${_BEACON_AUTO_MODE:-queue_only}" = "off" ]; then
+  if [ "${_BEACON_AUTO_MODE:-strategist}" = "off" ]; then
     log "notification: automatic continuation policy is manual — skipping auto-inject"
     exit 0
   fi
@@ -566,11 +683,10 @@ handle_notification() {
 
   # Dequeue any user-dispatched task first — same logic handle_stop uses for slot 1.
   # Skipped when health is degraded so the agent focuses on recovery before new work.
-  local queue_file _auto_action first_item
-  queue_file="/tmp/agent-queue-${TAB_NAME,,}"
-  first_item=""
-  [ -f "$queue_file" ] && first_item=$(jq -r '.[0] // empty' "$queue_file" 2>/dev/null)
-  case "${_BEACON_AUTO_MODE:-queue_only}" in
+  local _auto_action first_item queue_json
+  queue_json=$(_fetch_prompt_queue_json "$TAB_NAME")
+  first_item=$(printf '%s' "$queue_json" | jq -r '.[0] // empty' 2>/dev/null || true)
+  case "${_BEACON_AUTO_MODE:-strategist}" in
     queue_only)
       if [ -z "$first_item" ]; then
         log "notification: queue-only policy has no queued instruction — skipping auto-inject"
@@ -582,8 +698,7 @@ handle_notification() {
     strategist)
       _auto_action="nextbest"
       if [ "$auto_key" = "next_best" ] && [ -n "${_BEACON_AUTH_HEADER:-}" ]; then
-        local dispatch_payload dispatch_result dispatch_prompt queue_json
-        queue_json=$([ -f "$queue_file" ] && jq -c 'if type == "array" then . else [] end' "$queue_file" 2>/dev/null || printf '[]')
+        local dispatch_payload dispatch_result dispatch_prompt
         dispatch_payload=$(jq -nc \
           --arg done "$(grep -m1 '^done:' "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//' || true)" \
           --arg next "$(grep -m1 '^next:' "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' || true)" \
@@ -658,6 +773,15 @@ ${session_update_block}"
 case "$MODE" in
   stop) handle_stop ;;
   notification) handle_notification ;;
+  autopilot)
+    TAB_NAME="${2:-}"
+    session_file="${3:-}"
+    if [ -z "$TAB_NAME" ] || [ -z "$session_file" ]; then
+      echo "usage: agent-hook-bridge.sh autopilot <tab> <session_file>" >&2
+      exit 2
+    fi
+    autopilot_dispatch_and_inject "$TAB_NAME" "$session_file"
+    ;;
   *)
     echo "unknown mode: $MODE" >&2
     exit 2

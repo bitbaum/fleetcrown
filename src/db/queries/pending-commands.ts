@@ -47,8 +47,30 @@ export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchA
 // Atomically claims the next unclaimed command for one or more already
 // authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
+const STALE_CLAIM_SECONDS = 90;
+
+/** Commands claimed but never finished (daemon crash/restart) become claimable again. */
+export async function reclaimStalePendingCommands(userIds: string[]): Promise<number> {
+  if (userIds.length === 0) return 0;
+  const userFilter = userIds.length === 1
+    ? eq(pendingCommands.userId, userIds[0])
+    : inArray(pendingCommands.userId, userIds);
+  const reclaimed = await db
+    .update(pendingCommands)
+    .set({ claimedAt: null })
+    .where(and(
+      userFilter,
+      isNotNull(pendingCommands.claimedAt),
+      isNull(pendingCommands.executedAt),
+      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '90 seconds'`,
+    ))
+    .returning({ id: pendingCommands.id });
+  return reclaimed.length;
+}
+
 export async function claimNextPendingCommand(userIds: string[]) {
   if (userIds.length === 0) return null;
+  await reclaimStalePendingCommands(userIds);
   const userFilter = userIds.length === 1
     ? eq(pendingCommands.userId, userIds[0])
     : inArray(pendingCommands.userId, userIds);

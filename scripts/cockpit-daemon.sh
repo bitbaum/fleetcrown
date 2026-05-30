@@ -52,6 +52,16 @@ fi
 umask 077
 printf 'Authorization: Bearer %s\n' "$TOKEN" > "$_AUTH_HEADER"
 
+# Single-instance lock — prevents duplicate daemons (manual start + systemd, etc.).
+_DAEMON_LOCK="${XDG_RUNTIME_DIR:-/tmp}/${APP_SLUG}-daemon.lock"
+mkdir -p "$(dirname "$_DAEMON_LOCK")" 2>/dev/null || true
+exec 9>"$_DAEMON_LOCK"
+if ! flock -n 9; then
+  echo "[${APP_SLUG}-daemon] ERROR: another daemon instance is already running." >&2
+  echo "[${APP_SLUG}-daemon] Use: systemctl --user restart cockpit-daemon" >&2
+  exit 1
+fi
+
 log() { echo "[${APP_SLUG}-daemon] $(date '+%H:%M:%S') $*"; }
 
 # Hooks installed before the hosted helper lived in a separate cockpit-beacon
@@ -221,10 +231,22 @@ next: <state to resume from; empty when nothing is mid-flight>"
 execute_inject() {
   local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}"
 
-  # Look up the project's declared adapter (from agent-projects.conf 3rd field)
-  # so we tell the agent to write its handoff to the right per-adapter session dir.
-  local adapter="claude"
-  if type resolve_adapter >/dev/null 2>&1; then
+  # Look up the project's directory and live adapter (process scan beats conf default).
+  local adapter="claude" project_dir=""
+  while IFS='|' read -r t d _a || [ -n "$t" ]; do
+    [[ "$t" =~ ^[[:space:]]*# ]] && continue
+    t=$(echo "$t" | xargs 2>/dev/null)
+    d=$(echo "$d" | xargs 2>/dev/null)
+    [ -z "$t" ] || [ -z "$d" ] && continue
+    if [ "${t,,}" = "${tab,,}" ]; then
+      project_dir="$d"
+      break
+    fi
+  done < "$CONF_FILE"
+  if type _resolve_live_adapter >/dev/null 2>&1; then
+    _resolve_live_adapter "$tab" "$project_dir" 2>/dev/null || true
+    adapter="${ADAPTER:-claude}"
+  elif type resolve_adapter >/dev/null 2>&1; then
     TAB_NAME="$tab"
     resolve_adapter 2>/dev/null || true
     adapter="${ADAPTER:-claude}"
@@ -695,35 +717,6 @@ _sentinel() {
   echo "null"
 }
 
-# Scan /proc once; output lines of "<cwd> <agent_id>" for all running agents.
-# Uses the single definition in _agents.sh.
-_scan_agents() {
-  for pd in /proc/[0-9]*/; do
-    pd="${pd%/}"
-    [ -f "$pd/cmdline" ] || continue
-    local argv0 basename agent_id=""
-    argv0=$(tr '\0' '\n' < "$pd/cmdline" 2>/dev/null | head -1) || continue
-    basename="${argv0##*/}"
-
-    # Check known agents from the centralized table
-    for a in "${AGENTS[@]}"; do
-      local expected="${AGENT_PROCESS_NAMES[$a]}"
-      if [ "$basename" = "$expected" ]; then
-        if [ "$a" = "cursor" ]; then
-          _is_cursor_agent "$basename" "$argv0" || continue
-        fi
-        agent_id="$a"
-        break
-      fi
-    done
-
-    [ -z "$agent_id" ] && continue
-
-    local cwd
-    cwd=$(readlink "$pd/cwd" 2>/dev/null) || continue
-    echo "$cwd $agent_id"
-  done
-}
 
 _installed_agents_json() {
   local installed="[]"
@@ -845,15 +838,22 @@ _build_state_json() {
       fi
     fi
 
-    # Session file content (done/next/tests/todos/health) — read and push so the cloud
-    # control plane shows current session state without needing a local server connection.
-    # Use the per-adapter path declared in the projects conf (or default claude).
+    # Session file + direct-activity probe: use live adapter (process scan beats conf).
     local adapter="claude"
-    if type resolve_adapter >/dev/null 2>&1; then
+    if type _resolve_live_adapter >/dev/null 2>&1; then
+      _resolve_live_adapter "$live_tab" "$dir" 2>/dev/null || true
+      adapter="${ADAPTER:-claude}"
+    elif type resolve_adapter >/dev/null 2>&1; then
       TAB_NAME="$tab"
       resolve_adapter 2>/dev/null || true
       adapter="${ADAPTER:-claude}"
     fi
+    # Prefer /proc truth when scan found agents; conf/prompt may disagree mid-switch.
+    local scanned_adapter
+    scanned_adapter=$(echo "$agents_json" | jq -r '.[0] // empty' 2>/dev/null || true)
+    case "$scanned_adapter" in
+      grok|claude|codex|gemini|openclaw|cursor) adapter="$scanned_adapter" ;;
+    esac
     # Adapters may expose a project-scoped native activity feed for work typed
     # directly in the CLI. Only upload a short label and timestamp, never log
     # content; web-dispatched prompts and hook lifecycle work for every adapter.
@@ -912,10 +912,12 @@ _build_state_json() {
     # was rewritten after the prompt started — the agent wrote a handoff so
     # the cycle closed; (2) the prompt is older than 30 min (hard cap for
     # agents that never write a session file).
+    # Skip (1) while status: working — mid-task handoff updates are normal.
     if [ "$cpsat" != "null" ]; then
       local _now_s
       _now_s=$(date +%s)
-      if { [ "$sess_mtime" != "null" ] && [ "$sess_mtime" -gt "$((cpsat + 5))" ]; } \
+      if [ "$sess_status" != "working" ] \
+         && { [ "$sess_mtime" != "null" ] && [ "$sess_mtime" -gt "$((cpsat + 5))" ]; } \
          || [ "$((_now_s - cpsat))" -gt 1800 ]; then
         rm -f "$pf"
         cpk="" cpl="" cpsat="null"
@@ -932,6 +934,22 @@ _build_state_json() {
       _now_s=$(date +%s)
       if [ "$((_now_s - _pf_mtime))" -gt 1800 ]; then
         rm -f "$pf"
+      fi
+    fi
+
+    # A Cockpit-dispatched or direct-terminal prompt is live evidence even when
+    # /proc scan misses the agent (Cursor Agent, IDE Composer, race on startup).
+    if [ -n "$cpk" ] && [ "$cpsat" != "null" ]; then
+      running="true"
+      if [ "$(echo "$agents_json" | jq 'length' 2>/dev/null || echo 0)" = "0" ]; then
+        local cp_adapter=""
+        if [ -f "$pf" ]; then
+          cp_adapter=$(jq -r '.adapter // empty' "$pf" 2>/dev/null || true)
+        fi
+        case "$cp_adapter" in
+          grok|claude|codex|gemini|openclaw|cursor) agents_json=$(jq -nc --arg a "$cp_adapter" '[$a]') ;;
+          *) agents_json=$(jq -nc --arg a "$adapter" '[$a]') ;;
+        esac
       fi
     fi
 
@@ -1007,16 +1025,103 @@ push_runtime_state() {
   fi
 }
 
+# Daemon-side autopilot backup — fires when a tab is freshly ready but the Stop
+# hook did not inject (missing token, wrong URL, Codex/Cursor without hooks).
+_autopilot_watchdog() {
+  [ -f "$CONF_FILE" ] || return 0
+  local now_s all_open_tabs=""
+  now_s=$(date +%s)
+  while IFS= read -r zs; do
+    [ -z "$zs" ] && continue
+    local tabs
+    tabs=$(ZELLIJ_SESSION_NAME="$zs" zellij action query-tab-names 2>/dev/null || true)
+    all_open_tabs="${all_open_tabs}"$'\n'"${tabs}"
+  done < <(zellij list-sessions -n 2>/dev/null | awk '{print $1}')
+
+  while IFS='|' read -r tab dir _rest || [ -n "$tab" ]; do
+    [[ "$tab" =~ ^[[:space:]]*# ]] && continue
+    tab=$(echo "$tab" | xargs 2>/dev/null)
+    dir=$(echo "$dir" | xargs 2>/dev/null)
+    [ -z "$tab" ] || [ -z "$dir" ] && continue
+
+    local live_tab="$tab" tab_lower="${tab,,}" exact_tab="" suffix_tab=""
+    while IFS= read -r open_tab; do
+      [ -z "$open_tab" ] && continue
+      local open_lower="${open_tab,,}"
+      if [ "$open_lower" = "$tab_lower" ]; then exact_tab="$open_tab"; break; fi
+      if [ -z "$suffix_tab" ] && { [[ "$open_lower" == "$tab_lower "* ]] || [[ "$open_lower" == "$tab_lower-"* ]]; }; then
+        suffix_tab="$open_tab"
+      fi
+    done <<< "$all_open_tabs"
+    [ -n "$exact_tab" ] && live_tab="$exact_tab"
+    [ -z "$exact_tab" ] && [ -n "$suffix_tab" ] && live_tab="$suffix_tab"
+
+    local ready_at ready_source ready_age lock_at closed_sentinel pf fired_f fired_key sess_status adapter sf
+    adapter="claude"
+    if type _resolve_live_adapter >/dev/null 2>&1; then
+      _resolve_live_adapter "$live_tab" "$dir" 2>/dev/null || true
+      adapter="${ADAPTER:-claude}"
+    fi
+    if type _session_file >/dev/null 2>&1; then
+      sf="$(_session_file "$live_tab" "$adapter")"
+    else
+      sf="$HOME/.claude/sessions/${live_tab}.md"
+    fi
+
+    ready_at=$(_sentinel "/tmp/agent-ready-${live_tab}")
+    ready_source="sentinel"
+    if [ "$ready_at" = "null" ]; then
+      # Agents without Stop hooks (Cursor, Codex, Gemini) never write agent-ready-*.
+      # Fall back to a fresh session handoff with status: ready.
+      if [ -f "$sf" ]; then
+        sess_status=$(grep -m1 '^status:' "$sf" 2>/dev/null | sed 's/^status:[[:space:]]*//' | cut -d'#' -f1 | sed 's/[[:space:]]*$//' || true)
+        if [[ "$sess_status" == ready* ]] || [ "$sess_status" = "ready" ]; then
+          ready_at=$(stat -c %Y "$sf" 2>/dev/null || echo null)
+          ready_source="handoff"
+        fi
+      fi
+      [ "$ready_at" = "null" ] && continue
+    fi
+
+    ready_age=$((now_s - ready_at))
+    if [ "$ready_source" = "handoff" ]; then
+      [ "$ready_age" -lt 0 ] || [ "$ready_age" -gt 120 ] && continue
+    else
+      [ "$ready_age" -lt 0 ] || [ "$ready_age" -gt 60 ] && continue
+    fi
+    lock_at=$(_sentinel "/tmp/agent-stop-active-${live_tab}")
+    [ "$lock_at" != "null" ] && continue
+    closed_sentinel="/tmp/agent-session-closed-${live_tab}"
+    [ -f "$closed_sentinel" ] && continue
+    pf="/tmp/agent-current-prompt-${live_tab}"
+    [ -f "$pf" ] && continue
+
+    fired_f="/tmp/cockpit-autopilot-fired-${live_tab}"
+    fired_key="$ready_at"
+    [ "$ready_source" = "handoff" ] && fired_key="handoff:${ready_at}"
+    if [ -f "$fired_f" ] && [ "$(cat "$fired_f" 2>/dev/null)" = "$fired_key" ]; then
+      continue
+    fi
+
+    log "autopilot watchdog → tab=${live_tab} source=${ready_source} ready_age=${ready_age}s"
+    if bash "$SCRIPT_DIR/agent-hook-bridge.sh" autopilot "$live_tab" "$sf" >>/tmp/agent-hooks.log 2>&1; then
+      printf '%s' "$fired_key" > "$fired_f"
+    fi
+  done < "$CONF_FILE"
+}
+
 _push_loop() {
   local _last_hash=""
   local _last_push_ts=0
   local _last_error_status=""
   local _last_error_ts=0
+  local _consecutive_failures=0
   # Heartbeat: even when the state hash is unchanged, force a push every
   # HEARTBEAT_S so the cloud UI's "daemon offline" threshold (90 s in
   # ControlPanel.tsx:daemonOffline) never trips on a healthy idle daemon.
   # 60 s comfortably stays under that 90 s window with one missed-push slack.
   local _heartbeat_s="$(_brand_env DAEMON_HEARTBEAT_S 60)"
+  local _max_failures="$(_brand_env DAEMON_MAX_PUSH_FAILURES 30)"
   while true; do
     local _s _h _now _age _status
     _s=$(_build_state_json 2>/dev/null) || true
@@ -1035,19 +1140,37 @@ _push_loop() {
           _last_hash="$_h"
           _last_push_ts="$_now"
           _last_error_status=""
-        elif [ "$_status" != "$_last_error_status" ] || [ "$(( _now - _last_error_ts ))" -ge 60 ]; then
-          if [ "$_status" = "401" ]; then
-            log "runtime-state push unauthorized (HTTP 401) - renew the Agent token in Settings and restart the daemon"
-          else
-            log "runtime-state push failed (HTTP $_status)"
+          _consecutive_failures=0
+        else
+          _consecutive_failures=$(( _consecutive_failures + 1 ))
+          if [ "$_consecutive_failures" -ge "$_max_failures" ]; then
+            log "runtime-state push failed ${_consecutive_failures} times — exiting for systemd restart"
+            kill -TERM "$$" 2>/dev/null || exit 1
           fi
-          _last_error_status="$_status"
-          _last_error_ts="$_now"
+          if [ "$_status" != "$_last_error_status" ] || [ "$(( _now - _last_error_ts ))" -ge 60 ]; then
+            if [ "$_status" = "401" ]; then
+              log "runtime-state push unauthorized (HTTP 401) - renew the Agent token in Settings and restart the daemon"
+            else
+              log "runtime-state push failed (HTTP $_status) [${_consecutive_failures}/${_max_failures}]"
+            fi
+            _last_error_status="$_status"
+            _last_error_ts="$_now"
+          fi
         fi
       fi
     fi
+    _autopilot_watchdog 2>/dev/null || true
     sleep "$PUSH_INTERVAL"
   done
+}
+
+# Restart the background push loop if it dies (bash subshell crash, OOM, etc.).
+_ensure_push_loop() {
+  if [ -z "${_PUSH_PID:-}" ] || ! kill -0 "$_PUSH_PID" 2>/dev/null; then
+    log "push loop not running — restarting"
+    _push_loop &
+    _PUSH_PID=$!
+  fi
 }
 
 sync_legacy_hook_runtime
@@ -1058,9 +1181,16 @@ rm -f "/tmp/cockpit-sleep-mode" 2>/dev/null || true
 log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
 _PUSH_PID=$!
-trap 'kill "$_PUSH_PID" 2>/dev/null; rm -f "$_URL_CACHE" "$_AUTH_HEADER"; exit' INT TERM
+
+_shutdown() {
+  kill "$_PUSH_PID" 2>/dev/null || true
+  rm -f "$_URL_CACHE" "$_AUTH_HEADER"
+  exit 0
+}
+trap '_shutdown' INT TERM
 
 while true; do
+  _ensure_push_loop
   # Local maintenance pause support.
   if [ -f "/tmp/cockpit-pause" ]; then
     sleep 30
@@ -1146,6 +1276,7 @@ while true; do
   if [ "$RESTART_AFTER_COMMAND" = "1" ]; then
     kill "$_PUSH_PID" 2>/dev/null || true
     rm -f "$_URL_CACHE" "$_AUTH_HEADER"
-    exec "$HOME/.local/share/$APP_SLUG/cockpit-daemon.sh"
+    # Re-exec the same script tree we are running from — not a stale hosted bundle.
+    exec "$SCRIPT_DIR/cockpit-daemon.sh"
   fi
 done

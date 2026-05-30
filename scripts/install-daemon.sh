@@ -37,17 +37,16 @@ die()  { printf '%s✗%s %s\n' "$red"    "$reset" "$*" >&2; exit 1; }
 # Use this after pulling changes to cockpit-daemon.sh or agent-hook-lib.sh.
 #   bash scripts/install-daemon.sh --restart
 if [[ "${1:-}" == "--restart" ]]; then
-  if ! systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
-    die "Daemon is not running — run without --restart to install first."
+  if ! systemctl --user is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
+    die "Daemon service is not installed — run without --restart to install first."
   fi
-  systemctl --user restart "$SERVICE_NAME"
-  sleep 1
-  if systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
-    ok "Daemon restarted — running updated code from ${PROJECT_DIR}/scripts/"
-  else
-    die "Daemon failed to restart — check: journalctl --user -u ${SERVICE_NAME} -n 20"
-  fi
-  exit 0
+  # Refresh unit file so TimeoutStopSec / Restart=always changes apply.
+  info "Refreshing systemd unit…"
+  COCKPIT_DAEMON_TOKEN="${COCKPIT_DAEMON_TOKEN:-$(grep -E '^COCKPIT_DAEMON_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs || true)}"
+  COCKPIT_BASE_URL="${COCKPIT_BASE_URL:-$(grep -E '^COCKPIT_BASE_URL=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs || echo "https://cockpitapp.vercel.app")}"
+  export COCKPIT_DAEMON_TOKEN COCKPIT_BASE_URL
+  info "Re-installing service unit and restarting with latest scripts…"
+  set --
 fi
 
 # ── Uninstall ────────────────────────────────────────────────────────────────
@@ -118,8 +117,16 @@ StartLimitBurst=5
 Type=simple
 WorkingDirectory=${SCRIPT_DIR}
 ExecStart=${SCRIPT_DIR}/cockpit-daemon.sh
-Restart=on-failure
-RestartSec=5
+# Restart on crash, hang-kill, and self-heal exit (push-loop failure budget).
+Restart=always
+RestartSec=3
+# Give the daemon time to push one heartbeat before systemd considers it hung.
+TimeoutStartSec=30
+# Don't hang shutdown forever on a stuck zellij subprocess.
+TimeoutStopSec=15
+# Cap restart storms — StartLimit* in [Unit] still applies.
+KillMode=control-group
+KillSignal=SIGTERM
 
 # Preserve the login PATH so zellij, jq, ffmpeg, python3 etc. are reachable
 Environment=PATH=${CURRENT_PATH}
@@ -138,11 +145,35 @@ WantedBy=default.target
 EOF
 ok "Service file written to ${SERVICE_FILE}"
 
+# Keep the hosted-install copy aligned with this checkout so repair_helper
+# does not downgrade to an older production bundle.
+INSTALL_DIR="${HOME}/.local/share/cockpit"
+mkdir -p "$INSTALL_DIR"
+for runtime_file in cockpit-daemon.sh cockpit agent-hook-lib.sh agent-hook-bridge.sh \
+    _agents.sh _brand.sh install-daemon.sh run-codex-task.sh run-gemini-task.sh; do
+  [ -f "$SCRIPT_DIR/$runtime_file" ] && cp "$SCRIPT_DIR/$runtime_file" "$INSTALL_DIR/$runtime_file"
+done
+chmod +x "$INSTALL_DIR/cockpit-daemon.sh" "$INSTALL_DIR/cockpit" \
+  "$INSTALL_DIR/agent-hook-bridge.sh" "$INSTALL_DIR/install-daemon.sh" 2>/dev/null || true
+ok "Runtime bundle synced to ${INSTALL_DIR}"
+
+# Keep Claude Stop hook scripts current (autopilot lives here).
+if [ -x "$SCRIPT_DIR/install-beacon.sh" ]; then
+  bash "$SCRIPT_DIR/install-beacon.sh" --sync 2>/dev/null && ok "Beacon hook scripts synced" || true
+fi
+
 # ── Enable and start ──────────────────────────────────────────────────────────
 systemctl --user daemon-reload
 systemctl --user enable "$SERVICE_NAME"
 
-# Restart if already running, start if not
+# Kill orphan manual daemons so only systemd owns the singleton lock.
+info "Ensuring single daemon instance…"
+systemctl --user stop "$SERVICE_NAME" 2>/dev/null || true
+pkill -f "cockpit-daemon.sh" 2>/dev/null || true
+pkill -f "${INSTALL_DIR}/cockpit-daemon.sh" 2>/dev/null || true
+sleep 0.5
+
+# Start (or restart after stop above)
 if systemctl --user is-active "$SERVICE_NAME" >/dev/null 2>&1; then
   info "Service already running — restarting…"
   systemctl --user restart "$SERVICE_NAME"
