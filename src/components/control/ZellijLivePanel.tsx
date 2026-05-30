@@ -1,6 +1,7 @@
 "use client";
 
-import { Focus, PanelsTopLeft, RefreshCw, Terminal, Trash2, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Focus, PanelsTopLeft, RefreshCw, Send, Terminal, Trash2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
@@ -20,6 +21,13 @@ export function ZellijLivePanel({
   onRefresh: () => void;
   onFocusProject?: (tab: string) => void;
 }) {
+  const [targetTab, setTargetTab] = useState("");
+  const [prompt, setPrompt] = useState("");
+  const [sendingPrompt, setSendingPrompt] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const tabOptions = useMemo(() => rows.map((row) => row.tabName), [rows]);
+  const effectiveTarget = targetTab || tabOptions[0] || "";
+
   const focusTab = async (tabName: string) => {
     try {
       await postJson("/api/control/focus-tab", { tab: tabName });
@@ -39,6 +47,22 @@ export function ZellijLivePanel({
       const res = await postJson("/api/agent/repair-helper", {});
       if (res.ok) setTimeout(onRefresh, 1500);
     } catch { /* best effort */ }
+  };
+
+  const sendPrompt = async () => {
+    if (!effectiveTarget || !prompt.trim() || sendingPrompt) return;
+    setSendingPrompt(true);
+    setSendError(null);
+    try {
+      const res = await postJson("/api/control/tab-inject", { tab: effectiveTarget, prompt: prompt.trim() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setPrompt("");
+      setTimeout(onRefresh, 700);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Prompt send failed");
+    } finally {
+      setSendingPrompt(false);
+    }
   };
 
   return (
@@ -105,6 +129,43 @@ export function ZellijLivePanel({
         </div>
       ) : (
         <>
+          <div className="ui-control-live-composer">
+            <select
+              value={effectiveTarget}
+              onChange={(event) => setTargetTab(event.target.value)}
+              className="ui-control-live-select"
+              aria-label="Target Zellij tab"
+            >
+              {tabOptions.map((tab) => (
+                <option key={tab} value={tab}>{tab}</option>
+              ))}
+            </select>
+            <input
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  sendPrompt();
+                }
+              }}
+              className="ui-control-live-input"
+              placeholder="Send a prompt to any open tab"
+              aria-label="Prompt for selected Zellij tab"
+            />
+            <button
+              type="button"
+              onClick={sendPrompt}
+              disabled={sendingPrompt || !prompt.trim() || !effectiveTarget}
+              className="ui-btn-primary ui-btn-xs gap-1.5"
+              title="Send prompt"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Send</span>
+            </button>
+          </div>
+          {sendError && <p className="text-xs text-status-negative">{sendError}</p>}
+
           <div className="hidden md:block overflow-x-auto">
             <table className="ui-control-live-table text-xs">
               <thead>

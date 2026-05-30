@@ -34,6 +34,14 @@ function runTests(): void {
       "queries must use DEFAULT_AUTO_INJECT_MODE constant — no inline string defaults");
   });
 
+  check("Dispatch route falls back to DEFAULT_AUTO_INJECT_MODE", () => {
+    const route = readFileSync("src/app/api/control/dispatch/route.ts", "utf8");
+    assert(/DEFAULT_AUTO_INJECT_MODE/.test(route),
+      "dispatch route must use DEFAULT_AUTO_INJECT_MODE when no settings row exists");
+    assert(!/settings\?\.auto_inject_mode\s*\?\?\s*"queue_only"/.test(route),
+      "dispatch route must not drift back to queue_only as the implicit default");
+  });
+
   check("Coercer returns the constant for unknown values", () => {
     const queries = readFileSync("src/db/queries/beacon-settings.ts", "utf8");
     assert(/coerceAutoInjectMode[\s\S]*DEFAULT_AUTO_INJECT_MODE/.test(queries),
@@ -69,6 +77,7 @@ function runTests(): void {
     assert(/autopilot_dispatch_and_inject/.test(sh), "autopilot_dispatch_and_inject helper must exist");
     assert(/push_notify_stop/.test(sh), "push_notify_stop helper (Web Push) must exist");
     assert(/\/api\/control\/dispatch/.test(sh), "autopilot path must POST /api/control/dispatch");
+    assert(/status: ready \| working/.test(sh), "autopilot prompts must require the status handoff field");
     // Ensure handle_stop *calls* the autopilot helper (not only declares it).
     const stopCalls = sh.match(/autopilot_dispatch_and_inject\s+"\$TAB_NAME"/g) ?? [];
     assert(stopCalls.length >= 1, "handle_stop must invoke autopilot_dispatch_and_inject");

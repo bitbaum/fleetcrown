@@ -15,18 +15,57 @@ export function shellEscape(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-/** Query Zellij for currently open tab names. Returns [] if Zellij is unavailable. */
-export async function getZellijTabs(): Promise<string[]> {
+function cleanZellijLines(stdout: string): string[] {
+  const ansiRe = /\x1b\[[0-9;]*m/g;
+  return stdout
+    .split("\n")
+    .map((s) => s.replace(ansiRe, "").trim())
+    .filter((s) => s.length > 0 && !s.includes("[Created "));
+}
+
+export function getZellijSessionsSync(): string[] {
   try {
-    const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
-    // Strip ANSI escape sequences (present when called outside an active pane context).
-    // Also drop lines that look like session-list entries ("name [Created Xs ago]") which
-    // query-tab-names emits when ZELLIJ_SESSION_NAME points to a stale/wrong session.
-    const ansiRe = /\x1b\[[0-9;]*m/g;
+    const stdout = execSync("zellij list-sessions --no-formatting 2>/dev/null", {
+      encoding: "utf-8",
+      timeout: 2000,
+    });
     return stdout
       .split("\n")
-      .map((s) => s.replace(ansiRe, "").trim())
-      .filter((s) => s.length > 0 && !s.includes("[Created "));
+      .map((line) => line.trim().split(/\s+/)[0])
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function getTabsForSessionSync(session: string): string[] {
+  const commands = [
+    `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
+    `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action query-tab-names 2>/dev/null`,
+  ];
+  for (const command of commands) {
+    try {
+      const stdout = execSync(command, { encoding: "utf-8", timeout: 2000 });
+      const tabs = cleanZellijLines(stdout);
+      if (tabs.length > 0) return tabs;
+    } catch {
+      // Try the next addressing mode.
+    }
+  }
+  return [];
+}
+
+/** Query Zellij for currently open tab names. Returns [] if Zellij is unavailable. */
+export async function getZellijTabs(): Promise<string[]> {
+  const sessions = getZellijSessionsSync();
+  if (sessions.length > 0) {
+    const tabs = sessions.flatMap(getTabsForSessionSync);
+    if (tabs.length > 0) return [...new Set(tabs)];
+  }
+
+  try {
+    const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
+    return cleanZellijLines(stdout);
   } catch {
     return [];
   }

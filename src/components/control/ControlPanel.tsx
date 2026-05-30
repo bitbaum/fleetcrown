@@ -208,6 +208,15 @@ export function ControlPanel() {
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
 
+      <ZellijLivePanel
+        rows={liveTabRows}
+        daemonStateUnknown={daemonStateUnknown}
+        dashboard={dashboard}
+        refreshing={refreshing}
+        onRefresh={() => refresh(true)}
+        onFocusProject={setSelectedTab}
+      />
+
       <ProjectOperationsView
         snapshots={snapshots}
         selectedTab={selectedTab}
@@ -224,15 +233,6 @@ export function ControlPanel() {
           Diagnostics and launch settings
         </summary>
         <div className="ui-control-launch-defaults-body space-y-5">
-          <ZellijLivePanel
-            rows={liveTabRows}
-            daemonStateUnknown={daemonStateUnknown}
-            dashboard={dashboard}
-            refreshing={refreshing}
-            onRefresh={() => refresh(true)}
-            onFocusProject={setSelectedTab}
-          />
-
           <section>
             <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
             <p className="mb-3 text-xs leading-relaxed text-text-tertiary">

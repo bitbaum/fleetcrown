@@ -8,6 +8,7 @@ import {
   buildProjectOperationsSnapshots,
   findProjectForOpenTab,
   formatAgentRuntimeLabel,
+  inferAgentLabelFromTabName,
   getProjectDisplayState,
   isProjectTabOpen,
   isCurrentPromptStale,
@@ -69,6 +70,11 @@ function runTests(): void {
     assert(!isProjectTabOpen(project, ["Cockpit2 Claude"]), "must not match unrelated prefixes");
   });
 
+  check("isProjectTabOpen accepts a different live agent suffix than cached liveTab", () => {
+    const project = stubProject({ tab: "Cockpit", liveTab: "Cockpit Claude" });
+    assert(isProjectTabOpen(project, ["Cockpit Codex"]), "expected canonical project suffix to count as open");
+  });
+
   check("buildLiveTabRows sorts Working before Open", () => {
     const nowS = 1_700_000_000;
     const projects = [
@@ -108,6 +114,12 @@ function runTests(): void {
     assert(label === "Cursor", `expected Cursor, got ${label}`);
   });
 
+  check("inferAgentLabelFromTabName reads common agent suffixes", () => {
+    assert(inferAgentLabelFromTabName("Cockpit Codex") === "Codex", "expected Codex suffix");
+    assert(inferAgentLabelFromTabName("ops-grok") === "Grok", "expected Grok suffix");
+    assert(inferAgentLabelFromTabName("scratch") === null, "expected no inferred agent");
+  });
+
   check("unknown daemon state suppresses cached working and ready signals", () => {
     const nowS = 1_700_000_000;
     const project = stubProject({
@@ -144,9 +156,9 @@ function runTests(): void {
     const project = stubProject({ tab: "Cockpit", agentRunning: true });
     const state = getProjectDisplayState(project, ["Cockpit"], nowS);
     const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
-    assert(state.stateLabel === "Agent shell open", "open inactive agent must describe the observed shell");
+    assert(state.stateLabel === "Waiting for instructions", "open inactive agent must describe the observed shell");
     assert(snapshot.phase === "open_idle", "open inactive agent must not count as waiting for input");
-    assert(snapshot.evidenceLabel === "Agent shell open; no active task detected", "evidence should explain the live signal");
+    assert(snapshot.evidenceLabel === "Agent shell waiting for instructions", "evidence should explain the live signal");
   });
 
   check("ready sentinel is a next-step state, not generic waiting", () => {

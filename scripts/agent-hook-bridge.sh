@@ -365,6 +365,7 @@ autopilot_dispatch_and_inject() {
     return 1
   fi
   session_update_block="When done, update ${session_file} with exactly these lines:
+status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
 done: <one sentence what you completed>
 next: <one sentence what remains>
 tests: <N pass · N fail, or 'no suite'>
@@ -627,6 +628,7 @@ handle_notification() {
   base=$(get_prompt "$auto_key")
   [ -z "$base" ] && exit 0
   session_update_block="When done, update ${session_file} with exactly these lines:
+status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
 done: <one sentence what you completed>
 next: <one sentence what remains>
 tests: <N pass · N fail, or 'no suite'>

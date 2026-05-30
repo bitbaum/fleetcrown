@@ -18,6 +18,7 @@ import { getApiUserId } from "@/lib/session";
 import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
   //   next_best  → legacy: skip Groq, fire canned template
   //   off        → auto-inject disabled entirely; user dispatches by hand
   const settings = await getBeaconSettings(userId).catch(() => null);
-  const mode = settings?.auto_inject_mode ?? "queue_only";
+  const mode = settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE;
 
   if (mode === "off") {
     return NextResponse.json({

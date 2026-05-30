@@ -1,7 +1,7 @@
 import { execSync } from "child_process";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { shellEscape } from "@/lib/zellij";
+import { getZellijSessionsSync, shellEscape } from "@/lib/zellij";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
 import { enqueueTabCommand } from "@/db/queries/pending-commands";
@@ -11,37 +11,39 @@ const FocusTabBody = z.object({
 });
 
 function listSessions(): string[] {
-  try {
-    const out = execSync("zellij list-sessions --no-formatting 2>/dev/null", {
-      encoding: "utf-8",
-      timeout: 2000,
-    });
-    // Output format: "<name> [Created <n>s ago] [(current)]"
-    return out.split("\n")
-      .map((line) => line.trim().split(/\s+/)[0])
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
+  return getZellijSessionsSync();
 }
 
 function getTabsForSession(session: string): string[] {
-  try {
-    const out = execSync(
-      `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
-      { encoding: "utf-8", timeout: 2000 },
-    );
-    return out.split("\n").map((s) => s.trim()).filter(Boolean);
-  } catch {
-    return [];
+  const commands = [
+    `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
+    `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action query-tab-names 2>/dev/null`,
+  ];
+  for (const command of commands) {
+    try {
+      const out = execSync(command, { encoding: "utf-8", timeout: 2000 });
+      const tabs = out.split("\n").map((s) => s.trim()).filter(Boolean);
+      if (tabs.length > 0) return tabs;
+    } catch {
+      // Try next addressing mode.
+    }
   }
+  return [];
 }
 
 function switchTab(session: string, tab: string): void {
-  execSync(
-    `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`,
-    { stdio: "ignore" },
-  );
+  try {
+    execSync(
+      `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`,
+      { stdio: "ignore" },
+    );
+    return;
+  } catch {
+    execSync(
+      `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action go-to-tab-name ${shellEscape(tab)}`,
+      { stdio: "ignore" },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
