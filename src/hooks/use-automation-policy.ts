@@ -4,14 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { getJson, patchJson } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/db/queries/beacon-settings";
 import type { AutoInjectMode } from "@/config/beacon";
-import { DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
+import { DEFAULT_AUTO_INJECT_MODE, DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 
 /**
  * Global automatic-continuation policy. The server setting is authoritative;
- * defaulting to off prevents automatic dispatch before it has been loaded.
+ * seed from DEFAULT_AUTO_INJECT_MODE until /api/beacon-settings loads.
  */
 export function useAutomationPolicy() {
-  const [mode, setMode] = useState<AutoInjectMode>("off");
+  const [mode, setMode] = useState<AutoInjectMode>(DEFAULT_AUTO_INJECT_MODE);
   const [countdownSeconds, setCountdownSeconds] = useState(DEFAULT_BEACON_COUNTDOWN_S);
   const [saving, setSaving] = useState(false);
 
