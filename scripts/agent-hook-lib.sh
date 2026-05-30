@@ -48,19 +48,42 @@ resolve_adapter() {
 
 # Look up the third (agent) column for a tab in agent-projects.conf. Empty
 # output means either the conf is unreadable, the tab isn't registered, or
-# the agent column is blank.
+# the agent column is blank. Handles legacy 3-col lines and current 4-col
+# (tab|dir|agent|model) lines transparently — the unused 4th field is just
+# ignored.
 _conf_agent_for_tab() {
   local tab="$1" conf
   conf="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
   [ -r "$conf" ] || return 1
-  local t _d a
-  while IFS='|' read -r t _d a || [ -n "$t" ]; do
+  local t _d a _m
+  while IFS='|' read -r t _d a _m || [ -n "$t" ]; do
     [[ "$t" =~ ^[[:space:]]*# ]] && continue
     t=$(echo "$t" | xargs 2>/dev/null)
     [ -z "$t" ] && continue
     if [ "${t,,}" = "${tab,,}" ]; then
       a=$(echo "$a" | xargs 2>/dev/null)
       [ -n "$a" ] && { printf '%s\n' "$a"; return 0; }
+      return 1
+    fi
+  done < "$conf"
+  return 1
+}
+
+# Look up the fourth (model) column. Same shape as _conf_agent_for_tab.
+# Returns 1 (no output) for legacy 3-col conf lines or blank model field —
+# callers should default to the agent's built-in model in that case.
+_conf_model_for_tab() {
+  local tab="$1" conf
+  conf="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
+  [ -r "$conf" ] || return 1
+  local t _d _a m
+  while IFS='|' read -r t _d _a m || [ -n "$t" ]; do
+    [[ "$t" =~ ^[[:space:]]*# ]] && continue
+    t=$(echo "$t" | xargs 2>/dev/null)
+    [ -z "$t" ] && continue
+    if [ "${t,,}" = "${tab,,}" ]; then
+      m=$(echo "$m" | xargs 2>/dev/null)
+      [ -n "$m" ] && { printf '%s\n' "$m"; return 0; }
       return 1
     fi
   done < "$conf"

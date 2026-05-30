@@ -243,8 +243,16 @@ execute_inject() {
   # before injecting. Otherwise the prompt gets typed into a bare shell.
   if [ -n "$project_dir" ] && type _is_agent_running_in_dir >/dev/null 2>&1 \
      && ! _is_agent_running_in_dir "$adapter" "$project_dir"; then
+    # Honor user_projects.modelPref via the 4th column of agent-projects.conf
+    # (synced from /api/agent/projects). Without this the launch always used
+    # the agent's built-in default, so a Codex project pinned to gpt-5 still
+    # launched as gpt-5.4 and a Gemini project pinned to flash launched 1.5-pro.
+    local _model=""
+    if type _conf_model_for_tab >/dev/null 2>&1; then
+      _model=$(_conf_model_for_tab "$tab" 2>/dev/null || true)
+    fi
     local _launch_cmd
-    _launch_cmd=$(_agent_launch_cmd "$adapter" "$project_dir" "" 2>/dev/null)
+    _launch_cmd=$(_agent_launch_cmd "$adapter" "$project_dir" "$_model" 2>/dev/null)
     if [ -n "$_launch_cmd" ]; then
       log "inject: no $adapter in $tab — auto-launching"
       # Fresh agent → fresh session → re-deliver the handoff template once.

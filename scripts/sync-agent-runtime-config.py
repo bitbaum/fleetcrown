@@ -56,7 +56,7 @@ def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
 
     lines = [
         "# Managed by Cockpit. Edit projects in the web Control page; the daemon syncs this file.",
-        "# Format: tab_name|/absolute/path/to/project|agent",
+        "# Format: tab_name|/absolute/path/to/project|agent|model",
     ]
     for project in projects:
         if not isinstance(project, dict):
@@ -64,8 +64,9 @@ def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
         name = clean_field(project.get("name"))
         dir_path = clean_field(project.get("dirPath"))
         agent = clean_field(project.get("agent"))
+        model = clean_field(project.get("model"))
         if name and dir_path:
-            lines.append(f"{name}|{dir_path}|{agent}")
+            lines.append(f"{name}|{dir_path}|{agent}|{model}")
 
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(target.parent), delete=False) as tmp:
