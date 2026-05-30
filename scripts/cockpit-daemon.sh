@@ -457,6 +457,13 @@ execute_close_tab() {
 
 execute_launch_agent() {
   local id="$1" tab="$2" dir="$3" agent="$4" model="${5:-}" initial_prompt="${6:-}"
+  # Fall back to agent-projects.conf 4th column when caller didn't pin a model.
+  # The autopilot watchdog and direct hook callers don't carry modelPref in
+  # their payload, so without this they'd launch each agent at its built-in
+  # default — a project pinned to "opus" still got Sonnet, etc.
+  if [ -z "$model" ] && type _conf_model_for_tab >/dev/null 2>&1; then
+    model=$(_conf_model_for_tab "$tab" 2>/dev/null || true)
+  fi
   local session command
   command=$(_agent_launch_cmd "$agent" "$dir" "$model")
   if [ -z "$command" ]; then
@@ -542,6 +549,13 @@ execute_switch_agent() {
     log "DRY RUN switch_agent → tab=$tab from=${from_agent:-?} to=$to_agent"
     mark_done "$id" "true"
     return 0
+  fi
+
+  # Fall back to conf model when caller didn't pin one — same reasoning as
+  # execute_launch_agent. A user switching from Claude→Gemini on a project
+  # pinned to flash now actually gets flash instead of 1.5-pro.
+  if [ -z "$model" ] && type _conf_model_for_tab >/dev/null 2>&1; then
+    model=$(_conf_model_for_tab "$tab" 2>/dev/null || true)
   fi
 
   local launch_cmd
