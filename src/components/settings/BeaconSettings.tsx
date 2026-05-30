@@ -90,142 +90,160 @@ export function BeaconSettings() {
           <Loader2 className="ui-spinner" /> Loading…
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
 
-          {/* ── Auto-inject mode ── */}
-          <div className="space-y-2">
-            <label className="ui-kicker">Auto-inject mode</label>
-            <div className="grid grid-cols-2 gap-2">
-              {AUTO_INJECT_MODES.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  onClick={() => setAutoInjectMode(m.value)}
-                  className={[
-                    "text-left rounded-lg border p-3 transition-colors",
-                    autoInjectMode === m.value
-                      ? "border-accent-primary bg-accent-muted"
-                      : "border-border-default bg-surface-base hover:border-border-interactive",
-                  ].join(" ")}
-                >
-                  <div className="font-medium text-sm text-text-primary">{m.label}</div>
-                  <div className="mt-1 text-xs text-text-tertiary">{m.description}</div>
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-text-muted">
-              Decides what gets injected when a session ends and the queue/handoff combine to suggest a next move. Strategist is the default and uses Groq; switch to Queue only if you want strictly explicit prompts, or Off to dispatch every prompt by hand.
-            </p>
-          </div>
+          {/* ─── Subgroup: Auto-inject behavior ─── */}
+          <div className="space-y-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Auto-inject</h3>
 
-          {/* ── Popup mode ── */}
-          <div className="space-y-2">
-            <label className="ui-kicker">Popup mode</label>
-            <div className="grid grid-cols-2 gap-2">
-              {POPUP_MODES.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  onClick={() => setPopupMode(m.value)}
-                  className={[
-                    "text-left rounded-lg border p-3 transition-colors",
-                    popupMode === m.value
-                      ? "border-accent-primary bg-accent-muted"
-                      : "border-border-default bg-surface-base hover:border-border-interactive",
-                  ].join(" ")}
-                >
-                  <div className="font-medium text-sm text-text-primary">{m.label}</div>
-                  <div className="mt-1 text-xs text-text-tertiary">{m.description}</div>
-                </button>
-              ))}
-            </div>
-            <div className="rounded-lg border border-border-subtle bg-surface-raised p-3 space-y-1">
-              <p className="text-xs text-status-positive">
-                <span className="font-semibold">Advantage — </span>{selectedMode.pros}
-              </p>
+            {/* ── Auto-inject mode ── */}
+            <div className="space-y-2">
+              <label className="ui-kicker">Auto-inject mode</label>
+              <div className="grid grid-cols-2 gap-2">
+                {AUTO_INJECT_MODES.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setAutoInjectMode(m.value)}
+                    className={[
+                      "text-left rounded-lg border p-3 transition-colors",
+                      autoInjectMode === m.value
+                        ? "border-accent-primary bg-accent-muted"
+                        : "border-border-default bg-surface-base hover:border-border-interactive",
+                    ].join(" ")}
+                  >
+                    <div className="font-medium text-sm text-text-primary">{m.label}</div>
+                    <div className="mt-1 text-xs text-text-tertiary">{m.description}</div>
+                  </button>
+                ))}
+              </div>
               <p className="text-xs text-text-muted">
-                <span className="font-semibold">Trade-off — </span>{selectedMode.cons}
+                Decides what gets injected when a session ends and the queue/handoff combine to suggest a next move. Strategist is the default and uses Groq; switch to Queue only if you want strictly explicit prompts, or Off to dispatch every prompt by hand.
+              </p>
+            </div>
+
+            {/* ── Idle gate ── */}
+            <div className="space-y-1.5">
+              <label className="ui-kicker">Show popup after idle</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={0}
+                  max={MAX_BEACON_MIN_IDLE_S}
+                  value={minIdle}
+                  onChange={(e) => setMinIdle(Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)))}
+                  className="ui-input w-24 tabular-nums"
+                />
+                <span className="text-sm text-text-tertiary">seconds</span>
+              </div>
+              <p className="text-xs text-text-muted">
+                {minIdle === 0
+                  ? "Always show — popup fires every time a session ends regardless of keyboard activity."
+                  : `Skip popup if you've been active in the last ${minIdle}s — only show when idle.`}
+              </p>
+            </div>
+
+            {/* ── Countdown ── */}
+            <div className="space-y-1.5">
+              <label className="ui-kicker">Auto-continue countdown</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={MIN_BEACON_COUNTDOWN_S}
+                  max={MAX_BEACON_COUNTDOWN_S}
+                  value={countdown}
+                  onChange={(e) => setCountdown(Math.max(MIN_BEACON_COUNTDOWN_S, Math.min(MAX_BEACON_COUNTDOWN_S, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
+                  className="ui-input w-24 tabular-nums"
+                />
+                <span className="text-sm text-text-tertiary">seconds</span>
+              </div>
+              <p className="text-xs text-text-muted">
+                How long the beacon waits before auto-submitting the primary action. Currently {countdown}s.
               </p>
             </div>
           </div>
 
-          {/* ── Idle gate ── */}
-          <div className="space-y-1.5">
-            <label className="ui-kicker">Show popup after idle</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={0}
-                max={MAX_BEACON_MIN_IDLE_S}
-                value={minIdle}
-                onChange={(e) => setMinIdle(Math.max(0, Math.min(MAX_BEACON_MIN_IDLE_S, parseInt(e.target.value) || 0)))}
-                className="ui-input w-24 tabular-nums"
-              />
-              <span className="text-sm text-text-tertiary">seconds</span>
+          <hr className="border-border-subtle" />
+
+          {/* ─── Subgroup: Popup behavior ─── */}
+          <div className="space-y-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Popup behavior</h3>
+
+            <div className="space-y-2">
+              <label className="ui-kicker">Popup mode</label>
+              <div className="grid grid-cols-2 gap-2">
+                {POPUP_MODES.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => setPopupMode(m.value)}
+                    className={[
+                      "text-left rounded-lg border p-3 transition-colors",
+                      popupMode === m.value
+                        ? "border-accent-primary bg-accent-muted"
+                        : "border-border-default bg-surface-base hover:border-border-interactive",
+                    ].join(" ")}
+                  >
+                    <div className="font-medium text-sm text-text-primary">{m.label}</div>
+                    <div className="mt-1 text-xs text-text-tertiary">{m.description}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="rounded-lg border border-border-subtle bg-surface-raised p-3 space-y-1">
+                <p className="text-xs text-status-positive">
+                  <span className="font-semibold">Advantage — </span>{selectedMode.pros}
+                </p>
+                <p className="text-xs text-text-muted">
+                  <span className="font-semibold">Trade-off — </span>{selectedMode.cons}
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-text-muted">
-              {minIdle === 0
-                ? "Always show — popup fires every time a session ends regardless of keyboard activity."
-                : `Skip popup if you've been active in the last ${minIdle}s — only show when idle.`}
-            </p>
           </div>
 
-          {/* ── Countdown ── */}
-          <div className="space-y-1.5">
-            <label className="ui-kicker">Auto-continue countdown</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={MIN_BEACON_COUNTDOWN_S}
-                max={MAX_BEACON_COUNTDOWN_S}
-                value={countdown}
-                onChange={(e) => setCountdown(Math.max(MIN_BEACON_COUNTDOWN_S, Math.min(MAX_BEACON_COUNTDOWN_S, parseInt(e.target.value) || DEFAULT_BEACON_COUNTDOWN_S)))}
-                className="ui-input w-24 tabular-nums"
-              />
-              <span className="text-sm text-text-tertiary">seconds</span>
+          <hr className="border-border-subtle" />
+
+          {/* ─── Subgroup: Voice transcription ─── */}
+          <div className="space-y-5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Voice transcription</h3>
+
+            {/* ── Transcription provider ── */}
+            <div className="space-y-1.5">
+              <label className="ui-kicker">Transcription provider</label>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="ui-input"
+              >
+                {TRANSCRIPTION_PROVIDERS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label} — {p.note}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-muted">
+                Force local Whisper when Groq is rate-limited, or force Groq when local runtime is unavailable.
+              </p>
             </div>
-            <p className="text-xs text-text-muted">
-              How long the beacon waits before auto-submitting the primary action. Currently {countdown}s.
-            </p>
-          </div>
 
-          {/* ── Transcription provider ── */}
-          <div className="space-y-1.5">
-            <label className="ui-kicker">Transcription provider</label>
-            <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value)}
-              className="ui-input"
-            >
-              {TRANSCRIPTION_PROVIDERS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label} — {p.note}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-text-muted">
-              Force local Whisper when Groq is rate-limited, or force Groq when local runtime is unavailable.
-            </p>
-          </div>
-
-          {/* ── Whisper model ── */}
-          <div className="space-y-1.5">
-            <label className="ui-kicker">Voice transcription model</label>
-            <select
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              className="ui-input"
-            >
-              {WHISPER_MODELS.map((m) => (
-                <option key={m.value} value={m.value}>
-                  {m.label} — {m.note}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-text-muted">
-              Whisper model used when provider is Local or Auto with runtime available. Larger models are more accurate but slower.
-              Cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
-            </p>
+            {/* ── Whisper model ── */}
+            <div className="space-y-1.5">
+              <label className="ui-kicker">Voice transcription model</label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="ui-input"
+              >
+                {WHISPER_MODELS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label} — {m.note}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-muted">
+                Whisper model used when provider is Local or Auto with runtime available. Larger models are more accurate but slower.
+                Cached in <code className="text-text-secondary">~/.cache/whisper/</code>.
+              </p>
+            </div>
           </div>
         </div>
       )}
