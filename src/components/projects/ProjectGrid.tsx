@@ -15,7 +15,24 @@ import {
 import { getProjectLinks, RESERVED } from "./project-detail-types";
 import { buildProjectIvyPrompt } from "@/lib/ivy-prompts";
 
-const CHIP_MAX_CHARS = 28;
+const CHIP_MAX_CHARS = 24;
+
+// Many users store an entire sentence in the status field — e.g.
+// "Active — deployed as systemd service" or "150-line Prisma schema, no CI
+// yet, pre-launch". As a filter chip label that reads as ugly mid-sentence
+// truncation ("Active — deployed as syst…"). Cut at the first natural break
+// (em/en-dash with spaces, comma, colon, " - ", open paren/bracket) so the
+// chip surfaces the canonical short label and the full text stays available
+// via tooltip. Falls back to a hard truncation when the head is too short to
+// be meaningful (no break before the limit).
+function shortStatusLabel(s: string, max = CHIP_MAX_CHARS): string {
+  const m = s.match(/^(.{3,}?)(?:\s[—–-]\s|[,:(\[])/);
+  const head = (m ? m[1] : s).trim();
+  if (head.length < 3) {
+    return s.length > max ? s.slice(0, max) + "…" : s;
+  }
+  return head.length > max ? head.slice(0, max) + "…" : head;
+}
 
 type Project = {
   id: string;
@@ -204,19 +221,16 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
 
       {statuses.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
-          {statuses.map((s) => {
-            const truncated = s.length > CHIP_MAX_CHARS ? s.slice(0, CHIP_MAX_CHARS) + "…" : s;
-            return (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-                title={s}
-                className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
-              >
-                {truncated}
-              </button>
-            );
-          })}
+          {statuses.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+              title={s}
+              className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+            >
+              {shortStatusLabel(s)}
+            </button>
+          ))}
           {statusFilter && (
             <button onClick={() => setStatusFilter(null)} className="shrink-0 ui-chip-filter">
               Clear
