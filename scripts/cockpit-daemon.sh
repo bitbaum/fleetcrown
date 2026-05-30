@@ -488,6 +488,24 @@ _is_agent_running_in_dir() {
   [ "$found" = "1" ]
 }
 
+# Kill (sig = TERM/KILL) every process whose basename matches the agent and
+# whose cwd lives in $dir. Used as the escalation path for switch_agent when
+# the agent TUI ignored /exit + Ctrl+C.
+_kill_agents_in_dir() {
+  local agent="$1" dir="$2" sig="${3:-TERM}"
+  _scan_agents 2>/dev/null | while IFS=' ' read -r cwd aname; do
+    [ "$aname" = "$agent" ] || continue
+    [ "$cwd" = "$dir" ] || [[ "$cwd" == "$dir/"* ]] || continue
+    # Find the PIDs whose cwd matches (one agent name can have multiple processes;
+    # _scan_agents already filtered by basename + cwd, but it emits one line per match).
+    for pd in /proc/[0-9]*/; do
+      local p="${pd%/}"; p="${p##*/}"
+      [ "$(readlink "$pd/cwd" 2>/dev/null)" = "$cwd" ] || continue
+      kill -s "$sig" "$p" 2>/dev/null || true
+    done
+  done
+}
+
 execute_switch_agent() {
   local id="$1" tab="$2" dir="$3" to_agent="$4" from_agent="${5:-}" model="${6:-}"
 
@@ -526,6 +544,21 @@ execute_switch_agent() {
         log "switch_agent: quit didn't land, sending Ctrl+C to $tab"
         send_raw_key_to_tab "$tab" 3 2>/dev/null || true
         sleep 0.6
+      fi
+    fi
+
+    # Escalation: if the agent TUI swallowed /exit + Ctrl+C (Claude when busy,
+    # for example), the new-agent launch would be typed *into* the live old
+    # agent. Send SIGTERM, then SIGKILL, to the agent processes whose cwd is
+    # this project dir so the launch lands in a bare shell.
+    if _is_agent_running_in_dir "$from_agent" "$dir"; then
+      log "switch_agent: $from_agent still alive — SIGTERM on its PIDs"
+      _kill_agents_in_dir "$from_agent" "$dir" TERM
+      sleep 1.5
+      if _is_agent_running_in_dir "$from_agent" "$dir"; then
+        log "switch_agent: $from_agent still alive — SIGKILL"
+        _kill_agents_in_dir "$from_agent" "$dir" KILL
+        sleep 0.5
       fi
     fi
   fi
