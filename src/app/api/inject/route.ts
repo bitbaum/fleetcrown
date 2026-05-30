@@ -22,7 +22,10 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, InjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt, adapter } = dataOrResp;
-  const eventAdapter: AgentOption = adapter ?? "claude";
+  // Provisional adapter for early-return logging; the real resolution happens
+  // after we've looked up dbMatch and can honor user_projects.agent_pref below.
+  type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
+  let eventAdapter: ResolvedAdapter = adapter ?? "claude";
 
   const userId = await getApiUserId();
   if (!userId) {
@@ -71,6 +74,18 @@ export async function POST(req: NextRequest) {
   const canonical = dbMatch.name;
   const projectPath: string | null = dbMatch.dirPath ?? null;
   const projectId: string | null = dbMatch.entityProjectId ?? null;
+
+  // Honor the project's per-row agent preference when the caller didn't pin one.
+  // Without this the daemon defaults to "claude" for every project regardless
+  // of agent_pref, so a Gemini project gets a Claude launch and a Cursor
+  // project gets Claude too. The DB column is text, so validate it's still a
+  // supported adapter before trusting it.
+  if (!adapter && dbMatch.agentPref) {
+    const ids = ORCHESTRATION_ADAPTER_IDS as readonly string[];
+    if (ids.includes(dbMatch.agentPref)) {
+      eventAdapter = dbMatch.agentPref as ResolvedAdapter;
+    }
+  }
 
   let prompt: string;
   let promptLabel = "Custom";
