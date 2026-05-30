@@ -28,7 +28,7 @@ export function AgentTokenSettings() {
       .then((d: { tokens?: TokenMeta[] }) => setTokens(d.tokens ?? []))
       .catch(() => {});
   }, []);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const interactiveInitCommand = `curl -fsSL ${APP_URL}/api/agent/install | node - init --base-url ${APP_URL}`;
 
@@ -50,10 +50,12 @@ export function AgentTokenSettings() {
     }
   };
 
-  const copy = async (text: string) => {
+  // Per-key copy feedback so multiple Copy buttons in the same view can each
+  // show their own check-mark without stealing the others' state.
+  const copy = async (text: string, key: string = "default") => {
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 2000);
   };
 
   const remove = async (id: string) => {
@@ -71,12 +73,20 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Connect the {APP_NAME} background helper on any machine. Run{" "}
-        <code className="rounded bg-surface-raised px-1 py-0.5 font-mono text-xs text-text-secondary">
-          {interactiveInitCommand}
-        </code>{" "}
-        and paste the token when prompted. It installs and starts itself as a persistent service.
+        Connect the {APP_NAME} background helper on any machine. Run the command below and paste the token when prompted — it installs and starts itself as a persistent service.
       </p>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 break-all rounded-lg bg-surface-raised px-3 py-2 font-mono text-xs text-text-secondary">
+          {interactiveInitCommand}
+        </code>
+        <button
+          onClick={() => copy(interactiveInitCommand, "install")}
+          className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
+          title="Copy install command"
+        >
+          {copiedKey === "install" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
 
       {/* Token creation form */}
       <div className="flex gap-2">
@@ -110,19 +120,34 @@ export function AgentTokenSettings() {
               {revealed.token}
             </code>
             <button
-              onClick={() => copy(revealed.token)}
+              onClick={() => copy(revealed.token, "token")}
               className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
               title="Copy token"
             >
-              {copied ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+              {copiedKey === "token" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
-          <p className="text-xs text-text-tertiary">
-            <Terminal className="mr-1 inline-block h-3 w-3" />
-            <code className="font-mono">
-              curl -fsSL {APP_URL}/api/agent/install | node - init --token {revealed.token} --base-url {APP_URL}
-            </code>
+          <p className="text-xs text-text-tertiary flex items-center gap-1">
+            <Terminal className="h-3 w-3 shrink-0" />
+            Or one-shot install (token pre-filled, no prompt):
           </p>
+          {(() => {
+            const oneShot = `curl -fsSL ${APP_URL}/api/agent/install | node - init --token ${revealed.token} --base-url ${APP_URL}`;
+            return (
+              <div className="flex items-center gap-2">
+                <code className="flex-1 break-all rounded-lg bg-surface-base px-3 py-2 font-mono text-xs text-text-primary">
+                  {oneShot}
+                </code>
+                <button
+                  onClick={() => copy(oneShot, "oneshot")}
+                  className="ui-icon-action shrink-0 min-h-8 min-w-8 p-1.5"
+                  title="Copy install command with token pre-filled"
+                >
+                  {copiedKey === "oneshot" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
+                </button>
+              </div>
+            );
+          })()}
         </div>
       )}
 
