@@ -17,9 +17,14 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const tokens = await listAgentTokens(userId);
-  // Never expose the token value in list — only show metadata.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const safe = tokens.map(({ token: _t, ...rest }) => rest);
+  // Never expose the token value in list — only show metadata. Surface a short
+  // prefix (industry convention; GitHub PATs do the same) so the user can match
+  // a row here to the ck_… string in their daemon.env / .env.local and revoke
+  // the right one without guessing.
+  const safe = tokens.map(({ token, ...rest }) => ({
+    ...rest,
+    prefix: token.slice(0, 12) + "…",
+  }));
   return NextResponse.json({ tokens: safe });
 }
 
@@ -34,8 +39,16 @@ export async function POST(req: NextRequest) {
   const orgId = await getOwnerOrgId(userId);
   const { token, record } = await createAgentToken(userId, label, orgId);
 
-  // Return the plaintext token exactly once — caller must store it.
-  return NextResponse.json({ token, id: record.id, label: record.label, createdAt: record.createdAt });
+  // Return the plaintext token exactly once — caller must store it. Also send
+  // the prefix so the client can optimistically render the new row in the list
+  // without a refetch.
+  return NextResponse.json({
+    token,
+    id: record.id,
+    label: record.label,
+    createdAt: record.createdAt,
+    prefix: token.slice(0, 12) + "…",
+  });
 }
 
 export async function DELETE(req: NextRequest) {

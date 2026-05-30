@@ -10,6 +10,7 @@ type TokenMeta = {
   label: string;
   lastUsedAt: string | null;
   createdAt: string;
+  prefix?: string;
 };
 
 type NewToken = { token: string; id: string; label: string };
@@ -40,7 +41,7 @@ export function AgentTokenSettings() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create token");
       setRevealed({ token: data.token, id: data.id, label: data.label });
-      setTokens((prev) => [...prev, { id: data.id, label: data.label, lastUsedAt: null, createdAt: data.createdAt }]);
+      setTokens((prev) => [...prev, { id: data.id, label: data.label, lastUsedAt: null, createdAt: data.createdAt, prefix: data.prefix }]);
       setLabel("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -131,11 +132,19 @@ export function AgentTokenSettings() {
           {tokens.map((t) => (
             <div key={t.id} className="ui-card-shell flex items-center gap-3 px-4 py-3">
               <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-text-primary">{t.label}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="truncate text-sm font-medium text-text-primary">{t.label}</p>
+                  {t.prefix && (
+                    <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary shrink-0" title="Token prefix — match this against the ck_… in your .env to identify the right token">
+                      {t.prefix}
+                    </code>
+                  )}
+                </div>
                 <p className="text-xs text-text-tertiary mt-0.5">
+                  Created {new Date(t.createdAt).toLocaleDateString()}
                   {t.lastUsedAt
-                    ? `Last used ${new Date(t.lastUsedAt).toLocaleDateString()}`
-                    : `Created ${new Date(t.createdAt).toLocaleDateString()} · never used`}
+                    ? ` · last used ${new Date(t.lastUsedAt).toLocaleDateString()}`
+                    : " · never used"}
                 </p>
               </div>
               <button
