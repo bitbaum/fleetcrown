@@ -1246,12 +1246,33 @@ _init_base_url
 # A former UI toggle used a local sleep sentinel outside persisted policy.
 # It is no longer authoritative; discard any stranded value during upgrade.
 rm -f "/tmp/cockpit-sleep-mode" 2>/dev/null || true
+
+# Re-sync ~/.config/agent-projects.conf from cloud user_projects on startup
+# so a freshly-restarted daemon picks up any agent_pref / dir changes the
+# user made while the daemon was offline. Previously this only ran from
+# agent-hook-bridge.sh (i.e. when an agent stopped), so a pref edit could
+# sit unapplied for hours. Background — non-blocking; daemon proceeds even
+# if cloud is unreachable.
+python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 &
+
+# Periodic re-sync so changes made via the web UI propagate within ~5 min
+# even when no agent stops happen.
+_conf_sync_loop() {
+  while true; do
+    sleep 300
+    python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
+  done
+}
+_conf_sync_loop &
+_CONF_SYNC_PID=$!
+
 log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
 _PUSH_PID=$!
 
 _shutdown() {
   kill "$_PUSH_PID" 2>/dev/null || true
+  kill "$_CONF_SYNC_PID" 2>/dev/null || true
   rm -f "$_AUTH_HEADER"
   exit 0
 }
