@@ -231,6 +231,19 @@ function runTests(): void {
     assert(snapshot.evidenceLabel === "Live agent process detected", "evidence must read live, not historical");
   });
 
+  check("working handoff does not stale an active prompt", () => {
+    const nowS = 1_700_000_100;
+    const project = stubProject({
+      tab: "Cockpit",
+      agentRunning: false,
+      currentPrompt: { key: "custom", label: "Still implementing", startedAt: nowS - 30 },
+      session: { status: "working", done: "partial", next: "finish", tests: "", todos: "", health: "good", mtime: (nowS - 5) * 1000 },
+    });
+    assert(!isCurrentPromptStale(project, nowS), "status:working handoff must not clear Working");
+    assert(getProjectDisplayState(project, ["Cockpit"], nowS).stateLabel === "Working",
+      "fresh prompt must show Working without agentRunning");
+  });
+
   check("handoff written after prompt marks it completed", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({

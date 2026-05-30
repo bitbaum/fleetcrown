@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 import { Focus, PanelsTopLeft, RefreshCw, Send, Terminal, Trash2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
@@ -13,6 +13,10 @@ export function ZellijLivePanel({
   refreshing,
   onRefresh,
   onFocusProject,
+  highlightTab,
+  initialTargetTab,
+  panelRef,
+  embedded = false,
 }: {
   rows: LiveTabRow[];
   daemonStateUnknown: boolean;
@@ -20,8 +24,19 @@ export function ZellijLivePanel({
   refreshing: boolean;
   onRefresh: () => void;
   onFocusProject?: (tab: string) => void;
+  /** Row to visually emphasize (e.g. from a push notification deep-link). */
+  highlightTab?: string | null;
+  /** Pre-select this tab in the prompt composer. */
+  initialTargetTab?: string | null;
+  panelRef?: RefObject<HTMLElement | null>;
+  /** Strip outer chrome when nested inside a parent shell (mobile details). */
+  embedded?: boolean;
 }) {
   const [targetTab, setTargetTab] = useState("");
+
+  useEffect(() => {
+    if (initialTargetTab) setTargetTab(initialTargetTab);
+  }, [initialTargetTab]);
   const [prompt, setPrompt] = useState("");
   const [sendingPrompt, setSendingPrompt] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -65,8 +80,11 @@ export function ZellijLivePanel({
     }
   };
 
+  const isHighlighted = (tabName: string) =>
+    Boolean(highlightTab && tabName.toLowerCase() === highlightTab.toLowerCase());
+
   return (
-    <section className="ui-control-live-panel">
+    <section ref={panelRef} className={cn("ui-control-live-panel", embedded && "ui-control-live-panel-embedded")}>
       <div className="ui-control-live-panel-header py-1">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
@@ -179,7 +197,7 @@ export function ZellijLivePanel({
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.tabName}>
+                  <tr key={row.tabName} className={cn(isHighlighted(row.tabName) && "ui-control-live-row-highlight")}>
                     <td className="py-0.5">
                       <span className="font-medium text-text-primary">{row.tabName}</span>
                       {!row.registered && (
@@ -233,7 +251,10 @@ export function ZellijLivePanel({
 
           <div className="space-y-1.5 md:hidden">
             {rows.map((row) => (
-              <div key={row.tabName} className="ui-control-live-card py-1.5 px-2">
+              <div
+                key={row.tabName}
+                className={cn("ui-control-live-card py-1.5 px-2", isHighlighted(row.tabName) && "ui-control-live-row-highlight")}
+              >
                 <div className="flex items-start justify-between gap-1.5">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5">

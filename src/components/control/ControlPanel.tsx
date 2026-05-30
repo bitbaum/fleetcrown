@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { RefreshCw, Sparkles, Plus, Settings2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Sparkles, Plus, Settings2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
+import { postJson } from "@/lib/api/fetch";
 import type { ProjectState } from "@/lib/control-types";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows } from "./control-presenter";
+import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { DaemonStatusBanner } from "./DaemonStatusBanner";
 import {
@@ -20,7 +22,6 @@ import { ZellijLivePanel } from "./ZellijLivePanel";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
 import { ProjectOperationsView } from "./ProjectOperationsView";
-import { AutomationPolicyControl } from "./AutomationPolicyControl";
 import { useAutomationPolicy } from "@/hooks/use-automation-policy";
 
 export function ControlPanel() {
@@ -38,7 +39,15 @@ export function ControlPanel() {
   const automationPolicy = useAutomationPolicy();
   const [activityOpen, setActivityOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<string | null>(null);
+  const [highlightTab, setHighlightTab] = useState<string | null>(null);
+  const [liveTargetTab, setLiveTargetTab] = useState<string | null>(null);
+  const livePanelRef = useRef<HTMLElement>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const focusParam = searchParams.get("focus")?.trim() ?? null;
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
+  const liveDetailsRef = useRef<HTMLDetailsElement>(null);
   // eslint-disable-next-line react-hooks/purity
   const nowS = Math.floor(Date.now() / 1000);
 
@@ -82,17 +91,49 @@ export function ControlPanel() {
   const pageState = data ? buildControlPageState(data, nowS, !daemonStateUnknown) : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
-  const liveTabRows = data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS) : [];
+  const liveTabRows = useMemo(
+    () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS) : []),
+    [data, nowS],
+  );
   const snapshots = data
     ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, !daemonStateUnknown)
     : null;
 
+  const failedCount = data?.failedCommands?.length ?? 0;
+
   useEffect(() => {
     if (!snapshots?.length) return;
-    if (!selectedTab || !snapshots.some((snapshot) => snapshot.project.tab === selectedTab)) {
-      setSelectedTab(snapshots[0].project.tab);
-    }
+    const currentValid = selectedTab && snapshots.some((s) => s.project.tab === selectedTab);
+    if (currentValid) return;
+    const priority = snapshots.find(
+      (s) => s.phase === "waiting_for_user" || s.attentionReason,
+    );
+    setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
   }, [snapshots, selectedTab]);
+
+  // Push notification deep-link: /control?focus=<tab> lands on the live panel
+  // and selects the matching workspace (registered project or open tab).
+  useEffect(() => {
+    if (!focusParam || !data) return;
+
+    const tabLower = focusParam.toLowerCase();
+    const snapshotTab = snapshots?.find((s) => s.project.tab.toLowerCase() === tabLower)?.project.tab;
+    const liveTab = liveTabRows.find((r) => r.tabName.toLowerCase() === tabLower)?.tabName;
+    const resolvedTab = snapshotTab ?? liveTab;
+    if (!resolvedTab) return;
+
+    if (snapshotTab) setSelectedTab(snapshotTab);
+    setHighlightTab(resolvedTab);
+    setLiveTargetTab(resolvedTab);
+    if (liveDetailsRef.current) liveDetailsRef.current.open = true;
+    livePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => { /* best effort */ });
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("focus");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [focusParam, data, snapshots, liveTabRows, pathname, router, searchParams]);
 
   const cardProps = (project: ProjectState) => ({
     project,
@@ -147,36 +188,16 @@ export function ControlPanel() {
           {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums">● {dashboard.runningCount}</span>}
           {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
           {(daemonNeverSeen || daemonOffline) && (
-            <span className="hidden sm:inline h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
+            <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
           )}
           {!daemonNeverSeen && !daemonOffline && daemonLastPushedAt && (
-            <span className="hidden sm:inline text-text-muted" title="Local daemon last sync">daemon {timeAgo(new Date(daemonLastPushedAt).getTime())}</span>
+            <span className="text-text-muted" title="Local daemon last sync">daemon {timeAgo(new Date(daemonLastPushedAt).getTime())}</span>
           )}
-          {lastUpdated && <span className="hidden sm:inline">{timeAgo(lastUpdated)}</span>}
+          {lastUpdated && <span>{timeAgo(lastUpdated)}</span>}
         </>
       ) : (
         <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
       )}
-      <AutomationPolicyControl
-        mode={automationPolicy.mode}
-        saving={automationPolicy.saving}
-        onChange={automationPolicy.updateMode}
-      />
-      <button
-        onClick={() => refresh(true)}
-        disabled={refreshing}
-        title="Refresh"
-        className="ui-icon-btn-touch rounded p-0.5 transition-colors hover:text-text-primary disabled:opacity-50"
-      >
-        <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
-      </button>
-      {/* On cloud (runtimeAvailable=false) Bootstrap-with-AI 503s because
-          /api/project/ai-brief requires the local claude CLI — same gap the
-          /control empty state already gates on (commit 3b2fbad). Route the
-          toolbar "+ New" button to NewProjectModal (Register existing
-          project) instead so the affordance stays useful in cloud mode
-          instead of leading to the same dead-end. On local it still opens
-          Bootstrap as before. */}
       <button
         onClick={() => runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true)}
         title={`New project using ${selectedDefinition?.label ?? selectedAgent} · ${model || selectedDefinition?.defaultModel || ""}`}
@@ -188,8 +209,39 @@ export function ControlPanel() {
     </div>
   );
 
+  const livePanelProps = {
+    rows: liveTabRows,
+    daemonStateUnknown,
+    dashboard,
+    refreshing,
+    onRefresh: () => refresh(true),
+    onFocusProject: setSelectedTab,
+    highlightTab,
+    initialTargetTab: liveTargetTab,
+    panelRef: livePanelRef,
+  };
+
+  const livePanelDesktop = <ZellijLivePanel {...livePanelProps} />;
+  const livePanelMobile = <ZellijLivePanel {...livePanelProps} embedded />;
+
   return (
     <div className="space-y-6">
+      <ControlFleetStatus
+        dashboard={dashboard}
+        attentionCount={attention.length}
+        failedCount={failedCount}
+        daemonNeverSeen={daemonNeverSeen}
+        daemonOffline={daemonOffline}
+        daemonStateUnknown={daemonStateUnknown}
+        daemonLastPushedAt={daemonLastPushedAt}
+        lastUpdated={lastUpdated}
+        automationMode={automationPolicy.mode}
+        automationSaving={automationPolicy.saving}
+        refreshing={refreshing}
+        onRefresh={() => refresh(true)}
+        onAutomationChange={automationPolicy.updateMode}
+      />
+
       <section className="ui-control-operations-header">
         <div>
           <h2 className="text-base font-semibold text-text-primary">Agent operations</h2>
@@ -208,15 +260,6 @@ export function ControlPanel() {
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
 
-      <ZellijLivePanel
-        rows={liveTabRows}
-        daemonStateUnknown={daemonStateUnknown}
-        dashboard={dashboard}
-        refreshing={refreshing}
-        onRefresh={() => refresh(true)}
-        onFocusProject={setSelectedTab}
-      />
-
       <ProjectOperationsView
         snapshots={snapshots}
         selectedTab={selectedTab}
@@ -226,6 +269,17 @@ export function ControlPanel() {
         onNewProject={() => setNewProjectOpen(true)}
         runtimeAvailable={runtimeAvailable}
       />
+
+      <details ref={liveDetailsRef} className="ui-control-live-details md:hidden">
+        <summary className="ui-control-live-details-summary">
+          <span>Terminal workspaces</span>
+          <span className="ui-tag ui-tag-neutral text-micro">
+            {daemonStateUnknown ? "offline" : `${liveTabRows.length} open`}
+          </span>
+        </summary>
+        <div className="ui-control-live-details-body">{livePanelMobile}</div>
+      </details>
+      <div className="hidden md:block">{livePanelDesktop}</div>
 
       <details className="ui-control-launch-defaults">
         <summary className="ui-control-launch-defaults-summary flex items-center gap-2">

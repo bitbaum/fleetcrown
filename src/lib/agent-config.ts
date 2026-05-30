@@ -34,6 +34,18 @@ const CLAUDE_PROMPTS_FILE = () => path.join(/*turbopackIgnore: true*/ home(), ".
 
 export const SESSIONS_DIR = () => path.join(/*turbopackIgnore: true*/ home(), ".claude", "sessions");
 
+/** Per-adapter handoff directory — mirrors scripts/_agents.sh `_agent_session_dir`. */
+export function agentSessionDir(adapter: string): string {
+  if (adapter === "grok") {
+    return path.join(/*turbopackIgnore: true*/ home(), ".grok", "sessions");
+  }
+  return SESSIONS_DIR();
+}
+
+export function sessionFilePath(tab: string, adapter = "claude"): string {
+  return path.join(agentSessionDir(adapter), `${tab}.md`);
+}
+
 // ── State file helpers ────────────────────────────────────────────────────────
 // Single place where the /tmp/<name>-<tab> file names are defined for TypeScript.
 // Bash scripts in ~/.claude/hooks/ duplicate these as string literals — if you

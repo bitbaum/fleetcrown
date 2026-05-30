@@ -27,6 +27,8 @@ import {
 import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { isAgentId } from "@/lib/agent-registry";
+import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands } from "@/db/queries/pending-commands";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
@@ -281,7 +283,14 @@ export async function GET() {
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
     // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
-    const localSession = runtimeAvailable ? parseSession(liveTab) : null;
+    const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
+    const promptHint = runtimeAvailable ? readCurrentPrompt(liveTab) : null;
+    const liveAdapter = projectProcesses[0]?.agentId
+      ?? (promptHint?.adapter && isAgentId(promptHint.adapter) ? promptHint.adapter : null)
+      ?? inferAdapterFromTabName(liveTab)
+      ?? (agentPref && isAgentId(agentPref) ? agentPref : null)
+      ?? agentConfig.agent;
+    const localSession = runtimeAvailable ? parseSession(liveTab, liveAdapter) : null;
     const session = localSession ?? (dbState && (dbState.sessionDone || dbState.sessionNext || dbState.sessionStatus)
       ? {
           status: dbState.sessionStatus ?? undefined,
@@ -342,7 +351,6 @@ export async function GET() {
 
     const projectAgentId = agentPref ?? agentConfig.agent;
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
-    const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
     // On Vercel (no /proc access) fall back to daemon-pushed DB state so the control
     // panel reflects live agent activity on the home machine.
     const agentRunning = runtimeAvailable
@@ -358,7 +366,7 @@ export async function GET() {
     // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
     // show stale tasks after reboot). On Vercel, daemon keeps DB current so use DB.
     const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
-      ? readCurrentPrompt(liveTab)
+      ? promptHint
       : (dbState?.currentPromptKey && dbState?.currentPromptLabel && dbState?.currentPromptStartedAt)
         ? {
             key: dbState.currentPromptKey,
@@ -367,15 +375,11 @@ export async function GET() {
             source: "inject" as const,
           }
         : null;
-    // Agents without lifecycle callbacks, notably an interactive Codex TUI, can stay
-    // alive after returning to the prompt. Direct injections into those sessions have
-    // no reliable completion signal, so do not render their last injected text as an
-    // active task forever. One-shot runners set source:"runner" and are cleared by
-    // agent-hook-bridge.sh when they finish.
-    const currentPrompt: CurrentPrompt | null =
-      sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
-        ? rawCurrentPrompt
-        : null;
+    // Agents without lifecycle callbacks can leave inject sentinels that outlive
+    // the work on local runtime. Cloud daemon already applies stale cleanup.
+    const currentPrompt: CurrentPrompt | null = runtimeAvailable
+      ? (sessionLifecycleSignals || rawCurrentPrompt?.source === "runner" ? rawCurrentPrompt : null)
+      : rawCurrentPrompt;
 
     const lifecycleEvents = latestLifecycleEvents.get(tab);
     const derivedLifecycle = deriveLifecycleState({

@@ -1,12 +1,12 @@
 import fs from "fs";
 import path from "path";
-import { SESSIONS_DIR, stateFile } from "@/lib/agent-config";
+import { sessionFilePath, stateFile } from "@/lib/agent-config";
 import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
 import { parseSessionFile } from "@/lib/session-content";
 import type { CurrentPrompt, SessionState } from "@/lib/control-types";
 
-export function parseSession(tab: string): SessionState | null {
-  const file = path.join(SESSIONS_DIR(), `${tab}.md`);
+export function parseSession(tab: string, adapter = "claude"): SessionState | null {
+  const file = sessionFilePath(tab, adapter);
   if (!fs.existsSync(file)) return null;
   try {
     const raw = fs.readFileSync(file, "utf-8");
@@ -128,12 +128,13 @@ export function readFastState(
       ? rawCurrentPrompt
       : null;
 
+    const liveAdapter = activeAgents[0] ?? "claude";
     return {
       tab,
       agentRunning: agentCwds.some((cwd) => cwd === dir || cwd.startsWith(dir + "/")),
       tabOpen,
       activeAgents,
-      session: parseSession(tab),
+      session: parseSession(tab, liveAdapter),
       currentPrompt,
       readyAt:   tmpReady   !== null && (nowS - tmpReady)   < SENTINEL_VALIDITY_S ? tmpReady   : null,
       lockAt:    tmpLock    !== null && (nowS - tmpLock)    < SENTINEL_VALIDITY_S ? tmpLock    : null,

@@ -329,6 +329,23 @@
   }
   .ui-app-topbar-search-label { @apply truncate; }
   .ui-app-topbar-right { @apply ml-auto flex items-center gap-2; }
+  .ui-topbar-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-tertiary transition-colors;
+    background: oklch(1 0 0 / 0.04);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
+  }
+  .ui-topbar-pill:hover { @apply text-text-secondary; background: oklch(1 0 0 / 0.08); }
+  .ui-topbar-pill:disabled { @apply opacity-60; }
+  .ui-topbar-pill-active {
+    color: var(--accent-primary);
+    background: oklch(from var(--accent-primary) l c h / 0.12);
+    box-shadow: inset 0 0 0 1px oklch(from var(--accent-primary) l c h / 0.24);
+  }
+  .ui-topbar-pill-label {
+    @apply hidden sm:inline;
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
 
   /* App footer — desktop only, micro strip */
   .ui-app-footer {
@@ -1244,8 +1261,57 @@
       linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent);
   }
   .ui-control-operations-header {
-    @apply flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
+    @apply hidden md:flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
     box-shadow: var(--shadow-panel);
+  }
+  .ui-control-fleet {
+    @apply space-y-3 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-control-fleet-top {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+  .ui-control-fleet-daemon {
+    @apply inline-flex flex-wrap items-center gap-1.5 text-xs sm:text-sm;
+  }
+  .ui-control-fleet-daemon-ok { @apply text-status-positive; }
+  .ui-control-fleet-daemon-warn { @apply text-status-warning; }
+  .ui-control-fleet-actions {
+    @apply ml-auto flex items-center gap-2;
+  }
+  .ui-control-fleet-metrics {
+    @apply flex flex-wrap gap-2;
+  }
+  .ui-control-fleet-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary;
+    background: oklch(1 0 0 / 0.04);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
+  }
+  .ui-control-fleet-chip-attention {
+    color: var(--status-warning);
+    background: oklch(from var(--status-warning) l c h / 0.12);
+    box-shadow: inset 0 0 0 1px oklch(from var(--status-warning) l c h / 0.24);
+  }
+  .ui-control-fleet-chip-clear {
+    color: var(--status-positive);
+    background: oklch(from var(--status-positive) l c h / 0.1);
+    box-shadow: inset 0 0 0 1px oklch(from var(--status-positive) l c h / 0.2);
+  }
+  .ui-control-fleet-hint {
+    @apply text-xs leading-relaxed text-text-tertiary;
+  }
+  .ui-control-live-details {
+    @apply rounded-2xl border border-border-subtle bg-surface-raised;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-control-live-details-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary;
+  }
+  .ui-control-live-details-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-control-live-details-body {
+    @apply border-t border-border-subtle px-2 pb-2 pt-1 sm:px-3 sm:pb-3;
   }
   .ui-control-workspace {
     @apply grid items-start gap-4 lg:grid-cols-[17.5rem_minmax(0,1fr)];
@@ -1298,6 +1364,9 @@
     @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6;
     box-shadow: var(--shadow-panel);
   }
+  .ui-control-live-panel-embedded {
+    @apply rounded-none border-0 bg-transparent p-2 shadow-none sm:p-3;
+  }
   .ui-control-live-panel-header {
     @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4;
   }
@@ -1327,6 +1396,10 @@
   }
   .ui-control-live-card {
     @apply rounded-xl border border-border-subtle bg-surface-base p-3.5;
+  }
+  .ui-control-live-row-highlight {
+    background: oklch(from var(--accent-primary) l c h / 0.08);
+    box-shadow: inset 0 0 0 1px oklch(from var(--accent-primary) l c h / 0.24);
   }
   .ui-control-launch-defaults {
     @apply rounded-2xl border border-border-subtle bg-surface-raised;

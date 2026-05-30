@@ -31,7 +31,13 @@ export function isCurrentPromptStale(project: ProjectState, nowS: number): boole
   const startedAt = project.currentPrompt.startedAt;
   if (!startedAt) return false;
 
-  if (project.session?.status === "ready") return true;
+  const sessionStatus = project.session?.status?.trim().toLowerCase();
+  if (sessionStatus === "ready") return true;
+  // Agents mid-task update the handoff file with status: working — that must
+  // not clear the live "Working" badge (was causing false "Open, idle").
+  if (sessionStatus === "working") {
+    return nowS - startedAt > STALE_PROMPT_S;
+  }
 
   // SessionState.mtime is used for Date display elsewhere and remains milliseconds;
   // lifecycle sentinels and prompt startedAt are epoch seconds.
@@ -199,10 +205,9 @@ export function buildLiveTabRows(
       const display = project ? getProjectDisplayState(project, uniqueTabs, nowS) : null;
       const agentLabel = project?.activeAgents.length
         ? formatAgentRuntimeLabel(project)
-        : inferAgentLabelFromTabName(tabName) ??
-          (project?.agentPref
-            ? project.agentPref[0]?.toUpperCase() + project.agentPref.slice(1)
-            : null);
+        : display?.isRunning
+          ? "Agent"
+          : inferAgentLabelFromTabName(tabName);
       const stateLabel: LiveTabRow["stateLabel"] = display?.tone === "idle" && display.tabOpen
         ? "Open, idle"
         : display?.stateLabel ?? "Open";
@@ -251,13 +256,19 @@ export function formatAgentRuntimeLabel(project: ProjectState): string {
     cursor: "Cursor",
     agent: "Cursor",
   };
-  return project.activeAgents
+  const names = project.activeAgents.length
+    ? project.activeAgents
+    : project.currentPrompt?.adapter
+      ? [project.currentPrompt.adapter]
+      : [];
+  return names
     .map((name) => labels[name] ?? (name[0]?.toUpperCase() + name.slice(1)))
     .join(", ");
 }
 
 export function inferAgentLabelFromTabName(tabName: string): string | null {
-  const normalized = tabName.toLowerCase();
+  const id = inferAdapterFromTabName(tabName);
+  if (!id) return null;
   const labels: Record<string, string> = {
     claude: "Claude",
     codex: "Codex",
@@ -266,8 +277,17 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
     gemini: "Gemini",
     openclaw: "OpenClaw",
   };
-  for (const [id, label] of Object.entries(labels)) {
-    if (normalized === id || normalized.endsWith(` ${id}`) || normalized.endsWith(`-${id}`)) return label;
+  return labels[id] ?? null;
+}
+
+/** Tab suffix → adapter id: "Cockpit Cursor" → "cursor". Mirrors scripts/_agents.sh. */
+export function inferAdapterFromTabName(tabName: string): string | null {
+  const normalized = tabName.toLowerCase();
+  const ids = ["grok", "claude", "codex", "gemini", "cursor", "openclaw"] as const;
+  for (const id of ids) {
+    if (normalized === id || normalized.endsWith(` ${id}`) || normalized.endsWith(`-${id}`)) {
+      return id;
+    }
   }
   return null;
 }
@@ -298,12 +318,11 @@ export function getProjectDisplayState(
       stateTagClass: "ui-tag ui-tag-warning",
     };
   }
-  // "agentRunning" means an agent process/session exists. It does not prove
-  // active work: Claude/Codex can sit open at an input prompt after a task.
-  // The staleness gate covers the Codex-no-Stop-hook case where the
-  // /tmp/agent-current-prompt-<tab> sentinel lingers past the work cycle.
+  // Track active work from a fresh current-prompt sentinel. Do not require
+  // agentRunning — cloud daemon may hold a Cockpit-dispatched prompt while
+  // /proc scan misses Cursor Agent or IDE-side Composer activity.
   const stale = isCurrentPromptStale(project, nowS);
-  const currentPrompt = project.agentRunning && !stale ? project.currentPrompt : null;
+  const currentPrompt = project.currentPrompt && !stale ? project.currentPrompt : null;
   const promptRunning = Boolean(currentPrompt);
   const isSessionOpen = project.agentRunning;
 

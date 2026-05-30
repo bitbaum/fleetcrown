@@ -290,8 +290,10 @@ export async function POST(req: NextRequest) {
       meta: { userId, projectKey, hint, queueLen: queue.length },
     });
     return NextResponse.json({
-      action: "queue",
-      reason: `Groq unavailable (${hint}) — using queue order.${streakSuffix}`,
+      action: queue.length > 0 ? "queue" : "nextbest",
+      reason: queue.length > 0
+        ? `Groq unavailable (${hint}) — using queue order.${streakSuffix}`
+        : `Groq unavailable (${hint}) — falling back to next_best.${streakSuffix}`,
       source: "fallback",
     } satisfies DispatchResult);
   }
