@@ -43,59 +43,62 @@ export async function SummaryBar() {
     "What should I focus on today? What's the most urgent thing I'm likely to overlook?",
   ].filter(Boolean).join("\n");
 
+  // Group chips by semantic so the row reads as: "what I have" → "what wants me"
+  // → "what my fleet is doing" → "ask Ivy." Previously 10+ mixed chips with
+  // unit confusion ("0/2 habits" next to "1 urgent") and the action button
+  // styled identically to a status chip. Three counts arrays + thin dividers
+  // give scannable hierarchy while still wrapping cleanly on mobile.
+  const counters = [
+    s.activeGoals > 0 && <Pill key="g" icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />,
+    s.habitsTotal > 0 && (
+      <Pill
+        key="h"
+        icon={Repeat2}
+        value={`${s.habitsDone}/${s.habitsTotal} habits`}
+        variant={s.habitsDone === s.habitsTotal ? "green" : undefined}
+        href="#habits"
+      />
+    ),
+    s.staleContacts > 0 && (
+      <Pill key="c" icon={Users} value={`${s.staleContacts} contacts`} variant="amber" href="/people?health=stale" />
+    ),
+  ].filter(Boolean);
+
+  const alerts = [
+    s.overdueCommitments > 0 && <Pill key="o" icon={AlertCircle} value={`${s.overdueCommitments} overdue`} variant="red" href="#commitments" />,
+    s.urgentAlerts > 0 && <Pill key="u" icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" href="#alerts" />,
+    s.goalsDueSoon > 0 && <Pill key="gd" icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href="/goals" />,
+    s.stuckGoals > 0 && <Pill key="gs" icon={CirclePause} value={`${s.stuckGoals} goal${s.stuckGoals > 1 ? "s" : ""} stalled`} variant="amber" href="#stuck-goals" />,
+    s.eventsDueSoon > 0 && <Pill key="ed" icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" href="/events" />,
+    s.pendingDrafts > 0 && <Pill key="pd" icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" href="#actions" />,
+  ].filter(Boolean);
+
+  const fleetPills = [
+    fleet.running > 0 && <Pill key="fr" icon={Bot} value={`${fleet.running} running`} variant="accent" href="/control" />,
+    fleet.waiting > 0 && <Pill key="fw" icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href="/control" />,
+    fleet.degraded > 0 && <Pill key="fd" icon={Activity} value={`${fleet.degraded} degraded`} variant="amber" href="/control" />,
+  ].filter(Boolean);
+
+  // Hairline divider — vertical line between groups when wrapped on desktop,
+  // invisible-but-spacing on horizontal-scroll mobile. Inlined (not a local
+  // component) to satisfy react-hooks/static-components.
+  const divider = (
+    <span aria-hidden className="hidden sm:inline-block h-6 w-px bg-border-subtle self-center mx-1" />
+  );
+
   return (
     <div className="flex gap-3 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
-      {s.activeGoals > 0 && (
-        <Pill icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />
-      )}
-      {s.habitsTotal > 0 && (
-        <Pill
-          icon={Repeat2}
-          value={`${s.habitsDone}/${s.habitsTotal} habits`}
-          variant={s.habitsDone === s.habitsTotal ? "green" : undefined}
-          href="#habits"
-        />
-      )}
-      {s.goalsDueSoon > 0 && (
-        <Pill icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href="/goals" />
-      )}
-      {s.stuckGoals > 0 && (
-        <Pill icon={CirclePause} value={`${s.stuckGoals} goal${s.stuckGoals > 1 ? "s" : ""} stalled`} variant="amber" href="#stuck-goals" />
-      )}
-      {s.pendingDrafts > 0 && (
-        <Pill icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" href="#actions" />
-      )}
-      {s.overdueCommitments > 0 && (
-        <Pill icon={AlertCircle} value={`${s.overdueCommitments} overdue`} variant="red" href="#commitments" />
-      )}
-      {s.eventsDueSoon > 0 && (
-        <Pill icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" href="/events" />
-      )}
-      {s.staleContacts > 0 && (
-        <Pill
-          icon={Users}
-          value={`${s.staleContacts} contacts`}
-          variant="amber"
-          href="/people?health=stale"
-        />
-      )}
-      {s.urgentAlerts > 0 && (
-        <Pill icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" href="#alerts" />
-      )}
-      {fleet.degraded > 0 && (
-        <Pill icon={Activity} value={`${fleet.degraded} degraded`} variant="amber" href="/control" />
-      )}
-      {fleet.running > 0 && (
-        <Pill icon={Bot} value={`${fleet.running} running`} variant="accent" href="/control" />
-      )}
-      {fleet.waiting > 0 && (
-        <Pill icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href="/control" />
-      )}
+      {counters}
+      {counters.length > 0 && (alerts.length > 0 || fleetPills.length > 0) && divider}
+      {alerts}
+      {alerts.length > 0 && fleetPills.length > 0 && divider}
+      {fleetPills}
+      {(counters.length > 0 || alerts.length > 0 || fleetPills.length > 0) && divider}
       <IvyDispatchButton
         prompt={todayBriefPrompt}
         title="Brief Ivy on today"
         label="Brief Ivy"
-        className="inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-base px-3 py-2 text-xs font-medium text-text-secondary hover:text-status-positive hover:border-status-positive/30 transition-colors min-h-11 sm:min-h-0 shrink-0"
+        className="inline-flex items-center gap-1.5 rounded-full border border-status-positive/30 bg-status-positive-subtle/40 px-3 py-2 text-xs font-semibold text-status-positive hover:bg-status-positive-subtle transition-colors min-h-11 sm:min-h-0 shrink-0"
       />
     </div>
   );
