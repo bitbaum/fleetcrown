@@ -46,9 +46,15 @@ export function GitHubStatus() {
       ) : error || (data?.error && repos.length === 0) ? (
         <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
       ) : data?.runtimeOnly ? (
-        // Cloud mode — github-status.sh is local-only (`gh` CLI). Tell the
-        // user instead of pretending they have no repos.
-        <EmptyState>CI status shows here once the local daemon is connected.</EmptyState>
+        // Cloud mode — github-status.sh shells out to the `gh` CLI from the
+        // app server, which Vercel can't do. The daemon being connected
+        // doesn't fix this; it would need a daemon-pushed CI snapshot, which
+        // doesn't exist yet. Be honest about the constraint instead of
+        // implying "connect the daemon and it'll work".
+        <EmptyState>
+          CI status is collected by the <code>gh</code> CLI on the same machine that runs the Cockpit web server.
+          Open this page on your local Cockpit (<code>http://localhost:3000/projects</code>) to see it.
+        </EmptyState>
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>
       ) : (

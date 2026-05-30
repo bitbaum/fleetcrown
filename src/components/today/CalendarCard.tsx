@@ -37,9 +37,14 @@ export function CalendarCard() {
       ) : error || (data?.error && events.length === 0) ? (
         <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
       ) : data?.runtimeOnly ? (
-        // Cloud mode — `gog calendar list` is local-only, no events stream.
-        // Tell the user instead of pretending they have an empty calendar.
-        <EmptyState>Calendar shows here once the local daemon is connected.</EmptyState>
+        // Cloud mode — `gog calendar list` runs from the app server, not the
+        // daemon. Vercel can't shell out to it; connecting the daemon won't
+        // help. Tell the user where the data actually lives so they don't
+        // waste time re-pairing.
+        <EmptyState>
+          Calendar uses the <code>gog</code> CLI on the machine that runs the Cockpit web server.
+          Open this page on your local Cockpit (<code>http://localhost:3000/today</code>) to see today&apos;s events.
+        </EmptyState>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>
       ) : (
