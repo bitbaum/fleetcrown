@@ -85,10 +85,16 @@ export function ControlPanel() {
   const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
   const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
   const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
-  // Cloud cards cannot truthfully show live agent state without current daemon
-  // heartbeats. Queued commands remain visible as requests, not running work.
-  const daemonStateUnknown = daemonOffline || daemonNeverSeen;
-  const pageState = data ? buildControlPageState(data, nowS, !daemonStateUnknown) : null;
+  // Only hide cached runtime when the daemon has never connected. When offline
+  // but we have a last push, show last-known Working/Ready state with a stale label.
+  const daemonStateUnknown = daemonNeverSeen;
+  const runtimeStateKnown = !daemonNeverSeen;
+  const daemonSyncStale = daemonOffline && daemonLastPushedAt !== null;
+  const runtimeSyncCtx = {
+    syncStale: daemonSyncStale,
+    lastSyncedAt: daemonLastPushedAt,
+  };
+  const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown) : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
   const liveTabRows = useMemo(
@@ -96,7 +102,7 @@ export function ControlPanel() {
     [data, nowS],
   );
   const snapshots = data
-    ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, !daemonStateUnknown)
+    ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, runtimeStateKnown, runtimeSyncCtx)
     : null;
 
   const failedCount = data?.failedCommands?.length ?? 0;
@@ -176,7 +182,8 @@ export function ControlPanel() {
     onProfileSaved: () => { refresh(true); },
     onLaunch: () => openLaunchModal(project),
     runtimeAvailable,
-    runtimeStateKnown: !daemonStateUnknown,
+    runtimeStateKnown,
+    daemonSyncStale,
     automationMode: automationPolicy.mode,
     countdownSeconds: automationPolicy.countdownSeconds,
   });
@@ -211,7 +218,8 @@ export function ControlPanel() {
 
   const livePanelProps = {
     rows: liveTabRows,
-    daemonStateUnknown,
+    daemonNeverSeen,
+    daemonSyncStale,
     dashboard,
     refreshing,
     onRefresh: () => refresh(true),
@@ -232,7 +240,7 @@ export function ControlPanel() {
         failedCount={failedCount}
         daemonNeverSeen={daemonNeverSeen}
         daemonOffline={daemonOffline}
-        daemonStateUnknown={daemonStateUnknown}
+        daemonStateUnknown={daemonNeverSeen}
         daemonLastPushedAt={daemonLastPushedAt}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
@@ -274,7 +282,7 @@ export function ControlPanel() {
         <summary className="ui-control-live-details-summary">
           <span>Terminal workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
-            {daemonStateUnknown ? "offline" : `${liveTabRows.length} open`}
+            {daemonNeverSeen ? "offline" : daemonSyncStale ? `${liveTabRows.length} open · stale` : `${liveTabRows.length} open`}
           </span>
         </summary>
         <div className="ui-control-live-details-body">{livePanelMobile}</div>

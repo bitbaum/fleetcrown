@@ -31,7 +31,32 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
 # shellcheck source=_agents.sh
 source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
 
-_LOCAL_URL="http://localhost:3000"
+# Multi-source polling: COCKPIT_BASE_URLS is a comma-separated list of base URLs
+# (e.g. "http://127.0.0.1:3000,https://cockpitapp.vercel.app"). When 2+ are
+# present, this parent forks one child per extra URL — each runs the full
+# daemon loop against its own URL with its own lock file. Runs BEFORE
+# _REMOTE_URL is derived so the parent and child each pick their own.
+# Falls back silently when only COCKPIT_BASE_URL (singular) is set.
+_DAEMON_BASES=()
+if [ -n "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}" ]; then
+  IFS=',' read -ra _DAEMON_BASES <<< "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}"
+fi
+if [ "${#_DAEMON_BASES[@]}" -gt 1 ] && [ -z "${COCKPIT_DAEMON_CHILD:-}" ]; then
+  for _extra in "${_DAEMON_BASES[@]:1}"; do
+    _extra="$(echo "$_extra" | xargs)"
+    [ -z "$_extra" ] && continue
+    (
+      export COCKPIT_BASE_URL="$_extra"
+      export COCKPIT_BASE_URLS=""
+      export COCKPIT_DAEMON_CHILD=1
+      exec "$0"
+    ) &
+  done
+  # Parent owns the first URL; strip plural so its own startup is single-URL.
+  export COCKPIT_BASE_URL="$(echo "${_DAEMON_BASES[0]}" | xargs)"
+  export COCKPIT_BASE_URLS=""
+fi
+
 _REMOTE_URL="$(_brand_env BASE_URL "https://${APP_DOMAIN}")"
 POLL_INTERVAL="$(_brand_env POLL_INTERVAL 8)"
 PUSH_INTERVAL="$(_brand_env PUSH_INTERVAL 2)"
@@ -39,10 +64,7 @@ DRY_RUN="$(_brand_env DRY_RUN 0)"
 TOKEN="$(_brand_env DAEMON_TOKEN "")"
 CONF_FILE="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
 RESTART_AFTER_COMMAND=0
-# Cache file shared between the main poll loop and the background push loop.
-_URL_CACHE="$(_brand_tmp "daemon-url-$$")"
 _AUTH_HEADER="$(_brand_tmp "daemon-auth-$$")"
-_URL_TTL=30  # re-detect every 30 s
 
 if [ -z "$TOKEN" ]; then
   echo "[${APP_SLUG}-daemon] ERROR: ${APP_SLUG^^}_DAEMON_TOKEN is not set" >&2
@@ -52,12 +74,13 @@ fi
 umask 077
 printf 'Authorization: Bearer %s\n' "$TOKEN" > "$_AUTH_HEADER"
 
-# Single-instance lock — prevents duplicate daemons (manual start + systemd, etc.).
-_DAEMON_LOCK="${XDG_RUNTIME_DIR:-/tmp}/${APP_SLUG}-daemon.lock"
+# Single-instance lock — per-URL so multi-source daemons coexist.
+_lock_suffix=$(echo "${COCKPIT_BASE_URL:-default}" | tr -c 'a-zA-Z0-9' '_' | cut -c1-40)
+_DAEMON_LOCK="${XDG_RUNTIME_DIR:-/tmp}/${APP_SLUG}-daemon-${_lock_suffix}.lock"
 mkdir -p "$(dirname "$_DAEMON_LOCK")" 2>/dev/null || true
 exec 9>"$_DAEMON_LOCK"
 if ! flock -n 9; then
-  echo "[${APP_SLUG}-daemon] ERROR: another daemon instance is already running." >&2
+  echo "[${APP_SLUG}-daemon] ERROR: another daemon for ${COCKPIT_BASE_URL:-default} is already running." >&2
   echo "[${APP_SLUG}-daemon] Use: systemctl --user restart cockpit-daemon" >&2
   exit 1
 fi
@@ -79,71 +102,19 @@ sync_legacy_hook_runtime() {
   chmod +x "$hook_dir/agent-hook-bridge.sh" 2>/dev/null || true
 }
 
-# Returns the configured control plane by default. Development can explicitly
-# opt into localhost with COCKPIT_DAEMON_PREFER_LOCAL=1.
-# Result is cached in $_URL_CACHE for $_URL_TTL seconds so we don't probe on
-# every 2-second push. The file is shared between the main process and the
-# background push-loop subshell.
+# Each process owns exactly one base URL (set by the multi-source split above).
+# Earlier versions probed localhost vs the configured remote per request and
+# cached the choice; multi-source polling makes that obsolete — instead, every
+# extra URL gets its own forked daemon child with its own COCKPIT_BASE_URL.
 _base_url() {
-  local now ts cached url
-  now=$(date +%s)
-  if [ -f "$_URL_CACHE" ]; then
-    ts=$(cut -d' ' -f1 "$_URL_CACHE" 2>/dev/null)
-    cached=$(cut -d' ' -f2 "$_URL_CACHE" 2>/dev/null)
-    if [[ "$ts" =~ ^[0-9]+$ ]] && (( now - ts < _URL_TTL )) && [ -n "$cached" ]; then
-      echo "$cached"; return
-    fi
-  fi
-  # APP_DAEMON_FORCE_REMOTE=1 (or COCKPIT_DAEMON_FORCE_REMOTE=1 legacy) skips
-  # the local probe entirely. Use this when a local dev server is running with
-  # a different DB than the remote — without it, the daemon prefers local and
-  # remote runtime state goes stale (the cloud control panel shows
-  # daemonLastPushedAt frozen).
-  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ] || [ "$(_brand_env DAEMON_PREFER_LOCAL 0)" != "1" ]; then
-    url="$_REMOTE_URL"
-  elif curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
-    url="$_LOCAL_URL"
-  else
-    url="$_REMOTE_URL"
-  fi
-  echo "$now $url" > "$_URL_CACHE"
-  echo "$url"
+  echo "$_REMOTE_URL"
 }
 
-# Warm the cache at startup, retrying briefly so the local app has time to boot.
 _init_base_url() {
-  if [ "$(_brand_env DAEMON_FORCE_REMOTE 0)" = "1" ] || [ "$(_brand_env DAEMON_PREFER_LOCAL 0)" != "1" ]; then
-    echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
-    log "using configured control plane $_REMOTE_URL (local probing disabled)"
-    return
-  fi
-  local i=0
-  while (( i < 8 )); do
-    if curl -sf --max-time 0.8 "$_LOCAL_URL/api/health" >/dev/null 2>&1; then
-      echo "$(date +%s) $_LOCAL_URL" > "$_URL_CACHE"
-      log "local server detected — using $_LOCAL_URL"
-      # Loud warning: if the configured remote URL is a real production
-      # endpoint (anything that isn't localhost / 127.0.0.1), the user
-      # almost certainly has a deployed app + a local dev server running
-      # side-by-side. Polling local means dispatches from the production
-      # /control page never reach this daemon — they queue silently on
-      # the remote DB. This exact trap cost a real session before the
-      # warning was added.
-      if [[ "$_REMOTE_URL" != *localhost* && "$_REMOTE_URL" != *127.0.0.1* ]]; then
-        log "WARN: ${APP_SLUG^^}_BASE_URL=$_REMOTE_URL but daemon picked LOCAL —"
-        log "WARN: dispatches from $_REMOTE_URL/control will NOT reach this daemon."
-        log "WARN: set ${APP_SLUG^^}_DAEMON_FORCE_REMOTE=1 in your daemon.env to poll $_REMOTE_URL instead."
-      fi
-      return
-    fi
-    (( i++ )) || true
-    sleep 1
-  done
-  echo "$(date +%s) $_REMOTE_URL" > "$_URL_CACHE"
-  log "local server not available — using $_REMOTE_URL"
+  log "polling $_REMOTE_URL"
 }
 
-trap 'rm -f "$_URL_CACHE" "$_AUTH_HEADER"' EXIT
+trap 'rm -f "$_AUTH_HEADER"' EXIT
 
 claim_next() {
   local base wait_secs
@@ -229,7 +200,7 @@ next: <state to resume from; empty when nothing is mid-flight>"
 }
 
 execute_inject() {
-  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}"
+  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}" payload_adapter="${6:-}"
 
   # Look up the project's directory and live adapter (process scan beats conf default).
   local adapter="claude" project_dir=""
@@ -250,6 +221,47 @@ execute_inject() {
     TAB_NAME="$tab"
     resolve_adapter 2>/dev/null || true
     adapter="${ADAPTER:-claude}"
+  fi
+
+  # Payload adapter wins when scan detected nothing (fresh tab, no process).
+  # The UI/DB knows the project's preferred adapter (user_projects.agent_pref)
+  # so an empty tab launches the right agent, not just the bash default.
+  case "$payload_adapter" in
+    claude|grok|codex|gemini|cursor|openclaw)
+      if [ -n "$project_dir" ] && type _is_agent_running_in_dir >/dev/null 2>&1; then
+        # Only override if no live agent of any kind is in this project.
+        if ! _is_agent_running_in_dir "$adapter" "$project_dir"; then
+          adapter="$payload_adapter"
+        fi
+      else
+        adapter="$payload_adapter"
+      fi
+      ;;
+  esac
+
+  # Auto-launch: if no agent of the chosen kind is running here, start it
+  # before injecting. Otherwise the prompt gets typed into a bare shell.
+  if [ -n "$project_dir" ] && type _is_agent_running_in_dir >/dev/null 2>&1 \
+     && ! _is_agent_running_in_dir "$adapter" "$project_dir"; then
+    local _launch_cmd
+    _launch_cmd=$(_agent_launch_cmd "$adapter" "$project_dir" "" 2>/dev/null)
+    if [ -n "$_launch_cmd" ]; then
+      log "inject: no $adapter in $tab — auto-launching"
+      inject_prompt "$tab" "$_launch_cmd" 2>/dev/null || true
+      # Poll for the process to appear (Claude/Cursor TUI need ~1–3s to spawn).
+      local _deadline=$(( $(date +%s) + 20 ))
+      while (( $(date +%s) < _deadline )); do
+        sleep 0.5
+        if _is_agent_running_in_dir "$adapter" "$project_dir"; then
+          log "inject: $adapter ready in $tab"
+          sleep 2   # TUI input-handler warm-up
+          break
+        fi
+      done
+      if ! _is_agent_running_in_dir "$adapter" "$project_dir"; then
+        log "inject: $adapter did not appear in $tab within 20s — proceeding anyway"
+      fi
+    fi
   fi
 
   # If a promptKey was queued (cloud mode sends key string as prompt fallback),
@@ -383,7 +395,7 @@ execute_focus_tab() {
   local session
   session=$(_find_session_for_tab "$tab" 2>/dev/null || true)
   log "focus_tab → $tab"
-  if [ -n "$session" ] && ZELLIJ_SESSION_NAME="$session" zellij action go-to-tab-name "$tab" 2>/dev/null; then
+  if [ -n "$session" ] && ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action go-to-tab-name "$tab" 2>/dev/null; then
     mark_done "$id" "true"
     log "focus_tab done ✓"
   else
@@ -405,9 +417,9 @@ execute_close_tab() {
     return 0
   fi
   log "close_tab → $tab"
-  ZELLIJ_SESSION_NAME="$session" zellij action go-to-tab-name "$tab" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action go-to-tab-name "$tab" 2>/dev/null || true
   sleep 0.15
-  if ZELLIJ_SESSION_NAME="$session" zellij action close-tab 2>/dev/null; then
+  if ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action close-tab 2>/dev/null; then
     mark_done "$id" "true"
     log "close_tab done ✓"
   else
@@ -433,7 +445,7 @@ execute_launch_agent() {
   if [ -z "$session" ]; then
     session=$(zellij list-sessions -n 2>/dev/null | awk 'NR==1{print $1}')
     [ -z "$session" ] && { mark_done "$id" "false" "no zellij session found"; return 0; }
-    ZELLIJ_SESSION_NAME="$session" zellij action new-tab --name "$tab" 2>/dev/null || {
+    ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action new-tab --name "$tab" 2>/dev/null || {
       mark_done "$id" "false" "new-tab failed"; return 0;
     }
     sleep 0.5
@@ -592,7 +604,7 @@ execute_install_cli() {
   local tab_name="Install $label"
 
   # Create a fresh tab for the installer (user can close it when done)
-  ZELLIJ_SESSION_NAME="$session" zellij action new-tab --name "$tab_name" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action new-tab --name "$tab_name" 2>/dev/null || true
   sleep 0.6
 
   # Inject the install command
@@ -724,15 +736,19 @@ _installed_agents_json() {
     local ok="false"
     case "$agent" in
       cursor)
-        if command -v agent >/dev/null 2>&1; then
-          local agent_path
-          agent_path=$(command -v agent 2>/dev/null || true)
-          if [[ "$agent_path" == *".local/bin/agent"* ]] || [[ "$agent_path" == *"/.cursor/"* ]]; then
-            ok="true"
-          elif agent --version 2>&1 | grep -Eq '[0-9]{4}\.[0-9]{2}\.[0-9]{2}'; then
-            ok="true"
+        for _cursor_bin in agent cursor-agent; do
+          if command -v "$_cursor_bin" >/dev/null 2>&1; then
+            local agent_path
+            agent_path=$(command -v "$_cursor_bin" 2>/dev/null || true)
+            if [[ "$agent_path" == *".local/bin/agent"* ]] || [[ "$agent_path" == *"cursor-agent"* ]] || [[ "$agent_path" == *"/.cursor/"* ]]; then
+              ok="true"
+              break
+            elif "$_cursor_bin" --version 2>&1 | grep -Eq '[0-9]{4}\.[0-9]{2}\.[0-9]{2}'; then
+              ok="true"
+              break
+            fi
           fi
-        fi
+        done
         ;;
       *)
         command -v "${AGENT_PROCESS_NAMES[$agent]}" >/dev/null 2>&1 && ok="true"
@@ -758,7 +774,7 @@ _build_state_json() {
   while IFS= read -r zs; do
     [ -z "$zs" ] && continue
     local tabs
-    tabs=$(ZELLIJ_SESSION_NAME="$zs" zellij action query-tab-names 2>/dev/null || true)
+    tabs=$(ZELLIJ_SESSION_NAME="$zs" timeout 3 zellij action query-tab-names 2>/dev/null || true)
     all_open_tabs="${all_open_tabs}"$'\n'"${tabs}"
   done < <(zellij list-sessions -n 2>/dev/null | awk '{print $1}')
 
@@ -1034,7 +1050,7 @@ _autopilot_watchdog() {
   while IFS= read -r zs; do
     [ -z "$zs" ] && continue
     local tabs
-    tabs=$(ZELLIJ_SESSION_NAME="$zs" zellij action query-tab-names 2>/dev/null || true)
+    tabs=$(ZELLIJ_SESSION_NAME="$zs" timeout 3 zellij action query-tab-names 2>/dev/null || true)
     all_open_tabs="${all_open_tabs}"$'\n'"${tabs}"
   done < <(zellij list-sessions -n 2>/dev/null | awk '{print $1}')
 
@@ -1184,7 +1200,7 @@ _PUSH_PID=$!
 
 _shutdown() {
   kill "$_PUSH_PID" 2>/dev/null || true
-  rm -f "$_URL_CACHE" "$_AUTH_HEADER"
+  rm -f "$_AUTH_HEADER"
   exit 0
 }
 trap '_shutdown' INT TERM
@@ -1222,7 +1238,8 @@ while true; do
       if [ -n "$run_id" ]; then
         printf '%s' "$run_id" > "$(_brand_tmp "run-${tab}")"
       fi
-      execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label"
+      payload_adapter=$(echo "$payload" | jq -r '.adapter // empty')
+      execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label" "$payload_adapter"
       ;;
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')
@@ -1275,7 +1292,7 @@ while true; do
   push_runtime_state &
   if [ "$RESTART_AFTER_COMMAND" = "1" ]; then
     kill "$_PUSH_PID" 2>/dev/null || true
-    rm -f "$_URL_CACHE" "$_AUTH_HEADER"
+    rm -f "$_AUTH_HEADER"
     # Re-exec the same script tree we are running from — not a stale hosted bundle.
     exec "$SCRIPT_DIR/cockpit-daemon.sh"
   fi

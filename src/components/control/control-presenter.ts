@@ -5,6 +5,8 @@ import {
   READY_WINDOW_S,
   withinWindow,
 } from "@/lib/constants/control";
+import { timeAgo } from "@/lib/dates";
+import { getIntentLabel } from "@/config/control-intents";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
 /**
@@ -15,6 +17,36 @@ import type { ControlData, ProjectState } from "@/lib/control-types";
  * agent task should plausibly run; longer real work writes intermediate session
  * files so the mtime-based signal below fires first.
  */
+export type RuntimeSyncContext = {
+  /** True when the cloud has never received a daemon runtime-state push. */
+  stateUnknown?: boolean;
+  /** True when the last daemon push is older than the offline threshold. */
+  syncStale?: boolean;
+  /** ISO timestamp of the last successful runtime-state push from the local daemon. */
+  lastSyncedAt?: string | null;
+};
+
+function staleSyncLabel(lastSyncedAt: string | null | undefined): string {
+  if (!lastSyncedAt) return "Last sync unknown";
+  return `Last sync ${timeAgo(new Date(lastSyncedAt).getTime())}`;
+}
+
+function staleEvidenceLabel(
+  display: ProjectDisplayState,
+  project: ProjectState,
+  lastSyncedAt: string | null | undefined,
+): string {
+  const prefix = staleSyncLabel(lastSyncedAt);
+  if (display.isRunning && project.currentPrompt?.label) {
+    return `${prefix} · ${project.currentPrompt.label}`;
+  }
+  if (display.isReady) return `${prefix} · Ready for next step`;
+  if (display.isSessionOpen) return `${prefix} · Agent shell open`;
+  if (display.tabOpen) return `${prefix} · Workspace tab open`;
+  return prefix;
+}
+
+/** Hard cap (seconds) before currentPrompt is treated as stale — see isCurrentPromptStale. */
 const STALE_PROMPT_S = 30 * 60;
 
 /**
@@ -73,7 +105,7 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Ready for next step" | "Waiting for instructions" | "Closing" | "Completed" | "Not running";
+  stateLabel: "Offline" | "Working" | "Ready for next step" | "Waiting for instructions" | "Closing" | "Completed" | "Not running" | "Tab open";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
 };
@@ -135,6 +167,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Closing: 2,
   Completed: 3,
   "Not running": 4,
+  "Tab open": 4,
   "Open, idle": 4,
   Open: 5,
 };
@@ -416,6 +449,12 @@ export function getProjectDisplayState(
     idle:                  "ui-tag ui-tag-neutral",
   };
 
+  // When the Zellij tab is open but no agent/prompt is tracked, "Not running"
+  // reads like nothing exists — "Tab open" matches what the user can verify.
+  const stateLabel = tone === "idle" && tabOpen && !isSessionOpen
+    ? "Tab open"
+    : STATE_LABEL[tone];
+
   return {
     isClosed,
     isClosing,
@@ -430,7 +469,7 @@ export function getProjectDisplayState(
     showLatestOrchestration,
     tabOpen,
     tone,
-    stateLabel: STATE_LABEL[tone],
+    stateLabel,
     stateTagClass: STATE_TAG[tone],
   };
 }
@@ -440,7 +479,9 @@ export function buildProjectOperationsSnapshot(
   zellijTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
+  syncCtx: RuntimeSyncContext = {},
 ): ProjectOperationsSnapshot {
+  const { syncStale = false, lastSyncedAt = null } = syncCtx;
   const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
   const phase: ControlPhase = display.tone === "offline"
     ? "offline"
@@ -464,7 +505,22 @@ export function buildProjectOperationsSnapshot(
       : project.session?.done?.trim()
         ? project.session.done.trim()
         : null;
-  const liveObserved = runtimeStateKnown && (display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen);
+  const liveObserved = runtimeStateKnown && !syncStale && (display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen);
+  const latestInjection = project.recentInjections[0];
+  const latestInjectionAgeS = latestInjection?.dispatchedAt
+    ? nowS - Math.floor(new Date(latestInjection.dispatchedAt).getTime() / 1000)
+    : null;
+  const latestInjectionLabel = latestInjection
+    ? (latestInjection.customPrompt?.trim() || getIntentLabel(latestInjection.intent))
+    : null;
+  const recentDispatchSuffix =
+    latestInjection &&
+    latestInjectionAgeS !== null &&
+    latestInjectionAgeS >= 0 &&
+    latestInjectionAgeS < 30 * 60
+      ? `Last dispatch ${timeAgo(new Date(latestInjection.dispatchedAt).getTime())}${latestInjectionLabel ? ` · ${latestInjectionLabel}` : ""}`
+      : null;
+
   const liveEvidenceLabel = display.isRunning
     ? "Live agent process detected"
     : display.isReady
@@ -474,22 +530,28 @@ export function buildProjectOperationsSnapshot(
         : display.isSessionOpen
           ? "Agent shell waiting for instructions"
           : display.tabOpen
-            ? "Workspace tab open"
+            ? recentDispatchSuffix
+              ? `Workspace tab open · ${recentDispatchSuffix}`
+              : "Workspace tab open"
             : "No live observation";
+
+  const evidenceLabel = !runtimeStateKnown
+    ? "Live status unavailable"
+    : syncStale
+      ? staleEvidenceLabel(display, project, lastSyncedAt)
+      : liveObserved
+        ? liveEvidenceLabel
+        : handoffAt
+          ? "Saved agent context"
+          : "No live observation";
 
   return {
     project,
     phase,
     display,
-    evidenceLabel: !runtimeStateKnown
-      ? "Live status unavailable"
-      : liveObserved
-        ? liveEvidenceLabel
-        : handoffAt
-          ? "Saved agent context"
-          : "No live observation",
+    evidenceLabel,
     evidenceAt: liveObserved ? null : handoffAt,
-    evidenceKind: !runtimeStateKnown ? "unknown" : liveObserved ? "live" : "historical",
+    evidenceKind: !runtimeStateKnown ? "unknown" : syncStale ? "historical" : liveObserved ? "live" : "historical",
     contextSummary,
     attentionReason: attention.score > 0 ? attention.reason : null,
   };
@@ -500,9 +562,10 @@ export function buildProjectOperationsSnapshots(
   zellijTabs: string[],
   nowS: number,
   runtimeStateKnown = true,
+  syncCtx: RuntimeSyncContext = {},
 ): ProjectOperationsSnapshot[] {
   return projects
-    .map((project) => buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown))
+    .map((project) => buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx))
     .sort((a, b) => compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown));
 }
 

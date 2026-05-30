@@ -8,7 +8,8 @@ import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
 
 export function ZellijLivePanel({
   rows,
-  daemonStateUnknown,
+  daemonNeverSeen,
+  daemonSyncStale = false,
   dashboard,
   refreshing,
   onRefresh,
@@ -19,7 +20,8 @@ export function ZellijLivePanel({
   embedded = false,
 }: {
   rows: LiveTabRow[];
-  daemonStateUnknown: boolean;
+  daemonNeverSeen: boolean;
+  daemonSyncStale?: boolean;
   dashboard: ControlDashboardState | null;
   refreshing: boolean;
   onRefresh: () => void;
@@ -91,22 +93,24 @@ export function ZellijLivePanel({
             <PanelsTopLeft className="h-3.5 w-3.5 shrink-0 text-accent-text" />
             <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>
             <span className="ui-tag ui-tag-neutral text-[9px]">
-              {daemonStateUnknown ? "offline" : `${rows.length} open`}
+              {daemonNeverSeen ? "offline" : daemonSyncStale ? `${rows.length} open · stale` : `${rows.length} open`}
             </span>
           </div>
-          {!daemonStateUnknown && (
+          {!daemonNeverSeen && (
             <p className="mt-0.5 text-micro text-text-tertiary">
-              Open tabs come from Zellij. Working and awaiting input come from live agent/process signals.
+              {daemonSyncStale
+                ? "Showing last-known workspace state — local daemon sync is stale."
+                : "Open tabs come from Zellij. Working and awaiting input come from live agent/process signals."}
             </p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {dashboard && !daemonStateUnknown && (
+          {dashboard && !daemonNeverSeen && (
             <span className="ui-micro-label text-text-muted text-[9px]">
               {dashboard.runningCount} working · {dashboard.waitingCount} awaiting input
             </span>
           )}
-          {!daemonStateUnknown && (
+          {!daemonNeverSeen && (
             <button
               type="button"
               onClick={repairHelper}
@@ -130,7 +134,7 @@ export function ZellijLivePanel({
         </div>
       </div>
 
-      {daemonStateUnknown ? (
+      {daemonNeverSeen ? (
         <div className="ui-control-live-empty">
           <p className="font-medium text-text-secondary">No live workspace data</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">

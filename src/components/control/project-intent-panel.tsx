@@ -40,6 +40,7 @@ export function IntentButtonPanel({
   onCustomFocusChange,
   runtimeAvailable = true,
   runtimeStateKnown = true,
+  daemonSyncStale = false,
   automationStatusLabel,
 }: {
   project: ProjectState;
@@ -74,6 +75,7 @@ export function IntentButtonPanel({
   runtimeAvailable?: boolean;
   /** False when cached daemon-driven runtime fields cannot be trusted. */
   runtimeStateKnown?: boolean;
+  daemonSyncStale?: boolean;
   automationStatusLabel?: string;
 }) {
   const [showMore, setShowMore] = useState(false);
@@ -104,6 +106,8 @@ export function IntentButtonPanel({
     onToggleAutoContinue,
     statusLabel: !runtimeStateKnown
       ? "Daemon offline: sends will queue until this computer reconnects."
+      : daemonSyncStale
+      ? "Sync stale: sends queue on your computer until the daemon reconnects."
       : automationStatusLabel
       ? automationStatusLabel
       : autoContinueEnabled

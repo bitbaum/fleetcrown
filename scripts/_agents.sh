@@ -118,6 +118,14 @@ _agent_direct_activity() {
         | sort -nr | head -1 | cut -d' ' -f2-)
       [ -n "$file" ] && printf '%s|Direct terminal activity\n' "$(stat -c '%Y' "$file" 2>/dev/null)"
       ;;
+    cursor)
+      # Cursor Agent CLI writes agent transcripts under
+      # ~/.cursor/projects/<cwd-without-leading-slash-dashes>/agent-transcripts/.
+      encoded_dir=$(printf '%s' "${dir#/}" | tr '/' '-')
+      file=$(find "$HOME/.cursor/projects/$encoded_dir/agent-transcripts" -name '*.jsonl' -printf '%T@ %p\n' 2>/dev/null \
+        | sort -nr | head -1 | cut -d' ' -f2-)
+      [ -n "$file" ] && printf '%s|Direct terminal activity\n' "$(stat -c '%Y' "$file" 2>/dev/null)"
+      ;;
     # Add adapters here only when they expose a stable, project-scoped log.
     # Process detection, handoffs, and web-dispatched prompts work without it.
   esac
@@ -126,6 +134,10 @@ _agent_direct_activity() {
 # Returns 0 if the given basename+full argv looks like the Cursor agent (not a random "agent" binary).
 _is_cursor_agent() {
   local basename="$1" argv0="$2"
+  if [[ "$basename" == "cursor-agent" ]]; then
+    [[ "$argv0" == *"cursor-agent"* ]] || [[ "$argv0" == *"/.cursor/"* ]]
+    return $?
+  fi
   [[ "$basename" == "agent" ]] && { [[ "$argv0" == *".local/bin/agent"* ]] || [[ "$argv0" == *"/.cursor/"* ]]; }
 }
 
@@ -145,11 +157,13 @@ _scan_agents() {
     basename="${argv0##*/}"
 
     for a in "${AGENTS[@]}"; do
+      if [ "$a" = "cursor" ]; then
+        _is_cursor_agent "$basename" "$argv0" || continue
+        agent_id="$a"
+        break
+      fi
       local expected="${AGENT_PROCESS_NAMES[$a]}"
       if [ "$basename" = "$expected" ]; then
-        if [ "$a" = "cursor" ]; then
-          _is_cursor_agent "$basename" "$argv0" || continue
-        fi
         agent_id="$a"
         break
       fi

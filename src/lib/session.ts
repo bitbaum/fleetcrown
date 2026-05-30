@@ -78,7 +78,9 @@ export async function getApiUserId(): Promise<string | null> {
   // DB agent token (ck_*) — preferred path. Per-user, per-device, revocable.
   if (bearer.startsWith("ck_")) {
     const result = await validateAgentToken(bearer);
-    return result?.userId ?? null;
+    if (result) return result.userId;
+    // Fall through: a ck_-prefixed bearer can still be a legacy env-var token
+    // on single-tenant local installs that haven't minted a per-user token yet.
   }
 
   // Legacy env-var token → "default" user. Opt-in only; not multi-tenant safe.

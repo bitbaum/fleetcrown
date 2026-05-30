@@ -97,7 +97,7 @@ resolve_tab() {
   cwd=$(realpath "$1" 2>/dev/null)
 
   local actual_tabs
-  actual_tabs=$(zellij action query-tab-names 2>/dev/null)
+  actual_tabs=$(timeout 3 zellij action query-tab-names 2>/dev/null)
   [ -z "$actual_tabs" ] && return
 
   if [ -n "${AGENT_TAB_NAME:-}" ]; then
@@ -260,7 +260,7 @@ _resolve_live_tab_name() {
   all_tabs=$(
     zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
       [ -z "$s" ] && continue
-      ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null
+      ZELLIJ_SESSION_NAME="$s" timeout 3 zellij action query-tab-names 2>/dev/null
     done
   )
   while IFS= read -r open_tab; do
@@ -286,14 +286,14 @@ _resolve_live_tab_name() {
 }
 
 # Find the zellij session that has a tab with the given name.
-# Uses ZELLIJ_SESSION_NAME env var (required for zellij action outside a pane).
+# Uses ZELLIJ_SESSION_NAME env var (required for timeout 3 zellij action outside a pane).
 _find_session_for_tab() {
   local tab="$1" live_tab="$1"
   if type _resolve_live_tab_name >/dev/null 2>&1; then
     live_tab=$(_resolve_live_tab_name "$tab" 2>/dev/null) || live_tab="$tab"
   fi
   zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
-    if ZELLIJ_SESSION_NAME="$s" zellij action query-tab-names 2>/dev/null \
+    if ZELLIJ_SESSION_NAME="$s" timeout 3 zellij action query-tab-names 2>/dev/null \
         | grep -qxF "$live_tab"; then
       echo "$s"
       return 0
@@ -312,7 +312,7 @@ inject_prompt() {
   fi
 
   # When called from outside a zellij session (e.g. systemd daemon), find which
-  # session contains this tab — zellij action without ZELLIJ_SESSION_NAME set
+  # session contains this tab — timeout 3 zellij action without ZELLIJ_SESSION_NAME set
   # lists sessions instead of acting, so write-chars goes nowhere.
   local zellij_session="${ZELLIJ_SESSION_NAME:-}"
   if [ -z "$zellij_session" ]; then
@@ -323,19 +323,19 @@ inject_prompt() {
   # go-to-tab-name is fire-and-forget — the switch completes asynchronously.
   # Poll dump-layout until the focused tab matches before sending characters,
   # so write-chars never lands in the previously focused pane.
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$live_tab" 2>/dev/null
+  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action go-to-tab-name "$live_tab" 2>/dev/null
   local i active
   for i in $(seq 1 20); do
-    active=$(ZELLIJ_SESSION_NAME="$zellij_session" zellij action dump-layout 2>/dev/null \
+    active=$(ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action dump-layout 2>/dev/null \
       | grep 'focus=true' | grep 'tab name=' \
       | sed 's/.*tab name="\([^"]*\)".*/\1/' | head -1)
     [ "$active" = "$live_tab" ] && break
     sleep 0.05
   done
 
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write-chars -- "$prompt" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write-chars -- "$prompt" 2>/dev/null || true
   sleep 0.2
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write 13 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write 13 2>/dev/null || true
 }
 
 # Send a raw key code (e.g. 3 = Ctrl+C, 13 = Enter) to a tab without typing
@@ -348,9 +348,9 @@ send_raw_key_to_tab() {
     zellij_session=$(_find_session_for_tab "$tab")
     [ -z "$zellij_session" ] && return 1
   fi
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action go-to-tab-name "$tab" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action go-to-tab-name "$tab" 2>/dev/null || true
   sleep 0.1
-  ZELLIJ_SESSION_NAME="$zellij_session" zellij action write "$keycode" 2>/dev/null || true
+  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write "$keycode" 2>/dev/null || true
 }
 
 # Call after every injection to keep the Control panel and web beacon in sync.

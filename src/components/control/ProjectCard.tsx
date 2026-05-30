@@ -37,6 +37,7 @@ export function ProjectCard({
   isOnlyReady = false,
   runtimeAvailable = true,
   runtimeStateKnown = true,
+  daemonSyncStale = false,
   snapshot,
   automationMode = "queue_only",
   countdownSeconds,
@@ -57,6 +58,8 @@ export function ProjectCard({
   isOnlyReady?: boolean;
   runtimeAvailable?: boolean;
   runtimeStateKnown?: boolean;
+  /** True when cloud view is showing last-known daemon state (sync >90s old). */
+  daemonSyncStale?: boolean;
   snapshot?: ProjectOperationsSnapshot;
   automationMode?: AutoInjectMode;
   countdownSeconds?: number;
@@ -111,7 +114,10 @@ export function ProjectCard({
     (automationMode === "queue_only" && queue.length > 0)
   );
   const queuePolicyWaiting = automationMode === "queue_only" && autoContinueEnabled && queue.length === 0;
-  const automationStatusLabel = automationMode === "off"
+  const tabOpenUntracked = display.tone === "idle" && display.tabOpen && !display.isRunning;
+  const automationStatusLabel = tabOpenUntracked
+    ? "Tab open on your computer — focus the workspace to check the agent, or send a prompt below."
+    : automationMode === "off"
     ? "Manual: this project waits for your instruction."
     : !autoContinueEnabled
       ? "Automatic continuation paused for this project."
@@ -216,7 +222,7 @@ export function ProjectCard({
           {(display.isReady || display.isOrchestrationReady) && (
             <SessionSummary session={project.session} isClosed={display.isClosed} />
           )}
-          {display.tone === "idle" && project.session && (
+          {display.tone === "idle" && project.session && !display.tabOpen && (
             <div className="border-t border-border-subtle">
               <p className="px-4 pt-4 text-xs font-medium text-text-muted sm:px-5 md:px-6">Saved context from the last agent run</p>
               <SessionSummary session={project.session} isClosed={false} />
@@ -224,7 +230,7 @@ export function ProjectCard({
           )}
           {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 
-          {display.tone === "idle" && runtimeStateKnown && onLaunch && (
+          {display.tone === "idle" && !display.tabOpen && runtimeStateKnown && onLaunch && (
             <div className="ui-card-section flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-text-secondary">No agent is currently running for this project.</p>
               <button onClick={onLaunch} className="ui-btn-primary shrink-0 gap-1.5">
@@ -233,12 +239,22 @@ export function ProjectCard({
               </button>
             </div>
           )}
+          {display.tone === "idle" && display.tabOpen && !display.isRunning && (
+            <div className="ui-card-section">
+              <p className="text-sm text-text-secondary">
+                {daemonSyncStale
+                  ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or repair the daemon connection."
+                  : "Terminal tab is open, but Cockpit is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
+              </p>
+            </div>
+          )}
 
           <IntentButtonPanel
             project={project}
             currentAdapter={currentAdapter}
             runtimeAvailable={runtimeAvailable}
             runtimeStateKnown={runtimeStateKnown}
+            daemonSyncStale={daemonSyncStale}
             isRunning={display.isRunning}
             autoContinueEnabled={automationMode === "off" ? false : autoContinueEnabled}
             sending={sending}
