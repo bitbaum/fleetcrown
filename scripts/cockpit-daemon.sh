@@ -1253,18 +1253,27 @@ rm -f "/tmp/cockpit-sleep-mode" 2>/dev/null || true
 # agent-hook-bridge.sh (i.e. when an agent stopped), so a pref edit could
 # sit unapplied for hours. Background — non-blocking; daemon proceeds even
 # if cloud is unreachable.
-python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 &
+#
+# Gate on COCKPIT_DAEMON_CHILD == "" so only the *parent* daemon syncs.
+# Multi-source forks one child per extra URL; each child shares the same
+# host filesystem and ~/.config, so child syncs would just duplicate the
+# parent's work (2× HTTPS to /api/agent/projects per cycle). Atomic
+# os.replace in the sync script makes either-or safe; parent-only keeps it
+# clean. Both the initial sync and the periodic loop are gated.
+if [ -z "${COCKPIT_DAEMON_CHILD:-}" ]; then
+  python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 &
 
-# Periodic re-sync so changes made via the web UI propagate within ~5 min
-# even when no agent stops happen.
-_conf_sync_loop() {
-  while true; do
-    sleep 300
-    python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
-  done
-}
-_conf_sync_loop &
-_CONF_SYNC_PID=$!
+  # Periodic re-sync so changes made via the web UI propagate within ~5 min
+  # even when no agent stops happen.
+  _conf_sync_loop() {
+    while true; do
+      sleep 300
+      python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 || true
+    done
+  }
+  _conf_sync_loop &
+  _CONF_SYNC_PID=$!
+fi
 
 log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_INTERVAL}s), pushing state on change (max every ${PUSH_INTERVAL}s)"
 _push_loop &
@@ -1272,7 +1281,8 @@ _PUSH_PID=$!
 
 _shutdown() {
   kill "$_PUSH_PID" 2>/dev/null || true
-  kill "$_CONF_SYNC_PID" 2>/dev/null || true
+  # _CONF_SYNC_PID only exists in the parent (child daemons skip the loop).
+  [ -n "${_CONF_SYNC_PID:-}" ] && kill "$_CONF_SYNC_PID" 2>/dev/null || true
   rm -f "$_AUTH_HEADER"
   exit 0
 }
