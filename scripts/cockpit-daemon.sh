@@ -247,6 +247,8 @@ execute_inject() {
     _launch_cmd=$(_agent_launch_cmd "$adapter" "$project_dir" "" 2>/dev/null)
     if [ -n "$_launch_cmd" ]; then
       log "inject: no $adapter in $tab — auto-launching"
+      # Fresh agent → fresh session → re-deliver the handoff template once.
+      rm -f "/tmp/agent-handoff-sent-${tab}"
       inject_prompt "$tab" "$_launch_cmd" 2>/dev/null || true
       # Poll for the process to appear (Claude/Cursor TUI need ~1–3s to spawn).
       local _deadline=$(( $(date +%s) + 20 ))
@@ -300,6 +302,8 @@ execute_inject() {
     # these paths with ${TAB_NAME} / ${tab} which preserves the zellij/conf casing.
     rm -f "/tmp/agent-ready-${tab}" "/tmp/claude-ready-${tab}"
     rm -f "/tmp/agent-closed-${tab}" "/tmp/claude-closed-${tab}"
+    # Session ends — next dispatch re-injects the handoff template once.
+    rm -f "/tmp/agent-handoff-sent-${tab}"
     # Sentinel tells the stop hook to write closedAt instead of showing the beacon.
     : > "/tmp/agent-session-closed-${tab}"
     echo "$now_s" > "/tmp/agent-closing-${tab}"
@@ -339,9 +343,15 @@ execute_inject() {
     correct_handoff_file="$HOME/.claude/sessions/${tab}.md"
   fi
 
-  # Append a clear, high-priority handoff instruction. This overrides any stale
-  # Claude-path instructions that might have come from the server or previous context.
-  prompt="$prompt
+  # Append the handoff instruction only when this is the first dispatch of the
+  # current agent session. Repeated injection caused Claude to re-prompt for
+  # overwrite of the handoff file every turn and burned ~500 tokens per call.
+  # The sentinel is cleared by close_tab, hard_stop/close_session, switch_agent,
+  # and auto-launch (fresh agent → fresh session) so subsequent agents get the
+  # template too.
+  local _handoff_sent="/tmp/agent-handoff-sent-${tab}"
+  if [ ! -f "$_handoff_sent" ]; then
+    prompt="$prompt
 
 [MANDATORY HANDOFF — DO THIS BEFORE YOU STOP]
 When you finish the current task (or need to hand off), write your final status to this exact file:
@@ -359,10 +369,13 @@ wip-or-revert-in-last-5: yes | no
 tsc: pass | fail(N)
 lint: pass | fail(N errors, M warnings)
 "
+  fi
 
   if inject_prompt "$tab" "$prompt" 2>/dev/null; then
     mark_done "$id" "true"
     log "inject done ✓"
+    # Mark the handoff template as delivered for this session.
+    : > "$_handoff_sent"
     # Write current-prompt file so the UI shows the running banner.
     # Skipped for lifecycle intents (hard_stop/close_session) — those are ending,
     # not starting, a tracked prompt. Mirrors what the local inject/run routes write.
@@ -422,6 +435,8 @@ execute_close_tab() {
   if ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action close-tab 2>/dev/null; then
     mark_done "$id" "true"
     log "close_tab done ✓"
+    # Tab gone — next agent here gets the handoff template again.
+    rm -f "/tmp/agent-handoff-sent-${tab}"
   else
     mark_done "$id" "false" "close-tab failed"
     log "close_tab failed ✗"
@@ -451,6 +466,8 @@ execute_launch_agent() {
     sleep 0.5
   fi
   log "launch_agent → tab=$tab agent=$agent"
+  # Fresh agent process → fresh session → handoff template re-delivered next inject.
+  rm -f "/tmp/agent-handoff-sent-${tab}"
   if inject_prompt "$tab" "$command" 2>/dev/null; then
     if [ -n "$initial_prompt" ]; then
       sleep 2
@@ -563,6 +580,8 @@ execute_switch_agent() {
     fi
   fi
 
+  # Different agent process → fresh session → handoff template re-delivered.
+  rm -f "/tmp/agent-handoff-sent-${tab}"
   if inject_prompt "$tab" "$launch_cmd" 2>/dev/null; then
     mark_done "$id" "true"
     log "switch_agent done ✓ ($from_agent → $to_agent)"
