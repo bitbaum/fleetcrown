@@ -46,9 +46,34 @@ resolve_adapter() {
   done < "$_CONF"
 }
 
+# Look up the third (agent) column for a tab in agent-projects.conf. Empty
+# output means either the conf is unreadable, the tab isn't registered, or
+# the agent column is blank.
+_conf_agent_for_tab() {
+  local tab="$1" conf
+  conf="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
+  [ -r "$conf" ] || return 1
+  local t _d a
+  while IFS='|' read -r t _d a || [ -n "$t" ]; do
+    [[ "$t" =~ ^[[:space:]]*# ]] && continue
+    t=$(echo "$t" | xargs 2>/dev/null)
+    [ -z "$t" ] && continue
+    if [ "${t,,}" = "${tab,,}" ]; then
+      a=$(echo "$a" | xargs 2>/dev/null)
+      [ -n "$a" ] && { printf '%s\n' "$a"; return 0; }
+      return 1
+    fi
+  done < "$conf"
+  return 1
+}
+
 # Resolve the adapter actually running in a tab — not just the conf default.
-# Priority: /proc scan for project dir → current-prompt JSON adapter → tab suffix → conf field.
-# Sets ADAPTER and returns 0. Requires _agents.sh (sourced above).
+# Priority: /proc scan for project dir → current-prompt JSON adapter →
+# agent-projects.conf agent column → tab suffix → legacy resolve_adapter →
+# "claude" default. Sets ADAPTER and returns 0. Requires _agents.sh (sourced
+# above). The conf-column read closes the gap where direct hook invocations
+# (stop hook, beacon, autopilot watchdog) bypass /api/inject and would
+# otherwise default a Gemini/Cursor project to Claude on launch.
 _resolve_live_adapter() {
   local tab="$1" dir="${2:-}"
   ADAPTER=""
@@ -74,6 +99,15 @@ _resolve_live_adapter() {
         ;;
     esac
   fi
+
+  local from_conf
+  from_conf=$(_conf_agent_for_tab "$tab" 2>/dev/null || true)
+  case "$from_conf" in
+    grok|claude|codex|gemini|openclaw|cursor)
+      ADAPTER="$from_conf"
+      return 0
+      ;;
+  esac
 
   if type _infer_adapter_from_tab_name >/dev/null 2>&1; then
     local inferred
