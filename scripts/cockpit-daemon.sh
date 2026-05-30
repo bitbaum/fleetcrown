@@ -200,7 +200,7 @@ next: <state to resume from; empty when nothing is mid-flight>"
 }
 
 execute_inject() {
-  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}" payload_adapter="${6:-}"
+  local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}" payload_adapter="${6:-}" payload_model="${7:-}"
 
   # Look up the project's directory and live adapter (process scan beats conf default).
   local adapter="claude" project_dir=""
@@ -243,12 +243,16 @@ execute_inject() {
   # before injecting. Otherwise the prompt gets typed into a bare shell.
   if [ -n "$project_dir" ] && type _is_agent_running_in_dir >/dev/null 2>&1 \
      && ! _is_agent_running_in_dir "$adapter" "$project_dir"; then
-    # Honor user_projects.modelPref via the 4th column of agent-projects.conf
-    # (synced from /api/agent/projects). Without this the launch always used
-    # the agent's built-in default, so a Codex project pinned to gpt-5 still
-    # launched as gpt-5.4 and a Gemini project pinned to flash launched 1.5-pro.
-    local _model=""
-    if type _conf_model_for_tab >/dev/null 2>&1; then
+    # Honor user_projects.modelPref. Precedence:
+    #   1. payload_model — explicit caller choice (cloud /api/inject now
+    #      passes it from dbMatch.modelPref; future direct callers can pin).
+    #   2. _conf_model_for_tab — agent-projects.conf 4th column (synced from
+    #      /api/agent/projects on a 5-minute cycle).
+    # Without this the launch fell back to each agent's built-in default —
+    # a Codex project pinned to gpt-5 launched as gpt-5.4, a Gemini project
+    # pinned to flash launched 1.5-pro.
+    local _model="$payload_model"
+    if [ -z "$_model" ] && type _conf_model_for_tab >/dev/null 2>&1; then
       _model=$(_conf_model_for_tab "$tab" 2>/dev/null || true)
     fi
     local _launch_cmd
@@ -1330,7 +1334,8 @@ while true; do
         printf '%s' "$run_id" > "$(_brand_tmp "run-${tab}")"
       fi
       payload_adapter=$(echo "$payload" | jq -r '.adapter // empty')
-      execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label" "$payload_adapter"
+      payload_model=$(echo "$payload" | jq -r '.model // empty')
+      execute_inject "$id" "$tab" "$prompt" "$prompt_key" "$prompt_label" "$payload_adapter" "$payload_model"
       ;;
     focus_tab)
       tab=$(echo "$payload" | jq -r '.tab')

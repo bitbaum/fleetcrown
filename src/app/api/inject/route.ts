@@ -87,6 +87,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Model override from user_projects.modelPref. The daemon's execute_inject
+  // auto-launch reads payload.model and prefers it over the conf-file model,
+  // so a project pinned to "opus" launches Claude with the opus model and a
+  // Codex project pinned to "gpt-5" gets gpt-5 instead of the daemon's
+  // hardcoded gpt-5.4 default. Caller-supplied model (none yet, but kept for
+  // future explicit dispatch) is not in this route's schema — pure DB read.
+  const eventModel = dbMatch.modelPref?.trim() || undefined;
+
   let prompt: string;
   let promptLabel = "Custom";
   let effectiveTab = canonical;
@@ -200,7 +208,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, projectId, projectKey: canonical },
+    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );

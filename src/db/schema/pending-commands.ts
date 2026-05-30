@@ -26,6 +26,14 @@ export type InjectPayload = {
   promptKey?: string;
   promptLabel?: string;
   adapter?: string;
+  /**
+   * Model override for the dispatched agent (e.g. "opus", "flash", "gpt-5").
+   * The daemon's execute_inject auto-launch reads this when the target tab has
+   * no live agent and prefers it over the conf-file model. Matches the shape
+   * already used by LaunchAgentPayload/SwitchAgentPayload — adding it here so
+   * /api/inject can honor user_projects.modelPref end-to-end.
+   */
+  model?: string;
   projectId?: string | null;
   projectKey?: string;
   /**
