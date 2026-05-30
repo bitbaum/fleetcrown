@@ -16,7 +16,14 @@ export function configureWebPush(): { ok: boolean; reason?: string } {
       reason: "VAPID env vars missing — set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT.",
     };
   }
-  webpush.setVapidDetails(subject, publicKey, privateKey);
+
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "VAPID configure failed";
+    return { ok: false, reason: msg };
+  }
+
   configured = true;
   return { ok: true };
 }

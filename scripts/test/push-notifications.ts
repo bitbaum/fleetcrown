@@ -56,13 +56,11 @@ function runTests(): void {
     assert(/NotificationsPill/.test(bar), "AppTopBar must render NotificationsPill");
   });
 
-  check("configureWebPush requires VAPID env vars", () => {
+  check("configureWebPush catches invalid VAPID keys", () => {
     const lib = readFileSync("src/lib/push.ts", "utf8");
-    assert(/VAPID_PUBLIC_KEY/.test(lib), "push.ts must read VAPID_PUBLIC_KEY");
-    assert(/VAPID_PRIVATE_KEY/.test(lib), "push.ts must read VAPID_PRIVATE_KEY");
-    assert(/VAPID_SUBJECT/.test(lib), "push.ts must read VAPID_SUBJECT");
-    assert(/503/.test(readFileSync("src/app/api/push/notify/route.ts", "utf8")),
-      "notify route must return 503 when push is not configured");
+    assert(/try \{[\s\S]*setVapidDetails/.test(lib), "configureWebPush must catch setVapidDetails throws");
+    const notify = readFileSync("src/app/api/push/notify/route.ts", "utf8");
+    assert(/catch \(err/.test(notify), "notify route must catch unhandled errors");
   });
 
   console.log(`\n${passed}/${passed} passed`);

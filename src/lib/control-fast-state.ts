@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import { sessionFilePath, stateFile } from "@/lib/agent-config";
 import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
 import { parseSessionFile } from "@/lib/session-content";

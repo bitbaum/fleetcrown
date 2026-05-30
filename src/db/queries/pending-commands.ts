@@ -62,7 +62,7 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
       userFilter,
       isNotNull(pendingCommands.claimedAt),
       isNull(pendingCommands.executedAt),
-      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '90 seconds'`,
+      sql`${pendingCommands.claimedAt} < NOW() - INTERVAL '1 second' * ${STALE_CLAIM_SECONDS}`,
     ))
     .returning({ id: pendingCommands.id });
   return reclaimed.length;
