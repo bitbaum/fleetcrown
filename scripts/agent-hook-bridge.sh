@@ -403,6 +403,29 @@ autopilot_dispatch_and_inject() {
     return 1
   fi
 
+  # Per-tab cooldown (added 2026-05-31 after live observation of revamp-it
+  # tab being fired at every ~1-2 min by next_best while the agent had
+  # genuinely no work to do — branch in sync, no blockers, deploy live —
+  # so it kept writing the same ready handoff, kept getting re-fired, in a
+  # tight wasteful loop. The status gate alone doesn't break this loop
+  # because the AGENT itself writes status:ready each iteration to signal
+  # "I'm done." Cooldown enforces an absolute minimum interval between
+  # autopilot fires for the same tab, regardless of what the handoff says.
+  # The user can still dispatch manually via the UI within the cooldown
+  # window — this only gates the auto-fire path.
+  local cool_dir cool_file cool_age
+  cool_dir="${COCKPIT_TMP_DIR:-/tmp/cockpit-daemon}"
+  cool_file="${cool_dir}/last-autopilot-${tab_name}"
+  if [ -f "$cool_file" ]; then
+    cool_age=$(( $(date +%s) - $(stat -c %Y "$cool_file" 2>/dev/null || stat -f %m "$cool_file" 2>/dev/null || echo 0) ))
+    if [ "$cool_age" -lt "${COCKPIT_AUTOPILOT_COOLDOWN_S:-300}" ]; then
+      log "autopilot: cooldown ${cool_age}s/${COCKPIT_AUTOPILOT_COOLDOWN_S:-300}s for ${tab_name} — staying idle"
+      return 1
+    fi
+  fi
+  mkdir -p "$cool_dir" 2>/dev/null || true
+  touch "$cool_file" 2>/dev/null || true
+
   local done_line next_line tests_line todos_line health_line status_line
   done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""; status_line=""
   if [ -f "$session_file" ]; then
