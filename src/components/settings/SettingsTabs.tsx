@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import { ChevronRight } from "lucide-react";
 import { ProfileSettings } from "./ProfileSettings";
 import { AccountSettings } from "./AccountSettings";
 import { LocationSettings } from "./LocationSettings";
@@ -75,19 +76,31 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
 
   return (
     <div>
-      {/* Tab nav */}
-      <div className="border-b border-border-subtle -mx-4 px-4 mb-6 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex min-w-max">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Tab nav — relative wrapper so the mobile scroll-affordance chevron
+          sits outside the ui-scroll-fade-right mask. Same pattern as the
+          Today SummaryBar fix (4cb018c): 7-tab strip reliably overflows at
+          414px and the fade alone is too subtle on iOS where native
+          scrollbars hide at rest. */}
+      <div className="relative border-b border-border-subtle -mx-4 px-4 mb-6">
+        <div className="overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-max">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-1 text-text-tertiary sm:hidden"
+        >
+          <ChevronRight className="h-4 w-4 drop-shadow-[0_0_4px_var(--surface-page)]" />
+        </span>
       </div>
 
       {/* Tab content */}
