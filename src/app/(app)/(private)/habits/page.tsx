@@ -1,6 +1,7 @@
 import { Repeat2 } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
+import { StatRow } from "@/components/ui/stat-row";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getAllHabitsWithHistory } from "@/db/queries/habits";
 import { listActiveGoals } from "@/db/queries/goals";
@@ -35,13 +36,11 @@ export default async function HabitsPage() {
       subtitle={`${HABIT_HISTORY_DAYS}-day history — consistency compounds`}
       right={<NewHabitButton />}
     >
-      {/* Summary stats — same density fix as Goals (3f062a8) + Memory
-          (1baa421) + Money (this commit's sibling): 3-col on mobile. */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <StatRow>
         <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
         <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
         <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />
-      </div>
+      </StatRow>
 
       {habits.length === 0 ? (
         <Card>

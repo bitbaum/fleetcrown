@@ -1,6 +1,7 @@
 import { Brain, Database, Link2, Clock, Zap } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
+import { StatRow } from "@/components/ui/stat-row";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
 import { requirePageUserId } from "@/lib/session";
 import { compactRelativeDate } from "@/lib/dates";
@@ -47,12 +48,7 @@ export default async function MemoryPage() {
     <PullToRefresh>
     <PageLayout title="Memory" subtitle="What Ivy knows — the knowledge graph">
 
-      {/* Top stats — same density fix as Goals (3f062a8): grid-cols-3
-          everywhere so three single-stat cards don't stack full-width on
-          mobile and eat ~400px before the first piece of actual content.
-          Short labels + small values fit comfortably in ~130px-wide cards
-          at 414px. */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <StatRow>
         <Card>
           <CardHeader icon={Database} title="Entities" />
           <div className="text-2xl font-bold">{stats.totalEntities.toLocaleString()}</div>
@@ -65,7 +61,7 @@ export default async function MemoryPage() {
           <CardHeader icon={Brain} title="Types" />
           <div className="text-2xl font-bold">{stats.entityTypes.length}</div>
         </Card>
-      </div>
+      </StatRow>
 
       {/* Recent activity + recent additions side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

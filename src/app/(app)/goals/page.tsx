@@ -1,6 +1,7 @@
 import { Target } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, StatCard } from "@/components/ui/card";
+import { StatRow } from "@/components/ui/stat-row";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getGoals, getGoalStats } from "@/db/queries/goals";
 import { getHabitsByGoalIds } from "@/db/queries/habit-goals";
@@ -36,13 +37,7 @@ export default async function GoalsPage() {
       subtitle="Where you're going — and how you're getting there"
       right={<NewGoalButton goals={activeGoals} />}
     >
-      {/* Stats row: 3 columns at every breakpoint. Previously grid-cols-1 on
-          mobile stacked the cards vertically, eating ~400px before the user
-          saw any actual goal — three single-stat cards each ~130px tall.
-          Live audit at 414px confirmed the density problem. Three columns at
-          mobile keep each card narrow but readable (short labels + 1-2 digit
-          values fit comfortably; sub text wraps at most 2 lines). */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <StatRow>
         <StatCard
           label="Active Goals"
           value={String(stats.active)}
@@ -53,7 +48,7 @@ export default async function GoalsPage() {
         />
         <StatCard label="Avg Progress" value={`${stats.avgProgress}%`} sub="across active goals" />
         <StatCard label="Total" value={String(stats.total)} sub="goals tracked" />
-      </div>
+      </StatRow>
 
       {goalTree.length === 0 ? (
         <Card>

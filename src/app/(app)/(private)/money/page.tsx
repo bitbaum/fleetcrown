@@ -1,6 +1,7 @@
 import { CreditCard, AlertCircle, HelpCircle, ExternalLink } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader, StatCard } from "@/components/ui/card";
+import { StatRow } from "@/components/ui/stat-row";
 import { SubscriptionActions } from "@/components/money/SubscriptionActions";
 import { NewSubscriptionButton } from "@/components/money/NewSubscriptionButton";
 import { CancelledSubsSection } from "@/components/money/CancelledSubsSection";
@@ -98,11 +99,7 @@ export default async function MoneyPage() {
 
   return (
     <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
-      {/* Same density fix as Goals (3f062a8) + Memory (1baa421): 3-col on
-          mobile instead of 1-col stack so the user sees all summary stats
-          at a glance before scrolling. Money values can be long (multi-
-          currency concat); StatCard handles wrapping. */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+      <StatRow>
         <StatCard
           label="Monthly Burn"
           value={[
@@ -127,7 +124,7 @@ export default async function MoneyPage() {
           ].filter(Boolean).join(", ") || "—"}
           sub="other currencies"
         />
-      </div>
+      </StatRow>
 
       <Card>
         <CardHeader
