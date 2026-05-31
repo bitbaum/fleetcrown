@@ -39,6 +39,7 @@ export function ProjectStatusChips({
   onSwitchAgent,
   isAgentWorking,
   runtimeStateKnown = true,
+  autoContinueEnabled = true,
 }: {
   project: ProjectState;
   tabOpen: boolean;
@@ -52,6 +53,8 @@ export function ProjectStatusChips({
    *  omitted, falls back to raw currentPrompt for backward-compat. */
   isAgentWorking?: boolean;
   runtimeStateKnown?: boolean;
+  /** When false, show a clear "Auto paused" indicator so per-project pause is obvious. */
+  autoContinueEnabled?: boolean;
 }) {
   // SSOT for chip tone + label. When the parent passes the derived flag, we use
   // it (so staleness gating in getProjectDisplayState propagates to the chip);
@@ -161,6 +164,16 @@ export function ProjectStatusChips({
             {runtimeStateLabel}
           </span>
         )
+      )}
+
+      {/* Per-project pause indicator — makes the existing auto-continue toggle obvious at card level */}
+      {!autoContinueEnabled && (
+        <span
+          className={compact ? "text-status-warning" : statusChipClass("warning")}
+          title="Automatic continuation (auto-injections when the agent waits) is paused for this project. Click the pause/play button in the input area to resume."
+        >
+          Auto paused
+        </span>
       )}
 
       {(tabOpen || !compact) && clickableWorkspace && tabOpen && (
