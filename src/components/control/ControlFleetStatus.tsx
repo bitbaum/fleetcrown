@@ -96,26 +96,44 @@ export function ControlFleetStatus({
         </div>
       </div>
 
-      <div className="ui-control-fleet-metrics">
-        {needsYou > 0 ? (
-          <span className="ui-control-fleet-chip ui-control-fleet-chip-attention">
-            {needsYou} need{needsYou === 1 ? "s" : ""} you
-          </span>
-        ) : (
-          <span className="ui-control-fleet-chip ui-control-fleet-chip-clear">
-            All clear
-          </span>
-        )}
-        {working > 0 && (
-          <span className="ui-control-fleet-chip">
-            <span className="ui-dot ui-dot-positive shrink-0" aria-hidden="true" />
-            {working} working
-          </span>
-        )}
-        {openTabs > 0 && (
-          <span className="ui-control-fleet-chip">{openTabs} open</span>
-        )}
-      </div>
+      {(() => {
+        // Counts are extracted from the last daemon push. When the daemon is
+        // offline or its state is uncertain, those numbers are stale — but
+        // rendered as live, the user assumes "1 working" means an agent is
+        // actively making progress right now. Audit caught this live:
+        // "Daemon offline · sync 2m ago" header but "1 working" + green dot
+        // in the chip row reading as live. Fade + a stale tooltip so the chip
+        // reads as cached observation when sync isn't fresh.
+        const isStale = daemonOffline || daemonStateUnknown;
+        const staleClass = isStale ? "opacity-60" : "";
+        const staleTitle = isStale && daemonLastPushedAt
+          ? `From last daemon sync (${timeAgo(new Date(daemonLastPushedAt).getTime())}) — may be out of date`
+          : isStale
+            ? "Cached value — daemon hasn't pushed fresh state"
+            : undefined;
+        return (
+          <div className="ui-control-fleet-metrics">
+            {needsYou > 0 ? (
+              <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-attention", staleClass)} title={staleTitle}>
+                {needsYou} need{needsYou === 1 ? "s" : ""} you
+              </span>
+            ) : (
+              <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle}>
+                All clear
+              </span>
+            )}
+            {working > 0 && (
+              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+                <span className="ui-dot ui-dot-positive shrink-0" aria-hidden="true" />
+                {working} working
+              </span>
+            )}
+            {openTabs > 0 && (
+              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>{openTabs} open</span>
+            )}
+          </div>
+        );
+      })()}
 
       <p className="ui-control-fleet-hint">
         <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
