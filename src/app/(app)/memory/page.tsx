@@ -47,8 +47,12 @@ export default async function MemoryPage() {
     <PullToRefresh>
     <PageLayout title="Memory" subtitle="What Ivy knows — the knowledge graph">
 
-      {/* Top stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Top stats — same density fix as Goals (3f062a8): grid-cols-3
+          everywhere so three single-stat cards don't stack full-width on
+          mobile and eat ~400px before the first piece of actual content.
+          Short labels + small values fit comfortably in ~130px-wide cards
+          at 414px. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
           <CardHeader icon={Database} title="Entities" />
           <div className="text-2xl font-bold">{stats.totalEntities.toLocaleString()}</div>
