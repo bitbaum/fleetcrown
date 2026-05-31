@@ -156,7 +156,7 @@ export function ProjectStatusChips({
         ) : (
           <span
             className={compact ? undefined : statusChipClass(working ? "warning" : "neutral")}
-            title={`${runtimeLabel} is currently detected in this project workspace. "Open" means the agent process exists but no active task is being tracked. This comes from local process detection, not a cloud status API.`}
+            title={`Live agent in this workspace: ${runtimeLabel}. Source: local process scan on your machine (via daemon or direct). Not a cloud guess. If this says the wrong agent (e.g. "Claude" while you're running Grok), the tab name or active process detection may be stale — use the switcher or repair helper.`}
           >
             {runtimeStateLabel}
           </span>

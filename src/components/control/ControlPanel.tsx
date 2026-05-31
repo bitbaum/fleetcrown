@@ -287,7 +287,7 @@ export function ControlPanel() {
 
       <details ref={liveDetailsRef} className="ui-control-live-details md:hidden">
         <summary className="ui-control-live-details-summary">
-          <span>Terminal workspaces</span>
+          <span>Workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
             {daemonNeverSeen ? "offline" : daemonSyncStale ? `${liveTabRows.length} open · stale` : `${liveTabRows.length} open`}
           </span>
