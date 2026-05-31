@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { ChevronRight } from "lucide-react";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import { ProfileSettings } from "./ProfileSettings";
 import { AccountSettings } from "./AccountSettings";
 import { LocationSettings } from "./LocationSettings";
@@ -76,31 +76,25 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
 
   return (
     <div>
-      {/* Tab nav — relative wrapper so the mobile scroll-affordance chevron
-          sits outside the ui-scroll-fade-right mask. Same pattern as the
-          Today SummaryBar fix (4cb018c): 7-tab strip reliably overflows at
-          414px and the fade alone is too subtle on iOS where native
-          scrollbars hide at rest. */}
-      <div className="relative border-b border-border-subtle -mx-4 px-4 mb-6">
-        <div className="overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex min-w-max">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
-              >
-                {tab.label}
-              </button>
-            ))}
+      {/* Tab nav — ScrollAffordance handles the mobile chevron-outside-fade
+          pattern. The outer border + horizontal padding/margin stay on the
+          wrapper so the border-bottom spans the full width even when scrolled. */}
+      <div className="border-b border-border-subtle -mx-4 px-4 mb-6">
+        <ScrollAffordance childCount={TABS.length} threshold={4}>
+          <div className="overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex min-w-max">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`ui-tab ${activeTab === tab.id ? "ui-tab-active" : ""}`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-1 text-text-tertiary sm:hidden"
-        >
-          <ChevronRight className="h-4 w-4 drop-shadow-[0_0_4px_var(--surface-page)]" />
-        </span>
+        </ScrollAffordance>
       </div>
 
       {/* Tab content */}

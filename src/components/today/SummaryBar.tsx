@@ -1,4 +1,5 @@
-import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity, CirclePause, ChevronRight } from "lucide-react";
+import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity, CirclePause } from "lucide-react";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
@@ -9,7 +10,7 @@ import { APP_LOCALE } from "@/lib/constants";
 export function SummaryBarSkeleton() {
   const widths = ["5rem", "7rem", "6rem", "5rem", "5rem"];
   return (
-    <div className="relative">
+    <ScrollAffordance childCount={0}>
       <div className="flex gap-3 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
         {widths.map((w, i) => (
           <div
@@ -19,7 +20,7 @@ export function SummaryBarSkeleton() {
           />
         ))}
       </div>
-    </div>
+    </ScrollAffordance>
   );
 }
 
@@ -88,23 +89,10 @@ export async function SummaryBar() {
     <span aria-hidden className="hidden sm:inline-block h-6 w-px bg-border-subtle self-center mx-1" />
   );
 
-  // Mobile-only scroll affordance: a small chevron pinned to the right edge
-  // tells the user "more chips this way." ui-scroll-fade-right alone is too
-  // subtle on iOS (native scrollbars hide at rest). pointer-events-none so
-  // it never blocks a chip tap underneath. Hidden on sm+ where chips wrap.
-  const scrollHint = (
-    <span
-      aria-hidden
-      className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-1 text-text-tertiary sm:hidden"
-    >
-      <ChevronRight className="h-4 w-4 drop-shadow-[0_0_4px_var(--surface-page)]" />
-    </span>
-  );
-
   const totalChipCount = counters.length + alerts.length + fleetPills.length;
 
   return (
-    <div className="relative">
+    <ScrollAffordance childCount={totalChipCount} threshold={3}>
       <div className="flex gap-3 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
         {counters}
         {counters.length > 0 && (alerts.length > 0 || fleetPills.length > 0) && divider}
@@ -119,8 +107,7 @@ export async function SummaryBar() {
           className="inline-flex items-center gap-1.5 rounded-full border border-status-positive/30 bg-status-positive-subtle/40 px-3 py-2 text-xs font-semibold text-status-positive hover:bg-status-positive-subtle transition-colors min-h-11 sm:min-h-0 shrink-0"
         />
       </div>
-      {totalChipCount >= 3 && scrollHint}
-    </div>
+    </ScrollAffordance>
   );
 }
 
