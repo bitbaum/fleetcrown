@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, GitBranch, Globe, ShieldAlert, AlertTriangle, Search } from "lucide-react";
+import { ArrowRight, GitBranch, Globe, ShieldAlert, AlertTriangle, Search, X } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ProjectDetail } from "./ProjectDetail";
@@ -253,10 +253,11 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
               onClick={() => setHealthFilter(healthFilter === "security" ? null : "security")}
               aria-pressed={healthFilter === "security"}
               title={healthFilter === "security" ? "Clear security filter" : `Show only the ${securityRisks} project${securityRisks > 1 ? "s" : ""} with security risks`}
-              className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-negative transition-colors hover:bg-status-negative-subtle/50 ${healthFilter === "security" ? "bg-status-negative-subtle ring-1 ring-status-negative/40" : ""}`}
+              className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-negative transition-colors hover:bg-status-negative-subtle/50 ${healthFilter === "security" ? "bg-status-negative-subtle ring-2 ring-status-negative/70 font-semibold" : ""}`}
             >
               <ShieldAlert className="h-3.5 w-3.5" />
               {securityRisks} security risk{securityRisks > 1 ? "s" : ""}
+              {healthFilter === "security" && <X className="h-3 w-3" aria-hidden />}
             </button>
           )}
           <button
@@ -264,10 +265,11 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
             onClick={() => setHealthFilter(healthFilter === "attention" ? null : "attention")}
             aria-pressed={healthFilter === "attention"}
             title={healthFilter === "attention" ? "Clear attention filter" : `Show only the ${withIssues.length} project${withIssues.length > 1 ? "s" : ""} needing attention`}
-            className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-warning/80 transition-colors hover:bg-status-warning-subtle/50 ${healthFilter === "attention" ? "bg-status-warning-subtle ring-1 ring-status-warning/40" : ""}`}
+            className={`flex items-center gap-1.5 rounded-full px-2 py-1 -mx-2 -my-1 text-status-warning/80 transition-colors hover:bg-status-warning-subtle/50 ${healthFilter === "attention" ? "bg-status-warning-subtle ring-2 ring-status-warning/70 font-semibold text-status-warning" : ""}`}
           >
             <AlertTriangle className="h-3.5 w-3.5" />
             {withIssues.length} project{withIssues.length > 1 ? "s" : ""} need{withIssues.length === 1 ? "s" : ""} attention
+            {healthFilter === "attention" && <X className="h-3 w-3" aria-hidden />}
           </button>
           <span className="ml-auto text-text-tertiary">
             {projects.length - withIssues.length}/{projects.length} healthy
