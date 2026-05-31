@@ -36,14 +36,19 @@ function staleEvidenceLabel(
   project: ProjectState,
   lastSyncedAt: string | null | undefined,
 ): string {
-  const prefix = staleSyncLabel(lastSyncedAt);
+  // 2026-05-31: dropped the "Last sync X ago" prefix from per-row strings
+  // when daemon is offline globally. Showing the same fact 21 times (once
+  // per project row) was the loudest information-duplication in the page —
+  // the global offline banner already owns the "system is stale" signal,
+  // rows should just describe the last-known state. Preserve the prefix
+  // ONLY when we have NO other evidence to show (rare).
   if (display.isRunning && project.currentPrompt?.label) {
-    return `${prefix} · ${project.currentPrompt.label}`;
+    return project.currentPrompt.label;
   }
-  if (display.isReady) return `${prefix} · Ready for next step`;
-  if (display.isSessionOpen) return `${prefix} · Agent shell open`;
-  if (display.tabOpen) return `${prefix} · Workspace tab open`;
-  return prefix;
+  if (display.isReady) return "Ready for next step";
+  if (display.isSessionOpen) return "Agent shell open";
+  if (display.tabOpen) return "Workspace tab open";
+  return staleSyncLabel(lastSyncedAt);
 }
 
 /** Hard cap (seconds) before currentPrompt is treated as stale — see isCurrentPromptStale. */
@@ -207,23 +212,24 @@ export function getTabActivityText(
   project: ProjectState | null,
   display: ProjectDisplayState | null,
 ): string {
+  // Returns the short status string shown next to each project row.
+  // Critical rule (2026-05-31): NEVER paste raw handoff content (the agent's
+  // own done/next/status notes) into the default row text. These were leaking
+  // into the UI as "Saved handoff: ..." prefixes that exposed internal agent
+  // bookkeeping to the user, including multi-paragraph dumps that wrecked the
+  // row layout. Activity text is for human-readable lifecycle states only;
+  // handoff content belongs in a per-project expand/tooltip, not the
+  // always-visible row.
   if (!project) return "Tab open — not registered in fleet";
   if (display?.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
-  if ((display?.isReady || display?.isOrchestrationReady) && project.session?.next?.trim()) {
-    return project.session.next.trim();
-  }
   if (display?.isReady || display?.isOrchestrationReady) {
-    return "Agent finished the last task; choose the next action";
+    return "Ready — pick the next task";
   }
-  if (project.session?.next?.trim()) return `Saved handoff: ${project.session.next.trim()}`;
-  if (project.session?.done?.trim()) {
-    return `Saved handoff: ${project.session.done.trim().slice(0, 140)}`;
-  }
-  if (project.agentRunning) return "Agent CLI process is open";
-  if (display?.tabOpen) return "Tab is open; no agent CLI process detected";
-  return "No live agent process detected";
+  if (project.agentRunning) return "Agent open · idle";
+  if (display?.tabOpen) return "Tab open · no agent process";
+  return "Closed";
 }
 
 export function buildLiveTabRows(
@@ -233,6 +239,18 @@ export function buildLiveTabRows(
 ): LiveTabRow[] {
   const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
   return uniqueTabs
+    .map((tabName) => {
+      // 2026-05-31: skip zellij tabs that don't map to any registered project.
+      // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
+      // they opened manually that have nothing to do with the fleet. Their
+      // real zellij window already shows them; the Cockpit UI is for fleet
+      // ops, not a generic tab list. To re-expose unregistered tabs later,
+      // gate this on a "show all tabs" toggle in the UI.
+      const project = findProjectForOpenTab(tabName, projects);
+      if (!project) return null;
+      return tabName;
+    })
+    .filter((t): t is string => t !== null)
     .map((tabName) => {
       const project = findProjectForOpenTab(tabName, projects);
       const display = project ? getProjectDisplayState(project, uniqueTabs, nowS) : null;

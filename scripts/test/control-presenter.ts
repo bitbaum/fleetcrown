@@ -75,7 +75,10 @@ function runTests(): void {
     assert(isProjectTabOpen(project, ["Cockpit Codex"]), "expected canonical project suffix to count as open");
   });
 
-  check("buildLiveTabRows sorts Working before Open", () => {
+  check("buildLiveTabRows sorts Working before Open and drops unregistered tabs", () => {
+    // 2026-05-31: unregistered ("Tab #1 Unlinked") tabs are filtered out
+    // of the default rows — they were visible noise that mapped to no
+    // project. Test asserts the new filter behavior.
     const nowS = 1_700_000_000;
     const projects = [
       stubProject({
@@ -91,11 +94,12 @@ function runTests(): void {
         activeAgents: ["claude"],
       }),
     ];
-    const rows = buildLiveTabRows(["Active", "Mystery"], projects, nowS);
+    const rows = buildLiveTabRows(["Active", "IdleProj", "Mystery"], projects, nowS);
+    assert(rows.length === 2, `expected 2 rows (Mystery dropped as unregistered), got ${rows.length}`);
     assert(rows[0]?.tabName === "Active", "working tab first");
     assert(rows[0]?.stateLabel === "Working", "working state");
-    assert(rows[1]?.tabName === "Mystery", "unregistered second");
-    assert(rows[1]?.registered === false, "unregistered flag");
+    assert(rows[1]?.tabName === "IdleProj", "registered idle tab second");
+    assert(rows.every((r) => r.registered === true), "no unregistered tabs in output");
   });
 
   check("formatAgentRuntimeLabel maps cursor agent id", () => {
