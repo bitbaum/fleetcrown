@@ -234,6 +234,22 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Hierarchy rewrite 2026-05-31: when the daemon is offline or never seen,
+          the banner with Start/Restart buttons OWNS the top viewport — it's
+          the only actionable thing on the page until the user reconnects.
+          When healthy, the banner self-hides and FleetStatus is the first thing
+          the eye lands on. Also removed the verbose "Agent operations / Current
+          work, queued instructions, and saved context by project" section
+          header: that subtitle taught the user nothing they couldn't infer
+          from the table itself. */}
+      <DaemonStatusBanner
+        daemonNeverSeen={daemonNeverSeen}
+        daemonOffline={daemonOffline}
+        daemonLastPushedAt={daemonLastPushedAt}
+        runtimeAvailable={runtimeAvailable}
+        onRefresh={() => refresh(true)}
+      />
+
       <ControlFleetStatus
         dashboard={dashboard}
         attentionCount={attention.length}
@@ -250,23 +266,12 @@ export function ControlPanel() {
         onAutomationChange={automationPolicy.updateMode}
       />
 
-      <section className="ui-control-operations-header">
-        <div>
-          <h2 className="text-base font-semibold text-text-primary">Agent operations</h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            Current work, queued instructions, and saved context by project.
-          </p>
-        </div>
-        {headerRight}
-      </section>
-
-      <DaemonStatusBanner
-        daemonNeverSeen={daemonNeverSeen}
-        daemonOffline={daemonOffline}
-        daemonLastPushedAt={daemonLastPushedAt}
-        runtimeAvailable={runtimeAvailable}
-        onRefresh={() => refresh(true)}
-      />
+      {headerRight && (
+        <section className="ui-control-operations-header">
+          <div />
+          {headerRight}
+        </section>
+      )}
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
 

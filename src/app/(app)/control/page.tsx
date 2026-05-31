@@ -8,7 +8,11 @@ export const metadata = { title: "Control" };
 export default function ControlPage() {
   return (
     <PullToRefresh>
-      <PageLayout title="Control" subtitle="Live agent state, project readiness, and next actions">
+      {/* Subtitle dropped 2026-05-31 — "Live agent state, project readiness,
+          and next actions" was meaningless preamble taking space the daemon-
+          status banner needs. Title alone is enough; the chip strip + banner
+          below tell the user what's actually happening. */}
+      <PageLayout title="Control">
         <Suspense fallback={null}>
           <ControlPanel />
         </Suspense>
