@@ -57,6 +57,32 @@ export async function deleteProject(userId: string, id: string) {
   return deleted ?? null;
 }
 
+// Fetch the user_projects runtime metadata (dirPath + agentPref) for a list
+// of entity ids. Returned map is keyed by entityProjectId — entities without
+// a linked user_projects row are absent (caller treats as null).
+//
+// user_projects is the SSOT for where the project lives on disk and which
+// agent it prefers; the Projects page card needs both so bare-attr tiles show
+// concrete context instead of just a clickable title.
+async function fetchRuntimeMetaByEntityIds(
+  entityIds: string[],
+): Promise<Map<string, { dirPath: string | null; agentPref: string | null }>> {
+  const out = new Map<string, { dirPath: string | null; agentPref: string | null }>();
+  if (entityIds.length === 0) return out;
+  const rows = await db
+    .select({
+      entityProjectId: userProjects.entityProjectId,
+      dirPath: userProjects.dirPath,
+      agentPref: userProjects.agentPref,
+    })
+    .from(userProjects)
+    .where(inArray(userProjects.entityProjectId, entityIds));
+  for (const r of rows) {
+    if (r.entityProjectId) out.set(r.entityProjectId, { dirPath: r.dirPath, agentPref: r.agentPref });
+  }
+  return out;
+}
+
 export async function getProjects(userId: string) {
   const projects = await db
     .select()
@@ -69,12 +95,21 @@ export async function getProjects(userId: string) {
     )
     .orderBy(entities.name);
 
-  const attrsByEntity = await fetchAttributesByEntityIds(projects.map((p) => p.id));
+  const ids = projects.map((p) => p.id);
+  const [attrsByEntity, runtimeByEntity] = await Promise.all([
+    fetchAttributesByEntityIds(ids),
+    fetchRuntimeMetaByEntityIds(ids),
+  ]);
 
-  return projects.map((p) => ({
-    ...p,
-    attrs: attrsByEntity.get(p.id) ?? {},
-  }));
+  return projects.map((p) => {
+    const runtime = runtimeByEntity.get(p.id) ?? { dirPath: null, agentPref: null };
+    return {
+      ...p,
+      attrs: attrsByEntity.get(p.id) ?? {},
+      dirPath: runtime.dirPath,
+      agentPref: runtime.agentPref,
+    };
+  });
 }
 
 export type ProjectRow = Awaited<ReturnType<typeof getProjects>>[number];
@@ -88,8 +123,21 @@ export async function getOrgEntityProjects(userId: string): Promise<(ProjectRow 
     .from(entities)
     .where(and(inArray(entities.userId, peerIds), eq(entities.type, ENTITY_TYPE.PROJECT)))
     .orderBy(entities.name);
-  const attrsByEntity = await fetchAttributesByEntityIds(projects.map((p) => p.id));
-  return projects.map((p) => ({ ...p, attrs: attrsByEntity.get(p.id) ?? {}, readonly: true as const }));
+  const ids = projects.map((p) => p.id);
+  const [attrsByEntity, runtimeByEntity] = await Promise.all([
+    fetchAttributesByEntityIds(ids),
+    fetchRuntimeMetaByEntityIds(ids),
+  ]);
+  return projects.map((p) => {
+    const runtime = runtimeByEntity.get(p.id) ?? { dirPath: null, agentPref: null };
+    return {
+      ...p,
+      attrs: attrsByEntity.get(p.id) ?? {},
+      dirPath: runtime.dirPath,
+      agentPref: runtime.agentPref,
+      readonly: true as const,
+    };
+  });
 }
 
 /**

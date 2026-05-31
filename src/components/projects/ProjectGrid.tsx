@@ -40,6 +40,11 @@ type Project = {
   description: string | null;
   attrs: Record<string, string>;
   readonly?: boolean;
+  // Surfaced from user_projects via getProjects join so bare-attr tiles can
+  // show concrete project context (dir path + preferred agent) instead of
+  // just a clickable title.
+  dirPath?: string | null;
+  agentPref?: string | null;
 };
 
 function ProjectCard({
@@ -151,11 +156,26 @@ function ProjectCard({
           ))}
         </div>
       )}
-      {/* No empty-state placeholder: a card with only a title is less ugly
-          than a card with a dashed-bordered "Add context →" prompt that
-          dominates the visual when the user is scanning 20+ tiles. The whole
-          card is already clickable (onClick on the wrapper) so the affordance
-          to open the project is preserved. */}
+      {/* Bare-attr tiles (no description/status/maturity/health/next_step/
+          custom attrs) get the dirPath + agentPref from the user_projects
+          join. Same affordance as the dropped "Add context →" placeholder —
+          the whole card is clickable — but the user can now see WHERE the
+          project lives and WHICH agent runs it at a glance. Drops out when
+          neither field is set (truly unconfigured project). */}
+      {!description && !status && !maturity && !hasIssues && !nextStep && extraAttrs.length === 0 && (project.dirPath || project.agentPref) && (
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-tertiary">
+          {project.dirPath && (
+            <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-[10px]" title={project.dirPath}>
+              {project.dirPath.replace(/^.*\/([^/]+\/[^/]+)$/, "$1")}
+            </code>
+          )}
+          {project.agentPref && (
+            <span className="ui-micro-badge rounded-full border-border-default bg-surface-overlay">
+              {project.agentPref}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
