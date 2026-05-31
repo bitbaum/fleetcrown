@@ -9,6 +9,10 @@ export type ProjectActivityEvent =
       occurredAt: number;
       title: string;
       body: string;
+      /** Preset intent (e.g. "next_best", "test_fix") when no customPrompt
+       *  was supplied, null for free-form user prompts. Lets the renderer
+       *  distinguish at-a-glance which dispatches were templated vs typed. */
+      intent: string | null;
     }
   | {
       id: string;
@@ -26,13 +30,15 @@ export function buildProjectActivityLedger({
   git: ProjectState["git"];
 }): ProjectActivityEvent[] {
   const promptEvents: ProjectActivityEvent[] = injections.map((item) => {
-    const body = item.customPrompt ?? getIntentLabel(item.intent);
+    const isCustom = Boolean(item.customPrompt?.trim());
+    const body = isCustom ? item.customPrompt! : getIntentLabel(item.intent);
     return {
       id: `prompt:${item.id}`,
       kind: "user_prompt",
       occurredAt: new Date(item.dispatchedAt).getTime(),
       title: "Sent prompt",
       body,
+      intent: isCustom ? null : item.intent,
     };
   });
 

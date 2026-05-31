@@ -62,6 +62,14 @@ export function ProjectActivitySection({
                       <span className="shrink-0 pt-0.5 text-text-muted tabular-nums">
                         {event.occurredAt ? timeAgo(event.occurredAt) : ""}
                       </span>
+                      {event.kind === "user_prompt" && event.intent && (
+                        <span
+                          className="shrink-0 mt-px rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent-text"
+                          title={`Templated dispatch — intent: ${event.intent}`}
+                        >
+                          {event.intent.replace(/_/g, " ")}
+                        </span>
+                      )}
                       <button
                         onClick={() => setExpandedId((current) => current === event.id ? null : event.id)}
                         className="min-w-0 flex-1 truncate text-left text-text-tertiary transition-colors hover:text-text-secondary"
