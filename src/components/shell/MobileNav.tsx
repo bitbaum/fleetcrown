@@ -73,7 +73,7 @@ export function MobileNav() {
       {moreOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/48 backdrop-blur-sm md:hidden"
+            className="fixed inset-0 z-30 bg-black/48 backdrop-blur-sm md:hidden"
             onClick={() => setMoreOpen(false)}
           />
           <div className="ui-mobile-nav-sheet">

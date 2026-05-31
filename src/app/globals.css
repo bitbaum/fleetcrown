@@ -368,7 +368,7 @@
   }
   .ui-mobile-nav {
     bottom: calc(var(--mobile-nav-offset) + var(--mobile-safe-bottom));
-    @apply fixed inset-x-3 z-50 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-md shadow-panel-strong;
+    @apply fixed inset-x-3 z-40 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-md shadow-panel-strong;
   }
   .ui-mobile-nav-item {
     @apply relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-micro font-medium transition-colors min-h-11;
