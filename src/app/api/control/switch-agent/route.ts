@@ -63,27 +63,27 @@ export async function POST(req: NextRequest) {
 
   try {
     // Step 1: quit the current agent if we know what it is.
+    // Make this aggressive: always send quitCommand (if any) + Ctrl+C.
+    // This makes the switcher actually work in practice for the user's custom
+    // launches (Grok, custom Claude wrappers, etc.).
     if (fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
       const fromEntry = registry.find((e) => e.id === fromAgent);
       if (fromEntry?.quitCommand) {
         injectIntoTab(tab, fromEntry.quitCommand);
+      }
 
-        // Poll /proc for up to 2s to confirm the process exited cleanly.
-        const deadline = Date.now() + 2000;
-        let gone = false;
+      // Always send a hard Ctrl+C as a reliable way to interrupt whatever
+      // prompt or tool the agent is stuck on.
+      await sleep(300);
+      sendRawKey(tab, 3);
+      await sleep(800);
+
+      // Best-effort poll to give the process time to exit before we launch the next one.
+      if (fromEntry?.processMatchers?.length) {
+        const deadline = Date.now() + 1500;
         while (Date.now() < deadline) {
           await sleep(200);
-          if (!isAgentRunningInDir(fromEntry.processMatchers, dir)) {
-            gone = true;
-            break;
-          }
-        }
-
-        // Quit command didn't land — agent is stuck on a prompt or permission
-        // dialog. Send Ctrl+C as a harder interrupt and give it 600ms to clean up.
-        if (!gone) {
-          sendRawKey(tab, 3);
-          await sleep(600);
+          if (!isAgentRunningInDir(fromEntry.processMatchers, dir)) break;
         }
       }
     }
