@@ -553,6 +553,12 @@ export function buildProjectOperationsSnapshot(
               : "Workspace tab open"
             : "No live observation";
 
+  // "Saved agent context" was the prior wording — flagged in browser dogfood
+  // 2026-05-31 as opaque jargon that reads like an internal-data label (the
+  // user wondered whether their notes were being exposed). Replaced with
+  // "Idle" which describes the OBSERVABLE state for the human, not the
+  // internal-data state for the system. The recency is shown separately by
+  // the row's timestamp column, so the prefix doesn't need to duplicate it.
   const evidenceLabel = !runtimeStateKnown
     ? "Live status unavailable"
     : syncStale
@@ -560,7 +566,7 @@ export function buildProjectOperationsSnapshot(
       : liveObserved
         ? liveEvidenceLabel
         : handoffAt
-          ? "Saved agent context"
+          ? "Idle"
           : "No live observation";
 
   return {

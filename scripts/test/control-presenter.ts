@@ -151,7 +151,7 @@ function runTests(): void {
       session: { done: "Done earlier", next: "Continue later", tests: "", todos: "", health: "", mtime: (nowS - 300) * 1000 },
     }), [], nowS);
     assert(snapshot.phase === "not_running", "handoff must not imply a running agent");
-    assert(snapshot.evidenceLabel === "Saved agent context", "handoff must be labeled historical");
+    assert(snapshot.evidenceLabel === "Idle", "handoff must be labeled Idle (was 'Saved agent context' until the 2026-05-31 wording rewrite)");
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
