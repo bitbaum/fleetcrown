@@ -255,7 +255,7 @@ export function buildLiveTabRows(
       const project = findProjectForOpenTab(tabName, projects);
       const display = project ? getProjectDisplayState(project, uniqueTabs, nowS) : null;
       const agentLabel = project?.activeAgents.length
-        ? formatAgentRuntimeLabel(project)
+        ? formatAgentRuntimeLabel(project, tabName)
         : display?.isRunning
           ? "Agent"
           : inferAgentLabelFromTabName(tabName);
@@ -302,16 +302,24 @@ function attentionScore(project: ProjectState): { score: number; reason: string 
   return { score, reason: reasons[0] ?? "" };
 }
 
-export function formatAgentRuntimeLabel(project: ProjectState): string {
+export function formatAgentRuntimeLabel(project: ProjectState, liveTab?: string): string {
   const labels: Record<string, string> = {
     cursor: "Cursor",
     agent: "Cursor",
   };
-  const names = project.activeAgents.length
-    ? project.activeAgents
-    : project.currentPrompt?.adapter
-      ? [project.currentPrompt.adapter]
-      : [];
+  // Prefer live process detection
+  let names = project.activeAgents.length ? project.activeAgents : [];
+  // Then current prompt adapter (what was last dispatched)
+  if (!names.length && project.currentPrompt?.adapter) {
+    names = [project.currentPrompt.adapter];
+  }
+  // Strong fallback: infer from the actual live tab name the project is using right now.
+  // This fixes the case where the user is actively in the tab running Grok (or another agent)
+  // but activeAgents / currentPrompt haven't updated yet or the process scan missed it.
+  if (!names.length && liveTab) {
+    const inferred = inferAdapterFromTabName(liveTab);
+    if (inferred) names = [inferred];
+  }
   return names
     .map((name) => labels[name] ?? (name[0]?.toUpperCase() + name.slice(1)))
     .join(", ");

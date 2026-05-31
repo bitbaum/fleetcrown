@@ -62,7 +62,7 @@ export function ProjectStatusChips({
   const [workspaceState, setWorkspaceState] = useState<"idle" | "loading" | "done">("idle");
   const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
   const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
-  const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project) : "";
+  const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project, project.liveTab) : "";
   const runtimeStateLabel = working
     ? `${runtimeLabel} working`
     : project.readyAt
