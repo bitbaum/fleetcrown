@@ -1,8 +1,26 @@
 /**
- * Prompt Library — SSOT for all prompt templates.
- * Categories: fleet → security → engineering → frontend → backend → database → devops → design → business → marketing → research → personal
- * scope: "global" = runs across all projects, "project" = runs against one project
- * suggestedSchedule: cron expression if this makes sense as a recurring job
+ * Prompt Library — SSOT for all prompt template metadata.
+ *
+ * Single source of truth for: what prompts exist, their names/descriptions/
+ * categories, and how they surface in the UI (style, slot, icon, sendNow).
+ *
+ * For prompts that ALSO need to be dispatchable by the autopilot daemon
+ * (the ones the agent-hook-bridge.sh script reads to know what to inject),
+ * set `agentKey` to the snake_case identifier the daemon expects. The
+ * template body lives both here AND in ~/.config/agent-prompts.json — that
+ * JSON file is now a build artifact, generated from this TS source via
+ * `npm run generate:agent-prompts`. Edit ONLY this file when adding/changing
+ * a prompt; never hand-edit the JSON.
+ *
+ * Categories: fleet → security → engineering → frontend → backend → database
+ *           → devops → design → business → marketing → research → personal
+ *           → control (autopilot/loop primitives) → content (copy/docs)
+ * scope:    "global" = runs across all projects, "project" = runs against one
+ * style:    "primary" | "action" | "more" | "dimension" | "internal" | "danger"
+ *           — drives CTA prominence in the IntentPanel and DimensionSection
+ * sendNow:  if true, clicking the prompt SENDS immediately (no preview).
+ *           Default false — clicks fill the textarea so users can edit first.
+ *           Per the unified prompt-UX rule shipped 2026-05-31.
  */
 
 import { APP_NAME } from "./brand";
@@ -19,9 +37,13 @@ export type PromptCategory =
   | "business"
   | "marketing"
   | "research"
-  | "personal";
+  | "personal"
+  | "control"
+  | "content";
 
 type PromptScope = "global" | "project";
+
+export type PromptStyle = "primary" | "action" | "more" | "dimension" | "internal" | "danger";
 
 export type PromptTemplate = {
   id: string;
@@ -33,6 +55,20 @@ export type PromptTemplate = {
   suggestedSchedule?: string; // cron expr, e.g. "0 9 * * 1"
   tags?: string[];
   featured?: boolean; // show in Quick Access row
+  /** Snake_case key the daemon dispatches by. When set, this prompt is also
+   *  exposed via /api/prompts/agent and the autopilot can fire it. */
+  agentKey?: string;
+  /** Emoji shown in chips and DimensionSection rows. */
+  icon?: string;
+  /** CTA prominence in IntentPanel + DimensionSection. */
+  style?: PromptStyle;
+  /** Keyboard shortcut slot (1-14) for beacon popup. */
+  slot?: number;
+  /** Grouping in DimensionSection — independent of category for back-compat
+   *  with the legacy JSON taxonomy. */
+  dimensionId?: string;
+  /** If true: click sends immediately. Default false: click fills textarea. */
+  sendNow?: boolean;
 };
 
 export const CATEGORY_META: Record<PromptCategory, { label: string; color: string }> = {
@@ -48,6 +84,8 @@ export const CATEGORY_META: Record<PromptCategory, { label: string; color: strin
   marketing:   { label: "Marketing",     color: "ui-cat-marketing" },
   research:    { label: "Research",      color: "ui-cat-research" },
   personal:    { label: "Personal",      color: "ui-cat-personal" },
+  control:     { label: "Control",       color: "ui-cat-fleet" },
+  content:     { label: "Content",       color: "ui-cat-marketing" },
 };
 
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
@@ -797,6 +835,140 @@ Be specific. No more than 150 words.`,
 Be direct. If nothing shipped, say so. Under 150 words.`,
     suggestedSchedule: "0 17 * * 1-5",
     tags: ["review", "daily"],
+  },
+
+  // ─── Control (loop primitives) ─────────────────────────────────────────────
+  // These six were JSON-only until 2026-05-31 — meaning they were dispatchable
+  // by the autopilot daemon but invisible to the /prompts library page and
+  // ProjectPromptLibrary modal. Now they live in the unified SSOT with
+  // agentKey set, so they appear everywhere AND the daemon can still fire
+  // them via the same snake_case key it always used.
+  {
+    id: "hard-stop",
+    name: "Hard stop",
+    description: "Kill switch — agent stops immediately, writes nothing, runs no tools.",
+    category: "control",
+    scope: "global",
+    template: `HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only "Stopped." and stop.`,
+    agentKey: "hard_stop",
+    icon: "🛑",
+    style: "danger",
+    dimensionId: "control",
+    sendNow: true, // truly the only prompt where send-on-click is the point
+    tags: ["control", "emergency"],
+  },
+  {
+    id: "blocker-create",
+    name: "Raise blocker",
+    description: "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
+    category: "control",
+    scope: "global",
+    template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a Vercel deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
+
+Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
+
+# <one-line title of what is blocked>
+
+**Blocking:** <what task this blocker is gating>
+**Why the agent cannot do it:** <one sentence>
+
+## What the user needs to do
+<concrete steps>
+
+## How the agent will know it is resolved
+<observable signal — env var set, file exists, OAuth app registered, deploy ready, etc.>
+
+After writing the file, do NOT pick a task this iteration. Update <P>.md with status: blocked and next: empty (the blocker file IS the next step). Tell the user one sentence: "Raised blocker: <title>. See ~/.claude/sessions/<P>.blockers/pending/<filename>."
+
+Next loop iteration: next_best Setup detects the file, Rule 0 surfaces it, and on user confirmation the agent moves the file from pending/ to applied/.`,
+    agentKey: "blocker_create",
+    icon: "🚧",
+    style: "danger",
+    dimensionId: "control",
+    tags: ["control", "blocker"],
+  },
+  {
+    id: "orient",
+    name: "Orient",
+    description: "Re-read project state from scratch — git log, roadmap, session handoff, recent failures — and report current reality.",
+    category: "control",
+    scope: "global",
+    template: `Re-establish ground truth before doing anything. Run:
+  git log --oneline -10
+  git status
+  git stash list
+  cat ~/.claude/sessions/<P>.roadmap.md | head -50
+  cat ~/.claude/sessions/<P>.md
+  ls ~/.claude/sessions/<P>.blockers/pending/ 2>/dev/null
+
+Then in 5 bullets tell me:
+- What shipped in the last 24h
+- What is uncommitted/stashed
+- What the roadmap says the highest priority is
+- Any pending blocker
+- One concrete next step you'd take`,
+    agentKey: "orient",
+    icon: "🧭",
+    style: "more",
+    dimensionId: "control",
+    tags: ["control", "orientation"],
+  },
+  {
+    id: "unblock",
+    name: "Unblock",
+    description: "Agent is stuck — diagnose what's preventing progress and propose two paths forward.",
+    category: "control",
+    scope: "global",
+    template: `You appear stuck. Diagnose:
+1. What was the last thing you tried, and what was its concrete failure mode? (Quote the error or output.)
+2. What assumption are you making that might be wrong? (Name it explicitly.)
+3. What is the simplest test that would falsify that assumption?
+4. Propose TWO different paths forward — not variants of the same approach. Describe what makes each one risky.
+
+Do not implement either path yet. Hand off to the user with these four answers so they can pick.`,
+    agentKey: "unblock",
+    icon: "🔓",
+    style: "more",
+    dimensionId: "control",
+    tags: ["control", "diagnosis"],
+  },
+  {
+    id: "roadmap-check",
+    name: "Roadmap check",
+    description: "Audit ~/.claude/sessions/<P>.roadmap.md for stale entries, duplicates, completed items still marked open.",
+    category: "control",
+    scope: "global",
+    template: `Read ~/.claude/sessions/<P>.roadmap.md end-to-end. For every T0/T1/T2 entry, verify against git log + current code state:
+- Is it actually still open? (If it was shipped, mark DONE with the commit hash.)
+- Is it a duplicate of another entry? (Collapse.)
+- Does it have a clear next-step verb, or is it vague aspirational text? (Reword or delete.)
+
+Report a punch list of stale/duplicate/vague entries you'd fix. Don't fix yet — surface for the user first.`,
+    agentKey: "roadmap_check",
+    icon: "🗺️",
+    style: "more",
+    dimensionId: "control",
+    tags: ["control", "roadmap"],
+  },
+  {
+    id: "onboarding-audit",
+    name: "Onboarding audit",
+    description: "Walk the new-user signup-to-first-action flow as if you were a stranger and document every friction point.",
+    category: "control",
+    scope: "global",
+    template: `Walk through the new-user signup-to-first-action flow as if you were a stranger:
+1. Landing page → /sign-up
+2. Email/password OR OAuth
+3. Email verification
+4. /onboarding (username, first project, connect-machine instructions)
+5. /today landing experience
+
+For each step, name (a) what is unclear, (b) what is missing, (c) what is broken, (d) what would make you bounce. Use browser tools (mcp__claude-in-chrome) to actually click through if possible. Don't fix anything — produce a punch list ordered by drop-off severity.`,
+    agentKey: "onboarding",
+    icon: "🚪",
+    style: "more",
+    dimensionId: "control",
+    tags: ["control", "onboarding"],
   },
 ];
 
