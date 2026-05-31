@@ -41,7 +41,11 @@ export async function RecentRunsCard() {
         <p className="text-xs text-text-muted mb-2">No completed orchestration runs yet — showing recent dispatches.</p>
         <div className="space-y-2">
           {dispatches.map((d) => {
-            const label = d.customPrompt?.trim() || d.intent;
+            const custom = d.customPrompt?.trim();
+            // Matches the intent-badge styling shipped for the Control panel
+            // activity feed (4373e84) so templated dispatches read the same
+            // way in both places — uppercase pill inline with project name,
+            // body row reserved for free-form custom prompts only.
             return (
               <div key={d.id} className="flex items-start gap-3 pb-2 last:pb-0 border-b border-border-subtle/50 last:border-0">
                 <Send className="h-3 w-3 mt-1 shrink-0 text-accent-text/70" />
@@ -49,9 +53,19 @@ export async function RecentRunsCard() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium text-text-secondary">{d.projectKey}</span>
                     <span className="ui-badge">{d.adapter}</span>
+                    {!custom && (
+                      <span
+                        className="rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent-text"
+                        title={`Templated dispatch — intent: ${d.intent}`}
+                      >
+                        {d.intent.replace(/_/g, " ")}
+                      </span>
+                    )}
                     <span className="ml-auto text-xs text-text-muted shrink-0">{timeAgo(d.dispatchedAt.getTime())}</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{label}</p>
+                  {custom && (
+                    <p className="mt-0.5 text-xs text-text-tertiary leading-relaxed line-clamp-2">{custom}</p>
+                  )}
                 </div>
               </div>
             );
