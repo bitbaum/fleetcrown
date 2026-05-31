@@ -230,6 +230,11 @@ export function BrainConfigPanel({
           {lastTabResults.slice(0, 3).map((r, i) => (
             <span key={i}>{r.tab ? `${r.tab} ${r.status}` : r.status}{r.error ? ` (${r.error})` : ""}{i < Math.min(lastTabResults.length, 3) - 1 ? ", " : ""}</span>
           ))}
+          {lastTabResults.some((r) => r.status === "queued") && (
+            <span className="ml-1 text-text-muted">
+              · daemon picks up within ~25s
+            </span>
+          )}
         </div>
       )}
     </div>
