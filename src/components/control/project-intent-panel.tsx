@@ -134,7 +134,10 @@ export function IntentButtonPanel({
         {queue.length > 0 && (
           <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
         )}
-      {recentPrompts.length > 0 && (
+      {/* Only show "Reuse recent" when there are multiple useful (non-meta) items.
+          This reduces the three competing lists feeling (Sent / Reuse recent / Prompt library)
+          that the user reported as crowding. */}
+      {recentPrompts.length > 1 && (
         <div className="space-y-1.5">
           <p className="ui-kicker">Reuse recent prompts</p>
           <div className="flex flex-wrap gap-1.5">
@@ -242,7 +245,10 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      {recentPrompts.length > 0 && (
+      {/* Only show "Reuse recent" when there are multiple useful (non-meta) items.
+          This reduces the three competing lists feeling (Sent / Reuse recent / Prompt library)
+          that the user reported as crowding. */}
+      {recentPrompts.length > 1 && (
         <div className="space-y-1.5">
           <p className="ui-kicker">Reuse recent prompts</p>
           <div className="flex flex-wrap gap-1.5">
