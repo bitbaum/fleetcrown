@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowRight, GitBranch, Globe, ShieldAlert, AlertTriangle, Search, X } from "lucide-react";
+import { ArrowRight, GitBranch, Globe, ShieldAlert, AlertTriangle, Search, X, ChevronRight } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 import { ProjectDetail } from "./ProjectDetail";
@@ -246,21 +246,35 @@ export function ProjectGrid({ projects }: { projects: Project[] }) {
       </div>
 
       {statuses.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
-          {statuses.map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(statusFilter === s ? null : s)}
-              title={s}
-              className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+        <div className="relative">
+          <div className="flex gap-1.5 overflow-x-auto ui-scroll-fade-right [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-x-visible">
+            {statuses.map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(statusFilter === s ? null : s)}
+                title={s}
+                className={`shrink-0 ${statusFilter === s ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+              >
+                {shortStatusLabel(s)}
+              </button>
+            ))}
+            {statusFilter && (
+              <button onClick={() => setStatusFilter(null)} className="shrink-0 ui-chip-filter">
+                Clear
+              </button>
+            )}
+          </div>
+          {/* Mobile-only scroll affordance — third horizontal-scroll surface
+              after Today SummaryBar (4cb018c) and Settings tab strip
+              (7ab36d6). 4+ status chips reliably overflow at 414px and the
+              ui-scroll-fade-right mask alone is too subtle on iOS. */}
+          {statuses.length >= 4 && (
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 z-10 flex items-center pr-1 text-text-tertiary sm:hidden"
             >
-              {shortStatusLabel(s)}
-            </button>
-          ))}
-          {statusFilter && (
-            <button onClick={() => setStatusFilter(null)} className="shrink-0 ui-chip-filter">
-              Clear
-            </button>
+              <ChevronRight className="h-4 w-4 drop-shadow-[0_0_4px_var(--surface-page)]" />
+            </span>
           )}
         </div>
       )}
