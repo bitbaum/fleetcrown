@@ -159,10 +159,15 @@ export function IntentButtonPanel({
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
       {!bannerActive && primary && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
-          {/* Primary CTA: Next best — full width, visually elevated */}
+          {/* Primary CTA: Next best — full width, visually elevated.
+              Tooltip makes the AI-dispatch nature explicit per the unified
+              prompt UX (2026-05-31) — every other prompt-click on /control
+              fills the textarea, but this one and the secondary intent chips
+              dispatch immediately. Users need to know the difference. */}
           <button
             onClick={() => handleSendIntent(primary.id)}
             disabled={sending !== null}
+            title="Strategist picks the next task autonomously based on session handoff + queue + recent commits. This click dispatches without preview."
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
             {sending === primary.id ? "…" : `${primary.label} →`}
