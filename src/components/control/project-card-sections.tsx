@@ -91,9 +91,17 @@ export function ProjectCardHeader({
                 <span className="truncate text-base font-semibold text-text-primary sm:text-lg" title={project.tab}>
                   {project.tab}
                 </span>
-                <span className={cn("gap-1.5", stateTagClass)}>
-                  {stateLabel}
-                </span>
+                {/* When we have a real handoff with "next", show the actual next step instead of generic "Ready for next step".
+                    This reduces the duplicate "Ready for next step ✓ ✓" noise the user reported. */}
+                { (isReady || isOrchReady) && project.session?.next?.trim() ? (
+                  <span className={cn("gap-1.5", stateTagClass)}>
+                    Next: {project.session.next.split('\n')[0].slice(0, 60)}
+                  </span>
+                ) : (
+                  <span className={cn("gap-1.5", stateTagClass)}>
+                    {stateLabel}
+                  </span>
+                )}
                 <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>
               {evidenceLabel && (

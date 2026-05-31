@@ -95,17 +95,18 @@ export function useProjectCardActions({
 
   const sendCustom = async () => {
     if (!custom.trim()) return;
+    const trimmed = custom.trim();
     setSending("custom");
     setSendError(null);
     setDismissed(true);
     try {
-      await onInject(project.tab, undefined, custom.trim());
-      // Only clear input + draft AFTER confirmed success. If onInject throws
-      // (the parent in ControlPanel re-throws via setError), the text stays.
+      // Mirror the smartEnqueue special case: if the user is deliberately sending
+      // a handoff-controlled prompt (the exact workflow they use to drive the agent
+      // from the UI), prefer direct execution over queueing.
+      const isHandoffControl = /^status:\s*(working|ready)/i.test(trimmed);
+      await onInject(project.tab, undefined, trimmed);
       setCustom("");
     } catch (err) {
-      // onInject from ControlPanel already swallows + calls setError(global).
-      // We still defensively capture here in case the wrapper path changes.
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
