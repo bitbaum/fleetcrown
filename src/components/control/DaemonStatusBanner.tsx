@@ -1,24 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Radio, WifiOff } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
+import { getJson } from "@/lib/api/fetch";
+import { DaemonControls } from "./DaemonControls";
+
+type DaemonState = "active" | "inactive" | "failed" | "unknown";
 
 type Props = {
   daemonNeverSeen: boolean;
   daemonOffline: boolean;
   daemonLastPushedAt: string | null;
+  /** True on local installs only. Cloud renders DaemonControls disabled. */
+  runtimeAvailable?: boolean;
+  /** Caller refreshes its data view after the daemon lifecycle changes. */
+  onRefresh?: () => void;
 };
 
-export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastPushedAt }: Props) {
+export function DaemonStatusBanner({
+  daemonNeverSeen,
+  daemonOffline,
+  daemonLastPushedAt,
+  runtimeAvailable = false,
+  onRefresh,
+}: Props) {
   const [dismissed, setDismissed] = useState(false);
+  const [unitState, setUnitState] = useState<DaemonState>("unknown");
+
+  // Probe systemd unit state on mount + after every successful control
+  // action. Decoupled from daemonOffline (which is "is the daemon pushing
+  // updates?") so the button labels reflect whether the unit is loaded but
+  // not pushing vs truly stopped. Local-only — cloud 403s the GET.
+  useEffect(() => {
+    if (!runtimeAvailable) return;
+    getJson<{ state: DaemonState }>("/api/system/daemon")
+      .then((r) => setUnitState(r.state))
+      .catch(() => setUnitState("unknown"));
+  }, [runtimeAvailable]);
 
   if (dismissed || (!daemonNeverSeen && !daemonOffline)) return null;
 
   const lastSeen = daemonLastPushedAt
     ? timeAgo(new Date(daemonLastPushedAt).getTime())
     : null;
+
+  const refreshAfterAction = () => {
+    getJson<{ state: DaemonState }>("/api/system/daemon")
+      .then((r) => setUnitState(r.state))
+      .catch(() => {});
+    onRefresh?.();
+  };
 
   return (
     <div className="ui-callout-warning">
@@ -60,12 +93,18 @@ export function DaemonStatusBanner({ daemonNeverSeen, daemonOffline, daemonLastP
         ) : (
           <>
             <p className="text-text-secondary leading-relaxed">
-              The helper on your computer stopped sending updates (you closed the terminal, it crashed, laptop slept, etc.).
-              All agent commands are safely queued on the website until it reconnects.
+              The helper on your computer stopped sending updates. All agent commands are safely queued until it reconnects.
             </p>
-            <p className="text-xs text-text-muted">
-              New installs run as a background service and restart automatically. If an older helper is offline, run the one-line enrollment installer once from Settings to upgrade it; future repairs are available from the Control page.
-            </p>
+            <DaemonControls
+              runtimeAvailable={runtimeAvailable}
+              currentState={unitState}
+              onAfter={refreshAfterAction}
+            />
+            {!runtimeAvailable && (
+              <p className="text-xs text-text-muted">
+                You&apos;re on the cloud install — daemon control runs only from your local machine. Open Cockpit at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
+              </p>
+            )}
           </>
         )}
 

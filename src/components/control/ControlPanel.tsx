@@ -264,6 +264,8 @@ export function ControlPanel() {
         daemonNeverSeen={daemonNeverSeen}
         daemonOffline={daemonOffline}
         daemonLastPushedAt={daemonLastPushedAt}
+        runtimeAvailable={runtimeAvailable}
+        onRefresh={() => refresh(true)}
       />
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
