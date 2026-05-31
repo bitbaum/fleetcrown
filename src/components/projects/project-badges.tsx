@@ -79,9 +79,15 @@ const STATUS_COLOR_MAP: Record<string, string> = {
 
 export function StatusBadge({ value }: { value: string }) {
   const cls = STATUS_COLOR_MAP[value.toLowerCase()] ?? "bg-surface-raised text-text-tertiary border-border-subtle";
+  // ui-micro-badge is inline-flex; truncate on the outer text node won't add
+  // an ellipsis because flex layout doesn't apply text-overflow to anonymous
+  // children. Wrap the text in a real span so truncate has a block-like
+  // target. Spotted live on Projects mobile: a status like "Strategic
+  // planning only - no code, n…" was cutting mid-word with no ellipsis,
+  // making the chip look broken.
   return (
-    <span className={`ui-micro-badge truncate max-w-[180px] ${cls}`} title={value}>
-      {value}
+    <span className={`ui-micro-badge max-w-[180px] overflow-hidden ${cls}`} title={value}>
+      <span className="truncate">{value}</span>
     </span>
   );
 }
