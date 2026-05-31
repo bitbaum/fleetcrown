@@ -15,7 +15,20 @@ export const metadata = { title: "System" };
 
 export default async function SystemPage() {
   const userId = await requirePageUserId();
-  const jobs = await listCronJobsForUser(userId);
+  // listCronJobsForUser is the only direct DB await on this route. When it
+  // throws (cloud Neon DB connectivity blip, table not provisioned on a
+  // fresh branch, etc.) the entire page crashes into the global error
+  // boundary — caught live on cockpitapp.vercel.app/system showing
+  // "Something went wrong" with the Server Components render error.
+  // Defensive: fall back to an empty list so the rest of the page renders
+  // (AutopilotCard handles empty initialJobs cleanly). The error is
+  // captured in console so postmortem still works.
+  let jobs: Awaited<ReturnType<typeof listCronJobsForUser>> = [];
+  try {
+    jobs = await listCronJobsForUser(userId);
+  } catch (err) {
+    console.error("[system/page] listCronJobsForUser failed:", err);
+  }
 
   return (
     <PullToRefresh>
