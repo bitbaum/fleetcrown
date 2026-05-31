@@ -202,6 +202,37 @@ next: <state to resume from; empty when nothing is mid-flight>"
 execute_inject() {
   local id="$1" tab="$2" prompt="$3" prompt_key="${4:-}" prompt_label="${5:-}" payload_adapter="${6:-}" payload_model="${7:-}"
 
+  # Last-line autopilot gate (added 2026-05-31 after Commit 1's first gate was
+  # bypassed by the pending_commands path). Any inject — whether from cloud
+  # /api/orchestration/run, ReadyBanner auto-fire, or watchdog dispatch —
+  # passes through here. Refuse when the session handoff says status:working
+  # OR a blocker file is pending. The user's session-state is sovereign;
+  # everything that wants to type into their terminal must respect it.
+  #
+  # hard_stop is the ONE exception — it's a kill switch and must always go
+  # through, otherwise stuck loops can't be stopped.
+  if [ "$prompt_key" != "hard_stop" ]; then
+    local _session_file _session_status _blocker_dir _blocker_count
+    _session_file="${HOME}/.claude/sessions/${tab}.md"
+    _session_status=""
+    if [ -f "$_session_file" ]; then
+      _session_status=$(grep -m1 '^status:' "$_session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' || true)
+    fi
+    if [ "$_session_status" = "working" ]; then
+      log "inject REFUSED — ${tab} session status=working (prompt_key=${prompt_key:-?}, id=${id})"
+      return 1
+    fi
+    _blocker_dir="${HOME}/.claude/sessions/${tab}.blockers/pending"
+    _blocker_count=0
+    if [ -d "$_blocker_dir" ]; then
+      _blocker_count=$(find "$_blocker_dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+    fi
+    if [ "$_blocker_count" -gt 0 ]; then
+      log "inject REFUSED — ${tab} has ${_blocker_count} pending blocker(s) (prompt_key=${prompt_key:-?}, id=${id})"
+      return 1
+    fi
+  fi
+
   # Look up the project's directory and live adapter (process scan beats conf default).
   local adapter="claude" project_dir=""
   while IFS='|' read -r t d _a || [ -n "$t" ]; do

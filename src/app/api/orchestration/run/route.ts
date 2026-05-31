@@ -70,6 +70,26 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Cross-path autopilot gate (added 2026-05-31). The dispatch route's gates
+  // (b89fdfc) covered the watchdog path but missed this one — /api/orchestration/run
+  // is what enqueues pending_commands for the daemon, and it had no status check.
+  // Result: even with status:working set, the daemon kept getting fresh inject
+  // commands. Block here for non-lifecycle intents when the cached session state
+  // says working — daemon-side execute_inject also refuses (defence-in-depth)
+  // but blocking here saves a database write and a queue trip. hard_stop and
+  // close_session always go through (lifecycle kill switches must not be gated).
+  const liveIntent = (dataOrResp as OrchestrationTaskRequest).intent;
+  const liveProjectKey = (dataOrResp as OrchestrationTaskRequest).projectKey;
+  if (liveIntent !== "hard_stop" && liveIntent !== "close_session") {
+    const cached = await getProjectState(userId, liveProjectKey).catch(() => null);
+    if (cached?.sessionStatus === "working") {
+      return NextResponse.json({
+        error: "agent-status-working",
+        reason: "Your session handoff says status:working — autopilot is paused. Clear status to dispatch.",
+      }, { status: 409 });
+    }
+  }
+
   if (!isRuntimeAvailable()) {
     // Cloud mode: only the claude adapter can be queued via pending_commands.
     // Other adapters (openclaw, codex, gemini) require local workers/tools.
