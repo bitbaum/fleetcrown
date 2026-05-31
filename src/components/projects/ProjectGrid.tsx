@@ -142,21 +142,20 @@ function ProjectCard({
         </div>
       )}
 
-      {!status && !maturity && !hasIssues && !nextStep && (
-        extraAttrs.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {extraAttrs.slice(0, 2).map(([key, value]) => (
-              <span key={key} title={`${key}: ${value}`} className="ui-micro-badge rounded-full border-border-default bg-surface-overlay text-text-tertiary">
-                {String(value).slice(0, 30)}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded border border-dashed border-border-default px-2.5 py-2 text-center">
-            <span className="text-xs text-text-muted">Add context →</span>
-          </div>
-        )
+      {!status && !maturity && !hasIssues && !nextStep && extraAttrs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {extraAttrs.slice(0, 2).map(([key, value]) => (
+            <span key={key} title={`${key}: ${value}`} className="ui-micro-badge rounded-full border-border-default bg-surface-overlay text-text-tertiary">
+              {String(value).slice(0, 30)}
+            </span>
+          ))}
+        </div>
       )}
+      {/* No empty-state placeholder: a card with only a title is less ugly
+          than a card with a dashed-bordered "Add context →" prompt that
+          dominates the visual when the user is scanning 20+ tiles. The whole
+          card is already clickable (onClick on the wrapper) so the affordance
+          to open the project is preserved. */}
     </div>
   );
 }
