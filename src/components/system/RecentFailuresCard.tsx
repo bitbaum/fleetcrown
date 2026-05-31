@@ -26,18 +26,21 @@ const LEVEL_TONE: Record<string, { icon: typeof Info; cls: string }> = {
 export async function RecentFailuresCard() {
   const rows = await getRecentDebugLogs(10).catch(() => []);
   const errorCount = rows.filter((r) => r.level === "error").length;
+  const warnCount = rows.filter((r) => r.level === "warn").length;
+  // Previously read errorCount only and showed "all clear" whenever no
+  // errors existed — but 10 warning rows visible directly below
+  // contradicted the badge. Caught live on cloud /system: 10 groq 401
+  // warnings rendered under an "all clear" header. Surface warnings in
+  // the badge too; reserve "all clear" for genuinely empty problem state.
+  const right = errorCount > 0
+    ? <span className="text-xs font-medium text-status-negative">{errorCount} error{errorCount === 1 ? "" : "s"}</span>
+    : warnCount > 0
+      ? <span className="text-xs font-medium text-status-warning">{warnCount} warning{warnCount === 1 ? "" : "s"}</span>
+      : <span className="text-xs text-text-tertiary">all clear</span>;
 
   return (
     <Card>
-      <CardHeader
-        icon={AlertCircle}
-        title="Recent telemetry"
-        right={
-          errorCount > 0
-            ? <span className="text-xs font-medium text-status-negative">{errorCount} error{errorCount === 1 ? "" : "s"}</span>
-            : <span className="text-xs text-text-tertiary">all clear</span>
-        }
-      />
+      <CardHeader icon={AlertCircle} title="Recent telemetry" right={right} />
       {rows.length === 0 ? (
         <EmptyState>No recent telemetry events</EmptyState>
       ) : (
