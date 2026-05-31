@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Search, BookOpen } from "lucide-react";
+import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import type { ThoughtMeta } from "@/lib/thoughts-content";
 
 type ThoughtArticle = ThoughtMeta & { body: string };
@@ -84,26 +85,32 @@ export function ThoughtsLibrary({
           </span>
         </div>
 
-        {/* Single scrollable row — no wrapping */}
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            onClick={() => setActiveTag("all")}
-            className={`shrink-0 ${activeTag === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}`}
-          >
-            All
-          </button>
-          {tags.map((tag) => (
+        {/* Single scrollable row — no wrapping. Fifth horizontal-scroll
+            surface in the codebase; uses the extracted ScrollAffordance
+            (0429728) for the mobile chevron + fade rather than re-inlining
+            the pattern. Adds ui-scroll-fade-right that was previously
+            missing here too. */}
+        <ScrollAffordance childCount={tags.length + 1} threshold={4}>
+          <div className="flex gap-2 overflow-x-auto ui-scroll-fade-right pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <button
-              key={tag}
               type="button"
-              onClick={() => setActiveTag(tag)}
-              className={`shrink-0 ${activeTag === tag ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+              onClick={() => setActiveTag("all")}
+              className={`shrink-0 ${activeTag === "all" ? "ui-chip-filter-active" : "ui-chip-filter"}`}
             >
-              {tag}
+              All
             </button>
-          ))}
-        </div>
+            {tags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setActiveTag(tag)}
+                className={`shrink-0 ${activeTag === tag ? "ui-chip-filter-active" : "ui-chip-filter"}`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        </ScrollAffordance>
       </div>
 
       {filtered.length === 0 ? (
