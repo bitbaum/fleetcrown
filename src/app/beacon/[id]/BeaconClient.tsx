@@ -348,7 +348,14 @@ function BeaconBody({
         <div className="space-y-1.5 px-5">
           <p className="ui-kicker">Reuse recent prompts</p>
           <div className="flex flex-wrap gap-1.5">
-            {recentPrompts.map((r) => (
+            {recentPrompts
+              .filter((r) => {
+                const t = r.customPrompt.toLowerCase();
+                if (t.startsWith("setup (run, read outputs)")) return false;
+                if (t.includes("picked ") && t.includes(" (t")) return false;
+                return true;
+              })
+              .map((r) => (
               <button
                 key={r.customPrompt}
                 onClick={() => setCustom(r.customPrompt)}

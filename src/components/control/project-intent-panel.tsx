@@ -115,7 +115,16 @@ export function IntentButtonPanel({
       : `Manual for this project: ${APP_NAME} will wait for you before sending more work.`,
   };
 
-  const recentPrompts = project.recentCustomPrompts.slice(0, isRunning ? 3 : 5);
+  const recentPrompts = project.recentCustomPrompts
+    .filter((r) => {
+      const t = r.customPrompt.toLowerCase();
+      // Hide meta LOOP / autopilot template prompts from the "Reuse recent" chips.
+      // These pollute history (the "Setup (run, read outputs)..." ones the user sees).
+      if (t.startsWith("setup (run, read outputs)")) return false;
+      if (t.includes("picked ") && t.includes(" (t")) return false; // the accountability line
+      return true;
+    })
+    .slice(0, isRunning ? 3 : 5);
 
   // Running: interrupt input + auto-continue toggle (below, not adjacent) + queue + recent prompts
   if (isRunning) {
