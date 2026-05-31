@@ -19,7 +19,8 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
-import { evaluateDispatchGates, type AutoInjectMode } from "@/lib/orchestration/dispatch-gates";
+import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
+import type { AutoInjectMode } from "@/config/beacon";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -58,6 +59,10 @@ const DispatchBody = z.object({
   projectKey:    z.string().optional(),
   gitBranch:     z.string().optional(),
   recentCommits: z.array(z.string()).max(5).optional(),
+  /** Project mission / charter from profile — fed to strategist so composed
+   *  next-best prompts are aware of the user's larger intent, not just the
+   *  immediate handoff. */
+  mission:       z.string().optional(),
 });
 
 export type DispatchAction = "queue" | "nextbest" | "composed" | "off";
@@ -82,10 +87,12 @@ function buildPrompt(
   gitBranch?: string,
   recentCommits?: string[],
   recentOutcomes?: RecentOutcome[],
+  mission?: string,
 ): string {
   const projectCtx = [
     projectName ? `Project: ${projectName}` : "",
     gitBranch   ? `Branch: ${gitBranch}`    : "",
+    mission && mission.trim() ? `Mission: ${mission.trim()}` : "",
   ].filter(Boolean).join("  |  ");
 
   // Strip leading hash so the model focuses on message content, not SHAs.
@@ -123,7 +130,7 @@ Decide one of three actions:
 
 2. ACTION: NEXTBEST — fire the canned next_best template (generic "verify health, fix typecheck, execute session next, find adjacent broken thing"). Only choose this when both queue and handoff.next are weak signals AND there's no specific direction emerging from commits/outcomes.
 
-3. ACTION: COMPOSED — you write a fresh prompt body that names exactly what the agent should do right now, drawing on the handoff's "next", the queue tail, the last commit, and the outcome streak. Prefer this when handoff.next is specific (e.g. "fix login flow", "ship migration 0011") or when a queue item plus commit history together point at one clear move. The body should sound like a teammate's next-step note — concrete verbs, named files or features where possible, ≤2000 characters.
+3. ACTION: COMPOSED — you write a fresh prompt body that names exactly what the agent should do right now, drawing on the handoff's "next", the queue tail, the last commit, the outcome streak, AND the project mission (if present). The composed body must stay aligned with the mission while executing the highest-impact immediate step. Prefer this when handoff.next is specific (e.g. "fix login flow", "ship migration 0011") or when a queue item plus commit history together point at one clear move. The body should sound like a teammate's next-step note — concrete verbs, named files or features where possible, ≤2000 characters.
 
 Respond in this format (no extra text):
 
@@ -205,7 +212,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, blockerCount, projectName, projectKey, gitBranch, recentCommits } = dataOrResp;
+  const { handoff, queue, blockerCount, projectName, projectKey, gitBranch, recentCommits, mission } = dataOrResp;
 
   // Recent outcomes for this project — feeds Groq and is surfaced in the reason.
   // Safe-defaults: if the lookup fails, dispatch still proceeds.
@@ -252,7 +259,7 @@ export async function POST(req: NextRequest) {
 
   // Groq composition. Even with an empty queue, the strategist composes
   // from session next, recent commits, and outcome streak.
-  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes);
+  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission);
 
   try {
     const { action, reason, prompt: composedPrompt } = await callGroq(prompt);

@@ -60,7 +60,7 @@ export function PromptInput({
     : processing
     ? "Transcribing..."
     : custom.trim()
-    ? "Enter sends - Alt+Enter queues"
+    ? "Enter sends · Alt+Enter queues (or sends now if idle)"
     : autoContinueEnabled === false
     ? "Auto-continue paused"
     : autoContinueEnabled === true && isComposing
@@ -188,7 +188,7 @@ export function PromptInput({
             <button
               onClick={onEnqueue}
               disabled={(!custom.trim() && !listening) || sending !== null}
-              title={listening ? "Stop recording and add to queue" : "Add to queue - Alt+Enter"}
+              title={listening ? "Stop recording and queue (or send now if idle)" : "Queue for later (sends immediately if this project is idle) — Alt+Enter"}
               className="ui-btn-icon shrink-0 disabled:pointer-events-none disabled:opacity-25"
             >
               <ListPlus className="h-3.5 w-3.5" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson, patchJson } from "@/lib/api/fetch";
@@ -142,6 +142,28 @@ export function ProjectCard({
   const latestOrchRun = project.latestOrchestrationRun;
   const paused = !automaticContinuationEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
 
+  // Smart "send to queue" (user request #2):
+  // - If the project is currently idle/ready (nothing being done), treat the
+  //   queue action as an immediate send (fills the ready slot right now).
+  // - Otherwise, add to the persistent prompt_queue so it gets injected
+  //   automatically once the current task finishes (via handleAutoInject etc.).
+  // This unifies "type or pick from library/history → send to queue".
+  // Works for both the textarea (Alt+Enter) and the ListPlus button, and
+  // the mic "enqueue after recording" path (via onEnqueueCustom).
+  const smartEnqueue = useCallback((text: string) => {
+    const trimmed = (text || "").trim();
+    if (!trimmed) return;
+    const idle = !project.agentRunning
+      && !display.isRunning
+      && (isReadyNow || display.tone === "idle" || display.isReady || display.isOrchestrationReady);
+    if (idle) {
+      // Use the full send path (handles sending state, draft clearing, errors, dismiss, etc.)
+      sendText(trimmed);
+    } else {
+      enqueue(trimmed);
+    }
+  }, [enqueue, sendText, project.agentRunning, display.isRunning, display.tone, isReadyNow, display.isReady, display.isOrchestrationReady]);
+
   return (
     <div
       className={cn(
@@ -268,7 +290,7 @@ export function ProjectCard({
             onToggleAutoContinue={automationMode === "off" ? undefined : toggleAutoContinue}
             onSendIntent={sendIntent}
             onSendCustom={sendCustom}
-            onEnqueueCustom={enqueue}
+            onEnqueueCustom={smartEnqueue}
             onSendText={sendText}
             onSendFromQueue={handleSendFromQueue}
             onRemoveFromQueue={removeFromQueue}

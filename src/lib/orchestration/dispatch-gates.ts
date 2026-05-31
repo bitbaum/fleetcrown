@@ -14,8 +14,7 @@
  */
 
 import type { DispatchAction, DispatchResult } from "@/app/api/control/dispatch/route";
-
-export type AutoInjectMode = "off" | "queue_only" | "next_best" | "strategist";
+import type { AutoInjectMode } from "@/config/beacon";
 
 export type GateInput = {
   status: string;
@@ -69,6 +68,14 @@ export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
       reason: `Legacy next_best mode (no strategist).${streakSuffix}`,
       source: "mode_gate",
     };
+  }
+
+  // beacon (L3 popup + countdown) and strategist/Mission (L5) both fall through
+  // to the Groq composer in the route. The beacon UI calls dispatch to decide
+  // the auto-pick (queue head vs composed vs canned) when countdown fires.
+  // strategist mode forces the composed path for full autonomy.
+  if (mode === "beacon" || mode === "strategist") {
+    return null;
   }
 
   return null;
