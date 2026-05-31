@@ -7,7 +7,31 @@ import Link from "next/link";
 
 export async function MemorySummaryCard() {
   const userId = await requirePageUserId();
-  const stats = await getEntityStats(userId);
+  // Match the defensive shape of sibling RecentFailuresCard
+  // (`getRecentDebugLogs(10).catch(() => [])`). Without this, any
+  // Neon-side error in getEntityStats propagated past Suspense into
+  // the route boundary and took the whole /system page down — the
+  // most likely cause of the "Something went wrong" black-box screen
+  // ee6df43 caught. Render a degraded card explaining what's missing
+  // instead of breaking the route. console.error keeps the postmortem
+  // signal even when Vercel logs are unreliable.
+  let stats: Awaited<ReturnType<typeof getEntityStats>> | null = null;
+  try {
+    stats = await getEntityStats(userId);
+  } catch (err) {
+    console.error("[MemorySummaryCard] getEntityStats failed:", err);
+  }
+
+  if (!stats) {
+    return (
+      <Card>
+        <CardHeader icon={Brain} title="Memory" />
+        <p className="text-sm text-text-tertiary">
+          Couldn&apos;t load knowledge-graph stats. The rest of System is unaffected; this section will refresh on the next page load.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <Card>
