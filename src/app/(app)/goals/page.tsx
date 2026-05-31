@@ -36,7 +36,13 @@ export default async function GoalsPage() {
       subtitle="Where you're going — and how you're getting there"
       right={<NewGoalButton goals={activeGoals} />}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Stats row: 3 columns at every breakpoint. Previously grid-cols-1 on
+          mobile stacked the cards vertically, eating ~400px before the user
+          saw any actual goal — three single-stat cards each ~130px tall.
+          Live audit at 414px confirmed the density problem. Three columns at
+          mobile keep each card narrow but readable (short labels + 1-2 digit
+          values fit comfortably; sub text wraps at most 2 lines). */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <StatCard
           label="Active Goals"
           value={String(stats.active)}
