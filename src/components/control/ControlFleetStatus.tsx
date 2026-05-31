@@ -46,7 +46,15 @@ export function ControlFleetStatus({
   onRefresh,
   onAutomationChange,
 }: Props) {
-  const needsYou = attentionCount + failedCount + (dashboard?.waitingCount ?? 0);
+  // Vocabulary reconciled with ProjectOperationsView's rail counts
+  // 2026-05-31: header now shows "X working · Y ready · Z open" matching the
+  // rail exactly, with an optional "X need you" attention chip in front when
+  // failed commands or attention items are present. Was: "X need you · Y
+  // working · Z open" — different denominators (needsYou conflated waiting +
+  // failed + attention) and different verbs from the rail's working/ready/open
+  // triad. Same fact in two places now reads the same way.
+  const attention = attentionCount + failedCount; // truly user-blocking
+  const ready = dashboard?.waitingCount ?? 0;     // agent done, awaiting next step
   const working = dashboard?.runningCount ?? 0;
   const openTabs = dashboard?.openTabCount ?? 0;
 
@@ -113,23 +121,25 @@ export function ControlFleetStatus({
             : undefined;
         return (
           <div className="ui-control-fleet-metrics">
-            {needsYou > 0 ? (
+            {attention > 0 && (
               <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-attention", staleClass)} title={staleTitle}>
-                {needsYou} need{needsYou === 1 ? "s" : ""} you
+                {attention} need{attention === 1 ? "s" : ""} you
               </span>
-            ) : (
+            )}
+            <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+              {working > 0 && <span className="ui-dot ui-dot-positive shrink-0 mr-1" aria-hidden="true" />}
+              {working} working
+            </span>
+            <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+              {ready} ready
+            </span>
+            <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
+              {openTabs} open
+            </span>
+            {attention === 0 && working === 0 && ready === 0 && openTabs === 0 && (
               <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle}>
                 All clear
               </span>
-            )}
-            {working > 0 && (
-              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
-                <span className="ui-dot ui-dot-positive shrink-0" aria-hidden="true" />
-                {working} working
-              </span>
-            )}
-            {openTabs > 0 && (
-              <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>{openTabs} open</span>
             )}
           </div>
         );
