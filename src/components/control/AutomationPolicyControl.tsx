@@ -18,30 +18,36 @@ const MODES: { value: AutoInjectMode; label: string }[] = [
  * was that the autopilot's current mode wasn't visible enough to know what
  * a click anywhere on /control was going to do next.
  *
- *   off         → gray dot   · "Autopilot off — every send is manual"
- *   queue_only  → amber dot  · "Autopilot drains your queue — never composes"
- *   next_best   → blue dot   · "Autopilot fires the canned next_best template"
- *   strategist  → green dot, animated · "Autopilot composes prompts with Groq"
+ *   off         → gray dot   · "Manual — you dispatch every prompt"
+ *   queue_only  → amber dot  · "Queue — drain your written list, stop when empty"
+ *   beacon      → cyan dot, animated · "Beacon — popup + countdown auto-pick"
+ *   next_best   → blue dot, animated · "Continuous — auto-fires next-best, no popup"
+ *   strategist  → green dot, animated · "Mission — Groq composes from full context"
  */
 const MODE_STYLE: Record<AutoInjectMode, { dotClass: string; tooltip: string; pulse: boolean }> = {
   off: {
     dotClass: "bg-text-tertiary",
-    tooltip: "Autopilot OFF — every send is manual. No prompts will be auto-injected into your agent.",
+    tooltip: "Manual (L1) — Cockpit dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
     pulse: false,
   },
   queue_only: {
     dotClass: "bg-status-warning",
-    tooltip: "Autopilot drains your QUEUE only — never composes new prompts. Press send to fire the queue head.",
+    tooltip: "Queue (L2) — when the agent finishes, Cockpit fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
     pulse: false,
+  },
+  beacon: {
+    dotClass: "bg-accent-text",
+    tooltip: "Beacon (L3) — popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. Cockpit suggests, you decide.",
+    pulse: true,
   },
   next_best: {
     dotClass: "bg-accent-primary",
-    tooltip: "Autopilot fires the canned next_best template when the agent goes idle. No Groq composition.",
+    tooltip: "Continuous (L4) — drains your queue then auto-fires the canned next-best template, no popup. The project keeps moving while you work elsewhere.",
     pulse: true,
   },
   strategist: {
     dotClass: "bg-status-positive",
-    tooltip: "Autopilot AUTONOMOUS — Groq composes context-aware prompts from your handoff + queue + commits when the agent goes idle. Set status:working in your session file to pause; raise a blocker to halt.",
+    tooltip: "Mission (L5) — Groq composes context-aware prompts from project mission, goals, roadmap, and recent commits. Fall asleep, wake up shipped. Advanced — requires trust in the composer.",
     pulse: true,
   },
 };

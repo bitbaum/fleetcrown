@@ -108,15 +108,17 @@ def get_popup_mode() -> str:
 
 
 def get_auto_inject_mode() -> str:
-    """Return the automatic continuation policy used by every hook surface.
+    """Return the autopilot trust-ladder level used by every hook surface.
 
-    Default is "strategist": Cockpit's product promise is autopilot. The Stop
-    hook fires this when no per-user override exists. Safety rails live in
-    /api/control/dispatch and Stop-hook gating (manual override, health gate,
-    hard_stop, queue priority).
+    Default is "beacon" (L3): popup with smart choices + countdown auto-pick.
+    Was "strategist" (L5) until 2026-05-31 — flipped after user feedback that
+    L5 felt like a loose cannon. Five levels: off / queue_only / beacon /
+    next_best / strategist (Manual / Queue / Beacon / Continuous / Mission).
+    Safety rails live in /api/control/dispatch and the Stop-hook gates
+    (status:working refusal, pending-blocker refusal, hard_stop, queue prio).
     """
-    mode = load_settings().get("auto_inject_mode", "strategist")
-    return mode if mode in {"strategist", "queue_only", "next_best", "off"} else "strategist"
+    mode = load_settings().get("auto_inject_mode", "beacon")
+    return mode if mode in {"off", "queue_only", "beacon", "next_best", "strategist"} else "beacon"
 
 
 def load_prompt_meta() -> list:

@@ -84,7 +84,7 @@ if [ -n "$_BEACON_SETTINGS_JSON" ]; then
   _BEACON_POPUP_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
     "import sys,json; d=json.load(sys.stdin); print(d.get('popup_mode','both'))" 2>/dev/null || echo both)
   _BEACON_AUTO_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
-    "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','strategist'))" 2>/dev/null || echo strategist)
+    "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','beacon'))" 2>/dev/null || echo beacon)
 else
   # Cockpit offline — read from Python config (which reads the legacy file)
   _BEACON_MIN_IDLE=$(python3 -c "
@@ -101,7 +101,7 @@ print(get_popup_mode())
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from _beacon_config import get_auto_inject_mode
 print(get_auto_inject_mode())
-" 2>/dev/null || echo strategist)
+" 2>/dev/null || echo beacon)
 fi
 export BEACON_POPUP_MODE="$_BEACON_POPUP_MODE"
 
@@ -392,10 +392,41 @@ switch_agent_and_continue() {
 # looks. /control + push notifications carry the ambient signal.
 autopilot_dispatch_and_inject() {
   local tab_name="$1" session_file="$2"
+  local mode="${_BEACON_AUTO_MODE:-beacon}"
 
-  if [ "${_BEACON_AUTO_MODE:-strategist}" = "off" ]; then
-    log "autopilot: auto_inject_mode=off — staying idle (manual mode)"
+  if [ "$mode" = "off" ]; then
+    log "autopilot: mode=off (Manual) — staying idle"
     return 1
+  fi
+
+  # Beacon mode (L3, restored 2026-05-31 after being orphaned by 848da6c).
+  # Open the popup; let the user pick a queued item, the canned next-best, or
+  # a custom prompt. Countdown in the popup auto-picks if the user is away.
+  # beacon.py blocks until the user (or countdown) commits, then prints the
+  # chosen prompt key on stdout. The bridge then dispatches that key via the
+  # same emit_or_inject_prompt path the other modes use.
+  if [ "$mode" = "beacon" ]; then
+    local beacon_py="$(dirname "${BASH_SOURCE[0]}")/beacon.py"
+    if [ ! -x "$beacon_py" ]; then
+      log "autopilot: beacon mode active but launcher missing at ${beacon_py} — falling through to next_best"
+    else
+      local choice
+      log "autopilot: opening beacon popup for ${tab_name}"
+      choice=$("$beacon_py" stop "$tab_name" "$session_file" 2>/dev/null || true)
+      if [ -n "$choice" ]; then
+        if [[ "$choice" == "__custom__"* ]]; then
+          # Custom prompt prefix: "__custom__<body>". Treat the rest as the prompt body.
+          local custom_body="${choice#__custom__}"
+          emit_or_inject_prompt "$tab_name" "$custom_body" "custom" "Beacon custom prompt"
+        else
+          emit_or_inject_prompt "$tab_name" "" "$choice" "Beacon: ${choice}"
+        fi
+        log "autopilot: beacon dispatched ${choice} for ${tab_name}"
+        return 0
+      fi
+      log "autopilot: beacon timed out or user dismissed — staying idle"
+      return 1
+    fi
   fi
 
   if [ -z "${_BEACON_AUTH_HEADER:-}" ]; then

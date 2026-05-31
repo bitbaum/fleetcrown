@@ -9,14 +9,16 @@ export const beaconSettings = pgTable("beacon_settings", {
   minIdleSeconds:        integer("min_idle_seconds").notNull().default(0),
   whisperModel:          text("whisper_model").notNull().default("base"),
   transcriptionProvider: text("transcription_provider").notNull().default("auto"),
-  // strategist | queue_only | next_best | off — drives the Stop-hook autopilot
-  // path. Defaults to "strategist": Cockpit's product promise is "agents keep
-  // working when you're away", so new users land in autopilot. Safety rails
-  // remain (health gate, hard_stop, manual override, per-project pause); the
-  // strategist server-side already falls back to queue → next_best → no-op on
-  // composition failures. "queue_only" / "off" remain available as opt-outs
-  // for users who want explicit gating instead of autopilot.
-  autoInjectMode:        text("auto_inject_mode").notNull().default("strategist"),
+  // off | queue_only | beacon | next_best | strategist — the five-level
+  // autopilot trust ladder (Manual / Queue / Beacon / Continuous / Mission).
+  // Default is "beacon" (L3): popup with smart choices + countdown auto-pick
+  // when the agent finishes. Right starting trust level — new users see
+  // every dispatch through a popup before opting into Continuous (L4) or
+  // Mission (L5). Was "strategist" (L5) until 2026-05-31 — flipped after
+  // user feedback that L5 felt like a loose cannon (composed AI prompts
+  // fired without consent step). Safety rails (status:working gate,
+  // pending-blocker gate) apply at every level above off.
+  autoInjectMode:        text("auto_inject_mode").notNull().default("beacon"),
   updatedAt:             timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_beacon_settings_user_id").on(t.userId),

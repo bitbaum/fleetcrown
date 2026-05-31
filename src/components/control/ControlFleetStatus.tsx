@@ -7,11 +7,14 @@ import type { ControlDashboardState } from "./control-presenter";
 import type { AutoInjectMode } from "@/config/beacon";
 import { AutomationPolicyControl } from "./AutomationPolicyControl";
 
+// Single-line hint shown under the fleet chips when this mode is active.
+// Five-level trust ladder (2026-05-31): Manual / Queue / Beacon / Continuous / Mission.
 const AUTOMATION_HINT: Record<AutoInjectMode, string> = {
-  off: "Agents stop when a task ends — you send every next step.",
-  queue_only: "Agents continue only when queued instructions exist.",
-  strategist: "Agents keep working when you are away — you step in for exceptions.",
-  next_best: "Agents auto-run a canned next step when a task ends.",
+  off: "Manual — agents stop when a task ends; you dispatch every next step.",
+  queue_only: "Queue — agents drain your written queue, then stop.",
+  beacon: "Beacon — popup with smart choices on every handoff; countdown auto-picks if you're away.",
+  next_best: "Continuous — agents auto-run the canned next-best step on every handoff.",
+  strategist: "Mission — Cockpit composes context-aware prompts from project mission, goals, and history.",
 };
 
 type Props = {

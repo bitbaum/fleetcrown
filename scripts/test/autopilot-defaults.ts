@@ -19,13 +19,16 @@ function runTests(): void {
     console.log(`  ✓ ${label}`);
   };
 
-  check("DEFAULT_AUTO_INJECT_MODE is 'strategist'", () => {
-    assert(DEFAULT_AUTO_INJECT_MODE === "strategist", `expected strategist, got ${DEFAULT_AUTO_INJECT_MODE}`);
+  // 2026-05-31: default flipped from "strategist" (L5 Mission, loose cannon)
+  // to "beacon" (L3, popup + countdown auto-pick). The right starting trust
+  // level for the five-level ladder Manual/Queue/Beacon/Continuous/Mission.
+  check("DEFAULT_AUTO_INJECT_MODE is 'beacon'", () => {
+    assert(DEFAULT_AUTO_INJECT_MODE === "beacon", `expected beacon, got ${DEFAULT_AUTO_INJECT_MODE}`);
   });
 
   check("Drizzle schema column default matches", () => {
     const schema = readFileSync("src/db/schema/beacon-settings.ts", "utf8");
-    assert(/default\("strategist"\)/.test(schema), "beacon-settings.ts schema must default to 'strategist'");
+    assert(/default\("beacon"\)/.test(schema), "beacon-settings.ts schema must default to 'beacon'");
   });
 
   check("Queries DEFAULTS sources the constant (no drift)", () => {
@@ -66,19 +69,19 @@ function runTests(): void {
       "BeaconSettings must seed from DEFAULT_AUTO_INJECT_MODE — never an inline literal");
   });
 
-  check("Python offline fallback returns 'strategist'", () => {
+  check("Python offline fallback returns 'beacon'", () => {
     const py = readFileSync("scripts/_beacon_config.py", "utf8");
-    assert(/get\(.auto_inject_mode., .strategist.\)/.test(py),
-      "_beacon_config.py get_auto_inject_mode must default to 'strategist'");
+    assert(/get\(.auto_inject_mode., .beacon.\)/.test(py),
+      "_beacon_config.py get_auto_inject_mode must default to 'beacon'");
   });
 
-  check("Shell fallback (settings JSON missing) returns 'strategist'", () => {
+  check("Shell fallback (settings JSON missing) returns 'beacon'", () => {
     const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
     const matches = sh.match(/auto_inject_mode/g) ?? [];
     assert(matches.length >= 2, "agent-hook-bridge.sh must read auto_inject_mode in both code paths");
-    // The two bash fallback echoes must say strategist (one for the JSON-parse path, one for the Python-fallback path).
-    const strategistFallbacks = (sh.match(/echo\s+strategist/g) ?? []).length;
-    assert(strategistFallbacks >= 2, `expected ≥2 'echo strategist' fallbacks, got ${strategistFallbacks}`);
+    // The two bash fallback echoes must say beacon (one for the JSON-parse path, one for the Python-fallback path).
+    const beaconFallbacks = (sh.match(/echo\s+beacon/g) ?? []).length;
+    assert(beaconFallbacks >= 2, `expected ≥2 'echo beacon' fallbacks, got ${beaconFallbacks}`);
   });
 
   check("patch_project_state uses portable ISO date (not milliseconds)", () => {

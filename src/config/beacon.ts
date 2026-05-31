@@ -25,7 +25,15 @@ export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; l
   { value: "groq",  label: "Groq cloud",   note: "whisper-large-v3-turbo via API — rate limited" },
 ];
 
-export const AUTO_INJECT_MODE_VALUES = ["strategist", "queue_only", "next_best", "off"] as const;
+// The five-level autopilot trust ladder. Each level adds one more thing
+// Cockpit decides on your behalf — L1 (you decide everything) to L5 (full
+// AI-composed dispatch). Storage values keep legacy names ("off",
+// "queue_only", "next_best", "strategist") for migration safety; the UI
+// surfaces the new names (Manual, Queue, Beacon, Continuous, Mission) and
+// the new "beacon" value is the one being added 2026-05-31 to restore the
+// popup UX removed by commit 848da6c. Order in this array reflects the
+// trust ladder top-down (Manual → Mission); UI selector iterates this order.
+export const AUTO_INJECT_MODE_VALUES = ["off", "queue_only", "beacon", "next_best", "strategist"] as const;
 export type AutoInjectMode = (typeof AUTO_INJECT_MODE_VALUES)[number];
 
 export const AUTO_INJECT_MODES: readonly {
@@ -34,24 +42,29 @@ export const AUTO_INJECT_MODES: readonly {
   description: string;
 }[] = [
   {
-    value: "strategist",
-    label: "Strategist",
-    description: "Groq composes a context-aware prompt from handoff, queue, and recent commits. Best signal-to-noise; needs a working Groq key.",
+    value: "off",
+    label: "Manual",
+    description: "L1 · Cockpit dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
   },
   {
     value: "queue_only",
-    label: "Queue only",
-    description: "Fire the next queue item verbatim, or stay quiet when queue is empty. Predictable, never surprises.",
+    label: "Queue",
+    description: "L2 · When an agent finishes, Cockpit fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
+  },
+  {
+    value: "beacon",
+    label: "Beacon",
+    description: "L3 · Popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. Cockpit suggests, you decide.",
   },
   {
     value: "next_best",
-    label: "Canned next-best",
-    description: "Skip Groq, fire the static next-best template. Works offline; same prompt every time.",
+    label: "Continuous",
+    description: "L4 · Drains your queue then auto-fires the canned next-best template, no popup. The project keeps moving while you work elsewhere.",
   },
   {
-    value: "off",
-    label: "Off",
-    description: "Disable auto-inject entirely. You dispatch every prompt by hand.",
+    value: "strategist",
+    label: "Mission",
+    description: "L5 · Groq composes context-aware prompts from project mission, goals, roadmap, and recent commits. Fall asleep, wake up shipped. Advanced — requires trust in the composer.",
   },
 ];
 
