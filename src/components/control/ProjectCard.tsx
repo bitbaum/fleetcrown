@@ -153,11 +153,21 @@ export function ProjectCard({
   const smartEnqueue = useCallback((text: string) => {
     const trimmed = (text || "").trim();
     if (!trimmed) return;
+
+    // Special case for deliberate handoff-controlled prompts the user pastes
+    // (e.g. starting with "status: working" + full task). These should almost
+    // always go direct so the user can drive the agent intentionally.
+    const isHandoffControl = /^status:\s*(working|ready)/i.test(trimmed);
+
+    if (isHandoffControl) {
+      sendText(trimmed);
+      return;
+    }
+
     const idle = !project.agentRunning
       && !display.isRunning
       && (isReadyNow || display.tone === "idle" || display.isReady || display.isOrchestrationReady);
     if (idle) {
-      // Use the full send path (handles sending state, draft clearing, errors, dismiss, etc.)
       sendText(trimmed);
     } else {
       enqueue(trimmed);
