@@ -8,6 +8,7 @@ import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 
 const UpdateAgentBody = z.object({
   agent: z.enum(AGENT_IDS),
@@ -19,7 +20,10 @@ type SwitchTabResult = {
   tab?: string;
   dir?: string;
   command?: string;
-  status: "restarted" | "skipped" | "failed";
+  // "queued" is the cloud-mode outcome: a switch_agent pending_command was
+  // enqueued for the local daemon to execute. Local mode still uses
+  // restarted/skipped/failed from the inline execSync path.
+  status: "restarted" | "skipped" | "failed" | "queued";
   reason?: string;
   error?: string;
 };
@@ -93,19 +97,40 @@ export async function POST(req: NextRequest) {
 
     let tabResults: SwitchTabResult[] = [];
     if (dataOrResp.applyToOpenTabs) {
+      const userId = await getSessionUserId();
+      if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const [dbProjects, dbTeamProjects] = await Promise.all([
+        getUserProjects(userId).catch(() => []),
+        getOrgProjects(userId).catch(() => []),
+      ]);
+      const seenDirs = new Set<string>();
+      const allProjects = [...dbProjects, ...dbTeamProjects]
+        .filter((p) => p.dirPath && !seenDirs.has(p.dirPath) && seenDirs.add(p.dirPath))
+        .map((p) => ({ tab: p.name, dir: p.dirPath! }));
+
       if (!isRuntimeAvailable()) {
-        tabResults = [{ status: "skipped", reason: "Local runtime not available — cannot restart zellij tabs remotely." }];
+        // Cloud mode: instead of returning "skipped" and silently doing
+        // nothing, queue a switch_agent command per project. The local
+        // daemon's execute_switch_agent (hardened in 0ccb43d/9a3bd61)
+        // handles tab-not-open as a no-op via its quit signal path, so
+        // queueing for every registered project is safe. Daemon also
+        // falls back to conf model if model is empty (9a3bd61).
+        tabResults = await Promise.all(
+          allProjects.map(async ({ tab, dir }): Promise<SwitchTabResult> => {
+            try {
+              await enqueueSwitchAgentCommand(userId, {
+                tab,
+                dir,
+                toAgent: dataOrResp.agent,
+                model: dataOrResp.model,
+              });
+              return { tab, dir, status: "queued" as const };
+            } catch (err) {
+              return { tab, dir, status: "failed" as const, error: err instanceof Error ? err.message : String(err) };
+            }
+          }),
+        );
       } else {
-        const userId = await getSessionUserId();
-        if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        const [dbProjects, dbTeamProjects] = await Promise.all([
-          getUserProjects(userId).catch(() => []),
-          getOrgProjects(userId).catch(() => []),
-        ]);
-        const seenDirs = new Set<string>();
-        const allProjects = [...dbProjects, ...dbTeamProjects]
-          .filter((p) => p.dirPath && !seenDirs.has(p.dirPath) && seenDirs.add(p.dirPath))
-          .map((p) => ({ tab: p.name, dir: p.dirPath! }));
         tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, allProjects);
       }
     }
