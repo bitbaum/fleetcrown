@@ -188,6 +188,7 @@ export function ProjectCard({
           localAgent={localAgent}
           availableAgents={availableAgents}
           onSetAgent={setLocalAgent}
+          onFillPrompt={setCustom}
           onRunPrompt={(prompt, agent) => onRunCustomPrompt(project, prompt, agent)}
           onDeleted={onDeleted}
           onProfileSaved={onProfileSaved}

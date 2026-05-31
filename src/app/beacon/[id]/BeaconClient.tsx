@@ -367,7 +367,11 @@ function BeaconBody({
         projectName={session.project}
         open={libraryOpen}
         onOpenChange={setLibraryOpen}
-        onSelect={(prompt) => submit(`${CUSTOM_CHOICE_PREFIX}${prompt}`)}
+        // Universal fill-first rule (2026-05-31): library picks fill the
+        // composer textarea so the user previews/edits before sending.
+        // Was: submit(CUSTOM_CHOICE_PREFIX + prompt) which silently sent the
+        // same click that would have FILLED the textarea on /control.
+        onSelect={(prompt) => { setCustom(prompt); inputRef.current?.focus(); }}
         compact
       />
     </div>

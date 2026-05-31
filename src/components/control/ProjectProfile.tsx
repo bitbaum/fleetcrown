@@ -29,6 +29,7 @@ export function ProjectProfile({
   localAgent,
   availableAgents,
   onSetAgent,
+  onFillPrompt,
   onRunPrompt,
   onDeleted,
   onProfileSaved,
@@ -38,6 +39,12 @@ export function ProjectProfile({
   localAgent: AgentId | null;
   availableAgents: AgentEntry[];
   onSetAgent: (agent: AgentId | null) => void;
+  /** Drops the interpolated prompt template into the composer textarea so the
+   *  user can preview/edit before sending. Default behavior for every prompt
+   *  click — universal fill-first rule shipped 2026-05-31. */
+  onFillPrompt: (prompt: string) => void;
+  /** Send-immediate for prompts flagged sendNow:true in the SSOT (hard_stop
+   *  kill switch, etc.). Surfaced as a small ↪ button next to the fill action. */
   onRunPrompt: (prompt: string, agent: string) => Promise<void>;
   onDeleted?: () => void;
   onProfileSaved?: () => void;
@@ -175,7 +182,8 @@ export function ProjectProfile({
         </div>
       ) : null}
 
-      {/* Dimension prompt sections — loaded from ~/.config/agent-prompts.json */}
+      {/* Dimension prompt sections — sourced via /api/prompts/agent which merges
+          src/config/prompt-library.ts (SSOT) with the legacy JSON file. */}
       {dimensionGroups.map(({ id, prompts }) => (
         <DimensionSection
           key={id}
@@ -184,6 +192,7 @@ export function ProjectProfile({
           project={project}
           usageCounts={usageCounts}
           isSending={sending}
+          onFill={onFillPrompt}
           onRun={handleRun}
         />
       ))}

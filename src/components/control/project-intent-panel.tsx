@@ -251,10 +251,12 @@ export function IntentButtonPanel({
         projectName={project.tab}
         open={showLibraryPrompts}
         onOpenChange={setShowLibraryPrompts}
-        onSelect={(text) => {
-          if (bannerActive && onSendText) onSendText(text);
-          else onCustomChange(text);
-        }}
+        // Universal fill-first rule (2026-05-31): library picks always go into
+        // the composer textarea so the user previews/edits before sending.
+        // Previously this branched on bannerActive and silently sent — the
+        // same click had different consequences depending on which surface
+        // you were on, which was the UX bug the user named.
+        onSelect={onCustomChange}
       />
     </div>
   );

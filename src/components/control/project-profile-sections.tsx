@@ -171,6 +171,7 @@ export function DimensionSection({
   project,
   usageCounts,
   isSending,
+  onFill,
   onRun,
 }: {
   dimensionId: string;
@@ -178,7 +179,16 @@ export function DimensionSection({
   project: ProjectState;
   usageCounts: Map<string, number>;
   isSending: boolean;
-  onRun: (prompt: string) => void;
+  /** Default click behavior — drops the interpolated template into the
+   *  composer textarea so the user can preview/edit before sending.
+   *  Universal "fill-first" rule shipped 2026-05-31; replaces the previous
+   *  onRun-only behavior that silently dispatched without preview. */
+  onFill: (prompt: string) => void;
+  /** Optional send-immediate for prompts flagged sendNow:true in the SSOT
+   *  (e.g. hard_stop kill switch — preview makes no sense). Rendered as a
+   *  small ↪ icon button next to the main fill action so the bypass is
+   *  visible in the UI, not hidden in code. */
+  onRun?: (prompt: string) => void;
 }) {
   const meta = DIMENSION_META[dimensionId];
   if (!meta || prompts.length === 0) return null;
@@ -200,16 +210,30 @@ export function DimensionSection({
       {prompts.map((p) => {
         const rendered = interpolate(p.prompt, ctx);
         const uses = usageCounts.get(rendered) ?? 0;
+        const sendNow = p.sendNow === true;
         return (
-          <button
-            key={p.key}
-            onClick={() => onRun(rendered)}
-            disabled={isSending}
-            className="min-h-10 rounded-xl border border-border-subtle bg-surface-base px-3.5 py-2 text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:bg-surface-raised hover:text-text-primary disabled:opacity-40"
-          >
-            {p.icon} {p.label}
-            {uses > 0 && <span className="ml-2 text-micro text-text-tertiary">×{uses}</span>}
-          </button>
+          <div key={p.key} className="inline-flex items-stretch rounded-xl border border-border-subtle bg-surface-base text-xs font-medium text-text-secondary transition-all hover:border-accent-primary/40 hover:text-text-primary">
+            <button
+              onClick={() => onFill(rendered)}
+              disabled={isSending}
+              title={sendNow ? `Fill composer — also click ↪ to send immediately` : `Fill composer with this prompt`}
+              className="min-h-10 rounded-l-xl px-3.5 py-2 hover:bg-surface-raised disabled:opacity-40"
+            >
+              {p.icon} {p.label}
+              {uses > 0 && <span className="ml-2 text-micro text-text-tertiary">×{uses}</span>}
+            </button>
+            {sendNow && onRun && (
+              <button
+                onClick={() => onRun(rendered)}
+                disabled={isSending}
+                title="Send now without preview"
+                aria-label={`Send "${p.label}" immediately`}
+                className="min-h-10 rounded-r-xl border-l border-border-subtle px-2.5 py-2 text-text-tertiary hover:bg-status-warning-subtle hover:text-status-warning disabled:opacity-40"
+              >
+                ↪
+              </button>
+            )}
+          </div>
         );
       })}
     </CollapsibleSection>

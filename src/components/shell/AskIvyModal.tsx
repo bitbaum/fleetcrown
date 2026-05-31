@@ -97,13 +97,14 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
                 return (
                   <button
                     key={t.id}
+                    // Universal fill-first rule (2026-05-31): every click fills
+                    // the input so the user previews/edits before pressing Enter
+                    // or Send. Previously the same click sent immediately for
+                    // global-scoped prompts but filled for project-scoped ones —
+                    // a UX inconsistency the user named directly.
                     onClick={() => {
-                      if (t.scope === "global") {
-                        send(t.template);
-                      } else {
-                        setInput(t.template);
-                        inputRef.current?.focus();
-                      }
+                      setInput(t.template);
+                      inputRef.current?.focus();
                     }}
                     disabled={loading}
                     className="ui-card-shell group flex flex-col gap-1 px-3.5 py-3 text-left transition-all hover:bg-surface-raised hover:border-border-default disabled:opacity-30"
