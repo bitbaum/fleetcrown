@@ -35,8 +35,9 @@ export default async function HabitsPage() {
       subtitle={`${HABIT_HISTORY_DAYS}-day history — consistency compounds`}
       right={<NewHabitButton />}
     >
-      {/* Summary stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Summary stats — same density fix as Goals (3f062a8) + Memory
+          (1baa421) + Money (this commit's sibling): 3-col on mobile. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <StatCard label="Active Habits" value={String(active.length)} sub={`${habits.length} total`} />
         <StatCard label={`Completions (${HABIT_HISTORY_DAYS}d)`} value={String(totalCompletions)} sub="across all habits" />
         <StatCard label="Best Streak" value={bestStreak > 0 ? `${bestStreak}d` : "—"} sub="current longest" />

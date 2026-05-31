@@ -98,7 +98,11 @@ export default async function MoneyPage() {
 
   return (
     <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Same density fix as Goals (3f062a8) + Memory (1baa421): 3-col on
+          mobile instead of 1-col stack so the user sees all summary stats
+          at a glance before scrolling. Money values can be long (multi-
+          currency concat); StatCard handles wrapping. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <StatCard
           label="Monthly Burn"
           value={[
