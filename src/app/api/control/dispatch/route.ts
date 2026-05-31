@@ -19,6 +19,7 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
+import { evaluateDispatchGates, type AutoInjectMode } from "@/lib/orchestration/dispatch-gates";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -39,11 +40,20 @@ const HandoffSchema = z.object({
   health: z.string().default(""),
   tests:  z.string().default(""),
   todos:  z.string().default(""),
+  /** Agent's self-reported lifecycle. "working" means the agent is mid-task and
+   *  the autopilot must NOT inject anything. "ready" means handoff is final and
+   *  the strategist may pick the next task. Empty string is legacy / unknown
+   *  (treated permissively as "ready" so existing behavior is preserved). */
+  status: z.string().default(""),
 });
 
 const DispatchBody = z.object({
   handoff:       HandoffSchema,
   queue:         z.array(z.string().trim().min(1)).max(20),
+  /** Count of files in ~/.claude/sessions/<P>.blockers/pending/ as reported by
+   *  the local daemon. Any value > 0 short-circuits dispatch — a blocker file
+   *  is a human-action gate and autopilot has to wait until it clears. */
+  blockerCount:  z.number().int().nonnegative().default(0),
   projectName:   z.string().optional(),
   projectKey:    z.string().optional(),
   gitBranch:     z.string().optional(),
@@ -56,7 +66,7 @@ export type DispatchResult = {
   action: DispatchAction;
   reason: string;
   /** Which inference path produced the decision. */
-  source: "groq" | "health_gate" | "empty_queue" | "fallback" | "mode_gate";
+  source: "groq" | "health_gate" | "empty_queue" | "fallback" | "mode_gate" | "status_gate" | "blocker_gate";
   /** Strategist-composed prompt body when action="composed". The caller
    *  injects this as a custom prompt instead of firing the canned
    *  next_best template. Absent for queue / nextbest / off paths. */
@@ -195,7 +205,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, projectName, projectKey, gitBranch, recentCommits } = dataOrResp;
+  const { handoff, queue, blockerCount, projectName, projectKey, gitBranch, recentCommits } = dataOrResp;
 
   // Recent outcomes for this project — feeds Groq and is surfaced in the reason.
   // Safe-defaults: if the lookup fails, dispatch still proceeds.
@@ -206,42 +216,22 @@ export async function POST(req: NextRequest) {
   const streak = streakLine(recentOutcomes);
   const streakSuffix = streak ? `  [last 5: ${streak}]` : "";
 
-  // Per-user auto-inject mode (added 2026-05-20). Gates the strategist
-  // behavior before any expensive work:
-  //   strategist → Groq composes context-aware prompt (opt-in)
-  //   queue_only → only fire when there's a queue item; else off (DEFAULT for new users since 2026-05-25)
-  //   next_best  → legacy: skip Groq, fire canned template
-  //   off        → auto-inject disabled entirely; user dispatches by hand
+  // Per-user auto-inject mode + the two safety gates (status:working,
+  // pending blockers) added 2026-05-31. Centralized in evaluateDispatchGates
+  // so the invariants are unit-tested without spinning up a real route.
   const settings = await getBeaconSettings(userId).catch(() => null);
-  const mode = settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE;
+  const mode = (settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE) as AutoInjectMode;
 
-  if (mode === "off") {
-    return NextResponse.json({
-      action: "off",
-      reason: "Auto-inject is disabled in your beacon settings.",
-      source: "mode_gate",
-    } satisfies DispatchResult);
-  }
+  const gated = evaluateDispatchGates({
+    status: handoff.status,
+    blockerCount,
+    mode,
+    queueLength: queue.length,
+    streakSuffix,
+  });
+  if (gated) return NextResponse.json(gated satisfies DispatchResult);
 
-  if (mode === "queue_only") {
-    return NextResponse.json({
-      action: queue.length > 0 ? "queue" : "off",
-      reason: queue.length > 0
-        ? `Queue-only mode — firing queue item 1.${streakSuffix}`
-        : "Queue-only mode and queue is empty — nothing to do.",
-      source: "mode_gate",
-    } satisfies DispatchResult);
-  }
-
-  if (mode === "next_best") {
-    return NextResponse.json({
-      action: "nextbest",
-      reason: `Legacy next_best mode (no strategist).${streakSuffix}`,
-      source: "mode_gate",
-    } satisfies DispatchResult);
-  }
-
-  // mode === "strategist" — fall through to existing logic.
+  // mode === "strategist" — fall through to Groq composition.
 
   // No queue items + strategist mode: still call Groq to compose from
   // handoff + commits + outcomes. The strategist's value is highest

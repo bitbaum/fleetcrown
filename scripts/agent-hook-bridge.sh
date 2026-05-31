@@ -403,14 +403,34 @@ autopilot_dispatch_and_inject() {
     return 1
   fi
 
-  local done_line next_line tests_line todos_line health_line
-  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""
+  local done_line next_line tests_line todos_line health_line status_line
+  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""; status_line=""
   if [ -f "$session_file" ]; then
     done_line=$(grep   -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//' || true)
     next_line=$(grep   -m1 '^next:'   "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' || true)
     tests_line=$(grep  -m1 '^tests:'  "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//' || true)
     todos_line=$(grep  -m1 '^todos:'  "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//' || true)
     health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' || true)
+    status_line=$(grep -m1 '^status:' "$session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' || true)
+  fi
+
+  # SSOT for autopilot pause signals lives on the user's filesystem: the agent
+  # writes status:working when mid-task, and drops blocker files in pending/
+  # when it needs a human action. Both gate the dispatch endpoint below.
+  if [ "$status_line" = "working" ]; then
+    log "autopilot: session status=working — staying idle (agent owns the loop)"
+    return 1
+  fi
+
+  local blocker_dir blocker_count
+  blocker_dir="${HOME}/.claude/sessions/${tab_name}.blockers/pending"
+  blocker_count=0
+  if [ -d "$blocker_dir" ]; then
+    blocker_count=$(find "$blocker_dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  if [ "$blocker_count" -gt 0 ]; then
+    log "autopilot: ${blocker_count} pending blocker(s) at ${blocker_dir} — staying idle"
+    return 1
   fi
 
   local queue_json
@@ -419,10 +439,11 @@ autopilot_dispatch_and_inject() {
   local payload
   payload=$(jq -nc \
     --arg done "$done_line" --arg next "$next_line" --arg health "$health_line" \
-    --arg tests "$tests_line" --arg todos "$todos_line" \
+    --arg tests "$tests_line" --arg todos "$todos_line" --arg status "$status_line" \
     --arg project "$tab_name" \
+    --argjson blockers "$blocker_count" \
     --argjson queue "$queue_json" \
-    '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos},queue:$queue,projectName:$project,projectKey:$project}')
+    '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos,status:$status},blockerCount:$blockers,queue:$queue,projectName:$project,projectKey:$project}')
 
   local result action prompt reason
   result=$(curl -sf --max-time 18 -X POST "${APP_BASE_URL}/api/control/dispatch" \

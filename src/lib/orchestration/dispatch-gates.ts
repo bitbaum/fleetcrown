@@ -1,0 +1,75 @@
+/**
+ * Pre-Groq gates for the /api/control/dispatch route. Centralized so the
+ * route handler stays focused on the strategist composition path and so
+ * the gate invariants can be unit-tested without a running server.
+ *
+ * Gate precedence (first matching wins; all return action="off"):
+ *   1. handoff.status === "working" — agent declared mid-task; never interrupt
+ *   2. blockerCount > 0             — human-action gate is open; wait for clear
+ *   3. mode === "off"               — user disabled autopilot in settings
+ * Plus the non-off short-circuits:
+ *   4. mode === "queue_only"        — fire queue head or stay idle
+ *   5. mode === "next_best"         — fire the canned template
+ * `null` means "no gate fired — proceed to strategist (Groq composition)".
+ */
+
+import type { DispatchAction, DispatchResult } from "@/app/api/control/dispatch/route";
+
+export type AutoInjectMode = "off" | "queue_only" | "next_best" | "strategist";
+
+export type GateInput = {
+  status: string;
+  blockerCount: number;
+  mode: AutoInjectMode;
+  queueLength: number;
+  streakSuffix: string;
+};
+
+export function evaluateDispatchGates(input: GateInput): DispatchResult | null {
+  const { status, blockerCount, mode, queueLength, streakSuffix } = input;
+
+  if (status === "working") {
+    return {
+      action: "off",
+      reason: "Agent reported status:working — autopilot must not interrupt an in-progress turn.",
+      source: "status_gate",
+    };
+  }
+
+  if (blockerCount > 0) {
+    return {
+      action: "off",
+      reason: `${blockerCount} pending blocker file(s) — autopilot waits until the user clears the human-action gate.`,
+      source: "blocker_gate",
+    };
+  }
+
+  if (mode === "off") {
+    return {
+      action: "off",
+      reason: "Auto-inject is disabled in your beacon settings.",
+      source: "mode_gate",
+    };
+  }
+
+  if (mode === "queue_only") {
+    const fired: DispatchAction = queueLength > 0 ? "queue" : "off";
+    return {
+      action: fired,
+      reason: queueLength > 0
+        ? `Queue-only mode — firing queue item 1.${streakSuffix}`
+        : "Queue-only mode and queue is empty — nothing to do.",
+      source: "mode_gate",
+    };
+  }
+
+  if (mode === "next_best") {
+    return {
+      action: "nextbest",
+      reason: `Legacy next_best mode (no strategist).${streakSuffix}`,
+      source: "mode_gate",
+    };
+  }
+
+  return null;
+}
