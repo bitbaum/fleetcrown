@@ -91,7 +91,14 @@ export function ZellijLivePanel({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <PanelsTopLeft className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-            <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>
+            {/* When embedded inside the mobile <details> wrapper, the parent
+                <summary> already renders "Terminal workspaces" as its label —
+                suppressing the inner H2 here so the same heading doesn't
+                appear twice in the page (caught in browser dogfood
+                2026-05-31: 2 H2s "Terminal workspaces" surfaced in a
+                document.querySelectorAll scan). Desktop renders this panel
+                directly with no surrounding summary, so the H2 still appears. */}
+            {!embedded && <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>}
             <span className="ui-tag ui-tag-neutral text-[9px]">
               {daemonNeverSeen ? "offline" : daemonSyncStale ? `${rows.length} open · stale` : `${rows.length} open`}
             </span>
