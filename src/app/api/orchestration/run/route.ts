@@ -118,6 +118,12 @@ export async function POST(req: NextRequest) {
       promptKey: request.intent,
       promptLabel: intent.name,
       adapter: request.adapter,
+      // Forward caller-supplied model so the daemon's auto-launch (501a6e7)
+      // honors it. When absent, the daemon's _conf_model_for_tab fallback
+      // (9a3bd61) reads agent-projects.conf, which is synced from
+      // user_projects.modelPref on a 5-minute cycle. No DB lookup needed
+      // here — the daemon already covers the implicit-pref path.
+      model: request.model,
       projectId: request.projectId ?? null,
       projectKey: request.projectKey,
       runId: cloudRunId ?? undefined,
