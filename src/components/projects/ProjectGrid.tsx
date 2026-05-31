@@ -156,13 +156,14 @@ function ProjectCard({
           ))}
         </div>
       )}
-      {/* Bare-attr tiles (no description/status/maturity/health/next_step/
-          custom attrs) get the dirPath + agentPref from the user_projects
-          join. Same affordance as the dropped "Add context →" placeholder —
-          the whole card is clickable — but the user can now see WHERE the
-          project lives and WHICH agent runs it at a glance. Drops out when
-          neither field is set (truly unconfigured project). */}
-      {!description && !status && !maturity && !hasIssues && !nextStep && extraAttrs.length === 0 && (project.dirPath || project.agentPref) && (
+      {/* dirPath + agentPref from the user_projects join — runtime metadata
+          that adds context regardless of whether the user has filled status /
+          description / maturity. eae42d9 originally gated this on "no other
+          metadata," but a live audit found almost every project has a
+          description, so the chips never rendered in practice. Now render
+          whenever either field is set; subordinate styling (muted color,
+          micro size) keeps it from competing with primary content. */}
+      {(project.dirPath || project.agentPref) && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-tertiary">
           {project.dirPath && (
             <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-[10px]" title={project.dirPath}>
