@@ -101,7 +101,7 @@ export const INVESTOR_DETAILS = {
   contact: "investors@cockpitapp.com",
 };
 
-// Roadmap — three phases, declarative
+// Roadmap — multi-phase, with concrete bullets and cross-cutting throughlines
 export const ROADMAP = {
   eyebrow: "PRODUCT DIRECTION",
   title: "Roadmap",
@@ -110,31 +110,120 @@ export const ROADMAP = {
     {
       marker: "NOW",
       title: "Foundation",
-      paragraphs: [
-        "The web command center is live. It coordinates fleets of AI agents across projects with per-project autonomy, prompt queues, handoff systems, and truthful status surfaces.",
-        "A local execution layer runs agents directly inside the operator's terminal environment — Zellij plus Claude, Grok, Codex, and the rest.",
-        "The architecture is proven. The next phase is consolidation.",
+      summary: "Live in production. The system already coordinates real fleets across real projects.",
+      bullets: [
+        "Web command center coordinates fleets of AI agents across projects.",
+        "Per-project autonomy ladder: Manual → Queue → Beacon → Continuous → Mission.",
+        "Two local execution paths: the production daemon and the newer event-sourced home/ stack (Brain + Bridge + Worker).",
+        "Reliable handoff system between agent sessions, with truthful card status surfaces.",
+        "Per-project pause / resume / direct-send semantics and a real autopilot intent ladder.",
+        "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",
       ],
+      note: "The architecture is proven. The next phase is consolidating it into a real product.",
     },
     {
       marker: "NEXT",
       title: "The local fleet runner",
-      paragraphs: [
-        "The primary surface becomes a native desktop application. It owns Zellij, agent launching, session watching, and execution as the authoritative local runtime.",
-        "The web portal becomes a first-class remote control surface — talking to your local apps over a clean, authenticated channel rather than indirect polling.",
-        "One system. Two surfaces. The same reality.",
+      summary: "The primary surface becomes a native desktop application — the authoritative local runtime instead of a background daemon.",
+      bullets: [
+        "Native Electron application packages the best of the home/ stack into a first-class product.",
+        "Owns Zellij, agent launching, session watching, handoff files, and git directly — no polling layer in between.",
+        "Desktop UI for full-power interaction when sitting at the machine.",
+        "Clean local API and IPC so TUIs, scripts, and MCP clients can talk to it.",
+        "Becomes the default install path: one command drops the desktop app on macOS, Windows, or Linux.",
+        "The existing daemon path keeps working through the transition for users who do not want Electron.",
+      ],
+      note: "Cursor, Claude Code, and Grok Build all converged on this pattern independently — local client owns execution as a real application, not a service that polls a queue.",
+    },
+    {
+      marker: "AFTER",
+      title: "Remote control channel",
+      summary: "Web and mobile become genuine remote control surfaces — not eventually-consistent dashboards.",
+      bullets: [
+        "The local app opens an authenticated outbound WebSocket to the control plane when remote control is enabled.",
+        "Commands flow: surface → backend → that user's specific local app, over the open connection.",
+        "Status flows back the same way, with low latency.",
+        "Falls back to the existing queue when the local app is offline.",
+        "Scoped credentials via the existing agent token system. Outbound-only connections — easy to firewall.",
+        "All execution of dangerous actions stays on the user's machine. The backend never sees raw file contents unless the user explicitly shares them.",
+      ],
+    },
+    {
+      marker: "THEN",
+      title: "Mobile fleet control",
+      summary: "Steering a fleet from your phone should feel native, not like a phone-sized web page.",
+      bullets: [
+        "Native iOS and Android apps on the same remote control channel.",
+        "Optimized for steering and approval, not authoring.",
+        "Push notifications for Beacon mode and Mission checkpoints.",
+        "Swipe actions for approving or rejecting agent outputs at the moments that actually need a human.",
+        "Voice capture for the autopilot intent ladder — direct the fleet while walking.",
       ],
     },
     {
       marker: "LATER",
-      title: "Robotic fleets",
-      paragraphs: [
-        "Direct fleets of physical robots with the same patterns: per-fleet autonomy, queue management, handoffs, and remote command.",
-        "Robotics is a different execution surface bound to the same control plane.",
+      title: "Cloud agents as a complementary mode",
+      summary: "When the local machine is unavailable, parallel cloud agents take over — with explicit handoff.",
+      bullets: [
+        "Cloud agents for long-running, highly parallel work that does not fit on one laptop.",
+        "Explicit handoff between local and cloud sessions — the same agent identity continues across substrates.",
+        "A complement to local execution, never the default for hosted users.",
+        "Useful for builders running 8–12 agents at once who need extra parallelism or 24-hour availability.",
       ],
     },
+    {
+      marker: "TEAMS",
+      title: "Team and multi-machine surfaces",
+      summary: "Same control plane, multiple operators, multiple machines.",
+      bullets: [
+        "Shared fleet views across machines and across team members.",
+        "Per-operator permissions. Per-project autonomy ceilings.",
+        "Coordination when several people steer the same fleet without stepping on each other.",
+        "Multi-machine orchestration for power users running across desktop, laptop, and remote box.",
+      ],
+    },
+    {
+      marker: "ROBOTICS",
+      title: "Physical robotic fleets",
+      summary: "The same control patterns, applied to a different substrate.",
+      bullets: [
+        "Per-fleet autonomy — the same dial: Manual → Queue → Beacon → Continuous → Mission.",
+        "Handoff between human and robotic initiative.",
+        "Queues, visibility, override — everything we shipped for software agents transfers.",
+        "Robotics is a different execution surface bound to the same control plane.",
+        "Not a separate product line bolted on later. The continuity is the point.",
+      ],
+      note: "The person who today directs a fleet of agents building software is developing the muscles that will let them direct a fleet of robots building physical things.",
+    },
   ],
-  closer: "This roadmap is intentionally high-level. Detailed engineering plans live in internal documents and the architecture reference post.",
+  throughlines: {
+    eyebrow: "WHAT STAYS CONSTANT",
+    title: "Throughlines",
+    lede: "These do not change as the phases ship. They are constraints we hold across every stage.",
+    items: [
+      {
+        title: "Local execution is privileged.",
+        body: "When the user's machine can do the work, it should. We do not push everyone into remote sandboxes.",
+      },
+      {
+        title: "Open and local models are first-class.",
+        body: "Frontier subscriptions are often the best tool. But the infrastructure does not require them — the user points their fleet at whatever model serves their goals best.",
+      },
+      {
+        title: "Autonomy is a user-controlled dial.",
+        body: "Manual, Queue, Beacon, Continuous, Mission. Per project. Per moment. Never forced.",
+      },
+      {
+        title: "Outbound connections only.",
+        body: "The local client connects out to the control plane, not the other way around. Easier to firewall. Easier to reason about. Credible to security-conscious operators.",
+      },
+      {
+        title: "Nothing hidden.",
+        body: "Every agent's state is legible. No black boxes inside your own fleet.",
+      },
+    ],
+  },
+  closer: "This is the public-facing roadmap. Detailed engineering plans, deadlines, and sequencing live in internal documents and the architecture reference post.",
 };
 
 // Shared final CTA used at the bottom of every marketing page
