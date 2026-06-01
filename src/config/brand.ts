@@ -23,3 +23,13 @@ export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username
 // not a deliverable email domain). Override via EMAIL_FROM env var.
 export const APP_EMAIL_FROM = `${APP_NAME} <noreply@${APP_SLUG}.app>`;
 export const APP_TAGLINE    = "your life operating system";
+
+// Marketing / Positioning (SSOT for public copy)
+export const MARKETING_TAGLINE      = "The operating system for people running real AI agents.";
+export const MARKETING_SUBTITLE     = "Local execution where the work happens. Remote command from anywhere. One system. Two surfaces.";
+export const MARKETING_HERO_PRIMARY   = "Run your fleet.";
+export const MARKETING_HERO_SECONDARY = "From anywhere.";
+export const MARKETING_POSITIONING  = "Local execution · Remote command · No compromises";
+
+// Easy rebrand surface — use this in marketing instead of hardcoding "Cockpit".
+export const PRODUCT_NAME = APP_NAME;

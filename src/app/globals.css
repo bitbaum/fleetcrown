@@ -613,6 +613,81 @@
   .ui-public-doc-footer-note {
     @apply mb-8 text-sm text-white/30;
   }
+  /* Marketing surface — display + CTA primitives shared by the landing page
+     and the /mission, /philosophy, /investors, /roadmap subpages. */
+  .ui-public-eyebrow {
+    @apply text-xs uppercase tracking-[0.18em] text-white/50;
+  }
+  .ui-public-hero-badge {
+    @apply mb-6 inline-block rounded-full border border-white/10 px-4 py-1 text-xs uppercase tracking-[0.15em] text-white/60;
+  }
+  .ui-public-page-title {
+    @apply font-semibold text-white;
+    font-size: clamp(2.75rem, 6vw, 4.5rem);
+    line-height: 1;
+    letter-spacing: -0.035em;
+  }
+  .ui-public-hero-title {
+    @apply font-heading font-semibold text-white;
+    font-size: clamp(3.25rem, 8.5vw, 5.75rem);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+  }
+  .ui-public-hero-lede {
+    @apply mx-auto mt-8 max-w-2xl text-2xl leading-tight tracking-tight text-white/80;
+  }
+  .ui-public-hero-sublede {
+    @apply mx-auto mt-6 max-w-xl text-lg text-white/50;
+  }
+  .ui-public-display-lg {
+    @apply font-semibold text-white;
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+  }
+  .ui-public-display-md {
+    @apply font-semibold text-white;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .ui-public-cta {
+    @apply inline-flex items-center justify-center rounded-2xl bg-white px-10 py-4 text-lg font-medium text-black transition hover:bg-white/90 active:bg-white/80;
+  }
+  .ui-public-cta-ghost {
+    @apply inline-flex items-center justify-center rounded-2xl border border-white/20 px-10 py-4 text-lg font-medium text-white/90 transition hover:border-white/40 hover:text-white;
+  }
+  .ui-public-cta-lg {
+    @apply inline-flex items-center justify-center rounded-2xl bg-white px-12 py-4 text-xl font-medium text-black transition hover:bg-white/90;
+  }
+  .ui-public-lede {
+    @apply text-2xl leading-snug text-white/70;
+  }
+  .ui-public-body-lg {
+    @apply text-lg leading-relaxed text-white/80;
+  }
+  .ui-public-meta {
+    @apply text-sm text-white/50;
+  }
+  .ui-public-hero-fold {
+    @apply relative z-10 flex flex-col items-center justify-center px-6 text-center;
+    min-height: 92vh;
+  }
+  .ui-public-section-lede {
+    @apply max-w-2xl text-xl text-white/70;
+  }
+  .ui-public-step-num {
+    @apply w-8 shrink-0 font-mono text-sm text-white/40;
+  }
+  .ui-public-prose-strong {
+    @apply font-medium text-white;
+  }
+  .ui-public-prose-muted {
+    @apply text-white/60;
+  }
+  .ui-public-band {
+    @apply border-t border-white/10 bg-black/40;
+  }
   .ui-brand-mark {
     @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay;
   }

@@ -19,7 +19,9 @@ export const ROUTES = {
 
 // Nav links shared by landing page and all auth pages
 export const PUBLIC_NAV_LINKS: NavLink[] = [
-  { label: "Features", href: "/#features" },
-  { label: "Pricing", href: "/#pricing" },
+  { label: "Roadmap", href: "/roadmap" },
+  { label: "Investors", href: "/investors" },
+  { label: "Philosophy", href: "/philosophy" },
+  { label: "Mission", href: "/mission" },
   { label: "Whitepaper", href: "/whitepaper" },
 ];
