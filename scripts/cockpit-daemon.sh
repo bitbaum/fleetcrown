@@ -38,6 +38,7 @@ source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
 # _REMOTE_URL is derived so the parent and child each pick their own.
 # Falls back silently when only COCKPIT_BASE_URL (singular) is set.
 _DAEMON_BASES=()
+_DAEMON_CHILD_PIDS=()
 if [ -n "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}" ]; then
   IFS=',' read -ra _DAEMON_BASES <<< "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}"
 fi
@@ -51,6 +52,13 @@ if [ "${#_DAEMON_BASES[@]}" -gt 1 ] && [ -z "${COCKPIT_DAEMON_CHILD:-}" ]; then
       export COCKPIT_DAEMON_CHILD=1
       exec "$0"
     ) &
+    # Track child PIDs so the parent can self-terminate when one dies. A
+    # forked child's `kill -TERM "$$"` only stops itself; systemd supervises
+    # the parent and not the children, so without this the parent kept
+    # polling its URL while the sibling silently disappeared (observed
+    # 2026-06-01: cockpitapp.vercel.app dispatches queued for hours after
+    # the Vercel-bound child gave up).
+    _DAEMON_CHILD_PIDS+=("$!")
   done
   # Parent owns the first URL; strip plural so its own startup is single-URL.
   export COCKPIT_BASE_URL="$(echo "${_DAEMON_BASES[0]}" | xargs)"
@@ -1247,6 +1255,14 @@ _push_loop() {
   # 60 s comfortably stays under that 90 s window with one missed-push slack.
   local _heartbeat_s="$(_brand_env DAEMON_HEARTBEAT_S 60)"
   local _max_failures="$(_brand_env DAEMON_MAX_PUSH_FAILURES 30)"
+  # Remote pushes can absorb Vercel cold-starts (>5s tail); localhost should
+  # never take more than a few seconds. Keeping a single small timeout caused
+  # the Vercel-bound child to burn through 30 failures over a quiet 1.5h on
+  # 2026-06-01, exit, and silently stop polling that URL.
+  local _push_timeout=8
+  case "$(_base_url)" in
+    https://*) _push_timeout=20 ;;
+  esac
   while true; do
     local _s _h _now _age _status
     _s=$(_build_state_json 2>/dev/null) || true
@@ -1255,7 +1271,7 @@ _push_loop() {
       _now=$(date +%s)
       _age=$(( _now - _last_push_ts ))
       if [ "$_h" != "$_last_hash" ] || [ "$_age" -ge "$_heartbeat_s" ]; then
-        _status=$(curl -sS --max-time 8 -X POST \
+        _status=$(curl -sS --max-time "$_push_timeout" -X POST \
           -H "@$_AUTH_HEADER" \
           -H "Content-Type: application/json" \
           -d "$_s" \
@@ -1336,10 +1352,33 @@ log "starting — long-polling $(_base_url) (local wait=25s, remote wait=${POLL_
 _push_loop &
 _PUSH_PID=$!
 
+# Parent-only: if any forked sibling daemon (one per extra base URL) dies,
+# bring the parent down too so systemd restarts the full supervision tree.
+# Without this, only the surviving daemons keep polling and dispatches to the
+# dead one's URL queue for an unbounded time.
+if [ ${#_DAEMON_CHILD_PIDS[@]} -gt 0 ]; then
+  _PARENT_PID=$$
+  (
+    trap 'exit 0' INT TERM
+    while true; do
+      for _cpid in "${_DAEMON_CHILD_PIDS[@]}"; do
+        if ! kill -0 "$_cpid" 2>/dev/null; then
+          echo "[${APP_SLUG}-daemon] $(date '+%H:%M:%S') sibling daemon PID $_cpid exited — terminating parent so systemd restarts the supervision tree"
+          kill -TERM "$_PARENT_PID" 2>/dev/null || true
+          exit 0
+        fi
+      done
+      sleep 10
+    done
+  ) &
+  _CHILD_WATCHDOG_PID=$!
+fi
+
 _shutdown() {
   kill "$_PUSH_PID" 2>/dev/null || true
   # _CONF_SYNC_PID only exists in the parent (child daemons skip the loop).
   [ -n "${_CONF_SYNC_PID:-}" ] && kill "$_CONF_SYNC_PID" 2>/dev/null || true
+  [ -n "${_CHILD_WATCHDOG_PID:-}" ] && kill "$_CHILD_WATCHDOG_PID" 2>/dev/null || true
   rm -f "$_AUTH_HEADER"
   exit 0
 }
