@@ -3,12 +3,17 @@ import { db } from "@/db";
 import { goals, events, commitments, subscriptions } from "@/db/schema";
 import { GOAL_STATUS, COMMITMENT_STATUS, EVENT_STATUS, ENTITY_TYPE } from "@/lib/constants/statuses";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
+import { getTodayHabits } from "@/db/queries/habits";
+
+// A streak this long carries real psychological momentum — surfacing the
+// possibility of breaking it is the kind of nudge the Watch exists for.
+const HABIT_STREAK_THRESHOLD = 7;
 
 const STALLED_DAYS = 21;
 const IMMINENT_DAYS = 5;
 
 export type WatchFocus = {
-  kind: "overdue-commitment" | "overdue-goal" | "imminent-bill" | "imminent-event" | "stale-contact" | "stalled-goal";
+  kind: "overdue-commitment" | "overdue-goal" | "habit-at-risk" | "imminent-bill" | "imminent-event" | "stale-contact" | "stalled-goal";
   title: string;
   context: string;        // a single short clarifying line ("85% done · 1mo past target")
   href: string;           // where the user goes if they click through
@@ -24,6 +29,7 @@ export type WatchData = {
     imminentBills: number;
     imminentEvents: number;
     staleContacts: number;
+    habitsAtRisk: number;
     stalledGoals: number;
   };
 };
@@ -54,6 +60,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     imminentEventRows,
     staleContactRows,
     stalledGoalRows,
+    todayHabits,
   ] = await Promise.all([
     db
       .select({ id: commitments.id, description: commitments.description, dueDate: commitments.dueDate })
@@ -122,9 +129,18 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
         lte(goals.updatedAt, stalledBy),
       ))
       .orderBy(asc(goals.updatedAt)),
+
+    // Habit streaks at risk — habits due today, not yet done, with a streak
+    // long enough to be psychologically meaningful. getTodayHabits already
+    // computes the streak from completion history, so reuse it instead of
+    // duplicating the streak math.
+    getTodayHabits(userId),
   ]);
 
   const staleContactList = Array.from(staleContactRows) as Array<{ id: string; name: string; last_interaction: string | null }>;
+  const habitsAtRisk = todayHabits
+    .filter((h) => !h.doneToday && h.streak >= HABIT_STREAK_THRESHOLD)
+    .sort((a, b) => b.streak - a.streak);
 
   const totals = {
     overdueCommitments: overdueCommitmentRows.length,
@@ -132,6 +148,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     imminentBills: imminentBillRows.length,
     imminentEvents: imminentEventRows.length,
     staleContacts: staleContactList.length,
+    habitsAtRisk: habitsAtRisk.length,
     stalledGoals: stalledGoalRows.length,
   };
 
@@ -139,6 +156,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
   const focus = pickFocus(
     overdueCommitmentRows,
     overdueGoalRows,
+    habitsAtRisk,
     imminentBillRows,
     imminentEventRows,
     staleContactList,
@@ -152,6 +170,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
 function pickFocus(
   overdueCommitments: { id: string; description: string; dueDate: Date | null }[],
   overdueGoals: { id: string; title: string; progress: number | null; targetDate: Date | null }[],
+  habitsAtRisk: { id: string; title: string; streak: number }[],
   imminentBills: { id: string; name: string; amount: number | null; currency: string | null; nextBilling: Date | null }[],
   imminentEvents: { id: string; name: string; deadline: Date | null }[],
   staleContacts: { id: string; name: string; last_interaction: string | null }[],
@@ -180,6 +199,17 @@ function pickFocus(
       context: `${progress}% done · ${daysOverdue !== null ? `${daysOverdue}d past target` : "past target"}`,
       href: "/goals",
       ivyPrompt: `An overdue goal is close to done:\n\nGoal: ${g.title}\nProgress: ${progress}%\n${daysOverdue !== null ? `Days past target: ${daysOverdue}\n` : ""}\nWhat's the smallest concrete step today to close it out?`,
+    };
+  }
+
+  const h = habitsAtRisk[0];
+  if (h) {
+    return {
+      kind: "habit-at-risk",
+      title: h.title,
+      context: `${h.streak}-day streak · not done today`,
+      href: "/habits",
+      ivyPrompt: `A habit streak is at risk:\n\nHabit: ${h.title}\nCurrent streak: ${h.streak} day${h.streak === 1 ? "" : "s"}\nStatus today: not yet done\n\nNudge me to do it now in two short lines — be direct and warm, not preachy.`,
     };
   }
 

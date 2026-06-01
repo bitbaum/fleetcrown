@@ -8,6 +8,7 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 const KIND_LABEL: Record<WatchFocus["kind"], string> = {
   "overdue-commitment": "Overdue commitment",
   "overdue-goal":       "Overdue goal",
+  "habit-at-risk":      "Streak at risk",
   "imminent-bill":      "Renewal coming up",
   "imminent-event":     "Approaching deadline",
   "stale-contact":      "Relationship going stale",
@@ -84,11 +85,13 @@ function buildTotalStrip(totals: {
   imminentBills: number;
   imminentEvents: number;
   staleContacts: number;
+  habitsAtRisk: number;
   stalledGoals: number;
 }): string | null {
   const parts: string[] = [];
   if (totals.overdueCommitments > 1) parts.push(`${totals.overdueCommitments - 1} more overdue`);
   if (totals.overdueGoals > 0) parts.push(`${totals.overdueGoals} overdue goal${totals.overdueGoals === 1 ? "" : "s"}`);
+  if (totals.habitsAtRisk > 1) parts.push(`${totals.habitsAtRisk - 1} more streak${totals.habitsAtRisk - 1 === 1 ? "" : "s"} at risk`);
   if (totals.imminentBills > 1) parts.push(`${totals.imminentBills - 1} more imminent bill${totals.imminentBills - 1 === 1 ? "" : "s"}`);
   if (totals.imminentEvents > 0) parts.push(`${totals.imminentEvents} imminent deadline${totals.imminentEvents === 1 ? "" : "s"}`);
   if (totals.staleContacts > 0) parts.push(`${totals.staleContacts} relationship${totals.staleContacts === 1 ? "" : "s"} going stale`);
