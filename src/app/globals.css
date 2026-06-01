@@ -445,6 +445,35 @@
   .ui-sidebar-section-lock-active {
     @apply h-3 w-3 text-accent-text;
   }
+  /* Today's Watch — Ivy's proactive read on the user's private life,
+     pinned to the top of /today when the zone is unlocked. */
+  .ui-today-watch {
+    @apply rounded-2xl border border-border-subtle bg-surface-base p-5 space-y-3;
+  }
+  .ui-today-watch-head {
+    @apply flex items-center gap-2;
+  }
+  .ui-today-watch-eyebrow {
+    @apply text-micro font-semibold uppercase tracking-caps text-text-muted;
+  }
+  .ui-today-watch-focus-kind {
+    @apply text-xs uppercase tracking-caps text-status-warning;
+  }
+  .ui-today-watch-focus-title {
+    @apply flex items-center justify-between gap-3 text-lg font-semibold text-text-primary transition-colors hover:text-accent-text;
+  }
+  .ui-today-watch-focus-context {
+    @apply text-sm text-text-secondary;
+  }
+  .ui-today-watch-totals {
+    @apply text-sm text-text-tertiary;
+  }
+  .ui-today-watch-clear {
+    @apply flex items-center gap-2 text-sm text-text-secondary;
+  }
+  .ui-today-watch-action {
+    @apply pt-1;
+  }
   /* Locked-zone banner on /today — turns the silent absence of private data
      into an inviting unlock CTA. Renders only when the gate is locked. */
   .ui-locked-banner {

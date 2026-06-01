@@ -17,6 +17,7 @@ import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
+import { TodayWatch } from "@/components/today/TodayWatch";
 import { LayoutGrid } from "lucide-react";
 import { APP_NAME } from "@/config/brand";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
@@ -85,6 +86,12 @@ export default async function TodayPage() {
 
       <Suspense fallback={null}>
         <LockedZoneBanner />
+      </Suspense>
+
+      {/* Ivy's proactive read on the private zone — one thing to focus on,
+          plus a totals strip across categories. Renders only when unlocked. */}
+      <Suspense fallback={<CardSkeleton />}>
+        <TodayWatch />
       </Suspense>
 
       {/* Recent agent outcomes — what agents shipped since last visit */}
