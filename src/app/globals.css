@@ -430,20 +430,20 @@
     @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
   /* Sidebar section headers — small caps label introducing a group of items
-     (Work / Knowledge / Private / Site). Lock icon appears on private group. */
-  .ui-sidebar-section-header {
-    @apply mb-2 flex items-center justify-between gap-2 px-3 text-micro font-semibold uppercase tracking-caps text-text-muted;
+     (Work / Private / Site). Toggle button collapses/expands the section. */
+  .ui-sidebar-section-toggle {
+    @apply mb-2 flex w-full items-center justify-between gap-2 rounded-md px-3 py-1 text-micro font-semibold uppercase tracking-caps text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
+  }
+  /* Non-toggleable header used for the Private section when the zone is
+     locked — clicking the row itself routes to /unlock. */
+  .ui-sidebar-section-locked {
+    @apply mb-2 flex w-full items-center justify-between gap-2 rounded-md px-3 py-1 text-micro font-semibold uppercase tracking-caps text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
   .ui-sidebar-section-lock {
     @apply h-3 w-3 opacity-40;
   }
   .ui-sidebar-section-lock-active {
     @apply h-3 w-3 text-accent-text;
-  }
-  /* Single-row collapsed state for the PIN-locked Private section. Clicking
-     navigates to /people which triggers the existing PrivatePinGate flow. */
-  .ui-sidebar-private-unlock {
-    @apply flex items-center gap-3 rounded-xl border border-dashed border-border-subtle px-3 py-3 text-sm text-text-tertiary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-secondary;
   }
   .ui-public-surface {
     @apply relative min-h-screen overflow-hidden bg-background text-text-primary;

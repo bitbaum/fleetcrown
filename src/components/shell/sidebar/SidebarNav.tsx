@@ -1,11 +1,34 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { ChevronDown, Lock } from "lucide-react";
 import Link from "next/link";
 import { SIDEBAR_SECTIONS, type SidebarSection } from "@/config/navigation";
 import { isCurrentPath } from "@/lib/navigation";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { SidebarNavItem } from "./SidebarNavItem";
+
+// Per-browser UI preference — which sidebar sections the user has expanded.
+// SSOT for defaults lives here; new sections need exactly one entry to opt in
+// to the toggle behaviour.
+const STORAGE_KEY = "cockpit-sidebar-sections-v1";
+const DEFAULT_EXPANDED: Record<string, boolean> = {
+  work: true,      // operational items the user is in every day
+  private: false,  // hidden until the user explicitly opens it
+  site: false,     // marketing pages — least-used inside the app shell
+};
+
+function loadExpanded(): Record<string, boolean> {
+  if (typeof window === "undefined") return DEFAULT_EXPANDED;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT_EXPANDED;
+    const parsed = JSON.parse(raw) as Record<string, boolean>;
+    return { ...DEFAULT_EXPANDED, ...parsed };
+  } catch {
+    return DEFAULT_EXPANDED;
+  }
+}
 
 export function SidebarNav({
   pathname,
@@ -17,17 +40,59 @@ export function SidebarNav({
   const { configured, unlocked } = usePrivateZone();
   const privateLocked = configured && !unlocked;
 
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(DEFAULT_EXPANDED);
+
+  // Hydrate from localStorage after mount — server render uses the static
+  // defaults so SSR markup matches the first client render.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time hydration of persisted UI prefs
+    setExpanded(loadExpanded());
+  }, []);
+
+  // Always show the user where they are. If they navigate to a page that
+  // lives inside a collapsed section, auto-expand that section so the active
+  // item is visible. Skip private when locked — the section is non-expandable
+  // in that state and the user shouldn't be on a private page anyway.
+  useEffect(() => {
+    const activeId = SIDEBAR_SECTIONS.find((s) =>
+      s.items.some((item) => isCurrentPath(pathname, item.href)),
+    )?.id;
+    if (!activeId) return;
+    if (activeId === "private" && privateLocked) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: keep active section visible
+    setExpanded((prev) => (prev[activeId] ? prev : { ...prev, [activeId]: true }));
+  }, [pathname, privateLocked]);
+
+  const toggle = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // localStorage failures shouldn't break navigation.
+      }
+      return next;
+    });
+  }, []);
+
   return (
-    <nav className={collapsed ? "px-2 py-4 space-y-6" : "px-3 py-4 space-y-6"}>
-      {SIDEBAR_SECTIONS.map((section) => (
-        <SidebarNavSection
-          key={section.id}
-          section={section}
-          pathname={pathname}
-          collapsed={collapsed}
-          privateLocked={privateLocked}
-        />
-      ))}
+    <nav className={collapsed ? "px-2 py-4 space-y-4" : "px-3 py-4 space-y-3"}>
+      {SIDEBAR_SECTIONS.map((section) => {
+        // Icon-only sidebar shows every item regardless of section expansion
+        // (toggling has no visual meaning without labels).
+        const isExpanded = collapsed || expanded[section.id] !== false;
+        return (
+          <SidebarNavSection
+            key={section.id}
+            section={section}
+            pathname={pathname}
+            collapsed={collapsed}
+            privateLocked={privateLocked}
+            isExpanded={isExpanded}
+            onToggle={() => toggle(section.id)}
+          />
+        );
+      })}
     </nav>
   );
 }
@@ -37,32 +102,66 @@ function SidebarNavSection({
   pathname,
   collapsed,
   privateLocked,
+  isExpanded,
+  onToggle,
 }: {
   section: SidebarSection;
   pathname: string;
   collapsed: boolean;
   privateLocked: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
 }) {
   const isLocked = Boolean(section.private && privateLocked);
+
+  // When the private zone is locked, the section is not expandable — its
+  // header is the unlock affordance itself. There's nothing meaningful to
+  // expand into (the user can't see items anyway), and forcing a stale
+  // "Unlock to view" entry inside an expandable shell is just clutter.
+  if (isLocked) {
+    if (collapsed) {
+      return (
+        <Link
+          href="/unlock"
+          className="ui-sidebar-utility group relative w-full justify-center px-2"
+          aria-label="Unlock private section"
+        >
+          <Lock className="h-4 w-4 shrink-0" />
+          <span className="ui-sidebar-tooltip">Unlock private</span>
+        </Link>
+      );
+    }
+    return (
+      <Link href="/unlock" className="ui-sidebar-section-locked" aria-label="Unlock private section">
+        <span className="flex items-center gap-2">
+          <span>{section.label}</span>
+          <Lock className="ui-sidebar-section-lock-active" />
+        </span>
+        <span className="text-text-muted text-micro uppercase tracking-caps">Unlock</span>
+      </Link>
+    );
+  }
 
   return (
     <div>
       {!collapsed && (
-        <div className="ui-sidebar-section-header">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="ui-sidebar-section-toggle"
+          aria-expanded={isExpanded}
+          aria-controls={`sidebar-section-${section.id}`}
+        >
           <span>{section.label}</span>
-          {section.private && (
-            <Lock className={isLocked ? "ui-sidebar-section-lock-active" : "ui-sidebar-section-lock"} />
-          )}
-        </div>
+          <ChevronDown
+            className={`h-3 w-3 shrink-0 text-text-muted transition-transform ${isExpanded ? "" : "-rotate-90"}`}
+            aria-hidden
+          />
+        </button>
       )}
 
-      {isLocked ? (
-        <Link href="/unlock" className="ui-sidebar-private-unlock" aria-label="Unlock private section">
-          <Lock className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Unlock to view</span>}
-        </Link>
-      ) : (
-        <div className="space-y-1.5">
+      {isExpanded && (
+        <div id={`sidebar-section-${section.id}`} className="space-y-1.5">
           {section.items.map((item) => (
             <SidebarNavItem
               key={item.id}
