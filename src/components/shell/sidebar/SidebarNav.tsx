@@ -57,7 +57,7 @@ function SidebarNavSection({
       )}
 
       {isLocked ? (
-        <Link href="/people" className="ui-sidebar-private-unlock" aria-label="Unlock private section">
+        <Link href="/unlock" className="ui-sidebar-private-unlock" aria-label="Unlock private section">
           <Lock className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Unlock to view</span>}
         </Link>

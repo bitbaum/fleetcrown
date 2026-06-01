@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyPassword } from "@/lib/password";
 import {
   createPrivateZoneCookieValue,
+  getEffectivePinHash,
   isPrivateZoneConfigured,
   isPrivateZoneUnlocked,
   PRIVATE_ZONE_COOKIE,
@@ -14,11 +15,11 @@ const attempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000;
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string): boolean {
   const now = Date.now();
-  const entry = attempts.get(ip);
+  const entry = attempts.get(key);
   if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    attempts.set(key, { count: 1, resetAt: now + WINDOW_MS });
     return false;
   }
   entry.count++;
@@ -30,7 +31,7 @@ export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const configured = isPrivateZoneConfigured();
+  const configured = await isPrivateZoneConfigured(userId);
   const unlocked = configured ? await isPrivateZoneUnlocked(userId) : true;
 
   return NextResponse.json({ configured, unlocked });
@@ -41,13 +42,14 @@ export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const hash = process.env.PRIVATE_ZONE_PIN_HASH;
+  const hash = await getEffectivePinHash(userId);
   if (!hash) {
     return NextResponse.json({ ok: true, unconfigured: true });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
-  if (isRateLimited(ip)) {
+  // Rate-limit by user, not IP — multi-user prod has many users behind the
+  // same IPv6 prefix and shared egress addresses.
+  if (isRateLimited(userId)) {
     return NextResponse.json({ ok: false, error: "Too many attempts" }, { status: 429 });
   }
 
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/auth/pin — lock private zone (clear cookie). */
+/** DELETE /api/auth/pin — lock private zone (clear unlock cookie). */
 export async function DELETE() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

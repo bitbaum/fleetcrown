@@ -1,5 +1,5 @@
 import { requirePageUserId } from "@/lib/session";
-import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 
@@ -15,7 +15,7 @@ export async function PrivateZoneDataGate({
   label?: string;
 }) {
   const userId = await requirePageUserId();
-  if (isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId))) {
+  if (await isPrivateZoneLocked(userId)) {
     return (
       <EmptyState>
         Enter your PIN on{" "}

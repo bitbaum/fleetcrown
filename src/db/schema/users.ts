@@ -21,6 +21,11 @@ export const users = pgTable("users", {
   planStatus: text("plan_status").$type<PlanStatus>(),
   stripeCustomerId: text("stripe_customer_id").unique(),
   stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  // Private-zone PIN — scrypt hash in `<hash>.<salt>` format. Null = no PIN
+  // configured for this user; the gate stays open. Each user sets / changes
+  // / disables their own PIN through Settings → Privacy.
+  privateZonePinHash: text("private_zone_pin_hash"),
+  privateZonePinSetAt: timestamp("private_zone_pin_set_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

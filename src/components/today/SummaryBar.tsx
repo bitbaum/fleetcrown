@@ -4,7 +4,7 @@ import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
-import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { APP_LOCALE } from "@/lib/constants";
 
 /** Placeholder shown while SummaryBar's DB queries run. */
@@ -32,7 +32,7 @@ export async function SummaryBar() {
   // Private-zone gating — when the PIN is configured but not unlocked, zero
   // out the fields that read goals/habits/contacts/events data so even the
   // summary counts stay behind the gate.
-  const locked = isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId));
+  const locked = await isPrivateZoneLocked(userId);
   const s = locked
     ? {
         ...rawSummary,

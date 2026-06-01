@@ -2,7 +2,7 @@ import { Calendar, Clock, ExternalLink } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEventsDueSoon } from "@/db/queries/events";
 import { requirePageUserId } from "@/lib/session";
-import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { isPast, format } from "date-fns";
 import { deadlineLabel } from "@/lib/dates";
 import { EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
@@ -11,7 +11,7 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 
 export async function EventsDueCard() {
   const userId = await requirePageUserId();
-  if (isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId))) {
+  if (await isPrivateZoneLocked(userId)) {
     return null;
   }
   const items = await getEventsDueSoon(userId);

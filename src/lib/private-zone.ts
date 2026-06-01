@@ -1,14 +1,43 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { cache } from "react";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
 
 /** Matches client sessionStorage TTL in use-private-zone.ts */
 export const PRIVATE_ZONE_TTL_MS = 30 * 60 * 1000;
 
 export const PRIVATE_ZONE_COOKIE = "cockpit-pz";
 
-export function isPrivateZoneConfigured(): boolean {
-  return !!process.env.PRIVATE_ZONE_PIN_HASH?.trim();
+/**
+ * Resolve the effective PIN hash for a user.
+ *
+ * Per-user hashes live on `users.private_zone_pin_hash` and are the canonical
+ * source. The legacy `PRIVATE_ZONE_PIN_HASH` env var is honoured only when a
+ * user has no PIN of their own — a transitional fallback so the founder's
+ * existing env-managed PIN keeps working until they set one in-app. This is
+ * deliberately deprecated; new users should set their PIN through Settings →
+ * Privacy.
+ *
+ * `cache()` dedupes the DB lookup within a single request — important when
+ * many components on Today / System all call into the gate helpers.
+ */
+export const getEffectivePinHash = cache(async (userId: string): Promise<string | null> => {
+  const rows = await db
+    .select({ hash: users.privateZonePinHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const userHash = rows[0]?.hash?.trim() ?? null;
+  if (userHash) return userHash;
+  const envHash = process.env.PRIVATE_ZONE_PIN_HASH?.trim();
+  return envHash || null;
+});
+
+export async function isPrivateZoneConfigured(userId: string): Promise<boolean> {
+  return Boolean(await getEffectivePinHash(userId));
 }
 
 function authSecret(): string | null {
@@ -55,11 +84,22 @@ export function verifyPrivateZoneCookieValue(token: string, userId: string): boo
 }
 
 export async function isPrivateZoneUnlocked(userId: string): Promise<boolean> {
-  if (!isPrivateZoneConfigured()) return true;
+  // No PIN configured → no gate, always "unlocked".
+  if (!(await isPrivateZoneConfigured(userId))) return true;
   const jar = await cookies();
   const token = jar.get(PRIVATE_ZONE_COOKIE)?.value;
   if (!token) return false;
   return verifyPrivateZoneCookieValue(token, userId);
+}
+
+/**
+ * Single-call helper for components that just need to know "should I hide
+ * private data right now?" — returns true when the PIN is set AND the gate
+ * is still locked. One DB hit per request thanks to React's cache().
+ */
+export async function isPrivateZoneLocked(userId: string): Promise<boolean> {
+  if (!(await isPrivateZoneConfigured(userId))) return false;
+  return !(await isPrivateZoneUnlocked(userId));
 }
 
 /** Server components: throws redirect is handled by returning false — caller decides. */
@@ -72,7 +112,7 @@ export async function requirePrivateZoneUnlocked(userId: string): Promise<boolea
  * Returns a 403 NextResponse when PIN is required but missing/invalid.
  */
 export async function guardPrivateZoneApi(userId: string): Promise<NextResponse | null> {
-  if (!isPrivateZoneConfigured()) return null;
+  if (!(await isPrivateZoneConfigured(userId))) return null;
   if (await isPrivateZoneUnlocked(userId)) return null;
   return NextResponse.json(
     { error: "Private zone locked — enter your PIN first.", code: "private_zone_locked" },
