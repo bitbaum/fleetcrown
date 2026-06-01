@@ -4,6 +4,8 @@ import { useState, Suspense } from "react";
 import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import { ProfileSettings } from "./ProfileSettings";
 import { AccountSettings } from "./AccountSettings";
+import { AppearanceSettings } from "./AppearanceSettings";
+import { PrivacySettings } from "./PrivacySettings";
 import { LocationSettings } from "./LocationSettings";
 import { AgentTokenSettings } from "./AgentTokenSettings";
 import { BeaconSettings } from "./BeaconSettings";
@@ -35,13 +37,15 @@ type Props = {
 };
 
 const TABS = [
-  { id: "profile",   label: "Profile"   },
-  { id: "account",   label: "Account"   },
-  { id: "location",  label: "Location"  },
-  { id: "agent",     label: "Agent"     },
-  { id: "projects",  label: "Projects"  },
-  { id: "team",      label: "Team"      },
-  { id: "billing",   label: "Billing"   },
+  { id: "profile",    label: "Profile"    },
+  { id: "account",    label: "Account"    },
+  { id: "appearance", label: "Appearance" },
+  { id: "privacy",    label: "Privacy"    },
+  { id: "location",   label: "Location"   },
+  { id: "agent",      label: "Agent"      },
+  { id: "projects",   label: "Projects"   },
+  { id: "team",       label: "Team"       },
+  { id: "billing",    label: "Billing"    },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -103,6 +107,12 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
       )}
       {activeTab === "account" && (
         <AccountSettings user={{ email: user.email, hasPassword: user.hasPassword }} />
+      )}
+      {activeTab === "appearance" && (
+        <AppearanceSettings />
+      )}
+      {activeTab === "privacy" && (
+        <PrivacySettings />
       )}
       {activeTab === "location" && (
         <LocationSettings initialPrefs={userPrefs} />

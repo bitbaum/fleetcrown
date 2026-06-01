@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PanelLeftOpen, PanelLeftClose, LogOut, Lock, Sun, Moon } from "lucide-react";
+import Link from "next/link";
+import { PanelLeftOpen, PanelLeftClose, LogOut, Lock, Sun, Moon, Settings as SettingsIcon } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,17 @@ export function SidebarFooter({
           ? <PanelLeftOpen className="h-4 w-4" />
           : <><PanelLeftClose className="h-4 w-4 shrink-0" /><span>Collapse</span></>}
       </button>
+      <Link
+        href="/settings"
+        className={cn(
+          "ui-sidebar-utility group relative w-full",
+          collapsed && "justify-center px-2",
+        )}
+      >
+        <SettingsIcon className="h-4 w-4 shrink-0" />
+        {!collapsed && "Settings"}
+        {collapsed && <span className="ui-sidebar-tooltip">Settings</span>}
+      </Link>
       {configured && unlocked && (
         <button
           onClick={lock}
