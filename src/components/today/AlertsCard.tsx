@@ -2,6 +2,7 @@ import { Bell, AlertTriangle, Info, AlertCircle, ArrowRight, CheckCircle2 } from
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveAlerts } from "@/db/queries/alerts";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { DismissAlertButton } from "./DismissAlertButton";
 import Link from "next/link";
 import { ALERT_SEVERITY } from "@/lib/constants/statuses";
@@ -14,6 +15,11 @@ const SEVERITY_CONFIG = {
 
 export async function AlertsCard() {
   const userId = await requirePageUserId();
+  // Alerts can include contact names ("Andreas needs attention"), goal titles,
+  // and money amounts. Hide entirely when the private zone is locked.
+  if (await isPrivateZoneLocked(userId)) {
+    return null;
+  }
   const items = await getActiveAlerts(userId);
 
   if (items.length === 0) {

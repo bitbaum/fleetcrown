@@ -2,6 +2,7 @@ import { Inbox, Send, Calendar, CheckCircle, MessageCircle, Users, Check, X } fr
 import { Card, CardHeader } from "@/components/ui/card";
 import { getPendingActions, getRecentActions, type ActionRow } from "@/db/queries/actions";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { type ActionPayload } from "@/db/schema/actions";
 import { ACTION_TYPE, ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 import { ActionButtons } from "./ActionButtons";
@@ -59,6 +60,11 @@ function groupSimilarActions(
 
 export async function ActionQueueCard() {
   const userId = await requirePageUserId();
+  // Actions reference contacts ("Check in with X") and other private-zone
+  // entities. Hide the whole card when the zone is locked.
+  if (await isPrivateZoneLocked(userId)) {
+    return null;
+  }
   const [pending, recent] = await Promise.all([
     getPendingActions(userId),
     getRecentActions(userId, 5),

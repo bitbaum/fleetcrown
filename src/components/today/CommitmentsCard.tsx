@@ -2,11 +2,17 @@ import { CheckCircle } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getActiveCommitments } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { CommitmentItem } from "./CommitmentItem";
 import { AddCommitmentButton } from "./AddCommitmentButton";
 
 export async function CommitmentsCard() {
   const userId = await requirePageUserId();
+  // Commitments are personal life management — gated alongside the rest of
+  // the private zone (money / habits / events / people).
+  if (await isPrivateZoneLocked(userId)) {
+    return null;
+  }
   const items = await getActiveCommitments(userId);
 
   return (

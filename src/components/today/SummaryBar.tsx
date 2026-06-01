@@ -36,6 +36,7 @@ export async function SummaryBar() {
   const s = locked
     ? {
         ...rawSummary,
+        // Goals / habits / events / contacts — direct private-zone counts.
         activeGoals: 0,
         avgGoalProgress: 0,
         habitsDone: 0,
@@ -44,6 +45,11 @@ export async function SummaryBar() {
         stuckGoals: 0,
         eventsDueSoon: 0,
         staleContacts: 0,
+        // Commitments + alerts + drafts also leak names / amounts that
+        // reference the private zone.
+        overdueCommitments: 0,
+        urgentAlerts: 0,
+        pendingDrafts: 0,
       }
     : rawSummary;
 
