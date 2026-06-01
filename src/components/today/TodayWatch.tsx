@@ -4,6 +4,7 @@ import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { getTodayWatch, type WatchFocus } from "@/db/queries/today-watch";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { IvyNudge } from "./IvyNudge";
 
 const KIND_LABEL: Record<WatchFocus["kind"], string> = {
   "overdue-commitment": "Overdue commitment",
@@ -48,6 +49,7 @@ export async function TodayWatch() {
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <p className="ui-today-watch-focus-context">{focus.context}</p>
+          <IvyNudge kind={focus.kind} title={focus.title} context={focus.context} />
         </>
       ) : allClear ? (
         <div className="ui-today-watch-clear">

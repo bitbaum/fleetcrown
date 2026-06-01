@@ -474,6 +474,17 @@
   .ui-today-watch-action {
     @apply pt-1;
   }
+  /* Ivy-composed prose under a Watch focus. Lights up once the compose
+     endpoint returns; falls back invisibly if Groq is unavailable. */
+  .ui-ivy-nudge {
+    @apply mt-1 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2;
+  }
+  .ui-ivy-nudge-text {
+    @apply text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-ivy-nudge-shimmer {
+    @apply text-text-muted italic;
+  }
   /* Locked-zone banner on /today — turns the silent absence of private data
      into an inviting unlock CTA. Renders only when the gate is locked. */
   .ui-locked-banner {
