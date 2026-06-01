@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X, ExternalLink } from "lucide-react";
 import { PUBLIC_NAV, type PublicNavEntry } from "@/config/auth";
 
 /**
@@ -46,21 +46,39 @@ export function PublicNav() {
     <>
       {/* Desktop */}
       <div className="hidden items-center gap-1 md:flex">
-        {PUBLIC_NAV.map((entry) =>
-          entry.kind === "menu" ? (
-            <PublicNavDropdown
-              key={entry.label}
-              entry={entry}
-              open={openMenu === entry.label}
-              onOpen={() => setOpenMenu(entry.label)}
-              onClose={() => setOpenMenu(null)}
-            />
-          ) : (
+        {PUBLIC_NAV.map((entry) => {
+          if (entry.kind === "menu") {
+            return (
+              <PublicNavDropdown
+                key={entry.label}
+                entry={entry}
+                open={openMenu === entry.label}
+                onOpen={() => setOpenMenu(entry.label)}
+                onClose={() => setOpenMenu(null)}
+              />
+            );
+          }
+          if (entry.kind === "external") {
+            return (
+              <a
+                key={entry.label}
+                href={entry.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ui-public-nav-link inline-flex items-center gap-1"
+                title={entry.description}
+              >
+                {entry.label}
+                <ExternalLink className="h-3 w-3" aria-hidden />
+              </a>
+            );
+          }
+          return (
             <Link key={entry.label} href={entry.href} className="ui-public-nav-link">
               {entry.label}
             </Link>
-          ),
-        )}
+          );
+        })}
       </div>
 
       {/* Mobile */}
@@ -154,25 +172,48 @@ function PublicNavDrawer({ onClose }: { onClose: () => void }) {
         </button>
       </div>
       <div className="ui-public-drawer-body">
-        {PUBLIC_NAV.map((entry) =>
-          entry.kind === "menu" ? (
-            <section key={entry.label} className="ui-public-drawer-section">
-              <div className="ui-public-drawer-section-label">{entry.label}</div>
-              <div className="space-y-1">
-                {entry.items.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className="ui-public-drawer-item"
-                  >
-                    <span className="ui-public-nav-panel-item-label">{item.label}</span>
-                    <span className="ui-public-nav-panel-item-desc">{item.description}</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : (
+        {PUBLIC_NAV.map((entry) => {
+          if (entry.kind === "menu") {
+            return (
+              <section key={entry.label} className="ui-public-drawer-section">
+                <div className="ui-public-drawer-section-label">{entry.label}</div>
+                <div className="space-y-1">
+                  {entry.items.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className="ui-public-drawer-item"
+                    >
+                      <span className="ui-public-nav-panel-item-label">{item.label}</span>
+                      <span className="ui-public-nav-panel-item-desc">{item.description}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            );
+          }
+          if (entry.kind === "external") {
+            return (
+              <a
+                key={entry.label}
+                href={entry.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                className="ui-public-drawer-item"
+              >
+                <span className="ui-public-nav-panel-item-label inline-flex items-center gap-1.5">
+                  {entry.label}
+                  <ExternalLink className="h-3 w-3" aria-hidden />
+                </span>
+                {entry.description && (
+                  <span className="ui-public-nav-panel-item-desc">{entry.description}</span>
+                )}
+              </a>
+            );
+          }
+          return (
             <Link
               key={entry.label}
               href={entry.href}
@@ -181,8 +222,8 @@ function PublicNavDrawer({ onClose }: { onClose: () => void }) {
             >
               <span className="ui-public-nav-panel-item-label">{entry.label}</span>
             </Link>
-          ),
-        )}
+          );
+        })}
       </div>
     </div>,
     document.body,

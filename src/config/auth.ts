@@ -25,15 +25,19 @@ export const ROUTES = {
 // profile routes (/u/<username>/...), never in the public marketing nav —
 // even when the founder's own essays happen to discuss the platform.
 //
-// Two shapes:
+// Three shapes:
 //   - "menu" → dropdown with items + descriptions (mega-menu)
 //   - "link" → single direct link in the top nav
+//   - "external" → link to another origin (sibling product, etc.)
+//                  Rendered with an explicit external-target indicator so
+//                  visitors know they are leaving cockpitapp.vercel.app.
 // The shape is per-entry so we never paint a one-item dropdown.
 
 export type PublicNavItem = NavLink & { description: string };
 export type PublicNavEntry =
   | { kind: "menu"; label: string; items: PublicNavItem[] }
-  | { kind: "link"; label: string; href: string };
+  | { kind: "link"; label: string; href: string }
+  | { kind: "external"; label: string; href: string; description?: string };
 
 export const PUBLIC_NAV: PublicNavEntry[] = [
   {
@@ -50,6 +54,12 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
     kind: "link",
     label: "Investors",
     href: "/investors",
+  },
+  {
+    kind: "external",
+    label: "OrangeCat",
+    href: "https://orangecat.ch",
+    description: "Sibling product — the transaction half of the techno-capital machine for individuals. Cockpit is the production half; OrangeCat is the economic half. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
   },
 ];
 
