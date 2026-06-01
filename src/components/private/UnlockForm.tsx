@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Lock, ShieldCheck } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 
-type Area = { label: string; description: string };
+type Area = { label: string; description: string; count?: number; unit?: string };
 
 export function UnlockForm({ next, areas }: { next: string; areas: Area[] }) {
   const router = useRouter();
@@ -86,9 +86,16 @@ export function UnlockForm({ next, areas }: { next: string; areas: Area[] }) {
           {areas.map((area) => (
             <li key={area.label} className="flex items-start gap-3">
               <span className="ui-public-prose-bullet mt-2" />
-              <div>
-                <div className="text-sm font-medium text-text-primary">{area.label}</div>
-                <p className="text-sm text-text-tertiary">{area.description}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm font-medium text-text-primary">{area.label}</span>
+                  {typeof area.count === "number" && area.count > 0 && (
+                    <span className="text-xs font-mono text-text-tertiary shrink-0">
+                      {area.count.toLocaleString()} {area.unit ?? ""}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-sm text-text-tertiary">{area.description}</p>
               </div>
             </li>
           ))}
