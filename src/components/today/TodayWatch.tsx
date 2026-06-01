@@ -10,6 +10,7 @@ const KIND_LABEL: Record<WatchFocus["kind"], string> = {
   "overdue-goal":       "Overdue goal",
   "imminent-bill":      "Renewal coming up",
   "imminent-event":     "Approaching deadline",
+  "stale-contact":      "Relationship going stale",
   "stalled-goal":       "Stalled goal",
 };
 
@@ -82,6 +83,7 @@ function buildTotalStrip(totals: {
   overdueGoals: number;
   imminentBills: number;
   imminentEvents: number;
+  staleContacts: number;
   stalledGoals: number;
 }): string | null {
   const parts: string[] = [];
@@ -89,6 +91,7 @@ function buildTotalStrip(totals: {
   if (totals.overdueGoals > 0) parts.push(`${totals.overdueGoals} overdue goal${totals.overdueGoals === 1 ? "" : "s"}`);
   if (totals.imminentBills > 1) parts.push(`${totals.imminentBills - 1} more imminent bill${totals.imminentBills - 1 === 1 ? "" : "s"}`);
   if (totals.imminentEvents > 0) parts.push(`${totals.imminentEvents} imminent deadline${totals.imminentEvents === 1 ? "" : "s"}`);
+  if (totals.staleContacts > 0) parts.push(`${totals.staleContacts} relationship${totals.staleContacts === 1 ? "" : "s"} going stale`);
   if (totals.stalledGoals > 0) parts.push(`${totals.stalledGoals} stalled goal${totals.stalledGoals === 1 ? "" : "s"}`);
   if (parts.length === 0) return null;
   return `Also: ${parts.join(" · ")}.`;

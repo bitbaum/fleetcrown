@@ -1,13 +1,14 @@
-import { and, eq, lte, isNotNull, asc, desc } from "drizzle-orm";
+import { and, eq, lte, isNotNull, asc, desc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { goals, events, commitments, subscriptions } from "@/db/schema";
-import { GOAL_STATUS, COMMITMENT_STATUS, EVENT_STATUS } from "@/lib/constants/statuses";
+import { GOAL_STATUS, COMMITMENT_STATUS, EVENT_STATUS, ENTITY_TYPE } from "@/lib/constants/statuses";
+import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 
 const STALLED_DAYS = 21;
 const IMMINENT_DAYS = 5;
 
 export type WatchFocus = {
-  kind: "overdue-commitment" | "overdue-goal" | "imminent-bill" | "imminent-event" | "stalled-goal";
+  kind: "overdue-commitment" | "overdue-goal" | "imminent-bill" | "imminent-event" | "stale-contact" | "stalled-goal";
   title: string;
   context: string;        // a single short clarifying line ("85% done · 1mo past target")
   href: string;           // where the user goes if they click through
@@ -22,6 +23,7 @@ export type WatchData = {
     overdueGoals: number;
     imminentBills: number;
     imminentEvents: number;
+    staleContacts: number;
     stalledGoals: number;
   };
 };
@@ -50,6 +52,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     overdueGoalRows,
     imminentBillRows,
     imminentEventRows,
+    staleContactRows,
     stalledGoalRows,
   ] = await Promise.all([
     db
@@ -95,6 +98,21 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
       ))
       .orderBy(asc(events.deadline)),
 
+    // Stale contacts — entities of type=person whose latest interaction is
+    // older than the fading threshold. Bound to a single COUNT-and-TOP since
+    // the Watch only needs the most-stale one to focus on.
+    db.execute<{ id: string; name: string; last_interaction: string | null }>(sql`
+      SELECT e.id, e.name, max(i.occurred_at)::text AS last_interaction
+      FROM entities e
+      JOIN interactions i ON i.entity_id = e.id AND i.user_id = ${userId}
+      WHERE e.user_id = ${userId}
+        AND e.type = ${ENTITY_TYPE.PERSON}
+      GROUP BY e.id, e.name
+      HAVING max(i.occurred_at) < now() - make_interval(days => ${HEALTH_FADING_DAYS})
+      ORDER BY max(i.occurred_at) ASC
+      LIMIT 25
+    `),
+
     db
       .select({ id: goals.id, title: goals.title, progress: goals.progress, updatedAt: goals.updatedAt })
       .from(goals)
@@ -106,11 +124,14 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
       .orderBy(asc(goals.updatedAt)),
   ]);
 
+  const staleContactList = Array.from(staleContactRows) as Array<{ id: string; name: string; last_interaction: string | null }>;
+
   const totals = {
     overdueCommitments: overdueCommitmentRows.length,
     overdueGoals: overdueGoalRows.length,
     imminentBills: imminentBillRows.length,
     imminentEvents: imminentEventRows.length,
+    staleContacts: staleContactList.length,
     stalledGoals: stalledGoalRows.length,
   };
 
@@ -120,6 +141,7 @@ export async function getTodayWatch(userId: string): Promise<WatchData> {
     overdueGoalRows,
     imminentBillRows,
     imminentEventRows,
+    staleContactList,
     stalledGoalRows,
     now,
   );
@@ -132,6 +154,7 @@ function pickFocus(
   overdueGoals: { id: string; title: string; progress: number | null; targetDate: Date | null }[],
   imminentBills: { id: string; name: string; amount: number | null; currency: string | null; nextBilling: Date | null }[],
   imminentEvents: { id: string; name: string; deadline: Date | null }[],
+  staleContacts: { id: string; name: string; last_interaction: string | null }[],
   stalledGoals: { id: string; title: string; progress: number | null; updatedAt: Date }[],
   now: Date,
 ): WatchFocus | null {
@@ -181,6 +204,20 @@ function pickFocus(
       context: daysUntil !== null ? (daysUntil <= 0 ? "Today" : `In ${daysUntil}d`) : "Soon",
       href: "/events",
       ivyPrompt: `A deadline is approaching:\n\n${e.name}${daysUntil !== null ? ` — ${daysUntil} days away` : ""}.\n\nWhat needs to happen between now and then?`,
+    };
+  }
+
+  const sc = staleContacts[0];
+  if (sc) {
+    const lastDate = sc.last_interaction ? new Date(sc.last_interaction) : null;
+    const daysSince = lastDate ? Math.floor((now.getTime() - lastDate.getTime()) / 86_400_000) : null;
+    const firstName = sc.name.split(/\s+/)[0] ?? sc.name;
+    return {
+      kind: "stale-contact",
+      title: sc.name,
+      context: daysSince !== null ? `Last interaction ${daysSince}d ago` : "No recent interaction",
+      href: `/people?health=fading`,
+      ivyPrompt: `A relationship is going stale:\n\n${sc.name}${daysSince !== null ? ` — last interaction ${daysSince} days ago` : ""}.\n\nDraft a warm, short check-in message I can send to ${firstName}. Keep it natural, no business angle, in the tone I'd actually use.`,
     };
   }
 
