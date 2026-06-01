@@ -18,9 +18,8 @@ export async function PrivateZoneDataGate({
   if (await isPrivateZoneLocked(userId)) {
     return (
       <EmptyState>
-        Enter your PIN on{" "}
-        <Link href="/people" className="text-accent-text underline-offset-2 hover:underline">
-          People
+        <Link href="/unlock" className="text-accent-text underline-offset-2 hover:underline">
+          Unlock the private zone
         </Link>
         {" "}to view {label}.
       </EmptyState>

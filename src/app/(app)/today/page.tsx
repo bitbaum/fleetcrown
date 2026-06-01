@@ -16,6 +16,7 @@ import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
+import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
 import { LayoutGrid } from "lucide-react";
 import { APP_NAME } from "@/config/brand";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
@@ -81,6 +82,10 @@ export default async function TodayPage() {
           <QuickCaptureButton />
         </div>
       </div>
+
+      <Suspense fallback={null}>
+        <LockedZoneBanner />
+      </Suspense>
 
       {/* Recent agent outcomes — what agents shipped since last visit */}
       <Suspense fallback={<CardSkeleton />}>

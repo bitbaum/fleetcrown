@@ -445,6 +445,17 @@
   .ui-sidebar-section-lock-active {
     @apply h-3 w-3 text-accent-text;
   }
+  /* Locked-zone banner on /today — turns the silent absence of private data
+     into an inviting unlock CTA. Renders only when the gate is locked. */
+  .ui-locked-banner {
+    @apply flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface-base px-5 py-4 transition-colors hover:border-border-default hover:bg-surface-raised;
+  }
+  .ui-locked-banner-icon {
+    @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-raised text-accent-text;
+  }
+  .ui-locked-banner-cta {
+    @apply inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-text-primary;
+  }
   .ui-public-surface {
     @apply relative min-h-screen overflow-hidden bg-background text-text-primary;
   }
