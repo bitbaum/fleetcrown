@@ -183,6 +183,19 @@ export const ROADMAP = {
       ],
     },
     {
+      marker: "ECONOMY",
+      title: "OrangeCat integration — the transaction half",
+      summary: "Pair Cockpit's production layer with OrangeCat's economic layer. The two halves of the individual singularity, settled to the same operator on the same terms.",
+      bullets: [
+        "Identity bridge — Cockpit users connect their OrangeCat actor through OAuth. One identity, two products, one settlement layer.",
+        "Publish to OrangeCat — a project or agent output becomes a product or service listing with Lightning payments in one click.",
+        "Agent costs as outflows — compute, API tokens, and third-party services route through the operator's OrangeCat Cat. The economy of the fleet becomes legible and auditable per project.",
+        "Subscriptions as assets — Cockpit's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
+        "Cockpit pricing on Lightning rails — Cockpit's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
+      ],
+      note: "The pieces exist in production today on both platforms (cockpitapp.vercel.app and orangecat.ch). The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
+    },
+    {
       marker: "ROBOTICS",
       title: "Physical robotic fleets",
       summary: "The same control patterns, applied to a different substrate.",
