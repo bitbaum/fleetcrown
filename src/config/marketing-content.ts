@@ -196,6 +196,19 @@ export const ROADMAP = {
       note: "See the Thoughts essay \"From Two AIs to One\" for the strategic argument. Convergence is engineering on top of two products that already work standalone, not a rewrite.",
     },
     {
+      marker: "STAKEHOLDERS",
+      title: "Stakeholder graph — the concrete first convergence",
+      summary: "Every project has eight surrounding relationships — competitors, collaborators, investors, customers, employees, acquirers, acquisition targets, in-house dev projects. Track them as typed edges in OrangeCat's entity graph; surface them on Cockpit; let the agent act on them.",
+      bullets: [
+        "Storage in OrangeCat. The eight categories are edges between entities OrangeCat already has (projects, actors, groups, products, services, investments). One typed-edge schema covers all eight — no new entity tables.",
+        "Operations in Cockpit. /projects renders the eight stakeholder lanes per project, read from OrangeCat via the identity bridge. The Watch on /today surfaces signals derived from the graph.",
+        "Ship competitors first — the most automatable category. Landing-page diffs, RSS, funding-event detection, hiring-page diffs. The other seven follow with the same primitives.",
+        "Action loop: signal → Watch focus → \"Brief Ivy on this\" → agent drafts a response (pricing tweak, positioning post, feature pull-forward) → approve / disapprove.",
+        "No second graph. Cockpit does not duplicate OrangeCat's entity model. Two graphs are always wrong.",
+      ],
+      note: "First concrete instance of the convergence — same data, two surfaces, one agent reasoning across both. See the Thoughts essay \"Where Stakeholders Live\" for the full design.",
+    },
+    {
       marker: "ECONOMY",
       title: "OrangeCat integration — the transaction half",
       summary: "Pair Cockpit's production layer with OrangeCat's economic layer. The two halves of the individual singularity, settled to the same operator on the same terms.",
