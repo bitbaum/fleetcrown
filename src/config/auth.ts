@@ -17,15 +17,27 @@ export const ROUTES = {
   APP_HOME: "/today",
 } as const;
 
-// ─── Public marketing nav — grouped for the desktop mega-menu and the
-// mobile drawer. Each item carries a one-line description that surfaces in
-// the dropdown panel so visitors know what's behind each link.
+// ─── Public marketing nav — platform-wide content only.
+//
+// A deliberate architectural boundary lives here: every entry must apply to
+// the whole platform, not to a single user. Per-user surfaces (the user's
+// own Thoughts, profile, etc.) live in the in-app sidebar and on user
+// profile routes (/u/<username>/...), never in the public marketing nav —
+// even when the founder's own essays happen to discuss the platform.
+//
+// Two shapes:
+//   - "menu" → dropdown with items + descriptions (mega-menu)
+//   - "link" → single direct link in the top nav
+// The shape is per-entry so we never paint a one-item dropdown.
 
 export type PublicNavItem = NavLink & { description: string };
-export type PublicNavGroup = { label: string; items: PublicNavItem[] };
+export type PublicNavEntry =
+  | { kind: "menu"; label: string; items: PublicNavItem[] }
+  | { kind: "link"; label: string; href: string };
 
-export const PUBLIC_NAV_GROUPS: PublicNavGroup[] = [
+export const PUBLIC_NAV: PublicNavEntry[] = [
   {
+    kind: "menu",
     label: "Product",
     items: [
       { label: "Mission",    href: "/mission",    description: "Why we exist" },
@@ -35,16 +47,16 @@ export const PUBLIC_NAV_GROUPS: PublicNavGroup[] = [
     ],
   },
   {
-    label: "Company",
-    items: [
-      { label: "Investors", href: "/investors", description: "For investors" },
-      { label: "Thoughts",  href: "/thoughts",  description: "Essays on architecture and systems" },
-    ],
+    kind: "link",
+    label: "Investors",
+    href: "/investors",
   },
 ];
 
-// Flat list — kept for backwards compatibility (mobile fallbacks, sitemap-like
-// uses). Derived from PUBLIC_NAV_GROUPS so the two never drift.
-export const PUBLIC_NAV_LINKS: NavLink[] = PUBLIC_NAV_GROUPS.flatMap((g) =>
-  g.items.map(({ label, href }) => ({ label, href })),
+// Flat list — kept for backwards compatibility (sitemap-like uses, mobile
+// fallbacks). Derived from PUBLIC_NAV so the two never drift.
+export const PUBLIC_NAV_LINKS: NavLink[] = PUBLIC_NAV.flatMap((entry) =>
+  entry.kind === "menu"
+    ? entry.items.map(({ label, href }) => ({ label, href }))
+    : [{ label: entry.label, href: entry.href }],
 );
