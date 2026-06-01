@@ -11,7 +11,7 @@ import {
   MARKETING_HERO_SECONDARY,
   MARKETING_POSITIONING,
 } from "@/config/brand";
-import { ROUTES, PUBLIC_NAV_LINKS } from "@/config/auth";
+import { ROUTES } from "@/config/auth";
 
 export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
@@ -25,7 +25,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
+    <PublicSurface right={<PublicHeaderActions />}>
       <div className="ui-public-hero-fold">
         <div className="max-w-5xl">
           <div className="ui-public-hero-badge">
@@ -108,7 +108,7 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-20">
+      <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6">
           <div className="ui-public-eyebrow">THE DIFFERENCE</div>
           <h2 className="ui-public-display-lg mt-4">Not another coding agent.</h2>
@@ -133,7 +133,7 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-20 text-center">
+      <div className="border-t border-border-subtle py-20 text-center">
         <Link href={ROUTES.SIGN_IN} className="ui-public-cta-lg">
           Begin
         </Link>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
 import { APP_LOCALE } from "@/lib/constants";
 
 /** Placeholder shown while SummaryBar's DB queries run. */
@@ -26,7 +27,25 @@ export function SummaryBarSkeleton() {
 
 export async function SummaryBar() {
   const userId = await requirePageUserId();
-  const [s, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
+  const [rawSummary, fleet] = await Promise.all([getTodaySummary(userId), getFleetSummary(userId)]);
+
+  // Private-zone gating — when the PIN is configured but not unlocked, zero
+  // out the fields that read goals/habits/contacts/events data so even the
+  // summary counts stay behind the gate.
+  const locked = isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId));
+  const s = locked
+    ? {
+        ...rawSummary,
+        activeGoals: 0,
+        avgGoalProgress: 0,
+        habitsDone: 0,
+        habitsTotal: 0,
+        goalsDueSoon: 0,
+        stuckGoals: 0,
+        eventsDueSoon: 0,
+        staleContacts: 0,
+      }
+    : rawSummary;
 
   const todayBriefPrompt = [
     `Daily brief — ${new Date().toLocaleDateString(APP_LOCALE, { weekday: "long", month: "long", day: "numeric" })}`,

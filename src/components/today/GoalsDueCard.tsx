@@ -2,6 +2,7 @@ import { Target, Clock } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getGoalsDueSoon } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
 import { deadlineLabel } from "@/lib/dates";
 import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
@@ -10,6 +11,11 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 
 export async function GoalsDueCard() {
   const userId = await requirePageUserId();
+  // Goals live in the private zone — when PIN-locked, return nothing rather
+  // than crowd Today's actionable grid with a placeholder.
+  if (isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId))) {
+    return null;
+  }
   const items = await getGoalsDueSoon(userId);
 
   if (items.length === 0) return null;

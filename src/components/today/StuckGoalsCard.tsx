@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getStuckGoals } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
 import { AbandonGoalButton } from "./AbandonGoalButton";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
@@ -12,6 +13,9 @@ const idleDaysSince = (updatedAt: Date | string): number =>
 
 export async function StuckGoalsCard() {
   const userId = await requirePageUserId();
+  if (isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId))) {
+    return null;
+  }
   const items = await getStuckGoals(userId);
 
   if (items.length === 0) {

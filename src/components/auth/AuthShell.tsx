@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PUBLIC_SURFACE } from "@/config/ui";
-import { PUBLIC_NAV_LINKS } from "@/config/auth";
 
 export function AuthField({
   label,
@@ -88,7 +87,7 @@ export function AuthShell({
   navRight?: React.ReactNode;
 }) {
   return (
-    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={navRight}>
+    <PublicSurface right={navRight} showNav={false}>
       <main
         className="relative z-10 flex items-center justify-center px-4 pb-16"
         style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}

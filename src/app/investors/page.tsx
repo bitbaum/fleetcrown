@@ -1,7 +1,6 @@
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
-import { PUBLIC_NAV_LINKS } from "@/config/auth";
 import { INVESTORS, INVESTOR_DETAILS } from "@/config/marketing-content";
 
 export const metadata = {
@@ -11,14 +10,14 @@ export const metadata = {
 
 export default function InvestorsPage() {
   return (
-    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
+    <PublicSurface right={<PublicHeaderActions />}>
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="ui-public-eyebrow">{INVESTORS.eyebrow}</div>
         <h1 className="ui-public-page-title mt-4">{INVESTORS.headline}</h1>
         <p className="ui-public-lede mt-8 max-w-3xl">{INVESTORS.thesis}</p>
       </div>
 
-      <div className="border-t border-white/10 py-20">
+      <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6">
           <div className="ui-public-eyebrow">WHY NOW</div>
           <div className="mt-10 space-y-10">
@@ -32,7 +31,7 @@ export default function InvestorsPage() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-20">
+      <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6 grid gap-x-16 gap-y-16 md:grid-cols-2">
           <div>
             <div className="ui-public-eyebrow">WHAT WE HAVE BUILT</div>
@@ -45,7 +44,7 @@ export default function InvestorsPage() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-20">
+      <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6">
           <div className="ui-public-eyebrow">THE ASK</div>
           <p className="ui-public-section-lede mt-6">{INVESTORS.ask}</p>

@@ -429,6 +429,22 @@
   .ui-sidebar-utility {
     @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
+  /* Sidebar section headers — small caps label introducing a group of items
+     (Work / Knowledge / Private / Site). Lock icon appears on private group. */
+  .ui-sidebar-section-header {
+    @apply mb-2 flex items-center justify-between gap-2 px-3 text-micro font-semibold uppercase tracking-caps text-text-muted;
+  }
+  .ui-sidebar-section-lock {
+    @apply h-3 w-3 opacity-40;
+  }
+  .ui-sidebar-section-lock-active {
+    @apply h-3 w-3 text-accent-text;
+  }
+  /* Single-row collapsed state for the PIN-locked Private section. Clicking
+     navigates to /people which triggers the existing PrivatePinGate flow. */
+  .ui-sidebar-private-unlock {
+    @apply flex items-center gap-3 rounded-xl border border-dashed border-border-subtle px-3 py-3 text-sm text-text-tertiary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-secondary;
+  }
   .ui-public-surface {
     @apply relative min-h-screen overflow-hidden bg-background text-text-primary;
   }
@@ -456,6 +472,53 @@
   }
   .ui-public-nav-link {
     @apply rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-secondary;
+  }
+  /* Mega-menu trigger button — looks like a nav link, but with a chevron and
+     hover/expanded affordances. */
+  .ui-public-nav-trigger {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  /* Dropdown panel anchored to the trigger — grid of label + description per
+     destination. */
+  .ui-public-nav-panel {
+    @apply absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border border-border-subtle bg-surface-overlay p-2;
+    box-shadow: var(--shadow-panel-strong);
+  }
+  .ui-public-nav-panel-item {
+    @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
+  }
+  .ui-public-nav-panel-item-label {
+    @apply block text-sm font-medium text-text-primary;
+  }
+  .ui-public-nav-panel-item-desc {
+    @apply mt-0.5 block text-xs text-text-tertiary;
+  }
+  /* Mobile drawer toggle (hamburger / close) — square button on the public nav. */
+  .ui-public-nav-toggle {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  /* Full-screen drawer for the mobile public nav. Background colour is set
+     directly (not via bg-background) so it stays fully opaque on top of the
+     marketing surface — bg-background's CSS-var resolution composites with
+     ancestor backgrounds in some Tailwind 4 builds. */
+  .ui-public-drawer {
+    @apply fixed inset-0 z-50 flex flex-col;
+    background-color: var(--background);
+  }
+  .ui-public-drawer-bar {
+    @apply flex items-center justify-end px-6 py-5;
+  }
+  .ui-public-drawer-body {
+    @apply flex-1 overflow-y-auto px-6 pb-12 space-y-10;
+  }
+  .ui-public-drawer-section-label {
+    @apply mb-3 text-micro font-semibold uppercase tracking-caps text-text-muted;
+  }
+  .ui-public-drawer-section {
+    @apply space-y-2;
+  }
+  .ui-public-drawer-item {
+    @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
   }
   .ui-public-badge {
     @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-text-tertiary;

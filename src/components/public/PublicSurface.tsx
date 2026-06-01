@@ -1,19 +1,22 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/shell/BrandMark";
+import { PublicNav } from "@/components/public/PublicNav";
 
 export type NavLink = { label: string; href: string };
 
 export function PublicSurface({
   children,
-  navLinks,
   right,
   homeHref = "/",
+  showNav = true,
 }: {
   children: ReactNode;
-  navLinks?: NavLink[];
   right?: ReactNode;
   homeHref?: string;
+  /** Render the Product/Company mega-menu in the header. Default true; the
+      auth pages flip this off so the marketing nav doesn't crowd sign-in. */
+  showNav?: boolean;
 }) {
   return (
     <div className="ui-public-surface">
@@ -23,15 +26,7 @@ export function PublicSurface({
           <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
             <BrandMark />
           </Link>
-          {navLinks && navLinks.length > 0 && (
-            <div className="hidden items-center md:flex">
-              {navLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="ui-public-nav-link">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          )}
+          {showNav && <PublicNav />}
         </div>
         <div className="flex items-center gap-2">
           {right}

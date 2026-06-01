@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { parseThoughtBlocks } from "@/lib/thoughts-content";
-import { ROUTES, PUBLIC_NAV_LINKS } from "@/config/auth";
+import { ROUTES } from "@/config/auth";
 import { APP_NAME } from "@/config/brand";
 
 export const metadata: Metadata = {
@@ -45,7 +45,7 @@ export default function WhitepaperPage() {
   const publishedAt = meta.publishedAt ?? "";
 
   return (
-    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
+    <PublicSurface right={<PublicHeaderActions />}>
       <div className="relative z-10 mx-auto max-w-3xl px-6 pb-32 pt-16 sm:px-10">
         <div className="ui-public-doc-header">
           <div className="ui-public-doc-meta-row">

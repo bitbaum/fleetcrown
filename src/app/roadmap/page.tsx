@@ -1,7 +1,6 @@
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
-import { PUBLIC_NAV_LINKS } from "@/config/auth";
 import { ROADMAP } from "@/config/marketing-content";
 
 export const metadata = {
@@ -11,7 +10,7 @@ export const metadata = {
 
 export default function RoadmapPage() {
   return (
-    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
+    <PublicSurface right={<PublicHeaderActions />}>
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="ui-public-eyebrow">{ROADMAP.eyebrow}</div>
         <h1 className="ui-public-page-title mt-4">{ROADMAP.title}</h1>
@@ -20,7 +19,7 @@ export default function RoadmapPage() {
 
       <div className="mx-auto max-w-4xl px-6 pb-24 space-y-24">
         {ROADMAP.phases.map((phase) => (
-          <section key={phase.marker} className="border-t border-white/10 pt-16">
+          <section key={phase.marker} className="border-t border-border-subtle pt-16">
             <div className="ui-public-eyebrow">{phase.marker}</div>
             <h2 className="ui-public-display-md mt-4">{phase.title}</h2>
             <p className="ui-public-section-lede mt-6">{phase.summary}</p>
@@ -41,7 +40,7 @@ export default function RoadmapPage() {
         ))}
       </div>
 
-      <div className="border-t border-white/10 py-24">
+      <div className="border-t border-border-subtle py-24">
         <div className="mx-auto max-w-4xl px-6">
           <div className="ui-public-eyebrow">{ROADMAP.throughlines.eyebrow}</div>
           <h2 className="ui-public-display-md mt-4">{ROADMAP.throughlines.title}</h2>
@@ -62,7 +61,7 @@ export default function RoadmapPage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-6 pb-24">
-        <p className="ui-public-meta border-t border-white/10 pt-12 max-w-2xl">{ROADMAP.closer}</p>
+        <p className="ui-public-meta border-t border-border-subtle pt-12 max-w-2xl">{ROADMAP.closer}</p>
       </div>
 
       <FinalCta />
