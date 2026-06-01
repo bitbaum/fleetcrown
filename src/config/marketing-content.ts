@@ -183,6 +183,19 @@ export const ROADMAP = {
       ],
     },
     {
+      marker: "CONVERGE",
+      title: "One agent per user — the surface merge",
+      summary: "Today's Ivy (Cockpit) and Cat (OrangeCat) become one agent that sees the user's whole life. Two AIs is engineering convenience; one agent per user is the only interaction model that scales to nine billion builders.",
+      bullets: [
+        "Memory layer unifies — the user's contacts, projects, goals, transactions, listings, and decisions live in one graph the agent reasons against.",
+        "Reasoning loop unifies — when the user says \"do X,\" the agent decomposes X across whatever surfaces are involved without the user choosing the surface.",
+        "Autonomy ladder unifies — Manual → Queue → Beacon → Continuous → Mission applies across both products as one dial.",
+        "Approval queue unifies — Cockpit's Action Queue and OrangeCat's pending Cat actions become one inbox. The user lives in this queue.",
+        "Surfaces (Cockpit, OrangeCat) stay as engineering boundaries but stop being user-facing concepts. The user perceives \"my agent.\"",
+      ],
+      note: "See the Thoughts essay \"From Two AIs to One\" for the strategic argument. Convergence is engineering on top of two products that already work standalone, not a rewrite.",
+    },
+    {
       marker: "ECONOMY",
       title: "OrangeCat integration — the transaction half",
       summary: "Pair Cockpit's production layer with OrangeCat's economic layer. The two halves of the individual singularity, settled to the same operator on the same terms.",
