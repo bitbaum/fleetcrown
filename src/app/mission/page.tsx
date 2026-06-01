@@ -1,5 +1,7 @@
 import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
+import { PUBLIC_NAV_LINKS } from "@/config/auth";
 import { MISSION } from "@/config/marketing-content";
 
 export const metadata = {
@@ -9,7 +11,7 @@ export const metadata = {
 
 export default function MissionPage() {
   return (
-    <PublicSurface>
+    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
       <div className="ui-public-hero-fold">
         <div className="ui-public-eyebrow">{MISSION.eyebrow}</div>
         <h1 className="ui-public-hero-title mt-6">{MISSION.title}</h1>

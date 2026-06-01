@@ -1,5 +1,7 @@
 import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FinalCta } from "@/components/public/FinalCta";
+import { PUBLIC_NAV_LINKS } from "@/config/auth";
 import { INVESTORS, INVESTOR_DETAILS } from "@/config/marketing-content";
 
 export const metadata = {
@@ -9,7 +11,7 @@ export const metadata = {
 
 export default function InvestorsPage() {
   return (
-    <PublicSurface>
+    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
       <div className="mx-auto max-w-4xl px-6 py-24 sm:py-32">
         <div className="ui-public-eyebrow">{INVESTORS.eyebrow}</div>
         <h1 className="ui-public-page-title mt-4">{INVESTORS.headline}</h1>

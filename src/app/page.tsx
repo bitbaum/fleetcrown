@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserCount } from "@/db/queries/users";
 import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import {
   MARKETING_TAGLINE,
   MARKETING_SUBTITLE,
@@ -24,19 +25,7 @@ export default async function LandingPage() {
   }
 
   return (
-    <PublicSurface
-      navLinks={PUBLIC_NAV_LINKS}
-      right={(
-        <div className="flex items-center gap-2">
-          <Link href={ROUTES.SIGN_IN} className="ui-public-nav-link hidden sm:block">
-            Sign in
-          </Link>
-          <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action-compact">
-            Get started
-          </Link>
-        </div>
-      )}
-    >
+    <PublicSurface navLinks={PUBLIC_NAV_LINKS} right={<PublicHeaderActions />}>
       <div className="ui-public-hero-fold">
         <div className="max-w-5xl">
           <div className="ui-public-hero-badge">
@@ -45,7 +34,7 @@ export default async function LandingPage() {
 
           <h1 className="ui-public-hero-title">
             {MARKETING_HERO_PRIMARY}<br />
-            <span className="text-white/60">{MARKETING_HERO_SECONDARY}</span>
+            <span className="text-text-tertiary">{MARKETING_HERO_SECONDARY}</span>
           </h1>
 
           <p className="ui-public-hero-lede">

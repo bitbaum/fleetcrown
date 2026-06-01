@@ -158,6 +158,12 @@
   --public-backdrop-secondary-width: 1200px;
   --public-backdrop-secondary-height: 600px;
   --public-backdrop-grid-size: 80px;
+  /* Marketing backdrop — flips with theme so the public surface stays
+     coherent in light and dark mode. Values track foreground colour. */
+  --public-grid-stroke:     rgba(0, 0, 0, 0.055);
+  --public-glow-primary:    rgba(0, 0, 0, 0.04);
+  --public-glow-primary-2:  rgba(0, 0, 0, 0.02);
+  --public-glow-secondary:  rgba(0, 0, 0, 0.025);
   --public-title-min: 52px;
   --public-title-preferred: 8vw;
   --public-title-max: 108px;
@@ -267,6 +273,11 @@
   --status-neutral:         oklch(0.42 0 0);
   --shadow-panel: 0 1px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 6%);
   --shadow-panel-strong: 0 2px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 8%);
+  /* Marketing backdrop overrides — dark theme flips the grid + glow to white. */
+  --public-grid-stroke:     rgba(255, 255, 255, 0.055);
+  --public-glow-primary:    rgba(255, 255, 255, 0.09);
+  --public-glow-primary-2:  rgba(255, 255, 255, 0.03);
+  --public-glow-secondary:  rgba(255, 255, 255, 0.04);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -419,35 +430,35 @@
     @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary;
   }
   .ui-public-surface {
-    @apply relative min-h-screen overflow-hidden bg-surface-public text-white;
+    @apply relative min-h-screen overflow-hidden bg-background text-text-primary;
   }
   .ui-public-backdrop {
     @apply pointer-events-none absolute inset-0 overflow-hidden;
     background:
-      radial-gradient(ellipse var(--public-backdrop-primary-width) var(--public-backdrop-primary-height) at 50% 0%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 40%, transparent 70%),
-      radial-gradient(ellipse var(--public-backdrop-secondary-width) var(--public-backdrop-secondary-height) at 50% 33%, rgba(255,255,255,0.04) 0%, transparent 60%);
+      radial-gradient(ellipse var(--public-backdrop-primary-width) var(--public-backdrop-primary-height) at 50% 0%, var(--public-glow-primary) 0%, var(--public-glow-primary-2) 40%, transparent 70%),
+      radial-gradient(ellipse var(--public-backdrop-secondary-width) var(--public-backdrop-secondary-height) at 50% 33%, var(--public-glow-secondary) 0%, transparent 60%);
   }
   .ui-public-backdrop::after {
     content: "";
     @apply absolute inset-0;
     background-image:
-      linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px);
+      linear-gradient(var(--public-grid-stroke) 1px, transparent 1px),
+      linear-gradient(90deg, var(--public-grid-stroke) 1px, transparent 1px);
     background-size: var(--public-backdrop-grid-size) var(--public-backdrop-grid-size);
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
   }
   .ui-public-nav {
-    @apply relative z-10 flex items-center justify-between border-b border-white/[0.06] px-6 py-5 sm:px-10;
+    @apply relative z-10 flex items-center justify-between border-b border-border-subtle px-6 py-5 sm:px-10;
   }
   .ui-public-nav-action {
-    @apply rounded-full border border-white/[0.12] px-5 py-2 text-sm font-medium text-white/[0.55] transition-all hover:border-white/[0.22] hover:text-white/[0.80];
+    @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
   }
   .ui-public-nav-link {
-    @apply rounded-lg px-4 py-2 text-sm text-white/40 transition-colors hover:text-white/80;
+    @apply rounded-lg px-4 py-2 text-sm text-text-tertiary transition-colors hover:text-text-secondary;
   }
   .ui-public-badge {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.05] px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-white/[0.45];
+    @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-text-tertiary;
   }
   .ui-public-title {
     font-size: clamp(var(--public-title-min), var(--public-title-preferred), var(--public-title-max));
@@ -457,28 +468,28 @@
     @apply max-w-4xl font-bold;
   }
   .ui-public-subtitle {
-    @apply mt-8 max-w-md text-lg leading-relaxed text-white/40;
+    @apply mt-8 max-w-md text-lg leading-relaxed text-text-muted;
   }
   .ui-public-title-muted {
-    @apply text-white/[0.28];
+    @apply text-text-muted;
   }
   .ui-public-primary-action {
-    @apply rounded-full bg-white px-8 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-85;
+    @apply rounded-full bg-text-primary px-8 py-3 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85;
   }
   .ui-public-feature-card {
-    @apply rounded-2xl border border-white/[0.07] bg-white/[0.03] p-6 text-left;
+    @apply rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
   }
   .ui-public-feature-icon {
-    @apply mb-3 text-xl text-white/[0.60];
+    @apply mb-3 text-xl text-text-tertiary;
   }
   .ui-public-feature-title {
-    @apply mb-1.5 text-sm font-semibold text-white/[0.80];
+    @apply mb-1.5 text-sm font-semibold text-text-secondary;
   }
   .ui-public-feature-body {
-    @apply text-sm leading-relaxed text-white/[0.35];
+    @apply text-sm leading-relaxed text-text-muted;
   }
   .ui-public-footer {
-    @apply mt-16 text-xs tracking-[0.04em] text-white/[0.18];
+    @apply mt-16 text-xs tracking-[0.04em] text-text-muted;
   }
   .ui-icon-btn {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center;
@@ -493,206 +504,204 @@
     @apply inline-flex min-h-11 min-w-11 lg:min-h-0 lg:min-w-0 items-center justify-center;
   }
   .ui-public-pricing-card {
-    @apply rounded-2xl border border-white/[0.07] bg-white/[0.03] p-7 text-left;
+    @apply rounded-2xl border border-border-subtle bg-surface-base p-7 text-left;
   }
   .ui-public-pricing-card-highlighted {
-    @apply border-white/[0.18] bg-white/[0.06];
+    @apply border-border-default bg-surface-raised;
   }
   .ui-public-primary-action-compact {
-    @apply rounded-full bg-white !py-2 !px-5 text-sm font-semibold text-black transition-opacity hover:opacity-85;
+    @apply rounded-full bg-text-primary !py-2 !px-5 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-85;
   }
   .ui-public-section-kicker {
-    @apply mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-white/25;
+    @apply mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-text-muted;
   }
   .ui-public-section-title {
-    @apply text-2xl font-bold tracking-tight text-white/80;
+    @apply text-2xl font-bold tracking-tight text-text-secondary;
   }
   .ui-public-section-title-spaced {
-    @apply mb-8 text-2xl font-bold tracking-tight text-white/80 sm:mb-12;
+    @apply mb-8 text-2xl font-bold tracking-tight text-text-secondary sm:mb-12;
   }
   .ui-public-section-note {
-    @apply mb-8 sm:mb-12 text-sm text-white/30;
+    @apply mb-8 sm:mb-12 text-sm text-text-muted;
   }
   .ui-public-pricing-popular {
-    @apply mb-4 inline-flex items-center rounded-full bg-white/[0.08] px-2.5 py-1 text-micro font-semibold uppercase tracking-widest text-white/50;
+    @apply mb-4 inline-flex items-center rounded-full bg-surface-raised px-2.5 py-1 text-micro font-semibold uppercase tracking-widest text-text-tertiary;
   }
   .ui-public-pricing-plan {
-    @apply mb-1 text-xs font-semibold uppercase tracking-widest text-white/30;
+    @apply mb-1 text-xs font-semibold uppercase tracking-widest text-text-muted;
   }
   .ui-public-pricing-price-row {
     @apply flex items-baseline gap-1;
   }
   .ui-public-pricing-price {
-    @apply text-4xl font-bold tracking-tight text-white/90;
+    @apply text-4xl font-bold tracking-tight text-text-primary;
   }
   .ui-public-pricing-period {
-    @apply text-sm text-white/30;
+    @apply text-sm text-text-muted;
   }
   .ui-public-pricing-annual {
-    @apply mb-1 text-xs text-white/40;
+    @apply mb-1 text-xs text-text-muted;
   }
   .ui-public-pricing-tagline {
-    @apply mb-6 mt-3 text-sm leading-relaxed text-white/40;
+    @apply mb-6 mt-3 text-sm leading-relaxed text-text-muted;
   }
   .ui-public-pricing-divider {
-    @apply border-t border-white/[0.06] pt-5;
+    @apply border-t border-border-subtle pt-5;
   }
   .ui-public-pricing-features {
     @apply space-y-2.5 text-left;
   }
   .ui-public-pricing-feature {
-    @apply flex items-start gap-2.5 text-sm text-white/40;
+    @apply flex items-start gap-2.5 text-sm text-text-muted;
   }
   .ui-public-pricing-check {
-    @apply mt-0.5 shrink-0 text-white/20;
+    @apply mt-0.5 shrink-0 text-text-muted;
   }
   .ui-public-doc-header {
-    @apply mb-16 border-b border-white/[0.08] pb-12;
+    @apply mb-16 border-b border-border-subtle pb-12;
   }
   .ui-public-doc-meta-row {
     @apply mb-6 flex flex-wrap items-center gap-3;
   }
   .ui-public-doc-badge {
-    @apply rounded-full border border-white/[0.12] bg-white/[0.06] px-3 py-1 font-mono text-xs text-white/40;
+    @apply rounded-full border border-border-subtle bg-surface-raised px-3 py-1 font-mono text-xs text-text-muted;
   }
   .ui-public-doc-meta {
-    @apply font-mono text-xs text-white/25;
+    @apply font-mono text-xs text-text-muted;
   }
   .ui-public-doc-title {
-    @apply mb-5 font-bold tracking-tight text-white;
+    @apply mb-5 font-bold tracking-tight text-text-primary;
     font-size: clamp(2rem, 5vw, 3.25rem);
     line-height: 1.05;
     letter-spacing: -0.03em;
   }
   .ui-public-doc-subtitle {
-    @apply text-lg leading-relaxed text-white/40 sm:text-xl;
+    @apply text-lg leading-relaxed text-text-muted sm:text-xl;
   }
   .ui-public-prose {
     @apply space-y-8;
   }
   .ui-public-prose-h2 {
-    @apply pt-6 text-2xl font-semibold tracking-tight text-white/90;
+    @apply pt-6 text-2xl font-semibold tracking-tight text-text-primary;
     letter-spacing: -0.02em;
   }
   .ui-public-prose-h3 {
-    @apply pt-2 text-lg font-semibold text-white/80;
+    @apply pt-2 text-lg font-semibold text-text-secondary;
   }
   .ui-public-prose-p {
-    @apply text-base leading-[1.8] text-white/50;
+    @apply text-base leading-[1.8] text-text-secondary;
   }
   .ui-public-prose-blockquote {
-    @apply border-l-2 border-white/20 pl-6;
+    @apply border-l-2 border-border-default pl-6;
   }
   .ui-public-prose-blockquote-p {
-    @apply text-base italic leading-relaxed text-white/35;
+    @apply text-base italic leading-relaxed text-text-tertiary;
   }
   .ui-public-prose-li {
-    @apply flex items-start gap-3 text-base leading-relaxed text-white/45;
+    @apply flex items-start gap-3 text-base leading-relaxed text-text-secondary;
   }
   .ui-public-prose-bullet {
-    @apply mt-2.5 h-1 w-1 shrink-0 rounded-full bg-white/25;
+    @apply mt-2.5 h-1 w-1 shrink-0 rounded-full bg-text-muted;
   }
   .ui-public-prose-ol-index {
-    @apply mt-1 shrink-0 font-mono text-xs text-white/25;
+    @apply mt-1 shrink-0 font-mono text-xs text-text-muted;
   }
   .ui-public-code-block {
-    @apply overflow-x-auto rounded-xl border border-white/[0.08] bg-white/[0.04] p-5;
+    @apply overflow-x-auto rounded-xl border border-border-subtle bg-surface-raised p-5;
   }
   .ui-public-code-lang {
-    @apply mb-3 font-mono text-micro uppercase tracking-widest text-white/20;
+    @apply mb-3 font-mono text-micro uppercase tracking-widest text-text-muted;
   }
   .ui-public-code-pre {
-    @apply font-mono text-sm leading-relaxed text-white/60;
+    @apply font-mono text-sm leading-relaxed text-text-secondary;
   }
   .ui-public-doc-footer {
-    @apply mt-24 border-t border-white/[0.08] pt-16 text-center;
+    @apply mt-24 border-t border-border-subtle pt-16 text-center;
   }
   .ui-public-doc-footer-title {
-    @apply mb-2 text-sm font-medium text-white/60;
+    @apply mb-2 text-sm font-medium text-text-secondary;
   }
   .ui-public-doc-footer-note {
-    @apply mb-8 text-sm text-white/30;
+    @apply mb-8 text-sm text-text-muted;
   }
   /* Marketing surface — display + CTA primitives shared by the landing page
-     and the /mission, /philosophy, /investors, /roadmap subpages. */
+     and the /mission, /philosophy, /investors, /roadmap subpages. Theme-aware:
+     every colour resolves through theme tokens that flip with .dark. */
   .ui-public-eyebrow {
-    @apply text-xs uppercase tracking-[0.18em] text-white/50;
+    @apply text-xs uppercase tracking-[0.18em] text-text-tertiary;
   }
   .ui-public-hero-badge {
-    @apply mb-6 inline-block rounded-full border border-white/10 px-4 py-1 text-xs uppercase tracking-[0.15em] text-white/60;
+    @apply mb-6 inline-block rounded-full border border-border-subtle px-4 py-1 text-xs uppercase tracking-[0.15em] text-text-secondary;
   }
   .ui-public-page-title {
-    @apply font-semibold text-white;
+    @apply font-semibold text-text-primary;
     font-size: clamp(2.75rem, 6vw, 4.5rem);
     line-height: 1;
     letter-spacing: -0.035em;
   }
   .ui-public-hero-title {
-    @apply font-heading font-semibold text-white;
+    @apply font-heading font-semibold text-text-primary;
     font-size: clamp(3.25rem, 8.5vw, 5.75rem);
     line-height: 0.92;
     letter-spacing: -0.035em;
   }
   .ui-public-hero-lede {
-    @apply mx-auto mt-8 max-w-2xl text-2xl leading-tight tracking-tight text-white/80;
+    @apply mx-auto mt-8 max-w-2xl text-2xl leading-tight tracking-tight text-text-secondary;
   }
   .ui-public-hero-sublede {
-    @apply mx-auto mt-6 max-w-xl text-lg text-white/50;
+    @apply mx-auto mt-6 max-w-xl text-lg text-text-tertiary;
   }
   .ui-public-display-lg {
-    @apply font-semibold text-white;
+    @apply font-semibold text-text-primary;
     font-size: clamp(2.5rem, 5vw, 3.75rem);
     line-height: 1.02;
     letter-spacing: -0.025em;
   }
   .ui-public-display-md {
-    @apply font-semibold text-white;
+    @apply font-semibold text-text-primary;
     font-size: clamp(2rem, 4vw, 3rem);
     line-height: 1.05;
     letter-spacing: -0.02em;
   }
   .ui-public-cta {
-    @apply inline-flex items-center justify-center rounded-2xl bg-white px-10 py-4 text-lg font-medium text-black transition hover:bg-white/90 active:bg-white/80;
+    @apply inline-flex items-center justify-center rounded-2xl bg-text-primary px-10 py-4 text-lg font-medium text-text-inverted transition-opacity hover:opacity-85 active:opacity-75;
   }
   .ui-public-cta-ghost {
-    @apply inline-flex items-center justify-center rounded-2xl border border-white/20 px-10 py-4 text-lg font-medium text-white/90 transition hover:border-white/40 hover:text-white;
+    @apply inline-flex items-center justify-center rounded-2xl border border-border-default px-10 py-4 text-lg font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary;
   }
   .ui-public-cta-lg {
-    @apply inline-flex items-center justify-center rounded-2xl bg-white px-12 py-4 text-xl font-medium text-black transition hover:bg-white/90;
+    @apply inline-flex items-center justify-center rounded-2xl bg-text-primary px-12 py-4 text-xl font-medium text-text-inverted transition-opacity hover:opacity-85;
   }
   .ui-public-lede {
-    @apply text-2xl leading-snug text-white/70;
+    @apply text-2xl leading-snug text-text-secondary;
   }
   .ui-public-body-lg {
-    @apply text-lg leading-relaxed text-white/80;
+    @apply text-lg leading-relaxed text-text-secondary;
   }
   .ui-public-meta {
-    @apply text-sm text-white/50;
+    @apply text-sm text-text-tertiary;
   }
   .ui-public-hero-fold {
     @apply relative z-10 flex flex-col items-center justify-center px-6 text-center;
     min-height: 92vh;
   }
   .ui-public-section-lede {
-    @apply max-w-2xl text-xl text-white/70;
+    @apply max-w-2xl text-xl text-text-secondary;
   }
   .ui-public-step-num {
-    @apply w-8 shrink-0 font-mono text-sm text-white/40;
+    @apply w-8 shrink-0 font-mono text-sm text-text-muted;
   }
   .ui-public-prose-strong {
-    @apply font-medium text-white;
+    @apply font-medium text-text-primary;
   }
   .ui-public-prose-muted {
-    @apply text-white/60;
+    @apply text-text-secondary;
   }
   .ui-public-band {
-    @apply border-t border-white/10 bg-black/40;
+    @apply border-t border-border-subtle bg-surface-page;
   }
   .ui-brand-mark {
     @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay;
-  }
-  .ui-brand-mark-inverted {
-    @apply flex items-center justify-center rounded-2xl border border-white/12 bg-white/[0.03];
   }
   .ui-brand-mark-compact {
     @apply h-10 w-10;
@@ -700,60 +709,57 @@
   .ui-brand-mark-default {
     @apply h-11 w-11;
   }
-  .ui-brand-kicker-inverted {
-    @apply text-xs font-semibold uppercase tracking-[0.12em] text-white/38;
-  }
-  .ui-brand-wordmark-inverted {
-    @apply mt-1 block text-2xl font-medium tracking-display text-white;
-  }
+  /* Auth surface — same token system as ui-public-* so the marketing and
+     auth surfaces flip together when the user changes theme. Kept as a
+     separate namespace so they can diverge if the auth UX ever does. */
   .ui-auth-label {
-    @apply block text-sm font-medium text-white/[0.55];
+    @apply block text-sm font-medium text-text-secondary;
   }
   .ui-auth-input {
-    @apply w-full rounded-xl border border-white/[0.10] bg-white/[0.06] px-4 py-3 text-sm text-white placeholder:text-white/[0.20] outline-none transition-colors focus:border-white/[0.30];
+    @apply w-full rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-sm text-text-primary placeholder:text-text-muted outline-none transition-colors focus:border-border-strong;
   }
   .ui-auth-card {
-    @apply space-y-5 rounded-2xl border border-white/[0.09] bg-white/[0.04] p-6 sm:p-8 backdrop-blur-[12px];
+    @apply space-y-5 rounded-2xl border border-border-subtle bg-surface-base p-6 sm:p-8 backdrop-blur-[12px];
   }
   .ui-auth-submit-btn {
-    @apply w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35;
+    @apply w-full rounded-xl bg-text-primary py-3 text-sm font-semibold text-text-inverted transition-opacity hover:opacity-90 active:opacity-70 disabled:opacity-35;
   }
   .ui-auth-title {
     font-size: clamp(var(--auth-title-min), var(--auth-title-preferred), var(--auth-title-max));
-    @apply font-bold leading-[1.05] tracking-[-0.04em];
+    @apply font-bold leading-[1.05] tracking-[-0.04em] text-text-primary;
   }
   .ui-auth-subtitle {
-    @apply mt-3 text-base text-white/[0.38];
+    @apply mt-3 text-base text-text-tertiary;
   }
   .ui-auth-icon-badge {
-    @apply mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.10] bg-white/[0.06] text-xl;
+    @apply mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-border-subtle bg-surface-raised text-xl text-text-primary;
   }
   .ui-auth-divider-line {
-    @apply h-px flex-1 bg-white/[0.07];
+    @apply h-px flex-1 bg-border-subtle;
   }
   .ui-auth-divider-label {
-    @apply text-xs text-white/[0.22];
+    @apply text-xs text-text-muted;
   }
   .ui-auth-footer {
-    @apply mt-6 text-center text-sm text-white/[0.18];
+    @apply mt-6 text-center text-sm text-text-muted;
   }
   .ui-auth-footer-link {
-    @apply transition-colors hover:text-white/[0.50];
+    @apply transition-colors hover:text-text-secondary;
   }
   .ui-auth-secondary-btn {
-    @apply flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.09] bg-white/[0.04] py-3 text-sm font-medium text-white/[0.50] transition-colors hover:text-white/[0.80] disabled:opacity-40;
+    @apply flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-base py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary disabled:opacity-40;
   }
   .ui-auth-secondary-btn-strong {
-    @apply border-white/[0.10] bg-white/[0.06] text-white/[0.65] hover:border-white/[0.22] hover:text-white/[0.90];
+    @apply border-border-default bg-surface-raised text-text-primary hover:border-border-strong;
   }
   .ui-auth-note {
-    @apply text-center text-sm text-white/[0.35];
+    @apply text-center text-sm text-text-muted;
   }
   .ui-auth-inline-link {
-    @apply underline hover:text-white/[0.60];
+    @apply underline hover:text-text-secondary;
   }
   .ui-auth-input-disabled {
-    @apply cursor-not-allowed text-white/[0.60] opacity-50;
+    @apply cursor-not-allowed text-text-tertiary opacity-50;
   }
   .ui-auth-container {
     @apply w-full max-w-[400px];
@@ -762,112 +768,112 @@
     @apply mb-8 flex items-center gap-1.5;
   }
   .ui-auth-progress-segment {
-    @apply h-0.5 flex-1 rounded-full bg-white/[0.12] transition-all;
+    @apply h-0.5 flex-1 rounded-full bg-surface-raised transition-all;
   }
   .ui-auth-progress-segment-active {
-    @apply bg-white/50;
+    @apply bg-text-primary;
   }
   .ui-auth-body {
-    @apply text-sm leading-relaxed text-white/40;
+    @apply text-sm leading-relaxed text-text-secondary;
   }
   .ui-auth-list {
-    @apply ml-4 list-decimal space-y-2 text-sm text-white/50;
+    @apply ml-4 list-decimal space-y-2 text-sm text-text-secondary;
   }
   .ui-auth-link {
-    @apply text-white/70 underline-offset-2 hover:underline;
+    @apply text-text-secondary underline-offset-2 hover:underline;
   }
   .ui-auth-inline-code {
-    @apply rounded bg-white/[0.06] px-1 py-0.5 text-xs text-white/60;
+    @apply rounded bg-surface-raised px-1 py-0.5 text-xs text-text-secondary;
   }
   .ui-auth-inset-panel {
-    @apply rounded-xl border border-white/[0.12] bg-white/[0.04] p-3;
+    @apply rounded-xl border border-border-subtle bg-surface-raised p-3;
   }
   .ui-auth-inset-label {
-    @apply mb-1.5 text-xs font-medium text-white/40;
+    @apply mb-1.5 text-xs font-medium text-text-tertiary;
   }
   .ui-auth-mono {
-    @apply min-w-0 truncate font-mono text-xs text-white/70;
+    @apply min-w-0 truncate font-mono text-xs text-text-secondary;
   }
   .ui-auth-mono-wrap {
-    @apply min-w-0 break-all font-mono text-xs leading-relaxed text-white/70;
+    @apply min-w-0 break-all font-mono text-xs leading-relaxed text-text-secondary;
   }
   .ui-auth-selectable-card {
-    @apply w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-3.5 py-3 text-left transition-all hover:border-white/[0.14] hover:bg-white/[0.06];
+    @apply w-full rounded-xl border border-border-subtle bg-surface-base px-3.5 py-3 text-left transition-all hover:border-border-default hover:bg-surface-raised;
   }
   .ui-auth-selectable-card-selected {
-    @apply border-white/30 bg-white/10;
+    @apply border-border-strong bg-surface-raised;
   }
   .ui-auth-confirmation-row {
-    @apply flex items-center gap-2.5 rounded-xl border border-white/[0.14] bg-white/[0.06] px-3.5 py-3;
+    @apply flex items-center gap-2.5 rounded-xl border border-border-default bg-surface-raised px-3.5 py-3;
   }
   .ui-auth-status-banner {
-    @apply flex items-center gap-2 rounded-xl border border-white/[0.14] bg-white/[0.06] px-3.5 py-3 text-sm text-white/70;
+    @apply flex items-center gap-2 rounded-xl border border-border-default bg-surface-raised px-3.5 py-3 text-sm text-text-secondary;
   }
   .ui-auth-muted-link {
-    @apply text-xs text-white/30 transition-colors hover:text-white/55;
+    @apply text-xs text-text-muted transition-colors hover:text-text-secondary;
   }
   .ui-auth-hint {
-    @apply text-center text-sm text-white/35;
+    @apply text-center text-sm text-text-muted;
   }
   .ui-auth-hint-emphasis {
-    @apply text-center text-sm text-white/50;
+    @apply text-center text-sm text-text-tertiary;
   }
   .ui-auth-hint-link {
-    @apply text-white/60 underline underline-offset-2 transition-colors hover:text-white/80;
+    @apply text-text-secondary underline underline-offset-2 transition-colors hover:text-text-primary;
   }
   .ui-auth-mode-tabs {
-    @apply mb-6 flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-1;
+    @apply mb-6 flex rounded-xl border border-border-subtle bg-surface-base p-1;
   }
   .ui-auth-mode-tab {
-    @apply flex-1 rounded-lg py-2 text-sm font-medium text-white/30 transition-colors hover:text-white/55;
+    @apply flex-1 rounded-lg py-2 text-sm font-medium text-text-muted transition-colors hover:text-text-secondary;
   }
   .ui-auth-mode-tab-active {
-    @apply bg-white/[0.09] text-white/80;
+    @apply bg-surface-raised text-text-primary;
   }
   .ui-auth-prefix-field {
-    @apply flex w-full items-center gap-0 rounded-xl border border-white/[0.10] bg-white/[0.06] !py-0 px-4 text-sm text-white outline-none transition-colors focus:border-white/[0.30];
+    @apply flex w-full items-center gap-0 rounded-xl border border-border-subtle bg-surface-raised !py-0 px-4 text-sm text-text-primary outline-none transition-colors focus:border-border-strong;
   }
   .ui-auth-prefix-label {
-    @apply shrink-0 select-none py-3 text-sm text-white/30;
+    @apply shrink-0 select-none py-3 text-sm text-text-muted;
   }
   .ui-auth-prefix-input {
-    @apply flex-1 bg-transparent py-3 text-sm text-white outline-none placeholder:text-white/[0.20];
+    @apply flex-1 bg-transparent py-3 text-sm text-text-primary outline-none placeholder:text-text-muted;
   }
   .ui-auth-loading {
     @apply flex items-center justify-center py-16;
   }
   .ui-auth-spinner {
-    @apply h-6 w-6 animate-spin text-white/30;
+    @apply h-6 w-6 animate-spin text-text-muted;
   }
   .ui-auth-spinner-sm {
-    @apply h-5 w-5 animate-spin text-white/30;
+    @apply h-5 w-5 animate-spin text-text-muted;
   }
   .ui-auth-repo-hint {
-    @apply text-xs text-white/40;
+    @apply text-xs text-text-muted;
   }
   .ui-auth-repo-scroll {
     @apply max-h-60 space-y-1.5 overflow-y-auto pr-1;
   }
   .ui-auth-repo-name {
-    @apply truncate text-sm font-medium text-white/80;
+    @apply truncate text-sm font-medium text-text-secondary;
   }
   .ui-auth-repo-desc {
-    @apply mt-1 truncate text-xs text-white/35;
+    @apply mt-1 truncate text-xs text-text-muted;
   }
   .ui-auth-icon-muted {
-    @apply shrink-0 text-white/40;
+    @apply shrink-0 text-text-muted;
   }
   .ui-auth-icon-faint {
-    @apply h-3 w-3 shrink-0 text-white/30;
+    @apply h-3 w-3 shrink-0 text-text-muted;
   }
   .ui-auth-status-meta {
-    @apply text-xs text-white/35;
+    @apply text-xs text-text-muted;
   }
   .ui-auth-meta-inline {
-    @apply flex shrink-0 items-center gap-1 text-xs text-white/30;
+    @apply flex shrink-0 items-center gap-1 text-xs text-text-muted;
   }
   .ui-auth-owner-note {
-    @apply text-sm text-white/35;
+    @apply text-sm text-text-muted;
   }
   .ui-auth-row-actions {
     @apply flex gap-2;

@@ -20,8 +20,8 @@ export function PublicSurface({
       <div aria-hidden className="ui-public-backdrop" />
       <nav className="ui-public-nav">
         <div className="flex items-center gap-8">
-          <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white/40">
-            <BrandMark inverted />
+          <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
+            <BrandMark />
           </Link>
           {navLinks && navLinks.length > 0 && (
             <div className="hidden items-center md:flex">

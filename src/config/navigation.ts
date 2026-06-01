@@ -13,6 +13,11 @@ import {
   Settings,
   Brain,
   History,
+  Compass,
+  Anchor,
+  Map,
+  TrendingUp,
+  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -45,3 +50,14 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 export const MOBILE_NAV_ITEMS = NAV_ITEMS.filter((item) => item.mobile);
+
+// Secondary nav — public-facing marketing pages, surfaced in the sidebar
+// below the main app sections so logged-in users can reach the marketing
+// surface without leaving the app shell.
+export const SITE_NAV_ITEMS: NavItem[] = [
+  { id: "mission",    label: "Mission",    description: "Why we exist",              href: "/mission",    icon: Compass,    active: true, mobile: false },
+  { id: "philosophy", label: "Philosophy", description: "Principles we build by",    href: "/philosophy", icon: Anchor,     active: true, mobile: false },
+  { id: "roadmap",    label: "Roadmap",    description: "Product direction",         href: "/roadmap",    icon: Map,        active: true, mobile: false },
+  { id: "investors",  label: "Investors",  description: "For investors",             href: "/investors",  icon: TrendingUp, active: true, mobile: false },
+  { id: "whitepaper", label: "Whitepaper", description: "Technical architecture",    href: "/whitepaper", icon: FileText,   active: true, mobile: false },
+];
