@@ -2,11 +2,17 @@ import { Brain, Database, Link2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getEntityStats } from "@/db/queries/memory";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneConfigured, isPrivateZoneUnlocked } from "@/lib/private-zone";
 import { formatCount } from "@/lib/format";
 import Link from "next/link";
 
 export async function MemorySummaryCard() {
   const userId = await requirePageUserId();
+  // Memory lives in the private zone — when locked, hide the card from
+  // /system rather than leak entity / relation counts.
+  if (isPrivateZoneConfigured() && !(await isPrivateZoneUnlocked(userId))) {
+    return null;
+  }
   // Match the defensive shape of sibling RecentFailuresCard
   // (`getRecentDebugLogs(10).catch(() => [])`). Without this, any
   // Neon-side error in getEntityStats propagated past Suspense into

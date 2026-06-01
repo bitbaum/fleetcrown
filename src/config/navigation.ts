@@ -77,22 +77,25 @@ export type SidebarSection = {
 export const SIDEBAR_SECTIONS: SidebarSection[] = [
   {
     id: "work",
+    // Operational + editorial output: the daily fleet view, agent dispatch,
+    // project state, prompt library, audit log, system health, and the
+    // Thoughts essays the user authors and publishes from inside the app.
     label: "Work",
-    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.history, NAV.system],
-  },
-  {
-    id: "knowledge",
-    label: "Knowledge",
-    items: [NAV.memory, NAV.thoughts],
+    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.history, NAV.system, NAV.thoughts],
   },
   {
     id: "private",
+    // Personal data — the user's people graph, goals, habits, events, money
+    // ledger, and the Memory entity graph derived from all of the above.
+    // Hidden behind the PIN gate when configured + locked.
     label: "Private",
     private: true,
-    items: [NAV.people, NAV.goals, NAV.habits, NAV.events, NAV.money],
+    items: [NAV.memory, NAV.people, NAV.goals, NAV.habits, NAV.events, NAV.money],
   },
   {
     id: "site",
+    // Public marketing pages, surfaced inside the app shell so logged-in
+    // users can reach them without leaving the sidebar.
     label: "Site",
     items: [NAV.mission, NAV.philosophy, NAV.roadmap, NAV.investors, NAV.whitepaper],
   },
