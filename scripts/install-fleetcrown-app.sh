@@ -51,7 +51,7 @@ mkdir -p "$HOME/.config/systemd/user"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=FleetCrown — Life OS (local production server)
-Documentation=https://github.com/g-but/cockpit
+Documentation=https://github.com/maonakamoto/cockpit
 After=network.target
 
 [Service]

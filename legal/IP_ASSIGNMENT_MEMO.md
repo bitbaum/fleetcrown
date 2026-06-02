@@ -10,8 +10,8 @@
 
 I, Georgy Butaev (the "Founder"), residing in Switzerland, sole author and copyright holder of the software, designs, documentation, content, brand assets, and other materials (collectively, the "Work Product") created in connection with the projects currently known as:
 
-- **FleetCrown** — repository at `github.com/g-but/cockpit` (private; "cockpit" is the legacy repository directory name preserved for git history and in-flight daemon paths under `~/.config/cockpit`. The product is FleetCrown.)
-- **OrangeCat** — repository at `github.com/g-but/orangecat`
+- **FleetCrown** — repository at `github.com/maonakamoto/cockpit` (private; "cockpit" is the legacy repository directory name preserved for git history and in-flight daemon paths under `~/.config/cockpit`. The product is FleetCrown.)
+- **OrangeCat** — repository at `github.com/maonakamoto/orangecat`
 
 hereby declare my intent that all Work Product, whether created before or after the date of this memorandum, is and shall remain my sole property until such time as the planned corporate structure ("bitbaum AG", a Swiss Aktiengesellschaft to be incorporated in the Canton of Zug as a holding entity, together with its product-specific subsidiary GmbHs including but not limited to **orangecat GmbH** and **fleetcrown GmbH** (the latter owning the FleetCrown product; the repository directory remains "cockpit" for git-history continuity and for the in-flight daemon-path transition under `~/.config/cockpit`, `cockpit-daemon`, etc.), collectively "NewCo") is formed for the purpose of owning, developing, and commercializing these projects, at which point all Work Product shall be irrevocably assigned to the appropriate NewCo entity by formal written instrument of assignment.
 

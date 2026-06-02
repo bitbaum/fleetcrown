@@ -33,7 +33,7 @@ DEADLINE=$(( $(date +%s) + TIMEOUT ))
 prev=""
 
 while [ "$(date +%s)" -lt "$DEADLINE" ]; do
-  # Top deploy row, e.g.: "  5m  orangecat/cockpit  https://...  ● Ready  Production  2m  g-but"
+  # Top deploy row, e.g.: "  5m  orangecat/cockpit  https://...  ● Ready  Production  2m  maonakamoto"
   # Vercel CLI writes the deploy table to STDERR (not stdout) — must merge
   # with 2>&1 to capture. `2>/dev/null` would silently swallow every row.
   row=$(vercel ls --prod 2>&1 | awk '/●/{print; exit}')

@@ -287,19 +287,19 @@ export const DESKTOP_DOWNLOAD = {
       id: "mac",
       label: "macOS",
       note: "Build from source today (Universal) · Signed one-click coming soon",
-      url: "https://github.com/g-but/cockpit/releases",
+      url: "https://github.com/maonakamoto/cockpit/releases",
     },
     {
       id: "win",
       label: "Windows",
       note: "Build from source today (x64) · Signed installer coming soon",
-      url: "https://github.com/g-but/cockpit/releases",
+      url: "https://github.com/maonakamoto/cockpit/releases",
     },
     {
       id: "linux",
       label: "Linux",
       note: "AppImage • .deb (build now) · Signed packages + repos coming soon",
-      url: "https://github.com/g-but/cockpit/releases",
+      url: "https://github.com/maonakamoto/cockpit/releases",
     },
   ],
   fallback: {
@@ -311,7 +311,7 @@ export const DESKTOP_DOWNLOAD = {
   buildFromSource: {
     label: "Build the Fleet Runner (current way to get it)",
     description: "Clone and build to get a native AppImage / .deb (or equivalent on your OS) you can run immediately. This is the local authoritative runtime.",
-    steps: "git clone https://github.com/g-but/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
+    steps: "git clone https://github.com/maonakamoto/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
   },
   future: {
     desktop: "One-click downloadable installers with auto-update for macOS, Windows, and Linux (App Store, winget, apt, etc. where appropriate).",

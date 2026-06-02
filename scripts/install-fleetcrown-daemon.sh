@@ -107,7 +107,7 @@ mkdir -p "$(dirname "$SERVICE_FILE")"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=FleetCrown local daemon
-Documentation=https://github.com/g-but/cockpit
+Documentation=https://github.com/maonakamoto/cockpit
 After=network.target
 # If it crashes 5× in 2 min, stop retrying — something is wrong
 StartLimitIntervalSec=120

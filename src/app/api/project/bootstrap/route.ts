@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   // ── 2. Create GitHub repo ─────────────────────────────────────────────────
   let gitUrl = "";
   try {
-    const ghUser = githubUser ?? "g-but";
+    const ghUser = githubUser ?? "maonakamoto";
     const descArg = tagline ? `--description ${JSON.stringify(tagline)}` : "";
     const { stdout } = await execAsync(
       `gh repo create ${ghUser}/${repoSlug} --${visibility} ${descArg} --json url,sshUrl`,
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     const msg = String(err);
     // Repo may already exist — treat as non-fatal
     steps.push({ step: "Create GitHub repo", ok: false, detail: msg });
-    gitUrl = `https://github.com/${githubUser ?? "g-but"}/${repoSlug}`;
+    gitUrl = `https://github.com/${githubUser ?? "maonakamoto"}/${repoSlug}`;
   }
 
   // ── 3. Git init + remote ──────────────────────────────────────────────────

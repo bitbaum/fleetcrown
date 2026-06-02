@@ -23,7 +23,7 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 ## Get the runnable app (Linux example)
 
 ```bash
-git clone https://github.com/g-but/cockpit.git
+git clone https://github.com/maonakamoto/cockpit.git
 cd cockpit/desktop
 npm install
 npm run dist:linux

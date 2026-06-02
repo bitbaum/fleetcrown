@@ -50,7 +50,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "g-but",
+      "owner": "maonakamoto",
       "repo": "cockpit"
     }
   },
