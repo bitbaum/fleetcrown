@@ -4,9 +4,9 @@
  * contexts — neither marks itself "use client" / "use server" since the
  * function is universal.
  *
- * "George Butaev" → "GB"
- * "George"        → "GE"  (first two letters of a single word)
- * ""              → "?"
+ * "Mao Nakamoto" → "MN"
+ * "Mao"          → "MA"  (first two letters of a single word)
+ * ""             → "?"
  */
 export function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
