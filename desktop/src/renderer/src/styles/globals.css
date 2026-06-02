@@ -13,7 +13,10 @@
   --border: #1f1f1f;
   --text: #ffffff;
   --text-muted: #888888;
+  --text-subtle: #555555;
   --accent: #ff5c00; /* x.ai-like warm orange for CTAs and highlights */
+  --text-micro: 10px;
+  --text-nano: 9px;
 }
 
 body {
@@ -79,4 +82,101 @@ body {
   border: 1px solid var(--border);
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* Additional runner component primitives — keep the pure black x.ai aesthetic
+   but eliminate raw hex / arbitrary sizes in JSX. All visual decisions here. */
+.runner-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.runner-input {
+  background: #000;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  outline: none;
+}
+.runner-input:focus {
+  border-color: var(--accent);
+}
+
+.runner-btn {
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #111;
+  color: var(--text);
+  transition: all 0.1s ease;
+}
+.runner-btn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.runner-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.runner-btn-ghost {
+  font-size: 12px;
+  color: var(--accent);
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+.runner-btn-ghost:hover {
+  color: #fff;
+  background: #111;
+}
+
+.runner-label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.runner-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+.runner-project {
+  background: #050505;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  transition: border-color 0.1s ease;
+}
+.runner-project:hover {
+  border-color: #333;
+}
+.runner-project.selected {
+  border-color: var(--accent);
+  background: #0a0a0a;
+}
+
+.runner-status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 9999px;
+}
+
+.runner-result {
+  background: #050505;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.45;
 }

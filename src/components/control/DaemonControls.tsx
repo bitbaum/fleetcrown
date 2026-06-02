@@ -58,7 +58,7 @@ export function DaemonControls({
         type="button"
         onClick={() => act("start")}
         disabled={disabled || busy !== null || currentState === "active"}
-        title={disabled ? cloudTooltip : "Start the local daemon (systemctl --user start cockpit-daemon)"}
+        title={disabled ? cloudTooltip : "Start the local daemon (systemctl --user start fleetcrown-daemon or equivalent)"}
         className="ui-btn-secondary ui-btn-xs inline-flex items-center gap-1.5 disabled:opacity-40"
       >
         {busy === "start" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}

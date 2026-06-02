@@ -149,35 +149,35 @@ function App(): JSX.Element {
   const projectKeys = projects ? Object.keys(projects) : []
 
   return (
-    <div className="min-h-screen bg-[#000] text-[#fff] font-sans">
-      {/* x.ai-style minimal header */}
-      <div className="border-b border-[#1f1f1f] px-8 py-5 flex items-center justify-between">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans">
+      {/* Runner header — uses runner primitives + fleet-* from globals */}
+      <div className="border-b border-[var(--border)] px-8 py-5 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-2.5 h-2.5 bg-[#ff5c00] rounded-full" />
+          <div className="runner-status-dot" />
           <div>
-            <div className="fleet-header tracking-[3px]">FLEETCROWN</div>
-            <div className="text-[15px] font-medium tracking-[-0.2px] -mt-0.5">Fleet Runner</div>
+            <div className="fleet-header">FLEETCROWN</div>
+            <div className="text-sm font-medium tracking-[-0.2px] -mt-0.5">Fleet Runner</div>
           </div>
         </div>
-        <div className="text-xs text-[#666] font-mono">LOCAL • AUTHORITATIVE</div>
+        <div className="text-xs text-[var(--text-muted)] font-mono tracking-[1px]">LOCAL • AUTHORITATIVE</div>
       </div>
 
       <div className="max-w-[860px] mx-auto px-8 pt-16 pb-24">
-        {/* Big x.ai-style headline */}
+        {/* Hero */}
         <div className="mb-12">
           <div className="fleet-header mb-2">YOUR MACHINES. YOUR AGENTS.</div>
           <h1 className="fleet-title tracking-[-1.5px] leading-none">
             The Fleet Runner<br />runs here.
           </h1>
-          <p className="mt-4 max-w-md text-[#888] text-[15px]">
+          <p className="mt-4 max-w-md text-[15px] text-[var(--text-muted)]">
             Direct execution. No intermediaries. The desktop app is the source of truth for everything your agents do.
           </p>
 
-          {/* Connect / Token */}
-          <div className="mt-6 p-4 border border-[#1f1f1f] rounded-xl bg-[#0a0a0a]">
+          {/* Connect card */}
+          <div className="runner-card mt-6 p-4">
             <div className="flex items-center gap-2 mb-2">
-              <div className="text-xs tracking-widest text-[#666]">CONNECT TO FLEETCROWN</div>
-              {connected && <div className="text-[10px] px-2 py-0.5 bg-emerald-900 text-emerald-400 rounded">CONNECTED</div>}
+              <div className="runner-label">CONNECT TO FLEETCROWN</div>
+              {connected && <div className="text-[length:var(--text-micro)] px-2 py-0.5 bg-emerald-900 text-emerald-400 rounded">CONNECTED</div>}
             </div>
             <div className="flex gap-2">
               <input
@@ -185,54 +185,52 @@ function App(): JSX.Element {
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Paste agent token (ck_...)"
-                className="flex-1 bg-black border border-[#1f1f1f] px-4 py-2 text-sm rounded-xl focus:border-[#ff5c00] outline-none"
+                className="runner-input flex-1"
               />
-              <button onClick={handleConnect} className="px-4 py-2 text-sm border border-[#1f1f1f] rounded-xl hover:bg-[#111]">
+              <button onClick={handleConnect} className="runner-btn">
                 CONNECT
               </button>
             </div>
-            {configDir && <div className="text-[10px] text-[#444] mt-1 font-mono">Saved to {configDir}</div>}
+            {configDir && <div className="text-[length:var(--text-micro)] text-[var(--text-muted)] mt-1 font-mono">Saved to {configDir}</div>}
           </div>
         </div>
 
-        {/* Status — very clean */}
-        <div className="section mb-6 p-8">
+        {/* Runtime status */}
+        <div className="runner-card mb-6 p-8">
           <div className="flex items-baseline justify-between mb-6">
-            <div className="text-[13px] tracking-[1px] text-[#666] font-medium">RUNTIME</div>
-            <button 
-              onClick={refreshStatus} 
-              className="text-xs text-[#ff5c00] hover:text-white transition-colors"
-            >
-              REFRESH
-            </button>
-            <button 
-              onClick={handleSync}
-              disabled={!connected}
-              className="text-xs text-[#ff5c00] hover:text-white transition-colors disabled:opacity-50 ml-2"
-            >
-              SYNC TO WEB
-            </button>
+            <div className="runner-label">RUNTIME</div>
+            <div className="flex items-center gap-3">
+              <button onClick={refreshStatus} className="runner-btn-ghost">
+                REFRESH
+              </button>
+              <button 
+                onClick={handleSync}
+                disabled={!connected}
+                className="runner-btn-ghost disabled:opacity-50"
+              >
+                SYNC TO WEB
+              </button>
+            </div>
           </div>
           {status ? (
-            <div className="font-mono text-[13px] leading-relaxed text-[#ccc]">
-              {JSON.stringify(status, null, 2)}
+            <div className="runner-mono text-[length:var(--text-micro)] space-y-1">
+              <div>homeStack: {status.homeStackIntegrated ? '✓' : '—'} • projects: {status.projectCount ?? 0}</div>
+              <div>watcher: {status.hasWatcher ? 'embedded ✓' : '—'} • real log: {status.usesRealEventLog ? 'yes' : 'no'}</div>
+              <div className="opacity-60 mt-2">raw: {JSON.stringify(status, null, 0)}</div>
             </div>
           ) : (
-            <div className="text-[#555] text-sm">Loading local state…</div>
+            <div className="text-[var(--text-muted)] text-sm">Loading local state…</div>
           )}
         </div>
 
         {/* Projects */}
-        <div className="section p-8">
+        <div className="runner-card p-8">
           <div className="flex items-baseline justify-between mb-6">
             <div>
-              <div className="text-[13px] tracking-[1px] text-[#666] font-medium">PROJECTS</div>
+              <div className="runner-label">PROJECTS</div>
               <div className="text-2xl font-semibold tracking-[-0.4px] mt-1">{projectKeys.length} active</div>
             </div>
-            <button 
-              onClick={loadProjects} 
-              className="text-xs text-[#ff5c00] hover:text-white transition-colors"
-            >
+            <button onClick={loadProjects} className="runner-btn-ghost">
               RELOAD CONFIG
             </button>
           </div>
@@ -245,14 +243,14 @@ function App(): JSX.Element {
                   <div
                     key={key}
                     onClick={() => setSelectedProject(key)}
-                    className={`project-row flex items-center justify-between px-5 py-4 rounded-xl cursor-pointer ${isSel ? 'ring-1 ring-[#ff5c00]' : ''}`}
+                    className={`runner-project flex items-center justify-between cursor-pointer ${isSel ? 'selected' : ''}`}
                   >
                     <div className="min-w-0">
-                      <div className="font-medium text-[15px] tracking-[-0.1px] flex items-center gap-2">
+                      <div className="font-medium text-sm tracking-[-0.1px] flex items-center gap-2">
                         {key}
-                        {isSel && <span className="text-[10px] text-[#ff5c00]">SELECTED</span>}
+                        {isSel && <span className="text-[length:var(--text-micro)] text-[var(--accent)]">SELECTED</span>}
                       </div>
-                      <div className="text-[11px] text-[#555] font-mono truncate mt-px">
+                      <div className="text-[length:var(--text-micro)] text-[var(--text-muted)] font-mono truncate mt-px">
                         {projects[key]?.dir || '—'}
                       </div>
                     </div>
@@ -264,7 +262,7 @@ function App(): JSX.Element {
                             key={intent}
                             disabled={!!dispatching}
                             onClick={(e) => { e.stopPropagation(); handleDispatch(key, intent) }}
-                            className="intent-btn text-[10px] tracking-[0.5px] uppercase"
+                            className="intent-btn text-[length:var(--text-micro)] tracking-[0.5px] uppercase"
                           >
                             {dispatching === `${key}:${intent}` ? '…' : intent.replace('_', ' ')}
                           </button>
@@ -276,20 +274,20 @@ function App(): JSX.Element {
               })}
             </div>
           ) : (
-            <div className="text-[#555] py-8 text-sm">
+            <div className="text-[var(--text-muted)] py-8 text-sm">
               No projects found. Add entries to your <span className="font-mono">agent-projects.conf</span>.
             </div>
           )}
         </div>
 
-        {/* x.ai-style ultra-minimal command bar */}
+        {/* Command bar + custom prompt */}
         <div className="mt-8">
-          <div className="text-[10px] tracking-[2px] text-[#444] mb-2">COMMAND</div>
+          <div className="runner-label mb-2">COMMAND</div>
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="next best thing for project-x"
-              className="flex-1 bg-black border border-[#1f1f1f] focus:border-[#ff5c00] rounded-xl px-5 py-3 text-sm placeholder:text-[#333] outline-none"
+              className="runner-input flex-1"
               onKeyDown={(e) => {
                 const target = selectedProject || projectKeys[0]
                 if (e.key === 'Enter' && e.currentTarget.value.trim() && target) {
@@ -298,25 +296,22 @@ function App(): JSX.Element {
                 }
               }}
             />
-            <button
-              onClick={handlePing}
-              className="text-xs px-5 rounded-xl border border-[#1f1f1f] hover:bg-[#111] tracking-widest"
-            >
+            <button onClick={handlePing} className="runner-btn text-xs tracking-widest px-5">
               PING
             </button>
           </div>
-          <div className="text-[10px] text-[#333] mt-1.5">Type a prompt or intent. First project will be used for demo.</div>
+          <div className="text-[length:var(--text-micro)] text-[var(--text-muted)] mt-1.5">Type a prompt or intent. Selected project (or first) will be used.</div>
         </div>
 
         {response && (
-          <div className="mt-4 response-box p-5 rounded-2xl text-[#888] whitespace-pre-wrap overflow-auto max-h-56 text-xs leading-relaxed border border-[#1a1a1a]">
+          <div className="runner-result mt-4 text-[var(--text-muted)] whitespace-pre-wrap overflow-auto max-h-56 text-xs border border-[var(--border)]">
             {response}
           </div>
         )}
 
-        <div className="mt-16 text-center">
-          <div className="text-[10px] tracking-[2px] text-[#444]">BUILT FOR BUILDERS WHO RUN REAL FLEETS</div>
-          <div className="text-[10px] text-[#333] mt-1">Requires: zellij + at least one agent CLI (claude, codex, etc.) on PATH</div>
+        <div className="mt-16 text-center text-[length:var(--text-micro)] tracking-[2px] text-[var(--text-muted)]">
+          BUILT FOR BUILDERS WHO RUN REAL FLEETS<br />
+          <span className="text-[9px] opacity-60">Requires: zellij + at least one agent CLI (claude, codex, etc.) on PATH. Embedded watcher for handoffs active.</span>
         </div>
       </div>
     </div>
