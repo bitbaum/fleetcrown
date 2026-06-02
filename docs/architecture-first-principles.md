@@ -1,9 +1,9 @@
-# Cockpit Architecture Principles And Execution Plan
+# FleetCrown Architecture Principles And Execution Plan
 
 ## Purpose
 
 This document defines the engineering principles, first-principles framing,
-and implementation plan for turning Cockpit from a useful Claude-shaped control
+and implementation plan for turning FleetCrown from a useful Claude-shaped control
 surface into a neutral orchestration system for multiple projects, users, and
 agents.
 
@@ -104,7 +104,7 @@ Rules:
 
 Anti-patterns:
 
-- one state name in `dotfiles`, another in Cockpit
+- one state name in `dotfiles`, another in FleetCrown
 - prompt semantics duplicated across UI, routes, and local scripts
 - deriving domain truth from whichever file happens to exist
 
@@ -258,7 +258,7 @@ Owns:
 
 This layer is the brain of the system.
 
-### 4. Cockpit UI
+### 4. FleetCrown UI
 
 Owns:
 
@@ -409,7 +409,7 @@ Acceptance criteria:
 - orchestration core can trigger the same intent through multiple adapters
 - runtime-specific files are hidden behind adapter code
 
-### Phase 4: Move orchestration policy into Cockpit
+### Phase 4: Move orchestration policy into FleetCrown
 
 Goal:
 
@@ -458,14 +458,14 @@ Deliverables:
 
 - narrow compatibility hook surface
 - local runtime installer/bootstrap docs
-- migration of remaining semantic logic into Cockpit
+- migration of remaining semantic logic into FleetCrown
 - cleanup of obsolete Claude-only naming
 
 Acceptance criteria:
 
 - `dotfiles` is optional for orchestration semantics
 - local scripts no longer define canonical state names
-- a second machine/user setup can reproduce behavior from Cockpit-owned logic
+- a second machine/user setup can reproduce behavior from FleetCrown-owned logic
 
 ## Immediate Next Actions
 

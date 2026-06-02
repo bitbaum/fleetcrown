@@ -59,7 +59,7 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
     kind: "external",
     label: "OrangeCat",
     href: "https://orangecat.ch",
-    description: "Sibling product — the transaction half of the techno-capital machine for individuals. Cockpit is the production half; OrangeCat is the economic half. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
+    description: "Sibling product — the transaction half of the techno-capital machine for individuals. FleetCrown is the production half; OrangeCat is the economic half. See the Thoughts essay The Two Halves of the Individual Singularity for the joint architecture.",
   },
 ];
 

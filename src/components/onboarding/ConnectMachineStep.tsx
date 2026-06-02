@@ -121,7 +121,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
       </div>
 
       <ol className="ui-auth-list">
-        <li>Generate a token below and run the one-line installer. It installs and starts the Cockpit helper as a background service.</li>
+        <li>Generate a token below and run the one-line installer. It installs and starts the FleetCrown helper as a background service.</li>
         <li>After that, agent launches, repairs, and tab controls happen from this website.</li>
       </ol>
 

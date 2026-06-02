@@ -14,7 +14,7 @@ const AUTOMATION_HINT: Record<AutoInjectMode, string> = {
   queue_only: "Queue — agents drain your written queue, then stop.",
   beacon: "Beacon — popup with smart choices on every handoff; countdown auto-picks if you're away.",
   next_best: "Continuous — agents auto-run the canned next-best step on every handoff.",
-  strategist: "Mission — Cockpit composes context-aware prompts from project mission, goals, and history.",
+  strategist: "Mission — FleetCrown composes context-aware prompts from project mission, goals, and history.",
 };
 
 type Props = {

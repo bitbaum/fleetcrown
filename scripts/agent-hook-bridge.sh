@@ -86,7 +86,7 @@ if [ -n "$_BEACON_SETTINGS_JSON" ]; then
   _BEACON_AUTO_MODE=$(printf '%s' "$_BEACON_SETTINGS_JSON" | python3 -c \
     "import sys,json; d=json.load(sys.stdin); print(d.get('auto_inject_mode','beacon'))" 2>/dev/null || echo beacon)
 else
-  # Cockpit offline — read from Python config (which reads the legacy file)
+  # FleetCrown offline — read from Python config (which reads the legacy file)
   _BEACON_MIN_IDLE=$(python3 -c "
 import sys; sys.path.insert(0, '$SCRIPT_DIR')
 from _beacon_config import get_min_idle_seconds
@@ -387,7 +387,7 @@ switch_agent_and_continue() {
 #   _BEACON_AUTO_MODE = "off"    → no autopilot
 #   _BEACON_AUTO_MODE = anything → POST dispatch; server-side gate decides
 #
-# Cockpit's promise is autopilot. The Stop hook is the moment that promise
+# FleetCrown's promise is autopilot. The Stop hook is the moment that promise
 # pays off — agent finished, next prompt composed and running before the user
 # looks. /control + push notifications carry the ambient signal.
 autopilot_dispatch_and_inject() {

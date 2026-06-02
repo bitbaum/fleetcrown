@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Migrate Cockpit production Postgres: Neon → Oracle VM (minimal manual steps).
+# Migrate FleetCrown production Postgres: Neon → Oracle VM (minimal manual steps).
 #
 # Prerequisites (one-time):
 #   ./scripts/db/oracle-bootstrap.sh

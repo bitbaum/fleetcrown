@@ -8,9 +8,9 @@
 //   APP_SLUG     Lowercase kebab. Used in URLs, file paths, env-var prefixes.
 //   APP_DOMAIN   Canonical hostname (no scheme). Used in callbacks, emails, copy.
 
-export const APP_NAME        = "Cockpit";
-export const APP_SLUG        = "cockpit";
-export const APP_DOMAIN      = "cockpitapp.vercel.app";
+export const APP_NAME        = "FleetCrown";
+export const APP_SLUG        = "fleetcrown";
+export const APP_DOMAIN      = "fleetcrown.vercel.app";
 export const APP_KICKER      = "Personal Systems";
 export const APP_DESCRIPTION = "Command your agents, projects, and personal systems from one workspace.";
 
@@ -31,5 +31,5 @@ export const MARKETING_HERO_PRIMARY   = "Run your fleet.";
 export const MARKETING_HERO_SECONDARY = "From anywhere.";
 export const MARKETING_POSITIONING  = "Local execution · Remote command · No compromises";
 
-// Easy rebrand surface — use this in marketing instead of hardcoding "Cockpit".
+// Easy rebrand surface — use this in marketing instead of hardcoding "FleetCrown".
 export const PRODUCT_NAME = APP_NAME;

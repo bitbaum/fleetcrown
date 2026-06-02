@@ -1,6 +1,6 @@
-# Cockpit Desktop (Fleet Runner)
+# Fleet Runner Desktop (for FleetCrown)
 
-This is the native desktop application — the **primary local runtime** for Cockpit (the "local fleet runner").
+This is the native desktop application — the **primary local runtime** for FleetCrown (the "local fleet runner").
 
 See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, architecture, and prioritized execution steps.
 
@@ -24,8 +24,8 @@ npm run dist:linux
 Then run:
 
 ```bash
-chmod +x dist/Cockpit\ Fleet\ Runner-0.1.0.AppImage
-./dist/Cockpit\ Fleet\ Runner-0.1.0.AppImage
+chmod +x dist/Fleet\ Runner-0.1.0.AppImage
+./dist/Fleet\ Runner-0.1.0.AppImage
 ```
 
 (Or install the .deb.)

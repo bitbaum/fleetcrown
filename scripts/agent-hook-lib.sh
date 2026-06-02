@@ -1,6 +1,6 @@
 #!/bin/bash
 # Shared utilities for local agent hooks.
-# This file is Cockpit-owned so runtime glue can remain thin in dotfiles.
+# This file is FleetCrown-owned so runtime glue can remain thin in dotfiles.
 
 _CONF="${AGENT_PROJECTS_CONF:-${CLAUDE_PROJECTS_CONF:-$HOME/.config/agent-projects.conf}}"
 _PROMPTS="${AGENT_PROMPTS_FILE:-${CLAUDE_PROMPTS:-$HOME/.config/agent-prompts.json}}"
@@ -11,7 +11,7 @@ _DBUS="unix:path=/run/user/$(id -u)/bus"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
 
-# Cockpit handoff session directory per adapter.
+# FleetCrown handoff session directory per adapter.
 # Delegates to the centralized definition in _agents.sh (the bash mirror of the registry).
 _session_dir() {
   _agent_session_dir "${1:-claude}"
@@ -309,7 +309,7 @@ get_prompt() {
   jq -r --arg k "$1" '.[] | select(.key == $k) | .prompt' "$_PROMPTS" 2>/dev/null
 }
 
-# Resolve conf/registry tab name to the live Zellij tab (exact or "Cockpit Cursor" suffix).
+# Resolve conf/registry tab name to the live Zellij tab (exact or "FleetCrown Cursor" suffix).
 _resolve_live_tab_name() {
   local tab="$1"
   [ -z "$tab" ] && return 1

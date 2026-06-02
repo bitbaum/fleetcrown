@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# install-beacon.sh — Install Cockpit Beacon on this machine
+# install-beacon.sh — Install FleetCrown Beacon on this machine
 #
-# Cockpit Beacon is the desktop launcher that opens the Cockpit web popup
+# FleetCrown Beacon is the desktop launcher that opens the FleetCrown web popup
 # when Claude Code (or any AI agent) finishes a session. The popup itself
-# lives in the Cockpit web app (/beacon/live) — beacon.py just writes the
+# lives in the FleetCrown web app (/beacon/live) — beacon.py just writes the
 # session file to /tmp and launches a Chrome --app= frameless window.
 #
 # Requirements: Python 3.11+, Zellij, jq, a Chromium-family browser
@@ -65,7 +65,7 @@ if [[ "${1:-}" == "--sync" ]]; then
   exit 0
 fi
 
-echo "${bold}Cockpit Beacon installer${reset}"
+echo "${bold}FleetCrown Beacon installer${reset}"
 echo ""
 
 # ── 1. Copy beacon scripts ───────────────────────────────────────────────────
@@ -162,7 +162,7 @@ fi
 PROJECTS_FILE="$CONFIG_DIR/agent-projects.conf"
 if [ ! -f "$PROJECTS_FILE" ]; then
   cat > "$PROJECTS_FILE" << 'PROJECTS'
-# Cockpit Beacon — project registry
+# FleetCrown Beacon — project registry
 # Maps Zellij tab names to project directories.
 # Format (one per line):  tab_name|/absolute/path/to/project
 # Tab name is case-insensitive and matched against Zellij's tab list.

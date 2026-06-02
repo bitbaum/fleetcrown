@@ -56,9 +56,9 @@ export function renderPromptForDispatch(input: RenderInput): string {
 function selfTest() {
   let pass = 0, fail = 0;
   for (const intent of ORCHESTRATION_TASK_INTENT_IDS) {
-    const customBody = intent === "custom" ? "run security audit on Cockpit" : undefined;
+    const customBody = intent === "custom" ? "run security audit on FleetCrown" : undefined;
     const out = renderPromptForDispatch({
-      project: "Cockpit",
+      project: "FleetCrown",
       projectPath: "/home/g/dev/cockpit",
       intent,
       customInstructions: customBody,
@@ -76,7 +76,7 @@ function selfTest() {
       name: "queue items render under 'User's prompt queue for this project'",
       check: () => {
         const out = renderPromptForDispatch({
-          project: "Cockpit",
+          project: "FleetCrown",
           intent: "next_best",
           queue: ["fix tests", "ship the docs"],
         });
@@ -89,7 +89,7 @@ function selfTest() {
       name: "empty queue → no queue block rendered",
       check: () => {
         const out = renderPromptForDispatch({
-          project: "Cockpit",
+          project: "FleetCrown",
           intent: "next_best",
           queue: [],
         });
@@ -99,7 +99,7 @@ function selfTest() {
     {
       name: "undefined queue → no queue block rendered (back-compat)",
       check: () => {
-        const out = renderPromptForDispatch({ project: "Cockpit", intent: "next_best" });
+        const out = renderPromptForDispatch({ project: "FleetCrown", intent: "next_best" });
         return !out.includes("User's prompt queue");
       },
     },
@@ -107,7 +107,7 @@ function selfTest() {
       name: "queue > 10 items shows the first 10 plus an overflow indicator",
       check: () => {
         const items = Array.from({ length: 13 }, (_, i) => `item ${i + 1}`);
-        const out = renderPromptForDispatch({ project: "Cockpit", intent: "next_best", queue: items });
+        const out = renderPromptForDispatch({ project: "FleetCrown", intent: "next_best", queue: items });
         return out.includes("1. item 1")
             && out.includes("10. item 10")
             && !out.includes("11. item 11")

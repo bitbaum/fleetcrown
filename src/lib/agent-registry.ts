@@ -34,7 +34,7 @@ export type AgentRegistryEntry = {
   quitCommand: string;
   /** The exact command a new user should run to install this CLI (used by the web "Install" flow). */
   installCommand?: string;
-  /** Only for agents with strong native persistent session directories that Cockpit must respect. */
+  /** Only for agents with strong native persistent session directories that FleetCrown must respect. */
   sessionDir?: string;
   /** Optional adapter-owned activity feed used to reflect prompts typed directly in the CLI. */
   directActivitySource?: "hooks" | "native-session-log";
@@ -380,7 +380,7 @@ export function syncAgentSettings(agent: Agent, model: string): void {
     fs.mkdirSync(path.dirname(CLAUDE_SETTINGS_FILE), { recursive: true });
     fs.writeFileSync(CLAUDE_SETTINGS_FILE, JSON.stringify(settings, null, 2));
   } catch {
-    // Don't fail Cockpit updates if the agent settings sync fails.
+    // Don't fail FleetCrown updates if the agent settings sync fails.
   }
 }
 

@@ -150,7 +150,7 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 
 ## Readiness update (as of this execution)
 
-- Packaged binaries now produced: `desktop/dist/Cockpit Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
+- Packaged binaries now produced: `desktop/dist/FleetCrown Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
 - Users can follow the instructions on `/download` (and the updated component) to clone + `npm run dist:linux` (or equivalent for their OS) and immediately run a native x.ai-styled Fleet Runner that integrates the real home/ runtime logic.
 - Dispatch now renders real prompts (via orchestration renderers) and makes a best-effort injection into a running zellij session/tab matching the project key (falls back gracefully with the prompt shown in the UI).
 - The desktop app is the local runtime you can start using today for your projects (reads your existing config, owns decide/state, attempts execution).

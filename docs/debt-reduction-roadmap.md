@@ -1,9 +1,9 @@
-# Cockpit Debt Reduction Roadmap
+# FleetCrown Debt Reduction Roadmap
 
 ## Purpose
 
 This document turns the current architectural concerns into an execution
-roadmap for reducing code debt and making Cockpit viable as a startup-grade
+roadmap for reducing code debt and making FleetCrown viable as a startup-grade
 product.
 
 The standard is no longer "works for me locally." The standard is:
@@ -24,7 +24,7 @@ The product loop is currently spread across:
 
 - local hooks and `/tmp` signals
 - Beacon desktop UX
-- Cockpit browser UX
+- FleetCrown browser UX
 - direct injection routes
 - partial orchestration adapters
 
@@ -69,7 +69,7 @@ The target architecture is:
 
 - local runtime detects
 - adapters translate
-- Cockpit decides
+- FleetCrown decides
 - UI surfaces render
 
 Anything that does not fit that rule is debt.
@@ -78,7 +78,7 @@ Anything that does not fit that rule is debt.
 
 These are the things to remove as independent concepts.
 
-### Delete independent prompt semantics outside Cockpit
+### Delete independent prompt semantics outside FleetCrown
 
 Why:
 
@@ -210,7 +210,7 @@ Do not keep:
 
 Target role:
 
-- Beacon becomes a Cockpit-controlled desktop client
+- Beacon becomes a FleetCrown-controlled desktop client
 
 ### Stabilize adapter contracts
 
@@ -325,14 +325,14 @@ Implement:
 
 Result:
 
-- Beacon and Cockpit render the same choices from the same source
+- Beacon and FleetCrown render the same choices from the same source
 
 ### Priority 4: Reframe Beacon
 
 Implement:
 
-- Beacon reads Cockpit-owned state/prompt/policy contract
-- Beacon sends actions back through Cockpit
+- Beacon reads FleetCrown-owned state/prompt/policy contract
+- Beacon sends actions back through FleetCrown
 
 Result:
 
@@ -422,7 +422,7 @@ Before merging any change, ask:
 
 1. Does this add a second source of truth?
 2. Does this place product semantics in runtime glue?
-3. Does this make Beacon and Cockpit diverge more or less?
+3. Does this make Beacon and FleetCrown diverge more or less?
 4. Does this make routes thinner or fatter?
 5. Can a new engineer explain where the truth lives after this change?
 

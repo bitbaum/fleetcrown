@@ -250,7 +250,7 @@ function selfTest() {
     },
     {
       name: "tabFromFilename strips the .md extension",
-      run: () => tabFromFilename("Cockpit.md") === "Cockpit",
+      run: () => tabFromFilename("FleetCrown.md") === "FleetCrown",
     },
     {
       name: "tabFromFilename returns null for non-.md files",

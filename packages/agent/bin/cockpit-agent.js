@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * @cockpit/agent — CLI to enroll a local machine with the Cockpit cloud control plane.
+ * @cockpit/agent — CLI to enroll a local machine with the FleetCrown cloud control plane.
  *
  * Usage while the npm package is unpublished:
- *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init
- *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --token ck_...
- *   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --base-url https://cockpitapp.vercel.app
+ *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init
+ *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_...
+ *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
  */
 
 const fs = require("fs");
@@ -13,7 +13,7 @@ const path = require("path");
 const os = require("os");
 const readline = require("readline");
 
-const DEFAULT_BASE_URL = "https://cockpitapp.vercel.app";
+const DEFAULT_BASE_URL = "https://fleetcrown.vercel.app";
 const CONFIG_DIR = path.join(os.homedir(), ".config", "cockpit");
 const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
 const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "cockpit");
@@ -118,7 +118,7 @@ async function downloadDaemon(baseUrl) {
 }
 
 function printHelp() {
-  console.log(`@cockpit/agent — connect your machine to Cockpit
+  console.log(`@cockpit/agent — connect your machine to FleetCrown
 
 Commands:
   init    Verify token, save config, and install daemon scripts to
@@ -126,7 +126,7 @@ Commands:
 
 Options:
   --token <ck_* token>     Agent token from Settings → Agent tokens
-  --base-url <url>         Cockpit URL (default: ${DEFAULT_BASE_URL})
+  --base-url <url>         FleetCrown URL (default: ${DEFAULT_BASE_URL})
   --no-install             Download files only; do not install/start the
                            persistent background helper service
 
@@ -160,7 +160,7 @@ async function main() {
       console.error("Non-interactive environment: pass --token ck_… as an argument.");
       process.exit(2);
     }
-    console.log("Mint a token in Cockpit → Settings → Agent tokens");
+    console.log("Mint a token in FleetCrown → Settings → Agent tokens");
     token = await prompt("Paste your ck_* agent token: ");
   }
   if (!token.startsWith("ck_")) {
@@ -187,7 +187,7 @@ async function main() {
   }
   console.log("\nNext steps:");
   console.log("  1. Install Zellij + at least one agent CLI (claude, codex, gemini, or openclaw)");
-  console.log("  2. Register projects in Cockpit with local directory paths");
+  console.log("  2. Register projects in FleetCrown with local directory paths");
   if (!daemonInstalledAt) {
     console.log(`  3. Re-run the install command once you're online to fetch the daemon scripts:`);
     console.log(`     curl -fsSL ${args.baseUrl}/api/agent/install | node - init --token ${token}`);

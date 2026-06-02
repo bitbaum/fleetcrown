@@ -21,7 +21,7 @@ fi
 if [ ! -f "$CONFIG_FILE" ]; then
   PW="$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)"
   cat > "$CONFIG_FILE" <<EOF
-# Cockpit Oracle migration — generated $(date -Iseconds)
+# FleetCrown Oracle migration — generated $(date -Iseconds)
 ORACLE_SSH_KEY=$KEY
 ORACLE_SSH_USER=ubuntu
 POSTGRES_USER=studio

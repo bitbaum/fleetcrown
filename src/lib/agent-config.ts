@@ -5,7 +5,7 @@
  *
  * STATE FILE CONTRACT
  * ───────────────────
- * Cockpit (inject/control routes) and dotfiles (stop.sh, notification.sh)
+ * FleetCrown (inject/control routes) and dotfiles (stop.sh, notification.sh)
  * communicate exclusively through these /tmp sentinel files.
  * The bash scripts duplicate the names as string literals — keep in sync.
  *

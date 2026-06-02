@@ -4,7 +4,7 @@ import { DesktopDownload } from "@/components/public/DesktopDownload";
 import { DESKTOP_DOWNLOAD } from "@/config/marketing-content";
 
 export const metadata = {
-  title: "Download — Cockpit Fleet Runner",
+  title: "Download — Fleet Runner",
   description: DESKTOP_DOWNLOAD.lede,
 };
 
@@ -33,11 +33,11 @@ export default function DownloadPage() {
           npm run dist:linux   # or dist:mac / dist:win on your machine
         </div>
         <p>
-          Run the resulting <code>Cockpit Fleet Runner-*.AppImage</code> (make it executable with <code>chmod +x</code>) or install the .deb.
+          Run the resulting <code>Fleet Runner-*.AppImage</code> (make it executable with <code>chmod +x</code>) or install the .deb.
           It reads your existing <code>~/.config/agent-projects.conf</code>, shows your projects, and lets you dispatch intents that execute locally using the real orchestration logic (it will attempt to inject into a matching zellij session).
         </p>
         <p>
-          In the app, paste an agent token from Cockpit Settings → Agent tokens to connect. 
+          In the app, paste an agent token from FleetCrown Settings → Agent tokens to connect. 
           Then use the SYNC TO WEB button (in the RUNTIME section) to push your local projects/state so the hosted control plane sees this desktop app as your active local runner.
           Dispatch from the web or the desktop app will drive your local Zellij sessions.
         </p>

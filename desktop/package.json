@@ -1,10 +1,10 @@
 {
-  "name": "cockpit-desktop",
+  "name": "fleet-runner",
   "version": "0.1.0",
-  "description": "Cockpit Fleet Runner — the local authoritative desktop application for AI agent fleets (the 'local fleet runner').",
+  "description": "Fleet Runner — the local authoritative desktop application for the FleetCrown AI agent fleet platform.",
   "main": "./out/main/index.js",
   "author": {
-    "name": "Cockpit",
+    "name": "FleetCrown",
     "email": "team@fleetcrown.vercel.app"
   },
   "homepage": "https://fleetcrown.vercel.app",
@@ -19,8 +19,8 @@
     "dist:linux": "electron-vite build && electron-builder --linux --publish=never"
   },
   "build": {
-    "appId": "com.cockpit.fleet-runner",
-    "productName": "Cockpit Fleet Runner",
+    "appId": "com.fleetcrown.fleet-runner",
+    "productName": "Fleet Runner",
     "directories": {
       "output": "dist"
     },

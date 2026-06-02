@@ -62,9 +62,8 @@ export function IvyNudge({
     const key = cacheKey(kind, title, context);
     const cached = readCache(key);
     if (cached) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time cache hydration
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time (or prop-change) cache hydration; deferred render is fine for this enhancement
       setComposed(cached);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time cache hydration
       setState("ready");
       return;
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# cockpit-app.sh — starts the Cockpit Next.js production server.
+# cockpit-app.sh — starts the FleetCrown Next.js production server.
 #
 # Sources .env.local from the project root, then launches the standalone
 # server. Intended to be called by the cockpit-app.service systemd unit.

@@ -87,7 +87,6 @@ export function ControlPanel() {
   const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
   // Only hide cached runtime when the daemon has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.
-  const daemonStateUnknown = daemonNeverSeen;
   const runtimeStateKnown = !daemonNeverSeen;
   const daemonSyncStale = daemonOffline && daemonLastPushedAt !== null;
   const runtimeSyncCtx = {
@@ -305,7 +304,7 @@ export function ControlPanel() {
           <section>
             <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
             <p className="mb-3 text-xs leading-relaxed text-text-tertiary">
-              These choices are used when Cockpit opens a new terminal tab. CLI availability is reported by the connected computer, not by Vercel.
+              These choices are used when FleetCrown opens a new terminal tab. CLI availability is reported by the connected computer, not by Vercel.
             </p>
               <BrainConfigPanel
                 selectedAgent={selectedAgent}

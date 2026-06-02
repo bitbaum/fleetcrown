@@ -33,7 +33,7 @@ interface AgentDefinition {
   installDocsUrl?: string;
 
   // Handoff / State
-  sessionDir?: string;           // Only if the agent has its own persistent session dir we must respect (e.g. "~/.grok/sessions"). Most can use the Cockpit handoff convention.
+  sessionDir?: string;           // Only if the agent has its own persistent session dir we must respect (e.g. "~/.grok/sessions"). Most can use the FleetCrown handoff convention.
   usesCockpitHandoff: boolean;   // Almost always true for interactive TUIs
 
   // UI / Capabilities (drives buttons, labels, flows)
@@ -56,7 +56,7 @@ interface AgentDefinition {
 - Bash daemon reads a generated or mirrored small fragment (or calls into a small helper) for scan/launch/quit.
 - UI (ControlPanel, switcher, DaemonStatusBanner, project cards) is 100% driven by this.
 - "Install" flow uses `installCommand`.
-- Handoff path logic uses `sessionDir` (fallback to standard Cockpit handoff).
+- Handoff path logic uses `sessionDir` (fallback to standard FleetCrown handoff).
 
 ## Current Hardcoded Places (Audit Snapshot 2026-05-26)
 

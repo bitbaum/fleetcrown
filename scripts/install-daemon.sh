@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# install-daemon.sh — Install the Cockpit daemon as a systemd user service.
+# install-daemon.sh — Install the FleetCrown daemon as a systemd user service.
 #
-# The daemon polls the Cockpit control plane for commands (inject prompts,
+# The daemon polls the FleetCrown control plane for commands (inject prompts,
 # switch agents, transcribe audio) and pushes local runtime state (which
 # agents are running in which project tabs).
 #
@@ -106,7 +106,7 @@ ok "Env file written to ${ENV_FILE}"
 mkdir -p "$(dirname "$SERVICE_FILE")"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Cockpit local daemon
+Description=FleetCrown local daemon
 Documentation=https://github.com/g-but/cockpit
 After=network.target
 # If it crashes 5× in 2 min, stop retrying — something is wrong

@@ -1,10 +1,10 @@
 {
-  "name": "@cockpit/agent",
+  "name": "@fleetcrown/agent",
   "version": "0.1.0",
-  "description": "Connect your machine to the Cockpit cloud control plane",
-  "license": "MIT",
+  "description": "Connect your machine to the FleetCrown cloud control plane",
+  "license": "UNLICENSED",
   "bin": {
-    "cockpit-agent": "bin/cockpit-agent.js"
+    "fleetcrown-agent": "bin/cockpit-agent.js"
   },
   "files": [
     "bin"

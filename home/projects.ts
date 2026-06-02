@@ -100,7 +100,7 @@ function selfTest() {
   const tmpConf = path.join(os.tmpdir(), `home-projects-selftest-${process.pid}.conf`);
   fs.writeFileSync(tmpConf, [
     "# top-level comment",
-    "Cockpit|/home/g/dev/cockpit",
+    "FleetCrown|/home/g/dev/cockpit",
     "OrangeCat|/home/g/dev/orangecat|codex",      // 3rd field: codex adapter
     "   ",                                          // blank line — should be skipped
     "# inline comment",
@@ -116,9 +116,9 @@ function selfTest() {
       { name: "loads 4 valid entries, skips comments and malformed lines",
         check: () => projects.size === 4 },
       { name: "case-insensitive lookup matches mixed-case names",
-        check: () => resolveProjectPath("COCKPIT", projects) === "/home/g/dev/cockpit" },
+        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/cockpit" },
       { name: "lowercase lookup also works",
-        check: () => resolveProjectPath("cockpit", projects) === "/home/g/dev/cockpit" },
+        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/cockpit" },
       { name: "tab name with embedded spaces resolves",
         check: () => resolveProjectPath("Tab With Spaces", projects) === "/some/where" },
       { name: "unknown project returns undefined",
@@ -132,7 +132,7 @@ function selfTest() {
       { name: "resolveProjectAdapter returns the declared adapter",
         check: () => resolveProjectAdapter("OrangeCat", projects) === "codex" },
       { name: "two-field entries (no adapter declared) have adapter=undefined",
-        check: () => projects.get("cockpit")?.adapter === undefined },
+        check: () => projects.get("fleetcrown")?.adapter === undefined },
       { name: "unknown adapter value silently degrades to undefined (typo defence)",
         check: () => projects.get("bogus")?.adapter === undefined
                   && projects.get("bogus")?.dirPath === "/path" },

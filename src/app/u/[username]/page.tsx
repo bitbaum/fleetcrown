@@ -25,7 +25,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { username } = await params;
   const user = await getUser(username);
-  // Root layout's title template appends "— Cockpit" — don't double it here.
+  // Root layout's title template appends "— FleetCrown" — don't double it here.
   if (!user) return { title: "Not Found" };
   return {
     title: user.name ?? username,

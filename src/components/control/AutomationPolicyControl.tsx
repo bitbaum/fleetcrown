@@ -27,17 +27,17 @@ const MODES: { value: AutoInjectMode; label: string }[] = [
 const MODE_STYLE: Record<AutoInjectMode, { dotClass: string; tooltip: string; pulse: boolean }> = {
   off: {
     dotClass: "bg-text-tertiary",
-    tooltip: "Manual (L1) — Cockpit dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
+    tooltip: "Manual (L1) — FleetCrown dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
     pulse: false,
   },
   queue_only: {
     dotClass: "bg-status-warning",
-    tooltip: "Queue (L2) — when the agent finishes, Cockpit fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
+    tooltip: "Queue (L2) — when the agent finishes, FleetCrown fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
     pulse: false,
   },
   beacon: {
     dotClass: "bg-accent-text",
-    tooltip: "Beacon (L3) — popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. Cockpit suggests, you decide.",
+    tooltip: "Beacon (L3) — popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. FleetCrown suggests, you decide.",
     pulse: true,
   },
   next_best: {

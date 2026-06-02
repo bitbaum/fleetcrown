@@ -39,7 +39,7 @@ export async function generateMetadata({
   if (!article) return { title: "Not Found" };
   // type=article + publishedTime + tags turn the OG preview into a recognized
   // article card on Facebook/LinkedIn/Slack. Image falls back to the root
-  // layout's /opengraph-image (generic Cockpit card) until a per-essay
+  // layout's /opengraph-image (generic FleetCrown card) until a per-essay
   // image generator exists.
   return {
     title: article.title,

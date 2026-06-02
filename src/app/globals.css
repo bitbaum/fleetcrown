@@ -164,6 +164,7 @@
   --public-glow-primary:    rgba(0, 0, 0, 0.04);
   --public-glow-primary-2:  rgba(0, 0, 0, 0.02);
   --public-glow-secondary:  rgba(0, 0, 0, 0.025);
+  --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs (band forces dark aesthetic) */
   --public-title-min: 52px;
   --public-title-preferred: 8vw;
   --public-title-max: 108px;
@@ -278,6 +279,7 @@
   --public-glow-primary:    rgba(255, 255, 255, 0.09);
   --public-glow-primary-2:  rgba(255, 255, 255, 0.03);
   --public-glow-secondary:  rgba(255, 255, 255, 0.04);
+  --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs and highlights on public dark bands */
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -814,6 +816,77 @@
   .ui-public-band {
     @apply border-t border-border-subtle bg-surface-page;
   }
+
+  /* Desktop Fleet Runner download/install promo — x.ai-style pure-black band for the
+     local authoritative runtime CTA. All color, typography, and opacity decisions live
+     inside these class definitions (per design system Layer 3). JSX uses only the
+     semantic names + layout utilities. */
+  .ui-public-download {
+    @apply bg-black text-white border-t border-white/10 py-20;
+  }
+  .ui-public-download-eyebrow {
+    @apply text-micro font-mono tracking-[3.5px] text-white/40 mb-3;
+  }
+  .ui-public-download-title {
+    font-size: 56px;
+    line-height: 0.96;
+    font-weight: 600;
+    letter-spacing: -0.039em;
+    @apply mb-3 text-white;
+  }
+  .ui-public-download-lede {
+    @apply text-lg text-white/60 max-w-sm mx-auto;
+  }
+  .ui-public-download-note {
+    @apply text-center text-xs text-white/40 tracking-widest mb-8;
+  }
+  .ui-public-download-cta {
+    @apply inline-flex items-center rounded-full bg-white px-9 py-[17px] text-[17px] font-medium text-black transition-colors;
+  }
+  .ui-public-download-cta:hover {
+    background-color: var(--public-accent);
+    color: white;
+  }
+  .ui-public-download-cta-note {
+    @apply ml-2 text-xs text-black/50 transition-colors;
+  }
+  .ui-public-download-cta:hover .ui-public-download-cta-note {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  .ui-public-download-platform-bar {
+    @apply flex justify-center gap-1.5 mb-12;
+  }
+  .ui-public-download-platform {
+    @apply text-xs tracking-[1.5px] px-4 py-1.5 rounded-full border transition-all;
+  }
+  .ui-public-download-platform-active {
+    @apply border-white bg-white text-black;
+  }
+  .ui-public-download-platform-idle {
+    @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white;
+  }
+  .ui-public-download-fallback {
+    @apply border-t border-white/10 pt-9 text-center text-sm;
+  }
+  .ui-public-download-fallback-label {
+    @apply text-white/50 mb-1;
+  }
+  .ui-public-download-fallback-desc {
+    @apply text-white/40 text-xs max-w-xs mx-auto mb-4;
+  }
+  .ui-public-download-fallback-code {
+    @apply font-mono text-xs bg-white/5 border border-white/10 px-3 py-1.5 rounded text-white/70 inline-block;
+  }
+  .ui-public-download-build {
+    @apply mt-8 text-micro text-white/40;
+  }
+  .ui-public-download-build-step {
+    @apply font-mono text-white/60;
+  }
+  .ui-public-download-footer {
+    @apply text-center text-white/40 text-xs mt-16 tracking-wide max-w-xs mx-auto;
+  }
+
   .ui-brand-mark {
     @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay;
   }

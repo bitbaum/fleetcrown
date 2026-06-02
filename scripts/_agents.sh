@@ -82,9 +82,9 @@ _agent_launch_cmd() {
   esac
 }
 
-# Session directory for Cockpit handoff files (done:/next:/status: etc.).
+# Session directory for FleetCrown handoff files (done:/next:/status: etc.).
 # Only agents with strong native session stores get a special dir.
-# Everyone else uses the standard Cockpit convention (currently ~/.claude/sessions for compatibility).
+# Everyone else uses the standard FleetCrown convention (currently ~/.claude/sessions for compatibility).
 _agent_session_dir() {
   local agent="${1:-claude}"
   case "$agent" in
@@ -112,7 +112,7 @@ _agent_direct_activity() {
       # absolute path with every "/" replaced by "-". mtime updates on every
       # appended event, so a fresh mtime is reliable evidence the agent is
       # actively processing — including prompts the user typed directly into
-      # the TUI (no Cockpit dispatch sentinel exists for those).
+      # the TUI (no FleetCrown dispatch sentinel exists for those).
       encoded_dir=$(printf '%s' "$dir" | tr '/' '-')
       file=$(find "$HOME/.claude/projects/$encoded_dir" -maxdepth 1 -name '*.jsonl' -printf '%T@ %p\n' 2>/dev/null \
         | sort -nr | head -1 | cut -d' ' -f2-)
@@ -177,7 +177,7 @@ _scan_agents() {
   done
 }
 
-# Infer adapter from Zellij tab suffix: "Cockpit Cursor" → cursor.
+# Infer adapter from Zellij tab suffix: "FleetCrown Cursor" → cursor.
 _infer_adapter_from_tab_name() {
   local tab="$1"
   local lower="${tab,,}"

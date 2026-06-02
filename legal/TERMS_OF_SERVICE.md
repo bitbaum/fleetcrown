@@ -3,7 +3,7 @@
 **Last updated:** 2026-06-02
 **Status:** TEMPLATE — review with counsel before publishing.
 
-These Terms of Service ("Terms") govern your access to and use of [PRODUCT NAME] (the "Service"), operated by Georgy Butaev (pending incorporation of a successor corporate entity, herein "we," "us," "our"). By accessing or using the Service, you agree to be bound by these Terms.
+These Terms of Service ("Terms") govern your access to and use of FleetCrown (the "Service"), operated by Georgy Butaev (pending incorporation of a successor corporate entity, herein "we," "us," "our"). By accessing or using the Service, you agree to be bound by these Terms.
 
 If you do not agree, do not use the Service.
 
@@ -11,7 +11,7 @@ If you do not agree, do not use the Service.
 
 ## 1. The Service
 
-[PRODUCT NAME] is a software-as-a-service platform that provides AI-agent fleet orchestration, personal operations management (calendar, contacts, projects, goals, habits, finances), and related productivity tooling. Features may evolve at our discretion.
+FleetCrown is a software-as-a-service platform that provides AI-agent fleet orchestration, personal operations management (calendar, contacts, projects, goals, habits, finances), and related productivity tooling. Features may evolve at our discretion.
 
 ## 2. Eligibility
 

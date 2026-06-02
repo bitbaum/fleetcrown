@@ -103,7 +103,6 @@ export function useProjectCardActions({
       // Mirror the smartEnqueue special case: if the user is deliberately sending
       // a handoff-controlled prompt (the exact workflow they use to drive the agent
       // from the UI), prefer direct execution over queueing.
-      const isHandoffControl = /^status:\s*(working|ready)/i.test(trimmed);
       await onInject(project.tab, undefined, trimmed);
       setCustom("");
     } catch (err) {

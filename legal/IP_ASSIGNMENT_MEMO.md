@@ -13,7 +13,7 @@ I, Georgy Butaev (the "Founder"), residing in Switzerland, sole author and copyr
 - **Cockpit** — repository at `github.com/g-but/cockpit` (private), placeholder name pending rebrand
 - **OrangeCat** — repository at `github.com/g-but/orangecat`
 
-hereby declare my intent that all Work Product, whether created before or after the date of this memorandum, is and shall remain my sole property until such time as the planned corporate structure ("bitbaum AG", a Swiss Aktiengesellschaft to be incorporated in the Canton of Zug as a holding entity, together with its product-specific subsidiary GmbHs including but not limited to **orangecat GmbH** and an **as-yet-unnamed subsidiary** for the project currently codenamed "Cockpit", collectively "NewCo") is formed for the purpose of owning, developing, and commercializing these projects, at which point all Work Product shall be irrevocably assigned to the appropriate NewCo entity by formal written instrument of assignment.
+hereby declare my intent that all Work Product, whether created before or after the date of this memorandum, is and shall remain my sole property until such time as the planned corporate structure ("bitbaum AG", a Swiss Aktiengesellschaft to be incorporated in the Canton of Zug as a holding entity, together with its product-specific subsidiary GmbHs including but not limited to **orangecat GmbH** and **FleetCrown GmbH** (for the project currently codenamed "Cockpit" in repository paths), collectively "NewCo") is formed for the purpose of owning, developing, and commercializing these projects, at which point all Work Product shall be irrevocably assigned to the appropriate NewCo entity by formal written instrument of assignment.
 
 ## 2. Scope of Work Product
 
@@ -41,7 +41,7 @@ Upon formation of bitbaum AG and the relevant product subsidiary, I will execute
 
 - **bitbaum AG** (holding) — owns all shared infrastructure, brand assets at the holding level, the bitbaum name and goodwill, and equity in each subsidiary
 - **orangecat GmbH** — owns the OrangeCat product, its brand, code, and customer relationships
-- **[to-be-named] GmbH** — owns the Cockpit-replacement product, its brand, code, and customer relationships
+- **FleetCrown GmbH** — owns the FleetCrown product (currently codenamed "Cockpit" in repo paths), its brand, code, and customer relationships
 - Additional subsidiaries (hirn.li GmbH, botsmann GmbH, etc.) may be formed for other bitbaum products
 
 This memorandum is preliminary evidence of intent and shall not be construed as the assignment itself.

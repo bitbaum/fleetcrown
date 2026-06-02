@@ -23,7 +23,7 @@ export function AppearanceSettings() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Theme</h2>
           <p className="mt-1 text-sm text-text-tertiary">
-            Choose how Cockpit looks. System follows your OS preference.
+            Choose how FleetCrown looks. System follows your OS preference.
           </p>
         </div>
 

@@ -9,7 +9,7 @@ The product thesis is simple: AI agents are becoming cheap execution capacity,
 but serious users still need a trustworthy command center. Cockpit provides the
 state, queues, handoffs, guardrails, and business context around that capacity.
 
-Production: https://cockpitapp.vercel.app
+Production: https://fleetcrown.vercel.app
 
 ## What It Does
 
@@ -141,7 +141,7 @@ On a fresh database, visit `/setup` to create the first user.
 Agent dispatch from the hosted app needs a connected machine:
 
 ```bash
-curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --base-url https://cockpitapp.vercel.app
+curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
 ```
 
 The runtime requires Zellij and at least one supported CLI on `PATH`: `claude`,

@@ -1,5 +1,5 @@
 /**
- * Local runtime integration point for the Cockpit Fleet Runner (Electron).
+ * Local runtime integration point for the FleetCrown Fleet Runner (Electron).
  *
  * Goal: Own the best parts of the current `home/` stack (and eventually daemon logic)
  * so the desktop app is the authoritative local executor.
@@ -18,7 +18,7 @@ import * as HomeDecide from '@home/decide'
 import * as HomeEmit from '@home/emit'
 import * as HomeProjects from '@home/projects'
 import { renderTaskForAdapter } from '@/lib/orchestration'
-import { execSync } from 'child_process'
+import { injectIntoTab } from '@/lib/zellij'
 
 // Basic status proving we can reach the modern local runtime model from Electron main.
 export type LocalRuntimeStatus = {
@@ -112,18 +112,17 @@ export async function dispatchIntent(projectKey: string, intent: string, queueHe
 
   console.log(`[desktop-runtime] Would inject into Zellij tab "${projectKey}":\n${renderedPrompt}`)
 
-  // Attempt real(ish) injection via zellij CLI if available on this machine.
-  // This makes the app actually start controlling your local sessions.
+  // Use the canonical injectIntoTab (same as daemon/worker) — it does go-to-tab,
+  // focus wait (to avoid typing into wrong pane), write-chars + Enter, and restore.
+  // Throws on failure so we can surface it (future: emit proper worker.crashed).
   let injected = false
   try {
-    // zellij action write-chars sends text to the focused pane in the named session/tab.
-    // In real setup the tab name matches the project key in many configs.
-    execSync(`zellij action --session "${projectKey}" write-chars ${JSON.stringify(renderedPrompt + '\n')}`, { stdio: 'ignore' })
+    injectIntoTab(projectKey, renderedPrompt)
     injected = true
-    console.log(`[desktop-runtime] Injected prompt into zellij session "${projectKey}"`)
+    console.log(`[desktop-runtime] Injected prompt into zellij tab "${projectKey}"`)
   } catch (e) {
-    // zellij not running that session or not installed — common in early use.
-    console.log(`[desktop-runtime] Could not auto-inject (zellij session may not be running or not installed). Prompt is in the UI for you to use.`)
+    const msg = (e as Error).message
+    console.log(`[desktop-runtime] Could not auto-inject (zellij tab may not be running or not installed): ${msg}. Prompt shown in UI for manual paste.`)
   }
 
   // Simulate applying an event

@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
   let intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
   let consumedQueueItem: string | null = null;
 
-  // Resolve zellij alias once — "Cockpit" may run as "Cockpit Claude" in this session.
+  // Resolve zellij alias once — "FleetCrown" may run as "FleetCrown Claude" in this session.
   const activeTabs = await getZellijTabs();
   const effectiveKey = activeTabs.length > 0
     ? resolveEffectiveTab(request.projectKey, activeTabs)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Logical backup of the Cockpit database (portable across Postgres hosts).
+# Logical backup of the FleetCrown database (portable across Postgres hosts).
 #
 # Usage:
 #   DATABASE_URL=postgresql://... ./scripts/db/dump.sh [output.sql.gz]

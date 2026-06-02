@@ -63,7 +63,7 @@ function App(): JSX.Element {
       const res = await window.cockpit.saveToken(token.trim())
       if (res.ok) {
         setConnected(true)
-        setResponse('Token saved. This app can now act as your local runtime for Cockpit (use the same token in web settings if needed).')
+        setResponse('Token saved. This app can now act as your local runtime for FleetCrown (use the same token in web settings if needed).')
       } else {
         setResponse('Failed to save token: ' + (res.error || 'unknown'))
       }
@@ -100,7 +100,7 @@ function App(): JSX.Element {
         body: JSON.stringify(body)
       })
       if (res.ok) {
-        setResponse('Synced to Cockpit web! The control plane should now see this desktop app as your local runtime for these projects.')
+        setResponse('Synced to FleetCrown web! The control plane should now see this desktop app as your local runtime for these projects.')
         await refreshStatus()
       } else {
         const err = await res.text().catch(() => res.statusText)
@@ -129,12 +129,12 @@ function App(): JSX.Element {
     setResponse(res)
   }
 
-  const handleDispatch = async (projectKey: string, intent: string) => {
+  const handleDispatch = async (projectKey: string, intent: string, prompt?: string) => {
     const target = selectedProject || projectKey
     setDispatching(target + ':' + intent)
     setResponse('')
     try {
-      const res = await window.cockpit.dispatchIntent({ projectKey: target, intent })
+      const res = await window.cockpit.dispatchIntent({ projectKey: target, intent, queueHead: prompt })
       setResponse(JSON.stringify(res, null, 2))
       await refreshStatus()
       const liveState = await window.cockpit.getCurrentState()

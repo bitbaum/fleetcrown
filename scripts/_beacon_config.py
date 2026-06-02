@@ -40,9 +40,9 @@ def _read_daemon_token() -> str:
 
 
 def load_settings() -> dict:
-    """Return beacon settings, fetching from the Cockpit API with 5-min cache.
+    """Return beacon settings, fetching from the FleetCrown API with 5-min cache.
 
-    Falls back to the legacy JSON file when the API is unreachable (e.g. Cockpit
+    Falls back to the legacy JSON file when the API is unreachable (e.g. FleetCrown
     not running at daemon startup time).
     """
     # 1. Try warm cache first (avoids HTTP on every hook invocation)
@@ -73,7 +73,7 @@ def load_settings() -> dict:
         except Exception:
             pass
 
-    # 3. Legacy file fallback (single-user installs or Cockpit offline)
+    # 3. Legacy file fallback (single-user installs or FleetCrown offline)
     try:
         if os.path.exists(_SETTINGS_PATH):
             return json.load(open(_SETTINGS_PATH))
@@ -124,9 +124,9 @@ def get_auto_inject_mode() -> str:
 def load_prompt_meta() -> list:
     """Load prompt metadata from SSOT config file.
     DEPRECATED for primary use per debt-reduction-roadmap: Beacon should read
-    from Cockpit-owned contracts (lib/orchestration/intents.ts + /api or generated
+    from FleetCrown-owned contracts (lib/orchestration/intents.ts + /api or generated
     agent-prompts) not local claude-prompts.json. Fallback only for offline.
-    See Phase 4 of execution plan. Prompt *meaning* lives in Cockpit now.
+    See Phase 4 of execution plan. Prompt *meaning* lives in FleetCrown now.
     """
     try:
         file = _META_PATH if os.path.exists(_META_PATH) else _LEGACY_META_PATH

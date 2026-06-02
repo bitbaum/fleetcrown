@@ -7,12 +7,12 @@ When an agent session stops the hook calls:
   beacon.py stop <project_label> [session_file]
 
 beacon.py writes the session metadata to /tmp/cockpit-beacon/<id>.json (no API
-auth required) and opens the Cockpit web popup at /beacon/live in a frameless
+auth required) and opens the FleetCrown web popup at /beacon/live in a frameless
 Chrome `--app` window. The popup polls the session file for the user's choice
-and patches it back via the Cockpit API.
+and patches it back via the FleetCrown API.
 
-If Cockpit isn't reachable the launcher writes the session anyway (it'll
-surface via SSE the moment Cockpit boots), fires the systemd user unit in
+If FleetCrown isn't reachable the launcher writes the session anyway (it'll
+surface via SSE the moment FleetCrown boots), fires the systemd user unit in
 the background, and exits silently. No blocking dialog, no foreign UI —
 design lives in src/components/control/* and the web popup is the single
 source of truth.
@@ -74,7 +74,7 @@ def _check_capacity_sentinel(label: str) -> bool:
 def _write_beacon_session(label: str, session_content: str, popup_mode: str = "web") -> str:
     """Write a beacon session file directly to /tmp — no API auth required.
 
-    The Cockpit beacon route reads sessions from /tmp/cockpit-beacon/{id}.json.
+    The FleetCrown beacon route reads sessions from /tmp/cockpit-beacon/{id}.json.
     Writing directly here means beacon.py never needs to authenticate with the
     web server; the browser popup reads/writes via the API using its session cookie.
     """
@@ -179,12 +179,12 @@ def _poll_beacon_choice(session_id: str, timeout: float = 130.0) -> str | None:
     return None
 
 
-# ── Cockpit-not-running recovery ───────────────────────────────────────────────
+# ── FleetCrown-not-running recovery ───────────────────────────────────────────────
 
 def _start_cockpit_background() -> None:
-    """Fire-and-forget start of the Cockpit systemd user unit. No polling, no
+    """Fire-and-forget start of the FleetCrown systemd user unit. No polling, no
     blocking dialog. The session JSON has already been written to /tmp; once
-    Cockpit boots, /api/beacon/sse picks it up on the next subscriber connect.
+    FleetCrown boots, /api/beacon/sse picks it up on the next subscriber connect.
     """
     if shutil.which("systemctl"):
         subprocess.Popen(
@@ -216,7 +216,7 @@ def _stop(label: str, session_file: str) -> None:
             pass
 
     # Write the session unconditionally — it lands in /tmp and surfaces via SSE
-    # whenever Cockpit is up. If Cockpit is down, fire its systemd unit and exit;
+    # whenever FleetCrown is up. If FleetCrown is down, fire its systemd unit and exit;
     # the user's stop hook doesn't block on a foreign dialog, and the session is
     # still captured.
     session_id = _write_beacon_session(label, session_content, popup_mode)

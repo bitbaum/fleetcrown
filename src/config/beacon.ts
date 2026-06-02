@@ -26,7 +26,7 @@ export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; l
 ];
 
 // The five-level autopilot trust ladder. Each level adds one more thing
-// Cockpit decides on your behalf — L1 (you decide everything) to L5 (full
+// FleetCrown decides on your behalf — L1 (you decide everything) to L5 (full
 // AI-composed dispatch). Storage values keep legacy names ("off",
 // "queue_only", "next_best", "strategist") for migration safety; the UI
 // surfaces the new names (Manual, Queue, Beacon, Continuous, Mission) and
@@ -44,17 +44,17 @@ export const AUTO_INJECT_MODES: readonly {
   {
     value: "off",
     label: "Manual",
-    description: "L1 · Cockpit dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
+    description: "L1 · FleetCrown dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
   },
   {
     value: "queue_only",
     label: "Queue",
-    description: "L2 · When an agent finishes, Cockpit fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
+    description: "L2 · When an agent finishes, FleetCrown fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
   },
   {
     value: "beacon",
     label: "Beacon",
-    description: "L3 · Popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. Cockpit suggests, you decide.",
+    description: "L3 · Popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. FleetCrown suggests, you decide.",
   },
   {
     value: "next_best",

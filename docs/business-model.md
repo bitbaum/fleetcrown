@@ -1,9 +1,9 @@
-# Cockpit Business Model
+# FleetCrown Business Model
 
 ## Thesis
 
 AI agents create execution supply. The scarce resource shifts to judgment,
-context, prioritization, and trust. Cockpit owns that layer: the durable
+context, prioritization, and trust. FleetCrown owns that layer: the durable
 operating system around agents, projects, and the human decisions that guide
 them.
 
@@ -12,7 +12,7 @@ have too many projects and too much execution surface area.
 
 ## Customer Segments
 
-| Segment | Pain | Why Cockpit wins |
+| Segment | Pain | Why FleetCrown wins |
 | --- | --- | --- |
 | Founder / solo builder | Many projects, fragmented tools, agent work hard to supervise | One control plane for projects, agents, commitments, and handoffs |
 | Small product studio | Multiple client/internal projects with scattered state | Shared project memory, prompt queues, runtime visibility, team context |
@@ -24,7 +24,7 @@ have too many projects and too much execution surface area.
 Pricing should follow value captured, not token volume alone.
 
 1. **Personal Pro**
-   - For one builder using Cockpit as daily operating layer.
+   - For one builder using FleetCrown as daily operating layer.
    - Includes projects, goals, people, habits, events, money, prompts, and one
      connected runtime.
 
@@ -44,7 +44,7 @@ Pricing should follow value captured, not token volume alone.
 ## Expansion Loops
 
 - **Project count expansion**: more tracked projects increase switching cost
-  outside Cockpit and make the unified control plane more valuable.
+  outside FleetCrown and make the unified control plane more valuable.
 - **Runtime expansion**: each additional machine or agent CLI increases the need
   for trustworthy visibility and queue ownership.
 - **Team expansion**: project state becomes more valuable when shared.
@@ -59,7 +59,7 @@ Pricing should follow value captured, not token volume alone.
   project memory compound over time.
 - **Hybrid architecture**: cloud UX plus local runtime gives strong privacy and
   terminal power without forcing code onto a third-party sandbox.
-- **Agent neutrality**: Cockpit is positioned above individual model vendors and
+- **Agent neutrality**: FleetCrown is positioned above individual model vendors and
   CLIs.
 - **Operating cadence**: daily use across Today, Control, Projects, People, and
   Goals creates habit-level retention.

@@ -55,7 +55,7 @@ def sync_projects_from_cloud(target: Path, env: dict[str, str]) -> bool:
         return False
 
     lines = [
-        "# Managed by Cockpit. Edit projects in the web Control page; the daemon syncs this file.",
+        "# Managed by FleetCrown. Edit projects in the web Control page; the daemon syncs this file.",
         "# Format: tab_name|/absolute/path/to/project|agent|model",
     ]
     for project in projects:

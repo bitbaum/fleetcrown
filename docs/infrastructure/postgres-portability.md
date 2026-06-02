@@ -10,7 +10,7 @@ Goal: **switching Postgres host later is a config + dump/restore job**, not a co
 
 Long-form narrative: [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack).
 
-Applies to Cockpit first; copy the same env pattern to other Drizzle/Prisma apps in `~/dev`.
+Applies to FleetCrown first; copy the same env pattern to other Drizzle/Prisma apps in `~/dev`.
 
 ## Principles
 
@@ -29,7 +29,7 @@ Applies to Cockpit first; copy the same env pattern to other Drizzle/Prisma apps
 
 **Local dev:** set `DATABASE_URL` only. Pool URL falls back to the same value.
 
-**Legacy (Cockpit still reads these):** `NEON_DATABASE_URL` → pool, `NEON_DATABASE_URL_DIRECT` → direct. Prefer the neutral names on new hosts.
+**Legacy (FleetCrown still reads these):** `NEON_DATABASE_URL` → pool, `NEON_DATABASE_URL_DIRECT` → direct. Prefer the neutral names on new hosts.
 
 Implementation: `src/lib/db-url.ts` — `getDatabasePoolUrl()`, `getDatabaseDirectUrl()`.
 
@@ -99,7 +99,7 @@ SOURCE_DATABASE_URL="$OLD" TARGET_DATABASE_URL="$NEW" TARGET_USER_ID="<uuid>" \
 - [ ] Control SSE / daemon push updates `runtime_snapshots`
 - [ ] Decommission old Neon project after 7 days
 
-## Cockpit scripts
+## FleetCrown scripts
 
 | Script | Purpose |
 |--------|---------|

@@ -290,7 +290,7 @@ export async function GET() {
     const dbState = dbStateMap.get(`${ownerUserId}:${tab.toLowerCase()}`);
 
     // Resolve live Zellij tab first — session files and /tmp sentinels all use the live name.
-    // e.g. canonical "Cockpit" may run as "Cockpit Claude", so sessions/Cockpit Claude.md wins.
+    // e.g. canonical "FleetCrown" may run as "FleetCrown Claude", so sessions/FleetCrown Claude.md wins.
     const liveTab = resolveEffectiveTab(tab, zellijTabs);
     const projectProcesses = agentProcesses.filter((process) => process.cwd === dir || process.cwd.startsWith(dir + "/"));
     const promptHint = runtimeAvailable ? readCurrentPrompt(liveTab) : null;

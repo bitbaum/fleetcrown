@@ -243,7 +243,7 @@ export function buildLiveTabRows(
       // 2026-05-31: skip zellij tabs that don't map to any registered project.
       // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
       // they opened manually that have nothing to do with the fleet. Their
-      // real zellij window already shows them; the Cockpit UI is for fleet
+      // real zellij window already shows them; the FleetCrown UI is for fleet
       // ops, not a generic tab list. To re-expose unregistered tabs later,
       // gate this on a "show all tabs" toggle in the UI.
       const project = findProjectForOpenTab(tabName, projects);
@@ -339,7 +339,7 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
   return labels[id] ?? null;
 }
 
-/** Tab suffix → adapter id: "Cockpit Cursor" → "cursor". Mirrors scripts/_agents.sh. */
+/** Tab suffix → adapter id: "FleetCrown Cursor" → "cursor". Mirrors scripts/_agents.sh. */
 export function inferAdapterFromTabName(tabName: string): string | null {
   const normalized = tabName.toLowerCase();
   const ids = ["grok", "claude", "codex", "gemini", "cursor", "openclaw"] as const;
@@ -378,7 +378,7 @@ export function getProjectDisplayState(
     };
   }
   // Track active work from a fresh current-prompt sentinel. Do not require
-  // agentRunning — cloud daemon may hold a Cockpit-dispatched prompt while
+  // agentRunning — cloud daemon may hold a FleetCrown-dispatched prompt while
   // /proc scan misses Cursor Agent or IDE-side Composer activity.
   const stale = isCurrentPromptStale(project, nowS);
   const currentPrompt = project.currentPrompt && !stale ? project.currentPrompt : null;

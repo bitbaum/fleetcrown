@@ -8,16 +8,16 @@
 #             install-*.sh, beacon.py (via _beacon_config.py).
 
 # Display name. Appears in log lines, install prompts.
-APP_NAME="Cockpit"
+APP_NAME="FleetCrown"
 
 # Lowercase kebab-case identifier. Used in /tmp/<slug>-* paths, env var
 # prefixes, package names. Changing this requires migrating any on-disk
 # state (running daemons should be restarted).
-APP_SLUG="cockpit"
+APP_SLUG="fleetcrown"
 
 # Canonical hostname for the remote deployment. Used by the daemon when no
 # local server is reachable. Override via COCKPIT_BASE_URL / APP_BASE_URL.
-APP_DOMAIN="cockpitapp.vercel.app"
+APP_DOMAIN="fleetcrown.vercel.app"
 
 # Resolve an env var by name with both APP_* and COCKPIT_* prefixes, in that
 # order, falling back to a default. Used to migrate env-var names gradually

@@ -42,8 +42,8 @@ export function CalendarCard() {
         // help. Tell the user where the data actually lives so they don't
         // waste time re-pairing.
         <EmptyState>
-          Calendar uses the <code>gog</code> CLI on the machine that runs the Cockpit web server.
-          Open this page on your local Cockpit (<code>http://localhost:3000/today</code>) to see today&apos;s events.
+          Calendar uses the <code>gog</code> CLI on the machine that runs the FleetCrown web server.
+          Open this page on your local FleetCrown (<code>http://localhost:3000/today</code>) to see today&apos;s events.
         </EmptyState>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>

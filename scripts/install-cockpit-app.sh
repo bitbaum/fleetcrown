@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-cockpit-app.sh — build and install Cockpit as a systemd user service.
+# install-cockpit-app.sh — build and install FleetCrown as a systemd user service.
 #
 # Run once after cloning, and again after significant dependency changes.
 # The service auto-starts on login and restarts on crash.
@@ -50,7 +50,7 @@ mkdir -p "$HOME/.config/systemd/user"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Cockpit — Life OS (local production server)
+Description=FleetCrown — Life OS (local production server)
 Documentation=https://github.com/g-but/cockpit
 After=network.target
 
@@ -94,7 +94,7 @@ STATUS=$(systemctl --user is-active "$SERVICE_NAME" 2>/dev/null || echo "unknown
 if [ "$STATUS" = "active" ]; then
   PORT=$(grep "^PORT=" "$PROJECT_DIR/.env.local" 2>/dev/null | cut -d= -f2 || echo "3000")
   PORT="${PORT:-3000}"
-  log "✓ Cockpit is running at http://localhost:${PORT}"
+  log "✓ FleetCrown is running at http://localhost:${PORT}"
   log "  Manage with: systemctl --user {status|stop|restart|logs} ${SERVICE_NAME}"
   log "  View logs:   journalctl --user -u ${SERVICE_NAME} -f"
 else

@@ -6,7 +6,7 @@ last_modified_date: 2026-05-30
 last_modified_summary: Autopilot loop fix — session-handoff watchdog for agents without Stop hooks, inject queued via /api/inject with daemon bearer token, live tab name resolution.
 ---
 
-Cockpit is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
+FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
 
 This document is the SSOT for onboarding and support — keep it aligned with `DaemonStatusBanner`, the hosted agent installer, and `isRuntimeAvailable()`.
 
@@ -21,7 +21,7 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 
 ### Local setup (agent dispatch only)
 
-1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; Cockpit injects prompts into tabs.
+1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; FleetCrown injects prompts into tabs.
 2. **At least one agent CLI** on `$PATH` — not all of them:
    - Claude Code (`claude`)
    - Cursor Agent (`agent` — [install](https://cursor.com/docs/cli))

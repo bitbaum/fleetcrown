@@ -55,24 +55,24 @@ function runTests(): void {
   };
 
   check("findProjectForOpenTab exact match", () => {
-    const projects = [stubProject({ tab: "Cockpit", liveTab: "Cockpit" })];
-    assert(findProjectForOpenTab("cockpit", projects)?.tab === "Cockpit", "expected Cockpit");
+    const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" })];
+    assert(findProjectForOpenTab("cockpit", projects)?.tab === "FleetCrown", "expected FleetCrown");
   });
 
   check("findProjectForOpenTab prefix match (agent suffix tab)", () => {
-    const projects = [stubProject({ tab: "Cockpit", liveTab: "Cockpit Claude" })];
-    assert(findProjectForOpenTab("Cockpit Claude", projects)?.tab === "Cockpit", "expected prefix match");
+    const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" })];
+    assert(findProjectForOpenTab("FleetCrown Claude", projects)?.tab === "FleetCrown", "expected prefix match");
   });
 
   check("isProjectTabOpen accepts agent-suffixed live tabs", () => {
-    const project = stubProject({ tab: "Cockpit", liveTab: "Cockpit" });
-    assert(isProjectTabOpen(project, ["Cockpit Claude"]), "expected suffix tab to count as open");
+    const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" });
+    assert(isProjectTabOpen(project, ["FleetCrown Claude"]), "expected suffix tab to count as open");
     assert(!isProjectTabOpen(project, ["Cockpit2 Claude"]), "must not match unrelated prefixes");
   });
 
   check("isProjectTabOpen accepts a different live agent suffix than cached liveTab", () => {
-    const project = stubProject({ tab: "Cockpit", liveTab: "Cockpit Claude" });
-    assert(isProjectTabOpen(project, ["Cockpit Codex"]), "expected canonical project suffix to count as open");
+    const project = stubProject({ tab: "FleetCrown", liveTab: "FleetCrown Claude" });
+    assert(isProjectTabOpen(project, ["FleetCrown Codex"]), "expected canonical project suffix to count as open");
   });
 
   check("buildLiveTabRows sorts Working before Open and drops unregistered tabs", () => {
@@ -119,7 +119,7 @@ function runTests(): void {
   });
 
   check("inferAgentLabelFromTabName reads common agent suffixes", () => {
-    assert(inferAgentLabelFromTabName("Cockpit Codex") === "Codex", "expected Codex suffix");
+    assert(inferAgentLabelFromTabName("FleetCrown Codex") === "Codex", "expected Codex suffix");
     assert(inferAgentLabelFromTabName("ops-grok") === "Grok", "expected Grok suffix");
     assert(inferAgentLabelFromTabName("scratch") === null, "expected no inferred agent");
   });
@@ -139,7 +139,7 @@ function runTests(): void {
   });
 
   check("no detected process is reported as not running, not inferred activity", () => {
-    const project = stubProject({ tab: "Cockpit" });
+    const project = stubProject({ tab: "FleetCrown" });
     const state = getProjectDisplayState(project, [], 1_700_000_000);
     assert(state.stateLabel === "Not running", "inactive project must describe the absent live signal");
   });
@@ -147,7 +147,7 @@ function runTests(): void {
   check("snapshot separates saved context from current operational state", () => {
     const nowS = 1_700_000_000;
     const snapshot = buildProjectOperationsSnapshot(stubProject({
-      tab: "Cockpit",
+      tab: "FleetCrown",
       session: { done: "Done earlier", next: "Continue later", tests: "", todos: "", health: "", mtime: (nowS - 300) * 1000 },
     }), [], nowS);
     assert(snapshot.phase === "not_running", "handoff must not imply a running agent");
@@ -157,9 +157,9 @@ function runTests(): void {
 
   check("open session is not mislabeled as waiting for input", () => {
     const nowS = 1_700_000_000;
-    const project = stubProject({ tab: "Cockpit", agentRunning: true });
-    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
-    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    const project = stubProject({ tab: "FleetCrown", agentRunning: true });
+    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Waiting for instructions", "open inactive agent must describe the observed shell");
     assert(snapshot.phase === "open_idle", "open inactive agent must not count as waiting for input");
     assert(snapshot.evidenceLabel === "Agent shell waiting for instructions", "evidence should explain the live signal");
@@ -167,9 +167,9 @@ function runTests(): void {
 
   check("ready sentinel is a next-step state, not generic waiting", () => {
     const nowS = 1_700_000_000;
-    const project = stubProject({ tab: "Cockpit", readyAt: nowS - 5 });
-    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
-    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    const project = stubProject({ tab: "FleetCrown", readyAt: nowS - 5 });
+    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Ready for next step", "ready signal must name the action state");
     assert(snapshot.phase === "waiting_for_user", "ready signal remains actionable");
     assert(snapshot.evidenceLabel === "Agent signaled ready on connected computer", "ready evidence should identify the signal");
@@ -203,18 +203,18 @@ function runTests(): void {
   check("millisecond handoff mtime does not make a fresh prompt stale", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "Cockpit",
+      tab: "FleetCrown",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 10 },
       session: { done: "previous", next: "", tests: "", todos: "", health: "", mtime: (nowS - 20) * 1000 },
     });
     assert(!isCurrentPromptStale(project, nowS), "older handoff must not end current work");
-    assert(getProjectDisplayState(project, ["Cockpit"], nowS).stateLabel === "Working", "fresh prompt must show Working");
+    assert(getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working", "fresh prompt must show Working");
   });
 
   check("direct-terminal observation is surfaced as Working", () => {
     // Daemon-side path for prompts the user typed directly into Claude (no
-    // Cockpit dispatch sentinel). cockpit-daemon.sh sets currentPrompt.key to
+    // FleetCrown dispatch sentinel). cockpit-daemon.sh sets currentPrompt.key to
     // "direct_terminal" with startedAt = the transcript's mtime when the tab is
     // open, no other prompt is tracked, and the agent has not just signaled
     // ready. The presenter must treat this exactly like any tracked prompt so
@@ -222,15 +222,15 @@ function runTests(): void {
     // open" (the limitation 6da8d7e called out).
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "Cockpit",
+      tab: "FleetCrown",
       agentRunning: true,
       activeAgents: ["claude"],
       currentPrompt: { key: "direct_terminal", label: "Direct terminal activity", startedAt: nowS - 3 },
     });
-    const state = getProjectDisplayState(project, ["Cockpit"], nowS);
+    const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Working", "direct-terminal observation must report Working");
     assert(state.isAgentWorking, "isAgentWorking is the SSOT chips read");
-    const snapshot = buildProjectOperationsSnapshot(project, ["Cockpit"], nowS);
+    const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(snapshot.phase === "working", "snapshot phase must match the badge");
     assert(snapshot.evidenceLabel === "Live agent process detected", "evidence must read live, not historical");
   });
@@ -238,20 +238,20 @@ function runTests(): void {
   check("working handoff does not stale an active prompt", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "Cockpit",
+      tab: "FleetCrown",
       agentRunning: false,
       currentPrompt: { key: "custom", label: "Still implementing", startedAt: nowS - 30 },
       session: { status: "working", done: "partial", next: "finish", tests: "", todos: "", health: "good", mtime: (nowS - 5) * 1000 },
     });
     assert(!isCurrentPromptStale(project, nowS), "status:working handoff must not clear Working");
-    assert(getProjectDisplayState(project, ["Cockpit"], nowS).stateLabel === "Working",
+    assert(getProjectDisplayState(project, ["FleetCrown"], nowS).stateLabel === "Working",
       "fresh prompt must show Working without agentRunning");
   });
 
   check("handoff written after prompt marks it completed", () => {
     const nowS = 1_700_000_100;
     const project = stubProject({
-      tab: "Cockpit",
+      tab: "FleetCrown",
       agentRunning: true,
       currentPrompt: { key: "custom", label: "Current work", startedAt: nowS - 20 },
       session: { done: "finished", next: "", tests: "", todos: "", health: "", mtime: (nowS - 5) * 1000 },

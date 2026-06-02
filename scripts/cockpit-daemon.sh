@@ -1070,7 +1070,7 @@ _build_state_json() {
       fi
     fi
 
-    # A Cockpit-dispatched or direct-terminal prompt is live evidence even when
+    # A FleetCrown-dispatched or direct-terminal prompt is live evidence even when
     # /proc scan misses the agent (Cursor Agent, IDE Composer, race on startup).
     if [ -n "$cpk" ] && [ "$cpsat" != "null" ]; then
       running="true"

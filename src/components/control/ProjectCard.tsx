@@ -277,7 +277,7 @@ export function ProjectCard({
               <p className="text-sm text-text-secondary">
                 {daemonSyncStale
                   ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or repair the daemon connection."
-                  : "Terminal tab is open, but Cockpit is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
+                  : "Terminal tab is open, but FleetCrown is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
               </p>
             </div>
           )}

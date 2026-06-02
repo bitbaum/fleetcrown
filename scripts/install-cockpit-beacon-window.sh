@@ -20,7 +20,7 @@ mkdir -p "$HOME/.config/systemd/user"
 
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
-Description=Cockpit beacon window (pre-warmed Chromium app for instant popup)
+Description=FleetCrown beacon window (pre-warmed Chromium app for instant popup)
 Documentation=https://github.com/g-but/cockpit
 After=cockpit-app.service
 Wants=cockpit-app.service

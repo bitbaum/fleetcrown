@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
-import type { AgentOption } from "@/lib/agent-registry";
 import { getApiUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
