@@ -9,7 +9,9 @@
   },
   "homepage": "https://fleetcrown.vercel.app",
   "scripts": {
-    "dev": "electron-vite dev",
+    "generate:icons": "node scripts/generate-tray-icon.mjs",
+    "prebuild": "node scripts/generate-tray-icon.mjs",
+    "dev": "node scripts/generate-tray-icon.mjs && electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
@@ -22,20 +24,27 @@
     "appId": "com.fleetcrown.fleet-runner",
     "productName": "Fleet Runner",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "resources"
     },
     "files": [
       "out/**/*",
       "package.json"
     ],
+    "extraResources": [
+      { "from": "resources", "to": "." }
+    ],
     "mac": {
       "category": "public.app-category.developer-tools",
+      "icon": "resources/icon.png",
       "target": ["dmg", "zip"]
     },
     "win": {
+      "icon": "resources/icon.png",
       "target": ["nsis", "portable"]
     },
     "linux": {
+      "icon": "resources/icon.png",
       "target": ["AppImage", "deb"],
       "category": "Development"
     },

@@ -1,10 +1,25 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { homedir } from 'os'
+
+// Resolve a packaged resource file. electron-builder copies `resources/` into
+// `process.resourcesPath` at install time; during dev we read it directly from
+// the source tree. Returning '' lets callers treat missing files as no-icon
+// instead of crashing the process.
+function resourcePath(name: string): string {
+  const candidates = is.dev
+    ? [join(__dirname, '..', '..', 'resources', name)]
+    : [join(process.resourcesPath, name), join(process.resourcesPath, 'resources', name)]
+  for (const p of candidates) if (existsSync(p)) return p
+  return ''
+}
+
+const APP_ICON_PATH  = resourcePath('icon.png')
+const TRAY_ICON_PATH = resourcePath('tray-icon.png')
 
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
@@ -15,6 +30,7 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
+    ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -117,8 +133,13 @@ app.whenReady().then(() => {
   // desktop-originated runs now produce a more complete lifecycle in the event log
   // without requiring the user to run a separate watcher process.
   // The watcher respects the same registered projects from agent-projects.conf.
+  //
+  // The onIdle subscriber surfaces an OS notification for each completed run.
+  // This is the "fire-and-walk-away" UX promise of a Fleet Runner: dispatch an
+  // intent and the OS pings you when the agent hands off, regardless of which
+  // window has focus.
   try {
-    const w = startWatcher()
+    const w = startWatcher({ onIdle: notifyOnIdle })
     stopWatcher = w.close
     console.log('[desktop] embedded watcher started for session.md → worker.idle')
   } catch (e) {
@@ -151,8 +172,14 @@ app.on('before-quit', () => {
 })
 
 function createTray() {
-  // Placeholder icon; in production add a real png/icns from the unified control-window mark (see public/icon.svg + BrandMark.tsx + docs/branding-design.md)
-  const trayIcon = nativeImage.createEmpty()
+  // Tray icon: the FleetCrown control-window mark, pre-rendered to PNG by
+  // desktop/scripts/generate-tray-icon.mjs (kept visually identical to
+  // public/icon.svg + BrandMark.tsx; re-run that script if the geometry changes).
+  // Falls back to an empty image so the tray still mounts in dev if the file
+  // is missing — the menu and click handlers stay functional either way.
+  const trayIcon = TRAY_ICON_PATH
+    ? nativeImage.createFromPath(TRAY_ICON_PATH)
+    : nativeImage.createEmpty()
   const tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show Fleet Runner', click: () => mainWindow?.show() },
@@ -170,6 +197,26 @@ function createTray() {
       }
     }
   })
+}
+
+// OS notification fired on each worker.idle event from the embedded watcher.
+// Clicking the notification surfaces the main window so the user can act on
+// the handoff immediately. Health is encoded in the title so a glance tells
+// the user whether a run succeeded.
+function notifyOnIdle({ project, handoff }: { project: string; handoff: { done: string; next: string; health: string } }) {
+  if (!Notification.isSupported()) return
+  const healthBadge = handoff.health === 'good' ? '✓'
+    : handoff.health === 'critical' ? '✗'
+    : handoff.health === 'needs attention' ? '!'
+    : '•'
+  const n = new Notification({
+    title: `${healthBadge} ${project} — agent idle`,
+    body: handoff.done || handoff.next || 'Session handoff written.',
+    silent: false,
+    ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
+  })
+  n.on('click', () => mainWindow?.show())
+  n.show()
 }
 
 // In this file you can include the rest of your app's specific main process

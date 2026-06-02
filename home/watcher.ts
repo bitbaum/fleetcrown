@@ -97,6 +97,16 @@ function logSkipOnce(filename: string, reason: string) {
   console.log(`[watcher] skipping ${filename} — ${reason}`);
 }
 
+/**
+ * Subscriber called in addition to the JSONL append whenever a registered
+ * project's session.md flips to a complete handoff. Lets embedders (desktop
+ * Fleet Runner) surface OS notifications without re-tailing the event log.
+ * Errors in the subscriber are swallowed so a bad callback can't break the
+ * event-log path — the log remains the authoritative source.
+ */
+export type OnIdle = (event: { project: string; handoff: Handoff }) => void;
+let onIdleSubscriber: OnIdle | null = null;
+
 function readAndEmit(filename: string) {
   const tab = tabFromFilename(filename);
   if (!tab) return;
@@ -132,6 +142,11 @@ function readAndEmit(filename: string) {
     handoff,
   });
   console.log(`[watcher] worker.idle ${tab} · ${handoff.done.slice(0, 60)}…`);
+
+  if (onIdleSubscriber) {
+    try { onIdleSubscriber({ project: tab, handoff }); }
+    catch (e) { console.warn(`[watcher] onIdle subscriber threw: ${(e as Error).message}`); }
+  }
 }
 
 function scheduleFlush(filename: string) {
@@ -145,12 +160,14 @@ function scheduleFlush(filename: string) {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
-export function startWatcher(): { close: () => void } {
+export function startWatcher(opts: { onIdle?: OnIdle } = {}): { close: () => void } {
+  onIdleSubscriber = opts.onIdle ?? null;
+
   if (!fs.existsSync(SESSIONS_DIR)) {
     console.error(`[watcher] ${SESSIONS_DIR} does not exist — is Claude installed?`);
     // In library mode (desktop) we don't want to kill the whole process.
     // Return a no-op closer; caller can decide to surface to user.
-    return { close: () => {} };
+    return { close: () => { onIdleSubscriber = null; } };
   }
 
   // Load the registry. Empty registry isn't fatal — it just means nothing
@@ -188,6 +205,7 @@ export function startWatcher(): { close: () => void } {
     try { w.close(); } catch { /* ignore */ }
     for (const t of pendingFlush.values()) clearTimeout(t);
     pendingFlush.clear();
+    onIdleSubscriber = null;
   };
 
   // Only install process signal handlers when running as the direct CLI process.
