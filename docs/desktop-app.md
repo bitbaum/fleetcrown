@@ -184,10 +184,10 @@ This is the Fleet Runner becoming real. Legacy daemon still works in parallel.
 Current state (advanced prototype):
 - Packaged native apps (AppImage + deb) via `npm run dist:*` — ready to run after build.
 - x.ai-style UI: black, massive typography, minimal, powerful.
-- Full token connect: paste ck_* token, saves to ~/.config/cockpit/fleet-runner-token, "CONNECTED" badge.
-- Project selection: click to select (ring highlight), dispatch buttons only for selected, custom command bar targets selected.
-- Runtime: loads projects from your config, uses real home/ decide + renderTaskForAdapter (SSOT), best-effort zellij injection on dispatch (falls back to showing the exact prompt).
-- Sync to Web: button in UI that, using the token, POSTs the current projects/state to the hosted /api/control/runtime-state so the web control plane immediately sees this desktop app as the active local runtime for those projects.
+- Full token connect: paste ck_* token, saves to ~/.config/fleetcrown/fleet-runner-token, "CONNECTED" badge. Auto-syncs projects to web on successful connect.
+- Project selection: click to select (ring highlight), dispatch buttons only for selected, custom command bar (free text) targets selected or first.
+- Runtime: loads projects from your config, uses real home/ decide + renderTaskForAdapter (SSOT), *canonical* `injectIntoTab` (go-to + focus guard + write + Enter + restore; same as daemon/worker; throws on fail so callers can surface crashes).
+- Sync to Web: button (and auto on connect) in UI that, using the token as Bearer, POSTs the current projects + observed state to the hosted /api/control/runtime-state so the web control plane immediately sees this desktop app as the active local runtime for those projects. Web dispatches then target the desktop.
 - Site: polished x.ai-style /download page + homepage section with exact clone+build+run+connect+sync instructions. Settings page copy promotes desktop as preferred.
 - Quality: tsc clean for desktop, builds succeed, root lint passes on changed files (pre-existing warnings ignored as before).
 - No breaking changes to daemon path.
