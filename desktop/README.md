@@ -30,6 +30,11 @@ chmod +x dist/Cockpit\ Fleet\ Runner-0.1.0.AppImage
 
 (Or install the .deb.)
 
+In the app:
+- Projects from your `agent-projects.conf` are listed.
+- Select one, dispatch intents or type custom prompt.
+- Paste agent token from Cockpit web → Settings to connect it as your local runtime.
+
 On macOS/Windows use `npm run dist:mac` or `dist:win` on a machine of that platform.
 
 ## Dev (for contributors)

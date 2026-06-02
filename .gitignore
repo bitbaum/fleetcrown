@@ -18,3 +18,11 @@ next-env.d.ts
 /backups/
 /cockpit.service
 /codex-wrapper
+# Desktop app (Fleet Runner) subproject
+desktop/node_modules
+desktop/dist
+desktop/out
+desktop/package-lock.json
+desktop/.vite
+desktop/.turbo
+

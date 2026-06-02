@@ -80,16 +80,17 @@ export async function dispatchIntent(projectKey: string, intent: string, queueHe
 
   const projectConfig = (projectsCache && projectsCache[projectKey]) || { name: projectKey, dir: '.' }
 
-  // Build minimal project state for decide
+  // Build minimal project state for decide (cast to satisfy types for prototype)
   const decideInput = {
     project: {
       project: projectKey,
       recentOutcomes: currentState.recentOutcomes || [],
       lastHandoff: currentState.lastHandoff || {},
       currentRun: currentState.currentRun || null,
-    },
+      lastEventTs: Date.now(),
+    } as any,
     queueHead: queueHead || '',
-    autonomy: 'manual'
+    autonomy: 'manual' as const
   }
 
   const decision = HomeDecide.decide ? HomeDecide.decide(decideInput) : { action: { kind: 'next_best' } }
@@ -98,13 +99,13 @@ export async function dispatchIntent(projectKey: string, intent: string, queueHe
   let renderedPrompt = ''
   try {
     renderedPrompt = renderTaskForAdapter({
-      project: projectKey,
+      projectKey,
       projectPath: projectConfig.dir || '.',
       intent: intent as any,
       adapter: 'claude',
       customInstructions: queueHead,
       queue: [],
-    })
+    } as any)
   } catch (e) {
     renderedPrompt = `[rendered prompt for ${intent} on ${projectKey}]`
   }

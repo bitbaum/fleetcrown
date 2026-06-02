@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld('cockpit', {
   dispatchIntent: (args: { projectKey: string; intent: string; queueHead?: string }) =>
     ipcRenderer.invoke('dispatch-intent', args),
   getCurrentState: () => ipcRenderer.invoke('get-current-state'),
+  saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
+  loadToken: () => ipcRenderer.invoke('load-token'),
+  getConfigDir: () => ipcRenderer.invoke('get-config-dir'),
 })

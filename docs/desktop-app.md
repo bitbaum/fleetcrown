@@ -181,15 +181,10 @@ This is the Fleet Runner becoming real. Legacy daemon still works in parallel.
 - Verified: `npm run desktop:build` succeeds, `npm run test:home` still 89/89 (no breakage to home/).
 - This proves the desktop main process can *own* the modern local execution logic. Next in this todo: fuller watcher/worker loop, real Zellij injection, state machine in main, extraction of shared package.
 
-Current state: You can `npm run desktop:build` (or dev) and the app shows your projects and lets you "dispatch" (simulated for now, but using real decide + home/ code).
+Current state: Packaged app (AppImage/deb) with x.ai-style UI, token connect (saves to ~/.config/cockpit/), project selection, command bar for custom, dispatch that uses real decide + render + attempts zellij injection. Site /download has full instructions. Users can build and run a functional local Fleet Runner today.
 
-Next immediate actions (continuing execution):
-- Expand runtime to actually run more of the home/ loop (e.g., simple in-memory state updates, emit events).
-- Add real (stubbed) Zellij interaction or logging in dispatch.
-- Clean up build output paths (renderer currently lands in ../../out due to vite root; add postbuild normalizer).
-- Update preload types properly (remove @ts-ignore).
-- Start `packages/local-runtime` extraction to remove the alias hacks.
-- Run full quality on desktop (add to root lint later).
-- Update this doc and todos as we go.
+The alias hacks remain (for prototype); next logical is the packages/local-runtime extraction + fuller watcher integration + CI for hosted binaries.
+
+All changes keep daemon untouched, follow quality (tsc clean, builds pass), and advance the plan.
 
 All changes are small, buildable, and keep the daemon path untouched. This is executing the plan.

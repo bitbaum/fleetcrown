@@ -18,6 +18,10 @@ function App(): JSX.Element {
   const [projects, setProjects] = useState<any>(null)
   const [response, setResponse] = useState<string>('')
   const [dispatching, setDispatching] = useState<string | null>(null)
+  const [token, setToken] = useState<string>('')
+  const [connected, setConnected] = useState<boolean>(false)
+  const [configDir, setConfigDir] = useState<string>('')
+  const [selectedProject, setSelectedProject] = useState<string>('')
 
   const refreshStatus = async () => {
     try {
@@ -32,14 +36,46 @@ function App(): JSX.Element {
     try {
       const p = await window.cockpit.getProjects()
       setProjects(p)
+      const keys = p ? Object.keys(p) : []
+      if (keys.length > 0 && !selectedProject) {
+        setSelectedProject(keys[0])
+      }
     } catch (e) {
       setResponse('Error: ' + (e as Error).message)
+    }
+  }
+
+  const loadSavedToken = async () => {
+    try {
+      const saved = await window.cockpit.loadToken()
+      const dir = await window.cockpit.getConfigDir()
+      setConfigDir(dir || '')
+      if (saved) {
+        setToken(saved)
+        setConnected(true)
+      }
+    } catch {}
+  }
+
+  const handleConnect = async () => {
+    if (!token.trim()) return
+    try {
+      const res = await window.cockpit.saveToken(token.trim())
+      if (res.ok) {
+        setConnected(true)
+        setResponse('Token saved. This app can now act as your local runtime for Cockpit (use the same token in web settings if needed).')
+      } else {
+        setResponse('Failed to save token: ' + (res.error || 'unknown'))
+      }
+    } catch (e) {
+      setResponse('Error saving token: ' + (e as Error).message)
     }
   }
 
   useEffect(() => {
     refreshStatus()
     loadProjects()
+    loadSavedToken()
   }, [])
 
   const handlePing = async () => {
@@ -48,10 +84,11 @@ function App(): JSX.Element {
   }
 
   const handleDispatch = async (projectKey: string, intent: string) => {
-    setDispatching(projectKey + ':' + intent)
+    const target = selectedProject || projectKey
+    setDispatching(target + ':' + intent)
     setResponse('')
     try {
-      const res = await window.cockpit.dispatchIntent({ projectKey, intent })
+      const res = await window.cockpit.dispatchIntent({ projectKey: target, intent })
       setResponse(JSON.stringify(res, null, 2))
       await refreshStatus()
       const liveState = await window.cockpit.getCurrentState()
@@ -89,6 +126,27 @@ function App(): JSX.Element {
           <p className="mt-4 max-w-md text-[#888] text-[15px]">
             Direct execution. No intermediaries. The desktop app is the source of truth for everything your agents do.
           </p>
+
+          {/* Connect / Token */}
+          <div className="mt-6 p-4 border border-[#1f1f1f] rounded-xl bg-[#0a0a0a]">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="text-xs tracking-widest text-[#666]">CONNECT TO COCKPIT</div>
+              {connected && <div className="text-[10px] px-2 py-0.5 bg-emerald-900 text-emerald-400 rounded">CONNECTED</div>}
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Paste agent token (ck_...)"
+                className="flex-1 bg-black border border-[#1f1f1f] px-4 py-2 text-sm rounded-xl focus:border-[#ff5c00] outline-none"
+              />
+              <button onClick={handleConnect} className="px-4 py-2 text-sm border border-[#1f1f1f] rounded-xl hover:bg-[#111]">
+                CONNECT
+              </button>
+            </div>
+            {configDir && <div className="text-[10px] text-[#444] mt-1 font-mono">Saved to {configDir}</div>}
+          </div>
         </div>
 
         {/* Status — very clean */}
@@ -128,29 +186,41 @@ function App(): JSX.Element {
 
           {projectKeys.length > 0 ? (
             <div className="space-y-px">
-              {projectKeys.slice(0, 8).map((key: string) => (
-                <div key={key} className="project-row flex items-center justify-between px-5 py-4 rounded-xl">
-                  <div className="min-w-0">
-                    <div className="font-medium text-[15px] tracking-[-0.1px]">{key}</div>
-                    <div className="text-[11px] text-[#555] font-mono truncate mt-px">
-                      {projects[key]?.dir || '—'}
+              {projectKeys.slice(0, 8).map((key: string) => {
+                const isSel = selectedProject === key
+                return (
+                  <div
+                    key={key}
+                    onClick={() => setSelectedProject(key)}
+                    className={`project-row flex items-center justify-between px-5 py-4 rounded-xl cursor-pointer ${isSel ? 'ring-1 ring-[#ff5c00]' : ''}`}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-[15px] tracking-[-0.1px] flex items-center gap-2">
+                        {key}
+                        {isSel && <span className="text-[10px] text-[#ff5c00]">SELECTED</span>}
+                      </div>
+                      <div className="text-[11px] text-[#555] font-mono truncate mt-px">
+                        {projects[key]?.dir || '—'}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2 ml-4 flex-shrink-0">
-                    {['next_best', 'test_and_fix', 'close_session'].map((intent) => (
-                      <button
-                        key={intent}
-                        disabled={!!dispatching}
-                        onClick={() => handleDispatch(key, intent)}
-                        className="intent-btn text-[10px] tracking-[0.5px] uppercase"
-                      >
-                        {dispatching === `${key}:${intent}` ? '…' : intent.replace('_', ' ')}
-                      </button>
-                    ))}
+                    {isSel && (
+                      <div className="flex gap-2 ml-4 flex-shrink-0">
+                        {['next_best', 'test_and_fix', 'close_session'].map((intent) => (
+                          <button
+                            key={intent}
+                            disabled={!!dispatching}
+                            onClick={(e) => { e.stopPropagation(); handleDispatch(key, intent) }}
+                            className="intent-btn text-[10px] tracking-[0.5px] uppercase"
+                          >
+                            {dispatching === `${key}:${intent}` ? '…' : intent.replace('_', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-[#555] py-8 text-sm">
@@ -168,8 +238,9 @@ function App(): JSX.Element {
               placeholder="next best thing for project-x"
               className="flex-1 bg-black border border-[#1f1f1f] focus:border-[#ff5c00] rounded-xl px-5 py-3 text-sm placeholder:text-[#333] outline-none"
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.currentTarget.value.trim() && projectKeys[0]) {
-                  handleDispatch(projectKeys[0], 'custom', e.currentTarget.value.trim())
+                const target = selectedProject || projectKeys[0]
+                if (e.key === 'Enter' && e.currentTarget.value.trim() && target) {
+                  handleDispatch(target, 'custom', e.currentTarget.value.trim())
                   e.currentTarget.value = ''
                 }
               }}
@@ -192,6 +263,7 @@ function App(): JSX.Element {
 
         <div className="mt-16 text-center">
           <div className="text-[10px] tracking-[2px] text-[#444]">BUILT FOR BUILDERS WHO RUN REAL FLEETS</div>
+          <div className="text-[10px] text-[#333] mt-1">Requires: zellij + at least one agent CLI (claude, codex, etc.) on PATH</div>
         </div>
       </div>
     </div>

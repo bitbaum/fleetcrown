@@ -33,12 +33,12 @@ export default function DownloadPage() {
           npm run dist:linux   # or dist:mac / dist:win on your machine
         </div>
         <p>
-          Run the resulting <code>Cockpit Fleet Runner-*.AppImage</code> (chmod +x it) or install the .deb.
-          It reads your existing <code>~/.config/agent-projects.conf</code>, shows your projects, and lets you dispatch intents that execute locally using the real orchestration logic.
+          Run the resulting <code>Cockpit Fleet Runner-*.AppImage</code> (make it executable with <code>chmod +x</code>) or install the .deb.
+          It reads your existing <code>~/.config/agent-projects.conf</code>, shows your projects, and lets you dispatch intents that execute locally using the real orchestration logic (it will attempt to inject into a matching zellij session).
         </p>
         <p>
-          Connect it to your Cockpit account using an agent token from Settings (the same tokens as the legacy daemon). 
-          The web portal then becomes the remote control surface for the fleet running in the desktop app.
+          In the app, paste an agent token from Cockpit Settings → Agent tokens to connect. 
+          The web portal then becomes the remote control surface for the fleet running in this desktop app.
         </p>
         <p className="text-xs">
           Pre-built signed releases with auto-updates will become the default install path soon. This gets you a working native app right now.

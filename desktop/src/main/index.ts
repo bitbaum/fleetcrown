@@ -2,6 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
+import { homedir } from 'os'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -46,6 +48,41 @@ function createWindow(): void {
 
   ipcMain.handle('get-current-state', async () => {
     return getCurrentState()
+  })
+
+  // Token / connect support for using this app as the local runtime for hosted Cockpit
+  const configDir = join(homedir(), '.config', 'cockpit')
+  const tokenFile = join(configDir, 'fleet-runner-token')
+
+  function ensureConfigDir() {
+    if (!existsSync(configDir)) {
+      mkdirSync(configDir, { recursive: true })
+    }
+  }
+
+  ipcMain.handle('save-token', async (_event, token: string) => {
+    try {
+      ensureConfigDir()
+      writeFileSync(tokenFile, token.trim(), 'utf8')
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
+  ipcMain.handle('load-token', async () => {
+    try {
+      if (existsSync(tokenFile)) {
+        return readFileSync(tokenFile, 'utf8').trim()
+      }
+      return null
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('get-config-dir', async () => {
+    return configDir
   })
 }
 

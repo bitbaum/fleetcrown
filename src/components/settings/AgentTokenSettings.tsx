@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Copy, Check, Plus, Trash2, Loader2, Terminal } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
-import { APP_NAME, APP_URL } from "@/config/brand";
+import { APP_URL } from "@/config/brand";
 
 type TokenMeta = {
   id: string;
@@ -73,7 +73,7 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Connect the {APP_NAME} background helper on any machine. Run the command below and paste the token when prompted — it installs and starts itself as a persistent service.
+        Preferred: install the native <a href="/download" className="underline">Fleet Runner desktop app</a> (the authoritative local runtime). Legacy daemon installer below for transition / headless.
       </p>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded-lg bg-surface-raised px-3 py-2 font-mono text-xs text-text-secondary">
