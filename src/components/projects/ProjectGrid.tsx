@@ -167,7 +167,7 @@ function ProjectCard({
       {(project.dirPath || project.agentPref) && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs text-text-tertiary">
           {project.dirPath && (
-            <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-[10px]" title={project.dirPath}>
+            <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-micro" title={project.dirPath}>
               {project.dirPath.replace(/^.*\/([^/]+\/[^/]+)$/, "$1")}
             </code>
           )}

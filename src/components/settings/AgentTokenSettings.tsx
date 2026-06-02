@@ -160,7 +160,7 @@ export function AgentTokenSettings() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="truncate text-sm font-medium text-text-primary">{t.label}</p>
                   {t.prefix && (
-                    <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary shrink-0" title="Token prefix — match this against the ck_… in your .env to identify the right token">
+                    <code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-micro text-text-tertiary shrink-0" title="Token prefix — match this against the ck_… in your .env to identify the right token">
                       {t.prefix}
                     </code>
                   )}

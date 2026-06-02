@@ -55,7 +55,7 @@ export async function RecentRunsCard() {
                     <span className="ui-badge">{d.adapter}</span>
                     {!custom && (
                       <span
-                        className="rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent-text"
+                        className="rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-micro font-medium uppercase tracking-wide text-accent-text"
                         title={`Templated dispatch — intent: ${d.intent}`}
                       >
                         {d.intent.replace(/_/g, " ")}

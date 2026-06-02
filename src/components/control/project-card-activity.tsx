@@ -64,7 +64,7 @@ export function ProjectActivitySection({
                       </span>
                       {event.kind === "user_prompt" && event.intent && (
                         <span
-                          className="shrink-0 mt-px rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-accent-text"
+                          className="shrink-0 mt-px rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-micro font-medium uppercase tracking-wide text-accent-text"
                           title={`Templated dispatch — intent: ${event.intent}`}
                         >
                           {event.intent.replace(/_/g, " ")}
