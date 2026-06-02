@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUserId } from "@/lib/session";
+import { requirePrivateApiAccess } from "@/lib/private-zone-api";
 import { listActiveGoals, createGoal, CreateGoalBody } from "@/db/queries/goals";
 import { readJsonBody } from "@/lib/api/route-helpers";
 
 export async function GET() {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
   const items = await listActiveGoals(userId);
   return NextResponse.json({ goals: items });
 }
 
 export async function POST(req: NextRequest) {
-  const userId = await getSessionUserId();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requirePrivateApiAccess();
+  if (access instanceof NextResponse) return access;
+  const { userId } = access;
   const dataOrResp = await readJsonBody(req, CreateGoalBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 

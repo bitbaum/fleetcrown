@@ -4,6 +4,7 @@ import { entities, entityRelations, interactions, goals, userProjects, orgMember
 import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { z } from "zod";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 
 export const RECENT_INTERACTION_LIMIT = 5;
 
@@ -194,6 +195,23 @@ export async function getProjectDetail(userId: string, id: string) {
 
   if (!project) return null;
 
+  const privateLocked = await isPrivateZoneLocked(userId);
+  const goalsPromise = privateLocked
+    ? Promise.resolve([])
+    : db
+        .select({
+          id: goals.id,
+          title: goals.title,
+          description: goals.description,
+          status: goals.status,
+          progress: goals.progress,
+          targetDate: goals.targetDate,
+          milestones: goals.milestones,
+        })
+        .from(goals)
+        .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
+        .orderBy(desc(goals.progress));
+
   const [attrMap, relations, recentInteractions, linkedGoals, userProject] = await Promise.all([
     fetchAttributesByEntityIds([id]),
     db
@@ -206,19 +224,7 @@ export async function getProjectDetail(userId: string, id: string) {
       .where(and(eq(interactions.entityId, id), eq(interactions.userId, userId)))
       .orderBy(desc(interactions.occurredAt))
       .limit(RECENT_INTERACTION_LIMIT),
-    db
-      .select({
-        id: goals.id,
-        title: goals.title,
-        description: goals.description,
-        status: goals.status,
-        progress: goals.progress,
-        targetDate: goals.targetDate,
-        milestones: goals.milestones,
-      })
-      .from(goals)
-      .where(and(eq(goals.entityId, id), eq(goals.userId, userId)))
-      .orderBy(desc(goals.progress)),
+    goalsPromise,
     db.query.userProjects
       .findFirst({
         where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, project.id)),

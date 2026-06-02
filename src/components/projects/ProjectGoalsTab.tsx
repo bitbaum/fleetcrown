@@ -28,9 +28,20 @@ export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
   const openLink = async () => {
     setMode("link");
     setSelectedId("");
-    const data = await listGoals();
-    const linkedIds = new Set(linked.map((g) => g.id));
-    setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
+    setError(null);
+    try {
+      const data = await listGoals();
+      const linkedIds = new Set(linked.map((g) => g.id));
+      setAllGoals((data.goals ?? []).filter((g: { id: string }) => !linkedIds.has(g.id)));
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : "";
+      if (msg.includes("403") || msg.includes("private_zone_locked")) {
+        setError("Private zone locked — unlock to link existing goals.");
+        setAllGoals([]);
+      } else {
+        setError("Failed to load goals.");
+      }
+    }
   };
 
   const openCreate = () => {
@@ -52,6 +63,13 @@ export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
       await patchGoal(selectedId, { entityId: projectId });
       setMode("idle");
       onReload?.(); // parent refetches → real progress, status, milestones flow back in
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : "";
+      if (msg.includes("403") || msg.includes("private")) {
+        setError("Unlock private zone first to link goals.");
+      } else {
+        setError("Failed to link goal.");
+      }
     } finally {
       setSaving(false);
     }
@@ -64,6 +82,12 @@ export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
     setError(null);
     try {
       const res = await createGoal({ title, targetDate: newDate || undefined, entityId: projectId });
+      if (!res.ok) {
+        if (res.status === 403) { setError("Unlock private zone to create goals for projects."); return; }
+        const data = await res.json().catch(() => ({})) as { error?: string };
+        setError(data.error ?? "Failed to create goal");
+        return;
+      }
       const data = await res.json() as { ok?: boolean; goal?: { id: string; title: string; targetDate?: string | null }; error?: string };
       if (!data.ok) { setError(data.error ?? "Failed to create goal"); return; }
       setMode("idle");
@@ -74,8 +98,16 @@ export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
   };
 
   const handleUnlink = async (goalId: string) => {
-    await patchGoal(goalId, { entityId: null });
-    setLinked((prev) => prev.filter((g) => g.id !== goalId));
+    try {
+      await patchGoal(goalId, { entityId: null });
+      setLinked((prev) => prev.filter((g) => g.id !== goalId));
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message?: unknown }).message) : "";
+      if (msg.includes("403") || msg.includes("private")) {
+        setError("Unlock private zone to unlink goals.");
+      }
+      // else silent fail or parent will refresh
+    }
   };
 
   return (
@@ -140,6 +172,7 @@ export function GoalsTab({ goals: initialGoals, projectId, onReload }: {
         <div className="flex flex-col items-center gap-2 py-4 text-center">
           <Target className="h-6 w-6 text-text-muted" />
           <p className="text-xs text-text-secondary">No goals linked to this project yet.</p>
+          <p className="text-micro text-text-muted">Private goals are hidden while the zone is locked — use the sidebar to unlock.</p>
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { cancelSubscription } from "@/db/queries/money";
 import { createInteraction } from "@/db/queries/people";
 import { patchGoal } from "@/db/queries/goals";
 import { requirePageUserId } from "@/lib/session";
+import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { ROUTES } from "@/config/auth";
 import { GOAL_STATUS } from "@/lib/constants/statuses";
 import { ACTION_TYPE, type ActionType, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
@@ -68,6 +69,7 @@ export async function handleDismissAlert(id: string) {
 
 export async function handleFulfillCommitment(id: string) {
   const userId = await requirePageUserId();
+  if (await isPrivateZoneLocked(userId)) return; // UI should not call when locked
   await fulfillCommitment(id, userId);
   revalidatePath(ROUTES.APP_HOME);
 }
@@ -80,6 +82,7 @@ export async function handleCancelSubscription(id: string) {
 
 export async function handleAbandonGoal(id: string) {
   const userId = await requirePageUserId();
+  if (await isPrivateZoneLocked(userId)) return; // UI should not call when locked; private page gated
   await patchGoal(userId, id, { status: GOAL_STATUS.ABANDONED });
   revalidatePath(ROUTES.APP_HOME);
   revalidatePath("/goals");
