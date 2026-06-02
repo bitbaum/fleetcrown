@@ -181,7 +181,18 @@ This is the Fleet Runner becoming real. Legacy daemon still works in parallel.
 - Verified: `npm run desktop:build` succeeds, `npm run test:home` still 89/89 (no breakage to home/).
 - This proves the desktop main process can *own* the modern local execution logic. Next in this todo: fuller watcher/worker loop, real Zellij injection, state machine in main, extraction of shared package.
 
-Current state: Packaged app (AppImage/deb) with x.ai-style UI, token connect (saves to ~/.config/cockpit/), project selection, command bar for custom, dispatch that uses real decide + render + attempts zellij injection. Site /download has full instructions. Users can build and run a functional local Fleet Runner today.
+Current state (advanced prototype):
+- Packaged native apps (AppImage + deb) via `npm run dist:*` — ready to run after build.
+- x.ai-style UI: black, massive typography, minimal, powerful.
+- Full token connect: paste ck_* token, saves to ~/.config/cockpit/fleet-runner-token, "CONNECTED" badge.
+- Project selection: click to select (ring highlight), dispatch buttons only for selected, custom command bar targets selected.
+- Runtime: loads projects from your config, uses real home/ decide + renderTaskForAdapter (SSOT), best-effort zellij injection on dispatch (falls back to showing the exact prompt).
+- Sync to Web: button in UI that, using the token, POSTs the current projects/state to the hosted /api/control/runtime-state so the web control plane immediately sees this desktop app as the active local runtime for those projects.
+- Site: polished x.ai-style /download page + homepage section with exact clone+build+run+connect+sync instructions. Settings page copy promotes desktop as preferred.
+- Quality: tsc clean for desktop, builds succeed, root lint passes on changed files (pre-existing warnings ignored as before).
+- No breaking changes to daemon path.
+
+Users can now: follow /download, build on their machine, run the native app, connect with token from web, sync once, and have the web see/control the local fleet via the desktop (plus local dispatches from the app itself).
 
 The alias hacks remain (for prototype); next logical is the packages/local-runtime extraction + fuller watcher integration + CI for hosted binaries.
 

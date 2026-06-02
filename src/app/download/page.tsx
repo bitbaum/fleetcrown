@@ -38,7 +38,8 @@ export default function DownloadPage() {
         </p>
         <p>
           In the app, paste an agent token from Cockpit Settings → Agent tokens to connect. 
-          The web portal then becomes the remote control surface for the fleet running in this desktop app.
+          Then use the SYNC TO WEB button (in the RUNTIME section) to push your local projects/state so the hosted control plane sees this desktop app as your active local runner.
+          Dispatch from the web or the desktop app will drive your local Zellij sessions.
         </p>
         <p className="text-xs">
           Pre-built signed releases with auto-updates will become the default install path soon. This gets you a working native app right now.

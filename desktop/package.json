@@ -5,12 +5,12 @@
   "main": "./out/main/index.js",
   "author": {
     "name": "Cockpit",
-    "email": "team@cockpitapp.vercel.app"
+    "email": "team@fleetcrown.vercel.app"
   },
-  "homepage": "https://cockpitapp.vercel.app",
+  "homepage": "https://fleetcrown.vercel.app",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build && node -e \"const fs=require('fs'); const path=require('path'); const out='out/renderer'; if(!fs.existsSync(out)){fs.mkdirSync(out,{recursive:true});} const srcOut=path.resolve('..','out','renderer'); if(fs.existsSync(srcOut)){fs.cpSync(srcOut,out,{recursive:true}); console.log('normalized renderer out');}\" ",
+    "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "dist": "electron-vite build && electron-builder --publish=never",

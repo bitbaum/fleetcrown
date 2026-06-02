@@ -72,11 +72,57 @@ function App(): JSX.Element {
     }
   }
 
+  const handleSync = async () => {
+    if (!token) {
+      setResponse('Connect with token first (paste in the Connect box above)')
+      return
+    }
+    try {
+      const projList = projects ? Object.keys(projects).map((k: string) => ({
+        tab: k,
+        agentRunning: false,
+        tabOpen: true,
+        activeAgents: [],
+        observedAt: Date.now() / 1000
+      })) : []
+      const body = {
+        projects: projList,
+        openTabs: Object.keys(projects || {}),
+        installedAgents: ['claude', 'codex'], // example; in real we'd detect
+        observedAt: Date.now()
+      }
+      const res = await fetch('https://fleetcrown.vercel.app/api/control/runtime-state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      })
+      if (res.ok) {
+        setResponse('Synced to Cockpit web! The control plane should now see this desktop app as your local runtime for these projects.')
+        await refreshStatus()
+      } else {
+        const err = await res.text().catch(() => res.statusText)
+        setResponse('Sync failed: ' + err)
+      }
+    } catch (e) {
+      setResponse('Sync error: ' + (e as Error).message)
+    }
+  }
+
   useEffect(() => {
     refreshStatus()
     loadProjects()
     loadSavedToken()
   }, [])
+
+  useEffect(() => {
+    if (connected && token) {
+      // Auto-sync once when we have a token (so the web immediately sees this as the runtime)
+      handleSync()
+    }
+  }, [connected])
 
   const handlePing = async () => {
     const res = await window.cockpit.ping()
@@ -158,6 +204,13 @@ function App(): JSX.Element {
               className="text-xs text-[#ff5c00] hover:text-white transition-colors"
             >
               REFRESH
+            </button>
+            <button 
+              onClick={handleSync}
+              disabled={!connected}
+              className="text-xs text-[#ff5c00] hover:text-white transition-colors disabled:opacity-50 ml-2"
+            >
+              SYNC TO WEB
             </button>
           </div>
           {status ? (

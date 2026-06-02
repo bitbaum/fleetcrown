@@ -219,7 +219,7 @@ export const ROADMAP = {
         "Subscriptions as assets — Cockpit's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
         "Cockpit pricing on Lightning rails — Cockpit's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
       ],
-      note: "The pieces exist in production today on both platforms (cockpitapp.vercel.app and orangecat.ch). The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
+      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
     },
     {
       marker: "ROBOTICS",
@@ -306,7 +306,7 @@ export const DESKTOP_DOWNLOAD = {
     label: "Install the legacy daemon (terminal)",
     description:
       "For headless servers, CI, or users who prefer the old flow. The desktop app will become the recommended path.",
-    command: "curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init",
+    command: "curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init",
   },
   buildFromSource: {
     label: "Build the Fleet Runner (current way to get it)",
