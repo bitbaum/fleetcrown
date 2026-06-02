@@ -1,0 +1,195 @@
+# Desktop App (Local Fleet Runner) — Execution Plan
+
+**Date**: 2026-06 (post debt reduction push)
+**Status**: Starting implementation of the "NEXT" phase from the public roadmap.
+**References**:
+- `content/thoughts/the-local-fleet-runner-and-remote-control-plane-architecture.md` (the deep "why" and target architecture)
+- `src/config/marketing-content.ts` (ROADMAP — "The local fleet runner" is explicitly NEXT)
+- `docs/development/cloud-local-workflows.md` (current transitional daemon reality)
+- `home/README.md` (the prototype local logic we will package)
+- `CLAUDE.md` + debt-reduction-roadmap.md (engineering standards + unification priorities)
+
+## Vision Recap (Why This Matters)
+
+The current model (hosted web + background daemon that polls `pending_commands` or uses the `home/` event log) was the right bootstrap. It let us deliver a real multi-user SaaS + local execution quickly.
+
+The target (converging with Cursor, Claude Code, Grok Build):
+
+- A **first-class local desktop application** ("the fleet runner") is the authoritative owner of execution on the user's machine.
+- It directly owns Zellij, agent CLIs, session watching, handoff files, git, etc. — no polling/queuing layer between the user and reality when the machine is available.
+- The web portal (and later mobile) are excellent **remote control surfaces** that talk to the local app(s) via a clean authenticated channel (outbound WebSocket + fallback queue).
+- The app can run fully standalone.
+- Cloud execution remains a complementary mode for scale + when the laptop is closed, with explicit handoff.
+
+Product story: "Install the fleet runner on your machines. Control everything from the web or your phone."
+
+This is not a UI skin. It is the fundamental ownership shift called for in the architecture essay. It also makes the seed-stage narrative credible ("local app owns execution...").
+
+The essay's pragmatic path:
+1. Build the local Electron app as the new primary runtime (start by packaging the best of `home/` + daemon logic).
+2. Add the authenticated outbound connection as an optional feature.
+3. Evolve cloud agents into the complementary path.
+4. Keep the daemon working as a transition path for users who don't want the desktop app.
+
+## Stack Decision (Locked)
+
+**Primary runtime + shell**: Electron (explicitly named in every official plan and marketing copy) + **electron-vite** (modern DX: Vite for renderer, fast HMR, esbuild for main/preload).
+
+**UI layer in renderer**: React 19 + TypeScript + Tailwind (exact match to the web app).
+- Reuse design tokens (`globals.css` custom properties), `ui-*` classes, and as many components/logic as possible (control cards, intent dispatch, project state, etc.).
+- This maximizes DRY, keeps the visual language consistent, and lets us share types from `src/lib/orchestration`, `src/config/`, etc.
+
+**Why Electron (not Tauri or pure native) for v1 of this phase**:
+- Plans and public roadmap say "Native Electron application" repeatedly. Changing the name now would require updating marketing, essays, etc.
+- Full Node.js in main process makes porting the existing `home/` (pure Node/TS) and daemon logic trivial (Zellij control via child_process, file watching, event log, etc.). No immediate Rust rewrite needed.
+- Chromium + web tech means we can literally run large parts of the existing web UI (or share components) inside the desktop shell. Huge leverage.
+- electron-vite + builder gives us fast iteration + cross-platform distributables quickly.
+- Tradeoffs accepted: Larger binary size (we'll measure and optimize; can consider Tauri migration or using a lighter runtime later if it becomes painful). We accept this to move fast on the *product* and architecture validation.
+
+**Longer term options** (documented here for future):
+- Tauri (Rust core + web frontend) if we want dramatically smaller binaries and better native integration later.
+- Headless "runtime only" mode (the app can run without the window for power users who prefer their own terminal).
+- The runtime logic itself should be extractable (see below) so it isn't locked to one shell.
+
+**Monorepo placement**: `desktop/` at root (alongside `home/`, `src/`, `scripts/`). Not under `packages/` for now (to keep it self-contained like the web app). It can depend on shared packages we extract (e.g., `@cockpit/local-runtime`, `@cockpit/ui`).
+
+**Shared code strategy**:
+- Runtime core (`home/` logic + orchestration) → extract to `packages/local-runtime` (or similar) so both the desktop app and (for transition) the old daemon can consume it.
+- Types, intents, decide logic, event models → already in `src/lib/orchestration` and `src/config/` — desktop will import (or we make a published/internal package).
+- UI primitives + design tokens → we will make `packages/ui` or allow desktop to import from the web's `src/components/ui` + globals (via workspace or copy strategy initially).
+- This follows SSOT + DRY from CLAUDE.md.
+
+**Why this over alternatives**:
+- Starting with a beautiful but empty UI shell would be theater. The hard/important part is **owning execution**.
+- Rewriting the runtime from scratch in Rust on day 1 violates YAGNI and "leverage existing work". `home/` is small, has 8 self-test suites, and was literally built as the modern local model.
+- Ignoring the web stack for the desktop UI would create two divergent design systems and double the maintenance.
+
+## High-Level Target Architecture (Desktop App)
+
+```
+Desktop (Electron App)
+├── Main process (Node)
+│   ├── Local runtime core (ported home/ + daemon logic)
+│   │   ├── Event log (~/.cockpit/events.jsonl)
+│   │   ├── State projection (applyEvent)
+│   │   ├── decide() + autonomy gates
+│   │   ├── Watcher (session.md changes → worker.idle)
+│   │   ├── Worker (inject into Zellij, manage agents)
+│   │   └── Projects config loader
+│   ├── Zellij / agent CLI control (direct, authoritative)
+│   ├── Optional: authenticated outbound WebSocket to hosted backend
+│   └── IPC server (expose to renderer + future TUIs/MCP)
+│
+├── Renderer (React + Tailwind)
+│   ├── Local-first UI (project list, dispatch, live status, autonomy controls)
+│   ├── Reuses web components/types where possible
+│   └── Tray / native menus / notifications
+│
+└── Preload / secure bridge (minimal)
+```
+
+The app can run completely offline/local. When remote control is enabled, it opens the WS and the hosted web can route commands to *this specific machine*.
+
+## Transition & Compatibility Rules (Non-Negotiable)
+
+- The existing daemon (`cockpit-daemon.sh`, `home-start.sh`, install scripts) **must continue to work** for the entire transition period.
+- Users who don't want a GUI can keep using the headless daemon.
+- The desktop app becomes the *recommended* / default path in installers and docs.
+- We evolve the hosted installer (`/api/agent/install`) and `scripts/cockpit` CLI to offer the desktop app.
+- No breaking changes to the agent token system or project config format without migration path.
+
+## Prioritized Execution Order (and Why)
+
+This order is chosen for maximum leverage, minimum risk, and fastest path to a shippable artifact that proves the architecture.
+
+**Why this specific order (first-principles + product reasoning)**:
+- **Correctness & ownership first**: The local app must *actually own* execution before we add remote features or polish. Building on the already-modern `home/` stack (instead of the older daemon polling) ensures we carry the better model forward. Relevant because the debt-reduction work and the fleet-runner essay both emphasize one event/state model and local truth.
+- **Leverage existing tested code**: `home/` is small, has inline self-tests (`npm run test:home`), and was designed for exactly the local responsibilities we want. Porting it gives us decide(), autonomy, handoff rendering, etc., for "free." Rewriting would be waste.
+- **Small, reviewable, valuable slices**: We get a *runnable desktop app that can actually run agents* very early. This is 10x more useful for feedback and credibility than a pretty empty window.
+- **Ship the "local fleet runner" story ASAP**: The public roadmap calls this "NEXT". A downloadable app changes the user experience and the external narrative immediately ("install the fleet runner").
+- **Safety / transition**: Everything is additive/parallel to the daemon. We don't force migration.
+- **"Etc" sequencing**: Remote control channel, mobile, cloud handoff, etc. all become much easier (and make more sense) *after* the local app exists and owns execution. Doing remote first would mean building on the old daemon model we're trying to escape.
+- **Risk reduction**: Early validation of packaging, process model (main vs renderer), IPC, file paths, permissions. These are the things that bite desktop apps. UI polish can come after the engine works.
+- **Momentum fit**: We just finished a big tranche of foundation cleanup (design, private zone, orchestration slices, Beacon deprecation). The codebase is in a better state to build the *destination* on top of.
+- **Investor / long-term product fit**: As the essay notes, having a clear "local app owns execution, web is remote control" answer is dramatically more credible.
+
+Detailed order (with the todo ids we are tracking):
+
+1. **desktop-0-decision-doc** (this file + any updates to the architecture essay)
+2. **desktop-1-scaffold** — get a buildable Electron app with main + renderer running.
+3. **desktop-2-port-home-runtime** — the highest-leverage step. Make the app a real local executor using the home/ logic.
+4. **desktop-3-basic-ui** — minimal but usable local control surface (so people can actually use the app).
+5. **desktop-4-packaging** — distributables + one-command experience.
+6. **desktop-5-installer-transition** — make it the default path in our existing onboarding/install flows (daemon remains as opt-out).
+7. **desktop-6-remote-plumbing** — start the authenticated connection + basic relay (this is the bridge to the "Remote control channel" phase).
+
+Cross-cutting: Every step runs the quality bar (lint, tsc, relevant tests, design check). Small commits. Update this doc and the main plan.md. Keep the daemon 100% working.
+
+## Open Decisions (to resolve in the first 1-2 steps)
+
+- Exact folder: `desktop/` (top level, like `home/`) vs `packages/desktop/`.
+- How aggressively to extract shared packages in step 2 (minimal for speed, or do a small `packages/local-runtime` extraction early?).
+- Auto-update strategy (electron-updater?).
+- Code signing / notarization path for macOS (we'll need it for a real product).
+- Whether the desktop app should also be able to run the *web* UI locally (for `RUNTIME_AVAILABLE=true` users) or focus purely on the native fleet runner experience.
+
+## Success Criteria for "MVP Local Fleet Runner"
+
+- User can install/run the desktop app.
+- It discovers projects from the existing `~/.config/agent-projects.conf` (or the new name).
+- It can dispatch intents and actually drive Zellij/agent sessions using the home/ logic.
+- It feels like a real app (not "just the old scripts in a window").
+- Existing daemon users are unaffected.
+- We have a clear path to the remote control channel.
+
+---
+
+This doc will be updated as we execute. The goal is to treat the architecture essay's "pragmatic path" as the actual plan, not theater.
+
+*Started after the June 2026 debt reduction + private zone + small orchestration unification push, which strengthened the foundation we are now building the destination on.*
+
+## Readiness update (as of this execution)
+
+- Packaged binaries now produced: `desktop/dist/Cockpit Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
+- Users can follow the instructions on `/download` (and the updated component) to clone + `npm run dist:linux` (or equivalent for their OS) and immediately run a native x.ai-styled Fleet Runner that integrates the real home/ runtime logic.
+- Dispatch now renders real prompts (via orchestration renderers) and makes a best-effort injection into a running zellij session/tab matching the project key (falls back gracefully with the prompt shown in the UI).
+- The desktop app is the local runtime you can start using today for your projects (reads your existing config, owns decide/state, attempts execution).
+- Web download section and /download page updated with concrete steps.
+- Still early (no signed releases/auto-update yet, token connection to hosted is manual like the old daemon, full watcher/worker loop and multi-adapter injection coming next). But it is downloadable (via build) and functional enough to run real dispatches locally.
+
+This is the Fleet Runner becoming real. Legacy daemon still works in parallel.
+
+## Execution Log (immediate actions taken)
+
+**desktop-0 + desktop-1 (scaffold + decision doc)**: Completed.
+- Created `docs/desktop-app.md` with full rationale, stack choice (Electron + electron-vite + React/TS/Tailwind to share design system), architecture, transition rules, and this prioritized list.
+- Scaffolded `desktop/`:
+  - package.json, electron.vite.config, tsconfig, tailwind/postcss.
+  - Main + preload + renderer (React + Tailwind).
+  - Added root scripts: `npm run desktop:dev`, `desktop:build`, `desktop:preview`.
+  - Basic window + IPC.
+- Build succeeds (`npm run desktop:build`).
+
+**desktop-2 first slice (home/ runtime integration)**: In progress, core milestone achieved.
+- Created/expanded `desktop/src/main/runtime.ts`:
+  - Imports and exercises pure `home/` core: state, decide, emit, projects loader (via temporary @home/@ aliases in electron.vite.config.ts pointing to ../home and ../src).
+  - `getLocalRuntimeStatus()`, `getProjects()`, stub `dispatchIntent()` that calls into decide logic.
+  - Returns real data (project count from your config, etc.).
+- Wired in `src/main/index.ts`: more IPC handlers (get-runtime-status, get-projects, dispatch-intent).
+- Updated preload to expose them.
+- Enhanced renderer `App.tsx`: live status panel, project list (first 10), per-project dispatch buttons for next_best / test_and_fix / close_session. Results and status refresh from main process.
+- Verified: `npm run desktop:build` succeeds, `npm run test:home` still 89/89 (no breakage to home/).
+- This proves the desktop main process can *own* the modern local execution logic. Next in this todo: fuller watcher/worker loop, real Zellij injection, state machine in main, extraction of shared package.
+
+Current state: You can `npm run desktop:build` (or dev) and the app shows your projects and lets you "dispatch" (simulated for now, but using real decide + home/ code).
+
+Next immediate actions (continuing execution):
+- Expand runtime to actually run more of the home/ loop (e.g., simple in-memory state updates, emit events).
+- Add real (stubbed) Zellij interaction or logging in dispatch.
+- Clean up build output paths (renderer currently lands in ../../out due to vite root; add postbuild normalizer).
+- Update preload types properly (remove @ts-ignore).
+- Start `packages/local-runtime` extraction to remove the alias hacks.
+- Run full quality on desktop (add to root lint later).
+- Update this doc and todos as we go.
+
+All changes are small, buildable, and keep the daemon path untouched. This is executing the plan.

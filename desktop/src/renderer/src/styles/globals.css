@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* x.ai-inspired minimal dark aesthetic for the Fleet Runner desktop app.
+   Pure black, high contrast, generous whitespace, bold typography, almost no decoration.
+   Clean, powerful, focused. */
+
+:root {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-elevated: #0a0a0a;
+  --border: #1f1f1f;
+  --text: #ffffff;
+  --text-muted: #888888;
+  --accent: #ff5c00; /* x.ai-like warm orange for CTAs and highlights */
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: "tnum";
+  background: var(--bg);
+  color: var(--text);
+}
+
+.fleet-header {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.fleet-title {
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.section {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.intent-btn {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: #111;
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: all 0.1s ease;
+}
+
+.intent-btn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.intent-btn:disabled {
+  opacity: 0.5;
+}
+
+.project-row {
+  background: #050505;
+  border: 1px solid var(--border);
+  transition: border-color 0.1s ease;
+}
+
+.project-row:hover {
+  border-color: #333;
+}
+
+.response-box {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: #050505;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+}

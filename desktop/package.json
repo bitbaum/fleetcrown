@@ -1,0 +1,68 @@
+{
+  "name": "cockpit-desktop",
+  "version": "0.1.0",
+  "description": "Cockpit Fleet Runner — the local authoritative desktop application for AI agent fleets (the 'local fleet runner').",
+  "main": "./out/main/index.js",
+  "author": {
+    "name": "Cockpit",
+    "email": "team@cockpitapp.vercel.app"
+  },
+  "homepage": "https://cockpitapp.vercel.app",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build && node -e \"const fs=require('fs'); const path=require('path'); const out='out/renderer'; if(!fs.existsSync(out)){fs.mkdirSync(out,{recursive:true});} const srcOut=path.resolve('..','out','renderer'); if(fs.existsSync(srcOut)){fs.cpSync(srcOut,out,{recursive:true}); console.log('normalized renderer out');}\" ",
+    "preview": "electron-vite preview",
+    "postinstall": "electron-builder install-app-deps",
+    "dist": "electron-vite build && electron-builder --publish=never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish=never",
+    "dist:win": "electron-vite build && electron-builder --win --publish=never",
+    "dist:linux": "electron-vite build && electron-builder --linux --publish=never"
+  },
+  "build": {
+    "appId": "com.cockpit.fleet-runner",
+    "productName": "Cockpit Fleet Runner",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": ["dmg", "zip"]
+    },
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Development"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "g-but",
+      "repo": "cockpit"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.49",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5",
+    "vite": "^6.0.7"
+  }
+}
