@@ -72,10 +72,20 @@ export function DesktopDownload() {
             Build now: <span className="ui-public-download-build-step">{DESKTOP_DOWNLOAD.buildFromSource.steps}</span>
           </div>
         </div>
+
+        {/* Future platform promises — explicit, honest, from first principles (user asked for Android/iOS + "apps for you know" i.e. full desktop + mobile) */}
+        {DESKTOP_DOWNLOAD.future && (
+          <div className="mt-8 text-left text-xs text-text-secondary border-t border-border-subtle pt-4">
+            <div className="font-medium text-text-primary mb-1 tracking-[0.5px]">Coming to more surfaces</div>
+            <div>Desktop: {DESKTOP_DOWNLOAD.future.desktop}</div>
+            <div className="mt-1">Mobile: {DESKTOP_DOWNLOAD.future.mobile}</div>
+            {DESKTOP_DOWNLOAD.future.other && <div className="mt-1 opacity-80">{DESKTOP_DOWNLOAD.future.other}</div>}
+          </div>
+        )}
       </div>
 
       <p className="ui-public-download-footer">
-        The desktop app connects using the same tokens. Web = remote control.
+        The desktop app connects using the same tokens. Web = remote control. Mobile coming.
       </p>
     </div>
   );

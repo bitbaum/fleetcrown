@@ -98,7 +98,7 @@ export const INVESTORS = {
 
 export const INVESTOR_DETAILS = {
   deck: "Available upon request",
-  contact: "investors@cockpitapp.com",
+  contact: "investors@fleetcrown.app",
 };
 
 // Roadmap — multi-phase, with concrete bullets and cross-cutting throughlines
@@ -278,39 +278,44 @@ export const DESKTOP_DOWNLOAD = {
   eyebrow: "LOCAL FLEET RUNNER",
   title: "Install the desktop app",
   lede:
-    "The Fleet Runner is the native application that runs on your machines. It owns Zellij, agent launching, session watching, handoffs, and git — no daemon polling layer between you and the work.",
+    "The Fleet Runner is the native application that runs on your machines. It owns Zellij, agent launching, session watching, handoffs, and git — no daemon polling layer between you and the work. Web and mobile are remote control surfaces for the same system.",
   note:
-    "Packaged desktop apps are becoming the default install path. The legacy terminal daemon remains available during the transition.",
+    "Today: build from source for Linux (AppImage + .deb). The same process works for macOS and Windows. Packaged, signed, auto-updating releases for all major desktop platforms are coming soon. The legacy terminal daemon remains available during transition.",
   ctaLabel: "Download for your platform",
   platforms: [
     {
       id: "mac",
       label: "macOS",
-      note: "Universal (Apple Silicon + Intel)",
-      url: "https://github.com/g-but/cockpit/releases", // placeholder until we publish real .dmg/.zip
+      note: "Build from source today (Universal) · Signed one-click coming soon",
+      url: "https://github.com/g-but/cockpit/releases",
     },
     {
       id: "win",
       label: "Windows",
-      note: "x64 installer",
+      note: "Build from source today (x64) · Signed installer coming soon",
       url: "https://github.com/g-but/cockpit/releases",
     },
     {
       id: "linux",
       label: "Linux",
-      note: "AppImage • .deb • .rpm",
+      note: "AppImage • .deb (build now) · Signed packages + repos coming soon",
       url: "https://github.com/g-but/cockpit/releases",
     },
   ],
   fallback: {
     label: "Install the legacy daemon (terminal)",
     description:
-      "For headless servers, CI, or users who prefer the old flow. The desktop app will become the recommended path.",
+      "For headless servers, CI, or users who prefer the old flow. The desktop Fleet Runner will become the recommended path.",
     command: "curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init",
   },
   buildFromSource: {
     label: "Build the Fleet Runner (current way to get it)",
-    description: "Clone and build to get a native AppImage / .deb you can run immediately. This is the local authoritative runtime.",
-    steps: "git clone https://github.com/g-but/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux",
+    description: "Clone and build to get a native AppImage / .deb (or equivalent on your OS) you can run immediately. This is the local authoritative runtime.",
+    steps: "git clone https://github.com/g-but/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
+  },
+  future: {
+    desktop: "One-click downloadable installers with auto-update for macOS, Windows, and Linux (App Store, winget, apt, etc. where appropriate).",
+    mobile: "Native iOS and Android apps on the same remote control channel — full fleet visibility, queue management, and dispatch from your phone or tablet.",
+    other: "Additional runtimes and form factors (headless variants, CLI polish, and support for the platforms builders actually use).",
   },
 };
