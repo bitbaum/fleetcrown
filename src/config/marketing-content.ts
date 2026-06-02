@@ -219,7 +219,7 @@ export const ROADMAP = {
         "Subscriptions as assets — FleetCrown's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
         "FleetCrown pricing on Lightning rails — FleetCrown's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
       ],
-      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument. Built for real customers like FleetWave.",
+      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
     },
     {
       marker: "ROBOTICS",
@@ -320,13 +320,13 @@ export const DESKTOP_DOWNLOAD = {
   },
 };
 
-// FleetWave real customer + OrangeCat integration (SSOT for cross-product customer story)
+// OrangeCat integration for FleetCrown (SSOT for cross-product customer story)
 // FleetCrown (production/AI fleet) is a paying customer of OrangeCat (economic layer).
-// Both + FleetWave are live projects/profiles on orangecat.ch under Mao Nakamoto.
-// Shared BTC wallet, typed "customer" + "in_house_dev" stakeholder edges via stakeholder_relationships.
-// This demonstrates the full stack for a real customer; scales to others.
-export const FLEETWAVE_ORANGECAT_INTEGRATION = {
-  customer: "FleetWave",
+// Both OrangeCat and FleetCrown are live projects/profiles on orangecat.ch under Mao Nakamoto.
+// Shared BTC wallet, typed "customer" stakeholder edge via stakeholder_relationships.
+// This demonstrates the full stack; scales to other customers.
+export const ORANGECAT_INTEGRATION = {
+  customer: "FleetCrown",
   owner: "Mao Nakamoto",
   orangeCat: {
     title: "OrangeCat",
@@ -338,14 +338,10 @@ export const FLEETWAVE_ORANGECAT_INTEGRATION = {
     projectUrl: "https://www.orangecat.ch/projects/8130c927-114a-45b7-8cc2-99efd5224025",
     site: "https://fleetcrown.vercel.app",
   },
-  fleetWave: {
-    title: "FleetWave",
-    projectUrl: "https://www.orangecat.ch/projects/8502031c-1e71-4fea-a011-ffae17c74e25",
-  },
   wallet: {
     btc: "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",
     lightning: "orangecat@getalby.com",
   },
-  relation: "FleetCrown is 'customer' of OrangeCat; FleetWave is the real operating customer using the combined stack.",
-  note: "See stakeholder_relationships table (migration applied 2026-06) and live data. One is customer of the other.",
+  relation: "FleetCrown is 'customer' of OrangeCat via the shared stakeholder graph.",
+  note: "See stakeholder_relationships table (migration applied) and live data on orangecat.ch. One is customer of the other.",
 };

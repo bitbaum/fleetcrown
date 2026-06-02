@@ -15,7 +15,7 @@ import {
 import { requirePageUserId } from "@/lib/session";
 import { format, isPast } from "date-fns";
 import { formatMoney } from "@/lib/format";
-import { FLEETWAVE_ORANGECAT_INTEGRATION as INTEGRATION } from "@/config/marketing-content";
+import { ORANGECAT_INTEGRATION as INTEGRATION } from "@/config/marketing-content";
 
 export const metadata = { title: "Money" };
 
@@ -89,11 +89,11 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
 export default async function MoneyPage() {
   const userId = await requirePageUserId();
 
-  // FleetWave / OrangeCat integration banner (real customer setup) - SSOT in marketing-content
+  // OrangeCat integration banner for FleetCrown (the customer) - SSOT in marketing-content
   const IntegrationBanner = (
     <div className="mb-4 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
       <div className="font-medium">Economic layer: <a href={INTEGRATION.orangeCat.profile} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} profile ({INTEGRATION.owner})</a></div>
-      <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet for {INTEGRATION.customer} ops. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a> · <a href={INTEGRATION.fleetWave.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetWave.title} (real customer)</a>. Wallet: <code>{INTEGRATION.wallet.btc}</code></div>
+      <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet. <a href={INTEGRATION.orangeCat.projectUrl} target="_blank" className="ui-link">{INTEGRATION.orangeCat.title} project</a> · <a href={INTEGRATION.fleetCrown.projectUrl} target="_blank" className="ui-link">{INTEGRATION.fleetCrown.title} project</a>. Wallet: <code>{INTEGRATION.wallet.btc}</code></div>
     </div>
   );
 

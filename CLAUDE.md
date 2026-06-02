@@ -4,9 +4,7 @@
 
 ## Mission
 
-FleetCrown is a personal life OS and AI agent fleet for builders running multiple projects simultaneously (real customer: FleetWave). One interface to track goals, people, habits, money, and events; one neutral orchestration layer to dispatch and monitor AI agents across projects — so the builder stays in judgment mode while agents handle execution.
-
-FleetCrown is a customer of sibling product OrangeCat (economic layer / transaction half). Both appear as projects on orangecat.ch (profiles for Mao Nakamoto / FleetWave). Shared BTC wallet, typed "customer" stakeholder relation. See live data + integration in marketing-content.ts and stakeholder_relationships.
+FleetCrown is a personal life OS and AI agent fleet for builders running multiple projects simultaneously. FleetCrown itself is the customer of sibling product OrangeCat (economic layer / transaction half). Both OrangeCat and FleetCrown appear as projects/profiles on orangecat.ch under Mao Nakamoto. Shared BTC wallet, typed "customer" stakeholder relation. See live data + integration in marketing-content.ts and stakeholder_relationships.
 
 ## What This Is
 

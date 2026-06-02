@@ -2,7 +2,7 @@
 
 **Author:** Georgy Butaev
 **Date of memo:** 2026-06-02
-**Subject:** Intent to assign all intellectual property created on the FleetCrown (rebranded from repo codename "cockpit") and OrangeCat projects (for real customer FleetWave) to a to-be-formed corporate entity.
+**Subject:** Intent to assign all intellectual property created on the FleetCrown (rebranded from repo codename "cockpit") and OrangeCat projects (with FleetCrown as customer of OrangeCat) to a to-be-formed corporate entity.
 
 ---
 
@@ -22,7 +22,7 @@ The Work Product includes, without limitation:
 - All source code, configuration, infrastructure-as-code, and build artifacts in the FleetCrown (codename cockpit repo) and OrangeCat repositories and any successor or derivative repositories
 - All product designs, UX flows, brand identity, marketing copy, and visual assets
 - All documentation, technical specifications, architectural decisions, and internal records
-- All trademarks, service marks, trade dress, and brand names (including the former working title "Cockpit," the current brand "FleetCrown" for customer FleetWave, the brand "OrangeCat," and any future renamings)
+- All trademarks, service marks, trade dress, and brand names (including the former working title "Cockpit," the current brand "FleetCrown" (customer of OrangeCat), the brand "OrangeCat," and any future renamings)
 - All inventions, methods, processes, and know-how embodied in the Work Product, whether or not patentable
 - All goodwill associated with the foregoing
 
