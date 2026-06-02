@@ -213,10 +213,18 @@ function App(): JSX.Element {
             </div>
           </div>
           {status ? (
-            <div className="runner-mono text-[length:var(--text-micro)] space-y-1">
-              <div>homeStack: {status.homeStackIntegrated ? '✓' : '—'} • projects: {status.projectCount ?? 0}</div>
-              <div>watcher: {status.hasWatcher ? 'embedded ✓' : '—'} • real log: {status.usesRealEventLog ? 'yes' : 'no'}</div>
-              <div className="opacity-60 mt-2">raw: {JSON.stringify(status, null, 0)}</div>
+            <div>
+              <div className="flex gap-2 mb-2">
+                {status.hasWatcher && <span className="text-[length:var(--text-micro)] px-2 py-0.5 bg-[var(--accent)]/10 text-[var(--accent)] rounded">watcher embedded</span>}
+                {status.usesRealEventLog && <span className="text-[length:var(--text-micro)] px-2 py-0.5 bg-emerald-900/60 text-emerald-400 rounded">real event log</span>}
+              </div>
+              <div className="runner-mono text-[length:var(--text-micro)] opacity-75">
+                {status.projectCount ?? 0} projects • home stack {status.homeStackIntegrated ? 'active' : 'partial'}
+              </div>
+              <details className="mt-2">
+                <summary className="runner-label cursor-pointer">raw status</summary>
+                <div className="runner-mono text-[length:var(--text-micro)] mt-1 opacity-60">{JSON.stringify(status, null, 0)}</div>
+              </details>
             </div>
           ) : (
             <div className="text-[var(--text-muted)] text-sm">Loading local state…</div>
