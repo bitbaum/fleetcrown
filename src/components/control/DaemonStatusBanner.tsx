@@ -108,35 +108,44 @@ export function DaemonStatusBanner({
           </>
         )}
 
-        {/* One-click agent CLI install — the vision the user asked for */}
-        <div className="pt-2 border-t border-border-subtle">
-          <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
-          <div className="flex flex-wrap gap-2">
-            {["grok", "claude", "cursor", "gemini", "codex"].map((a) => (
-              <button
-                key={a}
-                onClick={async () => {
-                  try {
-                    const res = await fetch("/api/agent/install-cli", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ agent: a }),
-                    });
-                    if (res.ok) {
-                      // Success — daemon will open the tab if connected
-                    }
-                  } catch {}
-                }}
-                className="ui-btn-secondary ui-btn-xs"
-              >
-                Install {a[0].toUpperCase() + a.slice(1)}
-              </button>
-            ))}
+        {/* One-click agent CLI install — the vision the user asked for.
+            Suppressed when the daemon is offline on a cloud install: the
+            buttons POST to /api/agent/install-cli, which queues an installer
+            command for the daemon to pick up. With the daemon down and no
+            local daemon reachable from cloud, the buttons silently no-op and
+            their helper text ("When your Local Agent Helper is running…")
+            directly contradicts the banner just above. Keep them visible in
+            the never-seen (setup) flow and when running locally. */}
+        {(daemonNeverSeen || runtimeAvailable) && (
+          <div className="pt-2 border-t border-border-subtle">
+            <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
+            <div className="flex flex-wrap gap-2">
+              {["grok", "claude", "cursor", "gemini", "codex"].map((a) => (
+                <button
+                  key={a}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/agent/install-cli", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ agent: a }),
+                      });
+                      if (res.ok) {
+                        // Success — daemon will open the tab if connected
+                      }
+                    } catch {}
+                  }}
+                  className="ui-btn-secondary ui-btn-xs"
+                >
+                  Install {a[0].toUpperCase() + a.slice(1)}
+                </button>
+              ))}
+            </div>
+            <p className="text-micro text-text-muted mt-1">
+              When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
+            </p>
           </div>
-          <p className="text-micro text-text-muted mt-1">
-            When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
-          </p>
-        </div>
+        )}
       </div>
 
       <button

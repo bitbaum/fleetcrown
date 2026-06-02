@@ -188,19 +188,19 @@ export function ControlPanel() {
     countdownSeconds: automationPolicy.countdownSeconds,
   });
 
+  // Fleet counts (running/ready/etc) intentionally live in ControlFleetStatus
+  // below — they were rendered here too with subtly different labels ("waiting"
+  // here, "ready" in the chip strip) for the same underlying value, which read
+  // as a math bug in user testing. Header keeps only the page freshness hint
+  // and the New-project affordance; the fleet status section owns counts.
   const headerRight = (
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
       {data ? (
         <>
-          {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums ui-control-fleet-live">● {dashboard.runningCount}</span>}
-          {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
           {(daemonNeverSeen || daemonOffline) && (
             <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
           )}
-          {!daemonNeverSeen && !daemonOffline && daemonLastPushedAt && (
-            <span className="text-text-muted" title="Local daemon last sync">daemon {timeAgo(new Date(daemonLastPushedAt).getTime())}</span>
-          )}
-          {lastUpdated && <span>{timeAgo(lastUpdated)}</span>}
+          {lastUpdated && <span title="Page state last refreshed">{timeAgo(lastUpdated)}</span>}
         </>
       ) : (
         <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
@@ -285,16 +285,28 @@ export function ControlPanel() {
         runtimeAvailable={runtimeAvailable}
       />
 
-      <details ref={liveDetailsRef} className="ui-control-live-details md:hidden">
+      {/* Workspaces panel — collapsed-by-default on every breakpoint when the
+          daemon is offline or never-seen. The Projects grid above already
+          shows every registered project's last-known state; in offline mode
+          this panel duplicates the same fact in a different layout (caught in
+          dogfood: Projects list + Terminal workspaces both rendering Cockpit
+          with identical status read as broken). When the daemon is live the
+          panel auto-opens on desktop so the quick send-to-any-tab affordance
+          stays one click away. */}
+      <details
+        ref={liveDetailsRef}
+        className="ui-control-live-details"
+        open={!daemonNeverSeen && !daemonOffline}
+      >
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
             {daemonNeverSeen ? "offline" : daemonSyncStale ? `${liveTabRows.length} open · stale` : `${liveTabRows.length} open`}
           </span>
         </summary>
-        <div className="ui-control-live-details-body">{livePanelMobile}</div>
+        <div className="ui-control-live-details-body md:hidden">{livePanelMobile}</div>
+        <div className="ui-control-live-details-body hidden md:block">{livePanelDesktop}</div>
       </details>
-      <div className="hidden md:block">{livePanelDesktop}</div>
 
       <details className="ui-control-launch-defaults">
         <summary className="ui-control-launch-defaults-summary flex items-center gap-2">
