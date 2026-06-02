@@ -151,7 +151,7 @@ app.on('before-quit', () => {
 })
 
 function createTray() {
-  // Placeholder icon; in production add a real png/icns from assets
+  // Placeholder icon; in production add a real png/icns from the unified control-window mark (see public/icon.svg + BrandMark.tsx + docs/branding-design.md)
   const trayIcon = nativeImage.createEmpty()
   const tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([

@@ -7,6 +7,28 @@
 //   APP_NAME     Display string. Appears in <title>, sidebar, marketing.
 //   APP_SLUG     Lowercase kebab. Used in URLs, file paths, env-var prefixes.
 //   APP_DOMAIN   Canonical hostname (no scheme). Used in callbacks, emails, copy.
+//
+// Visual identity: The primary mark is the "control window" SVG defined in
+// BrandMark.tsx (rounded rect + control bars). icon.svg + all opengraph-*.tsx
+// MUST stay pixel-identical (see comments in those files). Never introduce a
+// third mark. Public surfaces always dark; ui-public-* / ui-auth-* intentionally
+// use white/opacity inside globals.css only.
+//
+// Name evaluation criteria (from first principles + product positioning):
+// - Must preserve "fleet" language in copy (run your fleet, fleet scale,
+//   fleet command, Fleet Runner, robotic fleets, orchestration).
+// - Must evoke active human command / control plane / direction / judgment
+//   (not passive ride/surf, not just "the tool for X").
+// - Tone: serious infrastructure for power users & future robotics, not toy or
+//   meme. "Serious operators", "no compromises", "durable OS".
+// - Scalable to non-AI (robots, physical fleets) without sounding silly.
+// - Ownable: clean .com/.app, socials, no major TM conflicts (esp. avoid Disney
+//   "Muppet", heavy existing industrial "Crown fleet", etc.).
+// - Short, memorable slug; works as wordmark + icon; easy to say/spell.
+// - Supports hybrid (local Runner + remote command) story.
+// See docs/branding-design.md for the full rationale, name selection criteria,
+// visual identity rules, and why FleetCrown was selected/stuck with over
+// alternatives.
 
 export const APP_NAME        = "FleetCrown";
 export const APP_SLUG        = "fleetcrown";
@@ -33,3 +55,10 @@ export const MARKETING_POSITIONING  = "Local execution · Remote command · No c
 
 // Easy rebrand surface — use this in marketing instead of hardcoding "FleetCrown".
 export const PRODUCT_NAME = APP_NAME;
+
+// Visual mark contract (for docs, audits, and future shared SVG data).
+// The primary mark is the "control window" (rounded rect + vertical + horiz bars).
+// See BrandMark.tsx for the canonical JSX version. icon.svg and opengraph images
+// duplicate the geometry (with scaling) and must be kept identical.
+export const BRAND_MARK_DESCRIPTION =
+  'Control window (rounded rect frame with internal command bars) — the geometric mark for FleetCrown as command / control plane.'

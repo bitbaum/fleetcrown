@@ -1,8 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- FleetCrown brand mark (control window) — must stay visually identical to the SVG in BrandMark.tsx -->
   <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
-  <g fill="none" stroke="#ededed" stroke-width="32" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="256" cy="256" r="140"/>
-    <path d="M256 116 V196 M256 316 V396 M116 256 H196 M316 256 H396"/>
+  <g transform="translate(116 116) scale(11.6667)" fill="none" stroke="#ededed" stroke-linecap="round" stroke-linejoin="round">
+    <!-- scaled from 24x24 viewBox BrandMark: rect window + control bars (strokes bumped for icon legibility at small sizes) -->
+    <rect x="4" y="5" width="16" height="14" rx="4" stroke="#ededed" stroke-width="1.6" opacity="0.95"/>
+    <path d="M12 7V17" stroke="#ededed" stroke-width="1.6" opacity="0.92"/>
+    <path d="M7 12H10" stroke="#ededed" stroke-width="1.6" opacity="0.8"/>
+    <path d="M14 12H17" stroke="#ededed" stroke-width="1.6" opacity="0.8"/>
+    <path d="M8 8.5H16" stroke="#ededed" stroke-width="1.4" opacity="0.65"/>
   </g>
-  <circle cx="256" cy="256" r="28" fill="#ededed"/>
 </svg>

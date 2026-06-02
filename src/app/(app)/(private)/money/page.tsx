@@ -18,6 +18,16 @@ import { formatMoney } from "@/lib/format";
 
 export const metadata = { title: "Money" };
 
+// Integration note for real customer FleetWave: FleetCrown's money/subscriptions are coordinated via OrangeCat (sibling economic platform).
+// FleetCrown is a "customer" of OrangeCat (stakeholder edge). Shared wallet. See orangecat.ch projects "OrangeCat", "FleetCrown", "FleetWave".
+const ORANGECAT_INTEGRATION = {
+  profile: "https://www.orangecat.ch/profile/mao-nakamoto",
+  orangeCatProject: "https://www.orangecat.ch/projects/cb093f00-8745-4579-98df-050ebfb37181",
+  fleetCrownProject: "https://www.orangecat.ch/projects/8130c927-114a-45b7-8cc2-99efd5224025",
+  fleetWaveProject: "https://www.orangecat.ch/projects/8502031c-1e71-4fea-a011-ffae17c74e25",
+  wallet: "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",
+};
+
 const STATUS_STYLE: Record<SubStatus, string> = {
   [SUB_STATUS.ACTIVE]:     "text-status-positive bg-status-positive-subtle",
   [SUB_STATUS.UNVERIFIED]: "text-status-warning bg-status-warning-subtle",
@@ -87,6 +97,15 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
 
 export default async function MoneyPage() {
   const userId = await requirePageUserId();
+
+  // FleetWave / OrangeCat integration banner (real customer setup)
+  const IntegrationBanner = (
+    <div className="mb-4 p-3 bg-surface-raised border border-border-subtle rounded-lg text-sm">
+      <div className="font-medium">Economic layer: <a href={ORANGECAT_INTEGRATION.profile} target="_blank" className="ui-link">OrangeCat profile (Mao Nakamoto)</a></div>
+      <div className="text-text-secondary mt-1">FleetCrown is a paying customer of OrangeCat (via <code>stakeholder_relationships</code> &quot;customer&quot; edge). Shared wallet for FleetWave ops. <a href={ORANGECAT_INTEGRATION.orangeCatProject} target="_blank" className="ui-link">OrangeCat project</a> · <a href={ORANGECAT_INTEGRATION.fleetCrownProject} target="_blank" className="ui-link">FleetCrown project</a> · <a href={ORANGECAT_INTEGRATION.fleetWaveProject} target="_blank" className="ui-link">FleetWave (real customer)</a>. Wallet: <code>{ORANGECAT_INTEGRATION.wallet}</code></div>
+    </div>
+  );
+
   const [allSubs, commitments] = await Promise.all([
     getAllSubscriptions(userId),
     getFinancialCommitments(userId),
@@ -99,6 +118,7 @@ export default async function MoneyPage() {
 
   return (
     <PageLayout title="Money" subtitle="Subscriptions, bills, and financial commitments" right={<NewSubscriptionButton />}>
+      {IntegrationBanner}
       <StatRow>
         <StatCard
           label="Monthly Burn"

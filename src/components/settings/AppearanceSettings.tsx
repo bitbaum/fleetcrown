@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/config/brand";
 
 const THEME_OPTIONS = [
   { value: "light",  label: "Light",  icon: Sun     },
@@ -23,7 +24,7 @@ export function AppearanceSettings() {
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Theme</h2>
           <p className="mt-1 text-sm text-text-tertiary">
-            Choose how FleetCrown looks. System follows your OS preference.
+            Choose how {APP_NAME} looks. System follows your OS preference.
           </p>
         </div>
 

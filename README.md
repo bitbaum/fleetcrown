@@ -1,9 +1,11 @@
 # FleetCrown
 
 FleetCrown is an execution operating system for builders who run many projects at
-once. It combines a SaaS control plane, a local terminal runtime (Fleet Runner
+once (real customer: FleetWave). It combines a SaaS control plane, a local terminal runtime (Fleet Runner
 desktop + daemon bridge), and a personal operating layer so a founder, engineer,
 or team can keep projects moving without losing judgment, context, or momentum.
+
+FleetCrown is a customer of sibling product OrangeCat (economic layer). Both have profiles as projects on orangecat.ch for Mao Nakamoto, with FleetCrown as "customer" via stakeholder graph, shared BTC wallet. The integration makes OrangeCat + FleetCrown the complete stack (production + economy). Changes to make it work for FleetWave improve it for all.
 
 The product thesis is simple: AI agents are becoming cheap execution capacity,
 but serious users still need a trustworthy command center. FleetCrown provides the
@@ -27,7 +29,7 @@ Production: https://fleetcrown.vercel.app
 
 ## Product And Economic Model
 
-FleetCrown is designed as a high-retention SaaS for power users and small teams.
+FleetCrown is designed as a high-retention SaaS for power users and small teams. As a customer of OrangeCat, it demonstrates the "one is customer of the other" model (FleetCrown production consumes OrangeCat economic services for the FleetWave customer). Both projects live on the OrangeCat platform with typed relations. See live: orangecat.ch projects for FleetCrown / OrangeCat / FleetWave (shared wallet bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz).
 The economic model is built around durable workflow ownership, not one-off AI
 novelty.
 

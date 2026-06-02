@@ -1,5 +1,6 @@
 // @ts-nocheck -- JSX namespace resolution in shared tsconfig; Vite build succeeds fine
 import { useState, useEffect } from 'react'
+import { APP_NAME } from '@/config/brand'
 
 declare global {
   interface Window {
@@ -64,7 +65,7 @@ function App(): JSX.Element {
       const res = await window.fleetRunner.saveToken(token.trim())
       if (res.ok) {
         setConnected(true)
-        setResponse('Token saved. This app can now act as your local runtime for FleetCrown (use the same token in web settings if needed).')
+        setResponse(`Token saved. This app can now act as your local runtime for ${APP_NAME} (use the same token in web settings if needed).`)
       } else {
         setResponse('Failed to save token: ' + (res.error || 'unknown'))
       }
@@ -101,7 +102,7 @@ function App(): JSX.Element {
         body: JSON.stringify(body)
       })
       if (res.ok) {
-        setResponse('Synced to FleetCrown web! The control plane should now see this desktop app as your local runtime for these projects.')
+        setResponse(`Synced to ${APP_NAME} web! The control plane should now see this desktop app as your local runtime for these projects.`)
         await refreshStatus()
       } else {
         const err = await res.text().catch(() => res.statusText)
@@ -155,7 +156,7 @@ function App(): JSX.Element {
         <div className="flex items-center gap-4">
           <div className="runner-status-dot" />
           <div>
-            <div className="fleet-header">FLEETCROWN</div>
+            <div className="fleet-header">{APP_NAME.toUpperCase()}</div>
             <div className="text-sm font-medium tracking-[-0.2px] -mt-0.5">Fleet Runner</div>
           </div>
         </div>

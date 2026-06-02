@@ -6,16 +6,17 @@ import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState } from "./control-presenter";
 import type { AutoInjectMode } from "@/config/beacon";
 import { AutomationPolicyControl } from "./AutomationPolicyControl";
+import { APP_NAME } from "@/config/brand";
 
 // Single-line hint shown under the fleet chips when this mode is active.
 // Five-level trust ladder (2026-05-31): Manual / Queue / Beacon / Continuous / Mission.
-const AUTOMATION_HINT: Record<AutoInjectMode, string> = {
+const getAutomationHint = (name: string): Record<AutoInjectMode, string> => ({
   off: "Manual — agents stop when a task ends; you dispatch every next step.",
   queue_only: "Queue — agents drain your written queue, then stop.",
   beacon: "Beacon — popup with smart choices on every handoff; countdown auto-picks if you're away.",
   next_best: "Continuous — agents auto-run the canned next-best step on every handoff.",
-  strategist: "Mission — FleetCrown composes context-aware prompts from project mission, goals, and history.",
-};
+  strategist: `Mission — ${name} composes context-aware prompts from project mission, goals, and history.`,
+});
 
 type Props = {
   dashboard: ControlDashboardState | null;
@@ -151,7 +152,7 @@ export function ControlFleetStatus({
       <p className="ui-control-fleet-hint">
         <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
         {" "}
-        {AUTOMATION_HINT[automationMode]}
+        {getAutomationHint(APP_NAME)[automationMode]}
       </p>
     </section>
   );

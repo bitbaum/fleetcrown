@@ -27,14 +27,16 @@ export default async function OGImage() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Brand mark — same crosshair geometry as /icon.svg, scaled. */}
+        {/* Brand mark — control window geometry (must match BrandMark.tsx + public/icon.svg) */}
         <svg width="120" height="120" viewBox="0 0 512 512" style={{ marginBottom: 48 }}>
           <rect width="512" height="512" rx="96" fill="#0a0a0a" />
-          <g fill="none" stroke="#ededed" strokeWidth="32" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="256" cy="256" r="140" />
-            <path d="M256 116 V196 M256 316 V396 M116 256 H196 M316 256 H396" />
+          <g transform="translate(116 116) scale(11.6667)" fill="none" stroke="#ededed" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="5" width="16" height="14" rx="4" stroke="#ededed" strokeWidth="1.3" opacity="0.95" />
+            <path d="M12 7V17" stroke="#ededed" strokeWidth="1.3" opacity="0.9" />
+            <path d="M7 12H10" stroke="#ededed" strokeWidth="1.3" opacity="0.75" />
+            <path d="M14 12H17" stroke="#ededed" strokeWidth="1.3" opacity="0.75" />
+            <path d="M8 8.5H16" stroke="#ededed" strokeWidth="1.1" opacity="0.6" />
           </g>
-          <circle cx="256" cy="256" r="28" fill="#ededed" />
         </svg>
 
         <div

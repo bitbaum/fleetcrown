@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
 import { APP_LOCALE } from "@/lib/constants";
+import { APP_NAME } from "@/config/brand";
 
 type CalendarEvent = {
   summary?: string;
@@ -42,8 +43,8 @@ export function CalendarCard() {
         // help. Tell the user where the data actually lives so they don't
         // waste time re-pairing.
         <EmptyState>
-          Calendar uses the <code>gog</code> CLI on the machine that runs the FleetCrown web server.
-          Open this page on your local FleetCrown (<code>http://localhost:3000/today</code>) to see today&apos;s events.
+          Calendar uses the <code>gog</code> CLI on the machine that runs the {APP_NAME} web server.
+          Open this page on your local {APP_NAME} (<code>http://localhost:3000/today</code>) to see today&apos;s events.
         </EmptyState>
       ) : events.length === 0 ? (
         <EmptyState>No events today</EmptyState>

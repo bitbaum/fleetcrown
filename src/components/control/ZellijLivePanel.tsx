@@ -143,6 +143,9 @@ export function ZellijLivePanel({
 
       {daemonNeverSeen ? (
         <div className="ui-control-live-empty">
+          <div className="mb-2 text-text-tertiary">
+            <Terminal className="mx-auto h-6 w-6" />
+          </div>
           <p className="font-medium text-text-secondary">No live workspace data</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
             The cloud control plane needs your local daemon running and pushing state.
@@ -151,6 +154,9 @@ export function ZellijLivePanel({
         </div>
       ) : rows.length === 0 ? (
         <div className="ui-control-live-empty">
+          <div className="mb-2 text-text-tertiary">
+            <Terminal className="mx-auto h-6 w-6" />
+          </div>
           <p className="font-medium text-text-secondary">No terminal workspaces open</p>
           <p className="mt-1 text-sm text-text-tertiary">
             Launch an agent from a project to open its terminal workspace.

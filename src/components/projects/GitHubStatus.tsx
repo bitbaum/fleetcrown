@@ -5,6 +5,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FetchErrorState } from "@/components/ui/fetch-error-state";
 import { useFetch } from "@/hooks/use-fetch";
+import { APP_NAME } from "@/config/brand";
 
 type RepoStatus = {
   repo: string;
@@ -52,8 +53,8 @@ export function GitHubStatus() {
         // doesn't exist yet. Be honest about the constraint instead of
         // implying "connect the daemon and it'll work".
         <EmptyState>
-          CI status is collected by the <code>gh</code> CLI on the same machine that runs the FleetCrown web server.
-          Open this page on your local FleetCrown (<code>http://localhost:3000/projects</code>) to see it.
+          CI status is collected by the <code>gh</code> CLI on the same machine that runs the {APP_NAME} web server.
+          Open this page on your local {APP_NAME} (<code>http://localhost:3000/projects</code>) to see it.
         </EmptyState>
       ) : repos.length === 0 ? (
         <EmptyState>No repo data</EmptyState>

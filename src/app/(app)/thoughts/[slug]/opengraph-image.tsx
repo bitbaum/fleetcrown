@@ -65,15 +65,17 @@ export default async function EssayOGImage({
           fontFamily: "sans-serif",
         }}
       >
-        {/* Brand stamp — small crosshair + wordmark, top-left */}
+        {/* Brand stamp — control window (synced with BrandMark.tsx + icon.svg) */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <svg width="40" height="40" viewBox="0 0 512 512">
             <rect width="512" height="512" rx="96" fill="#0a0a0a" />
-            <g fill="none" stroke="#ededed" strokeWidth="32" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="256" cy="256" r="140" />
-              <path d="M256 116 V196 M256 316 V396 M116 256 H196 M316 256 H396" />
+            <g transform="translate(116 116) scale(11.6667)" fill="none" stroke="#ededed" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="5" width="16" height="14" rx="4" stroke="#ededed" strokeWidth="1.3" opacity="0.95" />
+              <path d="M12 7V17" stroke="#ededed" strokeWidth="1.3" opacity="0.9" />
+              <path d="M7 12H10" stroke="#ededed" strokeWidth="1.3" opacity="0.75" />
+              <path d="M14 12H17" stroke="#ededed" strokeWidth="1.3" opacity="0.75" />
+              <path d="M8 8.5H16" stroke="#ededed" strokeWidth="1.1" opacity="0.6" />
             </g>
-            <circle cx="256" cy="256" r="28" fill="#ededed" />
           </svg>
           <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}>{APP_NAME}</span>
           <span style={{ fontSize: 20, color: "#52525b", marginLeft: 4 }}>· Essay</span>

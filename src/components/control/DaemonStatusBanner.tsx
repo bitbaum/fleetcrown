@@ -102,7 +102,7 @@ export function DaemonStatusBanner({
             />
             {!runtimeAvailable && (
               <p className="text-xs text-text-muted">
-                You&apos;re on the cloud install — daemon control runs only from your local machine. Open FleetCrown at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
+                You&apos;re on the cloud install — daemon control runs only from your local machine. Open {APP_NAME} at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
               </p>
             )}
           </>

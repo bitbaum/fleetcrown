@@ -219,7 +219,7 @@ export const ROADMAP = {
         "Subscriptions as assets — FleetCrown's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
         "FleetCrown pricing on Lightning rails — FleetCrown's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
       ],
-      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
+      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument. Built for real customers like FleetWave.",
     },
     {
       marker: "ROBOTICS",

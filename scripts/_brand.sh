@@ -4,6 +4,10 @@
 # product, edit this file + src/config/brand.ts + the vercel.json alias +
 # DNS at the registrar — that's it.
 #
+# Visual + name rules live in brand.ts (control window mark, fleet-language
+# requirement, serious control-plane tone, TM/domain ownability, etc.).
+# Keep the two files in sync on APP_* values only.
+#
 # Sourced by: fleetcrown-daemon.sh, agent-hook-bridge.sh, fleetcrown-beacon-window.sh,
 #             install-*.sh, beacon.py (via _beacon_config.py).
 

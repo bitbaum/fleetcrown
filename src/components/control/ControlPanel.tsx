@@ -14,6 +14,7 @@ import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRow
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { DaemonStatusBanner } from "./DaemonStatusBanner";
+import { APP_NAME } from "@/config/brand";
 import {
   ActivityLogPanel,
   BrainConfigPanel,
@@ -191,7 +192,7 @@ export function ControlPanel() {
     <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
       {data ? (
         <>
-          {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums">● {dashboard.runningCount}</span>}
+          {dashboard && dashboard.runningCount > 0 && <span className="font-medium text-accent-text tabular-nums ui-control-fleet-live">● {dashboard.runningCount}</span>}
           {dashboard && dashboard.waitingCount > 0 && <span className="text-status-positive tabular-nums">{dashboard.waitingCount} waiting</span>}
           {(daemonNeverSeen || daemonOffline) && (
             <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
@@ -304,7 +305,7 @@ export function ControlPanel() {
           <section>
             <h3 className="mb-3 text-sm font-medium text-text-secondary">Launch defaults</h3>
             <p className="mb-3 text-xs leading-relaxed text-text-tertiary">
-              These choices are used when FleetCrown opens a new terminal tab. CLI availability is reported by the connected computer, not by Vercel.
+              These choices are used when {APP_NAME} opens a new terminal tab. CLI availability is reported by the connected computer, not by Vercel.
             </p>
               <BrainConfigPanel
                 selectedAgent={selectedAgent}

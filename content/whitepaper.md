@@ -13,7 +13,7 @@ The operator is you. The person who must decide what runs next, notice when some
 
 This is the execution gap: the distance between the intelligence available in your tools and your ability to direct it consistently, at scale, without burning out or losing the thread.
 
-Cockpit is an operating system for closing that gap.
+FleetCrown is an operating system for closing that gap.
 
 ## Why Context Switching Kills Momentum
 
@@ -21,7 +21,7 @@ When a builder runs multiple projects simultaneously, each project exists in a m
 
 Traditional tools treat this as a knowledge management problem. Write things down. Use wikis. Maintain notes. But the problem is not storage. The problem is time cost and continuity. Reconstructing context is not free.
 
-Cockpit approaches this differently. The system itself maintains the model. Every agent session writes a structured handoff: what was completed, what comes next, what the health of the codebase is, how many open tasks remain. When you return to a project, Cockpit surfaces the state — not as a document to read, but as an operational signal: this agent is ready, here is what it proposes to do next.
+FleetCrown approaches this differently. The system itself maintains the model. Every agent session writes a structured handoff: what was completed, what comes next, what the health of the codebase is, how many open tasks remain. When you return to a project, FleetCrown surfaces the state — not as a document to read, but as an operational signal: this agent is ready, here is what it proposes to do next.
 
 The operator makes one decision. The loop continues.
 
@@ -31,19 +31,19 @@ AI agents create a new problem as they solve the old one.
 
 A single agent writing code faster than a human is unambiguously useful. But a portfolio of five or ten agents, each in a different terminal tab, each completing tasks at different moments — this creates coordination overhead that quickly exceeds the time saved.
 
-Cockpit calls this the agent paradox: the more capable your agents, the more you need a system to manage them. Without a coordination layer, gains from agent execution are partially consumed by the cognitive cost of tracking, directing, and reviewing that execution.
+FleetCrown calls this the agent paradox: the more capable your agents, the more you need a system to manage them. Without a coordination layer, gains from agent execution are partially consumed by the cognitive cost of tracking, directing, and reviewing that execution.
 
 The coordination layer is not an agent. It is an interface.
 
 ## The Builder Loop
 
-The fundamental unit of work in Cockpit is the builder loop:
+The fundamental unit of work in FleetCrown is the builder loop:
 
 ```
 Agent runs → signals completion → Cockpit surfaces state → operator decides → agent runs
 ```
 
-Each iteration is one cycle. Cockpit is built to make this cycle as tight as possible:
+Each iteration is one cycle. FleetCrown is built to make this cycle as tight as possible:
 
 1. The agent completes a task and signals the session lifecycle
 2. Cockpit reads the session file and marks the project ready
@@ -56,7 +56,7 @@ This is not automation for its own sake. It is a division of labor: the agent ha
 
 ## Architecture
 
-Cockpit is a Next.js application that runs locally as a personal operating system and optionally connects to a cloud control plane for remote access and multi-device synchronization.
+FleetCrown is a Next.js application that runs locally as a personal operating system and optionally connects to a cloud control plane for remote access and multi-device synchronization.
 
 ### State Propagation
 

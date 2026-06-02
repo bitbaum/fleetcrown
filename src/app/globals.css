@@ -841,11 +841,12 @@
     @apply text-center text-xs text-white/40 tracking-widest mb-8;
   }
   .ui-public-download-cta {
-    @apply inline-flex items-center rounded-full bg-white px-9 py-[17px] text-[17px] font-medium text-black transition-colors;
+    @apply inline-flex items-center rounded-full bg-white px-9 py-[17px] text-[17px] font-medium text-black transition-all active:scale-[0.985];
   }
   .ui-public-download-cta:hover {
     background-color: var(--public-accent);
     color: white;
+    box-shadow: 0 4px 12px color-mix(in oklch, var(--public-accent) 20%, transparent);
   }
   .ui-public-download-cta-note {
     @apply ml-2 text-xs text-black/50 transition-colors;
@@ -860,10 +861,10 @@
     @apply text-xs tracking-[1.5px] px-4 py-1.5 rounded-full border transition-all;
   }
   .ui-public-download-platform-active {
-    @apply border-white bg-white text-black;
+    @apply border-white bg-white text-black shadow-sm;
   }
   .ui-public-download-platform-idle {
-    @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white;
+    @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white hover:-translate-y-px;
   }
   .ui-public-download-fallback {
     @apply border-t border-white/10 pt-9 text-center text-sm;
@@ -888,7 +889,9 @@
   }
 
   .ui-brand-mark {
-    @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay;
+    @apply flex items-center justify-center rounded-2xl border border-border-default bg-surface-overlay transition-all;
+    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--text-primary) 4%, transparent);
+    /* Esthetics: command mark with subtle depth for sidebar/header */
   }
   .ui-brand-mark-compact {
     @apply h-10 w-10;
@@ -1524,9 +1527,15 @@
   .ui-control-hero {
     @apply relative overflow-hidden rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6;
     box-shadow: var(--shadow-panel);
+    /* High-flier command esthetics: subtle 'mission control' depth with faint data-grid overlay (restrained, token-based, echoes public-backdrop but dialed way down for focus). */
     background-image:
       radial-gradient(circle at top left, color-mix(in oklch, var(--accent-primary) 12%, transparent), transparent 32rem),
-      linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent);
+      linear-gradient(180deg, color-mix(in oklch, var(--surface-overlay) 70%, transparent), transparent),
+      linear-gradient(var(--public-grid-stroke) 1px, transparent 1px),
+      linear-gradient(90deg, var(--public-grid-stroke) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+    background-position: 0 0, 0 0, 0 0, 0 0;
+    /* grid is inherently faint via --public-grid-stroke token (no element-level dim needed) */
   }
   .ui-control-operations-header {
     @apply hidden md:flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5;
@@ -1551,9 +1560,13 @@
     @apply flex flex-wrap gap-2;
   }
   .ui-control-fleet-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary;
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary transition-all;
     background: oklch(1 0 0 / 0.04);
     box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
+  }
+  .ui-control-fleet-chip:hover {
+    background: oklch(1 0 0 / 0.08);
+    box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.08);
   }
   .ui-control-fleet-chip-attention {
     color: var(--status-warning);
@@ -1601,10 +1614,11 @@
     }
   }
   .ui-control-project-row {
-    @apply flex w-[15rem] shrink-0 gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-overlay lg:w-full;
+    @apply flex w-[15rem] shrink-0 gap-3 rounded-2xl px-3 py-3 text-left transition-all hover:bg-surface-overlay hover:-translate-x-px lg:w-full;
+    /* High-flier esthetics: softer rounding, lift on hover for tactile 'rail' in command workspace */
   }
   .ui-control-project-row-active {
-    @apply bg-accent-muted ring-1 ring-accent-primary/20;
+    @apply bg-accent-muted ring-1 ring-accent-primary/30 shadow-sm;
   }
   .ui-control-sidepanel {
     @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6 xl:sticky xl:top-6;
@@ -1614,7 +1628,8 @@
     @apply grid grid-cols-2 gap-2 sm:gap-3;
   }
   .ui-control-metric-card {
-    @apply rounded-xl border border-border-subtle bg-surface-base px-3 py-3 sm:rounded-2xl sm:px-4 sm:py-4;
+    @apply rounded-2xl border border-border-subtle bg-surface-base px-3 py-3 sm:px-4 sm:py-4 transition-all hover:border-border-default hover:shadow-panel hover:-translate-y-px;
+    /* Esthetics: consistent 2xl rounding, subtle lift on hover for premium 'instrument panel' feel */
   }
   .ui-control-metric-label {
     @apply flex items-center gap-1.5 text-micro font-semibold uppercase tracking-[0.12em] text-text-tertiary sm:gap-2 sm:text-xs sm:tracking-[0.14em];
@@ -1639,16 +1654,25 @@
     @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4;
   }
   .ui-control-live-empty {
-    @apply rounded-xl border border-dashed border-border-default bg-surface-base px-4 py-8 text-center;
+    @apply rounded-2xl border border-dashed border-border-subtle/60 bg-surface-base px-5 py-10 text-center;
+    /* High-flier esthetics: more refined empty state for live workspaces — softer dashed, better padding, subtle hierarchy for 'command ready' feel */
+  }
+  .ui-control-live-empty p:first-child {
+    @apply font-medium text-text-secondary;
+  }
+  .ui-control-live-empty p:not(:first-child) {
+    @apply mt-1 text-sm text-text-tertiary;
   }
   .ui-control-live-composer {
-    @apply flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-base p-2 sm:flex-row sm:items-center;
+    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-2 sm:flex-row sm:items-center shadow-sm;
+    /* Esthetics: softer round, subtle shadow for elevated 'input cockpit' feel in live command */
   }
   .ui-control-live-select {
     @apply min-h-9 rounded-lg border border-border-subtle bg-surface-raised px-2.5 text-xs text-text-secondary outline-none transition-colors focus:border-accent-primary sm:w-44;
   }
   .ui-control-live-input {
-    @apply min-h-9 min-w-0 flex-1 rounded-lg border border-border-subtle bg-surface-raised px-3 text-sm text-text-primary outline-none transition-colors placeholder:text-text-muted focus:border-accent-primary;
+    @apply min-h-9 min-w-0 flex-1 rounded-xl border border-border-subtle bg-surface-raised px-3 text-sm text-text-primary outline-none transition-all placeholder:text-text-muted focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/30;
+    /* Esthetics polish: rounded-xl for softer command input, subtle focus ring for high-flier keyboard control feel */
   }
   .ui-control-live-table {
     @apply w-full min-w-[40rem] border-separate border-spacing-0 text-sm;
@@ -1668,6 +1692,17 @@
   .ui-control-live-row-highlight {
     background: oklch(from var(--accent-primary) l c h / 0.08);
     box-shadow: inset 0 0 0 1px oklch(from var(--accent-primary) l c h / 0.24);
+    /* Esthetics: keeps the active row prominent in live table for command focus */
+  }
+
+  /* High-flier command esthetics: subtle live pulse for active fleet (working agents).
+     Pure CSS, respects tokens, restrained (no full spin, just breathing opacity for "alive" feel). */
+  @keyframes fleet-live-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+  }
+  .ui-control-fleet-live {
+    animation: fleet-live-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   .ui-control-launch-defaults {
     @apply rounded-2xl border border-border-subtle bg-surface-raised;
