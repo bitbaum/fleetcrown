@@ -319,3 +319,33 @@ export const DESKTOP_DOWNLOAD = {
     other: "Additional runtimes and form factors (headless variants, CLI polish, and support for the platforms builders actually use).",
   },
 };
+
+// FleetWave real customer + OrangeCat integration (SSOT for cross-product customer story)
+// FleetCrown (production/AI fleet) is a paying customer of OrangeCat (economic layer).
+// Both + FleetWave are live projects/profiles on orangecat.ch under Mao Nakamoto.
+// Shared BTC wallet, typed "customer" + "in_house_dev" stakeholder edges via stakeholder_relationships.
+// This demonstrates the full stack for a real customer; scales to others.
+export const FLEETWAVE_ORANGECAT_INTEGRATION = {
+  customer: "FleetWave",
+  owner: "Mao Nakamoto",
+  orangeCat: {
+    title: "OrangeCat",
+    projectUrl: "https://www.orangecat.ch/projects/cb093f00-8745-4579-98df-050ebfb37181",
+    profile: "https://www.orangecat.ch/profile/mao-nakamoto",
+  },
+  fleetCrown: {
+    title: "FleetCrown",
+    projectUrl: "https://www.orangecat.ch/projects/8130c927-114a-45b7-8cc2-99efd5224025",
+    site: "https://fleetcrown.vercel.app",
+  },
+  fleetWave: {
+    title: "FleetWave",
+    projectUrl: "https://www.orangecat.ch/projects/8502031c-1e71-4fea-a011-ffae17c74e25",
+  },
+  wallet: {
+    btc: "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",
+    lightning: "orangecat@getalby.com",
+  },
+  relation: "FleetCrown is 'customer' of OrangeCat; FleetWave is the real operating customer using the combined stack.",
+  note: "See stakeholder_relationships table (migration applied 2026-06) and live data. One is customer of the other.",
+};
