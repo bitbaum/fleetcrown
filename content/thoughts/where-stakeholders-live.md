@@ -40,19 +40,19 @@ OrangeCat already has thirteen entity types: projects, products, services, cause
 
 This is a much lighter lift than adding new entity types. It's an annotation layer over the graph that already exists.
 
-## Why It Doesn't Belong Only In Cockpit
+## Why It Doesn't Belong Only In FleetCrown
 
-Cockpit's strength is operations: agent fleets per project, the autonomy ladder, the Watch surfacing one focus item, the approval queue for proposed actions. Cockpit is where work happens.
+FleetCrown's strength is operations: agent fleets per project, the autonomy ladder, the Watch surfacing one focus item, the approval queue for proposed actions. FleetCrown is where work happens.
 
-Cockpit currently has `/projects` and tracks contacts inside the private zone. To store the stakeholder graph natively in Cockpit means inventing tables for entity types Cockpit doesn't need otherwise — investments, groups, products, services. That duplicates OrangeCat's entity model with worse abstractions. The result is two graphs that need a sync layer to stay coherent. Two graphs are always wrong.
+FleetCrown currently has `/projects` and tracks contacts inside the private zone. To store the stakeholder graph natively in FleetCrown means inventing tables for entity types FleetCrown doesn't need otherwise — investments, groups, products, services. That duplicates OrangeCat's entity model with worse abstractions. The result is two graphs that need a sync layer to stay coherent. Two graphs are always wrong.
 
-So: don't store stakeholders in Cockpit.
+So: don't store stakeholders in FleetCrown.
 
 ## Why It Doesn't Belong Only In OrangeCat Either
 
 OrangeCat's strength is the entity-relationship substrate and the economic settlement layer. The Cat is good at orchestrating actions inside OrangeCat's domain — creating listings, proposing loans, executing governance. The Cat is not where a builder lives day-to-day to direct project work.
 
-A builder thinking "what's my competitive landscape this week" does not naturally open a marketplace. They open their work surface. That's Cockpit.
+A builder thinking "what's my competitive landscape this week" does not naturally open a marketplace. They open their work surface. That's FleetCrown.
 
 So: don't surface stakeholders only in OrangeCat.
 
@@ -60,11 +60,11 @@ So: don't surface stakeholders only in OrangeCat.
 
 **Storage: OrangeCat.** Stakeholder relationships are edges in OrangeCat's entity graph. One typed-edge schema covers all eight categories (and any others a builder adds later). The actor system already handles pseudonymous identity for any non-founder party. No new database tables — just a relationships table with `from_entity`, `to_entity`, `kind`, and metadata.
 
-**Operations: Cockpit.** Cockpit's `/projects` reads the OrangeCat graph for the current builder's projects and renders the eight stakeholder lanes per project. The Watch on `/today` surfaces signals derived from the graph — competitor shipped, investor opened the deck, prospective customer hit the demo page, in-house adjacent project just stalled. The agent proposes actions against specific stakeholders, the user approves or disapproves.
+**Operations: FleetCrown.** FleetCrown's `/projects` reads the OrangeCat graph for the current builder's projects and renders the eight stakeholder lanes per project. The Watch on `/today` surfaces signals derived from the graph — competitor shipped, investor opened the deck, prospective customer hit the demo page, in-house adjacent project just stalled. The agent proposes actions against specific stakeholders, the user approves or disapproves.
 
-**Bridge: the identity bridge already on both roadmaps.** A Cockpit user OAuth-paired with their OrangeCat actor reads and writes the graph through that bridge. No new bridge.
+**Bridge: the identity bridge already on both roadmaps.** A FleetCrown user OAuth-paired with their OrangeCat actor reads and writes the graph through that bridge. No new bridge.
 
-This is the concrete first instance of the convergence argued for in *From Two AIs to One*. Same data, two surfaces. The user perceives one agent watching their stakeholder landscape — they don't perceive "the graph is in OrangeCat and the alerts are in Cockpit."
+This is the concrete first instance of the convergence argued for in *From Two AIs to One*. Same data, two surfaces. The user perceives one agent watching their stakeholder landscape — they don't perceive "the graph is in OrangeCat and the alerts are in FleetCrown."
 
 ## Don't Ship Eight At Once. Ship Competitors First.
 
@@ -81,9 +81,9 @@ The other seven follow with the same primitives but different polling shapes and
 
 ## What This Unblocks
 
-A builder running Cockpit and OrangeCat in tandem, with the identity bridge live and the stakeholder graph populated, gets a different daily experience than the one most builders have today.
+A builder running FleetCrown and OrangeCat in tandem, with the identity bridge live and the stakeholder graph populated, gets a different daily experience than the one most builders have today.
 
-They open Cockpit. The Watch greets them with "Three things this morning: your nearest competitor just shipped a competing feature; the investor you pitched two weeks ago just opened your deck again; one of your stalled in-house projects has a milestone Ivy thinks is worth finishing this week. Brief Ivy on which one to take first?"
+They open FleetCrown. The Watch greets them with "Three things this morning: your nearest competitor just shipped a competing feature; the investor you pitched two weeks ago just opened your deck again; one of your stalled in-house projects has a milestone Ivy thinks is worth finishing this week. Brief Ivy on which one to take first?"
 
 That is not a CRM. It is not a competitive-intelligence tool. It is not a fundraising dashboard. It is **the same approval-queue interaction model**, pointed at the relationships around the project, with the graph living in the platform that was built for graphs and the agent operations living in the platform that was built for agents.
 

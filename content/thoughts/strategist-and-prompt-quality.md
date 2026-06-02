@@ -11,7 +11,7 @@ readingTimeMin: 12
 
 ## The Gap That Took Two Audits To See
 
-Over the last two weeks Cockpit's orchestration layer got steadily more correct: per-project `status` gating so auto-inject only fires when the agent self-reports `ready`, queue moved from `/tmp` to `project_states.prompt_queue`, daemon heartbeat to keep the cloud's view fresh, queue context plumbed into the dispatched prompt body, click-to-expand on truncated working banners, the lot. All real. All shipped. None of it changed what the model actually reads when it wakes up.
+Over the last two weeks FleetCrown's orchestration layer got steadily more correct: per-project `status` gating so auto-inject only fires when the agent self-reports `ready`, queue moved from `/tmp` to `project_states.prompt_queue`, daemon heartbeat to keep the cloud's view fresh, queue context plumbed into the dispatched prompt body, click-to-expand on truncated working banners, the lot. All real. All shipped. None of it changed what the model actually reads when it wakes up.
 
 The injected prompt is still one of two ladders.
 
@@ -123,7 +123,7 @@ In `scripts/agent-hook-bridge.sh:handle_stop`, the runId sentinel is read once a
 
 ## Success Signal
 
-After this lands, if you write `status: ready` in `Cockpit.md` and walk away, the next thing your terminal receives is either (a) the top queue item you actually queued, or (b) a Groq-composed prompt that names what you said you'd do next, references the last commit's failure if there was one, and asks for the specific work — not "scan in order: 1, 2, 3, 4."
+After this lands, if you write `status: ready` in `FleetCrown.md` and walk away, the next thing your terminal receives is either (a) the top queue item you actually queued, or (b) a Groq-composed prompt that names what you said you'd do next, references the last commit's failure if there was one, and asks for the specific work — not "scan in order: 1, 2, 3, 4."
 
 If you wake up and see "Pick the highest-impact item and execute it fully" again, the strategist has failed and we revert to the gate.
 

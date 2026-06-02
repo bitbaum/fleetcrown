@@ -274,7 +274,7 @@ export async function GET() {
   ]);
   cleanupStaleOrchestrationRuns(userId).catch((err) => console.error("[control] cleanup failed:", err))
   // Key by (ownerUserId, projectKey) — two users in the same org may both have a
-  // project named "cockpit", and we want each card to read its own owner's row.
+  // project with the same key, and we want each card to read its own owner's row.
   const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${s.projectKey.toLowerCase()}`, s]));
 
   // Group recent activity by project key so each card gets its own slice (no extra query).

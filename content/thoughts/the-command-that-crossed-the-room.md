@@ -1,7 +1,7 @@
 ---
 title: The Command That Crossed the Room
-summary: How Cockpit gained the ability to command your local AI agents from anywhere in the world — and why a single silent bug had been blocking it from working.
-excerpt: You open Cockpit on your phone, type a message, press Send. Seven seconds later, your AI agent at home starts working on exactly what you told it. This is what that required.
+summary: How FleetCrown gained the ability to command your local AI agents from anywhere in the world — and why a single silent bug had been blocking it from working.
+excerpt: You open FleetCrown on your phone, type a message, press Send. Seven seconds later, your AI agent at home starts working on exactly what you told it. This is what that required.
 publishedAt: 2026-05-16
 tags: architecture,daemon,remote,zellij,breakthrough,mobile
 featured: true
@@ -13,35 +13,35 @@ readingTimeMin: 12
 
 Earlier today something happened that is worth writing down.
 
-A message was typed into Cockpit on a phone. Not on the machine where the AI agents run — on a phone, over the internet, connected to the live Cockpit website. The message said, to a project called Revamp-Info: start working.
+A message was typed into FleetCrown on a phone. Not on the machine where the AI agents run — on a phone, over the internet, connected to the live FleetCrown website. The message said, to a project called Revamp-Info: start working.
 
 Seven seconds later, on the computer at home, with no one sitting at the keyboard, the AI agent in that project's terminal window received the instruction and started working.
 
 The room was empty. The computer was not touched. The loop kept moving.
 
-This is not a parlor trick. This is the first real demonstration that Cockpit's central architectural promise — that you should be able to command your creative process from anywhere, not just from your desk — is actually true.
+This is not a parlor trick. This is the first real demonstration that FleetCrown's central architectural promise — that you should be able to command your creative process from anywhere, not just from your desk — is actually true.
 
 ## The Walk Test
 
-An earlier article in this series, [From Localhost to a Portable Creation Cockpit](/thoughts/from-localhost-to-a-portable-creation-cockpit), described what the real test for this product looks like:
+An earlier article in this series, [From Localhost to a Portable Creation FleetCrown](/thoughts/from-localhost-to-a-portable-creation-cockpit), described what the real test for this product looks like:
 
-> You leave your computer at home. You go for a walk, or a bike ride, or you sit somewhere away from your machine. Your phone buzzes. The system says the current agent has stopped. You open Cockpit from your phone, read the handoff, choose what should happen next, and send the next instruction into the same development loop you would have controlled from your desk. Then you put the phone away. The work continues.
+> You leave your computer at home. You go for a walk, or a bike ride, or you sit somewhere away from your machine. Your phone buzzes. The system says the current agent has stopped. You open FleetCrown from your phone, read the handoff, choose what should happen next, and send the next instruction into the same development loop you would have controlled from your desk. Then you put the phone away. The work continues.
 
 Until today, that test could not pass. The sending part was always broken in a way that was very hard to see. Instructions sent from a phone appeared to succeed — the screen showed a confirmation — but they never arrived. The agents at home sat idle. The loop did not continue.
 
 The bug that was causing this had been hiding in plain sight for months, logging success while doing nothing.
 
-## What Cockpit Is Actually Trying to Do
+## What FleetCrown Is Actually Trying to Do
 
 To understand why this matters, it helps to understand the shape of the system.
 
-When you use Cockpit locally — sitting at your computer — sending an instruction to an AI agent is simple. You open the control panel, you click a button or type a message, and the instruction is typed directly into the agent's terminal window. Think of it like someone physically walking up to a worker at their desk and speaking to them. Instant, direct, no middleman.
+When you use FleetCrown locally — sitting at your computer — sending an instruction to an AI agent is simple. You open the control panel, you click a button or type a message, and the instruction is typed directly into the agent's terminal window. Think of it like someone physically walking up to a worker at their desk and speaking to them. Instant, direct, no middleman.
 
-When you use Cockpit remotely — from your phone, from another city, from a café — that direct path is no longer available. Your phone is connected to the internet. Your computer is at home on your desk, not connected to your phone in any direct way. There is an air gap between where you are and where the agents are.
+When you use FleetCrown remotely — from your phone, from another city, from a café — that direct path is no longer available. Your phone is connected to the internet. Your computer is at home on your desk, not connected to your phone in any direct way. There is an air gap between where you are and where the agents are.
 
-To cross that air gap, Cockpit uses a two-part system.
+To cross that air gap, FleetCrown uses a two-part system.
 
-**The cloud side** is the Cockpit website — fleetcrown.vercel.app — which runs on servers in the internet. When you send an instruction from your phone, it reaches those servers first. The servers cannot deliver the instruction to your computer directly. Instead, they write it down in a queue: a list of pending instructions stored in a database, waiting to be picked up.
+**The cloud side** is the FleetCrown website — fleetcrown.vercel.app — which runs on servers in the internet. When you send an instruction from your phone, it reaches those servers first. The servers cannot deliver the instruction to your computer directly. Instead, they write it down in a queue: a list of pending instructions stored in a database, waiting to be picked up.
 
 **The local side** is a small program running quietly in the background on your computer called the daemon. Its only job is to watch that queue. Every five seconds, it asks the servers: is there anything new for me? If there is, it picks up the instruction and delivers it to the correct agent on your local machine. If there is nothing, it waits and asks again.
 
@@ -51,7 +51,7 @@ The problem was that the final delivery step — the moment the daemon takes the
 
 ## The Silent Failure
 
-Your computer runs a terminal session manager called Zellij. Think of Zellij as a building with many offices. Each project has its own office. Claude, the AI agent, sits in one office. Revamp-Info, OrangeCat, Cockpit — each in their own room, each running their own independent session. From the outside, the building has one front door.
+Your computer runs a terminal session manager called Zellij. Think of Zellij as a building with many offices. Each project has its own office. Claude, the AI agent, sits in one office. Revamp-Info, OrangeCat, FleetCrown — each in their own room, each running their own independent session. From the outside, the building has one front door.
 
 When the daemon receives an instruction — say, "tell the agent in OrangeCat to run the test suite" — it needs to walk through the building, find the right office, open the door, and speak to the agent inside. The command for doing this in Zellij is essentially: go to the office named OrangeCat, and type this message.
 
@@ -88,7 +88,7 @@ The change was about thirty lines of shell script. The impact was: everything th
 
 The code added a helper called `_find_session_for_tab`. It scans every Zellij session looking for a tab with the right name, and returns the session that contains it. Every subsequent command in the delivery process now carries that session name explicitly, so Zellij always knows exactly where to look.
 
-When the fix was deployed and tested — a message sent from a phone to the live Cockpit website — the daemon logs read:
+When the fix was deployed and tested — a message sent from a phone to the live FleetCrown website — the daemon logs read:
 
 ```
 07:45:01 inject → tab=Revamp-Info
@@ -101,7 +101,7 @@ And this time, the agent moved.
 
 The gap that just closed is not a small one. It is the gap between a tool that works when you are at your desk and a tool that works while you are alive.
 
-Before today, Cockpit was genuinely useful if you were sitting in front of your machine. You could launch agents, watch them work, redirect them, build things. The control panel was a real operational surface.
+Before today, FleetCrown was genuinely useful if you were sitting in front of your machine. You could launch agents, watch them work, redirect them, build things. The control panel was a real operational surface.
 
 But the moment you stepped away from your desk, the loop froze. You could look at what was happening — the runtime state, the agent status, the recent activity — but you could not act on it. Reading without writing. Watching without directing. The information flow ran one direction only.
 
@@ -109,11 +109,11 @@ That changed today. The loop can now be continued from anywhere with an internet
 
 More precisely, what is now possible:
 
-**You can manage a fleet of AI agents from your phone.** Open Cockpit, see the status of every project, send instructions to any agent, continue any session. The agents do not know you are not at your desk.
+**You can manage a fleet of AI agents from your phone.** Open FleetCrown, see the status of every project, send instructions to any agent, continue any session. The agents do not know you are not at your desk.
 
 **You can keep projects moving while you move.** If you are on a train, in a meeting, waiting somewhere — any moment you have sixty seconds and your phone — you can check on the fleet and send the next instruction. Work that would have paused until you returned to your desk no longer has to.
 
-**You can close the loop the article described.** The Walk Test is now passable. The agent finishes, the status updates in Cockpit, you read the handoff on your phone, you send the next step. The work continues.
+**You can close the loop the article described.** The Walk Test is now passable. The agent finishes, the status updates in FleetCrown, you read the handoff on your phone, you send the next step. The work continues.
 
 This is what [The Session System and the Loop That Almost Closes Itself](/thoughts/the-session-system-and-the-loop-that-almost-closes-itself) was pointing at: a loop that keeps moving not because a human is constantly present, but because the human can rejoin the loop from wherever they happen to be, at whatever moment they have attention to spare.
 
@@ -141,7 +141,7 @@ The remote→local command channel is now working. That was the missing link.
 
 The next piece is the reverse: not just commanding agents from your phone, but receiving richer information from them. The status updates are already flowing — you can see whether each agent is running, idle, or waiting — but what you cannot yet do is speak to the system by voice.
 
-The microphone button visible in Cockpit is wired for local use. When you are on your machine, it records your voice, sends the audio to a local AI transcription model called Whisper, and converts speech to text before injecting the instruction. No cloud, no subscription, your words processed on your own hardware.
+The microphone button visible in FleetCrown is wired for local use. When you are on your machine, it records your voice, sends the audio to a local AI transcription model called Whisper, and converts speech to text before injecting the instruction. No cloud, no subscription, your words processed on your own hardware.
 
 From a phone on the remote site, that path breaks at the first step. The remote server cannot run Whisper. The audio arrives and the server returns an error.
 

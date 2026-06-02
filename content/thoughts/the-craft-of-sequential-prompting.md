@@ -1,6 +1,6 @@
 ---
 title: "The Craft of Sequential Prompting: Why the Quality of What You Write Matters as Much as When It Runs"
-summary: How to write agent prompts that compound rather than drift, why the handoff is your only honest feedback, and how Cockpit needs an intelligence layer that evaluates prompt quality — not just dispatches the next item in line.
+summary: How to write agent prompts that compound rather than drift, why the handoff is your only honest feedback, and how FleetCrown needs an intelligence layer that evaluates prompt quality — not just dispatches the next item in line.
 excerpt: Every prompt either builds on what the agent just learned or erases it and starts over. Most prompts erase. The craft of sequential prompting is designing instructions that compound — and the system should be smart enough to help.
 publishedAt: 2026-05-14
 tags: prompts,craft,orchestration,ai,feedback,dispatch,intelligence
@@ -114,13 +114,13 @@ A system that reads this report card can do something valuable: it can adjust th
 
 This is prompt quality evaluation. It is different from dispatch selection. And it is where the embedded AI layer gets its most interesting work.
 
-## What Cockpit's Embedded AI Actually Does
+## What FleetCrown's Embedded AI Actually Does
 
-There is a distinction that matters and is often blurred: the AI that lives in the terminal is not the same as the AI that should live in Cockpit.
+There is a distinction that matters and is often blurred: the AI that lives in the terminal is not the same as the AI that should live in FleetCrown.
 
 The terminal agent — Claude, Codex, Gemini, whichever model is running the session — is an executor. It takes a prompt, reads the codebase, writes code, runs tests, makes decisions. It is the worker. Its intelligence is applied to the task at hand.
 
-Cockpit's embedded intelligence should be something different: a strategist. Not a worker that executes tasks, but a meta-layer that reasons about the sequence of tasks, the quality of the instructions, the state of the project, and what the next genuinely best move is.
+FleetCrown's embedded intelligence should be something different: a strategist. Not a worker that executes tasks, but a meta-layer that reasons about the sequence of tasks, the quality of the instructions, the state of the project, and what the next genuinely best move is.
 
 The distinction is important because the strategist and the worker have fundamentally different information needs.
 
@@ -132,10 +132,10 @@ The worker operates within a session. The strategist operates across sessions.
 
 The worker uses a large context window full of code. The strategist uses a small, structured input of metadata: handoffs, queue items, git delta, goal states, health history.
 
-This means Cockpit's embedded model does not need to be a frontier model. A fast, cheap model — Llama-3.1-8b on Groq, which returns in under 300 milliseconds — is sufficient for the structured classification and generation tasks that strategic dispatch requires. The call is cheap. The decision is valuable.
+This means FleetCrown's embedded model does not need to be a frontier model. A fast, cheap model — Llama-3.1-8b on Groq, which returns in under 300 milliseconds — is sufficient for the structured classification and generation tasks that strategic dispatch requires. The call is cheap. The decision is valuable.
 
 ```
-Cockpit Embedded AI — Strategist
+FleetCrown Embedded AI — Strategist
   Input: handoff, queue, git delta, goal state, health history
   Output: dispatch decision, prompt adjustment suggestion, health flag
   Latency: < 300ms (Groq)
@@ -150,7 +150,7 @@ Terminal Agent — Worker
 
 The roles are complementary, not competitive. The strategist makes the worker more effective by giving it better scaffolded prompts. The worker makes the strategist more informed by producing honest handoffs. They operate in a loop — one in-session, one cross-session — that is more capable than either alone.
 
-## The Four Things Cockpit's AI Can Do
+## The Four Things FleetCrown's AI Can Do
 
 Given this framing, the embedded strategist layer has four concrete responsibilities that go beyond simple dispatch selection.
 
@@ -166,7 +166,7 @@ These four capabilities share a common shape: they take structured input (handof
 
 ## The Prompt Library as Training Ground
 
-The prompt library — the system's collection of named, reusable prompt templates — already exists in Cockpit. It stores prompts that have been run before, lets the user browse and select them, and supports scheduling.
+The prompt library — the system's collection of named, reusable prompt templates — already exists in FleetCrown. It stores prompts that have been run before, lets the user browse and select them, and supports scheduling.
 
 What it does not do yet is learn.
 
@@ -176,7 +176,7 @@ A library that learns from this history can do something useful: it can annotate
 
 The strategist layer can use these annotations at dispatch time. Instead of choosing between a queue item and next-best, it chooses between a queue item, next-best, and a library prompt that has historically performed well in the current project state.
 
-This is the beginning of Cockpit developing operational intelligence about the projects it manages. Not intelligence in the abstract — intelligence grounded in actual execution history, actual handoff records, actual outcome data. The kind of intelligence that a human operator develops over months of managing a project, but made explicit, transferable, and reviewable.
+This is the beginning of FleetCrown developing operational intelligence about the projects it manages. Not intelligence in the abstract — intelligence grounded in actual execution history, actual handoff records, actual outcome data. The kind of intelligence that a human operator develops over months of managing a project, but made explicit, transferable, and reviewable.
 
 ## What the Human's Job Becomes
 
@@ -203,7 +203,7 @@ flowchart TD
     Human["Human\nsets intent, reviews decisions"]
     Queue["Queue\nhuman-authored tasks"]
     Library["Prompt Library\nannotated with history"]
-    Strategist["Cockpit AI (Strategist)\nGroq / fast model"]
+    Strategist["FleetCrown AI (Strategist)\nGroq / fast model"]
     Prompt["Augmented Prompt\ncontext-enriched, scoped"]
     Agent["Terminal Agent (Worker)\nClaude / Codex / Gemini"]
     Handoff["Session Handoff\ndone / next / health / tests"]
@@ -246,11 +246,11 @@ Frontier models make sense in two places:
 
 **Sequence planning.** Generating a coherent five-session plan for a complex project — one that considers goal dependencies, technical debt, health trends, and the relationships between queue items — is a reasoning task that benefits from more capable models. Claude Haiku or GPT-4o-mini can do this for under a cent per plan, which is reasonable for a feature run on-demand.
 
-**Prompt drafting for humans.** A future feature: the user describes what they want to accomplish in plain language, and Cockpit drafts the prompt — a specific, context-enriched, properly scoped instruction for the current project state. This is more creative and nuanced than classification, and benefits from a stronger model.
+**Prompt drafting for humans.** A future feature: the user describes what they want to accomplish in plain language, and FleetCrown drafts the prompt — a specific, context-enriched, properly scoped instruction for the current project state. This is more creative and nuanced than classification, and benefits from a stronger model.
 
 The bifurcation is practical: Groq for the real-time dispatch loop, frontier models for on-demand higher-quality planning. Free tier for the core. Optional paid tier for the premium capabilities.
 
-For multi-user Cockpit — if and when it becomes a shared platform — each user's dispatch budget scales with their usage, and the model tier scales with their plan. A user who wants Cockpit's strategist to be their Claude Sonnet-powered co-founder gets a better service than a user on the free tier. The infrastructure for this is the same Groq / OpenAI-compatible routing layer; only the API key and model name change.
+For multi-user FleetCrown — if and when it becomes a shared platform — each user's dispatch budget scales with their usage, and the model tier scales with their plan. A user who wants FleetCrown's strategist to be their Claude Sonnet-powered co-founder gets a better service than a user on the free tier. The infrastructure for this is the same Groq / OpenAI-compatible routing layer; only the API key and model name change.
 
 ## The Implementation Path
 
@@ -274,7 +274,7 @@ The total effort for steps one through seven is roughly eight to ten days of foc
 
 ## The Bigger Frame
 
-There is a version of Cockpit that most people building AI tools will not reach because they are too close to the agent.
+There is a version of FleetCrown that most people building AI tools will not reach because they are too close to the agent.
 
 Most AI development tools — co-pilots, assistants, chat interfaces — optimize for the quality of the individual AI response. They make each turn better. They are good at this. They are not designed for the problem that appears when you have been running agents continuously for thirty days across eight projects: the problem of coherence over time, of momentum across sessions, of the compounding value of sequences that build on each other rather than starting over.
 
@@ -284,10 +284,10 @@ The agent cannot solve it because the agent is stateless across sessions. The ag
 
 The system around the agent can solve it. And that system — if it is built well — does not need to be the agent. It needs to be a persistent, accumulating, learning layer that tracks what was done, evaluates what was produced, and uses that history to make the next prompt better, the next dispatch decision smarter, the next session more coherent.
 
-That is what Cockpit should be.
+That is what FleetCrown should be.
 
 Not the agent. Not the terminal. Not the queue drain. The layer that makes all of them more capable over time, that carries the project's momentum across the gaps between sessions, and that allows a builder to step away from the machine — go for a walk, take a meeting, sleep — without that momentum collapsing.
 
 The walk test is not just about remote access. It is about whether the system can be trusted to hold the thread when you are not watching it.
 
-The dispatch and prompt craft work described in this article is how Cockpit earns that trust.
+The dispatch and prompt craft work described in this article is how FleetCrown earns that trust.

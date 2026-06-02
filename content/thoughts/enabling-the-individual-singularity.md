@@ -16,7 +16,7 @@ We are building the control plane for that future.
 
 ## The Current Phase: Agents Building Things With People
 
-Today, the most advanced users of systems like Cockpit are already doing something qualitatively different from "using AI to code faster."
+Today, the most advanced users of systems like FleetCrown are already doing something qualitatively different from "using AI to code faster."
 
 They are running **fleets** of agents across multiple projects simultaneously. Some agents are working on feature work. Others are doing research, refactoring, testing, documentation, or exploration. The human is not in the critical path of every decision. They set direction, review high-leverage outputs, unblock, and occasionally change strategy.
 
@@ -24,7 +24,7 @@ This is still "with people." The human is actively involved in steering, correct
 
 The infrastructure question at this stage is: How do you give one person god-like leverage over a large number of semi-autonomous agents without losing coherence or control?
 
-That is the problem Cockpit is solving right now — through per-project autonomy levels, reliable handoff systems, queues, visibility, and the separation between local execution and remote command surfaces.
+That is the problem FleetCrown is solving right now — through per-project autonomy levels, reliable handoff systems, queues, visibility, and the separation between local execution and remote command surfaces.
 
 ## The Next Phase: Agents Building Things With Minimal Involvement
 
@@ -63,7 +63,7 @@ Once you have robust systems for:
 
 ...then moving from digital creation to physical creation is a matter of interfaces and embodiment, not a fundamentally new category of problem.
 
-The person who today uses Cockpit to direct a fleet of agents building software products will, in the future, be able to use very similar abstractions to direct a fleet of robots building physical things — houses, infrastructure, products, research hardware, art installations, whatever their ambition requires.
+The person who today uses FleetCrown to direct a fleet of agents building software products will, in the future, be able to use very similar abstractions to direct a fleet of robots building physical things — houses, infrastructure, products, research hardware, art installations, whatever their ambition requires.
 
 This is not a separate product line we will bolt on later. It is the same underlying philosophy and control architecture applied to a different substrate.
 

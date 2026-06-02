@@ -1,6 +1,6 @@
 ---
 title: The Anatomy of a Broken Injection Pipeline
-summary: A deep technical dissection of how Cockpit, Beacon, and Zellij connect to form a prompt-injection system — and the five structural bugs that make it unreliable when it looks like it should just work.
+summary: A deep technical dissection of how FleetCrown, Beacon, and Zellij connect to form a prompt-injection system — and the five structural bugs that make it unreliable when it looks like it should just work.
 excerpt: When you build a system that straddles a terminal multiplexer, a web server, a desktop UI toolkit, and an AI agent, coordination is the hard part. Here is precisely where it goes wrong.
 publishedAt: 2026-05-08
 tags: architecture,systems,beacon,zellij,debugging
@@ -10,7 +10,7 @@ readingTimeMin: 18
 ---
 ## The Setup
 
-Cockpit runs multiple Claude Code sessions simultaneously, one per project, each in its own Zellij tab. When Claude finishes a turn, a popup appears. The user picks the next action. Claude continues.
+FleetCrown runs multiple Claude Code sessions simultaneously, one per project, each in its own Zellij tab. When Claude finishes a turn, a popup appears. The user picks the next action. Claude continues.
 
 That description makes the system sound trivial. It is not.
 
@@ -28,9 +28,9 @@ The system has five components. They run in separate processes, share no memory,
 
 **agent-hook-bridge.sh** is the orchestration layer. It reads the hook payload, resolves the current Zellij tab by name, writes state files, and invokes the popup. This is 200 lines of bash.
 
-**beacon.py** is the popup daemon. Written in Python with PyQt6, it renders either a native desktop window (the fallback path) or opens a frameless browser window pointed at the Cockpit web app (the primary path).
+**beacon.py** is the popup daemon. Written in Python with PyQt6, it renders either a native desktop window (the fallback path) or opens a frameless browser window pointed at the FleetCrown web app (the primary path).
 
-**Cockpit** is the Next.js web app. It serves the beacon popup page, the control panel, and the injection API. It maintains a server-sent event stream that pushes real-time state updates to the control panel every two seconds.
+**FleetCrown** is the Next.js web app. It serves the beacon popup page, the control panel, and the injection API. It maintains a server-sent event stream that pushes real-time state updates to the control panel every two seconds.
 
 The filesystem is the message bus. The critical files are:
 
@@ -50,14 +50,14 @@ flowchart LR
     Bridge["hook-bridge.sh"]
     FS["/tmp/ files\n(filesystem bus)"]
     Beacon["beacon.py\n(PyQt6 / Chrome)"]
-    Cockpit["Cockpit\n(Next.js)"]
+    FleetCrown["FleetCrown\n(Next.js)"]
     Zellij["Zellij server"]
 
     Claude -->|"Stop hook · stdin JSON"| Bridge
     Bridge -->|"write agent-ready-{tab}\nread claude-pane-{PANE_ID}"| FS
     Bridge -->|"invoke"| Beacon
-    Beacon -->|"POST /api/beacon\npoll GET /api/beacon/{id}"| Cockpit
-    Cockpit -->|"SSE stream reads\nagent-ready · current-prompt"| FS
+    Beacon -->|"POST /api/beacon\npoll GET /api/beacon/{id}"| FleetCrown
+    FleetCrown -->|"SSE stream reads\nagent-ready · current-prompt"| FS
     Bridge -->|"go-to-tab-name\nwrite-chars · write 13"| Zellij
     Zellij -->|"types prompt\ninto focused pane"| Claude
 ```
@@ -68,7 +68,7 @@ There are three distinct paths by which a prompt can reach Claude. That number i
 
 ### Path A: The web beacon popup
 
-This is the primary path when Cockpit is running. When Claude stops:
+This is the primary path when FleetCrown is running. When Claude stops:
 
 The hook runs `resolve_tab` to convert the working directory into a Zellij tab name. If it succeeds, the ready sentinel is written. Then the hook calls `beacon.py stop` via command substitution — meaning the shell blocks, waiting for a choice to appear on stdout.
 
@@ -78,7 +78,7 @@ When the user clicks a button in the browser window, the page sends `PATCH /api/
 
 Back in the hook, the command substitution captures the output. The hook looks up the full prompt text for that slot from `~/.config/agent-prompts.json`, builds the final prompt string, and calls `inject_prompt`: `zellij action go-to-tab-name`, sleep 0.3 seconds, `zellij action write-chars`, sleep 0.1 seconds, `zellij action write 13`.
 
-### Path B: The Cockpit control panel
+### Path B: The FleetCrown control panel
 
 The control panel at `/control` has inject buttons on every project card. When a user clicks one, the browser posts to `/api/inject` with the tab name and prompt key.
 
@@ -86,7 +86,7 @@ The TypeScript route resolves the live Zellij tab name by calling `getZellijTabs
 
 ### Path C: The PyQt6 native popup
 
-When Cockpit is not running, `_web_stop` starts it and waits 30 seconds. If Cockpit never responds, `_pyqt_stop` shows a native Qt window synchronously. The user clicks. The choice is captured the same way as Path A and processed through the same injection code.
+When FleetCrown is not running, `_web_stop` starts it and waits 30 seconds. If FleetCrown never responds, `_pyqt_stop` shows a native Qt window synchronously. The user clicks. The choice is captured the same way as Path A and processed through the same injection code.
 
 ```mermaid
 flowchart TD
@@ -97,8 +97,8 @@ flowchart TD
     Stop --> Bridge
     Bridge --> Ready
 
-    Bridge -->|"Cockpit running"| WebBeacon["Path A · Web beacon popup"]
-    Bridge -->|"Cockpit down"| QtPopup["Path C · PyQt6 native popup"]
+    Bridge -->|"FleetCrown running"| WebBeacon["Path A · Web beacon popup"]
+    Bridge -->|"FleetCrown down"| QtPopup["Path C · PyQt6 native popup"]
     Ready -->|"user clicks inject"| Panel["Path B · Control panel\nPOST /api/inject"]
 
     WebBeacon -->|"slot choice → stdout"| BashInject["inject_prompt\nbash · 2-field session format"]
@@ -122,9 +122,9 @@ Method 2 is the right answer. The `claude()` bash wrapper writes the pane file a
 
 When method 2 fails, execution reaches method 5. The conf file contains three entries that map to the same directory:
 
-> Cockpit|/home/g/dev/cockpit
-> Cockpit Claude|/home/g/dev/cockpit
-> Cockpit Openclaw|/home/g/dev/cockpit
+> FleetCrown|/home/g/dev/cockpit
+> FleetCrown Claude|/home/g/dev/cockpit
+> FleetCrown Openclaw|/home/g/dev/cockpit
 
 Method 5 iterates the conf, counts how many entries match the current working directory and are also open in Zellij. When all three tabs are open, `exact_count = 3`. The resolution logic sets `TAB_NAME` only when `exact_count` is exactly 1. When it is 3, `TAB_NAME` stays empty.
 
@@ -142,9 +142,9 @@ Once `resolve_tab` succeeds, injection still has a race condition built into its
 
 The injection sequence is: call `zellij action go-to-tab-name`, sleep 0.3 seconds, call `zellij action write-chars`, sleep 0.1 seconds, call `zellij action write 13`. This is identical in both the bash path and the TypeScript path.
 
-The problem is that `go-to-tab-name` is a message to the Zellij server. It does not block until the tab is actually displayed. The 0.3 second sleep is a heuristic. Under load — Cockpit recompiling, another Claude session active, the SSE stream polling — the tab switch can take longer. When `write-chars` fires before the switch completes, the text goes into whatever pane is currently focused.
+The problem is that `go-to-tab-name` is a message to the Zellij server. It does not block until the tab is actually displayed. The 0.3 second sleep is a heuristic. Under load — FleetCrown recompiling, another Claude session active, the SSE stream polling — the tab switch can take longer. When `write-chars` fires before the switch completes, the text goes into whatever pane is currently focused.
 
-If Cockpit's own terminal is open in the same Zellij session, the prompt lands there instead. If the user had a shell window focused, the prompt types itself into the shell. From Claude's perspective, nothing happened. From the user's perspective, Claude received no input and appears to be doing nothing.
+If FleetCrown's own terminal is open in the same Zellij session, the prompt lands there instead. If the user had a shell window focused, the prompt types itself into the shell. From Claude's perspective, nothing happened. From the user's perspective, Claude received no input and appears to be doing nothing.
 
 There is a second problem on top of the race. `write-chars` types into the focused pane of the target tab — not into Claude specifically. If the user has a multi-pane layout with Claude on the left and a shell on the right, and the shell was last focused, the prompt goes into the shell regardless of which tab is active.
 
@@ -168,7 +168,7 @@ The bash injection path builds the session update instruction as: "Update the se
 
 The TypeScript injection path (through `buildPromptWithSession`) appends a precise block instructing Claude to write five fields: `done:`, `next:`, `tests:`, `todos:`, and `health:`.
 
-The session file format that Cockpit depends on has five fields. The control panel displays all five. The SSE stream diffs on all five. When sessions are injected through Path A — which is the primary path — only two fields get written. On the next turn, the control panel renders the project as having no test count, no TODO count, and no health status. Not because Claude did not check those things. Because the prompt never told it to report them.
+The session file format that FleetCrown depends on has five fields. The control panel displays all five. The SSE stream diffs on all five. When sessions are injected through Path A — which is the primary path — only two fields get written. On the next turn, the control panel renders the project as having no test count, no TODO count, and no health status. Not because Claude did not check those things. Because the prompt never told it to report them.
 
 There is a further wrinkle. The prompts in `~/.config/agent-prompts.json` already contain the full five-field session update format embedded in the prompt text. When Path B injects, `buildPromptWithSession` appends the instruction a second time. Claude reads the same instruction twice. The redundancy is harmless to Claude but is a clear signal that the session format has drifted out of its single source of truth and into three separate locations: the prompts file, the TypeScript wrapper function, and the bash prompt-building code in `handle_stop`.
 
@@ -178,7 +178,7 @@ Three locations, two different subsets of the format. This is the kind of drift 
 
 The control panel subscribes to a server-sent event stream at `/api/control/stream`. When the connection is established, the stream resolves each project's canonical tab name to its live Zellij casing using `getZellijTabs()` and `resolveEffectiveTab()`. These resolved names are used for all subsequent `/tmp` file reads for the entire lifetime of the stream connection.
 
-If Zellij tabs change while the control panel is loaded — the user opens a new Claude session, renames a tab, or closes one — the stream continues reading `/tmp` files under the stale names. A ready sentinel written as `/tmp/agent-ready-Cockpit-Claude` is invisible to a stream that is looking for `/tmp/agent-ready-Cockpit`. The project appears frozen even though it has transitioned to a new state.
+If Zellij tabs change while the control panel is loaded — the user opens a new Claude session, renames a tab, or closes one — the stream continues reading `/tmp` files under the stale names. A ready sentinel written as `/tmp/agent-ready-FleetCrown-Claude` is invisible to a stream that is looking for `/tmp/agent-ready-FleetCrown`. The project appears frozen even though it has transitioned to a new state.
 
 The stream reconnects on error, which re-resolves tab names. But that reconnection is driven by a network error, not by a Zellij topology change. The gap can persist for as long as the browser tab stays open without an error.
 
@@ -188,7 +188,7 @@ It is worth being precise about what the system looks like when all five compone
 
 The `claude()` bash wrapper is the key. When Claude is started through it, the wrapper reads the current Zellij tab name, writes the pane identity file keyed by `ZELLIJ_PANE_ID`, and writes a screen geometry file with the monitor coordinates. These two files are the foundation of everything else.
 
-When Claude stops inside a session started this way: `resolve_tab` reads the pane file and gets the exact tab name in under a millisecond. The ready sentinel is written under that exact name. `beacon.py` checks `/api/health` (a fast, unconditional endpoint), finds Cockpit running, creates the beacon session, and opens the browser window at the correct screen position. The user picks slot 1 in 12 seconds. The polling loop returns the choice. The prompt is injected. The session file gets all five fields.
+When Claude stops inside a session started this way: `resolve_tab` reads the pane file and gets the exact tab name in under a millisecond. The ready sentinel is written under that exact name. `beacon.py` checks `/api/health` (a fast, unconditional endpoint), finds FleetCrown running, creates the beacon session, and opens the browser window at the correct screen position. The user picks slot 1 in 12 seconds. The polling loop returns the choice. The prompt is injected. The session file gets all five fields.
 
 Under these conditions, the loop is fast, reliable, and completely correct. The 30-plus commits of history on the injection system represent the incremental work of closing the failure cases that the happy path does not cover.
 
@@ -202,7 +202,7 @@ There should be one injection path.
 
 The correct architecture: when Claude stops, the hook writes the ready sentinel and exits. The user responds through one interface — the control panel — and one API route handles all injection. The web beacon popup becomes a toast or prominent card inside the control panel, not a separate browser window. The bash injection code and the TypeScript injection code collapse into a single implementation. The prompt-building logic lives in one function. The session update format is embedded in the prompt texts once, not appended again at build time.
 
-This collapses three paths into one. It eliminates the prompt format divergence. It eliminates the double-injection race between popup and panel. It removes the dependency on `beacon.py`'s web-stop polling loop entirely, which removes the Cockpit-availability check, the browser-positioning code, and the 120-second timeout.
+This collapses three paths into one. It eliminates the prompt format divergence. It eliminates the double-injection race between popup and panel. It removes the dependency on `beacon.py`'s web-stop polling loop entirely, which removes the FleetCrown-availability check, the browser-positioning code, and the 120-second timeout.
 
 The pane file approach for tab identity stays — it is the correct mechanism. The SSE stream stays but re-resolves tab names on each tick rather than once at connection time. The `write-chars` heuristic becomes a verified sequence: call `go-to-tab-name`, query the active tab, confirm it matches, then send characters.
 
@@ -214,7 +214,7 @@ The beacon popup as a separate browser window exists because the control panel i
 
 The bash injection path exists because the shell has direct access to the Zellij session environment and can inject reliably when tab identity is known. Running the injection from a web server process adds indirection and requires the web process to have socket access to Zellij.
 
-The PyQt6 fallback exists because Cockpit takes seconds to start after boot, and the popup needed to work immediately without waiting for Next.js to compile.
+The PyQt6 fallback exists because FleetCrown takes seconds to start after boot, and the popup needed to work immediately without waiting for Next.js to compile.
 
 The pane file approach to tab identity exists because working directories alone are ambiguous. Multiple tabs can run the same project. Multiple projects can share a directory. Only the pane ID is unambiguous.
 

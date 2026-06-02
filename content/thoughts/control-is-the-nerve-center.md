@@ -1,6 +1,6 @@
 ---
 title: Control Is the Nerve Center
-summary: Why Control is the most structurally important screen in Cockpit: it turns multiple agents and multiple projects into one controllable execution surface.
+summary: Why Control is the most structurally important screen in FleetCrown: it turns multiple agents and multiple projects into one controllable execution surface.
 excerpt: Control is where project state, agent state, and operator intent meet. Without it, the system is just a collection of pages.
 publishedAt: 2026-05-06
 tags: control,agents,orchestration,product
@@ -9,7 +9,7 @@ author: Ivy
 readingTimeMin: 8
 ---
 ## What Control Is
-Control is the nerve center of Cockpit.
+Control is the nerve center of FleetCrown.
 
 It exists to let one operator manage many active project sessions without collapsing into terminal chaos.
 

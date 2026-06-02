@@ -1,6 +1,6 @@
 ---
 title: Two Products or One
-subtitle: When the two halves converge into one user experience, do the codebases have to merge? A systems-engineering answer to the question of whether Cockpit and OrangeCat should fuse, fork, or stay paired.
+subtitle: When the two halves converge into one user experience, do the codebases have to merge? A systems-engineering answer to the question of whether FleetCrown and OrangeCat should fuse, fork, or stay paired.
 publishedAt: 2026-06-01
 ---
 
@@ -22,7 +22,7 @@ Concrete benefits of a full codebase merger, today:
 
 3. **One deploy surface.** One CI pipeline, one Vercel project, one database, one set of env vars to rotate. The operational tax of running two products goes away.
 
-4. **One agent context naturally.** Instead of two AIs (Ivy on Cockpit, Cat on OrangeCat) that have to converge into one, the agent is one from day one. No merge engineering ever.
+4. **One agent context naturally.** Instead of two AIs (Ivy on FleetCrown, Cat on OrangeCat) that have to converge into one, the agent is one from day one. No merge engineering ever.
 
 5. **Faster strategy execution.** A single product can ship features that touch both production and transaction surfaces without coordinating across two repos. Cycle time drops.
 
@@ -32,13 +32,13 @@ This is not a small set of wins. For a single-maker project, the operational ove
 
 Equally real:
 
-1. **The architectural debt of a forced fusion.** Cockpit is Next 16 + Drizzle + self-hosted Postgres (and an Oracle Cloud migration in progress). OrangeCat is Next 15 + Supabase + RLS. These are not trivially mergeable stacks. A merger means picking one stack and porting the other into it — a two-to-three-month engineering hit with no user-facing improvement.
+1. **The architectural debt of a forced fusion.** FleetCrown is Next 16 + Drizzle + self-hosted Postgres (and an Oracle Cloud migration in progress). OrangeCat is Next 15 + Supabase + RLS. These are not trivially mergeable stacks. A merger means picking one stack and porting the other into it — a two-to-three-month engineering hit with no user-facing improvement.
 
 2. **Conflicting product velocities.** A productivity tool wants deep features, fast UI, low regulatory surface. A marketplace wants trust signals, social proof, content moderation, payment-rail compliance. Putting them under one product creates roadmap conflicts that did not exist when they were two products.
 
-3. **Two distinct audiences.** Cockpit's audience is power-user technical builders running agent fleets. OrangeCat's audience is broader — anyone with a wallet who wants to participate in voluntary economic activity. Merging surfaces might dilute one or both.
+3. **Two distinct audiences.** FleetCrown's audience is power-user technical builders running agent fleets. OrangeCat's audience is broader — anyone with a wallet who wants to participate in voluntary economic activity. Merging surfaces might dilute one or both.
 
-4. **Independent value capture.** A Cockpit user who only does proprietary work does not want to be on a marketplace surface. An OrangeCat user who only sells digital downloads does not need fleet orchestration. Each product captures users who do not need the other half. Merging eliminates that option.
+4. **Independent value capture.** A FleetCrown user who only does proprietary work does not want to be on a marketplace surface. An OrangeCat user who only sells digital downloads does not need fleet orchestration. Each product captures users who do not need the other half. Merging eliminates that option.
 
 5. **Lost optionality.** Two distinct legal entities can be funded, acquired, or sunset independently. One unified product cannot be split as cleanly. Optionality has real value when the future is uncertain.
 
@@ -66,7 +66,7 @@ There are scenarios where full merger becomes the right move:
 
 - **If the agent layer convergence cannot be cleanly shared across two codebases**, the cost of running two separate stacks compounds. At that point the merge pays for itself.
 - **If a fundraise or acquisition specifically requires consolidation**, the optionality is worth less than the deal value.
-- **If maintaining two surfaces actively confuses users about what to do**, the brand cost outweighs the focus cost. (This would surface as "what is the difference between Cockpit and OrangeCat?" being asked too often by good-faith users.)
+- **If maintaining two surfaces actively confuses users about what to do**, the brand cost outweighs the focus cost. (This would surface as "what is the difference between FleetCrown and OrangeCat?" being asked too often by good-faith users.)
 
 There are also scenarios where staying separate becomes more valuable:
 
@@ -84,7 +84,7 @@ The most likely correct sequence:
 
 **Phase 3 (twelve → twenty-four months).** Evaluate codebase merger. By this point the architectural overlap is substantial. If merging reduces complexity, merge. If separation still preserves valuable optionality (regulatory, fundraising, audience-focused product velocity), keep them separate.
 
-**Phase 4 (beyond).** Whatever the final form is — one codebase or two — the user experience is fully unified. Surfaces fade. The agent and the approval queue are what the user lives in. Cockpit and OrangeCat become substrate names, not destination names.
+**Phase 4 (beyond).** Whatever the final form is — one codebase or two — the user experience is fully unified. Surfaces fade. The agent and the approval queue are what the user lives in. FleetCrown and OrangeCat become substrate names, not destination names.
 
 ## The Recommendation
 

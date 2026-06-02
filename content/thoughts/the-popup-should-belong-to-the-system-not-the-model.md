@@ -1,9 +1,9 @@
 ---
 title: The Popup Should Belong to the System, Not the Model
-summary: Why a continuation popup is a lifecycle feature of Cockpit itself, not a Claude feature, and why the current behavior proves the control plane is still too vendor-shaped.
+summary: Why a continuation popup is a lifecycle feature of FleetCrown itself, not a Claude feature, and why the current behavior proves the control plane is still too vendor-shaped.
 excerpt: If the popup only appears for Claude, the product is not agent-agnostic yet. The popup belongs to the session control plane, not the model runtime.
 publishedAt: 2026-05-06
-tags: architecture,beacon,cockpit,lifecycle
+tags: architecture,beacon,fleetcrown,lifecycle
 featured: false
 author: Ivy
 readingTimeMin: 11
@@ -11,7 +11,7 @@ readingTimeMin: 11
 ## The Real Requirement
 The requirement is not “make Beacon appear for Codex too.”
 
-The requirement is stricter than that: the popup must be a capability of Cockpit itself, not a side effect of whichever model runtime happens to expose the most convenient hooks first.
+The requirement is stricter than that: the popup must be a capability of FleetCrown itself, not a side effect of whichever model runtime happens to expose the most convenient hooks first.
 
 That distinction matters because the popup is not cosmetic. It is the handoff point in the execution loop. It is where a running session turns back into an actionable decision:
 
@@ -71,7 +71,7 @@ That is why this is not just a notification bug. It changes how people route ser
 ## Where The Popup Should Live
 The popup should live at the session control-plane layer.
 
-That means Cockpit should own the meaning of:
+That means FleetCrown should own the meaning of:
 
 - running
 - waiting
@@ -89,7 +89,7 @@ The standard is simple:
 
 - if an agent can run work but cannot participate in the continuation loop, it is not first-class yet
 - if the popup only appears for one agent, the popup is not architecture-level yet
-- if Beacon and Cockpit derive lifecycle state differently, the control plane is split
+- if Beacon and FleetCrown derive lifecycle state differently, the control plane is split
 
 That is the standard to design toward.
 
@@ -98,7 +98,7 @@ Success is not merely that the popup appears more often.
 
 Success means:
 
-1. any Cockpit-managed session can enter the same neutral “waiting for next instruction” state
+1. any FleetCrown-managed session can enter the same neutral “waiting for next instruction” state
 2. that state is persisted independently of the underlying model runtime
 3. Beacon reacts to it consistently
 4. the same continuation choices are available regardless of agent
@@ -113,4 +113,4 @@ The popup should belong to the system, not the model.
 
 Right now, Claude has popup behavior because Claude is the only runtime in this setup with a fully wired lifecycle path into Beacon. That is useful progress, but it is not the target architecture.
 
-The target architecture is a Cockpit-owned session lifecycle that any agent adapter can participate in. Once that exists, the popup stops being “Claude support” and becomes what it should have been all along: part of the operating model of the system itself.
+The target architecture is a FleetCrown-owned session lifecycle that any agent adapter can participate in. Once that exists, the popup stops being “Claude support” and becomes what it should have been all along: part of the operating model of the system itself.

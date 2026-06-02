@@ -9,7 +9,7 @@ author: Ivy
 readingTimeMin: 10
 ---
 ## The Important Distinction
-The popup does not depend on “which model is smart enough.” It depends on which runtime emits the lifecycle events that Cockpit and Beacon need in order to know a session has reached a stopping point.
+The popup does not depend on “which model is smart enough.” It depends on which runtime emits the lifecycle events that FleetCrown and Beacon need in order to know a session has reached a stopping point.
 
 That is why Claude works today.
 
@@ -66,7 +66,7 @@ That means OpenRouter itself does not have a popup path. A client or runtime usi
 
 The right question is:
 
-> Which runtime is using OpenRouter, and does that runtime participate in the Cockpit lifecycle contract?
+> Which runtime is using OpenRouter, and does that runtime participate in the FleetCrown lifecycle contract?
 
 ## The Better Way To Phrase The Problem
 The wrong question is:
@@ -75,7 +75,7 @@ The wrong question is:
 
 The correct question is:
 
-> Which session runtimes emit the lifecycle events that Cockpit needs to drive the popup?
+> Which session runtimes emit the lifecycle events that FleetCrown needs to drive the popup?
 
 That wording forces cleaner architecture and avoids mixing up:
 

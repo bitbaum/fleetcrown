@@ -11,7 +11,7 @@ readingTimeMin: 11
 
 ## The Problem With One Prompt for Everything
 
-The first version of Cockpit's auto-inject system did something simple: when Claude finished and you were away from the keyboard, it fired `next_best`. Every time. Regardless of what just happened, what the project's health was, what you'd queued up, or what time it was.
+The first version of FleetCrown's auto-inject system did something simple: when Claude finished and you were away from the keyboard, it fired `next_best`. Every time. Regardless of what just happened, what the project's health was, what you'd queued up, or what time it was.
 
 This is automation, not orchestration. The difference matters.
 
@@ -101,13 +101,13 @@ The current system is better than what it replaced, but it's still shallow. Here
 
 **Multi-item queue execution.** The current queue injects one item per session. If the user has queued three tasks, they run in three separate sessions — each with context load overhead, each with potential for mid-session derailment. A "queue drain" mode that executes items sequentially in a single session would be faster and more reliable.
 
-**Inter-project coordination.** The system currently orchestrates within a single project tab. It has no awareness of what's happening across the fleet — whether the Cockpit tab is blocked waiting on an API the OrangeCat tab is building, or whether two tabs are about to modify the same shared library.
+**Inter-project coordination.** The system currently orchestrates within a single project tab. It has no awareness of what's happening across the fleet — whether the FleetCrown tab is blocked waiting on an API the OrangeCat tab is building, or whether two tabs are about to modify the same shared library.
 
 ## The Bigger Picture
 
 The observation behind this is simple: the best prompt injected at the wrong moment is noise. `next_best` after a critical failure is counterproductive. `close_session` in the middle of a deep debugging run breaks flow. `orient` when the agent has perfect context and a specific task queued is waste.
 
-Cockpit's value isn't in having good prompts. Other tools have prompts. The value is in knowing which prompt, for which project state, at which moment — and executing that decision automatically so the builder never has to think about it.
+FleetCrown's value isn't in having good prompts. Other tools have prompts. The value is in knowing which prompt, for which project state, at which moment — and executing that decision automatically so the builder never has to think about it.
 
 Every prompt in the library is a policy. A policy that says: in this situation, with this context, do this kind of work. The orchestration layer's job is to read the situation and apply the right policy.
 

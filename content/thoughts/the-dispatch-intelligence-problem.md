@@ -1,7 +1,7 @@
 ---
 title: "The Dispatch Intelligence Problem: Why Blind Autocontinue Breaks the Flow"
-summary: A first-principles analysis of why mechanical queue drain undermines project momentum, what it would mean for Cockpit to dispatch intelligently, and the path toward embedding a genuine strategist in the loop.
-excerpt: The queue is a backlog. The next best step is a forecast. Blindly draining one while ignoring the other is not automation — it is slot machine pressing. Cockpit needs a dispatch layer that can read context and decide.
+summary: A first-principles analysis of why mechanical queue drain undermines project momentum, what it would mean for FleetCrown to dispatch intelligently, and the path toward embedding a genuine strategist in the loop.
+excerpt: The queue is a backlog. The next best step is a forecast. Blindly draining one while ignoring the other is not automation — it is slot machine pressing. FleetCrown needs a dispatch layer that can read context and decide.
 publishedAt: 2026-05-14
 tags: architecture,autoprompting,queue,orchestration,ai,dispatch,intelligence
 featured: true
@@ -103,7 +103,7 @@ The dispatch layer described above is not something you can implement with a dec
 
 What the dispatch layer actually needs is an LLM call.
 
-This is where Cockpit gets its own brain — not the Claude or Codex or Gemini instance running inside the terminal on the local machine, but a lightweight model embedded in the web application itself, capable of reasoning about dispatch decisions before anything reaches the agent.
+This is where FleetCrown gets its own brain — not the Claude or Codex or Gemini instance running inside the terminal on the local machine, but a lightweight model embedded in the web application itself, capable of reasoning about dispatch decisions before anything reaches the agent.
 
 The call is fast and cheap. It does not need a frontier model. A prompt like:
 
@@ -133,7 +133,7 @@ The answer arrives before the autocontinue fires. The dispatch layer routes acco
 
 ## Groq and the Embedded Intelligence Layer
 
-The `groq-neon-and-the-next-infra-layer.md` article introduced Groq as the free intelligence tier. This is exactly the use case it exists for in Cockpit. Groq's API provides:
+The `groq-neon-and-the-next-infra-layer.md` article introduced Groq as the free intelligence tier. This is exactly the use case it exists for in FleetCrown. Groq's API provides:
 
 - Sub-second responses on Llama-3.1-8b and Mixtral-8x7b
 - A generous free tier (14,400 requests per day, 30 RPM on free tier)
@@ -158,13 +158,13 @@ The reason is important. If the system overrides the queue, the human needs to s
 
 For paying users, or for projects where the stakes are higher, the same call can route to Claude Haiku, GPT-4o-mini, or Gemini Flash — models that understand more nuance in the handoff signal and can reason about goal context at a deeper level.
 
-This is the beginning of Cockpit having its own intelligence: not intelligence that executes code, but intelligence that decides how to route the execution that happens inside the terminal.
+This is the beginning of FleetCrown having its own intelligence: not intelligence that executes code, but intelligence that decides how to route the execution that happens inside the terminal.
 
 ## The Smarter Queue
 
 The dispatch layer changes the relationship between the queue and next-best from a strict priority hierarchy to a collaborative negotiation. Some implications:
 
-**Queue items get annotated with context.** When you add an item to the queue, Cockpit records the current project state alongside it: what the last handoff said, what branch was active, what files were recently changed. At dispatch time, the AI sees not just the item text but when and under what conditions it was written. "Add dark mode" written immediately after a design review carries different weight than "add dark mode" written during an unrelated debugging session.
+**Queue items get annotated with context.** When you add an item to the queue, FleetCrown records the current project state alongside it: what the last handoff said, what branch was active, what files were recently changed. At dispatch time, the AI sees not just the item text but when and under what conditions it was written. "Add dark mode" written immediately after a design review carries different weight than "add dark mode" written during an unrelated debugging session.
 
 **The queue can surface reasoning.** Rather than silently draining or silently skipping, the ready banner can show: "Queue item postponed: auth tests failing. Will return to dark mode after tests pass." The human sees the decision. They can override it if the AI got it wrong.
 

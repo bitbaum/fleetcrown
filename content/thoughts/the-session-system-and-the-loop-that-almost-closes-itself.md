@@ -1,6 +1,6 @@
 ---
 title: The Session System and the Loop That Almost Closes Itself
-summary: How Cockpit's prompt library and session handoff protocol work together — and the one missing piece that separates a manually-triggered execution system from a genuinely self-improving one.
+summary: How FleetCrown's prompt library and session handoff protocol work together — and the one missing piece that separates a manually-triggered execution system from a genuinely self-improving one.
 excerpt: Thirty-two prompt templates and a five-field handoff are not features. They are the architecture of continuity. Here is what they do, why the design matters, and the precise gap between where this system is now and where it needs to go.
 publishedAt: 2026-05-15
 tags: architecture,prompts,sessions,orchestration,autonomy,product
@@ -17,7 +17,7 @@ You open a repo after two days away. You check the last commit message. You read
 
 The problem compounds under AI-assisted development. Models have no memory between sessions. Every cold start means re-establishing context: what the project is, what was last done, what the conventions are, what the current blocker is. Without a protocol for that, AI assistance is brilliant within a session and amnesiac between them.
 
-This is the coordination problem Cockpit was built to solve. Not "make coding faster" — that's an easy pitch that misses the actual bottleneck. The actual bottleneck is continuity: keeping work moving across sessions, across days, across the unavoidable gaps that come with running a portfolio of projects simultaneously.
+This is the coordination problem FleetCrown was built to solve. Not "make coding faster" — that's an easy pitch that misses the actual bottleneck. The actual bottleneck is continuity: keeping work moving across sessions, across days, across the unavoidable gaps that come with running a portfolio of projects simultaneously.
 
 Two mechanisms are now operational. They work together in a way that becomes clear once you see the design.
 
@@ -57,7 +57,7 @@ Every team that uses AI agents seriously accumulates a corpus of effective promp
 
 The prompt library is where those patterns live.
 
-Cockpit has thirty-two templates across six dimensions: engineering, UX, deployment, product, marketing, and business. Each is parameterized with variables — `{name}`, `{path}`, `{mission}`, `{url}` — so the same template runs against any project without modification.
+FleetCrown has thirty-two templates across six dimensions: engineering, UX, deployment, product, marketing, and business. Each is parameterized with variables — `{name}`, `{path}`, `{mission}`, `{url}` — so the same template runs against any project without modification.
 
 What makes a template good is not brevity. It is structural completeness. A template that looks terse often fails because it leaves the agent without a decision framework. A template that specifies the right decision framework — here is the context you have, here is how to triage, here is the scope, here is what you cannot do, here is when you are done — consistently produces work that doesn't need to be undone.
 
@@ -106,15 +106,15 @@ The third gap is persistence of agent output. Agent runs currently stream to the
 
 Storing run output per project changes the system from a dispatcher into a learner. With history, the prompt library can improve based on what actually worked. Without it, evaluation is based on intuition and the developer's memory of recent sessions.
 
-The fourth gap is cross-project intelligence. Cockpit has data about every project: recent commits, session health, test status, todo count. But that data is per-project, not synthesized across the portfolio. The question "which project needs attention most right now?" has an answer — it's in the session files and git logs — but the system doesn't compute it. A builder with six active projects has to hold the priority ordering in their head rather than reading it from the system.
+The fourth gap is cross-project intelligence. FleetCrown has data about every project: recent commits, session health, test status, todo count. But that data is per-project, not synthesized across the portfolio. The question "which project needs attention most right now?" has an answer — it's in the session files and git logs — but the system doesn't compute it. A builder with six active projects has to hold the priority ordering in their head rather than reading it from the system.
 
-This is the gap between a dashboard and an operating system. A dashboard shows data. An OS makes decisions based on data. Cockpit has the data; the synthesis layer is missing.
+This is the gap between a dashboard and an operating system. A dashboard shows data. An OS makes decisions based on data. FleetCrown has the data; the synthesis layer is missing.
 
 ## The Habits-to-Goals Connection
 
 One gap deserves its own note because it reveals something about the life OS framing.
 
-Habits and goals are tracked separately in Cockpit. The habit heatmap shows thirty-day check-off patterns. The goals view shows hierarchical targets with progress tracking. But there is no connection between them. A habit like "read for thirty minutes daily" and a goal like "finish the ML fundamentals curriculum" are not linked. The system doesn't know that one feeds the other.
+Habits and goals are tracked separately in FleetCrown. The habit heatmap shows thirty-day check-off patterns. The goals view shows hierarchical targets with progress tracking. But there is no connection between them. A habit like "read for thirty minutes daily" and a goal like "finish the ML fundamentals curriculum" are not linked. The system doesn't know that one feeds the other.
 
 This matters because the life OS framing only becomes real when the system can answer: is this habit serving a goal? Which habits are not connected to anything? Which goals have no habits supporting them?
 
@@ -142,7 +142,7 @@ The current architecture requires either full autonomy (let it run) or full cont
 
 There is a qualitative threshold between a tool and a system. A tool does something when you use it. A system operates on its own, improves over time, and degrades gracefully when it can't do something.
 
-Cockpit is currently a tool with strong system architecture. The session protocol, the prompt library, the triage framework, the db/queries layering, the deployment pipeline — these are system thinking applied to a tool. But the tool still requires a human to start every cycle.
+FleetCrown is currently a tool with strong system architecture. The session protocol, the prompt library, the triage framework, the db/queries layering, the deployment pipeline — these are system thinking applied to a tool. But the tool still requires a human to start every cycle.
 
 The cron-triggered `next_best` loop is what crosses the threshold. Once the system fires autonomously, applies the best available operational template to the highest-priority project, and writes a session handoff for the builder to review, the dynamic inverts. The builder reviews output rather than initiating work. The session file is a report rather than a starting point.
 
@@ -150,7 +150,7 @@ What makes this tractable — unlike most "AI autonomy" pitches — is that the 
 
 ## What This Means in Practice
 
-The mission of Cockpit is: stay in judgment mode while agents handle execution.
+The mission of FleetCrown is: stay in judgment mode while agents handle execution.
 
 Every architectural decision traces back to that. The session system ensures agents don't start cold, which means the builder doesn't have to brief them. The prompt library ensures good workflows are reusable, which means the builder doesn't have to reconstruct them. The triage framework ensures agents pick the right task, which means the builder doesn't have to queue work manually.
 

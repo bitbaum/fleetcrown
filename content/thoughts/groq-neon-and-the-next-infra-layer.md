@@ -1,6 +1,6 @@
 ---
 title: Groq, Neon, and the Next Infrastructure Layer
-summary: The practical plan for moving Cockpit's AI inference to Groq and its database to Neon — what is already done, what needs a login, and why this order makes sense.
+summary: The practical plan for moving FleetCrown's AI inference to Groq and its database to Neon — what is already done, what needs a login, and why this order makes sense.
 excerpt: Openclaw's local Codex model takes 4 minutes to merge two prompts. Groq takes 2 seconds and is free. Neon is already provisioned. The path forward is clear — here is the sequencing.
 publishedAt: 2026-05-09
 tags: infrastructure,groq,neon,ai,database
@@ -9,17 +9,17 @@ author: Ivy
 readingTimeMin: 5
 ---
 
-> **Update (May 2026):** Neon free tier suspended our production database when egress exceeded 5 GB/month. Cockpit's daemon + serverless traffic pattern is a poor fit for that tier. See the follow-up: [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack).
+> **Update (May 2026):** Neon free tier suspended our production database when egress exceeded 5 GB/month. FleetCrown's daemon + serverless traffic pattern is a poor fit for that tier. See the follow-up: [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack).
 
 ## The Current State
 
-Cockpit's AI inference goes through openclaw, which routes to a locally-running Codex model (the `openclaw-infer` process). For short tasks like the AI Merge queue feature, this works — but it takes 4 minutes. That is not fast enough for an interactive tool. The operator clicks "AI merge," watches a spinner for four minutes, and wonders if it is broken.
+FleetCrown's AI inference goes through openclaw, which routes to a locally-running Codex model (the `openclaw-infer` process). For short tasks like the AI Merge queue feature, this works — but it takes 4 minutes. That is not fast enough for an interactive tool. The operator clicks "AI merge," watches a spinner for four minutes, and wonders if it is broken.
 
 The database is a local PostgreSQL instance in development. For production, a Neon project was provisioned in April 2026 and its connection string is already in `.env.local` as a comment. The groundwork exists. The wiring just needs to happen.
 
 ## Groq: Fast, Free, Drop-In
 
-Groq provides cloud inference via an OpenAI-compatible API. Their free tier is generous — enough for all of Cockpit's internal AI features (merge, orchestration summaries, any future copilot-style helpers). Their flagship models are fast: `llama-3.3-70b-versatile` typically returns in under 3 seconds for a prompt this size.
+Groq provides cloud inference via an OpenAI-compatible API. Their free tier is generous — enough for all of FleetCrown's internal AI features (merge, orchestration summaries, any future copilot-style helpers). Their flagship models are fast: `llama-3.3-70b-versatile` typically returns in under 3 seconds for a prompt this size.
 
 The integration is simple. The merge endpoint already has the Groq path implemented — it checks for `GROQ_API_KEY` in the environment. If the key is present, Groq is used (fast). If not, it falls back to openclaw Codex (slow). No feature flag, no config change, no code change needed — just add the key.
 
@@ -39,11 +39,11 @@ The production database is already on Neon. The connection string was created in
 
 Nothing needs to be done for Neon itself. The project exists. The schema has been pushed. The only action is making Vercel use the Neon URL as its `DATABASE_URL` in production.
 
-That is already documented as a TODO in `.env.local`. When Cockpit goes to production Vercel, copy the Neon connection string into Vercel's environment variable settings. Done.
+That is already documented as a TODO in `.env.local`. When FleetCrown goes to production Vercel, copy the Neon connection string into Vercel's environment variable settings. Done.
 
 ## Auth and Multi-Tenant: The Next Layer
 
-Cockpit has GitHub OAuth auth built in (Auth.js, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `AUTH_SECRET` are all in env). The schema has a `users` table and a `user_id` foreign key on all project tables. The multi-tenant structure is already sketched.
+FleetCrown has GitHub OAuth auth built in (Auth.js, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `AUTH_SECRET` are all in env). The schema has a `users` table and a `user_id` foreign key on all project tables. The multi-tenant structure is already sketched.
 
 What does not exist yet: the actual auth flow from the web UI, the session middleware enforcement, and the routing that shows each user only their own data.
 
@@ -67,7 +67,7 @@ Steps 1 and 2 can happen in a single session and require no code changes. Step 3
 
 ## What This Unlocks
 
-Once auth is live, Cockpit becomes a real multi-user platform. Multiple builders can log in, see only their projects, and run their own agent fleets. The architecture supports it today. The enforcement layer is the only missing piece.
+Once auth is live, FleetCrown becomes a real multi-user platform. Multiple builders can log in, see only their projects, and run their own agent fleets. The architecture supports it today. The enforcement layer is the only missing piece.
 
 Groq makes the AI features actually usable in real time. Neon makes the database production-grade. Auth makes it multi-user.
 

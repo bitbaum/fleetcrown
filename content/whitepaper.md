@@ -40,19 +40,19 @@ The coordination layer is not an agent. It is an interface.
 The fundamental unit of work in FleetCrown is the builder loop:
 
 ```
-Agent runs → signals completion → Cockpit surfaces state → operator decides → agent runs
+Agent runs → signals completion → FleetCrown surfaces state → operator decides → agent runs
 ```
 
 Each iteration is one cycle. FleetCrown is built to make this cycle as tight as possible:
 
 1. The agent completes a task and signals the session lifecycle
-2. Cockpit reads the session file and marks the project ready
+2. FleetCrown reads the session file and marks the project ready
 3. The operator sees the ready state and the proposed next action
 4. With one tap or keystroke, the next iteration begins
 
 Auto-continue removes the operator from steps 2–4 entirely for routine continuation. The operator re-enters only when the loop requires judgment: a design decision, an ambiguous requirement, a broken test.
 
-This is not automation for its own sake. It is a division of labor: the agent handles execution, the operator handles judgment. Cockpit is the interface between them.
+This is not automation for its own sake. It is a division of labor: the agent handles execution, the operator handles judgment. FleetCrown is the interface between them.
 
 ## Architecture
 
@@ -64,7 +64,7 @@ Agent state flows from the terminal to the UI through a layered propagation mech
 
 The agent writes structured session files to `/tmp` on completion. These files contain the session handoff: what was done, what comes next, health indicators, test status, open tasks. The files follow a naming convention: `agent-ready-<tab>`, `agent-session-<tab>`, `agent-current-prompt-<tab>`.
 
-The Cockpit SSE stream reads these files at 2-second intervals and emits diff-patched updates to all connected clients. Only changed projects trigger events, keeping bandwidth minimal.
+The FleetCrown SSE stream reads these files at 2-second intervals and emits diff-patched updates to all connected clients. Only changed projects trigger events, keeping bandwidth minimal.
 
 On the client, a React hook consumes the SSE stream and maintains the full project state map. Render cycles are bounded: only components tied to changed projects re-render.
 
@@ -72,7 +72,7 @@ On the client, a React hook consumes the SSE stream and maintains the full proje
 
 Sending a prompt to an agent is not a queue operation or an API call. It is a direct terminal injection.
 
-Cockpit uses Zellij's `write-chars` and `write 13` commands to type a prompt into the correct terminal pane and submit it. The injection sequence is:
+FleetCrown uses Zellij's `write-chars` and `write 13` commands to type a prompt into the correct terminal pane and submit it. The injection sequence is:
 
 ```
 1. go-to-tab-name <tab>        — focus the correct tab
@@ -85,19 +85,19 @@ The system resolves the correct tab name dynamically, matching against the live 
 
 ### Typing Guard
 
-Injecting into a terminal while the user is composing a command garbles their input. Cockpit solves this with a per-pane typing guard.
+Injecting into a terminal while the user is composing a command garbles their input. FleetCrown solves this with a per-pane typing guard.
 
-ZSH `zle-line-init` and `zle-line-finish` hooks write and delete a marker file at `/tmp/cockpit-typing-<ZELLIJ_PANE_ID>` containing the tab name and a Unix timestamp. Before any injection — direct or queued — Cockpit reads these markers. If the target tab has a live marker under 60 seconds old, injection is deferred until the user stops typing.
+ZSH `zle-line-init` and `zle-line-finish` hooks write and delete a marker file at `/tmp/cockpit-typing-<ZELLIJ_PANE_ID>` containing the tab name and a Unix timestamp. Before any injection — direct or queued — FleetCrown reads these markers. If the target tab has a live marker under 60 seconds old, injection is deferred until the user stops typing.
 
 The daemon bridge respects the same guard: queued commands from the cloud control plane wait up to 30 seconds for the user to finish before executing.
 
 ### Remote Access: The Daemon Bridge
 
-Cockpit is a local application by design. It needs to be on the same machine as the terminal to inject commands. But operators increasingly need to dispatch from a phone, a second machine, or a shared device.
+FleetCrown is a local application by design. It needs to be on the same machine as the terminal to inject commands. But operators increasingly need to dispatch from a phone, a second machine, or a shared device.
 
 The daemon bridge is the solution.
 
-When the Cockpit server runs on Vercel (or any remote host), injections are written to a `pending_commands` table in the database rather than executed immediately. A local daemon script polls the cloud control plane over HTTPS, claims pending commands, executes them using the same injection primitives, and marks them done.
+When the FleetCrown server runs on Vercel (or any remote host), injections are written to a `pending_commands` table in the database rather than executed immediately. A local daemon script polls the cloud control plane over HTTPS, claims pending commands, executes them using the same injection primitives, and marks them done.
 
 The same daemon pushes runtime state — agent processes, `/tmp` sentinel files, session health — to the cloud every 2 seconds, so the remote UI stays live.
 
@@ -109,45 +109,45 @@ No open ports. No SSH tunnels. No VPN. The local machine makes outbound HTTPS re
 
 ### Dispatch Intelligence
 
-When auto-continue fires, Cockpit does not blindly send "next task." It routes intelligently.
+When auto-continue fires, FleetCrown does not blindly send "next task." It routes intelligently.
 
-If a prompt queue exists, Cockpit asks the dispatch router — a Groq inference call on the session handoff and queue contents — whether to drain the queue or run the agent's own judgment. The router returns an action (`queue` or `nextbest`) with a reasoning string that appears in the UI.
+If a prompt queue exists, FleetCrown asks the dispatch router — a Groq inference call on the session handoff and queue contents — whether to drain the queue or run the agent's own judgment. The router returns an action (`queue` or `nextbest`) with a reasoning string that appears in the UI.
 
 The queue drain itself respects health gates: if the session reports critical health or failing tests, queue items are bypassed and the agent is forced into recovery mode. A broken project should fix itself, not accept new tasks that compound the damage.
 
 ### Session Lifecycle Signaling
 
-Agent hooks are shell functions executed at the start and end of every Claude Code session. They translate terminal events into Cockpit state signals:
+Agent hooks are shell functions executed at the start and end of every Claude Code session. They translate terminal events into FleetCrown state signals:
 
 - Session start: clears ready marker, writes current-prompt sentinel
-- Session end: writes session handoff file, sets ready marker, pings Cockpit
+- Session end: writes session handoff file, sets ready marker, pings FleetCrown
 - Hard stop: writes closed and sentinel markers
 
-These hooks are installed once and run automatically. The agent does not need to know about Cockpit. The shell layer is the integration boundary.
+These hooks are installed once and run automatically. The agent does not need to know about FleetCrown. The shell layer is the integration boundary.
 
 ### The Life OS Layer
 
-Agent orchestration is the fleet management half of Cockpit. The other half is personal operating surface.
+Agent orchestration is the fleet management half of FleetCrown. The other half is personal operating surface.
 
 Goals, habits, people, subscriptions, and commitments are tracked in the same interface as project and agent state. This is not an accident of feature creep. It reflects a truth about how serious builders work: the project is not separate from the life. Deadlines exist because of constraints. Habits determine momentum. People are collaborators and stakeholders.
 
-Cockpit makes this visible together so operators can reason about their actual situation, not a sanitized project view.
+FleetCrown makes this visible together so operators can reason about their actual situation, not a sanitized project view.
 
 ## Subscription Tiers
 
-Cockpit is offered as a hosted SaaS product with three subscription levels.
+FleetCrown is offered as a hosted SaaS product with three subscription levels.
 
 **Personal** — for solo builders managing up to 5 projects. Local runtime with cloud backup and remote access via the daemon bridge. Full project/agent/life OS features. Designed for the individual operator who wants to run the full system without self-hosting.
 
-**Pro** — for power builders running 10+ active projects. Faster dispatch inference, extended prompt history, priority support, and direct access to new features in beta. Intended for builders where Cockpit is an operational dependency.
+**Pro** — for power builders running 10+ active projects. Faster dispatch inference, extended prompt history, priority support, and direct access to new features in beta. Intended for builders where FleetCrown is an operational dependency.
 
 **Team** — for small groups (up to 10 people) sharing a fleet. Multi-user project state, shared prompt queues, and team-level dashboards. Built for pairs and small studios who want a shared execution surface without enterprise overhead.
 
-Self-hosted deployment remains fully supported for operators who prefer to run Cockpit on their own infrastructure. The architecture is designed to run on a single machine with PostgreSQL.
+Self-hosted deployment remains fully supported for operators who prefer to run FleetCrown on their own infrastructure. The architecture is designed to run on a single machine with PostgreSQL.
 
 ## The Standard
 
-Cockpit is not a productivity app. Productivity apps make individual tasks faster. Cockpit changes the relationship between the operator and the work.
+FleetCrown is not a productivity app. Productivity apps make individual tasks faster. FleetCrown changes the relationship between the operator and the work.
 
 The standard is: the operator stays in judgment mode. The agents stay in execution mode. The system maintains the state that connects them.
 

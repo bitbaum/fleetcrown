@@ -1,6 +1,6 @@
 # Contributing
 
-Cockpit is optimized for clear ownership, tight feedback loops, and production
+FleetCrown is optimized for clear ownership, tight feedback loops, and production
 trust. Changes should be small enough to review and strong enough to ship.
 
 ## Before Editing

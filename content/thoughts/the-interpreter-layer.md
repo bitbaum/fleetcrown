@@ -65,11 +65,11 @@ This matters because it transforms the interpreter from a black box into a colla
 
 This is not a chat with the AI. It is a chat with your fleet, mediated by an AI. The distinction is important. You are not asking the interpreter to make decisions. You are asking it to resolve your expression into something the agent can execute. The interpreter never decides which project to address, what to build, or what is important. Those remain yours. The interpreter handles only the phrasing.
 
-## The Cockpit Interface Is Converging on Chat
+## The FleetCrown Interface Is Converging on Chat
 
 Looking at the views that matter most in actual use — the control panel, the prompt library, the session relay — they are all converging on the same interface: a text field, a send button, and a feed of what happened. That is a chat. The form factor is already there. The interpreter layer is what gives that interface genuine leverage over raw transcription.
 
-When Cockpit can take "check on the OrangeCat stuff and maybe push the next step if it looks ready" and produce a correct, specific, safe instruction without requiring the user to rewrite it, the interface becomes genuinely useful for the moments when you cannot write carefully. Those moments — on a walk, between meetings, in the few seconds before sleep — are exactly when the fleet should be easiest to direct.
+When FleetCrown can take "check on the OrangeCat stuff and maybe push the next step if it looks ready" and produce a correct, specific, safe instruction without requiring the user to rewrite it, the interface becomes genuinely useful for the moments when you cannot write carefully. Those moments — on a walk, between meetings, in the few seconds before sleep — are exactly when the fleet should be easiest to direct.
 
 ## What Stays Human
 
@@ -77,11 +77,11 @@ The interpreter layer does not lower the quality bar for judgment. It lowers the
 
 Knowing what you want remains fully human. Deciding which project matters, what to build next, when to stop and reassess — none of that is touched by the interpreter. The interpreter only handles the step where your judgment has to be converted into a string the agent can parse without ambiguity.
 
-This is the right boundary. The goal of Cockpit is not to replace human judgment with AI judgment. It is to remove the mechanical friction that sits between a human's decision and its execution. The phrasing step is mechanical. It can be automated. The decision that the phrasing describes cannot be, and the architecture should not try.
+This is the right boundary. The goal of FleetCrown is not to replace human judgment with AI judgment. It is to remove the mechanical friction that sits between a human's decision and its execution. The phrasing step is mechanical. It can be automated. The decision that the phrasing describes cannot be, and the architecture should not try.
 
 ## What This Enables
 
-If this layer exists, the effective input quality of the Cockpit interface becomes independent of the user's ability to write precise prompts on demand.
+If this layer exists, the effective input quality of the FleetCrown interface becomes independent of the user's ability to write precise prompts on demand.
 
 A fragment of voice. Half a sentence typed on a phone before locking the screen. A thought expressed in the thirty seconds before a train stop. All of these become valid ways to give the fleet a useful instruction.
 

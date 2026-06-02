@@ -1,6 +1,6 @@
 ---
 title: What a Truly Agent-Agnostic Popup Architecture Needs
-summary: The concrete architecture needed to make Beacon and Cockpit lifecycle-driven instead of Claude-driven, with a clear split between adapters, control plane, and clients.
+summary: The concrete architecture needed to make Beacon and FleetCrown lifecycle-driven instead of Claude-driven, with a clear split between adapters, control plane, and clients.
 excerpt: Agent-agnostic does not mean every backend works the same way internally. It means every backend can be translated into the same system-level lifecycle semantics.
 publishedAt: 2026-05-06
 tags: architecture,orchestration,beacon,control-plane
@@ -48,7 +48,7 @@ Per-agent adapters are responsible for:
 They should not own product semantics.
 
 ## Session Control Plane
-Cockpit should own:
+FleetCrown should own:
 
 - lifecycle state
 - handoff summary persistence
@@ -106,7 +106,7 @@ The finished system should let a user:
 5. see the same popup semantics
 6. continue, redirect, or close without caring which runtime is underneath
 
-If that holds, the popup belongs to Cockpit.
+If that holds, the popup belongs to FleetCrown.
 
 If it does not, the popup still belongs to one adapter.
 
@@ -116,7 +116,7 @@ The path to a truly agent-agnostic popup is not “make every backend act like C
 It is:
 
 - define lifecycle semantics once
-- let Cockpit own them
+- let FleetCrown own them
 - reduce Claude to one adapter among several
 - make each backend emit or map into that lifecycle contract
 - keep Beacon and the browser as clients of shared state

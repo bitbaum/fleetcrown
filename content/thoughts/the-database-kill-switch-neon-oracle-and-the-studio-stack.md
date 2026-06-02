@@ -1,7 +1,7 @@
 ---
 title: The Database Kill Switch — Neon, Oracle, Hetzner, and the Studio Stack
-summary: Cockpit signed us out, wiped our projects from view, and taught us that "free Postgres" is not one thing. A field guide to egress cliffs, daemon traffic, and why a product studio needs one database trunk — not twelve Neon saplings.
-excerpt: Your app did not forget you. Your database vendor suspended compute because you moved too many bytes. Here is what that means, why Cockpit is the worst possible customer for Neon free, and where we are going instead.
+summary: FleetCrown signed us out, wiped our projects from view, and taught us that "free Postgres" is not one thing. A field guide to egress cliffs, daemon traffic, and why a product studio needs one database trunk — not twelve Neon saplings.
+excerpt: Your app did not forget you. Your database vendor suspended compute because you moved too many bytes. Here is what that means, why FleetCrown is the worst possible customer for Neon free, and where we are going instead.
 publishedAt: 2026-05-22
 tags: infrastructure,database,neon,postgres,vercel,architecture,studio
 featured: true
@@ -11,7 +11,7 @@ readingTimeMin: 22
 
 ## You Did Not Forget Your Password. The Database Got Turned Off.
 
-One morning Cockpit stopped letting anyone sign in. The Control page looked like a fresh install: no projects, daemon offline, onboarding banners everywhere. The natural reaction is to blame auth — wrong password, expired session, GitHub OAuth misconfigured.
+One morning FleetCrown stopped letting anyone sign in. The Control page looked like a fresh install: no projects, daemon offline, onboarding banners everywhere. The natural reaction is to blame auth — wrong password, expired session, GitHub OAuth misconfigured.
 
 None of that was the problem.
 
@@ -29,12 +29,12 @@ This essay is what we learned fixing it, and how we think about database hosting
 
 ## A Quick Map of Where Data Lives
 
-Before the jargon, picture the stack Cockpit actually runs:
+Before the jargon, picture the stack FleetCrown actually runs:
 
 ```mermaid
 flowchart TB
     subgraph browser["Your browser"]
-        UI[Cockpit UI on Vercel]
+        UI[FleetCrown UI on Vercel]
     end
 
     subgraph vercel["Vercel serverless"]
@@ -63,7 +63,7 @@ Three clients hammer one database:
 2. **Vercel**, spinning up serverless functions that each open a connection, run queries, return JSON.
 3. **The daemon**, a small bash loop on your laptop that long-polls the cloud and **pushes runtime state every couple of seconds** so Control shows live Zellij tabs.
 
-That third client is unusual. Most "Next.js + Postgres" tutorials assume your database sighs with relief at 3am. Cockpit's database gets pinged like a group chat where someone never mutes notifications.
+That third client is unusual. Most "Next.js + Postgres" tutorials assume your database sighs with relief at 3am. FleetCrown's database gets pinged like a group chat where someone never mutes notifications.
 
 ---
 
@@ -91,7 +91,7 @@ Neon free includes about **5 GB of public egress per month**. That sounds like a
 | Local dev accidentally pointed at prod | you pay twice — once in life, once in egress |
 | 1,300+ contact rows with JSONB | fat result sets |
 
-We did not hit 5 GB because Cockpit is badly written. We hit it because **the product shape is chatty** — and free tier pricing assumes you are not.
+We did not hit 5 GB because FleetCrown is badly written. We hit it because **the product shape is chatty** — and free tier pricing assumes you are not.
 
 ---
 
@@ -108,14 +108,14 @@ Vercel function  ──►  pooler :6432  ──►  postgres :5432
                       (many clients, few server conns)
 ```
 
-Cockpit now uses two environment variables (vendor-neutral names):
+FleetCrown now uses two environment variables (vendor-neutral names):
 
 | Variable | Use |
 |----------|-----|
 | `DATABASE_URL` | **Direct** connection — migrations, `LISTEN/NOTIFY`, DDL |
 | `DATABASE_POOL_URL` | **Pooled** connection — normal app queries on Vercel |
 
-Some features **cannot** go through a pooler. Cockpit's Control SSE stream uses Postgres `LISTEN` for sub-second updates when the daemon pushes state. Poolers in transaction mode drop long-lived listeners. So you need **both** URLs in production.
+Some features **cannot** go through a pooler. FleetCrown's Control SSE stream uses Postgres `LISTEN` for sub-second updates when the daemon pushes state. Poolers in transaction mode drop long-lived listeners. So you need **both** URLs in production.
 
 Neon gives you a `-pooler` host automatically. Self-hosted Oracle/Hetzner setup means you run PgBouncer yourself — we packaged that in `infra/postgres-host/` for when we migrate.
 
@@ -134,7 +134,7 @@ Neon gives you a `-pooler` host automatically. Self-hosted Oracle/Hetzner setup 
 
 Managed is renting an apartment with utilities included until you blast the AC. Self-hosted is owning a small house — nobody cuts your power for bandwidth, but the roof is yours.
 
-Cockpit's outage was a **managed kill switch**: zero bytes malicious, just economics.
+FleetCrown's outage was a **managed kill switch**: zero bytes malicious, just economics.
 
 ---
 
@@ -156,7 +156,7 @@ The old Neon project still holds whatever was only in prod at freeze time — **
 
 ## The Studio Sprawl Problem
 
-Cockpit is one repo in a folder of many. A scan of `~/dev` showed the pattern:
+FleetCrown is one repo in a folder of many. A scan of `~/dev` showed the pattern:
 
 - **Six+ apps** on various Neon endpoints
 - **Two+ Supabase projects** (orangecat, printcraft — auth, storage, RLS)
@@ -179,14 +179,14 @@ The bitbaum README says "shared infrastructure, many products." The infra stack 
 - Branching, serverless scale-to-zero, pretty dashboard
 - Perfect for a **hackathon CRUD app** or a schema you touch twice a week
 
-**Cons (for Cockpit)**
+**Cons (for FleetCrown)**
 
 - **5 GB egress** then **hard suspend** — not throttle, *off*
 - Chatty apps burn quota silently until auth breaks
 - Easy to accidentally aim local dev at prod
 - Multiple projects ≠ multiple free lunches if org egress is shared
 
-**Verdict:** Neon free is **not a production home for Cockpit**. It can be a **temporary bridge** (what `bitbaum-pg` is today) or a **preview database** for branches. Not the trunk.
+**Verdict:** Neon free is **not a production home for FleetCrown**. It can be a **temporary bridge** (what `bitbaum-pg` is today) or a **preview database** for branches. Not the trunk.
 
 ---
 
@@ -219,11 +219,11 @@ Orangecat is not "Postgres with extra steps." It is **Postgres + Auth + RLS + St
 
 **Cons**
 
-- Paying for a bundle when you only need Postgres (Cockpit uses Auth.js — wrong fit)
+- Paying for a bundle when you only need Postgres (FleetCrown uses Auth.js — wrong fit)
 - Same egress class of limits on free
 - Two active free projects per org
 
-**Verdict:** **Stay on Supabase for Supabase apps.** Do not force Cockpit onto it just to consolidate bills.
+**Verdict:** **Stay on Supabase for Supabase apps.** Do not force FleetCrown onto it just to consolidate bills.
 
 ---
 
@@ -245,7 +245,7 @@ Oracle's Always Free tier is the internet's favorite punchline and secret weapon
 - ARM — fine for Node/Postgres; occasional binary annoyance
 - Oracle support is "community forum and vibes"
 
-**Verdict:** **Best $0 trunk** for Cockpit + sibling Drizzle apps if you can provision the VM. We packaged `infra/postgres-host/` and `scripts/db/deploy-host.sh` for this path.
+**Verdict:** **Best $0 trunk** for FleetCrown + sibling Drizzle apps if you can provision the VM. We packaged `infra/postgres-host/` and `scripts/db/deploy-host.sh` for this path.
 
 ---
 
@@ -268,7 +268,7 @@ Pieter Levels does not use Oracle free because he hates money. He uses Hetzner b
 
 ---
 
-## Side-by-Side (Cockpit-Shaped)
+## Side-by-Side (FleetCrown-Shaped)
 
 | | Neon free | Neon paid | Oracle free | Hetzner ~€7 |
 |--|-----------|-----------|-------------|-------------|
@@ -291,7 +291,7 @@ Pieter Levels does not use Oracle free because he hates money. He uses Hetzner b
 
 **Permanent exceptions:** **Supabase** for orangecat / printcraft. **Local Docker** for every `.env.local`. **Never** prod URL on the laptop.
 
-**Neon free verdict for Cockpit:** *workable as a lab; unworkable as production.* The product is a **life OS + fleet command center**, not a todo app you open twice a week.
+**Neon free verdict for FleetCrown:** *workable as a lab; unworkable as production.* The product is a **life OS + fleet command center**, not a todo app you open twice a week.
 
 ---
 
@@ -334,7 +334,7 @@ Managed Postgres vendors price along axes that assume:
 - Connections that behave like a small pool of app servers
 - Humans who do not aim their dev laptop at production
 
-Cockpit violates all three. It is a **control plane** — closer to observability or ops tooling than to a marketing site. The database sees traffic patterns like a **monitoring agent**, not like a blog.
+FleetCrown violates all three. It is a **control plane** — closer to observability or ops tooling than to a marketing site. The database sees traffic patterns like a **monitoring agent**, not like a blog.
 
 That mismatch is the real story. Neon free did not "fail." **We picked a pricing model that assumes a different species of app.**
 
@@ -344,7 +344,7 @@ Once you see that, the fix is obvious: either **pay for managed** at the tier th
 
 ## Closing: The Walk Test Applies to Data Too
 
-We wrote elsewhere about the **Walk Test** — Cockpit must work from your phone while the daemon keeps running at home. That test fails if the cloud database is suspended because you moved five gigabytes of rows.
+We wrote elsewhere about the **Walk Test** — FleetCrown must work from your phone while the daemon keeps running at home. That test fails if the cloud database is suspended because you moved five gigabytes of rows.
 
 Infrastructure is not separate from product. **The kill switch on the database is a kill switch on the walk.**
 

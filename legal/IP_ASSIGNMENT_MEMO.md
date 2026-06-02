@@ -2,7 +2,7 @@
 
 **Author:** Georgy Butaev
 **Date of memo:** 2026-06-02
-**Subject:** Intent to assign all intellectual property created on the FleetCrown (rebranded from repo codename "cockpit") and OrangeCat projects (with FleetCrown as customer of OrangeCat) to a to-be-formed corporate entity.
+**Subject:** Intent to assign all intellectual property created on the FleetCrown and OrangeCat projects (FleetCrown is the first paying customer of OrangeCat; the FleetCrown repository directory is historically named "cockpit") to a to-be-formed corporate entity.
 
 ---
 
@@ -10,19 +10,19 @@
 
 I, Georgy Butaev (the "Founder"), residing in Switzerland, sole author and copyright holder of the software, designs, documentation, content, brand assets, and other materials (collectively, the "Work Product") created in connection with the projects currently known as:
 
-- **FleetCrown** — repository at `github.com/g-but/cockpit` (private; product rebranded to FleetCrown, git history preserves "cockpit" codename for transition)
+- **FleetCrown** — repository at `github.com/g-but/cockpit` (private; "cockpit" is the legacy repository directory name preserved for git history and in-flight daemon paths under `~/.config/cockpit`. The product is FleetCrown.)
 - **OrangeCat** — repository at `github.com/g-but/orangecat`
 
-hereby declare my intent that all Work Product, whether created before or after the date of this memorandum, is and shall remain my sole property until such time as the planned corporate structure ("bitbaum AG", a Swiss Aktiengesellschaft to be incorporated in the Canton of Zug as a holding entity, together with its product-specific subsidiary GmbHs including but not limited to **orangecat GmbH** and **fleetwave GmbH** (FleetCrown for real customer FleetWave; repo path remains "cockpit" for git history + legacy daemon transition: ~/.config/cockpit, cockpit-daemon, etc.), collectively "NewCo") is formed for the purpose of owning, developing, and commercializing these projects, at which point all Work Product shall be irrevocably assigned to the appropriate NewCo entity by formal written instrument of assignment.
+hereby declare my intent that all Work Product, whether created before or after the date of this memorandum, is and shall remain my sole property until such time as the planned corporate structure ("bitbaum AG", a Swiss Aktiengesellschaft to be incorporated in the Canton of Zug as a holding entity, together with its product-specific subsidiary GmbHs including but not limited to **orangecat GmbH** and **fleetcrown GmbH** (the latter owning the FleetCrown product; the repository directory remains "cockpit" for git-history continuity and for the in-flight daemon-path transition under `~/.config/cockpit`, `cockpit-daemon`, etc.), collectively "NewCo") is formed for the purpose of owning, developing, and commercializing these projects, at which point all Work Product shall be irrevocably assigned to the appropriate NewCo entity by formal written instrument of assignment.
 
 ## 2. Scope of Work Product
 
 The Work Product includes, without limitation:
 
-- All source code, configuration, infrastructure-as-code, and build artifacts in the FleetCrown (codename cockpit repo) and OrangeCat repositories and any successor or derivative repositories
+- All source code, configuration, infrastructure-as-code, and build artifacts in the FleetCrown repository (directory named "cockpit" for historical reasons) and OrangeCat repository, and any successor or derivative repositories
 - All product designs, UX flows, brand identity, marketing copy, and visual assets
 - All documentation, technical specifications, architectural decisions, and internal records
-- All trademarks, service marks, trade dress, and brand names (including the former working title "Cockpit," the current brand "FleetCrown" (customer of OrangeCat), the brand "OrangeCat," and any future renamings)
+- All trademarks, service marks, trade dress, and brand names (including the former working title "Cockpit," any other discarded working titles, the current brand "FleetCrown" (first paying customer of OrangeCat), the brand "OrangeCat," and any future renamings)
 - All inventions, methods, processes, and know-how embodied in the Work Product, whether or not patentable
 - All goodwill associated with the foregoing
 
@@ -41,7 +41,7 @@ Upon formation of bitbaum AG and the relevant product subsidiary, I will execute
 
 - **bitbaum AG** (holding) — owns all shared infrastructure, brand assets at the holding level, the bitbaum name and goodwill, and equity in each subsidiary
 - **orangecat GmbH** — owns the OrangeCat product, its brand, code, and customer relationships
-- **FleetCrown GmbH** — owns the FleetCrown product (repo directory "cockpit" for historical/git reasons), its brand, code, and customer relationships
+- **fleetcrown GmbH** — owns the FleetCrown product (repo directory still named "cockpit" for historical/git reasons), its brand, code, and customer relationships
 - Additional subsidiaries (hirn.li GmbH, botsmann GmbH, etc.) may be formed for other bitbaum products
 
 This memorandum is preliminary evidence of intent and shall not be construed as the assignment itself.

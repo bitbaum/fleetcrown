@@ -172,7 +172,7 @@ The most dangerous coordination gap: two consumers can fire the same queue item.
 Here is the sequence:
 
 1. Claude stops. The PyQt popup appears immediately (zero load time).
-2. Simultaneously, `_web_stop` starts Cockpit, creates a beacon session, opens Brave.
+2. Simultaneously, `_web_stop` starts FleetCrown, creates a beacon session, opens Brave.
 3. Both popups start counting down. PyQt is fast — it may be at 8 seconds by the time the web beacon loads.
 4. PyQt countdown hits zero. PyQt pops `queue[0]`, writes the file, fires the item.
 5. The file now has `queue[1:]`.

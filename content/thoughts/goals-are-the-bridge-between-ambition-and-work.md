@@ -22,7 +22,7 @@ That means a real goal system must connect to:
 - commitments in the real world
 
 ## The Product Role
-Goals give the rest of Cockpit directional pressure.
+Goals give the rest of FleetCrown directional pressure.
 
 Without them, the system can still optimize locally, but it cannot tell whether the work being done is moving the user toward the right outcomes.
 

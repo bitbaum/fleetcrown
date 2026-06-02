@@ -1,6 +1,6 @@
 ---
 title: Images as Agent Input — Why Visual Context Changes the Game
-summary: A case for adding image upload and paste support to Cockpit's agent interface, and what it would take to do it right.
+summary: A case for adding image upload and paste support to FleetCrown's agent interface, and what it would take to do it right.
 excerpt: An image of a broken UI tells the agent more than a paragraph of text. Adding visual input to the agent command surface is the next natural step for builders who think visually.
 publishedAt: 2026-05-09
 tags: agents,control,ux,product
@@ -10,7 +10,7 @@ readingTimeMin: 6
 ---
 ## The Gap in the Current Interface
 
-The current agent interface in Cockpit accepts text. Prompts, queue items, custom instructions — all text.
+The current agent interface in FleetCrown accepts text. Prompts, queue items, custom instructions — all text.
 
 That's fine when the work is purely textual: fix a bug, write a function, add a field. But a lot of real builder work is visual. A screenshot of a broken layout. A Figma mockup of what it should look like. A photo of a whiteboard sketch. A cursor or VS Code screenshot showing an error state.
 
@@ -24,7 +24,7 @@ Text descriptions of visual problems carry ambiguity. Images remove it. An agent
 
 This is not a marginal improvement. For UI work specifically, it's a qualitative leap in the quality of agent instruction.
 
-## What "Image Input" Would Look Like in Cockpit
+## What "Image Input" Would Look Like in FleetCrown
 
 The implementation surface is the agent command interface — the same place where prompts are typed and queue items are added.
 
@@ -50,13 +50,13 @@ On the API side:
 - The inject endpoint currently accepts text. It needs to accept an `images` array of base64 strings or URLs alongside the `prompt` text
 - The downstream agent call (Claude Code, CLI, or API) needs to forward those images to the model
 
-The wire format question is the main technical decision. Claude Code (the CLI) currently accepts images via special syntax in some contexts. The Anthropic Messages API accepts image blocks in the `content` array. If Cockpit is injecting prompts into terminal sessions (via zellij/bash hooks), there's a harder translation problem — terminals don't natively carry images. If it's calling the API directly, images are first-class.
+The wire format question is the main technical decision. Claude Code (the CLI) currently accepts images via special syntax in some contexts. The Anthropic Messages API accepts image blocks in the `content` array. If FleetCrown is injecting prompts into terminal sessions (via zellij/bash hooks), there's a harder translation problem — terminals don't natively carry images. If it's calling the API directly, images are first-class.
 
 ## Where the Complexity Lives
 
 The straightforward case is an API-mode agent: send `{ role: "user", content: [{ type: "image_url", ... }, { type: "text", ... }] }` and the model gets both. Clean.
 
-The harder case is terminal injection. When Cockpit sends a prompt to a running Claude Code session in a zellij pane, it types text into the terminal. Images don't type. The workarounds are: (a) save the image to a temp file and include the path in the prompt, (b) embed the image as base64 in the prompt and tell the agent to read it, (c) add an attachment API to Claude Code itself.
+The harder case is terminal injection. When FleetCrown sends a prompt to a running Claude Code session in a zellij pane, it types text into the terminal. Images don't type. The workarounds are: (a) save the image to a temp file and include the path in the prompt, (b) embed the image as base64 in the prompt and tell the agent to read it, (c) add an attachment API to Claude Code itself.
 
 Option (a) — temp file + path — is the most practical and already works today. The agent can read files. The prompt becomes "please look at /tmp/cockpit-screenshot-1234.png and fix the layout issue shown." The agent opens the file, sees the image, and acts.
 
@@ -87,4 +87,4 @@ A proof of concept worth 200 lines: paste handler + temp file write + path injec
 
 If that unlocks better agent output on visual tasks, the UI investment is justified. Build the proof of concept, measure whether agents actually produce better results with image context, then invest in the full input experience.
 
-This is the Cockpit way: ship the minimal version, measure real impact, then build what the data justifies.
+This is the FleetCrown way: ship the minimal version, measure real impact, then build what the data justifies.

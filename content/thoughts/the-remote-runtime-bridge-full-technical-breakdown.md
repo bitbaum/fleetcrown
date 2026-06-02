@@ -163,7 +163,7 @@ Alternatively, use the Zellij session layout itself: the daemon already has the 
 
 The current `inject_prompt` implementation calls `go-to-tab-name` before writing characters. This switches the visible tab in the Zellij session — if the user is actively looking at their terminal, the view jumps to the injected tab. This is almost always undesirable for remote injection: the user is not at their computer, so switching visible focus is unnecessary and mildly annoying if they return to find a different tab focused.
 
-A cleaner implementation would write characters without switching focus. Zellij does not currently expose a way to write to an unfocused pane. This is a Zellij limitation, not a Cockpit limitation. The workaround would be to record which tab was focused before injection, inject, then restore focus — but this adds two more `zellij action` calls and a race condition window.
+A cleaner implementation would write characters without switching focus. Zellij does not currently expose a way to write to an unfocused pane. This is a Zellij limitation, not a FleetCrown limitation. The workaround would be to record which tab was focused before injection, inject, then restore focus — but this adds two more `zellij action` calls and a race condition window.
 
 The pragmatic answer is to document this behavior and note that it is a Zellij API limitation.
 
@@ -293,6 +293,6 @@ The answer is cost, capability, and control.
 
 A cloud runner capable of running Claude Code with filesystem access, Git, npm, and all the other tools that real development requires is either a full VM (expensive) or a heavily sandboxed container (limited). The local machine is already all of this, paid for, configured, trusted, connected to the user's actual repos, dotfiles, credentials, and environment. Replacing it would cost more and deliver less.
 
-The daemon pattern — local capability, cloud coordination — is the right layering. The local machine is the runtime. The cloud is the control plane. The phone is the operator interface. This is exactly the architecture described in [From Localhost to a Portable Creation Cockpit](/thoughts/from-localhost-to-a-portable-creation-cockpit), and today's fix proved it is actually achievable without rethinking the foundation.
+The daemon pattern — local capability, cloud coordination — is the right layering. The local machine is the runtime. The cloud is the control plane. The phone is the operator interface. This is exactly the architecture described in [From Localhost to a Portable Creation FleetCrown](/thoughts/from-localhost-to-a-portable-creation-cockpit), and today's fix proved it is actually achievable without rethinking the foundation.
 
 What needs to be built is not a different architecture. It is more complete instrumentation of the one that now demonstrably works.

@@ -1,7 +1,7 @@
 ---
 title: The Model-Agnostic Layer
-summary: Every AI lab is building a walled garden. Cockpit is building the gate that connects all of them — and eventually the plot of land that lets you grow your own.
-excerpt: Grok Build, Claude dispatch, ChatGPT Codex, Gemini CLI. The labs are racing to own the developer loop. Here is why that race produces the exact gap Cockpit fills.
+summary: Every AI lab is building a walled garden. FleetCrown is building the gate that connects all of them — and eventually the plot of land that lets you grow your own.
+excerpt: Grok Build, Claude dispatch, ChatGPT Codex, Gemini CLI. The labs are racing to own the developer loop. Here is why that race produces the exact gap FleetCrown fills.
 publishedAt: 2026-05-18
 tags: product,strategy,agents,dispatch,model-agnostic,hardware
 featured: true
@@ -24,19 +24,19 @@ None of them are wrong exactly. But all of them are partial.
 
 A builder running five projects, three of which use Claude for reasoning-heavy work, one of which is a coding sprint that runs better on Codex, and one that runs a local model for privacy — that builder has no coherent control surface. They have five browser tabs, three CLI sessions, and a general sense that they are managing tools rather than executing work.
 
-That is the gap. Cockpit fills it.
+That is the gap. FleetCrown fills it.
 
-## What Cockpit Is Actually Building
+## What FleetCrown Is Actually Building
 
-Cockpit is not a Claude wrapper. It is not a better Codex UI. It is not an "AI assistant" in the consumer sense of that word.
+FleetCrown is not a Claude wrapper. It is not a better Codex UI. It is not an "AI assistant" in the consumer sense of that word.
 
-Cockpit is the dispatch and orchestration layer that sits above every model, every agent runtime, every CLI tool — and presents one coherent interface to the builder operating them.
+FleetCrown is the dispatch and orchestration layer that sits above every model, every agent runtime, every CLI tool — and presents one coherent interface to the builder operating them.
 
 Think of it the way you think of a trading terminal. Bloomberg does not care whether you are buying Apple stock through Fidelity or Schwab. It gives you one surface to see positions, place orders, read signals, and execute decisions. The brokers are interchangeable. The terminal is the constant.
 
-Cockpit is that terminal, for AI work.
+FleetCrown is that terminal, for AI work.
 
-The models are brokers. Cockpit is the terminal.
+The models are brokers. FleetCrown is the terminal.
 
 ## The Fallback Chain
 
@@ -46,11 +46,11 @@ When you run an AI agent today, you make a bet. You bet that Claude has enough t
 
 Usually those bets are fine. Sometimes they are not, and when they are not, the cost is an interrupted session with no handoff. You lose state, you lose momentum, and you have to context-switch back into a problem you were making progress on.
 
-Cockpit solves this with a priority chain.
+FleetCrown solves this with a priority chain.
 
 You configure, once, the sequence of agents you trust: Claude first, then Codex, then Gemini CLI, then a local Mistral instance running on your machine. You assign each a role: reasoning, coding, fast responses, private work. You set capacity thresholds.
 
-When Claude hits a token ceiling — real token exhaustion, not a soft limit — Cockpit detects it via the beacon. The agent stops. The beacon fires. Cockpit reads the exit state, reads the session transcript, packages a handoff prompt, and starts the next agent in the chain.
+When Claude hits a token ceiling — real token exhaustion, not a soft limit — FleetCrown detects it via the beacon. The agent stops. The beacon fires. FleetCrown reads the exit state, reads the session transcript, packages a handoff prompt, and starts the next agent in the chain.
 
 From your perspective: Claude stopped, Codex continued. You did not touch a terminal. You did not re-explain the problem. You did not lose context. The session persisted.
 
@@ -66,13 +66,13 @@ We have no such reason.
 
 Local models belong in the fallback chain for a reason that has nothing to do with cost: privacy. There is a category of work — legal analysis, medical records, proprietary codebase review, sensitive business strategy — that should never leave a local machine. Not because the cloud providers are untrustworthy, but because the risk profile is fundamentally different when data leaves the device.
 
-A builder who runs Claude for general work and a local Mistral instance for anything touching client data has a more defensible posture than one who sends everything to the cloud. Cockpit makes that split seamless: route by project tag, by file type, by sensitivity level. The builder does not need to think about it once the rules are set.
+A builder who runs Claude for general work and a local Mistral instance for anything touching client data has a more defensible posture than one who sends everything to the cloud. FleetCrown makes that split seamless: route by project tag, by file type, by sensitivity level. The builder does not need to think about it once the rules are set.
 
 Beyond privacy, local models are increasingly capable. Mistral 7B, Llama 3, Gemma 2 — all of them run on consumer hardware and handle the majority of coding and reasoning tasks that developers actually do day-to-day. The gap between a good local model and a frontier API call is narrowing every quarter.
 
 The builder who knows how to run a local model today is ahead of the builder who discovers this in eighteen months when the economics of frontier APIs become uncomfortable.
 
-Cockpit will make this obvious. Setup guides, one-click configuration, hardware recommendations. Not as an afterthought — as a first-class feature with clear UX.
+FleetCrown will make this obvious. Setup guides, one-click configuration, hardware recommendations. Not as an afterthought — as a first-class feature with clear UX.
 
 ## The Hardware Layer
 
@@ -84,19 +84,19 @@ This is a solvable problem with good curation and clear communication.
 
 The near-term version is simple: we recommend specific machines. A tier for experimentation — a consumer GPU that runs Mistral comfortably. A tier for serious work — something that handles a 30B model at reasonable speed. A tier for the builder who wants to match frontier performance locally — a workstation-class setup that covers 70B models.
 
-We document the setup precisely. Not vague tutorials — exact commands, exact models, exact configuration. You buy the machine we recommend, follow the guide, and within an hour you have a local model in your Cockpit fallback chain.
+We document the setup precisely. Not vague tutorials — exact commands, exact models, exact configuration. You buy the machine we recommend, follow the guide, and within an hour you have a local model in your FleetCrown fallback chain.
 
-The medium-term version is a curated hardware bundle. A machine pre-configured with the right drivers, the right model weights, and Cockpit pre-installed. Plug it in, power it on, it joins your fleet. No setup friction. It shows up in your Control panel like any other agent slot.
+The medium-term version is a curated hardware bundle. A machine pre-configured with the right drivers, the right model weights, and FleetCrown pre-installed. Plug it in, power it on, it joins your fleet. No setup friction. It shows up in your Control panel like any other agent slot.
 
-The long-term version is a machine we design. Not because the hardware itself is the point — it is not — but because the integration is. A computer designed from the ground up to run AI workloads locally, with Cockpit as the OS-level control layer, with the fallback chain built into firmware, with hardware-level session persistence so that if power is cut mid-session the agent state survives the restart.
+The long-term version is a machine we design. Not because the hardware itself is the point — it is not — but because the integration is. A computer designed from the ground up to run AI workloads locally, with FleetCrown as the OS-level control layer, with the fallback chain built into firmware, with hardware-level session persistence so that if power is cut mid-session the agent state survives the restart.
 
-This is not a fantasy. Apple builds hardware and software together because the integration produces an experience neither can produce separately. The same principle applies here: a Cockpit machine is not a PC that happens to run Cockpit. It is a device where the hardware, the agent runtime, and the dispatch layer are designed as a unit.
+This is not a fantasy. Apple builds hardware and software together because the integration produces an experience neither can produce separately. The same principle applies here: a FleetCrown machine is not a PC that happens to run FleetCrown. It is a device where the hardware, the agent runtime, and the dispatch layer are designed as a unit.
 
 ## Against the Walled Garden
 
 Let us be precise about what we are opposing.
 
-We are not opposed to Anthropic. Anthropic makes the best general-purpose reasoning model available today. Claude is in the default position in every Cockpit chain and will be for the foreseeable future.
+We are not opposed to Anthropic. Anthropic makes the best general-purpose reasoning model available today. Claude is in the default position in every FleetCrown chain and will be for the foreseeable future.
 
 We are not opposed to OpenAI. Codex is a capable coding agent and the API is well-designed. It belongs in the chain.
 
@@ -104,7 +104,7 @@ What we are opposed to is the structural incentive that pushes every lab toward 
 
 That assumption produces bad UX. It produces duplicated context-switching. It produces the current situation where builders managing multiple models manage them as separate worlds rather than as a coherent fleet.
 
-The walled garden is not a conspiracy. It is a consequence of business incentives: each lab benefits when you route more work through them. Cockpit's incentive is different. We benefit when you route work correctly — to whichever model is best suited for the task, regardless of provider. That alignment is the product.
+The walled garden is not a conspiracy. It is a consequence of business incentives: each lab benefits when you route more work through them. FleetCrown's incentive is different. We benefit when you route work correctly — to whichever model is best suited for the task, regardless of provider. That alignment is the product.
 
 ## Simpler and More Powerful, Together
 
@@ -122,13 +122,13 @@ This is the only kind of simplicity worth building. The kind that does not cost 
 
 ## What This Means for the Builder
 
-Concretely, here is what the Cockpit model-agnostic layer means for a builder running it:
+Concretely, here is what the FleetCrown model-agnostic layer means for a builder running it:
 
 Your morning session starts. Claude is your primary agent. You dispatch it to a coding task from the Control panel. It runs for two hours, commits code, raises a question, stops. The beacon fires. You review the session, inject a continue prompt, it runs another hour.
 
-Late morning, Claude's session context is getting long. It slows slightly. Cockpit notices session depth and surfaces a warning. You set a threshold in settings: if session tokens exceed eighty percent of Claude's context window, offer to start fresh on Codex. You accept. Cockpit packages the last five commits, the open file, and the current task description into a handoff prompt. Codex opens in your Zellij session. Continues from exactly where Claude left off.
+Late morning, Claude's session context is getting long. It slows slightly. FleetCrown notices session depth and surfaces a warning. You set a threshold in settings: if session tokens exceed eighty percent of Claude's context window, offer to start fresh on Codex. You accept. FleetCrown packages the last five commits, the open file, and the current task description into a handoff prompt. Codex opens in your Zellij session. Continues from exactly where Claude left off.
 
-Afternoon. You switch to a project that involves reviewing a client's proprietary data. The project tag says "private." Cockpit's routing rules see the tag and automatically assign the local model for this project. No cloud. No data leaves the machine. You work the same way you always do — dispatch from Control, beacon fires when ready, inject to continue — but the execution happens locally.
+Afternoon. You switch to a project that involves reviewing a client's proprietary data. The project tag says "private." FleetCrown's routing rules see the tag and automatically assign the local model for this project. No cloud. No data leaves the machine. You work the same way you always do — dispatch from Control, beacon fires when ready, inject to continue — but the execution happens locally.
 
 End of day. You are in the middle of something. Your frontier model subscriptions are both rate-limited — you hit a heavy day. The local model picks up. Slower, but it finishes. No session lost.
 
@@ -140,14 +140,14 @@ The AI industry is three years into a period of explosive capability growth and 
 
 Every lab is converging on similar answers: agents that can write code, agents that can use tools, agents that can be orchestrated together. The differentiation is moving from "what can the model do" toward "how does the builder interact with it."
 
-That is the right place for Cockpit to be.
+That is the right place for FleetCrown to be.
 
 We are not betting on one model winning. We are betting that the right abstraction is above the model layer — that the operator interface, the dispatch logic, the session persistence, the fallback chain — these are the durable parts of the stack.
 
 Models will get better. Prices will change. New providers will emerge. Local hardware will improve. Some labs will consolidate; others will open-source their weights. All of that will happen.
 
-Cockpit's job is to make none of that matter to the builder. New model comes out — add it to the chain. Price drops on Codex — rebalance the routing. Local model improves — promote it in the priority list. The builder's workflow does not change. The fleet adapts underneath it.
+FleetCrown's job is to make none of that matter to the builder. New model comes out — add it to the chain. Price drops on Codex — rebalance the routing. Local model improves — promote it in the priority list. The builder's workflow does not change. The fleet adapts underneath it.
 
 This is the right bet. Not because we are certain about how the AI landscape shakes out. But because whatever happens, there will be builders who want to use multiple models, across multiple projects, with the least possible cognitive overhead. That demand is structural. It comes from the nature of the work, not from a particular model's feature set.
 
-Cockpit is the product that earns that builder's trust — and keeps it, regardless of which model they are trusting today.
+FleetCrown is the product that earns that builder's trust — and keeps it, regardless of which model they are trusting today.

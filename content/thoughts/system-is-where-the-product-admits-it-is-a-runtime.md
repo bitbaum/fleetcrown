@@ -1,6 +1,6 @@
 ---
 title: System Is Where the Product Admits It Is a Runtime
-summary: Why the System product matters: it is where Cockpit stops pretending to be only an app UI and exposes the runtime and autopilot machinery underneath.
+summary: Why the System product matters: it is where FleetCrown stops pretending to be only an app UI and exposes the runtime and autopilot machinery underneath.
 excerpt: The System page is where infrastructure becomes a product concern instead of hidden implementation detail.
 publishedAt: 2026-05-06
 tags: system,runtime,autopilot,product
@@ -9,7 +9,7 @@ author: Ivy
 readingTimeMin: 7
 ---
 ## What System Is
-System is the page where Cockpit admits it is not just a CRUD app. It is a runtime.
+System is the page where FleetCrown admits it is not just a CRUD app. It is a runtime.
 
 That includes:
 

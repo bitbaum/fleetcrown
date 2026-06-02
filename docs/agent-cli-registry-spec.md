@@ -34,7 +34,7 @@ interface AgentDefinition {
 
   // Handoff / State
   sessionDir?: string;           // Only if the agent has its own persistent session dir we must respect (e.g. "~/.grok/sessions"). Most can use the FleetCrown handoff convention.
-  usesCockpitHandoff: boolean;   // Almost always true for interactive TUIs
+  usesFleetCrownHandoff: boolean;   // Almost always true for interactive TUIs
 
   // UI / Capabilities (drives buttons, labels, flows)
   capabilities: {

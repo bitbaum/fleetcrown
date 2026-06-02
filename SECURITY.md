@@ -1,6 +1,6 @@
 # Security Policy
 
-Cockpit is a hybrid system: the hosted app stores account, project, and product
+FleetCrown is a hybrid system: the hosted app stores account, project, and product
 state; the local daemon executes terminal, git, and agent work on the user's
 machine. Security work should preserve that boundary.
 

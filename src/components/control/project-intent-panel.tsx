@@ -70,7 +70,7 @@ export function IntentButtonPanel({
   onSendText?: (text: string) => void;
   onCustomChange: (value: string) => void;
   onCustomFocusChange: (focused: boolean) => void;
-  /** False on cockpitapp (cloud) — gates buttons whose endpoints require a
+  /** False on the cloud app — gates buttons whose endpoints require a
    *  local zellij/CLI runtime and would 503 silently otherwise. */
   runtimeAvailable?: boolean;
   /** False when cached daemon-driven runtime fields cannot be trusted. */
