@@ -15,7 +15,7 @@ export default async function HistoryPage() {
   return (
     <PageLayout
       title="History"
-      subtitle="Every prompt dispatched to your agents — newest first"
+      subtitle="Every prompt dispatched to your agents (orchestration events & runs feed the control surfaces too) — newest first"
     >
       {items.length === 0 ? (
         <Card>

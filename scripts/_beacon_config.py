@@ -122,7 +122,12 @@ def get_auto_inject_mode() -> str:
 
 
 def load_prompt_meta() -> list:
-    """Load prompt metadata from SSOT config file."""
+    """Load prompt metadata from SSOT config file.
+    DEPRECATED for primary use per debt-reduction-roadmap: Beacon should read
+    from Cockpit-owned contracts (lib/orchestration/intents.ts + /api or generated
+    agent-prompts) not local claude-prompts.json. Fallback only for offline.
+    See Phase 4 of execution plan. Prompt *meaning* lives in Cockpit now.
+    """
     try:
         file = _META_PATH if os.path.exists(_META_PATH) else _LEGACY_META_PATH
         if os.path.exists(file):

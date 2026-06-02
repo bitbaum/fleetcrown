@@ -24,7 +24,16 @@ import {
   readCurrentPrompt,
   getAgentProcesses,
 } from "@/lib/control-fast-state";
-import { collectRuntimeLifecycleEvents, deriveLifecycleState, shouldPersistLifecycleEvent } from "@/lib/orchestration";
+import {
+  collectRuntimeLifecycleEvents,
+  deriveLifecycleState,
+  shouldPersistLifecycleEvent,
+} from "@/lib/orchestration";
+// Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
+// contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
+// sessions) and pending-commands are *inputs* / compat only. Derived truth +
+// events table should be preferred for new code. This route is being thinned to
+// delegate more to lib/orchestration (deriveLifecycleState etc already used).
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { isAgentId } from "@/lib/agent-registry";
