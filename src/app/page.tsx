@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getUserCount } from "@/db/queries/users";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
+import { DesktopDownload } from "@/components/public/DesktopDownload";
 import {
   MARKETING_TAGLINE,
   MARKETING_SUBTITLE,
@@ -88,7 +89,10 @@ export default async function LandingPage() {
             <div className="ui-public-step-num">01</div>
             <div>
               <div className="ui-public-prose-strong">Install the local runner</div>
-              <div className="ui-public-prose-muted mt-2">A native application on your machines that actually executes agents in your terminal environment (Zellij, Claude, Grok, Codex, etc.).</div>
+              <div className="ui-public-prose-muted mt-2">
+                A native application on your machines that actually executes agents in your terminal environment (Zellij, Claude, Grok, Codex, etc.).
+                <a href="/download" className="ui-public-link ml-1">Download →</a>
+              </div>
             </div>
           </div>
           <div className="flex gap-8">
@@ -107,6 +111,8 @@ export default async function LandingPage() {
           </div>
         </div>
       </div>
+
+      <DesktopDownload />
 
       <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6">

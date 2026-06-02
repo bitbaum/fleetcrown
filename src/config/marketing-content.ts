@@ -271,3 +271,46 @@ export const FINAL_CTA = {
   note: "For builders running real agent operations.",
   cta: "Start building",
 };
+
+// Download / install section for the desktop Fleet Runner (the local authoritative app).
+// SSOT for the public download experience. Update links + copy here when we ship real artifacts.
+export const DESKTOP_DOWNLOAD = {
+  eyebrow: "LOCAL FLEET RUNNER",
+  title: "Install the desktop app",
+  lede:
+    "The Fleet Runner is the native application that runs on your machines. It owns Zellij, agent launching, session watching, handoffs, and git — no daemon polling layer between you and the work.",
+  note:
+    "Packaged desktop apps are becoming the default install path. The legacy terminal daemon remains available during the transition.",
+  ctaLabel: "Download for your platform",
+  platforms: [
+    {
+      id: "mac",
+      label: "macOS",
+      note: "Universal (Apple Silicon + Intel)",
+      url: "https://github.com/g-but/cockpit/releases", // placeholder until we publish real .dmg/.zip
+    },
+    {
+      id: "win",
+      label: "Windows",
+      note: "x64 installer",
+      url: "https://github.com/g-but/cockpit/releases",
+    },
+    {
+      id: "linux",
+      label: "Linux",
+      note: "AppImage • .deb • .rpm",
+      url: "https://github.com/g-but/cockpit/releases",
+    },
+  ],
+  fallback: {
+    label: "Install the legacy daemon (terminal)",
+    description:
+      "For headless servers, CI, or users who prefer the old flow. The desktop app will become the recommended path.",
+    command: "curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init",
+  },
+  buildFromSource: {
+    label: "Build the Fleet Runner (current way to get it)",
+    description: "Clone and build to get a native AppImage / .deb you can run immediately. This is the local authoritative runtime.",
+    steps: "git clone https://github.com/g-but/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux",
+  },
+};
