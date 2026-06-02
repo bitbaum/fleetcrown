@@ -28,7 +28,10 @@
 // - Supports hybrid (local Runner + remote command) story.
 // See docs/branding-design.md for the full rationale, name selection criteria,
 // visual identity rules, and why FleetCrown was selected/stuck with over
-// alternatives.
+// alternatives (including recent .com-available "shade/shady fleet" proposals
+// like shadefleet.com / shadyfleet.com, and especially fleetclown.com — the
+// latter rejected as the worst possible inversion of "crown"/command/serious
+// infrastructure tone).
 
 export const APP_NAME        = "FleetCrown";
 export const APP_SLUG        = "fleetcrown";

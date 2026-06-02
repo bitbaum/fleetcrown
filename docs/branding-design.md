@@ -4,7 +4,7 @@
 
 This is the canonical reference (in addition to the executable SSOTs). It captures decisions, criteria, and best practices so future changes (rebrands, new surfaces, major visual updates) stay consistent with first principles and the existing four-layer discipline.
 
-FleetCrown is locked as the product name. The criteria below were used to evaluate alternatives (FleetJockey, FleetSurfer, MuppetMaster, etc.) and FleetCrown was selected (and confirmed) because it best satisfies the requirements for fleet language, active command/control tone, serious infrastructure positioning, scalability to robotics, and ownability.
+FleetCrown is locked as the product name. The criteria below were used to evaluate alternatives (FleetJockey, FleetSurfer, MuppetMaster, shadofleet/shadefleet, shadyfleet/piracyfleet, fleetclown, etc.) and FleetCrown was selected (and confirmed) because it best satisfies the requirements for fleet language, active command/control tone, serious infrastructure positioning, scalability to robotics, and ownability. Recent .com-available suggestions (including fleetclown.com) were considered for the domain advantage but rejected (see "Recent name evaluations" section).
 
 ## Brand SSOTs (never bypass)
 
@@ -159,3 +159,41 @@ All changes serve the core: making the builder feel more in control, with cleare
 **Rationale (first principles):** Esthetics must serve the user — make fleet state instantly scannable and the act of commanding feel powerful yet calm. Subtle animations (pulse, hovers, lifts) communicate 'alive system' without distraction. Consistent rounding/shadows reinforce premium infrastructure feel for serious builders.
 
 Further polish possible in public landing hero or Today cards if needed.
+
+## Recent Name Evaluations (shadefleet / shadyfleet etc.)
+
+In 2026, user floated .com-available variants leaning on "shade/shady" + fleet: shadofleet.com / shadefleet.com / shadyfleet.com / piracyfleet.com (all claimed available at time of discussion).
+
+**Evaluation against criteria:**
+- Preserve "fleet": Yes.
+- Evoke active human **command / control plane / direction / judgment**: No. "Shade/shady" strongly implies hidden, opaque, untrustworthy, stealthy or suspicious operations.
+- Tone: serious infrastructure for serious builders / "nothing hidden": Direct contradiction. See Philosophy: "Nothing hidden. You always know what each agent is doing and why. No black boxes inside your own fleet." and "Built for serious operators."
+- Real-world associations:
+  - "Shadow fleet" / "shade fleet": Dominant modern usage = Russia's (and others') sanctioned oil tanker fleets evading Western sanctions, smuggling, high-risk/illegal maritime activity. Heavy news coverage on seizures, environmental damage, war funding. Toxic for a "trustworthy command center" and "operational trust" product.
+  - "Shady fleet": Even worse — slang for dubious, sketchy, potentially criminal (e.g. "shady operators", contraband references in shipping/gaming contexts).
+- Scalable to robotics: "My shadyfleet of robots" or "shadow fleet building the physical world" sounds dystopian/black-ops rather than empowering sovereign builder tool.
+- Ownable: Domain win, but branding risk high (wrong audience: people seeking "shady" tools vs. serious power users/investors). Minor gaming/music collisions for "Shadefleet".
+- Rebrand cost: High (SSOT in brand.ts + _brand.sh, 100s of references in code/docs/desktop/marketing/OG images/legal, daemons, installers, user mental models). Would require rewriting hero ("Run your fleet"), mission, "control layer" language.
+- Visual/BrandMark fit: Current mark is a visible "control window" (rect + bars like a dashboard/terminal). "Shade" suggests dark/hidden, clashing with the explicit "command center" visual and "nothing hidden" principle.
+
+**Verdict:** Rejected. The .com availability is tempting (current prod is fleetcrown.vercel.app), but names actively undermine core value prop (visibility + trust + sovereign control) and invite negative real-world baggage from sanctioned shipping. "Shadyfleet" worse than "shadefleet" due to stronger "untrustworthy" slang. "Piracyfleet" even more toxic (theft/illegal).
+
+**FleetCrown remains the name** because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution. Keeps fleet language, serious durable infrastructure tone, supports robotics vision ("same control patterns").
+
+If domain pressure is high, pursue purchasing fleetcrown.com (or .app / strong alternative) rather than changing name to fit available shady/shadow variants. These might suit a different product (e.g. underground stealth agent runner), not this one.
+
+See also earlier evaluations in this doc for FleetJockey (role-name mismatch), FleetSurfer (passive flow vs. active command), MuppetMaster (toy/meme + IP issues).
+
+**FleetClown.com (user suggestion, .com available):** 
+- Preserves "fleet": Technically yes, but "clown" destroys any serious fleet-command meaning.
+- Evokes active command/control: Catastrophic failure. "Clown" universally connotes foolishness, joke, circus performer, incompetence, or meme (e.g. "clown emoji" 🤡 for "this is ridiculous"). Direct opposite of "crown" (authority/sovereignty) and "command layer".
+- Tone: "Serious operators", "infrastructure", "nothing hidden", "control plane for the age of autonomous creation": Utter mismatch. Saying "I use FleetClown for my agent fleet" or pitching investors "the control layer... FleetClown" would be career suicide. Reads as toy/meme in every context the criteria explicitly reject.
+- Real-world: Searches turn up random fan art, games, insults, and "clown" used derisively. Zero positive infrastructure/software associations.
+- Scalability: "My fleetclown of robots" sounds like a joke product or actual clown car of useless agents. Would require complete rewrite of every piece of marketing copy, investor thesis, hero ("Run your fleet" becomes comedy), and philosophy.
+- Ownable: Domain available is the *only* positive. But the name itself creates massive trademark risk (clown IP, memes) and makes social handles toxic.
+- Visual fit: BrandMark is a clean control-window/dashboard SVG. Pairing with "Clown" would look absurd next to the serious dark UI, ui-control-hero, etc.
+- Rebrand cost: Highest possible — every file, every user, every external reference (README, CLAUDE.md, legal, desktop "Fleet Runner", marketing-content.ts, etc.) would need scrubbing. The "crown" etymology and control-window mark would have to be abandoned.
+
+**Verdict:** Hard reject. This is the single worst suggestion in the entire evaluation history. It doesn't just fail the criteria — it inverts them. The domain availability does not come close to compensating for the permanent damage to credibility, tone, and positioning. If the goal is a memorable .com, FleetCrown + acquiring fleetcrown.com (or creative variant) remains far superior. "Clown" variants belong in the rejected meme bucket with MuppetMaster, only worse because it actively mocks the "serious builders" audience.
+
+FleetCrown stays locked. "Clown" would make the entire "serious infrastructure" thesis a punchline.
