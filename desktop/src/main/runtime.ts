@@ -33,6 +33,7 @@ export type LocalRuntimeStatus = {
   hasState: boolean
   hasEmit?: boolean
   usesRealEventLog?: boolean
+  hasWatcher?: boolean
   projectsLoaded: boolean
   projectCount: number
   homeStackVersion: string
@@ -58,9 +59,10 @@ export async function getLocalRuntimeStatus(): Promise<LocalRuntimeStatus> {
     hasState: typeof HomeState.applyEvent === 'function' || !!HomeState,
     hasEmit: true,
     usesRealEventLog: true,
+    hasWatcher: true,
     projectsLoaded: true,
     projectCount,
-    homeStackVersion: 'home/ core (state + decide + emit + projects) integrated; desktop dispatch now appends real bridge.dispatch + worker.started/crashed to the shared log'
+    homeStackVersion: 'home/ core (state + decide + emit + projects + watcher) integrated; desktop now emits bridge.dispatch/worker.started/crashed + worker.idle (from embedded watcher on session.md changes)'
   }
 }
 

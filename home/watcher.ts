@@ -28,9 +28,14 @@ import { appendEvent } from "./emit";
 import { loadProjects, projectsConfPath } from "./projects";
 import type { Handoff } from "@/lib/events";
 
-// Boot-mode gate — symmetric with server.ts + worker.ts. Naked
-// `npx tsx home/watcher.ts` is a help banner; --start opens the fs.watch.
-if (!process.argv.includes("--start") && !process.argv.includes("--self-test")) {
+// Library vs CLI gate.
+// When required/imported as a module (or called with --start from desktop main),
+// we export startWatcher() and do not print+exit.
+// Direct `npx tsx home/watcher.ts` (no args) prints usage and exits.
+// --self-test runs the pure parser tests.
+const isDirectCli = import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("watcher.ts");
+
+if (isDirectCli && !process.argv.includes("--start") && !process.argv.includes("--self-test")) {
   console.log(`${APP_NAME} watcher — Bridge layer of the home/ stack.
 Watches ~/.claude/sessions/*.md and emits worker.idle events into ~/.${APP_SLUG}/events.jsonl.
 Usage:  npx tsx home/watcher.ts --start       (boot the watcher)
@@ -140,10 +145,12 @@ function scheduleFlush(filename: string) {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
-function start() {
+export function startWatcher(): { close: () => void } {
   if (!fs.existsSync(SESSIONS_DIR)) {
     console.error(`[watcher] ${SESSIONS_DIR} does not exist — is Claude installed?`);
-    process.exit(1);
+    // In library mode (desktop) we don't want to kill the whole process.
+    // Return a no-op closer; caller can decide to surface to user.
+    return { close: () => {} };
   }
 
   // Load the registry. Empty registry isn't fatal — it just means nothing
@@ -177,14 +184,25 @@ function start() {
   });
   w.on("error", (err) => console.error("[watcher] fs.watch error:", err));
 
-  const shutdown = (sig: string) => {
-    console.log(`[watcher] ${sig} — shutting down`);
-    w.close();
+  const close = () => {
+    try { w.close(); } catch { /* ignore */ }
     for (const t of pendingFlush.values()) clearTimeout(t);
-    process.exit(0);
+    pendingFlush.clear();
   };
-  process.on("SIGINT",  () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+  // Only install process signal handlers when running as the direct CLI process.
+  // When embedded (desktop main), the app owns lifecycle and will call close().
+  if (isDirectCli) {
+    const shutdown = (sig: string) => {
+      console.log(`[watcher] ${sig} — shutting down`);
+      close();
+      process.exit(0);
+    };
+    process.on("SIGINT",  () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+  }
+
+  return { close };
 }
 
 // ── Self-test ────────────────────────────────────────────────────────────────
@@ -273,5 +291,11 @@ function selfTest() {
   if (fail > 0) process.exit(1);
 }
 
-if (process.argv.includes("--self-test")) selfTest();
-else start();
+if (process.argv.includes("--self-test")) {
+  selfTest();
+} else if (isDirectCli || process.argv.includes("--start")) {
+  startWatcher();
+}
+
+// Also export the pure helpers so embedders (desktop) or tests can use them directly if needed.
+export { parseHandoff, tabFromFilename, readAndEmit };

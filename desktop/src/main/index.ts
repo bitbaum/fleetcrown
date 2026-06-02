@@ -2,10 +2,12 @@ import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
+import { startWatcher } from '@home/watcher'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { homedir } from 'os'
 
 let mainWindow: BrowserWindow | null = null
+let stopWatcher: (() => void) | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -107,6 +109,22 @@ app.whenReady().then(() => {
   createWindow()
   createTray()
 
+  // Start the embedded home/ watcher bridge inside the desktop main process.
+  // This gives us the "real worker idle path": when a dispatched agent finishes
+  // and writes its handoff to ~/.claude/sessions/<project>.md, we append
+  // worker.idle events to the shared log (just like a standalone home/watcher.ts).
+  // Combined with the dispatch-side appendEvent(bridge.dispatch + started/crashed),
+  // desktop-originated runs now produce a more complete lifecycle in the event log
+  // without requiring the user to run a separate watcher process.
+  // The watcher respects the same registered projects from agent-projects.conf.
+  try {
+    const w = startWatcher()
+    stopWatcher = w.close
+    console.log('[desktop] embedded watcher started for session.md → worker.idle')
+  } catch (e) {
+    console.warn('[desktop] could not start embedded watcher:', (e as Error).message)
+  }
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -120,6 +138,15 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
+  }
+})
+
+// Ensure the embedded watcher is stopped when the app exits (prevents
+// dangling fs.watch handles and pending debounce timers).
+app.on('before-quit', () => {
+  if (stopWatcher) {
+    try { stopWatcher() } catch { /* ignore */ }
+    stopWatcher = null
   }
 })
 

@@ -159,12 +159,13 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 - Web download section and /download page updated with concrete steps. Settings + landing promote the desktop as the preferred local runtime.
 - Still early (no signed releases/auto-update yet, full watcher/worker loop + real event log projection inside the app not yet wired — see gaps below). But it is downloadable (via build), builds clean, and functional enough to run real dispatches locally from both the native UI and the web when synced.
 
-**Known gaps (current prototype — desktop-2/3 incomplete)**:
-- In-memory `currentState` only in `desktop/src/main/runtime.ts`. Dispatches call `HomeState.applyEvent` on a transient object; no `HomeEmit.appendEvent` to `~/.fleetcrown/events.jsonl`.
-- No embedded watcher / worker. The desktop directly invokes `injectIntoTab` inside `dispatchIntent`. The real home/ idle detection (session.md → worker.idle), full run lifecycle (worker.started/finished/crashed), persistence, and multi-process projection are not running inside the Electron main process yet.
-- To get the full authoritative local loop you currently run the separate `home/` trio (`npx tsx home/server.ts --start`, watcher, worker) or the legacy daemon alongside. Future: the desktop main becomes a drop-in "Brain+Bridge+Worker" host so one process owns the log + UI + injection.
-- State shown in desktop UI and what the web sees after "Sync to Web" is a snapshot at connect/dispatch time, not a live projection from the shared event log.
-- No tray, notifications, or auto-restart of the runtime loop yet.
+**Known gaps (current prototype — desktop-2/3 dispatch + idle paths complete)**:
+- Desktop main owns the core local loop for runs it originates:
+  - Real appendEvent for bridge.dispatch + worker.started/crashed (with runId + /tmp sentinel for stop-hook correlation).
+  - Embedded `home/watcher` (startWatcher): fs.watch on ~/.claude/sessions for registered projects, debounced `worker.idle` + parsed handoff on change. No external watcher process needed for full event emission when the Fleet Runner is the runtime.
+- Local UI + "Sync to Web" snapshots are still lightweight (eager apply of events seen by this process). A full in-process Brain (tail the log, serve rich state) is a smaller follow-on slice.
+- Standalone home/ trio and legacy daemon continue to work for headless use.
+- No tray/notifications, signed distributables with auto-update, or packaged "run as background runtime only" mode yet.
 
 This is the Fleet Runner becoming real. Legacy daemon + home/ stack still works in parallel for headless / transition use. See "Execution Log" for precise phase status.
 
@@ -216,7 +217,7 @@ All changes keep daemon untouched, follow quality (tsc clean, builds pass), and 
 - Desktop README and `docs/desktop-app.md` updated with capabilities + explicit known gaps (in-memory vs real emit + watcher).
 - Quality: `npm run desktop:build` clean, root `npx tsc --noEmit` clean, `npm run lint` clean on changed files, `npm run test:home` 89/89, design audit clean for the public surfaces touched.
 - 70+ file follow-up (rebrand + desktop + docs + marketing) prepared for commit as "feat(desktop) + fix(design,lint): ...".
-- During this session: hardened `src/lib/zellij.ts` (session resolution via findSessionForTab + --session qualified actions + `--` separator for write-chars to match legacy robustness). Advanced runtime.ts dispatch to real appendEvent path (with started/crashed + sentinel) — the "use appendEvent + real worker idle path instead of fake" item from the prior next. Desktop dispatches are now first-class citizens of the shared event log.
+- During this session: hardened `src/lib/zellij.ts` (session resolution via findSessionForTab + --session qualified actions + `--` separator for write-chars to match legacy robustness). Advanced runtime.ts dispatch to real appendEvent path (with started/crashed + sentinel). Wired embedded watcher: refactored home/watcher.ts for library use (startWatcher() export, no auto-exit on import, conditional signal handlers), started from desktop main/index.ts on app ready, closed on before-quit. Desktop now emits the full local event lifecycle (dispatch + idle from session.md handoffs) without external home/ processes. This largely closes the "real worker idle path" for desktop-2/3.
 
 **Current prototype summary (post-landing)**:
 The app is usable for real work on a machine with zellij + claude running: build it, run it, connect token from web Settings, sync, dispatch from either surface. The "local authoritative runtime" story is demonstrable.

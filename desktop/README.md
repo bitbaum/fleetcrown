@@ -14,11 +14,11 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 - "Sync to Web" (after pasting a ck_* agent token) posts runtime snapshot + projects so the hosted control plane at fleetcrown.vercel.app sees this desktop as the live local runner for those projects. Auto-syncs on connect.
 - Runs standalone as your local authoritative runtime. Web /control and desktop dispatch both drive the same local Zellij sessions.
 
-**Known gaps (prototype phase — desktop-2/3 in progress)**:
-- Dispatch now uses real `appendEvent` (bridge.dispatch + worker.started/crashed with runId + sentinel) so runs originating from the desktop produce durable events in `~/.fleetcrown/events.jsonl` that any home/ consumer (web /control when synced as runtime, other tools) will see. Local UI snapshot uses eager applyLocal for immediate response.
-- No embedded watcher yet (session.md → worker.idle). Idle / handoff observation still requires a co-running `home/watcher.ts` (or legacy beacon/daemon). The desktop participates correctly as a dispatch source in the shared log.
-- Full "desktop is the brain" (tail log, serve state, run decide loop internally) is the remaining desktop-2/3 slice. Current state: dispatches are authoritative in the log; UI state is a local projection of the events *this process* has seen.
-- See `docs/desktop-app.md` (Execution Log + Readiness) for precise status and the path to a single-process authoritative runtime.
+**Known gaps (prototype phase — desktop-2/3 largely complete for dispatch+idle)**:
+- Dispatch uses real `appendEvent` (bridge.dispatch + worker.started/crashed + runId + sentinel).
+- The main process now embeds the home/ watcher (startWatcher): fs.watch on ~/.claude/sessions/*.md for registered projects, debounced emit of `worker.idle` with parsed handoff. Desktop-originated runs now produce the full dispatch → started → idle (on handoff) → finished (stop hook) chain in the shared log without a separate watcher process.
+- Local UI snapshot still uses an in-process projection; a future slice can tail the log inside the app for a complete local Brain view.
+- See `docs/desktop-app.md` for status. Co-running the standalone home/ trio is still supported for headless/transition use.
 
 ## Get the runnable app (Linux example)
 
