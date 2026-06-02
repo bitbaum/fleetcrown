@@ -7,14 +7,14 @@
 #
 # Usage:
 #   ORACLE_HOST=1.2.3.4 npm run db:oracle-cutover
-#   npm run db:oracle-cutover   # if ORACLE_HOST is in ~/.config/cockpit/oracle-migration.env
+#   npm run db:oracle-cutover   # if ORACLE_HOST is in ~/.config/fleetcrown/oracle-migration.env
 #
 # This script: dump prod → deploy docker on VM → restore → update Vercel → redeploy.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CONFIG_FILE="${COCKPIT_ORACLE_CONFIG:-${HOME}/.config/cockpit/oracle-migration.env}"
+CONFIG_FILE="${COCKPIT_ORACLE_CONFIG:-${HOME}/.config/fleetcrown/oracle-migration.env}"
 BACKUP="${ROOT}/backups/oracle-cutover-$(date +%Y%m%d-%H%M%S).sql.gz"
 
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -138,5 +138,5 @@ echo "  Direct : ${DIRECT}"
 echo "  Pool   : ${POOL}"
 echo "  Backup : ${BACKUP}"
 echo ""
-curl -sS "https://cockpitapp.vercel.app/api/setup" || true
+curl -sS "https://fleetcrown.vercel.app/api/setup" || true
 echo ""

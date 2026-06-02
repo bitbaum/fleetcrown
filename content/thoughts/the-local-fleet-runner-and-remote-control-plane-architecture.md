@@ -61,7 +61,7 @@ As of May 2026, Cockpit is a hybrid system. This is documented clearly in `docs/
 
 ### The Two Worlds
 
-When someone uses the hosted web portal (`cockpitapp.vercel.app`):
+When someone uses the hosted web portal (`fleetcrown.vercel.app`):
 
 - All commands (send prompt, switch agent, pause auto-continue, etc.) go to our backend.
 - Because the backend has no access to the user's machine, it writes the work into a queue (database or events).

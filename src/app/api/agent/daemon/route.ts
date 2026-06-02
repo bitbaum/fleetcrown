@@ -5,12 +5,12 @@ import path from "node:path";
 
 /**
  * Serves a gzipped tarball of the local helper runtime so a new customer can
- * install the agent fleet without cloning the cockpit repo:
+ * install the agent fleet without cloning the repo:
  *
- *   scripts/cockpit-daemon.sh   — main polling loop (~780 lines)
- *   scripts/_brand.sh           — brand SSOT (APP_NAME / APP_SLUG / APP_DOMAIN)
- *   scripts/agent-hook-lib.sh   — zellij inject_prompt + shared helpers
- *   scripts/agent-hook-bridge.sh — agent CLI bridge (~660 lines)
+ *   scripts/fleetcrown-daemon.sh — main polling loop
+ *   scripts/_brand.sh            — brand SSOT (APP_NAME / APP_SLUG / APP_DOMAIN)
+ *   scripts/agent-hook-lib.sh    — zellij inject_prompt + shared helpers
+ *   scripts/agent-hook-bridge.sh — agent CLI bridge
  *
  * Together ~1500 lines of bash. They are the local execution surface.
  *
@@ -22,7 +22,7 @@ import path from "node:path";
  * the system-binary dependency entirely.
  *
  * Files extract at the destination root (no `scripts/` prefix) so the
- * agent CLI writes them straight into ~/.local/share/cockpit/.
+ * agent CLI writes them straight into ~/.local/share/fleetcrown/.
  *
  * Public (no auth) — matches the matcher exception in src/proxy.ts.
  * next.config.ts includes the source files in this route's
@@ -30,8 +30,8 @@ import path from "node:path";
  */
 const FILES = [
   // Core daemon + shared brand/zellij helpers + bridge entry point.
-  "cockpit-daemon.sh",
-  "cockpit",
+  "fleetcrown-daemon.sh",
+  "fleet",
   "_brand.sh",
   "_agents.sh",
   "agent-hook-lib.sh",
@@ -44,9 +44,9 @@ const FILES = [
   // systemd installer — the agent CLI's --install flag spawns this so a new
   // customer's daemon survives shell exit. Uses $SCRIPT_DIR for service
   // WorkingDirectory + ExecStart, which resolves correctly under the flat
-  // ~/.local/share/cockpit/ layout (no PROJECT_DIR/.. assumption is hit on
+  // ~/.local/share/fleetcrown/ layout (no PROJECT_DIR/.. assumption is hit on
   // the env-var token path that the CLI feeds in).
-  "install-daemon.sh",
+  "install-fleetcrown-daemon.sh",
   // Python helpers referenced by agent-hook-bridge.sh. All are wrapped in
   // `|| true` / `2>/dev/null` in the bridge so absence degrades gracefully —
   // but real customers want the full experience (audio beacon, idle detection,
@@ -56,7 +56,7 @@ const FILES = [
   "get-idle-secs.py",
   "notify-choice.py",
   "sync-agent-runtime-config.py",
-  // Audio transcription is invoked by cockpit-daemon.sh for recorded prompt
+  // Audio transcription is invoked by fleetcrown-daemon.sh for recorded prompt
   // commands and must travel with the flat installed runtime.
   "transcribe.py",
 ] as const;
@@ -71,7 +71,7 @@ export async function GET() {
       headers: {
         "Content-Type": "application/gzip",
         "Cache-Control": "public, max-age=300, s-maxage=300",
-        "Content-Disposition": 'attachment; filename="cockpit-daemon.tar.gz"',
+        "Content-Disposition": 'attachment; filename="fleetcrown-daemon.tar.gz"',
       },
     });
   } catch (e) {

@@ -10,7 +10,7 @@
     "build": "next build",
     "postbuild": "bash scripts/deploy-local.sh",
     "start": "next start",
-    "install-app": "bash scripts/install-cockpit-app.sh",
+    "install-app": "bash scripts/install-fleetcrown-app.sh",
     "migrate": "drizzle-kit push",
     "lint": "eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",

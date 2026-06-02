@@ -13,4 +13,4 @@
 /** Fired by PullToRefresh on a successful commit. useFetch listens and bumps
  *  its revision so client-side polls refetch in lockstep with the
  *  router.refresh() that drives server-component revalidation. */
-export const COCKPIT_REFRESH_EVENT = "cockpit:refresh";
+export const FLEETCROWN_REFRESH_EVENT = "fleetcrown:refresh";

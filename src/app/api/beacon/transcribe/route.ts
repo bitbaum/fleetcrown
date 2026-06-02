@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   //   provider="local"/"auto" + runtime missing   → enqueue for the user's daemon
   //                                                  to pick up and run on their
   //                                                  machine. This is what makes
-  //                                                  cockpitapp.vercel.app's /control
+  //                                                  fleetcrown.vercel.app's /control
   //                                                  use the user's local STT by
   //                                                  default — Vercel has no whisper.
   const useGroq = provider === "groq";

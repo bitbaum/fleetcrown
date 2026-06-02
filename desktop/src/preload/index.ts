@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 // Expose the local runtime API to the renderer.
 // This bridges to the home/ stack running in the main process.
-contextBridge.exposeInMainWorld('cockpit', {
+// The key is "fleetRunner" (no "cockpit" in the product name anymore).
+contextBridge.exposeInMainWorld('fleetRunner', {
   ping: () => ipcRenderer.invoke('ping'),
   getRuntimeStatus: () => ipcRenderer.invoke('get-runtime-status'),
   getProjects: () => ipcRenderer.invoke('get-projects'),

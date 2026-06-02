@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 
 declare global {
   interface Window {
-    cockpit: {
+    fleetRunner: {
       ping: () => Promise<string>
       getRuntimeStatus: () => Promise<any>
       getProjects: () => Promise<any>
@@ -25,7 +25,7 @@ function App(): JSX.Element {
 
   const refreshStatus = async () => {
     try {
-      const s = await window.cockpit.getRuntimeStatus()
+      const s = await window.fleetRunner.getRuntimeStatus()
       setStatus(s)
     } catch (e) {
       setResponse('Error: ' + (e as Error).message)
@@ -34,7 +34,7 @@ function App(): JSX.Element {
 
   const loadProjects = async () => {
     try {
-      const p = await window.cockpit.getProjects()
+      const p = await window.fleetRunner.getProjects()
       setProjects(p)
       const keys = p ? Object.keys(p) : []
       if (keys.length > 0 && !selectedProject) {
@@ -47,8 +47,8 @@ function App(): JSX.Element {
 
   const loadSavedToken = async () => {
     try {
-      const saved = await window.cockpit.loadToken()
-      const dir = await window.cockpit.getConfigDir()
+      const saved = await window.fleetRunner.loadToken()
+      const dir = await window.fleetRunner.getConfigDir()
       setConfigDir(dir || '')
       if (saved) {
         setToken(saved)
@@ -60,7 +60,7 @@ function App(): JSX.Element {
   const handleConnect = async () => {
     if (!token.trim()) return
     try {
-      const res = await window.cockpit.saveToken(token.trim())
+      const res = await window.fleetRunner.saveToken(token.trim())
       if (res.ok) {
         setConnected(true)
         setResponse('Token saved. This app can now act as your local runtime for FleetCrown (use the same token in web settings if needed).')
@@ -125,7 +125,7 @@ function App(): JSX.Element {
   }, [connected])
 
   const handlePing = async () => {
-    const res = await window.cockpit.ping()
+    const res = await window.fleetRunner.ping()
     setResponse(res)
   }
 
@@ -134,10 +134,10 @@ function App(): JSX.Element {
     setDispatching(target + ':' + intent)
     setResponse('')
     try {
-      const res = await window.cockpit.dispatchIntent({ projectKey: target, intent, queueHead: prompt })
+      const res = await window.fleetRunner.dispatchIntent({ projectKey: target, intent, queueHead: prompt })
       setResponse(JSON.stringify(res, null, 2))
       await refreshStatus()
-      const liveState = await window.cockpit.getCurrentState()
+      const liveState = await window.fleetRunner.getCurrentState()
       setResponse((prev) => prev + '\n\n' + JSON.stringify(liveState, null, 2))
     } catch (e) {
       setResponse('Error: ' + (e as Error).message)
@@ -155,7 +155,7 @@ function App(): JSX.Element {
         <div className="flex items-center gap-4">
           <div className="w-2.5 h-2.5 bg-[#ff5c00] rounded-full" />
           <div>
-            <div className="fleet-header tracking-[3px]">COCKPIT</div>
+            <div className="fleet-header tracking-[3px]">FLEETCROWN</div>
             <div className="text-[15px] font-medium tracking-[-0.2px] -mt-0.5">Fleet Runner</div>
           </div>
         </div>
@@ -176,7 +176,7 @@ function App(): JSX.Element {
           {/* Connect / Token */}
           <div className="mt-6 p-4 border border-[#1f1f1f] rounded-xl bg-[#0a0a0a]">
             <div className="flex items-center gap-2 mb-2">
-              <div className="text-xs tracking-widest text-[#666]">CONNECT TO COCKPIT</div>
+              <div className="text-xs tracking-widest text-[#666]">CONNECT TO FLEETCROWN</div>
               {connected && <div className="text-[10px] px-2 py-0.5 bg-emerald-900 text-emerald-400 rounded">CONNECTED</div>}
             </div>
             <div className="flex gap-2">

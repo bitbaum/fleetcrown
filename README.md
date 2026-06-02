@@ -1,12 +1,12 @@
-# Cockpit
+# FleetCrown
 
-Cockpit is an execution operating system for builders who run many projects at
-once. It combines a SaaS control plane, a local terminal runtime, and a
-personal operating layer so a founder, engineer, or team can keep projects
-moving without losing judgment, context, or momentum.
+FleetCrown is an execution operating system for builders who run many projects at
+once. It combines a SaaS control plane, a local terminal runtime (Fleet Runner
+desktop + daemon bridge), and a personal operating layer so a founder, engineer,
+or team can keep projects moving without losing judgment, context, or momentum.
 
 The product thesis is simple: AI agents are becoming cheap execution capacity,
-but serious users still need a trustworthy command center. Cockpit provides the
+but serious users still need a trustworthy command center. FleetCrown provides the
 state, queues, handoffs, guardrails, and business context around that capacity.
 
 Production: https://fleetcrown.vercel.app
@@ -27,13 +27,13 @@ Production: https://fleetcrown.vercel.app
 
 ## Product And Economic Model
 
-Cockpit is designed as a high-retention SaaS for power users and small teams.
+FleetCrown is designed as a high-retention SaaS for power users and small teams.
 The economic model is built around durable workflow ownership, not one-off AI
 novelty.
 
 | Layer | Value | Monetization path |
 | --- | --- | --- |
-| Individual builder | One cockpit for projects, agents, commitments, and execution memory | Pro subscription |
+| Individual builder | One FleetCrown for projects, agents, commitments, and execution memory | Pro subscription |
 | Team / studio | Shared project state, team visibility, agent dispatch, audit trail | Per-seat team plan |
 | Agent runtime | Local daemon connects private machines to the hosted control plane | Paid runtime seats / usage tiers |
 | Execution intelligence | Prompt routing, queue reasoning, outcomes, continuation policies | Premium automation tier |
@@ -128,7 +128,7 @@ npm run dev
 Minimum local `.env.local`:
 
 ```bash
-DATABASE_URL=postgresql://cockpit:changeme@localhost:5432/cockpit
+DATABASE_URL=postgresql://fleetcrown:changeme@localhost:5432/fleetcrown
 AUTH_SECRET=replace-me
 GITHUB_CLIENT_ID=replace-me
 GITHUB_CLIENT_SECRET=replace-me

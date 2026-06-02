@@ -6,7 +6,7 @@ machine. Security work should preserve that boundary.
 
 ## Supported Surface
 
-- Production app: `https://cockpitapp.vercel.app`
+- Production app: `https://fleetcrown.vercel.app`
 - Default branch: `main`
 - Runtime bridge: per-user `ck_*` agent tokens
 - Database: PostgreSQL through direct and pooled URLs

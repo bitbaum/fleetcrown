@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { haptic } from "@/lib/haptics";
-import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
+import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 /**
  * Mobile-only pull-to-refresh. Swipe-down past 80px at scrollTop=0 fires
@@ -62,7 +62,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
         router.refresh();
         // Wake up client-side useFetch polls in lockstep — router.refresh()
         // only revalidates server-component data.
-        window.dispatchEvent(new CustomEvent(COCKPIT_REFRESH_EVENT));
+        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
         // Hold the indicator briefly so the user sees the refresh, then snap back.
         setTimeout(() => {
           setRefreshing(false);

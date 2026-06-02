@@ -1,6 +1,6 @@
 {
-  "name": "Cockpit",
-  "short_name": "Cockpit",
+  "name": "FleetCrown",
+  "short_name": "FleetCrown",
   "description": "Command your agents, projects, and personal systems from one workspace.",
   "start_url": "/control",
   "scope": "/",

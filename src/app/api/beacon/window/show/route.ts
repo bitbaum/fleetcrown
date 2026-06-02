@@ -4,7 +4,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { APP_SLUG } from "@/config/brand";
 
 // WM_CLASS the pre-warmed beacon window is launched with. Must match
-// scripts/cockpit-beacon-window.sh:BEACON_WM_CLASS (also derived from
+// scripts/fleetcrown-beacon-window.sh:BEACON_WM_CLASS (also derived from
 // APP_SLUG) and the same constant in window/hide/route.ts.
 const BEACON_WM_CLASS = `${APP_SLUG}-beacon`;
 
@@ -13,8 +13,8 @@ const BEACON_WM_CLASS = `${APP_SLUG}-beacon`;
  * and activates it. Called by BeaconLiveClient's useEffect when a session
  * becomes active.
  *
- * Targets the cockpit-beacon-window.service chromium instance specifically
- * via WM_CLASS=cockpit-beacon, so a user's regular browser tab at the same
+ * Targets the fleetcrown-beacon-window.service chromium instance specifically
+ * via WM_CLASS=fleetcrown-beacon, so a user's regular browser tab at the same
  * URL is never moved. No-ops cleanly if xdotool isn't installed or if no
  * matching window exists.
  *

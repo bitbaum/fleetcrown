@@ -421,7 +421,7 @@ write_inject_state() {
   # Use jq -Rs to JSON-escape key/label: user-supplied custom prompts can
   # contain newlines or quotes which otherwise break the JSON, then the
   # daemon's parser falls back to empty and the cleanup gate can't fire.
-  # Match the daemon's other sentinel writer (cockpit-daemon.sh execute_inject).
+  # Match the daemon's other sentinel writer (fleetcrown-daemon.sh execute_inject).
   printf '{"key":%s,"label":%s,"startedAt":%s}\n' \
     "$(printf '%s' "$key"   | jq -Rs .)" \
     "$(printf '%s' "$label" | jq -Rs .)" \

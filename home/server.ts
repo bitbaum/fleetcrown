@@ -47,7 +47,7 @@ Env:    APP_HOME_PORT  port to bind (default 3001)`);
 }
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
-const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
+const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.FLEETCROWN_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
 
 let state: GlobalState = new Map();
 let lastError: { ts: string; message: string; raw?: string } | null = null;

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @cockpit/agent — CLI to enroll a local machine with the FleetCrown cloud control plane.
+ * @fleetcrown/agent — CLI to enroll a local machine with the FleetCrown cloud control plane.
  *
  * Usage while the npm package is unpublished:
  *   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init
@@ -14,9 +14,9 @@ const os = require("os");
 const readline = require("readline");
 
 const DEFAULT_BASE_URL = "https://fleetcrown.vercel.app";
-const CONFIG_DIR = path.join(os.homedir(), ".config", "cockpit");
+const CONFIG_DIR = path.join(os.homedir(), ".config", "fleetcrown");
 const ENV_FILE = path.join(CONFIG_DIR, "daemon.env");
-const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "cockpit");
+const DAEMON_DIR = path.join(os.homedir(), ".local", "share", "fleetcrown");
 
 function parseArgs(argv) {
   const args = { command: argv[2], token: "", baseUrl: DEFAULT_BASE_URL, install: true };
@@ -73,9 +73,9 @@ async function verifyToken(baseUrl, token) {
 function writeEnvFile(token, baseUrl) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
   const content = [
-    `# Written by @cockpit/agent init`,
-    `COCKPIT_DAEMON_TOKEN=${token}`,
-    `COCKPIT_BASE_URL=${baseUrl}`,
+    `# Written by @fleetcrown/agent init`,
+    `FLEETCROWN_DAEMON_TOKEN=${token}`,
+    `FLEETCROWN_BASE_URL=${baseUrl}`,
     `APP_DAEMON_TOKEN=${token}`,
     `APP_BASE_URL=${baseUrl}`,
     "",
@@ -110,7 +110,7 @@ async function downloadDaemon(baseUrl) {
 
   // chmod +x the executables so the user can run them directly without
   // having to remember `bash ...`.
-  for (const name of ["cockpit-daemon.sh", "cockpit", "agent-hook-bridge.sh", "install-daemon.sh"]) {
+  for (const name of ["fleetcrown-daemon.sh", "fleet", "agent-hook-bridge.sh", "install-fleetcrown-daemon.sh"]) {
     try { fs.chmodSync(path.join(DAEMON_DIR, name), 0o755); } catch {}
   }
 
@@ -118,7 +118,7 @@ async function downloadDaemon(baseUrl) {
 }
 
 function printHelp() {
-  console.log(`@cockpit/agent — connect your machine to FleetCrown
+  console.log(`@fleetcrown/agent — connect your machine to FleetCrown
 
 Commands:
   init    Verify token, save config, and install daemon scripts to
@@ -200,21 +200,21 @@ async function main() {
   if (args.install) {
     const { spawnSync } = require("child_process");
     // Prefer the just-downloaded copy in DAEMON_DIR; fall back to the
-    // repo-clone location for developers running from inside the cockpit tree.
+    // repo-clone location for developers running from inside the tree.
     const candidates = [
-      path.join(DAEMON_DIR, "install-daemon.sh"),
-      path.join(process.cwd(), "scripts", "install-daemon.sh"),
+      path.join(DAEMON_DIR, "install-fleetcrown-daemon.sh"),
+      path.join(process.cwd(), "scripts", "install-fleetcrown-daemon.sh"),
     ];
     const installScript = candidates.find(fs.existsSync);
     if (installScript) {
-      console.log(`\nRunning install-daemon.sh (${installScript})…`);
+      console.log(`\nRunning install-fleetcrown-daemon.sh (${installScript})…`);
       const r = spawnSync("bash", [installScript], {
         stdio: "inherit",
-        env: { ...process.env, COCKPIT_DAEMON_TOKEN: token, COCKPIT_BASE_URL: args.baseUrl },
+        env: { ...process.env, FLEETCROWN_DAEMON_TOKEN: token, FLEETCROWN_BASE_URL: args.baseUrl },
       });
       process.exit(r.status ?? 1);
     } else {
-      console.warn("\nBackground helper setup skipped: install-daemon.sh not found.");
+      console.warn("\nBackground helper setup skipped: install-fleetcrown-daemon.sh not found.");
     }
   }
 }

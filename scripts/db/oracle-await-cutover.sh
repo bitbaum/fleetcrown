@@ -5,13 +5,13 @@
 # Usage:
 #   ./scripts/db/oracle-await-cutover.sh &
 #   # create VM, then:
-#   sed -i 's/^ORACLE_HOST=.*/ORACLE_HOST=1.2.3.4/' ~/.config/cockpit/oracle-migration.env
+#   sed -i 's/^ORACLE_HOST=.*/ORACLE_HOST=1.2.3.4/' ~/.config/fleetcrown/oracle-migration.env
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-CONFIG="${COCKPIT_ORACLE_CONFIG:-${HOME}/.config/cockpit/oracle-migration.env}"
-LOG="${HOME}/.config/cockpit/oracle-await.log"
+CONFIG="${COCKPIT_ORACLE_CONFIG:-${HOME}/.config/fleetcrown/oracle-migration.env}"
+LOG="${HOME}/.config/fleetcrown/oracle-await.log"
 TIMEOUT="${ORACLE_AWAIT_TIMEOUT:-7200}"
 INTERVAL=15
 

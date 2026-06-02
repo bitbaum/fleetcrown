@@ -32,9 +32,9 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 3. **Agent token** — Settings → Agent tokens → Generate.
 4. **Connect your machine:**
    ```bash
-   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --base-url https://cockpitapp.vercel.app
+   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
    # or after generating a token:
-   curl -fsSL https://cockpitapp.vercel.app/api/agent/install | node - init --token ck_... --base-url https://cockpitapp.vercel.app
+   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_... --base-url https://fleetcrown.vercel.app
    ```
    Config is written to `~/.config/cockpit/daemon.env`.
 5. **Install and start the daemon (recommended — systemd user service):**
@@ -114,7 +114,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 ## Architecture sketch
 
 ```
- Browser (cockpitapp.vercel.app)
+ Browser (fleetcrown.vercel.app)
    │  auth, DB, UI, command queue
    ▼
  PostgreSQL (pending_commands, cron_jobs, …)

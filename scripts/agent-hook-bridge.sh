@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_brand.sh"
 
 _load_cockpit_daemon_env() {
-  local f="${HOME}/.config/cockpit/daemon.env"
+  local f="${HOME}/.config/fleetcrown/daemon.env"
   [ -f "$f" ] || return 0
   set -a
   # shellcheck source=/dev/null
@@ -48,7 +48,7 @@ log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
 _token_from_env_or_file() {
   local key="$1"
-  local val="" f="${HOME}/.config/cockpit/daemon.env"
+  local val="" f="${HOME}/.config/fleetcrown/daemon.env"
   val="$(_brand_env "$key" "")"
   if [ -n "$val" ]; then
     printf '%s' "$val"
@@ -149,7 +149,7 @@ emit_worker_finished() {
     health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//')
   fi
   # Read duration AND runId from the /tmp/<slug>-run-<tab> sentinel that
-  # cockpit-daemon.sh:execute_inject wrote at dispatch time. The runId is
+  # fleetcrown-daemon.sh:execute_inject wrote at dispatch time. The runId is
   # required for state.applyEvent's cancelledRunIds → user_abort relabel
   # to match (otherwise a user-cancelled run gets recorded as partial in
   # recentOutcomes and drags computeConfidence down). Sentinel file
@@ -445,7 +445,7 @@ autopilot_dispatch_and_inject() {
   # The user can still dispatch manually via the UI within the cooldown
   # window — this only gates the auto-fire path.
   local cool_dir cool_file cool_age
-  cool_dir="${COCKPIT_TMP_DIR:-/tmp/cockpit-daemon}"
+  cool_dir="${COCKPIT_TMP_DIR:-/tmp/fleetcrown-daemon}"
   cool_file="${cool_dir}/last-autopilot-${tab_name}"
   if [ -f "$cool_file" ]; then
     cool_age=$(( $(date +%s) - $(stat -c %Y "$cool_file" 2>/dev/null || stat -f %m "$cool_file" 2>/dev/null || echo 0) ))

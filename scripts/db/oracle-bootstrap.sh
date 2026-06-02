@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-CONFIG_DIR="${HOME}/.config/cockpit"
+CONFIG_DIR="${HOME}/.config/fleetcrown"
 CONFIG_FILE="${CONFIG_DIR}/oracle-migration.env"
 KEY="${CONFIG_DIR}/oracle_ed25519"
 CLOUD_INIT_OUT="${CONFIG_DIR}/oracle-cloud-init.yaml"

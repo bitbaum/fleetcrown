@@ -57,7 +57,7 @@ function createWindow(): void {
   })
 
   // Token / connect support for using this app as the local runtime for hosted FleetCrown
-  // Use the new product slug for the local config dir (transition: old ~/.config/cockpit/ tokens are not auto-migrated in v0.1)
+  // Use the product slug for the local config dir (transition: old ~/.config/cockpit/ tokens are not auto-migrated).
   const configDir = join(homedir(), '.config', 'fleetcrown')
   const tokenFile = join(configDir, 'fleet-runner-token')
 

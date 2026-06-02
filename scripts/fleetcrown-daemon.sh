@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# cockpit-daemon.sh — polls the cloud control plane for pending commands and executes them locally.
+# fleetcrown-daemon.sh — polls the FleetCrown cloud control plane for pending commands and executes them locally.
 #
 # Usage:
-#   COCKPIT_DAEMON_TOKEN=<secret> ./scripts/cockpit-daemon.sh
+#   FLEETCROWN_DAEMON_TOKEN=<secret> ./scripts/fleetcrown-daemon.sh
 #
-# Optional env vars:
-#   COCKPIT_BASE_URL      — defaults to https://cockpitapp.vercel.app
-#   COCKPIT_POLL_INTERVAL — long-poll wait for remote/Vercel endpoint (seconds), default 8
-#   COCKPIT_DRY_RUN       — set to "1" to log commands without executing them
+# Optional env vars (APP_* and FLEETCROWN_* preferred; COCKPIT_* supported for transition):
+#   FLEETCROWN_BASE_URL   — defaults to https://fleetcrown.vercel.app
+#   APP_BASE_URL
+#   FLEETCROWN_POLL_INTERVAL — long-poll wait for remote/Vercel endpoint (seconds), default 8
+#   FLEETCROWN_DRY_RUN       — set to "1" to log commands without executing them
 #
 # The daemon authenticates via bearer token; the server finds the default user automatically.
 # No user ID needed — the cloud determines which user's queue to drain.
@@ -31,38 +32,39 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
 # shellcheck source=_agents.sh
 source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
 
-# Multi-source polling: COCKPIT_BASE_URLS is a comma-separated list of base URLs
-# (e.g. "http://127.0.0.1:3000,https://cockpitapp.vercel.app"). When 2+ are
+# Multi-source polling: FLEETCROWN_BASE_URLS (or APP_BASE_URLS) is a comma-separated list of base URLs
+# (e.g. "http://127.0.0.1:3000,https://fleetcrown.vercel.app"). When 2+ are
 # present, this parent forks one child per extra URL — each runs the full
 # daemon loop against its own URL with its own lock file. Runs BEFORE
 # _REMOTE_URL is derived so the parent and child each pick their own.
-# Falls back silently when only COCKPIT_BASE_URL (singular) is set.
+# Falls back silently when only FLEETCROWN_BASE_URL (singular) is set.
 _DAEMON_BASES=()
 _DAEMON_CHILD_PIDS=()
-if [ -n "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}" ]; then
-  IFS=',' read -ra _DAEMON_BASES <<< "${COCKPIT_BASE_URLS:-${APP_BASE_URLS:-}}"
+_BASE_URLS_RAW="$(_brand_env BASE_URLS "")"
+if [ -n "$_BASE_URLS_RAW" ]; then
+  IFS=',' read -ra _DAEMON_BASES <<< "$_BASE_URLS_RAW"
 fi
-if [ "${#_DAEMON_BASES[@]}" -gt 1 ] && [ -z "${COCKPIT_DAEMON_CHILD:-}" ]; then
+if [ "${#_DAEMON_BASES[@]}" -gt 1 ] && [ -z "${FLEETCROWN_DAEMON_CHILD:-${COCKPIT_DAEMON_CHILD:-}}" ]; then
   for _extra in "${_DAEMON_BASES[@]:1}"; do
     _extra="$(echo "$_extra" | xargs)"
     [ -z "$_extra" ] && continue
     (
-      export COCKPIT_BASE_URL="$_extra"
-      export COCKPIT_BASE_URLS=""
-      export COCKPIT_DAEMON_CHILD=1
+      export FLEETCROWN_BASE_URL="$_extra"
+      export FLEETCROWN_BASE_URLS=""
+      export FLEETCROWN_DAEMON_CHILD=1
       exec "$0"
     ) &
     # Track child PIDs so the parent can self-terminate when one dies. A
     # forked child's `kill -TERM "$$"` only stops itself; systemd supervises
     # the parent and not the children, so without this the parent kept
     # polling its URL while the sibling silently disappeared (observed
-    # 2026-06-01: cockpitapp.vercel.app dispatches queued for hours after
+    # 2026-06-01: old fleetcrown.vercel.app dispatches queued for hours after
     # the Vercel-bound child gave up).
     _DAEMON_CHILD_PIDS+=("$!")
   done
   # Parent owns the first URL; strip plural so its own startup is single-URL.
-  export COCKPIT_BASE_URL="$(echo "${_DAEMON_BASES[0]}" | xargs)"
-  export COCKPIT_BASE_URLS=""
+  export FLEETCROWN_BASE_URL="$(echo "${_DAEMON_BASES[0]}" | xargs)"
+  export FLEETCROWN_BASE_URLS=""
 fi
 
 _REMOTE_URL="$(_brand_env BASE_URL "https://${APP_DOMAIN}")"
@@ -83,13 +85,14 @@ umask 077
 printf 'Authorization: Bearer %s\n' "$TOKEN" > "$_AUTH_HEADER"
 
 # Single-instance lock — per-URL so multi-source daemons coexist.
-_lock_suffix=$(echo "${COCKPIT_BASE_URL:-default}" | tr -c 'a-zA-Z0-9' '_' | cut -c1-40)
+_lock_suffix=$(echo "${FLEETCROWN_BASE_URL:-${COCKPIT_BASE_URL:-default}}" | tr -c 'a-zA-Z0-9' '_' | cut -c1-40)
 _DAEMON_LOCK="${XDG_RUNTIME_DIR:-/tmp}/${APP_SLUG}-daemon-${_lock_suffix}.lock"
 mkdir -p "$(dirname "$_DAEMON_LOCK")" 2>/dev/null || true
 exec 9>"$_DAEMON_LOCK"
 if ! flock -n 9; then
-  echo "[${APP_SLUG}-daemon] ERROR: another daemon for ${COCKPIT_BASE_URL:-default} is already running." >&2
-  echo "[${APP_SLUG}-daemon] Use: systemctl --user restart cockpit-daemon" >&2
+  _base_for_err="${FLEETCROWN_BASE_URL:-${COCKPIT_BASE_URL:-default}}"
+  echo "[${APP_SLUG}-daemon] ERROR: another daemon for ${_base_for_err} is already running." >&2
+  echo "[${APP_SLUG}-daemon] Use: systemctl --user restart fleetcrown-daemon" >&2
   exit 1
 fi
 
@@ -113,7 +116,7 @@ sync_legacy_hook_runtime() {
 # Each process owns exactly one base URL (set by the multi-source split above).
 # Earlier versions probed localhost vs the configured remote per request and
 # cached the choice; multi-source polling makes that obsolete — instead, every
-# extra URL gets its own forked daemon child with its own COCKPIT_BASE_URL.
+# extra URL gets its own forked daemon child with its own FLEETCROWN_BASE_URL.
 _base_url() {
   echo "$_REMOTE_URL"
 }
@@ -754,8 +757,8 @@ execute_repair_helper() {
     log "repair_helper failed ✗"
     return 0
   fi
-  chmod +x "$install_dir/cockpit-daemon.sh" "$install_dir/cockpit" \
-    "$install_dir/agent-hook-bridge.sh" "$install_dir/install-daemon.sh" 2>/dev/null || true
+  chmod +x "$install_dir/fleetcrown-daemon.sh" "$install_dir/fleet" \
+    "$install_dir/agent-hook-bridge.sh" "$install_dir/install-fleetcrown-daemon.sh" 2>/dev/null || true
   rm -rf "$tmp"
   sync_legacy_hook_runtime
   mark_done "$id" "true"
@@ -801,7 +804,7 @@ execute_transcription() {
 
   # Run Whisper — reads model from beacon settings if set, else "base"
   local model="base"
-  local settings_file="${BEACON_SETTINGS_PATH:-$HOME/.config/cockpit/beacon.json}"
+  local settings_file="${BEACON_SETTINGS_PATH:-$HOME/.config/fleetcrown/beacon.json}"
   if [ -f "$settings_file" ]; then
     local m
     m=$(jq -r '.whisper_model // empty' "$settings_file" 2>/dev/null)
@@ -1327,13 +1330,13 @@ rm -f "/tmp/cockpit-sleep-mode" 2>/dev/null || true
 # sit unapplied for hours. Background — non-blocking; daemon proceeds even
 # if cloud is unreachable.
 #
-# Gate on COCKPIT_DAEMON_CHILD == "" so only the *parent* daemon syncs.
+# Gate on FLEETCROWN_DAEMON_CHILD (or legacy COCKPIT_) so only the *parent* daemon syncs.
 # Multi-source forks one child per extra URL; each child shares the same
 # host filesystem and ~/.config, so child syncs would just duplicate the
 # parent's work (2× HTTPS to /api/agent/projects per cycle). Atomic
 # os.replace in the sync script makes either-or safe; parent-only keeps it
 # clean. Both the initial sync and the periodic loop are gated.
-if [ -z "${COCKPIT_DAEMON_CHILD:-}" ]; then
+if [ -z "${FLEETCROWN_DAEMON_CHILD:-${COCKPIT_DAEMON_CHILD:-}}" ]; then
   python3 "$SCRIPT_DIR/sync-agent-runtime-config.py" >/dev/null 2>&1 &
 
   # Periodic re-sync so changes made via the web UI propagate within ~5 min
@@ -1474,6 +1477,6 @@ while true; do
     kill "$_PUSH_PID" 2>/dev/null || true
     rm -f "$_AUTH_HEADER"
     # Re-exec the same script tree we are running from — not a stale hosted bundle.
-    exec "$SCRIPT_DIR/cockpit-daemon.sh"
+    exec "$SCRIPT_DIR/fleetcrown-daemon.sh"
   fi
 done

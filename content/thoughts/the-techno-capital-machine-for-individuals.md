@@ -62,7 +62,7 @@ That is the version of the future Cockpit + OrangeCat are sized for. Nine billio
 
 ## The Honest Note On What This Requires
 
-This is not a five-year build. The convergence essays (*The Two Halves of the Individual Singularity*, *From Two AIs to One*, *Where Stakeholders Live*) lay out a multi-phase programme. The roadmap on cockpitapp.vercel.app names the phases: local fleet runner → remote control channel → mobile → cloud agents → teams → convergence → stakeholder graph → economy integration → robotics.
+This is not a five-year build. The convergence essays (*The Two Halves of the Individual Singularity*, *From Two AIs to One*, *Where Stakeholders Live*) lay out a multi-phase programme. The roadmap on fleetcrown.vercel.app names the phases: local fleet runner → remote control channel → mobile → cloud agents → teams → convergence → stakeholder graph → economy integration → robotics.
 
 Each phase is concrete engineering. The settlement layer (Bitcoin/Lightning, OrangeCat's actor system) scales by physics. The production layer (Cockpit's agent fleet, autonomy ladder, approval queue) scales horizontally per user. The convergence is where the hard architectural work is — turning two AIs into one agent, two graphs into one graph, two approval surfaces into one inbox.
 

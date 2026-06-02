@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 
-const CACHE_PREFIX = "cockpit-ivy-nudge-v1:";
+const CACHE_PREFIX = "fleetcrown-ivy-nudge-v1:";
 const CACHE_TTL_MS = 60 * 60 * 1000; // one hour
 
 type CacheEntry = { composed: string; expiresAt: number };

@@ -106,14 +106,14 @@ function runTests(): void {
 
   check("Stop hook loads daemon.env for production URL and token", () => {
     const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
-    assert(/_load_cockpit_daemon_env/.test(sh), "hook must load ~/.config/cockpit/daemon.env");
+    assert(/_load_cockpit_daemon_env/.test(sh), "hook must load ~/.config/fleetcrown/daemon.env");
     assert(/COCKPIT_BASE_URL/.test(sh), "hook must honor COCKPIT_BASE_URL");
     assert(/daemon\.env.*COCKPIT_\$\{key\}/.test(sh.replace(/\n/g, " ")),
       "token helper must read COCKPIT_DAEMON_TOKEN from daemon.env");
   });
 
   check("Daemon autopilot watchdog backs up Stop hook", () => {
-    const sh = readFileSync("scripts/cockpit-daemon.sh", "utf8");
+    const sh = readFileSync("scripts/fleetcrown-daemon.sh", "utf8");
     assert(/_autopilot_watchdog/.test(sh), "daemon must include autopilot watchdog");
     assert(/agent-hook-bridge\.sh" autopilot/.test(sh), "watchdog must delegate to hook bridge");
   });
@@ -145,7 +145,7 @@ function runTests(): void {
   });
 
   check("Daemon watchdog detects session handoff without Stop hook", () => {
-    const sh = readFileSync("scripts/cockpit-daemon.sh", "utf8");
+    const sh = readFileSync("scripts/fleetcrown-daemon.sh", "utf8");
     assert(/ready_source="handoff"/.test(sh), "watchdog must detect status:ready handoff files");
     assert(/handoff:\$\{ready_at\}/.test(sh), "handoff dedupe key must prevent re-fire loops");
   });

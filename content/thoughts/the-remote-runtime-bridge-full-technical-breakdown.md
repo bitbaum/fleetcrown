@@ -22,7 +22,7 @@ The daemon runs as a `systemd` user service:
 Type=simple
 WorkingDirectory=/home/g/dev/cockpit
 ExecStart=/bin/bash /home/g/dev/cockpit/scripts/cockpit-daemon.sh
-Environment=COCKPIT_BASE_URL=https://cockpitapp.vercel.app
+Environment=COCKPIT_BASE_URL=https://fleetcrown.vercel.app
 Environment=COCKPIT_DAEMON_TOKEN=<token>
 ```
 

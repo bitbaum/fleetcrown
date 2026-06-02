@@ -1,5 +1,5 @@
 /**
- * Cockpit service worker — handles Web Push events.
+ * FleetCrown service worker — handles Web Push events.
  *
  * Scope: root ("/") so notifications fire regardless of which app page is open
  * (or none — that's the point of background push).
@@ -18,7 +18,7 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Cockpit", body: "Agent update", url: "/control", tag: "cockpit" };
+  let data = { title: "FleetCrown", body: "Agent update", url: "/control", tag: "fleetcrown" };
   if (event.data) {
     try { data = { ...data, ...event.data.json() }; }
     catch { data.body = event.data.text() || data.body; }
@@ -40,7 +40,7 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    // Focus a cockpit tab if one's already open; navigate it to the target.
+    // Focus a FleetCrown tab if one's already open; navigate it to the target.
     for (const client of all) {
       try {
         const u = new URL(client.url);

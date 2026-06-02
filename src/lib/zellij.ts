@@ -55,6 +55,18 @@ function getTabsForSessionSync(session: string): string[] {
   return [];
 }
 
+/** Find which Zellij session (if any) currently hosts a tab with the given name (case-insensitive match on tab). */
+function findSessionForTab(tab: string): string | null {
+  const sessions = getZellijSessionsSync();
+  for (const s of sessions) {
+    const tabs = getTabsForSessionSync(s);
+    if (tabs.some((t) => t.toLowerCase() === tab.toLowerCase())) {
+      return s;
+    }
+  }
+  return null;
+}
+
 /** Query Zellij for currently open tab names. Returns [] if Zellij is unavailable. */
 export async function getZellijTabs(): Promise<string[]> {
   const sessions = getZellijSessionsSync();
@@ -73,10 +85,19 @@ export async function getZellijTabs(): Promise<string[]> {
 
 const DUMP_CMD = `zellij action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
 
+/** Build a dump-layout command qualified to a specific session when known. */
+function buildDumpCmd(session: string | null): string {
+  if (session) {
+    return `zellij --session ${shellEscape(session)} action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
+  }
+  return DUMP_CMD;
+}
+
 /** Return the name of the currently focused Zellij tab, or null if unavailable. */
-function getCurrentTab(): string | null {
+function getCurrentTab(sessionHint: string | null = null): string | null {
   try {
-    const result = execFileSync("bash", ["-c", DUMP_CMD], { timeout: 2000 }).toString().trim();
+    const cmd = buildDumpCmd(sessionHint);
+    const result = execFileSync("bash", ["-c", cmd], { timeout: 2000 }).toString().trim();
     return result || null;
   } catch {
     return null;
@@ -91,11 +112,12 @@ function getCurrentTab(): string | null {
  * matches and writing characters then types into whatever pane IS focused,
  * which can be the user's private terminal session.
  */
-function waitForTabFocus(tab: string, maxWaitMs = 1000): boolean {
+function waitForTabFocus(tab: string, maxWaitMs = 1000, session: string | null = null): boolean {
   const deadline = Date.now() + maxWaitMs;
+  const cmd = buildDumpCmd(session);
   while (Date.now() < deadline) {
     try {
-      const active = execFileSync("bash", ["-c", DUMP_CMD], { timeout: 2000 }).toString().trim();
+      const active = execFileSync("bash", ["-c", cmd], { timeout: 2000 }).toString().trim();
       if (active === tab) return true;
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
     execSync("sleep 0.05");
@@ -130,14 +152,18 @@ export function isUserTypingInTab(tab: string): boolean {
  * any characters first. Use for interrupt signals where write-chars would be wrong.
  */
 export function sendRawKey(tab: string, keyCode: number): void {
-  const originalTab = getCurrentTab();
-  execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
-  if (!waitForTabFocus(tab)) {
+  const session = findSessionForTab(tab);
+  const originalTab = getCurrentTab(session);
+  const go = session ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}` : `zellij action go-to-tab-name ${shellEscape(tab)}`;
+  const write = session ? `zellij --session ${shellEscape(session)} action write ${keyCode}` : `zellij action write ${keyCode}`;
+  execSync(go);
+  if (!waitForTabFocus(tab, 1000, session)) {
     throw new Error(`sendRawKey: zellij tab "${tab}" did not gain focus within 1s — is the tab open?`);
   }
-  execSync(`zellij action write ${keyCode}`);
+  execSync(write);
   if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
-    try { execSync(`zellij action go-to-tab-name ${shellEscape(originalTab)}`); } catch { /* best effort */ }
+    const restore = session && originalTab ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}` : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
+    try { execSync(restore); } catch { /* best effort */ }
   }
 }
 
@@ -145,24 +171,38 @@ export function injectIntoTab(tab: string, prompt: string): void {
   // Capture where the user currently is so we can restore it after injection.
   // Zellij has no "write to unfocused pane" command — we must switch tabs to inject.
   // Switching back immediately keeps the disruption to a sub-200ms flash.
-  const originalTab = getCurrentTab();
+  const session = findSessionForTab(tab);
+  const originalTab = getCurrentTab(session);
 
   // go-to-tab-name is fire-and-forget; confirm the switch landed before
   // sending characters so write-chars never types into the wrong pane.
-  execSync(`zellij action go-to-tab-name ${shellEscape(tab)}`);
-  if (!waitForTabFocus(tab)) {
+  // Use --session when we know it (multi-session safety) and the -- separator for write-chars.
+  const go = session
+    ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`
+    : `zellij action go-to-tab-name ${shellEscape(tab)}`;
+  execSync(go);
+  if (!waitForTabFocus(tab, 1000, session)) {
     // Hard fail — typing into the wrong pane would garble the user's
     // private terminal. Surface this so the caller (home/worker.ts or
     // any of the API routes) emits a worker.crashed event / 500 instead
     // of silently corrupting whatever pane is focused.
     throw new Error(`injectIntoTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
   }
-  execSync(`zellij action write-chars ${shellEscape(prompt)}`);
+
+  // Use -- to stop option parsing in case the prompt text starts with a dash.
+  const writeChars = session
+    ? `zellij --session ${shellEscape(session)} action write-chars -- ${shellEscape(prompt)}`
+    : `zellij action write-chars -- ${shellEscape(prompt)}`;
+  execSync(writeChars);
   execSync("sleep 0.1");
-  execSync("zellij action write 13");
+  const enter = session ? `zellij --session ${shellEscape(session)} action write 13` : `zellij action write 13`;
+  execSync(enter);
 
   // Restore original tab so the user's terminal view doesn't permanently change.
   if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
-    try { execSync(`zellij action go-to-tab-name ${shellEscape(originalTab)}`); } catch { /* best effort */ }
+    const restore = session
+      ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}`
+      : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
+    try { execSync(restore); } catch { /* best effort */ }
   }
 }

@@ -30,7 +30,7 @@ export const ROUTES = {
 //   - "link" → single direct link in the top nav
 //   - "external" → link to another origin (sibling product, etc.)
 //                  Rendered with an explicit external-target indicator so
-//                  visitors know they are leaving cockpitapp.vercel.app.
+//                  visitors know they are leaving fleetcrown.vercel.app.
 // The shape is per-entry so we never paint a one-item dropdown.
 
 export type PublicNavItem = NavLink & { description: string };

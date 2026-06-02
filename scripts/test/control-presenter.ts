@@ -214,7 +214,7 @@ function runTests(): void {
 
   check("direct-terminal observation is surfaced as Working", () => {
     // Daemon-side path for prompts the user typed directly into Claude (no
-    // FleetCrown dispatch sentinel). cockpit-daemon.sh sets currentPrompt.key to
+    // FleetCrown dispatch sentinel). fleetcrown-daemon.sh sets currentPrompt.key to
     // "direct_terminal" with startedAt = the transcript's mtime when the tab is
     // open, no other prompt is tracked, and the agent has not just signaled
     // ready. The presenter must treat this exactly like any tracked prompt so

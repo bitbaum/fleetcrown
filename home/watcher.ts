@@ -8,7 +8,7 @@
  * about the run without modifying the agent's stop-hook scripts.
  *
  * This is deliberately observer-only:
- *   - existing scripts/cockpit-daemon.sh + scripts/agent-hook-bridge.sh
+ *   - existing scripts/fleetcrown-daemon.sh + scripts/agent-hook-bridge.sh
  *     keep running unchanged
  *   - existing /tmp/agent-* sentinels keep being written
  *   - the new Brain just gets a parallel view via the JSONL log

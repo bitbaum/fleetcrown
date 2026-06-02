@@ -38,13 +38,13 @@ Implementation: `src/lib/db-url.ts` — `getDatabasePoolUrl()`, `getDatabaseDire
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Laptop: docker compose up db                                │
-│   DATABASE_URL=postgresql://cockpit:changeme@localhost:5432/cockpit
+│   DATABASE_URL=postgresql://fleetcrown:changeme@localhost:5432/fleetcrown
 │   (never the cloud URL in .env.local)                       │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │ Vercel (unchanged app code when host changes)               │
-│   DATABASE_URL=postgresql://user:pass@host:5432/cockpit     │
+│   DATABASE_URL=postgresql://user:pass@host:5432/fleetcrown     │
 │   DATABASE_POOL_URL=postgresql://user:pass@host:6432/cockpit │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -55,7 +55,7 @@ One VM, Postgres 17, optional PgBouncer:
 
 ```bash
 # On the VM (example)
-createdb cockpit
+createdb fleetcrown
 createdb kivvi
 createdb revampit
 # … one DB per project
@@ -71,13 +71,13 @@ Point each Vercel project at its own database name on the same host.
 
 ```bash
 # 1. Backup source
-DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh cockpit-pre-migrate.sql.gz
+DATABASE_URL="$OLD_DIRECT_URL" ./scripts/db/dump.sh fleetcrown-pre-migrate.sql.gz
 
 # 2. Create empty DB on new host, push schema
 DATABASE_URL="$NEW_DIRECT_URL" npm run migrate
 
 # 3. Restore
-DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh cockpit-pre-migrate.sql.gz
+DATABASE_URL="$NEW_DIRECT_URL" ./scripts/db/restore.sh fleetcrown-pre-migrate.sql.gz
 
 # 4. Update Vercel env (both URLs), redeploy
 # 5. Smoke test sign-in + one CRUD path + Control daemon push

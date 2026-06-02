@@ -14,6 +14,12 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 - "Sync to Web" (after pasting a ck_* agent token) posts runtime snapshot + projects so the hosted control plane at fleetcrown.vercel.app sees this desktop as the live local runner for those projects. Auto-syncs on connect.
 - Runs standalone as your local authoritative runtime. Web /control and desktop dispatch both drive the same local Zellij sessions.
 
+**Known gaps (prototype phase — desktop-2/3 in progress)**:
+- Dispatch now uses real `appendEvent` (bridge.dispatch + worker.started/crashed with runId + sentinel) so runs originating from the desktop produce durable events in `~/.fleetcrown/events.jsonl` that any home/ consumer (web /control when synced as runtime, other tools) will see. Local UI snapshot uses eager applyLocal for immediate response.
+- No embedded watcher yet (session.md → worker.idle). Idle / handoff observation still requires a co-running `home/watcher.ts` (or legacy beacon/daemon). The desktop participates correctly as a dispatch source in the shared log.
+- Full "desktop is the brain" (tail log, serve state, run decide loop internally) is the remaining desktop-2/3 slice. Current state: dispatches are authoritative in the log; UI state is a local projection of the events *this process* has seen.
+- See `docs/desktop-app.md` (Execution Log + Readiness) for precise status and the path to a single-process authoritative runtime.
+
 ## Get the runnable app (Linux example)
 
 ```bash
@@ -35,7 +41,7 @@ chmod +x dist/Fleet\ Runner-0.1.0.AppImage
 In the app:
 - Projects from your `agent-projects.conf` are listed.
 - Select one, dispatch intents or type custom prompt.
-- Paste agent token from Cockpit web → Settings to connect it as your local runtime.
+- Paste agent token from FleetCrown web → Settings to connect it as your local runtime.
 
 On macOS/Windows use `npm run dist:mac` or `dist:win` on a machine of that platform.
 

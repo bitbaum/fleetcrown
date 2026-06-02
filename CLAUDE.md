@@ -1,14 +1,14 @@
-# Cockpit — Life Operating System
+# FleetCrown — Life Operating System
 
 @~/.claude/CLAUDE.md
 
 ## Mission
 
-Cockpit is a personal life OS and AI agent fleet for builders running multiple projects simultaneously. One interface to track goals, people, habits, money, and events; one neutral orchestration layer to dispatch and monitor AI agents across projects — so the builder stays in judgment mode while agents handle execution.
+FleetCrown is a personal life OS and AI agent fleet for builders running multiple projects simultaneously. One interface to track goals, people, habits, money, and events; one neutral orchestration layer to dispatch and monitor AI agents across projects — so the builder stays in judgment mode while agents handle execution.
 
 ## What This Is
 
-Cockpit is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
+FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across projects. Users sign in (GitHub OAuth), register their projects, and launch/monitor AI agents from a single dashboard. Dark-first, mobile-ready, designed for builders who want control without complexity.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Cockpit is a multi-user SaaS platform for commanding AI agent fleets across proj
 - **TypeScript strict** — no `any` without justification
 - **Tailwind CSS 4 + shadcn/ui** — always dark mode (`.dark` class on html)
 - **Drizzle ORM** — schema is SSOT for types (`$inferSelect`, `$inferInsert`)
-- **PostgreSQL 17** (self-hosted, `cockpit` database)
+- **PostgreSQL 17** (self-hosted, `fleetcrown` database — migration from "cockpit" name in progress)
 
 ## Architecture
 
@@ -60,7 +60,7 @@ home/              → Local-first agent orchestration stack — runs on the use
 
 ### Design System — The Four-Layer Architecture
 
-Every pixel in Cockpit flows through exactly four layers in order. Any shortcut past a layer is a violation.
+Every pixel in FleetCrown flows through exactly four layers in order. Any shortcut past a layer is a violation.
 
 ```
 Layer 1  globals.css :root / .dark     → Raw values: OKLCH colors, rem sizes, shadows

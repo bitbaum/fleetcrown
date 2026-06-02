@@ -4,7 +4,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { APP_SLUG } from "@/config/brand";
 
 // WM_CLASS the pre-warmed beacon window is launched with. Must match
-// scripts/cockpit-beacon-window.sh:BEACON_WM_CLASS (also derived from
+// scripts/fleetcrown-beacon-window.sh:BEACON_WM_CLASS (also derived from
 // APP_SLUG) and the same constant in window/show/route.ts.
 const BEACON_WM_CLASS = `${APP_SLUG}-beacon`;
 

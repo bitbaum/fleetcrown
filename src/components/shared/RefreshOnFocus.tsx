@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
+import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 /**
  * When the tab returns visible after ≥30s hidden, fire a router.refresh() +
@@ -34,7 +34,7 @@ export function RefreshOnFocus() {
       hiddenAt.current = null;
       if (wentHiddenAt && Date.now() - wentHiddenAt >= REFRESH_THRESHOLD_MS) {
         router.refresh();
-        window.dispatchEvent(new CustomEvent(COCKPIT_REFRESH_EVENT));
+        window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
       }
     };
     document.addEventListener("visibilitychange", handler);

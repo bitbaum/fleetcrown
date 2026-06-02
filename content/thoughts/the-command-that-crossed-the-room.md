@@ -41,7 +41,7 @@ When you use Cockpit remotely — from your phone, from another city, from a caf
 
 To cross that air gap, Cockpit uses a two-part system.
 
-**The cloud side** is the Cockpit website — cockpitapp.vercel.app — which runs on servers in the internet. When you send an instruction from your phone, it reaches those servers first. The servers cannot deliver the instruction to your computer directly. Instead, they write it down in a queue: a list of pending instructions stored in a database, waiting to be picked up.
+**The cloud side** is the Cockpit website — fleetcrown.vercel.app — which runs on servers in the internet. When you send an instruction from your phone, it reaches those servers first. The servers cannot deliver the instruction to your computer directly. Instead, they write it down in a queue: a list of pending instructions stored in a database, waiting to be picked up.
 
 **The local side** is a small program running quietly in the background on your computer called the daemon. Its only job is to watch that queue. Every five seconds, it asks the servers: is there anything new for me? If there is, it picks up the instruction and delivers it to the correct agent on your local machine. If there is nothing, it waits and asks again.
 

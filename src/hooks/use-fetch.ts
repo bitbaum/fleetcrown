@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getJson } from "@/lib/api/fetch";
-import { COCKPIT_REFRESH_EVENT } from "@/lib/client-events";
+import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 /**
  * Default abort ceiling for every useFetch call. Individual sites can pass
@@ -74,8 +74,8 @@ export function useFetch<T>(
   useEffect(() => {
     if (!url) return;
     const handler = () => setRevision((v) => v + 1);
-    window.addEventListener(COCKPIT_REFRESH_EVENT, handler);
-    return () => window.removeEventListener(COCKPIT_REFRESH_EVENT, handler);
+    window.addEventListener(FLEETCROWN_REFRESH_EVENT, handler);
+    return () => window.removeEventListener(FLEETCROWN_REFRESH_EVENT, handler);
   }, [url]);
 
   return { data, loading, error, refetch };

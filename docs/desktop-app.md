@@ -152,12 +152,21 @@ This doc will be updated as we execute. The goal is to treat the architecture es
 
 - Packaged binaries now produced: `desktop/dist/FleetCrown Fleet Runner-0.1.0.AppImage` (104 MB, runnable on Linux) and `.deb`.
 - Users can follow the instructions on `/download` (and the updated component) to clone + `npm run dist:linux` (or equivalent for their OS) and immediately run a native x.ai-styled Fleet Runner that integrates the real home/ runtime logic.
-- Dispatch now renders real prompts (via orchestration renderers) and makes a best-effort injection into a running zellij session/tab matching the project key (falls back gracefully with the prompt shown in the UI).
-- The desktop app is the local runtime you can start using today for your projects (reads your existing config, owns decide/state, attempts execution).
-- Web download section and /download page updated with concrete steps.
-- Still early (no signed releases/auto-update yet, token connection to hosted is manual like the old daemon, full watcher/worker loop and multi-adapter injection coming next). But it is downloadable (via build) and functional enough to run real dispatches locally.
+- Dispatch now renders real prompts (via orchestration renderers) and makes a best-effort injection into a running zellij session/tab matching the project key (falls back gracefully with the prompt shown in the UI). Uses the *canonical* `injectIntoTab` (go-to-tab + focus guard + write-chars + Enter + restore) — same code as daemon + home/worker.
+- "Sync to Web" + auto-sync on token connect: posts projects + observed runtime state to the hosted `/api/control/runtime-state` using the ck_* token. Web /control then treats this desktop as the live local runner for those projects.
+- Project selection + custom free-text prompts: the UI lets you pick a project and type arbitrary instructions; they are forwarded as `queueHead` for `custom` intent and rendered end-to-end.
+- The desktop app is the local runtime you can start using today for your projects (reads your existing config, owns decide + render, attempts execution, surfaces results).
+- Web download section and /download page updated with concrete steps. Settings + landing promote the desktop as the preferred local runtime.
+- Still early (no signed releases/auto-update yet, full watcher/worker loop + real event log projection inside the app not yet wired — see gaps below). But it is downloadable (via build), builds clean, and functional enough to run real dispatches locally from both the native UI and the web when synced.
 
-This is the Fleet Runner becoming real. Legacy daemon still works in parallel.
+**Known gaps (current prototype — desktop-2/3 incomplete)**:
+- In-memory `currentState` only in `desktop/src/main/runtime.ts`. Dispatches call `HomeState.applyEvent` on a transient object; no `HomeEmit.appendEvent` to `~/.fleetcrown/events.jsonl`.
+- No embedded watcher / worker. The desktop directly invokes `injectIntoTab` inside `dispatchIntent`. The real home/ idle detection (session.md → worker.idle), full run lifecycle (worker.started/finished/crashed), persistence, and multi-process projection are not running inside the Electron main process yet.
+- To get the full authoritative local loop you currently run the separate `home/` trio (`npx tsx home/server.ts --start`, watcher, worker) or the legacy daemon alongside. Future: the desktop main becomes a drop-in "Brain+Bridge+Worker" host so one process owns the log + UI + injection.
+- State shown in desktop UI and what the web sees after "Sync to Web" is a snapshot at connect/dispatch time, not a live projection from the shared event log.
+- No tray, notifications, or auto-restart of the runtime loop yet.
+
+This is the Fleet Runner becoming real. Legacy daemon + home/ stack still works in parallel for headless / transition use. See "Execution Log" for precise phase status.
 
 ## Execution Log (immediate actions taken)
 
@@ -198,4 +207,20 @@ The alias hacks remain (for prototype); next logical is the packages/local-runti
 
 All changes keep daemon untouched, follow quality (tsc clean, builds pass), and advance the plan.
 
-All changes are small, buildable, and keep the daemon path untouched. This is executing the plan.
+**desktop-2 + desktop-3 (home/ runtime + basic usable UI, first full slice shipped)**: Landed in 2d98638 + follow-ups.
+
+- Full project selection in renderer, custom prompt bar that forwards `queueHead` for `custom` intent (free-text commands work end-to-end with renderTaskForAdapter).
+- Canonical `injectIntoTab` wired (same as worker/daemon); graceful fallback shows the rendered prompt in the UI when zellij not reachable.
+- "Sync to Web" + auto-sync: posts to `/api/control/runtime-state` (Bearer ck_* token) so the hosted control plane sees this desktop instance as the authoritative local runtime. Web dispatches then flow through the normal orchestration path and hit the desktop's local Zellij.
+- Rebrand + polish pass: cockpit → fleetcrown everywhere in desktop, scripts, docs, marketing, home/, packages/agent, legal, thoughts. New `ui-public-download-*` classes + `--public-accent` token to eliminate design violations in the web download surface (zero raw hex / arbitrary text sizes / opacity hacks left in DesktopDownload.tsx).
+- Desktop README and `docs/desktop-app.md` updated with capabilities + explicit known gaps (in-memory vs real emit + watcher).
+- Quality: `npm run desktop:build` clean, root `npx tsc --noEmit` clean, `npm run lint` clean on changed files, `npm run test:home` 89/89, design audit clean for the public surfaces touched.
+- 70+ file follow-up (rebrand + desktop + docs + marketing) prepared for commit as "feat(desktop) + fix(design,lint): ...".
+- During this session: hardened `src/lib/zellij.ts` (session resolution via findSessionForTab + --session qualified actions + `--` separator for write-chars to match legacy robustness). Advanced runtime.ts dispatch to real appendEvent path (with started/crashed + sentinel) — the "use appendEvent + real worker idle path instead of fake" item from the prior next. Desktop dispatches are now first-class citizens of the shared event log.
+
+**Current prototype summary (post-landing)**:
+The app is usable for real work on a machine with zellij + claude running: build it, run it, connect token from web Settings, sync, dispatch from either surface. The "local authoritative runtime" story is demonstrable.
+
+The remaining desktop-2/3 work is the deeper port: make the Electron main process the actual host of the append-only log + watcher + worker so that desktop UI state, web /control (when this is the selected runtime), and the agent sessions are all projections of the *same* event source with no "fake" in-memory layer.
+
+All changes keep daemon + home/ trio untouched and working. This is executing the plan.
