@@ -1,0 +1,27 @@
+# Vercel uploads everything NOT excluded here when using `vercel --prod`
+# from CLI. .gitignore is only partially honored, so this is the
+# authoritative list of "things Vercel doesn't need to build the web app."
+
+# Desktop app — entirely separate runtime, not built or served by Vercel
+desktop/
+
+# Local-only toolchains and vendor dirs
+.local-toolchain/
+.python-vendor/
+
+# Build artifacts (also gitignored but listed here so vercel CLI honors)
+.next/
+node_modules/
+*.tsbuildinfo
+
+# Local backups + dev caches
+backups/
+.claude/
+.playwright-mcp/
+
+# Local env / vercel link state
+.env*
+.vercel/
+
+# Git internals
+.git/
