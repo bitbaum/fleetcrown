@@ -22,6 +22,7 @@ function App(): JSX.Element {
   const [connected, setConnected] = useState<boolean>(false)
   const [configDir, setConfigDir] = useState<string>('')
   const [selectedProject, setSelectedProject] = useState<string>('')
+  const [lastDispatch, setLastDispatch] = useState<any>(null)
 
   const refreshStatus = async () => {
     try {
@@ -133,12 +134,11 @@ function App(): JSX.Element {
     const target = selectedProject || projectKey
     setDispatching(target + ':' + intent)
     setResponse('')
+    setLastDispatch(null)
     try {
       const res = await window.fleetRunner.dispatchIntent({ projectKey: target, intent, queueHead: prompt })
-      setResponse(JSON.stringify(res, null, 2))
+      setLastDispatch(res)
       await refreshStatus()
-      const liveState = await window.fleetRunner.getCurrentState()
-      setResponse((prev) => prev + '\n\n' + JSON.stringify(liveState, null, 2))
     } catch (e) {
       setResponse('Error: ' + (e as Error).message)
     } finally {
@@ -169,7 +169,7 @@ function App(): JSX.Element {
           <h1 className="fleet-title tracking-[-1.5px] leading-none">
             The Fleet Runner<br />runs here.
           </h1>
-          <p className="mt-4 max-w-md text-[15px] text-[var(--text-muted)]">
+          <p className="mt-4 max-w-md text-base text-[var(--text-muted)]">
             Direct execution. No intermediaries. The desktop app is the source of truth for everything your agents do.
           </p>
 
@@ -303,6 +303,32 @@ function App(): JSX.Element {
           <div className="text-[length:var(--text-micro)] text-[var(--text-muted)] mt-1.5">Type a prompt or intent. Selected project (or first) will be used.</div>
         </div>
 
+        {/* Functioning dispatch result — nice card instead of raw blob */}
+        {lastDispatch && (
+          <div className="runner-card mt-6 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="runner-label">DISPATCH RESULT</div>
+              <div className={`text-[length:var(--text-micro)] px-2 py-0.5 rounded ${lastDispatch.injected ? 'bg-emerald-900 text-emerald-400' : 'bg-amber-900 text-amber-400'}`}>
+                {lastDispatch.injected ? 'INJECTED' : 'MANUAL PASTE NEEDED'}
+              </div>
+            </div>
+
+            {lastDispatch.renderedPrompt && (
+              <div className="mb-4">
+                <div className="runner-label mb-1.5">PROMPT SENT TO AGENT</div>
+                <div className="runner-result text-[var(--text)] whitespace-pre-wrap max-h-48 overflow-auto border border-[var(--border)]">
+                  {lastDispatch.renderedPrompt}
+                </div>
+              </div>
+            )}
+
+            <div className="text-[length:var(--text-micro)] text-[var(--text-muted)]">
+              project: {lastDispatch.projectKey} · intent: {lastDispatch.intent} · runId: {lastDispatch.runId?.slice(0,8) || '—'}
+            </div>
+          </div>
+        )}
+
+        {/* Error / other responses */}
         {response && (
           <div className="runner-result mt-4 text-[var(--text-muted)] whitespace-pre-wrap overflow-auto max-h-56 text-xs border border-[var(--border)]">
             {response}
