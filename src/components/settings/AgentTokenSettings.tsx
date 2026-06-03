@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, Plus, Trash2, Loader2, Terminal } from "lucide-react";
+import { Copy, Check, Plus, Trash2, Loader2, Terminal, ExternalLink } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
 import { APP_URL } from "@/config/brand";
 
@@ -127,6 +127,25 @@ export function AgentTokenSettings() {
               {copiedKey === "token" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
+          {/* Deep-link: hands the freshly-revealed token to the desktop app
+              without a manual paste. Falls back gracefully — if Fleet Runner
+              isn't installed or the protocol isn't registered, the browser
+              shows its standard "this protocol isn't handled" dialog and the
+              user can still use the copy-token path above. */}
+          <a
+            href={`fleetcrown://auth?token=${encodeURIComponent(revealed.token)}`}
+            className="ui-btn-primary self-start gap-1.5 text-xs"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open in Fleet Runner
+          </a>
+          <p className="text-xs text-text-tertiary">
+            Requires Fleet Runner v0.2 or newer installed.{" "}
+            <a href="/download" className="underline">
+              Get it here
+            </a>
+            .
+          </p>
           <p className="text-xs text-text-tertiary flex items-center gap-1">
             <Terminal className="h-3 w-3 shrink-0" />
             Or one-shot install (token pre-filled, no prompt):

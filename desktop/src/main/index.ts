@@ -46,6 +46,30 @@ function resourcePath(name: string): string {
 const APP_ICON_PATH  = resourcePath('icon.png')
 const TRAY_ICON_PATH = resourcePath('tray-icon.png')
 
+// Bundled-binary directory. desktop/scripts/download-zellij.mjs drops a
+// platform-appropriate `zellij` here at prebuild time and electron-builder
+// packs the whole `resources/` tree into the installer. Prepending this to
+// PATH means every existing exec("zellij ...") in src/lib/zellij.ts and
+// home/worker.ts resolves to the bundled binary first, with the user's own
+// $PATH as fallback. No call-site changes needed.
+//
+// If the bundled binary is missing (dev box that hasn't run prebuild, custom
+// build that skipped the script), the PATH still works — the user just has
+// to have Zellij installed themselves, the original v0.1.0 contract.
+function bundledBinDir(): string {
+  const candidates = is.dev
+    ? [join(__dirname, '..', '..', 'resources', 'bin')]
+    : [join(process.resourcesPath, 'bin'), join(process.resourcesPath, 'resources', 'bin')]
+  for (const p of candidates) if (existsSync(p)) return p
+  return ''
+}
+
+const BUNDLED_BIN_DIR = bundledBinDir()
+if (BUNDLED_BIN_DIR) {
+  process.env.PATH = `${BUNDLED_BIN_DIR}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`
+  console.log(`[desktop] bundled bin prepended to PATH: ${BUNDLED_BIN_DIR}`)
+}
+
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
 // Tray is lifted to module scope so the poller's status callback can refresh
@@ -204,9 +228,103 @@ function createWindow(): void {
   })
 }
 
+// Deep-link auth: clicking `fleetcrown://auth?token=ck_...` from the web app
+// (the "Open in Fleet Runner" button on Settings → Agent tokens) hands the
+// token to the desktop app without copy-paste. The same flow Slack/Linear use.
+//
+// Protocol registration:
+//   - mac/Windows: app.setAsDefaultProtocolClient handles it directly.
+//   - Linux .deb: electron-builder writes a .desktop file declaring
+//     x-scheme-handler/fleetcrown, so xdg-open routes the URL to Fleet Runner.
+//   - Linux AppImage: protocol routing depends on the user's launcher.
+//     AppImageLauncher and most distros pick it up after first run; some
+//     don't. The web UI keeps the "copy token" fallback for that case.
+//
+// Cold-start handling (Linux/Win): a fleetcrown:// click launches Electron,
+// and the URL lands in process.argv. We scan it once at boot. Mac uses the
+// 'open-url' event (fired before app.whenReady), which we wire below.
+app.setAsDefaultProtocolClient('fleetcrown')
+
+// Pending URL captured before the main window exists. Filled by 'open-url'
+// on mac when the OS launches Fleet Runner via a deep-link before whenReady
+// resolves. The save-token logic consumes it the moment the window opens.
+let pendingDeepLink: string | null = null
+
+function extractTokenFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'fleetcrown:') return null
+    // Both /auth and //auth host paths are accepted — different platforms
+    // produce slightly different URL shapes for custom schemes and we don't
+    // want a punctuation difference to break the flow.
+    const path = `${u.host}${u.pathname}`.replace(/\/+/g, '/').replace(/^\//, '')
+    if (!path.startsWith('auth')) return null
+    const tok = u.searchParams.get('token')
+    return tok && tok.length >= 8 ? tok : null
+  } catch {
+    return null
+  }
+}
+
+function handleDeepLinkUrl(url: string) {
+  const tok = extractTokenFromUrl(url)
+  if (!tok) {
+    console.warn('[desktop] ignored malformed deep-link:', url)
+    return
+  }
+  // Persist via the same path the manual-paste flow uses, so there's only
+  // one code path for "token reached this machine" — easier to reason about.
+  try {
+    const configDir = join(homedir(), '.config', 'fleetcrown')
+    const tokenFile = join(configDir, 'fleet-runner-token')
+    if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true })
+    writeFileSync(tokenFile, tok.trim(), 'utf8')
+    restartPoller()
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) mainWindow.show()
+      mainWindow.focus()
+    }
+    console.log('[desktop] deep-link auth: token saved, poller restarted')
+  } catch (e) {
+    console.error('[desktop] deep-link auth failed:', (e as Error).message)
+  }
+}
+
+// Mac: 'open-url' fires when fleetcrown:// is clicked, even before whenReady.
+// Buffer it until the window exists.
+app.on('open-url', (event, url) => {
+  event.preventDefault()
+  if (mainWindow) handleDeepLinkUrl(url)
+  else pendingDeepLink = url
+})
+
+// Linux/Windows: only one Fleet Runner should run. A second invocation (from
+// a fleetcrown:// click after the app is already up) triggers second-instance
+// with the new argv; we scan it for the deep-link URL and surface the window.
+const gotLock = app.requestSingleInstanceLock()
+if (!gotLock) {
+  app.quit()
+} else {
+  app.on('second-instance', (_event, argv) => {
+    const url = argv.find((a) => a.startsWith('fleetcrown://'))
+    if (url) handleDeepLinkUrl(url)
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.fleetcrown.fleet-runner')
+
+  // Linux/Win cold-start: if Fleet Runner was launched directly via a
+  // fleetcrown:// click (not while already running), the URL is in argv.
+  // Buffer it so we apply it after the window finishes loading.
+  const argvUrl = process.argv.find((a) => a.startsWith('fleetcrown://'))
+  if (argvUrl) pendingDeepLink = argvUrl
 
   // Web-shell mode: mark requests with a Fleet-Runner UA suffix so the deployed
   // app can detect when it's being rendered inside the desktop shell (enabling
@@ -229,6 +347,13 @@ app.whenReady().then(() => {
 
   createWindow()
   createTray()
+
+  // Apply any deep-link captured before the window existed (mac open-url
+  // pre-whenReady, or Linux/Win argv URL). Token gets saved + poller restarts.
+  if (pendingDeepLink) {
+    handleDeepLinkUrl(pendingDeepLink)
+    pendingDeepLink = null
+  }
 
   // Start the embedded home/ watcher bridge inside the desktop main process.
   // This gives us the "real worker idle path": when a dispatched agent finishes

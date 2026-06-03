@@ -943,6 +943,15 @@
   .ui-public-download-command code {
     @apply block whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-white/70;
   }
+  .ui-public-download-command-row {
+    @apply flex items-start gap-3;
+  }
+  .ui-public-download-command-row code {
+    @apply flex-1 block whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-white/85;
+  }
+  .ui-public-download-command-copy {
+    @apply inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2.5 py-1.5 text-xs font-medium text-white/80 transition hover:border-white/30 hover:bg-white/15 hover:text-white;
+  }
   .ui-public-download-prereqs {
     @apply mb-10 border-t border-white/10 pt-9 text-left;
   }

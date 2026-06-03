@@ -328,21 +328,21 @@ export const DESKTOP_DOWNLOAD = {
   setupSteps: [
     {
       number: "01",
-      title: "Install and open the app",
+      title: "Make it runnable, then open",
       body:
-        "After download, open Fleet Runner like any other app. It launches with the same FleetCrown interface you already use on the web.",
+        "On Linux, downloads start non-executable for safety. Paste the one-line command shown under Download to mark Fleet Runner executable and launch it. On macOS and Windows (coming soon), a normal double-click is enough.",
     },
     {
       number: "02",
-      title: "Sign in or paste a token",
+      title: "Sign in — once",
       body:
-        "Use the same account you signed up with on the web. Or, from Settings → Agent tokens, copy a token and paste it into Fleet Runner to connect it as your local runner.",
+        "Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click \"Open in Fleet Runner\" to log the desktop app in without copy-pasting a token.",
     },
     {
       number: "03",
       title: "Dispatch your first intent",
       body:
-        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it's done — even if the app is hidden.",
+        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it hands off — even if the app is hidden. Make sure Zellij and at least one agent CLI are installed (see prerequisites below).",
     },
   ],
 
@@ -368,9 +368,9 @@ export const DESKTOP_DOWNLOAD = {
         },
       ],
       afterDownload:
-        "Make it executable, then open it like a normal app:",
+        "Linux marks downloads non-executable by default. Open a terminal and paste this one line — it makes the file runnable and launches it. If KDE / Dolphin blocked it \"for security reasons,\" this is the fix:",
       command:
-        "chmod +x 'Fleet Runner-0.1.0.AppImage' && './Fleet Runner-0.1.0.AppImage'",
+        "chmod +x ~/Downloads/Fleet.Runner-*.[aA]pp[iI]mage && ~/Downloads/Fleet.Runner-*.[aA]pp[iI]mage",
     },
     {
       id: "mac",
@@ -409,23 +409,23 @@ export const DESKTOP_DOWNLOAD = {
   prerequisites: {
     title: "What Fleet Runner uses on your computer",
     description:
-      "Fleet Runner doesn't replace the tools you already use — it drives them. Install the ones you want available to your agents. Zellij is the only one strictly required.",
+      "Fleet Runner doesn't replace the tools you already use — it drives them. Two things must exist on your machine for an agent to actually run: Zellij (terminal session manager) and at least one supported agent CLI. Pick whichever AI you prefer; you only need one to start.",
     items: [
       {
         title: "Zellij",
         role: "Terminal session manager",
         required: true,
         whyYouNeedIt:
-          "Fleet Runner gives each agent its own persistent terminal session so you can also attach to it manually. Zellij is what makes that possible.",
+          "Fleet Runner gives each agent its own persistent terminal session so you can also attach to it manually. Zellij is what makes that possible. One-line install on every major distro and macOS.",
         href: "https://zellij.dev/documentation/installation.html",
-        installLabel: "Install instructions",
+        installLabel: "Install Zellij",
       },
       {
         title: "Claude Code",
         role: "Anthropic's coding agent",
-        required: false,
+        required: true,
         whyYouNeedIt:
-          "One of the supported agents Fleet Runner can launch and steer. Install it if you want Claude available in your fleet.",
+          "One supported agent CLI is required — Claude Code is the recommended default. Skip this if you already plan to install Grok below; you only need one.",
         href: "https://code.claude.com/docs/en/installation",
         installLabel: "Install Claude Code",
         command: "npm install -g @anthropic-ai/claude-code",
@@ -435,7 +435,7 @@ export const DESKTOP_DOWNLOAD = {
         role: "xAI's coding agent",
         required: false,
         whyYouNeedIt:
-          "Another supported agent. Install it if you want Grok available alongside Claude.",
+          "Alternative agent CLI. Install instead of Claude Code, or alongside it if you want both available to the fleet.",
         href: "https://x.ai/cli",
         installLabel: "Install Grok CLI",
         command: "curl -fsSL https://x.ai/cli/install.sh | bash",

@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 
 type PlatformId = DesktopDownloadPlatform["id"];
@@ -208,8 +208,38 @@ function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPla
 
       <div className="ui-public-download-command">
         <span>{platform.afterDownload}</span>
-        <code>{platform.command}</code>
+        <CopyableCommand command={platform.command} />
       </div>
+    </div>
+  );
+}
+
+function CopyableCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API can fail on insecure origins or restricted browsers —
+      // the code is still visible and selectable, so this is non-blocking.
+    }
+  }
+
+  return (
+    <div className="ui-public-download-command-row">
+      <code>{command}</code>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={copied ? "Copied" : "Copy command"}
+        className="ui-public-download-command-copy"
+      >
+        {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+        <span>{copied ? "Copied" : "Copy"}</span>
+      </button>
     </div>
   );
 }
