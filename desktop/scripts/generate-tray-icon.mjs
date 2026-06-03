@@ -159,7 +159,10 @@ function renderMark(size) {
 const sizes = [
   { name: "tray-icon.png",    size: 22 },
   { name: "tray-icon@2x.png", size: 44 },
-  { name: "icon.png",         size: 256 },   // window + electron-builder icon
+  // 1024px: retina-ready and well above electron-builder's macOS minimum of
+  // 512x512. macOS dmg/iconset generation will downscale; Linux/Windows just
+  // use the source. Procedural renderer means no quality loss when scaling.
+  { name: "icon.png",         size: 1024 },  // window + electron-builder icon
 ];
 
 for (const { name, size } of sizes) {
