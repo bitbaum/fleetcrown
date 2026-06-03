@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 
@@ -83,19 +82,11 @@ export function DesktopDownload() {
               className={`ui-public-download-platform ${active.id === p.id ? "ui-public-download-platform-active" : "ui-public-download-platform-idle"}`}
             >
               {p.label}
-              {p.status === "comingSoon" && (
-                <span className="ui-public-download-platform-soon">soon</span>
-              )}
             </button>
           ))}
         </div>
 
-        {/* Per-platform CTA panel — branches on status so we never lie */}
-        {active.status === "ready" ? (
-          <ReadyPlatformPanel platform={active} />
-        ) : (
-          <ComingSoonPlatformPanel platform={active} />
-        )}
+        <ReadyPlatformPanel platform={active} />
 
         {/* 3-step "what happens next" — only relevant once a CTA is in view */}
         <div className="ui-public-download-steps">
@@ -244,48 +235,3 @@ function CopyableCommand({ command }: { command: string }) {
   );
 }
 
-function ComingSoonPlatformPanel({
-  platform,
-}: {
-  platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }>;
-}) {
-  const [showBuild, setShowBuild] = useState(false);
-  return (
-    <div className="ui-public-download-panel">
-      <div className="ui-public-download-soon">
-        <div className="ui-public-download-soon-badge">Coming soon</div>
-        <p className="ui-public-download-soon-message">{platform.comingSoonMessage}</p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <a
-            href={platform.watchReleasesUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ui-public-download-cta"
-          >
-            Watch the release feed
-            <span className="ui-public-download-cta-note">(GitHub Atom)</span>
-          </a>
-          <Link href="/" className="ui-public-download-secondary">
-            Use the web app instead →
-          </Link>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setShowBuild((s) => !s)}
-        className="ui-public-download-dev-toggle"
-        aria-expanded={showBuild}
-      >
-        <span>{platform.developerBuild.label}</span>
-        <span className="ui-public-download-dev-toggle-icon">{showBuild ? "−" : "+"}</span>
-      </button>
-      {showBuild && (
-        <div className="ui-public-download-dev-body">
-          <code className="ui-public-download-dev-command">{platform.developerBuild.command}</code>
-          <p className="ui-public-download-dev-block-body">{platform.developerBuild.note}</p>
-        </div>
-      )}
-    </div>
-  );
-}

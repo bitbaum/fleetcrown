@@ -342,7 +342,7 @@ export const DESKTOP_DOWNLOAD = {
       number: "03",
       title: "Dispatch your first intent",
       body:
-        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it hands off — even if the app is hidden. Make sure Zellij and at least one agent CLI are installed (see prerequisites below).",
+        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it hands off — even if the app is hidden. The terminal session manager ships inside Fleet Runner; you just need at least one agent CLI installed (Claude Code or Grok — see prerequisites below).",
     },
   ],
 
@@ -356,51 +356,60 @@ export const DESKTOP_DOWNLOAD = {
       status: "ready" as const,
       primary: {
         label: "Download AppImage",
-        note: "Recommended · ~120 MB",
+        note: "Recommended · ~108 MB",
+        // /releases/latest/download/... — GitHub redirects to the current
+        // release, so this URL survives future version bumps without a
+        // marketing-content edit per release.
         url:
-          "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/Fleet.Runner-0.1.0.AppImage",
+          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
       },
       secondary: [
         {
           label: ".deb (Ubuntu / Debian)",
           url:
-            "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/fleet-runner_0.1.0_amd64.deb",
+            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
         },
       ],
       afterDownload:
         "Linux marks downloads non-executable by default. Open a terminal and paste this one line — it makes the file runnable and launches it. If KDE / Dolphin blocked it \"for security reasons,\" this is the fix:",
       command:
-        "chmod +x ~/Downloads/Fleet.Runner-*.[aA]pp[iI]mage && ~/Downloads/Fleet.Runner-*.[aA]pp[iI]mage",
+        "chmod +x ~/Downloads/Fleet-Runner-linux-*.AppImage && ~/Downloads/Fleet-Runner-linux-*.AppImage",
     },
     {
       id: "mac",
       label: "macOS",
-      status: "comingSoon" as const,
-      comingSoonMessage:
-        "Signed .dmg installers are in production — automated cross-platform builds land first. Watch the release feed to get notified the moment they ship.",
-      watchReleasesUrl:
-        "https://github.com/maonakamoto/fleetcrown-releases/releases.atom",
-      developerBuild: {
-        label: "Developers: build from source",
-        command:
-          "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:mac",
-        note: "Requires Node 22+, Xcode command-line tools, and macOS.",
+      status: "ready" as const,
+      primary: {
+        label: "Download .dmg",
+        note: "Apple Silicon · ~98 MB",
+        url:
+          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
       },
+      secondary: [
+        {
+          label: ".zip (no installer)",
+          url:
+            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
+        },
+      ],
+      afterDownload:
+        "Open the .dmg, drag Fleet Runner to Applications, then launch it. First time only: macOS will warn \"Apple cannot check this for malicious software\" (we're not yet code-signed). Control-click the app → Open → Open. After that one bypass, it launches normally:",
+      command: "open ~/Applications/Fleet\\ Runner.app",
     },
     {
       id: "win",
       label: "Windows",
-      status: "comingSoon" as const,
-      comingSoonMessage:
-        "Signed installers are in production — automated cross-platform builds land first. Watch the release feed to get notified the moment they ship.",
-      watchReleasesUrl:
-        "https://github.com/maonakamoto/fleetcrown-releases/releases.atom",
-      developerBuild: {
-        label: "Developers: build from source",
-        command:
-          "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:win",
-        note: "Requires Node 22+, Windows build tools, and Windows.",
+      status: "ready" as const,
+      primary: {
+        label: "Download installer",
+        note: "x64 · ~81 MB",
+        url:
+          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-win-x64.exe",
       },
+      secondary: [],
+      afterDownload:
+        "Run the .exe. Windows SmartScreen may say \"unrecognized app\" (we're not yet code-signed). Click \"More info\" → \"Run anyway.\" The installer takes care of the rest:",
+      command: "Fleet-Runner-win-x64.exe",
     },
   ],
 
@@ -409,17 +418,8 @@ export const DESKTOP_DOWNLOAD = {
   prerequisites: {
     title: "What Fleet Runner uses on your computer",
     description:
-      "Fleet Runner doesn't replace the tools you already use — it drives them. Two things must exist on your machine for an agent to actually run: Zellij (terminal session manager) and at least one supported agent CLI. Pick whichever AI you prefer; you only need one to start.",
+      "Fleet Runner doesn't replace the tools you already use — it drives them. Only one thing must exist on your machine for an agent to actually run: a supported agent CLI. Pick whichever AI you prefer; you only need one to start. (Zellij — the terminal session manager that gives each agent its own pane — ships inside Fleet Runner since v0.2.0, so you no longer install it separately.)",
     items: [
-      {
-        title: "Zellij",
-        role: "Terminal session manager",
-        required: true,
-        whyYouNeedIt:
-          "Fleet Runner gives each agent its own persistent terminal session so you can also attach to it manually. Zellij is what makes that possible. One-line install on every major distro and macOS.",
-        href: "https://zellij.dev/documentation/installation.html",
-        installLabel: "Install Zellij",
-      },
       {
         title: "Claude Code",
         role: "Anthropic's coding agent",
@@ -439,6 +439,15 @@ export const DESKTOP_DOWNLOAD = {
         href: "https://x.ai/cli",
         installLabel: "Install Grok CLI",
         command: "curl -fsSL https://x.ai/cli/install.sh | bash",
+      },
+      {
+        title: "Zellij",
+        role: "Bundled — no install needed",
+        required: false,
+        whyYouNeedIt:
+          "Fleet Runner v0.2.0+ ships with a known-good Zellij inside the bundle and prefers it over any system install. Listed here only so you know what's running. Install it yourself only if you also want a system-wide Zellij outside Fleet Runner.",
+        href: "https://zellij.dev/documentation/installation.html",
+        installLabel: "Zellij docs (optional)",
       },
     ],
   },
