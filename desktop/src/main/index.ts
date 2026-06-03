@@ -72,6 +72,24 @@ if (BUNDLED_BIN_DIR) {
   console.log(`[desktop] bundled bin prepended to PATH: ${BUNDLED_BIN_DIR}`)
 }
 
+// Chromium SUID sandbox on Linux AppImage: the chrome-sandbox helper binary
+// inside an AppImage cannot have its setuid bit honored (AppImage mounts
+// the squashfs without it), so Chromium aborts at FATAL on launch with:
+//   "The SUID sandbox helper binary was found, but is not configured
+//   correctly. ... You need to make sure that ... chrome-sandbox is owned
+//   by root and has mode 4755."
+// This is the same issue every Electron AppImage hits (Slack, Discord,
+// VSCode, Cursor, Obsidian) — all ship with --no-sandbox. The renderer
+// sandbox is independently controlled by `sandbox: false` on webPreferences
+// (and remains disabled because we need Node integration in the renderer
+// for the @home/* and @/* imports).
+// Scoped to Linux because macOS and Windows AppImage equivalents (.dmg /
+// .exe) don't have the SUID-host wrinkle and benefit from keeping the
+// browser-process sandbox on.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox')
+}
+
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
 // Tray is lifted to module scope so the poller's status callback can refresh
