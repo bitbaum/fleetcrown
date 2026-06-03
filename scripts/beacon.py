@@ -125,7 +125,7 @@ def _read_beacon_choice_fs(session_id: str) -> str | None:
 
 # ── Browser window ─────────────────────────────────────────────────────────────
 #
-# The cockpit-beacon-window.service systemd user unit owns the pre-warmed
+# The fleetcrown-beacon-window.service systemd user unit owns the pre-warmed
 # brave/chromium --app window. beacon.py does NOT spawn its own — that path
 # created rogue, untargetable windows whenever the unit wasn't running.
 #
@@ -135,12 +135,14 @@ def _read_beacon_choice_fs(session_id: str) -> str | None:
 
 
 def _ensure_beacon_window_unit() -> None:
-    """Make sure cockpit-beacon-window.service is running. Idempotent and fast
-    (systemctl start on an already-active unit is a no-op).
+    """Make sure fleetcrown-beacon-window.service is running. Idempotent and fast
+    (systemctl start on an already-active unit is a no-op). Tries the canonical
+    fleetcrown-beacon-window first and the legacy cockpit-beacon-window second so
+    transitional installs that still have the old unit name keep working.
     """
     if shutil.which("systemctl"):
         subprocess.Popen(
-            ["systemctl", "--user", "start", "cockpit-beacon-window"],
+            ["systemctl", "--user", "start", "fleetcrown-beacon-window", "cockpit-beacon-window"],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -187,8 +189,11 @@ def _start_cockpit_background() -> None:
     FleetCrown boots, /api/beacon/sse picks it up on the next subscriber connect.
     """
     if shutil.which("systemctl"):
+        # Try canonical fleetcrown-app first; fall back to legacy cockpit-app for
+        # transitional installs. systemctl start is a no-op if the unit is already
+        # running, so the duplicate call is safe.
         subprocess.Popen(
-            ["systemctl", "--user", "start", "cockpit-app"],
+            ["systemctl", "--user", "start", "fleetcrown-app", "cockpit-app"],
             start_new_session=True,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )

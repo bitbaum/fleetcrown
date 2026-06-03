@@ -19,11 +19,17 @@ export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
 
   const session = await auth();
+  // Onboarding is an unfinished flow — keep the redirect so the user finishes it.
+  // But once onboarding is done, the homepage is just another public page they
+  // are allowed to read. PublicHeaderActions surfaces an "Open FleetCrown →"
+  // entry into the app for signed-in visitors.
+  let signedIn = false;
   if (session?.user) {
     const done =
       session.user.onboardingComplete === true ||
       Boolean(session.user.onboardedAt && session.user.username);
-    redirect(done ? ROUTES.APP_HOME : ROUTES.ONBOARDING);
+    if (!done) redirect(ROUTES.ONBOARDING);
+    signedIn = true;
   }
 
   return (
@@ -48,8 +54,8 @@ export default async function LandingPage() {
           </p>
 
           <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-            <Link href={ROUTES.SIGN_UP} className="ui-public-cta">
-              Start building
+            <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
+              {signedIn ? "Open FleetCrown" : "Start building"}
             </Link>
             <Link href="/download" className="ui-public-cta-ghost">
               Download runner
@@ -225,8 +231,8 @@ export default async function LandingPage() {
       </div>
 
       <div className="border-t border-border-subtle py-20 text-center">
-        <Link href={ROUTES.SIGN_UP} className="ui-public-cta-lg">
-          Begin
+        <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta-lg">
+          {signedIn ? "Open FleetCrown" : "Begin"}
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>
       </div>

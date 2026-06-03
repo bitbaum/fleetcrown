@@ -1,10 +1,27 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
 import { homedir } from 'os'
+import { APP_URL } from '@/config/brand'
+
+// Web-shell mode — the production default.
+//
+// Fleet Runner is a native window around the same React tree fleetcrown.vercel.app
+// serves. Native IPC remains available via the preload-injected window.fleetRunner
+// bridge; the UI itself is the deployed web app, so the desktop and the browser
+// stay at parity automatically (one codebase, one source of truth).
+//
+// FLEETCROWN_WEB_URL overrides the URL (useful for pointing at a preview
+// deployment or a local `npm run dev`). The literal value "local" disables
+// web-shell entirely and loads the bundled renderer — kept around as the
+// development surface for the IPC layer.
+const RAW_URL_OVERRIDE = (process.env.FLEETCROWN_WEB_URL || '').trim()
+const DISABLE_WEB_SHELL = RAW_URL_OVERRIDE.toLowerCase() === 'local'
+const WEB_SHELL_URL = DISABLE_WEB_SHELL ? '' : (RAW_URL_OVERRIDE || APP_URL)
+const USE_WEB_SHELL = WEB_SHELL_URL.length > 0
 
 // Resolve a packaged resource file. electron-builder copies `resources/` into
 // `process.resourcesPath` at install time; during dev we read it directly from
@@ -45,8 +62,46 @@ function createWindow(): void {
     mainWindow = null
   })
 
-  // HMR for renderer base on electron-vite cli.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  // Web-shell mode: keep OAuth redirects in the same window instead of spawning
+  // a popup Electron can't follow. GitHub's authorize page opens cleanly that
+  // way; rejecting it would otherwise break sign-in inside the desktop app.
+  if (USE_WEB_SHELL) {
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      // Auth flows (GitHub OAuth, NextAuth callback) stay in the main window.
+      const isAuthFlow = /\/(api\/)?auth\/|github\.com\/login\/oauth\//i.test(url)
+      if (isAuthFlow) {
+        mainWindow?.loadURL(url).catch(() => {})
+        return { action: 'deny' }
+      }
+      // Everything else (external links, marketing pages) opens in the user's
+      // default browser — desktop apps shouldn't become mini-browsers.
+      void import('electron').then(({ shell }) => shell.openExternal(url))
+      return { action: 'deny' }
+    })
+  }
+
+  if (USE_WEB_SHELL) {
+    // Spike mode: point the main window at the FleetCrown web app. Same React
+    // tree the browser serves runs inside the Electron window. Native APIs
+    // remain available via the preload-injected window.fleetRunner bridge.
+    console.log(`[desktop] web-shell mode → loading ${WEB_SHELL_URL}`)
+    mainWindow.loadURL(WEB_SHELL_URL).catch((err) => {
+      console.error('[desktop] failed to load web shell:', err)
+      // Fallback to a tiny inline page so the window isn't blank on failure.
+      mainWindow?.loadURL(
+        `data:text/html,${encodeURIComponent(
+          `<body style="background:#000;color:#fff;font-family:sans-serif;padding:40px">
+             <h1>Could not reach ${WEB_SHELL_URL}</h1>
+             <p>${String(err)}</p>
+             <p>Unset FLEETCROWN_WEB_URL to fall back to the bundled renderer.</p>
+           </body>`,
+        )}`,
+      )
+    })
+    // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
+    if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
+  } else if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    // HMR for renderer based on electron-vite cli (existing flow).
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
@@ -114,6 +169,18 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.fleetcrown.fleet-runner')
+
+  // Web-shell mode: mark requests with a Fleet-Runner UA suffix so the deployed
+  // app can detect when it's being rendered inside the desktop shell (enabling
+  // tray hooks, hotkeys, etc.) without affecting normal browser traffic.
+  // Cookies persist by default in Electron's user-data dir → NextAuth session
+  // survives across launches with no extra wiring.
+  if (USE_WEB_SHELL) {
+    const ua = session.defaultSession.getUserAgent()
+    if (!ua.includes('FleetRunner/')) {
+      session.defaultSession.setUserAgent(`${ua} FleetRunner/${app.getVersion()}`)
+    }
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

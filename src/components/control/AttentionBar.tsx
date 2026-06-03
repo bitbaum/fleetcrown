@@ -45,6 +45,9 @@ export function AttentionBar({
             {items.map(({ project, reason }) => {
               const healthKey = (project.session?.health ?? project.latestOrchestrationRun?.summary?.health ?? "").toLowerCase();
               const tagCls = HEALTH_TAG_STYLE[healthKey] ?? "ui-tag ui-tag-warning";
+              // Reason chip only adds value when distinct from the bar's
+              // "Needs attention:" prefix; the literal phrase just repeats it.
+              const showReasonChip = reason && reason.toLowerCase() !== "needs attention";
               return (
                 <span key={project.tab} className="flex items-center gap-1.5 shrink-0">
                   {onFocusProject ? (
@@ -57,7 +60,7 @@ export function AttentionBar({
                   ) : (
                     <span className="text-xs font-medium text-text-primary">{project.tab}</span>
                   )}
-                  {reason && <span className={tagCls}>{reason}</span>}
+                  {showReasonChip && <span className={tagCls}>{reason}</span>}
                 </span>
               );
             })}

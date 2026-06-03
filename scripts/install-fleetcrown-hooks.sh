@@ -2,7 +2,7 @@
 # Install ZSH hooks that let the app detect when you are actively typing at
 # the prompt — so auto-inject skips your tab instead of garbling your input.
 #
-# Usage:  bash scripts/install-cockpit-hooks.sh
+# Usage:  bash scripts/install-fleetcrown-hooks.sh
 # Effect: appends a small hook block to ~/.zshrc (idempotent).
 
 set -euo pipefail

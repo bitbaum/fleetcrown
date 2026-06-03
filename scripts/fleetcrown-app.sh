@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# cockpit-app.sh — starts the FleetCrown Next.js production server.
+# fleetcrown-app.sh — starts the FleetCrown Next.js production server.
 #
 # Sources .env.local from the project root, then launches the standalone
-# server. Intended to be called by the cockpit-app.service systemd unit.
+# server. Intended to be called by the fleetcrown-app.service systemd unit.
 #
-# Usage: ./scripts/cockpit-app.sh
+# Usage: ./scripts/fleetcrown-app.sh
 
 set -euo pipefail
 
@@ -13,8 +13,8 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
 
 if [ ! -f "$STANDALONE/server.js" ]; then
-  echo "[cockpit-app] ERROR: standalone build not found at $STANDALONE/server.js" >&2
-  echo "[cockpit-app] Run: npm run build && npm run install-app" >&2
+  echo "[fleetcrown-app] ERROR: standalone build not found at $STANDALONE/server.js" >&2
+  echo "[fleetcrown-app] Run: npm run build && npm run install-app" >&2
   exit 1
 fi
 

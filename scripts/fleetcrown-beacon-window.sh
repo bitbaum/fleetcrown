@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# cockpit-beacon-window.sh — keep a chromium --app= window open on /beacon/live.
+# fleetcrown-beacon-window.sh — keep a chromium --app= window open on /beacon/live.
 #
-# Run by the cockpit-beacon-window.service systemd user unit. Restart=always
+# Run by the fleetcrown-beacon-window.service systemd user unit. Restart=always
 # means systemd brings the window back within ~2s whenever it dies, so a stop
 # hook always finds a pre-warmed window to focus (PyQt-equivalent <100ms).
 #

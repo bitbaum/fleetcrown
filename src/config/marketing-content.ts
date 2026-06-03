@@ -91,7 +91,7 @@ export const INVESTORS = {
     "Open and local models are converging on frontier capability. Whoever controls the orchestration layer will be neutral to model choice.",
     "The same control patterns transfer to physical robotics. The market has not yet appreciated this.",
   ],
-  built: "A web command center coordinates fleets of AI agents across projects. A local execution layer runs them directly in the operator's terminal environment. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use.",
+  built: "A web command center coordinates fleets of AI agents across projects. A native Fleet Runner desktop app — same React tree as the web, plus tray and OS notifications — runs them directly in the operator's terminal environment via Zellij. Per-project autonomy controls, reliable handoff systems, queue management, and truthful status surfaces are live and in daily use. Signed multi-OS installers ship from a single CI matrix on every release tag.",
   traction: "Sophisticated power users run multi-project agent operations daily. Demand for finer autonomy controls, fleet visibility, and freedom from single-vendor frontier subscriptions is consistent and growing.",
   ask: "We are raising to productize the local fleet runner, harden the remote control plane, expand open-model support, and lay groundwork for robotic orchestration.",
 };
@@ -118,22 +118,23 @@ export const ROADMAP = {
         "Reliable handoff system between agent sessions, with truthful card status surfaces.",
         "Per-project pause / resume / direct-send semantics and a real autopilot intent ladder.",
         "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",
+        "Native Fleet Runner desktop app — loads the same React tree the web serves (one UI, two surfaces) plus tray icon, OS notifications on agent idle, and an embedded Zellij watcher for fire-and-walk-away dispatch.",
+        "Multi-OS release pipeline. One tag push produces signed macOS, Windows, and Linux installers from a shared CI matrix.",
       ],
-      note: "The architecture is proven. The next phase is consolidating it into a real product.",
+      note: "The architecture is proven. The next phase is finishing distribution and auto-update so non-technical operators can install without touching a terminal.",
     },
     {
       marker: "NEXT",
-      title: "The local fleet runner",
-      summary: "The primary surface becomes a native desktop application — the authoritative local runtime instead of a background daemon.",
+      title: "Distribution and auto-update",
+      summary: "Make Fleet Runner trivial to install and keep current on every platform — including for builders who never open a terminal.",
       bullets: [
-        "Native Electron application packages the best of the home/ stack into a first-class product.",
-        "Owns Zellij, agent launching, session watching, handoff files, and git directly — no polling layer in between.",
-        "Desktop UI for full-power interaction when sitting at the machine.",
-        "Clean local API and IPC so TUIs, scripts, and MCP clients can talk to it.",
-        "Becomes the default install path: one command drops the desktop app on macOS, Windows, or Linux.",
-        "The existing daemon path keeps working through the transition for users who do not want Electron.",
+        "Public macOS (.dmg, signed + notarized) and Windows (.exe) builds landing on every tagged release alongside the existing Linux AppImage / .deb.",
+        "Auto-update via electron-builder's GitHub provider so users never download a stale binary.",
+        "Native package channels where they exist — Homebrew tap for macOS, winget for Windows, .deb apt repo for Linux.",
+        "Clean window.fleetRunner IPC bridge so the web React tree can detect 'I am running inside the desktop app' and surface desktop-only affordances coherently.",
+        "Daemon install path stays supported for headless servers, CI runners, and operators who prefer a pure CLI flow.",
       ],
-      note: "Cursor, Claude Code, and Grok Build all converged on this pattern independently — local client owns execution as a real application, not a service that polls a queue.",
+      note: "Cursor, Claude Code, and Grok Build all converged on the same pattern — local client owns execution as a real application, not a service that polls a queue. Fleet Runner takes one extra step: the app and the web run the same React tree, so there is exactly one product surface to design and one codebase to keep at parity.",
     },
     {
       marker: "AFTER",
@@ -272,87 +273,206 @@ export const FINAL_CTA = {
   cta: "Start building",
 };
 
-// Download / install section for the desktop Fleet Runner (the local authoritative app).
-// SSOT for the public download experience. Update links + copy here when we ship real artifacts.
+// Download / install section for the desktop Fleet Runner (the optional local app).
+//
+// SSOT for the public download experience. The shape is deliberately narrative,
+// not a flat file list: a non-technical visitor reads it top to bottom and gets
+// answers in order — what is this, do I need it, how to get it, what happens
+// next. Update links + copy here when we ship real artifacts.
+//
+// Platform status is honest: only "ready" platforms show a real installer URL.
+// "comingSoon" platforms surface a release-watch CTA (GitHub releases atom
+// subscription) and a *clearly demoted* build-from-source path for developers,
+// instead of pretending the source tree is a download.
 export const DESKTOP_DOWNLOAD = {
-  eyebrow: "LOCAL FLEET RUNNER",
-  title: "Install the desktop app",
+  // Top-level back-compat fields (used by /download page metadata + homepage).
+  eyebrow: "DESKTOP APP",
+  title: "Get Fleet Runner",
   lede:
-    "The Fleet Runner is the native application that runs on your machines. It owns Zellij, agent launching, session watching, handoffs, and git — no daemon polling layer between you and the work. Web and mobile are remote control surfaces for the same system.",
-  note:
-    "Linux packages are available now. macOS and Windows packages are next; until then, build from source on those platforms. The legacy terminal daemon remains available during transition.",
-  ctaLabel: "Download for your platform",
+    "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+
+  hero: {
+    eyebrow: "DESKTOP APP",
+    title: "Get Fleet Runner",
+    lede:
+      "FleetCrown runs in your browser as a full control plane. Fleet Runner is the optional desktop app that lets agents act on your computer — open files, run commands, drive terminal sessions — while you stay in command from the web or your phone.",
+  },
+
+  // Web vs. desktop — answers "do I need this?" in plain language.
+  comparison: {
+    web: {
+      label: "Web (fleetcrown.com)",
+      tagline: "Already available — no install",
+      bullets: [
+        "Full fleet visibility across all projects",
+        "Browse history, projects, and queues",
+        "Dispatch commands from any browser or phone",
+        "Read-only without a connected local runner",
+      ],
+    },
+    desktop: {
+      label: "Desktop (Fleet Runner)",
+      tagline: "Adds local execution",
+      bullets: [
+        "Actually runs agents on your machine",
+        "Drives Zellij sessions and handoffs",
+        "Native notifications when an agent finishes",
+        "Keeps working after you close your browser",
+      ],
+    },
+    note: "You can start with the web today and add Fleet Runner whenever you want agents to actually do work on your machine.",
+  },
+
+  // Three steps that answer "what happens after I click download?"
+  // Numbered so visual layout can render as a step indicator on dark bg.
+  setupSteps: [
+    {
+      number: "01",
+      title: "Install and open the app",
+      body:
+        "After download, open Fleet Runner like any other app. It launches with the same FleetCrown interface you already use on the web.",
+    },
+    {
+      number: "02",
+      title: "Sign in or paste a token",
+      body:
+        "Use the same account you signed up with on the web. Or, from Settings → Agent tokens, copy a token and paste it into Fleet Runner to connect it as your local runner.",
+    },
+    {
+      number: "03",
+      title: "Dispatch your first intent",
+      body:
+        "Pick a project on your computer and dispatch an intent. Fleet Runner launches the agent in a terminal session and pings you when it's done — even if the app is hidden.",
+    },
+  ],
+
+  // Platforms with honest "ready" vs "comingSoon" status. The component shows
+  // a real CTA + secondary formats for ready platforms, and a release-watch
+  // link + collapsed build-from-source for coming-soon platforms.
   platforms: [
     {
       id: "linux",
       label: "Linux",
-      note: "AppImage",
-      url: "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/Fleet.Runner-0.1.0.AppImage",
+      status: "ready" as const,
+      primary: {
+        label: "Download AppImage",
+        note: "Recommended · ~120 MB",
+        url:
+          "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/Fleet.Runner-0.1.0.AppImage",
+      },
       secondary: [
         {
-          label: "Download .deb",
-          url: "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/fleet-runner_0.1.0_amd64.deb",
+          label: ".deb (Ubuntu / Debian)",
+          url:
+            "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/fleet-runner_0.1.0_amd64.deb",
         },
       ],
-      command: "chmod +x 'Fleet Runner-0.1.0.AppImage' && './Fleet Runner-0.1.0.AppImage'",
+      afterDownload:
+        "Make it executable, then open it like a normal app:",
+      command:
+        "chmod +x 'Fleet Runner-0.1.0.AppImage' && './Fleet Runner-0.1.0.AppImage'",
     },
     {
       id: "mac",
       label: "macOS",
-      note: "Build from source today · signed package coming soon",
-      url: "https://github.com/maonakamoto/fleetcrown/tree/main/desktop",
-      secondary: [],
-      command: "cd desktop && npm install && npm run dist:mac",
+      status: "comingSoon" as const,
+      comingSoonMessage:
+        "Signed .dmg installers are in production — automated cross-platform builds land first. Watch the release feed to get notified the moment they ship.",
+      watchReleasesUrl:
+        "https://github.com/maonakamoto/fleetcrown-releases/releases.atom",
+      developerBuild: {
+        label: "Developers: build from source",
+        command:
+          "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:mac",
+        note: "Requires Node 22+, Xcode command-line tools, and macOS.",
+      },
     },
     {
       id: "win",
       label: "Windows",
-      note: "Build from source today · signed installer coming soon",
-      url: "https://github.com/maonakamoto/fleetcrown/tree/main/desktop",
-      secondary: [],
-      command: "cd desktop && npm install && npm run dist:win",
+      status: "comingSoon" as const,
+      comingSoonMessage:
+        "Signed installers are in production — automated cross-platform builds land first. Watch the release feed to get notified the moment they ship.",
+      watchReleasesUrl:
+        "https://github.com/maonakamoto/fleetcrown-releases/releases.atom",
+      developerBuild: {
+        label: "Developers: build from source",
+        command:
+          "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:win",
+        note: "Requires Node 22+, Windows build tools, and Windows.",
+      },
     },
   ],
-  prerequisites: [
-    {
-      title: "Zellij",
-      role: "Terminal session manager",
-      description: "Required for local session ownership and injection. Install it before expecting Fleet Runner to drive terminal agents.",
-      primary: { label: "Install Zellij", href: "https://zellij.dev/documentation/installation.html" },
-      command: "See official packages or download a prebuilt binary from zellij.dev.",
-    },
-    {
-      title: "Grok Build",
-      role: "xAI coding agent",
-      description: "Optional, but supported as one of the local agents Fleet Runner can launch and steer.",
-      primary: { label: "Install Grok CLI", href: "https://x.ai/cli" },
-      command: "curl -fsSL https://x.ai/cli/install.sh | bash",
-    },
-    {
-      title: "Claude Code",
-      role: "Anthropic coding agent",
-      description: "Optional supported agent. Install and authenticate it locally before assigning a project to Claude.",
-      primary: { label: "Install Claude Code", href: "https://code.claude.com/docs/en/installation" },
-      command: "npm install -g @anthropic-ai/claude-code",
-    },
-  ],
-  fallback: {
-    label: "Install the legacy daemon (terminal)",
+
+  // "What Fleet Runner uses on your computer" — plain-language explanation of
+  // why each tool exists, not a wall of curl commands.
+  prerequisites: {
+    title: "What Fleet Runner uses on your computer",
     description:
-      "For headless servers, CI, or users who prefer the old flow. The desktop Fleet Runner will become the recommended path.",
-    command: "curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init",
+      "Fleet Runner doesn't replace the tools you already use — it drives them. Install the ones you want available to your agents. Zellij is the only one strictly required.",
+    items: [
+      {
+        title: "Zellij",
+        role: "Terminal session manager",
+        required: true,
+        whyYouNeedIt:
+          "Fleet Runner gives each agent its own persistent terminal session so you can also attach to it manually. Zellij is what makes that possible.",
+        href: "https://zellij.dev/documentation/installation.html",
+        installLabel: "Install instructions",
+      },
+      {
+        title: "Claude Code",
+        role: "Anthropic's coding agent",
+        required: false,
+        whyYouNeedIt:
+          "One of the supported agents Fleet Runner can launch and steer. Install it if you want Claude available in your fleet.",
+        href: "https://code.claude.com/docs/en/installation",
+        installLabel: "Install Claude Code",
+        command: "npm install -g @anthropic-ai/claude-code",
+      },
+      {
+        title: "Grok Build",
+        role: "xAI's coding agent",
+        required: false,
+        whyYouNeedIt:
+          "Another supported agent. Install it if you want Grok available alongside Claude.",
+        href: "https://x.ai/cli",
+        installLabel: "Install Grok CLI",
+        command: "curl -fsSL https://x.ai/cli/install.sh | bash",
+      },
+    ],
   },
-  buildFromSource: {
-    label: "Build the Fleet Runner (current way to get it)",
-    description: "Clone and build to get a native AppImage / .deb (or equivalent on your OS) you can run immediately. This is the local authoritative runtime.",
-    steps: "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
+
+  // Developer / advanced — collapsed by default in the UI.
+  developer: {
+    label: "For developers",
+    description:
+      "Build the desktop app yourself, or run the headless terminal daemon instead.",
+    buildFromSource: {
+      label: "Build the desktop app from source",
+      body:
+        "Clone and build a native package for your machine. Useful if you're contributing, want a development build, or are on a platform we don't ship binaries for yet.",
+      command:
+        "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
+    },
+    legacyDaemon: {
+      label: "Headless terminal daemon",
+      body:
+        "For CI runners, headless servers, or operators who prefer a pure CLI flow. Fleet Runner is the recommended path; the daemon remains available during the transition.",
+      command:
+        "curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init",
+    },
   },
+
+  // "Coming to more surfaces" — kept in case the homepage section wants it.
   future: {
-    desktop: "One-click downloadable installers with auto-update for macOS, Windows, and Linux (App Store, winget, apt, etc. where appropriate).",
-    mobile: "Native iOS and Android apps on the same remote control channel — full fleet visibility, queue management, and dispatch from your phone or tablet.",
-    other: "Additional runtimes and form factors (headless variants, CLI polish, and support for the platforms builders actually use).",
+    desktop:
+      "One-click signed installers with auto-update for macOS, Windows, and Linux.",
+    mobile:
+      "Native iOS and Android apps on the same remote control channel — fleet visibility, queues, and dispatch from your phone.",
   },
 };
+export type DesktopDownloadPlatform = (typeof DESKTOP_DOWNLOAD.platforms)[number];
 
 export const PRODUCT_SURFACES = [
   {

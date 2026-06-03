@@ -18,6 +18,7 @@ import {
   Map,
   TrendingUp,
   FileText,
+  Download,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -53,6 +54,7 @@ const NAV: Record<string, NavItem> = {
   events:     { id: "events",   label: "Events",   description: "Deadlines & opportunities",         href: "/events",     icon: Calendar,     active: true,  mobile: false },
   money:      { id: "money",    label: "Money",    description: "Subscriptions & monthly burn",      href: "/money",      icon: Wallet,       active: true,  mobile: false },
 
+  download:   { id: "download",   label: "Download",   description: "Get Fleet Runner for your machine", href: "/download", icon: Download,   active: true, mobile: false },
   mission:    { id: "mission",    label: "Mission",    description: "Why we exist",              href: "/mission",    icon: Compass,    active: true, mobile: false },
   philosophy: { id: "philosophy", label: "Philosophy", description: "Principles we build by",    href: "/philosophy", icon: Anchor,     active: true, mobile: false },
   roadmap:    { id: "roadmap",    label: "Roadmap",    description: "Product direction",         href: "/roadmap",    icon: Map,        active: true, mobile: false },
@@ -97,7 +99,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // Public marketing pages, surfaced inside the app shell so logged-in
     // users can reach them without leaving the sidebar.
     label: "Site",
-    items: [NAV.mission, NAV.philosophy, NAV.roadmap, NAV.investors, NAV.whitepaper],
+    items: [NAV.download, NAV.mission, NAV.philosophy, NAV.roadmap, NAV.investors, NAV.whitepaper],
   },
 ];
 

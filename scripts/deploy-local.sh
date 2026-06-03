@@ -3,7 +3,8 @@
 #
 # Copies runtime assets into .next/standalone/ (required for the production
 # server to serve CSS, JS chunks, public files, and markdown content) then restarts
-# the cockpit-app systemd service if it is installed on this machine.
+# the fleetcrown-app systemd service if it is installed on this machine.
+# Legacy cockpit-app service name is supported as a fallback for transitional installs.
 #
 # Skips silently in CI or on machines where the service is not installed, so
 # running `npm run build` on Vercel / GitHub Actions stays clean.
@@ -29,10 +30,13 @@ cp -r "$PROJECT_DIR/content"       "$STANDALONE/content"
 echo "→ deploy: runtime assets copied to standalone"
 
 # ── Restart systemd service (local machine only) ──────────────────────────────
-SERVICE="cockpit-app"
-SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE}.service"
-
-if [ -f "$SERVICE_FILE" ] && systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
-  systemctl --user restart "$SERVICE"
-  echo "→ deploy: cockpit-app service restarted"
-fi
+# Prefer the canonical fleetcrown-app service; fall back to legacy cockpit-app
+# for machines still running the pre-rename install.
+for SERVICE in fleetcrown-app cockpit-app; do
+  SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE}.service"
+  if [ -f "$SERVICE_FILE" ] && systemctl --user is-enabled --quiet "$SERVICE" 2>/dev/null; then
+    systemctl --user restart "$SERVICE"
+    echo "→ deploy: ${SERVICE} service restarted"
+    break
+  fi
+done

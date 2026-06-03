@@ -34,7 +34,11 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src')
+        '@renderer': resolve('src/renderer/src'),
+        // Match the main-process alias so the renderer can import shared
+        // config (e.g. @/config/brand) from the web app's source tree.
+        // Goes away when packages/design-tokens + packages/ui are extracted.
+        '@': resolve(__dirname, '../src')
       }
     },
     plugins: [react()],

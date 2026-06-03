@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
-import { DESKTOP_DOWNLOAD } from "@/config/marketing-content";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
+import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 
-type Platform = (typeof DESKTOP_DOWNLOAD.platforms)[number];
+type PlatformId = DesktopDownloadPlatform["id"];
 
-function detectPlatformId(): Platform["id"] {
+function detectPlatformId(): PlatformId {
   if (typeof navigator === "undefined") return DESKTOP_DOWNLOAD.platforms[0].id;
   const ua = navigator.userAgent.toLowerCase();
   const platform = navigator.platform?.toLowerCase() || "";
-  if (platform.includes("linux") || ua.includes("linux")) return "linux";
   if (platform.includes("win") || ua.includes("windows")) return "win";
   if (platform.includes("mac") || ua.includes("mac")) return "mac";
+  if (platform.includes("linux") || ua.includes("linux")) return "linux";
   return DESKTOP_DOWNLOAD.platforms[0].id;
 }
 
@@ -24,113 +26,236 @@ function getClientPlatformId() {
   return detectPlatformId();
 }
 
-function getServerPlatformId(): Platform["id"] {
-  return DESKTOP_DOWNLOAD.platforms[0].id;
+function getServerPlatformId(): PlatformId {
+  // Server snapshot: pick the one that's actually ready so non-interactive
+  // crawlers and the initial paint surface a real link, not a "coming soon"
+  // panel that depends on the user's UA.
+  return DESKTOP_DOWNLOAD.platforms.find((p) => p.status === "ready")?.id ?? DESKTOP_DOWNLOAD.platforms[0].id;
 }
 
 export function DesktopDownload() {
   const detectedPlatformId = useSyncExternalStore(subscribePlatform, getClientPlatformId, getServerPlatformId);
-  const [selectedPlatformId, setSelectedPlatformId] = useState<Platform["id"] | null>(null);
+  const [selectedPlatformId, setSelectedPlatformId] = useState<PlatformId | null>(null);
   const activePlatformId = selectedPlatformId ?? detectedPlatformId;
   const active =
     DESKTOP_DOWNLOAD.platforms.find((platform) => platform.id === activePlatformId) ?? DESKTOP_DOWNLOAD.platforms[0];
+  const [showDeveloper, setShowDeveloper] = useState(false);
 
   return (
     <div className="ui-public-download">
-      <div className="mx-auto max-w-[720px] px-6">
-        <div className="text-center mb-10">
-          <div className="ui-public-download-eyebrow">{DESKTOP_DOWNLOAD.eyebrow}</div>
-          <h2 className="ui-public-download-title">
-            {DESKTOP_DOWNLOAD.title}
-          </h2>
-          <p className="ui-public-download-lede">
-            {DESKTOP_DOWNLOAD.lede}
-          </p>
+      <div className="mx-auto max-w-[960px] px-6">
+        <div className="text-center mb-12">
+          <div className="ui-public-download-eyebrow">{DESKTOP_DOWNLOAD.hero.eyebrow}</div>
+          <h2 className="ui-public-download-title">{DESKTOP_DOWNLOAD.hero.title}</h2>
+          <p className="ui-public-download-lede">{DESKTOP_DOWNLOAD.hero.lede}</p>
         </div>
 
-        {/* x.ai style massive primary action */}
-        <div className="flex flex-col items-center gap-3 mb-6">
-          <a href={active.url} className="ui-public-download-cta group">
-            {active.id === "linux" ? "Download AppImage" : `Build for ${active.label}`}
-            <span className="ui-public-download-cta-note">({active.note})</span>
-          </a>
-          {active.secondary.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2">
-              {active.secondary.map((download) => (
-                <a key={download.url} href={download.url} className="ui-public-download-secondary">
-                  {download.label}
-                </a>
+        {/* Web vs desktop — answers "do I need this?" before any download CTA */}
+        <div className="ui-public-download-compare">
+          <div className="ui-public-download-compare-card">
+            <div className="ui-public-download-compare-label">{DESKTOP_DOWNLOAD.comparison.web.label}</div>
+            <div className="ui-public-download-compare-tagline">{DESKTOP_DOWNLOAD.comparison.web.tagline}</div>
+            <ul className="ui-public-download-compare-list">
+              {DESKTOP_DOWNLOAD.comparison.web.bullets.map((b) => (
+                <li key={b}>{b}</li>
               ))}
-            </div>
-          )}
+            </ul>
+          </div>
+          <div className="ui-public-download-compare-card ui-public-download-compare-card-emphasis">
+            <div className="ui-public-download-compare-label">{DESKTOP_DOWNLOAD.comparison.desktop.label}</div>
+            <div className="ui-public-download-compare-tagline">{DESKTOP_DOWNLOAD.comparison.desktop.tagline}</div>
+            <ul className="ui-public-download-compare-list">
+              {DESKTOP_DOWNLOAD.comparison.desktop.bullets.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          </div>
         </div>
+        <p className="ui-public-download-compare-note">{DESKTOP_DOWNLOAD.comparison.note}</p>
 
-        <p className="ui-public-download-note">{DESKTOP_DOWNLOAD.note}</p>
-
-        {/* Clean platform switcher */}
+        {/* Platform switcher */}
         <div className="ui-public-download-platform-bar">
           {DESKTOP_DOWNLOAD.platforms.map((p) => (
             <button
               key={p.id}
+              type="button"
               onClick={() => setSelectedPlatformId(p.id)}
-              className={`ui-public-download-platform ${active.id === p.id ? 'ui-public-download-platform-active' : 'ui-public-download-platform-idle'}`}
+              className={`ui-public-download-platform ${active.id === p.id ? "ui-public-download-platform-active" : "ui-public-download-platform-idle"}`}
             >
               {p.label}
+              {p.status === "comingSoon" && (
+                <span className="ui-public-download-platform-soon">soon</span>
+              )}
             </button>
           ))}
         </div>
 
-        <div className="ui-public-download-command">
-          <span>After download</span>
-          <code>{active.command}</code>
+        {/* Per-platform CTA panel — branches on status so we never lie */}
+        {active.status === "ready" ? (
+          <ReadyPlatformPanel platform={active} />
+        ) : (
+          <ComingSoonPlatformPanel platform={active} />
+        )}
+
+        {/* 3-step "what happens next" — only relevant once a CTA is in view */}
+        <div className="ui-public-download-steps">
+          <div className="ui-public-download-steps-heading">After install</div>
+          <div className="ui-public-download-steps-grid">
+            {DESKTOP_DOWNLOAD.setupSteps.map((step) => (
+              <div key={step.number} className="ui-public-download-step">
+                <div className="ui-public-download-step-num">{step.number}</div>
+                <div className="ui-public-download-step-title">{step.title}</div>
+                <p className="ui-public-download-step-body">{step.body}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* What it uses on your computer — plain-language prereqs */}
         <div className="ui-public-download-prereqs">
-          <div className="ui-public-download-prereqs-heading">Required local tools</div>
-          <div className="grid gap-3">
-            {DESKTOP_DOWNLOAD.prerequisites.map((item) => (
+          <div className="ui-public-download-prereqs-title">{DESKTOP_DOWNLOAD.prerequisites.title}</div>
+          <p className="ui-public-download-prereqs-desc">{DESKTOP_DOWNLOAD.prerequisites.description}</p>
+          <div className="ui-public-download-prereqs-grid">
+            {DESKTOP_DOWNLOAD.prerequisites.items.map((item) => (
               <div key={item.title} className="ui-public-download-prereq-card">
-                <div>
-                  <div className="ui-public-download-prereq-title">{item.title}</div>
-                  <div className="ui-public-download-prereq-role">{item.role}</div>
+                <div className="ui-public-download-prereq-head">
+                  <div>
+                    <div className="ui-public-download-prereq-title">{item.title}</div>
+                    <div className="ui-public-download-prereq-role">{item.role}</div>
+                  </div>
+                  <span
+                    className={
+                      item.required
+                        ? "ui-public-download-prereq-required"
+                        : "ui-public-download-prereq-optional"
+                    }
+                  >
+                    {item.required ? "Required" : "Optional"}
+                  </span>
                 </div>
-                <p>{item.description}</p>
-                <code>{item.command}</code>
-                <a href={item.primary.href} className="ui-public-download-prereq-link">
-                  {item.primary.label} →
+                <p className="ui-public-download-prereq-why">{item.whyYouNeedIt}</p>
+                {item.command && <code className="ui-public-download-prereq-command">{item.command}</code>}
+                <a
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ui-public-download-prereq-link"
+                >
+                  {item.installLabel}
+                  <ExternalLink className="ui-public-download-prereq-link-icon" aria-hidden />
                 </a>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Very understated fallback */}
-        <div className="ui-public-download-fallback">
-          <div className="ui-public-download-fallback-label">{DESKTOP_DOWNLOAD.fallback.label}</div>
-          <p className="ui-public-download-fallback-desc">{DESKTOP_DOWNLOAD.fallback.description}</p>
-          <code className="ui-public-download-fallback-code">
-            {DESKTOP_DOWNLOAD.fallback.command}
-          </code>
+        {/* For developers — collapsed by default so the page doesn't lead with jargon */}
+        <div className="ui-public-download-dev">
+          <button
+            type="button"
+            onClick={() => setShowDeveloper((s) => !s)}
+            className="ui-public-download-dev-toggle"
+            aria-expanded={showDeveloper}
+          >
+            <span>{DESKTOP_DOWNLOAD.developer.label}</span>
+            <span className="ui-public-download-dev-toggle-icon">{showDeveloper ? "−" : "+"}</span>
+          </button>
+          {showDeveloper && (
+            <div className="ui-public-download-dev-body">
+              <p className="ui-public-download-dev-desc">{DESKTOP_DOWNLOAD.developer.description}</p>
 
-          <div className="ui-public-download-build">
-            Build now: <span className="ui-public-download-build-step">{DESKTOP_DOWNLOAD.buildFromSource.steps}</span>
-          </div>
+              <div className="ui-public-download-dev-block">
+                <div className="ui-public-download-dev-block-title">{DESKTOP_DOWNLOAD.developer.buildFromSource.label}</div>
+                <p className="ui-public-download-dev-block-body">{DESKTOP_DOWNLOAD.developer.buildFromSource.body}</p>
+                <code className="ui-public-download-dev-command">{DESKTOP_DOWNLOAD.developer.buildFromSource.command}</code>
+              </div>
+
+              <div className="ui-public-download-dev-block">
+                <div className="ui-public-download-dev-block-title">{DESKTOP_DOWNLOAD.developer.legacyDaemon.label}</div>
+                <p className="ui-public-download-dev-block-body">{DESKTOP_DOWNLOAD.developer.legacyDaemon.body}</p>
+                <code className="ui-public-download-dev-command">{DESKTOP_DOWNLOAD.developer.legacyDaemon.command}</code>
+              </div>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Future platform promises — explicit, honest, from first principles (user asked for Android/iOS + "apps for you know" i.e. full desktop + mobile) */}
-        {DESKTOP_DOWNLOAD.future && (
-          <div className="mt-8 text-left text-xs text-text-secondary border-t border-border-subtle pt-4">
-            <div className="font-medium text-text-primary mb-1 tracking-[0.5px]">Coming to more surfaces</div>
-            <div>Desktop: {DESKTOP_DOWNLOAD.future.desktop}</div>
-            <div className="mt-1">Mobile: {DESKTOP_DOWNLOAD.future.mobile}</div>
-            {DESKTOP_DOWNLOAD.future.other && <div className="mt-1 opacity-80">{DESKTOP_DOWNLOAD.future.other}</div>}
+      <p className="ui-public-download-footer">
+        The desktop app, the web, and your phone all connect to the same fleet. Use whichever surface is in front of you.
+      </p>
+    </div>
+  );
+}
+
+function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPlatform, { status: "ready" }> }) {
+  return (
+    <div className="ui-public-download-panel">
+      <div className="flex flex-col items-center gap-3">
+        <a href={platform.primary.url} className="ui-public-download-cta">
+          {platform.primary.label}
+          <span className="ui-public-download-cta-note">({platform.primary.note})</span>
+        </a>
+        {platform.secondary.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {platform.secondary.map((s) => (
+              <a key={s.url} href={s.url} className="ui-public-download-secondary">
+                {s.label}
+              </a>
+            ))}
           </div>
         )}
       </div>
 
-      <p className="ui-public-download-footer">
-        The desktop app connects using the same tokens. Web = remote control. Mobile coming.
-      </p>
+      <div className="ui-public-download-command">
+        <span>{platform.afterDownload}</span>
+        <code>{platform.command}</code>
+      </div>
+    </div>
+  );
+}
+
+function ComingSoonPlatformPanel({
+  platform,
+}: {
+  platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }>;
+}) {
+  const [showBuild, setShowBuild] = useState(false);
+  return (
+    <div className="ui-public-download-panel">
+      <div className="ui-public-download-soon">
+        <div className="ui-public-download-soon-badge">Coming soon</div>
+        <p className="ui-public-download-soon-message">{platform.comingSoonMessage}</p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a
+            href={platform.watchReleasesUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ui-public-download-cta"
+          >
+            Watch the release feed
+            <span className="ui-public-download-cta-note">(GitHub Atom)</span>
+          </a>
+          <Link href="/" className="ui-public-download-secondary">
+            Use the web app instead →
+          </Link>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowBuild((s) => !s)}
+        className="ui-public-download-dev-toggle"
+        aria-expanded={showBuild}
+      >
+        <span>{platform.developerBuild.label}</span>
+        <span className="ui-public-download-dev-toggle-icon">{showBuild ? "−" : "+"}</span>
+      </button>
+      {showBuild && (
+        <div className="ui-public-download-dev-body">
+          <code className="ui-public-download-dev-command">{platform.developerBuild.command}</code>
+          <p className="ui-public-download-dev-block-body">{platform.developerBuild.note}</p>
+        </div>
+      )}
     </div>
   );
 }

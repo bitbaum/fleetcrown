@@ -23,6 +23,7 @@
   "build": {
     "appId": "com.fleetcrown.fleet-runner",
     "productName": "Fleet Runner",
+    "artifactName": "Fleet-Runner-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "resources"
@@ -41,7 +42,9 @@
     },
     "win": {
       "icon": "resources/icon.png",
-      "target": ["nsis", "portable"]
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
     },
     "linux": {
       "icon": "resources/icon.png",
@@ -51,7 +54,7 @@
     "publish": {
       "provider": "github",
       "owner": "maonakamoto",
-      "repo": "cockpit"
+      "repo": "fleetcrown"
     }
   },
   "dependencies": {},

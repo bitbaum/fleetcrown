@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# install-cockpit-app.sh — build and install FleetCrown as a systemd user service.
+# install-fleetcrown-app.sh — build and install FleetCrown as a systemd user service.
 #
 # Run once after cloning, and again after significant dependency changes.
 # The service auto-starts on login and restarts on crash.
 #
-# Usage: ./scripts/install-cockpit-app.sh [--skip-build]
+# Usage: ./scripts/install-fleetcrown-app.sh [--skip-build]
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-SERVICE_NAME="cockpit-app"
+SERVICE_NAME="fleetcrown-app"
 SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 STANDALONE="$PROJECT_DIR/.next/standalone"
 
-log() { echo "[install-cockpit-app] $*"; }
+log() { echo "[install-fleetcrown-app] $*"; }
 
 # ── 1. Build ──────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=${STANDALONE}
-ExecStart=${SCRIPT_DIR}/cockpit-app.sh
+ExecStart=${SCRIPT_DIR}/fleetcrown-app.sh
 Restart=on-failure
 RestartSec=5
 # Next's standalone server can hold open instrumentation resources on SIGTERM.

@@ -6,13 +6,25 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 
 ## Current status
 
-- Packaged native app (AppImage + .deb produced via electron-builder).
-- x.ai-style minimalist UI: pure black, massive typography, minimal decoration, orange accents only on actions.
-- Project list with selection, per-project quick intents (next_best, test_and_fix, close_session), and free-text command bar.
+- Packaged native app (AppImage + .deb produced via electron-builder; macOS/Windows builds wire up via `.github/workflows/desktop-release.yml`).
+- **Ships in web-shell mode by default**: the main window loads `https://fleetcrown.vercel.app` directly and the user gets the exact same React tree the browser serves, plus native bits (tray, OS notifications on agent idle, persistent NextAuth cookies). One UI, two surfaces.
+- Native IPC remains available via the preload-injected `window.fleetRunner` bridge — the web app can detect Fleet Runner via the `FleetRunner/<version>` UA suffix and call into the local runtime where it makes sense.
 - Real `home/` stack integration in the main process: loads your projects config from agent-projects.conf, uses `decide()`, renders actual prompts via the orchestration layer (renderTaskForAdapter) on every dispatch.
 - Dispatch uses the *canonical* `injectIntoTab` (same code path as the daemon/worker): go-to-tab + focus poll guard (prevents typing into wrong pane) + write-chars + Enter + best-effort restore of previous tab.
-- "Sync to Web" (after pasting a ck_* agent token) posts runtime snapshot + projects so the hosted control plane at fleetcrown.vercel.app sees this desktop as the live local runner for those projects. Auto-syncs on connect.
-- Runs standalone as your local authoritative runtime. Web /control and desktop dispatch both drive the same local Zellij sessions.
+- The embedded `home/watcher` reacts to `~/.claude/sessions/*.md` changes and fires a native OS notification on every `worker.idle` event — fire-and-walk-away UX.
+
+### Overriding the shell URL
+
+```bash
+# Point the desktop at a preview deployment
+FLEETCROWN_WEB_URL=https://fleetcrown-git-mybranch.vercel.app ./Fleet Runner-0.1.0.AppImage
+
+# Or against a local dev server
+FLEETCROWN_WEB_URL=http://localhost:3000 ./Fleet Runner-0.1.0.AppImage
+
+# Disable web-shell entirely and load the bundled renderer (IPC dev surface)
+FLEETCROWN_WEB_URL=local npm run dev
+```
 
 **Known gaps (prototype phase — desktop-2/3 largely complete for dispatch+idle)**:
 - Dispatch uses real `appendEvent` (bridge.dispatch + worker.started/crashed + runId + sentinel).
@@ -20,13 +32,15 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 - Local UI snapshot still uses an in-process projection; a future slice can tail the log inside the app for a complete local Brain view.
 - See `docs/desktop-app.md` for status. Co-running the standalone home/ trio is still supported for headless/transition use.
 
-## Get the runnable app (Linux example)
+## Get the runnable app
+
+End users should grab a signed installer from the [download page](https://fleetcrown.vercel.app/download). For a local build from source:
 
 ```bash
-git clone https://github.com/maonakamoto/cockpit.git
-cd cockpit/desktop
+git clone https://github.com/maonakamoto/fleetcrown.git
+cd fleetcrown/desktop
 npm install
-npm run dist:linux
+npm run dist:linux    # or dist:mac / dist:win on those platforms
 ```
 
 Then run:
@@ -36,14 +50,9 @@ chmod +x dist/Fleet\ Runner-0.1.0.AppImage
 ./dist/Fleet\ Runner-0.1.0.AppImage
 ```
 
-(Or install the .deb.)
+(Or install the .deb / .dmg / .exe.)
 
-In the app:
-- Projects from your `agent-projects.conf` are listed.
-- Select one, dispatch intents or type custom prompt.
-- Paste agent token from FleetCrown web → Settings to connect it as your local runtime.
-
-On macOS/Windows use `npm run dist:mac` or `dist:win` on a machine of that platform.
+On launch, the app loads the FleetCrown control plane directly. Sign in with the same account you use on the web; native APIs are injected via `window.fleetRunner`, and the embedded watcher fires native notifications when local agents go idle.
 
 ## Dev (for contributors)
 
@@ -60,6 +69,35 @@ npm run dist          # current platform
 npm run dist:linux    # AppImage + deb
 # etc.
 ```
+
+## Cutting a release
+
+`.github/workflows/desktop-release.yml` builds Fleet Runner for macOS, Windows,
+and Linux from one tag push and uploads the signed installers to a GitHub
+Release. To cut a release:
+
+```bash
+cd desktop
+npm version patch     # or minor/major — bumps package.json + creates a commit
+git tag fleet-runner-v$(node -p "require('./package.json').version")
+git push --follow-tags
+```
+
+The workflow takes ~10 minutes. Once it's green, the binaries are at:
+
+- `https://github.com/maonakamoto/fleetcrown/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage`
+- `https://github.com/maonakamoto/fleetcrown/releases/latest/download/Fleet-Runner-linux-amd64.deb`
+- `https://github.com/maonakamoto/fleetcrown/releases/latest/download/Fleet-Runner-mac-x64.dmg`
+- `https://github.com/maonakamoto/fleetcrown/releases/latest/download/Fleet-Runner-mac-arm64.dmg`
+- `https://github.com/maonakamoto/fleetcrown/releases/latest/download/Fleet-Runner-win-x64.exe`
+
+To test the workflow without minting a real release, dispatch it manually from
+the Actions tab with `dry_run: true` — it builds on all three runners but
+skips the publish step.
+
+After the first release, update `src/config/marketing-content.ts` to point the
+download page's Linux URLs at the `/releases/latest/download/` permalinks and
+flip the macOS/Windows platforms from `comingSoon` to `ready`.
 
 The old daemon remains supported for transition / headless use. This desktop app is the future default.
 

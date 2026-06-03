@@ -48,6 +48,9 @@ function staleEvidenceLabel(
   if (display.isReady) return "Ready for next step";
   if (display.isSessionOpen) return "Agent shell open";
   if (display.tabOpen) return "Workspace tab open";
+  // Session mtime is rendered as evidenceAt; falling through to
+  // staleSyncLabel would put two unlabeled timestamps side by side.
+  if (project.session?.mtime) return "Idle";
   return staleSyncLabel(lastSyncedAt);
 }
 

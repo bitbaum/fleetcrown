@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
-# install-cockpit-beacon-window.sh — register the cockpit-beacon-window user unit.
+# install-fleetcrown-beacon-window.sh — register the fleetcrown-beacon-window user unit.
 #
-# Sister to install-cockpit-app.sh. Keeps a chromium --app=/beacon/live window
+# Sister to install-fleetcrown-app.sh. Keeps a chromium --app=/beacon/live window
 # pre-warmed so the popup is sub-100ms when a stop hook fires, matching the
 # instant-feel PyQt used to have. Restart=always means the unit recovers if
 # the user closes the window or the browser crashes.
 #
-# Usage: ./scripts/install-cockpit-beacon-window.sh
+# Usage: ./scripts/install-fleetcrown-beacon-window.sh
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVICE_NAME="cockpit-beacon-window"
+SERVICE_NAME="fleetcrown-beacon-window"
 SERVICE_FILE="$HOME/.config/systemd/user/${SERVICE_NAME}.service"
 
-log() { echo "[install-cockpit-beacon-window] $*"; }
+log() { echo "[install-fleetcrown-beacon-window] $*"; }
 
 mkdir -p "$HOME/.config/systemd/user"
 
@@ -22,12 +22,12 @@ cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=FleetCrown beacon window (pre-warmed Chromium app for instant popup)
 Documentation=https://github.com/maonakamoto/cockpit
-After=cockpit-app.service
-Wants=cockpit-app.service
+After=fleetcrown-app.service
+Wants=fleetcrown-app.service
 
 [Service]
 Type=simple
-ExecStart=${SCRIPT_DIR}/cockpit-beacon-window.sh
+ExecStart=${SCRIPT_DIR}/fleetcrown-beacon-window.sh
 Restart=always
 RestartSec=2
 # Cap the restart rate so a permanently broken browser doesn't thrash systemd.
