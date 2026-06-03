@@ -8,6 +8,7 @@ import type { ProjectState } from "@/lib/control-types";
 import { formatAgentRuntimeLabel } from "./control-presenter";
 import { AgentSwitcherPopover } from "./agent-switcher-popover";
 import type { AgentEntry } from "./agent-switcher-popover";
+import { FEEDBACK_MEDIUM_MS, TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
 
 function statusChipClass(tone: "neutral" | "positive" | "warning" = "neutral", clickable = false) {
   return cn(
@@ -92,7 +93,7 @@ export function ProjectStatusChips({
       const res = await postJson("/api/control/focus-tab", { tab: workspaceTab });
       if (res.ok) {
         setWorkspaceState("done");
-        setTimeout(() => setWorkspaceState("idle"), 2000);
+        setTimeout(() => setWorkspaceState("idle"), FEEDBACK_MEDIUM_MS);
       } else {
         setWorkspaceState("idle");
       }
@@ -112,16 +113,16 @@ export function ProjectStatusChips({
       if (res.ok) {
         setCommitResult({ sha: body.sha });
         setCommitState("done");
-        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 4000);
+        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_MEDIUM_MS);
       } else {
         setCommitResult({ error: body.error ?? "Commit failed" });
         setCommitState("error");
-        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 6000);
+        setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_LONG_MS);
       }
     } catch {
       setCommitState("error");
       setCommitResult({ error: "Network error" });
-      setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, 4000);
+      setTimeout(() => { setCommitState("idle"); setCommitResult(null); }, TOAST_MEDIUM_MS);
     }
   };
 

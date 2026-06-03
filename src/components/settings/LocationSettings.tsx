@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, MapPin, Navigation, X } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
 import type { UserPreferencesData } from "@/db/queries/user-preferences";
+import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 
 const LOCALE_OPTIONS: { value: string; label: string }[] = [
   { value: "en-US", label: "English (US)" },
@@ -81,7 +82,7 @@ export function LocationSettings({ initialPrefs }: Props) {
       const saved = { homeCity: homeCity.trim() || null, homeTimezone: homeTimezone || null, homeLocale: homeLocale || null };
       setSavedPrefs((p) => ({ ...p, ...saved }));
       setHomeSaved(true);
-      setTimeout(() => setHomeSaved(false), 3000);
+      setTimeout(() => setHomeSaved(false), TOAST_SHORT_MS);
     } catch {
       setHomeError("Network error — try again");
     } finally {
@@ -107,7 +108,7 @@ export function LocationSettings({ initialPrefs }: Props) {
       const saved = { currentCity: currentCity.trim() || null, currentTimezone: currentTimezone || null, currentCityUntil: currentCityUntil || null };
       setSavedPrefs((p) => ({ ...p, ...saved }));
       setCurrentSaved(true);
-      setTimeout(() => setCurrentSaved(false), 3000);
+      setTimeout(() => setCurrentSaved(false), TOAST_SHORT_MS);
     } catch {
       setCurrentError("Network error — try again");
     } finally {

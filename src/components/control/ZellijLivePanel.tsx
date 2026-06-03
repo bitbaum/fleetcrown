@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type RefObject } from "react";
 import { Focus, PanelsTopLeft, RefreshCw, Send, Terminal, Trash2, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
 
 export function ZellijLivePanel({
@@ -62,7 +63,7 @@ export function ZellijLivePanel({
   const repairHelper = async () => {
     try {
       const res = await postJson("/api/agent/repair-helper", {});
-      if (res.ok) setTimeout(onRefresh, 1500);
+      if (res.ok) setTimeout(onRefresh, FEEDBACK_SHORT_MS);
     } catch { /* best effort */ }
   };
 

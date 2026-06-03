@@ -13,6 +13,7 @@ import type { HabitWithHistory } from "@/db/queries/habits";
 import type { LinkedGoal } from "@/db/queries/habit-goals";
 import { HABIT_FREQUENCY, type HabitFrequency, scheduledDays } from "@/lib/constants/statuses";
 import { HABIT_HISTORY_DAYS } from "@/lib/constants";
+import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 import { toLocalDateStr } from "@/lib/dates";
 
 export function HabitCard({
@@ -63,7 +64,7 @@ export function HabitCard({
 
   const flashError = (msg: string) => {
     setToggleError(msg);
-    setTimeout(() => setToggleError(""), 3000);
+    setTimeout(() => setToggleError(""), TOAST_SHORT_MS);
   };
 
   const handleFrequencyChange = async (next: HabitFrequency) => {

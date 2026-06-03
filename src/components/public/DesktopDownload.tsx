@@ -3,6 +3,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 
 type PlatformId = DesktopDownloadPlatform["id"];
 
@@ -212,7 +213,7 @@ function CopyableCommand({ command }: { command: string }) {
     try {
       await navigator.clipboard.writeText(command);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), FEEDBACK_MEDIUM_MS);
     } catch {
       // Clipboard API can fail on insecure origins or restricted browsers —
       // the code is still visible and selectable, so this is non-blocking.

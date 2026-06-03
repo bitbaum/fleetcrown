@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, Send } from "lucide-react";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 
 export function IvyDispatchButton({
   prompt,
@@ -19,7 +20,7 @@ export function IvyDispatchButton({
   const handleSend = () => {
     window.dispatchEvent(new CustomEvent("ivy:open", { detail: { prompt } }));
     setSent(true);
-    setTimeout(() => setSent(false), 1500);
+    setTimeout(() => setSent(false), FEEDBACK_SHORT_MS);
   };
 
   return (

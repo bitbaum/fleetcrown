@@ -7,6 +7,7 @@ import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 
 export function ProgressInput({
   goalId,
@@ -172,7 +173,7 @@ export function CopyGoalPromptButton(props: GoalPromptProps) {
   const handleCopy = async () => {
     await navigator.clipboard.writeText(buildGoalPrompt(props));
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), FEEDBACK_SHORT_MS);
   };
 
   return (

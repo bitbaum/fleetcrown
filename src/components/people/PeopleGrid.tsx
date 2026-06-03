@@ -10,6 +10,7 @@ import { getJson } from "@/lib/api/fetch";
 import { SORT_MODE, SORT_LABELS, type SortMode } from "@/lib/constants/statuses";
 import { type RelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL, RELATIONSHIP_HEALTH_VALUES, deriveRelationshipHealth } from "@/lib/constants/people";
 import { useEscapeKey } from "@/hooks/use-escape-key";
+import { SEARCH_DEBOUNCE_MS } from "@/lib/constants/timings";
 
 const HEALTH_FILTERS = RELATIONSHIP_HEALTH_VALUES.map((value) => ({ value, label: HEALTH_LABEL[value] }));
 
@@ -86,7 +87,7 @@ export function PeopleGrid({
       return;
     }
     const ctrl = new AbortController();
-    const timer = setTimeout(() => search(query, sort, healthFilter, 0, ctrl.signal), 300);
+    const timer = setTimeout(() => search(query, sort, healthFilter, 0, ctrl.signal), SEARCH_DEBOUNCE_MS);
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [query, sort, healthFilter, search]);
 

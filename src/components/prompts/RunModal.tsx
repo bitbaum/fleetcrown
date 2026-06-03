@@ -7,6 +7,7 @@ import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 
 export function RunModal({
   template,
@@ -55,7 +56,7 @@ export function RunModal({
     if (result) {
       navigator.clipboard.writeText(result);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), FEEDBACK_SHORT_MS);
     }
   };
 

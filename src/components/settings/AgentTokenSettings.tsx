@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Copy, Check, Plus, Trash2, Loader2, Terminal, ExternalLink } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
 import { APP_URL } from "@/config/brand";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 
 type TokenMeta = {
   id: string;
@@ -55,7 +56,7 @@ export function AgentTokenSettings() {
   const copy = async (text: string, key: string = "default") => {
     await navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), 2000);
+    setTimeout(() => setCopiedKey((current) => (current === key ? null : current)), FEEDBACK_MEDIUM_MS);
   };
 
   const remove = async (id: string) => {

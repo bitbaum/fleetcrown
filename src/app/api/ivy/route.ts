@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
           : "Ivy is unavailable right now — please try again in a moment.";
         return NextResponse.json({ error: friendly }, { status: 500 });
       }
-      console.log("[ivy] falling back to Groq");
+      console.warn("[ivy] falling back to Groq");
     } catch (e) {
       console.error("[ivy] openclaw exception:", e);
       if (!process.env.GROQ_API_KEY) {

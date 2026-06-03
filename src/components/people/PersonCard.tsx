@@ -9,6 +9,7 @@ import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { formatDistanceToNow } from "date-fns";
 import { postJson, throwApiError } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
+import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
 
 export function PersonCard({
   person,
@@ -59,7 +60,7 @@ export function PersonCard({
       if (!res.ok) return;
       setQuickDone(true);
       onLogged?.(person.id, occurredAt);
-      setTimeout(() => setQuickDone(false), 1500);
+      setTimeout(() => setQuickDone(false), FEEDBACK_SHORT_MS);
     } finally {
       setQuickSaving(false);
     }

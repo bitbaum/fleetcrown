@@ -8,6 +8,7 @@ import { CHANNEL_NAMES, isChannelAttrKey, stripChannelPrefix, withChannelPrefix 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Section, ChannelIcon } from "./PersonDetailHelpers";
 import { formatChannelValue } from "./person-detail-types";
+import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 
 export function ChannelsSection({
   personId,
@@ -56,11 +57,11 @@ export function ChannelsSection({
         onUpdate(next);
       } else {
         setSaveError("Failed to remove — try again");
-        setTimeout(() => setSaveError(null), 3000);
+        setTimeout(() => setSaveError(null), TOAST_SHORT_MS);
       }
     } catch {
       setSaveError("Network error — try again");
-      setTimeout(() => setSaveError(null), 3000);
+      setTimeout(() => setSaveError(null), TOAST_SHORT_MS);
     } finally {
       setDeletingKey(null);
     }

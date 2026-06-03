@@ -6,6 +6,7 @@ import { createCronJob } from "@/lib/api/crons";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 import { Modal } from "@/components/ui/modal";
+import { MODAL_AUTO_CLOSE_MS } from "@/lib/constants/timings";
 
 export function ScheduleModal({
   template,
@@ -46,7 +47,7 @@ export function ScheduleModal({
       });
       if (!res.ok) { setError("Failed to create job — try again"); return; }
       setDone(true);
-      setTimeout(onClose, 1200);
+      setTimeout(onClose, MODAL_AUTO_CLOSE_MS);
     } catch {
       setError("Network error — try again");
     } finally {

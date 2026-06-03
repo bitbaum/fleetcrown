@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, GitBranch, X as XIcon, Globe, Trash2 } from "lucide-react";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import { useFetch } from "@/hooks/use-fetch";
+import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 
 type ConnectedAccount = { provider: string; providerAccountId: string };
 
@@ -99,7 +100,7 @@ export function AccountSettings({ user }: Props) {
       }
       setPwdSaved(true);
       setCurrentPwd(""); setNewPwd(""); setConfirmPwd("");
-      setTimeout(() => setPwdSaved(false), 4000);
+      setTimeout(() => setPwdSaved(false), TOAST_MEDIUM_MS);
     } catch (e) {
       setPwdError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

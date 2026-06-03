@@ -5,6 +5,7 @@ import { Check, Loader2, X, Flame, Pencil } from "lucide-react";
 import type { HabitWithStatus } from "@/db/queries/habits";
 import { HABIT_FREQUENCY, type HabitFrequency } from "@/lib/constants/statuses";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 
 type EditDraft = { title: string; frequency: HabitFrequency };
 
@@ -42,7 +43,7 @@ export function HabitRow({
     }).then((saved) => {
       if (!saved) {
         setEditError("Failed to save — try again");
-        setTimeout(() => setEditError(null), 4000);
+        setTimeout(() => setEditError(null), TOAST_MEDIUM_MS);
       }
     });
   };

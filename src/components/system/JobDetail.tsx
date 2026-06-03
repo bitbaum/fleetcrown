@@ -7,6 +7,7 @@ import type { CronJob } from "@/lib/crons-shared";
 import { humanCronSchedule } from "@/lib/crons-shared";
 import { Drawer } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 
 export function JobDetail({
   job,
@@ -47,7 +48,7 @@ export function JobDetail({
     await onSavePrompt(job.id, prompt);
     setSaving(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => setSaved(false), FEEDBACK_MEDIUM_MS);
   };
 
   const handleToggle = async () => {

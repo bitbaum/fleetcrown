@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Target, Plus, XCircle, Loader2, X } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
 import type { LinkedGoal } from "@/db/queries/habit-goals";
+import { TOAST_SHORT_MS } from "@/lib/constants/timings";
 
 export function HabitGoalLinks({
   habitId,
@@ -23,7 +24,7 @@ export function HabitGoalLinks({
 
   const flashError = (msg: string) => {
     setLinkError(msg);
-    setTimeout(() => setLinkError(null), 3000);
+    setTimeout(() => setLinkError(null), TOAST_SHORT_MS);
   };
 
   const unlinked = allGoals.filter((g) => !items.some((l) => l.id === g.id));

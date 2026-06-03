@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Check, Copy, Loader2, Terminal, Wifi } from "lucide-react";
 import { getJson, postJson } from "@/lib/api/fetch";
 import { APP_NAME, APP_URL } from "@/config/brand";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 
 type Props = {
   saving: boolean;
@@ -57,7 +58,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
   async function copy(text: string, kind: "token" | "cmd") {
     await navigator.clipboard.writeText(text);
     setCopied(kind);
-    setTimeout(() => setCopied(null), 2000);
+    setTimeout(() => setCopied(null), FEEDBACK_MEDIUM_MS);
   }
 
   // @cockpit/agent isn't on npm yet and the repo is private, so the
