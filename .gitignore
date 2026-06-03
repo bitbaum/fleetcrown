@@ -24,6 +24,12 @@ desktop/dist
 desktop/out
 desktop/.vite
 desktop/.turbo
+# AppImage extraction artifact — created by `./Fleet-Runner-*.AppImage
+# --appimage-extract` for debugging. Bulky (~300 MB), never useful to
+# commit, and Next.js's output: "standalone" tracer was bundling it into
+# every serverless function before next.config's outputFileTracingExcludes
+# caught it.
+squashfs-root/
 # Bundled Zellij binary — downloaded by desktop/scripts/download-zellij.mjs at
 # prebuild time, packed into the AppImage / .deb / .dmg by electron-builder.
 # Not committed: it's a 10MB+ platform-specific binary, idempotent to fetch.

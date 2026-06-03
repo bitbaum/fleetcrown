@@ -15,6 +15,24 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingExcludes: {
     "/api/agent/launch": ["./next.config.ts"],
+    // CRITICAL — without this glob every serverless function deployed to
+    // Vercel exceeded the 250 MB unzipped limit and the whole deploy
+    // failed silently. The desktop/ subtree is the Electron app + its
+    // node_modules + bundled Zellij (~35 MB) + AppImage build artifacts.
+    // It has NOTHING to do with the web app, but Next.js's output:
+    // "standalone" tracer was copying the whole tree into every function
+    // on the off chance any web code happened to import something from
+    // `desktop/`. Nothing does. The "*" key applies the exclusion to
+    // every route bundle.
+    "*": [
+      "./desktop/**",
+      // AppImage extraction artifacts (e.g., from `./Fleet-Runner-*.AppImage
+      // --appimage-extract`) drop a `squashfs-root/` tree containing the
+      // full unpacked Electron app (~300 MB). It also has nothing to do
+      // with the web app; tracing was including it whenever a dev had
+      // extracted an AppImage in the repo root for inspection.
+      "./squashfs-root/**",
+    ],
   },
   outputFileTracingIncludes: {
     // Serves the @fleetcrown/agent CLI script to new customers (the package
