@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { NAV } from "@/config/navigation";
 import { CardSkeleton } from "@/components/ui/card";
 import { Greeting } from "@/components/today/Greeting";
 import { SummaryBar, SummaryBarSkeleton } from "@/components/today/SummaryBar";
@@ -52,7 +53,7 @@ export default async function TodayPage() {
               <p className="mt-0.5 text-sm text-text-secondary">
                 {APP_NAME} tracks your AI agent sessions, git state, and progress across projects — add one to the control panel to unlock the fleet view.
               </p>
-              <Link href="/control" className="mt-3 inline-flex items-center min-h-11 sm:min-h-0 gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
+              <Link href={NAV.control.href} className="mt-3 inline-flex items-center min-h-11 sm:min-h-0 gap-1.5 text-sm font-medium text-accent-text hover:opacity-80 transition-opacity">
                 Go to Control Panel →
               </Link>
             </div>

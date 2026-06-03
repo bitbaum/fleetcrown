@@ -37,7 +37,7 @@ export type NavItem = {
 // Defined once so SIDEBAR_SECTIONS (groupings) and MOBILE_NAV_ITEMS (filter)
 // both consume the same source. Never duplicate an entry.
 
-const NAV: Record<string, NavItem> = {
+export const NAV = {
   today:      { id: "today",    label: "Today",    description: "Daily overview & action queue",     href: "/today",      icon: Sun,          active: true,  mobile: true  },
   control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: true  },
@@ -62,7 +62,7 @@ const NAV: Record<string, NavItem> = {
   whitepaper: { id: "whitepaper", label: "Whitepaper", description: "Technical architecture",    href: "/whitepaper", icon: FileText,   active: true, mobile: false },
 
   settings:   { id: "settings", label: "Settings", description: "Profile & team management",         href: "/settings",   icon: Settings,     active: true,  mobile: false },
-};
+} satisfies Record<string, NavItem>;
 
 // ─── Sidebar sections — SSOT for sidebar groupings ────────────────────────────
 // Each section has a label header. When `private: true`, the section is hidden

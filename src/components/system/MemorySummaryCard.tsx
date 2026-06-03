@@ -5,6 +5,7 @@ import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { formatCount } from "@/lib/format";
 import Link from "next/link";
+import { NAV } from "@/config/navigation";
 
 export async function MemorySummaryCard() {
   const userId = await requirePageUserId();
@@ -45,7 +46,7 @@ export async function MemorySummaryCard() {
         icon={Brain}
         title="Memory"
         right={
-          <Link href="/memory" className="ui-link-muted">
+          <Link href={NAV.memory.href} className="ui-link-muted">
             View details →
           </Link>
         }

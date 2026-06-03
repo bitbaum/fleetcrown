@@ -7,6 +7,7 @@ import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { AbandonGoalButton } from "./AbandonGoalButton";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
+import { NAV } from "@/config/navigation";
 
 const idleDaysSince = (updatedAt: Date | string): number =>
   Math.floor((Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
@@ -65,7 +66,7 @@ export async function StuckGoalsCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-border-subtle">
-          <Link href="/goals" className="ui-link-subtle">
+          <Link href={NAV.goals.href} className="ui-link-subtle">
             Review in Goals →
           </Link>
         </div>

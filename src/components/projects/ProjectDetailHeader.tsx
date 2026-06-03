@@ -10,6 +10,7 @@ import { setAttr } from "@/lib/api/attrs";
 import type { ProjectData, Tab } from "./project-detail-types";
 import { getProjectLinks } from "./project-detail-types";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
+import { NAV } from "@/config/navigation";
 import {
   NameEditor,
   DescriptionEditor,
@@ -133,7 +134,7 @@ export function ProjectDetailHeader({
           )}
           {data?.runtimeState && (
             <Link
-              href="/control"
+              href={NAV.control.href}
               className="ui-icon-action"
               title={`Agent active — go to Control (${data.runtimeState.tabName})`}
             >

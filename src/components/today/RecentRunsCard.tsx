@@ -8,6 +8,7 @@ import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
+import { NAV } from "@/config/navigation";
 
 // Adjacent runs on the same project that finished within this window collapse
 // into a single row (with a "× N" badge). 1 hour matches the rough duration
@@ -25,7 +26,7 @@ export async function RecentRunsCard() {
   if (runs.length === 0 && dispatches.length === 0) {
     return (
       <Card>
-        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
+        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href={NAV.control.href} className="ui-link-subtle">Control →</Link>} />
         <p className="text-sm text-text-muted">No agent runs in the past 24 hours.</p>
       </Card>
     );
@@ -37,7 +38,7 @@ export async function RecentRunsCard() {
   if (runs.length === 0) {
     return (
       <Card>
-        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href="/control" className="ui-link-subtle">Control →</Link>} />
+        <CardHeader icon={Bot} title="Recent Agent Work" right={<Link href={NAV.control.href} className="ui-link-subtle">Control →</Link>} />
         <p className="text-xs text-text-muted mb-2">No completed orchestration runs yet — showing recent dispatches.</p>
         <div className="space-y-2">
           {dispatches.map((d) => {
@@ -102,7 +103,7 @@ export async function RecentRunsCard() {
           icon={Bot}
           title="Recent Agent Work"
           right={
-            <Link href="/control" className="ui-link-subtle">
+            <Link href={NAV.control.href} className="ui-link-subtle">
               Control →
             </Link>
           }

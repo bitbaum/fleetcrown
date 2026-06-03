@@ -8,6 +8,7 @@ import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { NAV } from "@/config/navigation";
 
 export async function GoalsDueCard() {
   const userId = await requirePageUserId();
@@ -68,7 +69,7 @@ export async function GoalsDueCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-border-subtle">
-          <Link href="/goals" className="ui-link-subtle">
+          <Link href={NAV.goals.href} className="ui-link-subtle">
             Open Goals →
           </Link>
         </div>

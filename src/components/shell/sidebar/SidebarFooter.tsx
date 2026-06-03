@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { ROUTES } from "@/config/auth";
+import { NAV } from "@/config/navigation";
 
 export function SidebarFooter({
   collapsed,
@@ -41,7 +42,7 @@ export function SidebarFooter({
           : <><PanelLeftClose className="h-4 w-4 shrink-0" /><span>Collapse</span></>}
       </button>
       <Link
-        href="/settings"
+        href={NAV.settings.href}
         className={cn(
           "ui-sidebar-utility group relative w-full",
           collapsed && "justify-center px-2",

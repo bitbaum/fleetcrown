@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
+import { NAV } from "@/config/navigation";
 
 // ─── JobRow ───────────────────────────────────────────────────────────────────
 
@@ -164,7 +165,7 @@ export function PromptsTab({
       )}
 
       <a
-        href="/prompts"
+        href={NAV.prompts.href}
         className="ui-btn-add"
       >
         <Zap className="h-3.5 w-3.5" /> Browse Prompt Library →

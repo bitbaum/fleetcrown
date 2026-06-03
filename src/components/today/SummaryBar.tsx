@@ -6,6 +6,7 @@ import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { APP_LOCALE } from "@/lib/constants";
+import { NAV } from "@/config/navigation";
 
 /** Placeholder shown while SummaryBar's DB queries run. */
 export function SummaryBarSkeleton() {
@@ -77,7 +78,7 @@ export async function SummaryBar() {
   // styled identically to a status chip. Three counts arrays + thin dividers
   // give scannable hierarchy while still wrapping cleanly on mobile.
   const counters = [
-    s.activeGoals > 0 && <Pill key="g" icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href="/goals" />,
+    s.activeGoals > 0 && <Pill key="g" icon={Target} value={`${s.activeGoals} goals · ${s.avgGoalProgress}%`} href={NAV.goals.href} />,
     s.habitsTotal > 0 && (
       <Pill
         key="h"
@@ -95,16 +96,16 @@ export async function SummaryBar() {
   const alerts = [
     s.overdueCommitments > 0 && <Pill key="o" icon={AlertCircle} value={`${s.overdueCommitments} overdue`} variant="red" href="#commitments" />,
     s.urgentAlerts > 0 && <Pill key="u" icon={Bell} value={`${s.urgentAlerts} urgent`} variant="red" href="#alerts" />,
-    s.goalsDueSoon > 0 && <Pill key="gd" icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href="/goals" />,
+    s.goalsDueSoon > 0 && <Pill key="gd" icon={Clock} value={`${s.goalsDueSoon} goal${s.goalsDueSoon > 1 ? "s" : ""} due soon`} variant="amber" href={NAV.goals.href} />,
     s.stuckGoals > 0 && <Pill key="gs" icon={CirclePause} value={`${s.stuckGoals} goal${s.stuckGoals > 1 ? "s" : ""} stalled`} variant="amber" href="#stuck-goals" />,
-    s.eventsDueSoon > 0 && <Pill key="ed" icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" href="/events" />,
+    s.eventsDueSoon > 0 && <Pill key="ed" icon={Calendar} value={`${s.eventsDueSoon} deadline${s.eventsDueSoon > 1 ? "s" : ""}`} variant="amber" href={NAV.events.href} />,
     s.pendingDrafts > 0 && <Pill key="pd" icon={Inbox} value={`${s.pendingDrafts} drafts`} variant="amber" href="#actions" />,
   ].filter(Boolean);
 
   const fleetPills = [
-    fleet.running > 0 && <Pill key="fr" icon={Bot} value={`${fleet.running} running`} variant="accent" href="/control" />,
-    fleet.waiting > 0 && <Pill key="fw" icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href="/control" />,
-    fleet.degraded > 0 && <Pill key="fd" icon={Activity} value={`${fleet.degraded} degraded`} variant="amber" href="/control" />,
+    fleet.running > 0 && <Pill key="fr" icon={Bot} value={`${fleet.running} running`} variant="accent" href={NAV.control.href} />,
+    fleet.waiting > 0 && <Pill key="fw" icon={Bot} value={`${fleet.waiting} waiting`} variant="green" href={NAV.control.href} />,
+    fleet.degraded > 0 && <Pill key="fd" icon={Activity} value={`${fleet.degraded} degraded`} variant="amber" href={NAV.control.href} />,
   ].filter(Boolean);
 
   // Hairline divider — vertical line between groups when wrapped on desktop,

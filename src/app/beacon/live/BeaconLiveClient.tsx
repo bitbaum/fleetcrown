@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react";
 import type { BeaconSession } from "@/app/api/beacon/route";
 import { BeaconPageClient } from "@/app/beacon/[id]/BeaconClient";
 import { APP_NAME } from "@/config/brand";
+import { NAV } from "@/config/navigation";
 
 export function BeaconLiveClient({ initialSession = null }: { initialSession?: BeaconSession | null }) {
   const [session, setSession] = useState<BeaconSession | null>(initialSession);
@@ -61,7 +62,7 @@ export function BeaconLiveClient({ initialSession = null }: { initialSession?: B
           <p className="text-sm font-medium text-text-secondary">No agent session waiting</p>
           <p className="mt-1 text-xs text-text-tertiary">This window will fill in the moment one stops.</p>
         </div>
-        <Link href="/control" className="ui-btn-pill-positive">
+        <Link href={NAV.control.href} className="ui-btn-pill-positive">
           Open Control panel <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>

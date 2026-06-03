@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NAV } from "@/config/navigation";
 
 const COMMIT_SHA = (
   process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
@@ -29,7 +30,7 @@ export function AppFooter() {
         </span>
       )}
       <span className="ml-auto">
-        <Link href="/system" className="ui-app-footer-cell">System</Link>
+        <Link href={NAV.system.href} className="ui-app-footer-cell">System</Link>
       </span>
     </footer>
   );

@@ -5,6 +5,7 @@ import { requirePageUserId } from "@/lib/session";
 import Link from "next/link";
 import { HabitsList } from "./HabitsList";
 import { PrivateZoneDataGate } from "@/components/shared/PrivateZoneDataGate";
+import { NAV } from "@/config/navigation";
 
 async function HabitsCardContent() {
   const userId = await requirePageUserId();
@@ -27,7 +28,7 @@ async function HabitsCardContent() {
       <HabitsList initialHabits={habits} />
       {habits.length > 0 && (
         <div className="mt-3 pt-2 border-t border-border-subtle">
-          <Link href="/habits" className="ui-link-subtle">
+          <Link href={NAV.habits.href} className="ui-link-subtle">
             Open Habits →
           </Link>
         </div>

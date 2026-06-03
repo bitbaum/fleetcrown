@@ -8,6 +8,7 @@ import { deadlineLabel } from "@/lib/dates";
 import { EVENTS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { NAV } from "@/config/navigation";
 
 export async function EventsDueCard() {
   const userId = await requirePageUserId();
@@ -93,7 +94,7 @@ export async function EventsDueCard() {
           })}
         </div>
         <div className="mt-3 pt-2 border-t border-border-subtle">
-          <Link href="/events" className="ui-link-subtle">
+          <Link href={NAV.events.href} className="ui-link-subtle">
             Open Events →
           </Link>
         </div>
