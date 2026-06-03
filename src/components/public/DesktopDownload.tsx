@@ -5,25 +5,8 @@ import { DESKTOP_DOWNLOAD } from "@/config/marketing-content";
 
 type Platform = (typeof DESKTOP_DOWNLOAD.platforms)[number];
 
-function getPlatform(): string {
-  if (typeof navigator === "undefined") return "other";
-  const ua = navigator.userAgent;
-  const platform = navigator.platform?.toLowerCase() || "";
-
-  if (/mac/i.test(platform) || /mac/i.test(ua)) return "mac";
-  if (/win/i.test(platform) || /win/i.test(ua)) return "win";
-  if (/linux/i.test(platform) || /linux/i.test(ua)) return "linux";
-  return "other";
-}
-
-function getInitialPlatform(): Platform {
-  if (typeof window === "undefined") return DESKTOP_DOWNLOAD.platforms[0];
-  const p = getPlatform();
-  return DESKTOP_DOWNLOAD.platforms.find((pl) => pl.id === p) ?? DESKTOP_DOWNLOAD.platforms[0];
-}
-
 export function DesktopDownload() {
-  const [selected, setSelected] = useState<Platform>(getInitialPlatform);
+  const [selected, setSelected] = useState<Platform>(DESKTOP_DOWNLOAD.platforms[0]);
 
   return (
     <div className="ui-public-download">

@@ -5,6 +5,7 @@ import { getUserCount } from "@/db/queries/users";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { DesktopDownload } from "@/components/public/DesktopDownload";
+import { PRODUCT_SURFACES, START_PATHS } from "@/config/marketing-content";
 import {
   MARKETING_TAGLINE,
   MARKETING_SUBTITLE,
@@ -47,17 +48,42 @@ export default async function LandingPage() {
           </p>
 
           <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-            <Link href={ROUTES.SIGN_IN} className="ui-public-cta">
+            <Link href={ROUTES.SIGN_UP} className="ui-public-cta">
               Start building
             </Link>
-            <Link href="/whitepaper" className="ui-public-cta-ghost">
-              Read the architecture
+            <Link href="/download" className="ui-public-cta-ghost">
+              Download runner
             </Link>
           </div>
         </div>
       </div>
 
-      <div className="ui-public-band py-24">
+      <div className="ui-public-band py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-10 md:grid-cols-[0.9fr_1.1fr] md:items-end">
+            <div>
+              <div className="ui-public-eyebrow">PRODUCT</div>
+              <h2 className="ui-public-display-lg mt-4">One control plane. Local execution.</h2>
+            </div>
+            <p className="ui-public-section-lede md:justify-self-end">
+              FleetCrown is built for operators already running multiple AI agents across multiple projects. It makes the work visible, steerable, and recoverable.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-4 md:grid-cols-3">
+            {PRODUCT_SURFACES.map((surface) => (
+              <section key={surface.label} className="ui-public-surface-card">
+                <div className="ui-public-surface-card-label">{surface.label}</div>
+                <h3 className="ui-public-surface-card-title">{surface.title}</h3>
+                <p className="ui-public-surface-card-body">{surface.body}</p>
+                <div className="ui-public-surface-card-meta">{surface.meta}</div>
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid gap-x-16 gap-y-20 md:grid-cols-2">
             <div>
@@ -75,6 +101,44 @@ export default async function LandingPage() {
                 The web portal gives you complete visibility and control over your entire fleet —
                 whether your laptop is open or not.
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="ui-public-band py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-12 md:grid-cols-[1fr_1.2fr] md:items-start">
+            <div>
+              <div className="ui-public-eyebrow">LIVE SURFACE</div>
+              <h2 className="ui-public-display-md mt-4">Built around the state real agent work produces.</h2>
+              <p className="ui-public-section-lede mt-6">
+                The product is not a chat box. It is an operational surface for sessions, queues, handoffs, and machine-local execution.
+              </p>
+            </div>
+
+            <div className="ui-public-terminal-demo">
+              <div className="ui-public-terminal-row">
+                <span>projects/main</span>
+                <span>Continuous</span>
+              </div>
+              <div className="ui-public-terminal-line">❯ migrate auth from sessions to jwt</div>
+              <div className="ui-public-terminal-muted">read_file src/proxy.ts · inspect callbackUrl · patch matcher</div>
+              <div className="ui-public-terminal-grid">
+                <div>
+                  <div className="ui-public-terminal-stat">11</div>
+                  <div className="ui-public-terminal-label">active projects</div>
+                </div>
+                <div>
+                  <div className="ui-public-terminal-stat">4</div>
+                  <div className="ui-public-terminal-label">agents running</div>
+                </div>
+                <div>
+                  <div className="ui-public-terminal-stat">7</div>
+                  <div className="ui-public-terminal-label">queued intents</div>
+                </div>
+              </div>
+              <div className="ui-public-terminal-footer">local runner connected · remote command enabled</div>
             </div>
           </div>
         </div>
@@ -114,6 +178,27 @@ export default async function LandingPage() {
 
       <DesktopDownload />
 
+      <div className="py-24">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="text-center">
+            <div className="ui-public-eyebrow">GET STARTED</div>
+            <h2 className="ui-public-display-lg mt-4">Choose your entry point.</h2>
+          </div>
+
+          <div className="mt-14 grid gap-4 md:grid-cols-3">
+            {START_PATHS.map((path) => (
+              <section key={path.title} className="ui-public-start-card">
+                <h3 className="ui-public-start-card-title">{path.title}</h3>
+                <p className="ui-public-start-card-body">{path.body}</p>
+                <Link href={path.href} className="ui-public-start-card-link">
+                  {path.cta} →
+                </Link>
+              </section>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="border-t border-border-subtle py-20">
         <div className="mx-auto max-w-4xl px-6">
           <div className="ui-public-eyebrow">THE DIFFERENCE</div>
@@ -140,7 +225,7 @@ export default async function LandingPage() {
       </div>
 
       <div className="border-t border-border-subtle py-20 text-center">
-        <Link href={ROUTES.SIGN_IN} className="ui-public-cta-lg">
+        <Link href={ROUTES.SIGN_UP} className="ui-public-cta-lg">
           Begin
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>

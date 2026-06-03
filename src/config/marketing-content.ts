@@ -320,6 +320,48 @@ export const DESKTOP_DOWNLOAD = {
   },
 };
 
+export const PRODUCT_SURFACES = [
+  {
+    label: "Control",
+    title: "See the whole fleet at once.",
+    body: "Every project, active agent, queue item, and handoff sits in one operating view instead of disappearing into terminal tabs.",
+    meta: "Live sessions · autonomy levels · dispatch",
+  },
+  {
+    label: "Runner",
+    title: "Execution stays on your machine.",
+    body: "The local runner owns Zellij, git, agent launching, and handoff files. FleetCrown coordinates the work without turning your environment into a cloud sandbox.",
+    meta: "Desktop app · daemon fallback · agent tokens",
+  },
+  {
+    label: "Beacon",
+    title: "Human judgment appears at the right moments.",
+    body: "Queue, Beacon, Continuous, and Mission modes let each project ask for oversight only when the next decision actually needs you.",
+    meta: "Approvals · voice intent · remote command",
+  },
+] as const;
+
+export const START_PATHS = [
+  {
+    title: "Run locally",
+    body: "Install or build the Fleet Runner, connect an agent token, and let your real machine become the authoritative execution surface.",
+    href: "/download",
+    cta: "Download runner",
+  },
+  {
+    title: "Open the control plane",
+    body: "Create an account, add projects, and command agent sessions from the hosted web surface.",
+    href: "/sign-up",
+    cta: "Start building",
+  },
+  {
+    title: "Read the architecture",
+    body: "Understand the local-runner, remote-control, queue, and handoff design before committing your workflow to it.",
+    href: "/whitepaper",
+    cta: "View whitepaper",
+  },
+] as const;
+
 // OrangeCat integration for FleetCrown (SSOT for cross-product customer story)
 // FleetCrown (production/AI fleet) is a paying customer of OrangeCat (economic layer).
 // Both OrangeCat and FleetCrown are live projects/profiles on orangecat.ch under Mao Nakamoto.

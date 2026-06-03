@@ -24,7 +24,7 @@ export async function PublicHeaderActions() {
       <Link href={ROUTES.SIGN_IN} className="ui-public-nav-link hidden sm:block">
         Sign in
       </Link>
-      <Link href={ROUTES.SIGN_IN} className="ui-public-primary-action-compact">
+      <Link href={ROUTES.SIGN_UP} className="ui-public-primary-action-compact hidden sm:inline-flex">
         Get started
       </Link>
     </div>

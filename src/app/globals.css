@@ -816,6 +816,58 @@
   .ui-public-band {
     @apply border-t border-border-subtle bg-surface-page;
   }
+  .ui-public-surface-card {
+    @apply flex min-h-[320px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
+  }
+  .ui-public-surface-card-label {
+    @apply mb-8 font-mono text-xs uppercase tracking-[0.18em] text-text-muted;
+  }
+  .ui-public-surface-card-title {
+    @apply text-2xl font-semibold leading-tight text-text-primary;
+  }
+  .ui-public-surface-card-body {
+    @apply mt-4 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-public-surface-card-meta {
+    @apply mt-auto pt-8 font-mono text-xs text-text-tertiary;
+  }
+  .ui-public-terminal-demo {
+    @apply rounded-2xl border border-border-subtle bg-black p-6 text-left text-white;
+    box-shadow: var(--shadow-panel-strong);
+  }
+  .ui-public-terminal-row {
+    @apply mb-8 flex items-center justify-between font-mono text-xs uppercase tracking-[0.16em] text-white/45;
+  }
+  .ui-public-terminal-line {
+    @apply font-mono text-xl leading-snug text-white;
+  }
+  .ui-public-terminal-muted {
+    @apply mt-3 font-mono text-xs leading-relaxed text-white/45;
+  }
+  .ui-public-terminal-grid {
+    @apply mt-10 grid grid-cols-3 gap-3 border-t border-white/10 pt-6;
+  }
+  .ui-public-terminal-stat {
+    @apply font-mono text-3xl text-white;
+  }
+  .ui-public-terminal-label {
+    @apply mt-1 text-xs text-white/45;
+  }
+  .ui-public-terminal-footer {
+    @apply mt-8 rounded-full border border-white/10 px-4 py-2 text-center font-mono text-xs text-white/50;
+  }
+  .ui-public-start-card {
+    @apply flex min-h-[260px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left transition-colors hover:border-border-default;
+  }
+  .ui-public-start-card-title {
+    @apply text-xl font-semibold text-text-primary;
+  }
+  .ui-public-start-card-body {
+    @apply mt-4 text-sm leading-relaxed text-text-secondary;
+  }
+  .ui-public-start-card-link {
+    @apply mt-auto pt-8 text-sm font-medium text-text-primary underline underline-offset-4;
+  }
 
   /* Desktop Fleet Runner download/install promo — x.ai-style pure-black band for the
      local authoritative runtime CTA. All color, typography, and opacity decisions live
