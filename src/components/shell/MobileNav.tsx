@@ -3,9 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MoreHorizontal, X } from "lucide-react";
+import { LogOut, MoreHorizontal, Sparkles, X } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/config/navigation";
 import { isCurrentPath } from "@/lib/navigation";
+import { ROUTES } from "@/config/auth";
 import { cn } from "@/lib/utils";
 
 const OVERFLOW_ITEMS = NAV_ITEMS.filter((item) => !item.mobile);
@@ -51,7 +53,7 @@ export function MobileNav() {
             aria-label="Ask Ivy"
             title="Ask Ivy"
           >
-            🌿
+            <Sparkles className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
 
@@ -109,6 +111,23 @@ export function MobileNav() {
                   </Link>
                 );
               })}
+            </div>
+            {/* Sign-out lives in the sidebar on desktop; the sidebar is
+                hidden:md:flex, so without this row mobile users had no in-app
+                exit. Placed at the sheet bottom under a divider so it's
+                discoverable but visually de-emphasized from primary nav. */}
+            <div className="mt-2 border-t border-border-subtle px-3 py-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  signOut({ callbackUrl: ROUTES.SIGN_IN });
+                }}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary min-h-11"
+              >
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         </>
