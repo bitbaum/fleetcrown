@@ -5,8 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Plus, Settings2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
-import type { ProjectState } from "@/lib/control-types";
-import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
@@ -20,6 +18,7 @@ import {
   BrainConfigPanel,
 } from "./control-panel-helpers";
 import { ZellijLivePanel } from "./ZellijLivePanel";
+import { buildCardProps } from "./control-panel-card-props";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
 import { ProjectOperationsView } from "./ProjectOperationsView";
@@ -141,46 +140,18 @@ export function ControlPanel() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [focusParam, data, snapshots, liveTabRows, pathname, router, searchParams]);
 
-  const cardProps = (project: ProjectState) => ({
-    project,
+  const cardProps = buildCardProps({
     prompts: data!.prompts,
     zellijTabs: data!.zellijTabs,
-    currentAdapter: selectedAgent,
-    availableAgents: switchableRegistry.map(({ id, label, modelSuggestions }) => ({ id, label, modelSuggestions })),
-    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
-      try {
-        const { mode } = await inject(tab, promptKey, customPrompt);
-        if (mode === "queued") {
-          setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
-          setTimeout(() => setQueuedNotice(null), 6000);
-        }
-      } catch (err) {
-        // Set the global error (renders at the top of the page) AND re-throw
-        // so the per-card sendError state in useProjectCardActions can render
-        // an inline error near the send button. The global banner is invisible
-        // when a mobile user is scrolled down to a project card — the inline
-        // error is the surface they're guaranteed to see.
-        setError(err instanceof Error ? err.message : "Injection failed");
-        throw err;
-      }
-    },
-    onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
-      try { await runWithBrain(projectState, intent); }
-      catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to run task");
-        throw err;
-      }
-    },
-    onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
-      try { await runCustomPrompt(projectState, prompt, ag); }
-      catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to run prompt");
-        throw err;
-      }
-    },
-    onDeleted: () => { refresh(true); },
-    onProfileSaved: () => { refresh(true); },
-    onLaunch: () => openLaunchModal(project),
+    selectedAgent,
+    switchableRegistry,
+    inject,
+    runWithBrain,
+    runCustomPrompt,
+    setError,
+    setQueuedNotice,
+    refresh,
+    openLaunchModal,
     runtimeAvailable,
     runtimeStateKnown,
     daemonSyncStale,

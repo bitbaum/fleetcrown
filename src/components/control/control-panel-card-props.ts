@@ -1,0 +1,91 @@
+import type { ProjectState } from "@/lib/control-types";
+import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
+import type { PromptMeta } from "@/lib/agent-config";
+import type { AutoInjectMode } from "@/config/beacon";
+import { TOAST_LONG_MS } from "@/lib/constants/timings";
+
+type RegistryEntry = { id: string; label: string; modelSuggestions: string[] };
+
+type Deps = {
+  prompts: PromptMeta[];
+  zellijTabs: string[];
+  selectedAgent: string;
+  switchableRegistry: RegistryEntry[];
+  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct" }>;
+  runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
+  runCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
+  setError: (error: string | null) => void;
+  setQueuedNotice: (notice: string | null) => void;
+  refresh: (clear?: boolean) => void;
+  openLaunchModal: (project: ProjectState) => void;
+  runtimeAvailable: boolean;
+  runtimeStateKnown: boolean;
+  daemonSyncStale: boolean;
+  automationMode: AutoInjectMode;
+  countdownSeconds: number | undefined;
+};
+
+/**
+ * Builds the per-project props bag consumed by <ProjectCard /> from the
+ * ControlPanel render. Extracted out of ControlPanel.tsx because it was 45
+ * lines of callback-wrapping noise that obscured the page's actual render
+ * flow. Returns a closure: pass the deps once per render, then invoke per
+ * project to get its props.
+ *
+ * The try/catch around each async callback exists because the per-card
+ * `useProjectCardActions` hook needs to render an inline error near the
+ * Send button (caught during a mobile dogfood where the global error
+ * banner sat off-screen). Setting the global error AND re-throwing gives
+ * both surfaces — keep both calls in any future edits.
+ */
+export function buildCardProps(deps: Deps) {
+  const availableAgents = deps.switchableRegistry.map(({ id, label, modelSuggestions }) => ({
+    id,
+    label,
+    modelSuggestions,
+  }));
+
+  return (project: ProjectState) => ({
+    project,
+    prompts: deps.prompts,
+    zellijTabs: deps.zellijTabs,
+    currentAdapter: deps.selectedAgent,
+    availableAgents,
+    onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
+      try {
+        const { mode } = await deps.inject(tab, promptKey, customPrompt);
+        if (mode === "queued") {
+          deps.setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
+          setTimeout(() => deps.setQueuedNotice(null), TOAST_LONG_MS);
+        }
+      } catch (err) {
+        deps.setError(err instanceof Error ? err.message : "Injection failed");
+        throw err;
+      }
+    },
+    onRunWithBrain: async (projectState: ProjectState, intent: OrchestrationTaskIntentId) => {
+      try {
+        await deps.runWithBrain(projectState, intent);
+      } catch (err) {
+        deps.setError(err instanceof Error ? err.message : "Failed to run task");
+        throw err;
+      }
+    },
+    onRunCustomPrompt: async (projectState: ProjectState, prompt: string, ag: string) => {
+      try {
+        await deps.runCustomPrompt(projectState, prompt, ag);
+      } catch (err) {
+        deps.setError(err instanceof Error ? err.message : "Failed to run prompt");
+        throw err;
+      }
+    },
+    onDeleted: () => { deps.refresh(true); },
+    onProfileSaved: () => { deps.refresh(true); },
+    onLaunch: () => deps.openLaunchModal(project),
+    runtimeAvailable: deps.runtimeAvailable,
+    runtimeStateKnown: deps.runtimeStateKnown,
+    daemonSyncStale: deps.daemonSyncStale,
+    automationMode: deps.automationMode,
+    countdownSeconds: deps.countdownSeconds,
+  });
+}
