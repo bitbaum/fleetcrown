@@ -336,7 +336,7 @@ export const DESKTOP_DOWNLOAD = {
       number: "02",
       title: "Sign in — once",
       body:
-        "Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click \"Open in Fleet Runner\" to log the desktop app in without copy-pasting a token.",
+        "Use the same FleetCrown account you signed up with on the web. The desktop app opens straight to your dashboard. From the web, you can also click \"Open in Fleet Runner\" to log the desktop app in without copy-pasting a token. From v0.3.0 onward, Fleet Runner checks for updates on launch and downloads them in the background — you'll never have to manually re-download.",
     },
     {
       number: "03",

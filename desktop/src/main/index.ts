@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, session } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
@@ -393,6 +394,55 @@ app.whenReady().then(() => {
   trayTickHandle = setInterval(() => {
     if (tray) tray.setToolTip(formatTrayTooltip(getPollerStatus()))
   }, 5_000)
+
+  // Auto-update — read latest-<platform>.yml from the canonical public
+  // release host (maonakamoto/fleetcrown-releases). We override the feed URL
+  // explicitly instead of relying on desktop/package.json's publish.repo
+  // because electron-builder's build pipeline targets a different repo
+  // (maonakamoto/fleetcrown) than where users actually download from. The
+  // mirror script reconciles those.
+  //
+  // Behavior: silent background check on launch, downloads the newer
+  // installer in the background if one exists, surfaces a "ready to install"
+  // notification when complete. The user keeps using the current version
+  // until they relaunch.
+  //
+  // Disabled in dev (would interfere with the local Electron dev cycle) and
+  // when the renderer is in web-shell mode pointed at a non-prod URL
+  // (FLEETCROWN_WEB_URL override) — those builds aren't the public binary.
+  if (!is.dev) {
+    try {
+      autoUpdater.autoDownload = true
+      autoUpdater.autoInstallOnAppQuit = true
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'maonakamoto',
+        repo: 'fleetcrown-releases',
+      })
+      autoUpdater.on('error', (err) => {
+        console.warn('[desktop] auto-update error:', err?.message ?? err)
+      })
+      autoUpdater.on('update-available', (info) => {
+        console.log(`[desktop] auto-update: ${info.version} available (current ${app.getVersion()})`)
+      })
+      autoUpdater.on('update-downloaded', (info) => {
+        console.log(`[desktop] auto-update: ${info.version} downloaded — will install on next quit`)
+        if (Notification.isSupported()) {
+          new Notification({
+            title: `Fleet Runner ${info.version} ready`,
+            body: 'Update downloaded — restart Fleet Runner to apply it.',
+            silent: true,
+            ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
+          }).show()
+        }
+      })
+      // Fire-and-forget — failures end up on the 'error' listener above.
+      void autoUpdater.checkForUpdatesAndNotify()
+      console.log('[desktop] auto-update check kicked off (fleetcrown-releases)')
+    } catch (e) {
+      console.warn('[desktop] auto-update setup failed:', (e as Error).message)
+    }
+  }
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
