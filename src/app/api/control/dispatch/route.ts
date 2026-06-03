@@ -21,6 +21,7 @@ import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
+import { getOrangeCatContext, renderOrangeCatContext } from "@/lib/integrations/orangecat-context";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -88,6 +89,7 @@ function buildPrompt(
   recentCommits?: string[],
   recentOutcomes?: RecentOutcome[],
   mission?: string,
+  orangeCatContext?: string,
 ): string {
   const projectCtx = [
     projectName ? `Project: ${projectName}` : "",
@@ -106,6 +108,12 @@ function buildPrompt(
     ? `\nRecent run outcomes (most recent first): ${streakLine(recentOutcomes)}\n`
     : "";
 
+  // Commercial context from OrangeCat (services/products the actor lists),
+  // surfaced so the strategist can prefer revenue-adjacent moves when handoff
+  // signals are weak. Empty when no OC key configured or the actor has no
+  // commercial state — strategist proceeds with FC-only context as before.
+  const orangeCatSection = orangeCatContext ?? "";
+
   const queueList = queue
     .slice(0, 5)
     .map((item, i) => `${i + 1}. ${item}`)
@@ -113,7 +121,7 @@ function buildPrompt(
   const queueOverflow = queue.length > 5 ? `\n(+${queue.length - 5} more items)` : "";
 
   return `You are a dispatch strategist for an AI coding agent workflow.
-${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}${outcomesSection}
+${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}${outcomesSection}${orangeCatSection}
 The agent just finished a work session. Handoff summary:
   done:   ${handoff.done || "(none)"}
   next:   ${handoff.next || "(none)"}
@@ -257,9 +265,18 @@ export async function POST(req: NextRequest) {
     } satisfies DispatchResult);
   }
 
+  // Fetch the actor's commercial state from OrangeCat in parallel with
+  // anything else that might run before Groq. The fetcher caches 5min and
+  // races a 1.5s timeout, so this never delays the strategist by more than
+  // the OC API's quickest response. Returns null silently when no
+  // ORANGECAT_API_KEY is configured.
+  const orangeCatContext = await getOrangeCatContext()
+    .then(renderOrangeCatContext)
+    .catch(() => "");
+
   // Groq composition. Even with an empty queue, the strategist composes
   // from session next, recent commits, and outcome streak.
-  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission);
+  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission, orangeCatContext);
 
   try {
     const { action, reason, prompt: composedPrompt } = await callGroq(prompt);
