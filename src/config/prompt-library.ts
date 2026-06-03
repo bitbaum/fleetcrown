@@ -843,50 +843,12 @@ Be direct. If nothing shipped, say so. Under 150 words.`,
   // ProjectPromptLibrary modal. Now they live in the unified SSOT with
   // agentKey set, so they appear everywhere AND the daemon can still fire
   // them via the same snake_case key it always used.
-  {
-    id: "hard-stop",
-    name: "Hard stop",
-    description: "Kill switch — agent stops immediately, writes nothing, runs no tools.",
-    category: "control",
-    scope: "global",
-    template: `HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only "Stopped." and stop.`,
-    agentKey: "hard_stop",
-    icon: "🛑",
-    style: "danger",
-    dimensionId: "control",
-    sendNow: true, // truly the only prompt where send-on-click is the point
-    tags: ["control", "emergency"],
-  },
-  {
-    id: "blocker-create",
-    name: "Raise blocker",
-    description: "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
-    category: "control",
-    scope: "global",
-    template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a Vercel deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
-
-Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
-
-# <one-line title of what is blocked>
-
-**Blocking:** <what task this blocker is gating>
-**Why the agent cannot do it:** <one sentence>
-
-## What the user needs to do
-<concrete steps>
-
-## How the agent will know it is resolved
-<observable signal — env var set, file exists, OAuth app registered, deploy ready, etc.>
-
-After writing the file, do NOT pick a task this iteration. Update <P>.md with status: blocked and next: empty (the blocker file IS the next step). Tell the user one sentence: "Raised blocker: <title>. See ~/.claude/sessions/<P>.blockers/pending/<filename>."
-
-Next loop iteration: next_best Setup detects the file, Rule 0 surfaces it, and on user confirmation the agent moves the file from pending/ to applied/.`,
-    agentKey: "blocker_create",
-    icon: "🚧",
-    style: "danger",
-    dimensionId: "control",
-    tags: ["control", "blocker"],
-  },
+  //
+  // Order intent (2026-06-03): safe / read-only / diagnostic primitives FIRST,
+  // structured escalation SECOND, destructive kill-switch LAST. The previous
+  // order put "Hard stop" first, which meant the command palette led with a
+  // send-now kill switch — bad UX and a footgun. The palette renders in
+  // source order; PROMPT_TEMPLATES sequence IS the SSOT for palette ordering.
   {
     id: "orient",
     name: "Orient",
@@ -969,6 +931,55 @@ For each step, name (a) what is unclear, (b) what is missing, (c) what is broken
     style: "more",
     dimensionId: "control",
     tags: ["control", "onboarding"],
+  },
+  // Escalation — writes a structured file, requires the user to take action.
+  // Not destructive but heavyweight; placed after the read-only diagnostics.
+  {
+    id: "blocker-create",
+    name: "Raise blocker",
+    description: "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
+    category: "control",
+    scope: "global",
+    template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a Vercel deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
+
+Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
+
+# <one-line title of what is blocked>
+
+**Blocking:** <what task this blocker is gating>
+**Why the agent cannot do it:** <one sentence>
+
+## What the user needs to do
+<concrete steps>
+
+## How the agent will know it is resolved
+<observable signal — env var set, file exists, OAuth app registered, deploy ready, etc.>
+
+After writing the file, do NOT pick a task this iteration. Update <P>.md with status: blocked and next: empty (the blocker file IS the next step). Tell the user one sentence: "Raised blocker: <title>. See ~/.claude/sessions/<P>.blockers/pending/<filename>."
+
+Next loop iteration: next_best Setup detects the file, Rule 0 surfaces it, and on user confirmation the agent moves the file from pending/ to applied/.`,
+    agentKey: "blocker_create",
+    icon: "🚧",
+    style: "danger",
+    dimensionId: "control",
+    tags: ["control", "blocker"],
+  },
+  // Kill switch — ALWAYS last in the control section. Send-now means a single
+  // click ships it; users surfacing the palette by accident shouldn't have a
+  // destructive primitive at the top of their results.
+  {
+    id: "hard-stop",
+    name: "Hard stop",
+    description: "Kill switch — agent stops immediately, writes nothing, runs no tools.",
+    category: "control",
+    scope: "global",
+    template: `HARD STOP. Stop all work immediately. Do not run any more tools. Do not write any code. Do not make any changes. Say only "Stopped." and stop.`,
+    agentKey: "hard_stop",
+    icon: "🛑",
+    style: "danger",
+    dimensionId: "control",
+    sendNow: true, // truly the only prompt where send-on-click is the point
+    tags: ["control", "emergency"],
   },
 ];
 

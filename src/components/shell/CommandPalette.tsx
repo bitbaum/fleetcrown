@@ -16,16 +16,34 @@ type PaletteEntry =
   | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null;   href: string }
   | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string };
 
-const RECENT_KEY = "cockpit.palette.recent";
+const RECENT_KEY = "fleetcrown.palette.recent";
+const RECENT_KEY_LEGACY = "cockpit.palette.recent";
 const RECENT_LIMIT = 6;
 
 export function CommandPalette() {
   const { open, setOpen } = useCommandPalette();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
+
+  // Global Escape: closes the palette regardless of where focus is. The
+  // input's own onKeyDown already handles Escape when focused, but that
+  // breaks the moment focus moves to the mic button, a result row, or
+  // anywhere else — the user's "Escape doesn't close" complaint.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, setOpen]);
 
   const { data: agentPrompts } = useFetch<AgentPrompt[]>(open ? "/api/prompts/agent" : null);
 
@@ -40,7 +58,13 @@ export function CommandPalette() {
   useEffect(() => {
     if (!open) return;
     try {
-      const raw = window.sessionStorage.getItem(RECENT_KEY);
+      // Migration: read fleetcrown.* first; fall back to the legacy
+      // cockpit.* key so existing users don't lose their recents after the
+      // 2026-06 rebrand. The next pushRecent writes under the new key, so
+      // the legacy entry stops being read once the user picks anything.
+      const raw =
+        window.sessionStorage.getItem(RECENT_KEY) ??
+        window.sessionStorage.getItem(RECENT_KEY_LEGACY);
       if (raw) setRecent(JSON.parse(raw) as string[]); // eslint-disable-line react-hooks/set-state-in-effect
     } catch { /* ignore */ }
   }, [open]);
@@ -132,10 +156,18 @@ export function CommandPalette() {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-start justify-center"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      // Click-outside-to-close: contains() handles the case where the
+      // backdrop div (sibling of the panel) is the click target. The old
+      // `target === currentTarget` check failed any click that landed on
+      // the backdrop element itself — i.e., most "click outside the panel"
+      // attempts — which is the user's "menu doesn't close" complaint.
+      onMouseDown={(e) => {
+        if (!panelRef.current?.contains(e.target as Node)) setOpen(false);
+      }}
     >
       <div className="ui-palette-backdrop" aria-hidden="true" />
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
