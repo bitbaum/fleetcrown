@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { BrandMark } from "@/components/shell/BrandMark";
 import { PublicNav } from "@/components/public/PublicNav";
+import { PublicFooter } from "@/components/public/PublicFooter";
 
 export type NavLink = { label: string; href: string };
 
@@ -34,6 +35,8 @@ export function PublicSurface({
       </nav>
 
       {children}
+
+      <PublicFooter />
     </div>
   );
 }
