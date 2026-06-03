@@ -1,5 +1,16 @@
 # Desktop App (Local Fleet Runner) — Execution Plan
 
+> **Status (2026-06-03): SHIPPED through v0.4.0.** This document is kept as
+> historical context for the original migration plan from the daemon to the
+> Electron app. Where the doc references `@cockpit/*` packages,
+> `cockpit-daemon.sh`, `~/.cockpit/` paths, or the 0.1.0 artifact name —
+> those are pre-rebrand naming and pre-release filenames. The shipped state
+> is documented in:
+> - `desktop/src/main/index.ts` — the actual Electron main process
+> - `home/README.md` — the local runtime that's now embedded in the desktop app
+> - `src/config/marketing-content.ts` — the user-facing download story
+> - `scripts/mirror-desktop-release.sh` — the release flow
+
 **Date**: 2026-06 (post debt reduction push)
 **Status**: Starting implementation of the "NEXT" phase from the public roadmap.
 **References**:

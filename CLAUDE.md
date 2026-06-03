@@ -16,7 +16,7 @@ FleetCrown is a multi-user SaaS platform for commanding AI agent fleets across p
 - **TypeScript strict** — no `any` without justification
 - **Tailwind CSS 4 + shadcn/ui** — always dark mode (`.dark` class on html)
 - **Drizzle ORM** — schema is SSOT for types (`$inferSelect`, `$inferInsert`)
-- **PostgreSQL 17** (self-hosted, `fleetcrown` database — migration from "cockpit" name in progress)
+- **PostgreSQL 17** (self-hosted, `fleetcrown` database)
 
 ## Architecture
 
