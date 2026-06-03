@@ -140,9 +140,20 @@ export function ControlPanel() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [focusParam, data, snapshots, liveTabRows, pathname, router, searchParams]);
 
+  // Build cardProps unconditionally — the closure is fine with empty arrays
+  // when `data` hasn't loaded yet. ProjectOperationsView only invokes the
+  // closure when there's a selected project, which requires `snapshots`,
+  // which requires `data` to be non-null. So an empty-array cardProps is
+  // never actually called against a real project — it's just a typesafe
+  // placeholder for the initial paint.
+  //
+  // The previous `data!.prompts` non-null assertion lied to the TS compiler
+  // and crashed in production with "Cannot read properties of null (reading
+  // 'prompts')" the first time a user landed on /control before the SWR
+  // fetch resolved. Worse on slow networks, every time on cold reload.
   const cardProps = buildCardProps({
-    prompts: data!.prompts,
-    zellijTabs: data!.zellijTabs,
+    prompts: data?.prompts ?? [],
+    zellijTabs: data?.zellijTabs ?? [],
     selectedAgent,
     switchableRegistry,
     inject,
