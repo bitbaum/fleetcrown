@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { NotificationsPill } from "./NotificationsPill";
+import { FleetRunnerStatusPill } from "@/components/desktop/FleetRunnerStatusPill";
 
 /**
  * Slim app-shell top bar. Universal across every authenticated route.
@@ -28,6 +29,7 @@ export function AppTopBar() {
         <kbd className="ui-palette-kbd ml-auto">{platformHint}</kbd>
       </button>
       <div className="ui-app-topbar-right">
+        <FleetRunnerStatusPill />
         <NotificationsPill />
       </div>
     </header>

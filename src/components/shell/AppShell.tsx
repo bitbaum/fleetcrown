@@ -8,6 +8,7 @@ import { AppTopBar } from "./AppTopBar";
 import { AppFooter } from "./AppFooter";
 import { CommandPalette } from "./CommandPalette";
 import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
+import { FleetRunnerAutoMint } from "@/components/desktop/FleetRunnerAutoMint";
 import {
   CommandPaletteProvider,
   useCommandPaletteHotkey,
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <AskIvyButton />
         <RefreshOnFocus />
         <CommandPalette />
+        <FleetRunnerAutoMint />
       </div>
     </CommandPaletteProvider>
   );

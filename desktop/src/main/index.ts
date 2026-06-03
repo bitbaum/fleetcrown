@@ -3,9 +3,17 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs'
+import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { APP_URL } from '@/config/brand'
+import {
+  startPoller,
+  stopPoller,
+  restartPoller,
+  onPollerStatus,
+  getPollerStatus,
+  formatTrayTooltip,
+} from './poller'
 
 // Web-shell mode — the production default.
 //
@@ -40,6 +48,12 @@ const TRAY_ICON_PATH = resourcePath('tray-icon.png')
 
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
+// Tray is lifted to module scope so the poller's status callback can refresh
+// its tooltip without going through createTray() every time.
+let tray: Tray | null = null
+// Refresh the tooltip on a short timer so "last poll Ns ago" stays accurate
+// between status events (the long-poll cycle is up to 25s).
+let trayTickHandle: NodeJS.Timeout | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -144,6 +158,10 @@ function createWindow(): void {
     try {
       ensureConfigDir()
       writeFileSync(tokenFile, token.trim(), 'utf8')
+      // Pick up the new token immediately — without this the poller would
+      // keep running with the previous token (or stay idle) until the next
+      // restart, defeating the "paste and go" UX.
+      restartPoller()
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
@@ -161,8 +179,28 @@ function createWindow(): void {
     }
   })
 
+  // Used by the in-window auto-mint flow (and Settings UI) when the user
+  // wants to disconnect this machine from the control plane without quitting
+  // the app — clears the saved token and stops the poller.
+  ipcMain.handle('clear-token', async () => {
+    try {
+      if (existsSync(tokenFile)) unlinkSync(tokenFile)
+      stopPoller()
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: (e as Error).message }
+    }
+  })
+
   ipcMain.handle('get-config-dir', async () => {
     return configDir
+  })
+
+  // Live connection status — the renderer (and any in-window React tree
+  // running inside web-shell mode) can call this for an immediate snapshot,
+  // and listen to the 'poller-status' event below for live updates.
+  ipcMain.handle('get-poller-status', async () => {
+    return getPollerStatus()
   })
 }
 
@@ -213,6 +251,24 @@ app.whenReady().then(() => {
     console.warn('[desktop] could not start embedded watcher:', (e as Error).message)
   }
 
+  // Wire the command poller — the cable that closes the web → local Zellij
+  // loop. Status updates flow to the tray tooltip and to any renderer window
+  // that wants to surface "connected to fleetcrown.vercel.app" in the UI.
+  onPollerStatus((status) => {
+    if (tray) tray.setToolTip(formatTrayTooltip(status))
+    // Push to all renderer windows — web-shell mode means the in-window
+    // React tree can show a connection chip without polling IPC.
+    BrowserWindow.getAllWindows().forEach((w) => {
+      if (!w.isDestroyed()) w.webContents.send('poller-status', status)
+    })
+  })
+  startPoller()
+  // Refresh the "last poll Ns ago" string between status events so the
+  // tooltip never feels frozen during the 25-second long-poll wait.
+  trayTickHandle = setInterval(() => {
+    if (tray) tray.setToolTip(formatTrayTooltip(getPollerStatus()))
+  }, 5_000)
+
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -230,12 +286,19 @@ app.on('window-all-closed', () => {
 })
 
 // Ensure the embedded watcher is stopped when the app exits (prevents
-// dangling fs.watch handles and pending debounce timers).
+// dangling fs.watch handles and pending debounce timers). Same applies
+// to the command poller — without aborting it, the long-poll fetch leaves
+// the process alive after the windows are closed.
 app.on('before-quit', () => {
   if (stopWatcher) {
     try { stopWatcher() } catch { /* ignore */ }
     stopWatcher = null
   }
+  if (trayTickHandle) {
+    clearInterval(trayTickHandle)
+    trayTickHandle = null
+  }
+  try { stopPoller() } catch { /* ignore */ }
 })
 
 function createTray() {
@@ -247,13 +310,13 @@ function createTray() {
   const trayIcon = TRAY_ICON_PATH
     ? nativeImage.createFromPath(TRAY_ICON_PATH)
     : nativeImage.createEmpty()
-  const tray = new Tray(trayIcon)
+  tray = new Tray(trayIcon)
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Show Fleet Runner', click: () => mainWindow?.show() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() }
   ])
-  tray.setToolTip('Fleet Runner')
+  tray.setToolTip(formatTrayTooltip(getPollerStatus()))
   tray.setContextMenu(contextMenu)
   tray.on('click', () => {
     if (mainWindow) {
