@@ -380,19 +380,14 @@ export const DESKTOP_DOWNLOAD = {
       label: "macOS",
       status: "ready" as const,
       primary: {
-        label: "Download .dmg (Apple Silicon)",
-        note: "M1/M2/M3/M4 · ~98 MB",
+        label: "Download .dmg",
+        note: "Apple Silicon · ~98 MB",
         url:
           "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.dmg",
       },
       secondary: [
         {
-          label: ".dmg (Intel)",
-          url:
-            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-x64.dmg",
-        },
-        {
-          label: ".zip (Apple Silicon, no installer)",
+          label: ".zip (no installer)",
           url:
             "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-mac-arm64.zip",
         },
