@@ -123,7 +123,6 @@ function PublicNavDropdown({
       ref={containerRef}
       className="relative"
       onMouseEnter={onOpen}
-      onMouseLeave={onClose}
     >
       <button
         type="button"
@@ -136,19 +135,26 @@ function PublicNavDropdown({
       </button>
 
       {open && (
-        <div className="ui-public-nav-panel" role="menu">
-          <div className="grid gap-1">
-            {entry.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="ui-public-nav-panel-item"
-                role="menuitem"
-                onClick={onClose}
-              >
-                <span className="ui-public-nav-panel-item-label">{item.label}</span>
-                <span className="ui-public-nav-panel-item-desc">{item.description}</span>
-              </Link>
+        <div className="ui-public-nav-panel-wrap">
+          <div className="ui-public-nav-panel" role="menu">
+            {entry.sections.map((section) => (
+              <section key={section.title} className="ui-public-nav-panel-section">
+                <div className="ui-public-nav-panel-section-label">{section.title}</div>
+                <div className="grid gap-1">
+                  {section.items.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="ui-public-nav-panel-item"
+                      role="menuitem"
+                      onClick={onClose}
+                    >
+                      <span className="ui-public-nav-panel-item-label">{item.label}</span>
+                      <span className="ui-public-nav-panel-item-desc">{item.description}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>
@@ -178,16 +184,21 @@ function PublicNavDrawer({ onClose }: { onClose: () => void }) {
               <section key={entry.label} className="ui-public-drawer-section">
                 <div className="ui-public-drawer-section-label">{entry.label}</div>
                 <div className="space-y-1">
-                  {entry.items.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className="ui-public-drawer-item"
-                    >
-                      <span className="ui-public-nav-panel-item-label">{item.label}</span>
-                      <span className="ui-public-nav-panel-item-desc">{item.description}</span>
-                    </Link>
+                  {entry.sections.map((section) => (
+                    <div key={section.title} className="space-y-1">
+                      <div className="ui-public-drawer-subsection-label">{section.title}</div>
+                      {section.items.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={onClose}
+                          className="ui-public-drawer-item"
+                        >
+                          <span className="ui-public-nav-panel-item-label">{item.label}</span>
+                          <span className="ui-public-nav-panel-item-desc">{item.description}</span>
+                        </Link>
+                      ))}
+                    </div>
                   ))}
                 </div>
               </section>

@@ -280,26 +280,60 @@ export const DESKTOP_DOWNLOAD = {
   lede:
     "The Fleet Runner is the native application that runs on your machines. It owns Zellij, agent launching, session watching, handoffs, and git — no daemon polling layer between you and the work. Web and mobile are remote control surfaces for the same system.",
   note:
-    "Today: build from source for Linux (AppImage + .deb). The same process works for macOS and Windows. Packaged, signed, auto-updating releases for all major desktop platforms are coming soon. The legacy terminal daemon remains available during transition.",
+    "Linux packages are available now. macOS and Windows packages are next; until then, build from source on those platforms. The legacy terminal daemon remains available during transition.",
   ctaLabel: "Download for your platform",
   platforms: [
     {
+      id: "linux",
+      label: "Linux",
+      note: "AppImage",
+      url: "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/Fleet.Runner-0.1.0.AppImage",
+      secondary: [
+        {
+          label: "Download .deb",
+          url: "https://github.com/maonakamoto/fleetcrown-releases/releases/download/fleet-runner-v0.1.0/fleet-runner_0.1.0_amd64.deb",
+        },
+      ],
+      command: "chmod +x 'Fleet Runner-0.1.0.AppImage' && './Fleet Runner-0.1.0.AppImage'",
+    },
+    {
       id: "mac",
       label: "macOS",
-      note: "Build from source today (Universal) · Signed one-click coming soon",
-      url: "https://github.com/maonakamoto/cockpit/releases",
+      note: "Build from source today · signed package coming soon",
+      url: "https://github.com/maonakamoto/fleetcrown/tree/main/desktop",
+      secondary: [],
+      command: "cd desktop && npm install && npm run dist:mac",
     },
     {
       id: "win",
       label: "Windows",
-      note: "Build from source today (x64) · Signed installer coming soon",
-      url: "https://github.com/maonakamoto/cockpit/releases",
+      note: "Build from source today · signed installer coming soon",
+      url: "https://github.com/maonakamoto/fleetcrown/tree/main/desktop",
+      secondary: [],
+      command: "cd desktop && npm install && npm run dist:win",
+    },
+  ],
+  prerequisites: [
+    {
+      title: "Zellij",
+      role: "Terminal session manager",
+      description: "Required for local session ownership and injection. Install it before expecting Fleet Runner to drive terminal agents.",
+      primary: { label: "Install Zellij", href: "https://zellij.dev/documentation/installation.html" },
+      command: "See official packages or download a prebuilt binary from zellij.dev.",
     },
     {
-      id: "linux",
-      label: "Linux",
-      note: "AppImage • .deb (build now) · Signed packages + repos coming soon",
-      url: "https://github.com/maonakamoto/cockpit/releases",
+      title: "Grok Build",
+      role: "xAI coding agent",
+      description: "Optional, but supported as one of the local agents Fleet Runner can launch and steer.",
+      primary: { label: "Install Grok CLI", href: "https://x.ai/cli" },
+      command: "curl -fsSL https://x.ai/cli/install.sh | bash",
+    },
+    {
+      title: "Claude Code",
+      role: "Anthropic coding agent",
+      description: "Optional supported agent. Install and authenticate it locally before assigning a project to Claude.",
+      primary: { label: "Install Claude Code", href: "https://code.claude.com/docs/en/installation" },
+      command: "npm install -g @anthropic-ai/claude-code",
     },
   ],
   fallback: {
@@ -311,7 +345,7 @@ export const DESKTOP_DOWNLOAD = {
   buildFromSource: {
     label: "Build the Fleet Runner (current way to get it)",
     description: "Clone and build to get a native AppImage / .deb (or equivalent on your OS) you can run immediately. This is the local authoritative runtime.",
-    steps: "git clone https://github.com/maonakamoto/cockpit.git && cd cockpit/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
+    steps: "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # (use dist:mac or dist:win on other machines)",
   },
   future: {
     desktop: "One-click downloadable installers with auto-update for macOS, Windows, and Linux (App Store, winget, apt, etc. where appropriate).",

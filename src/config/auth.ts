@@ -34,37 +34,41 @@ export const ROUTES = {
 // The shape is per-entry so we never paint a one-item dropdown.
 
 export type PublicNavItem = NavLink & { description: string };
+export type PublicNavSection = { title: string; items: PublicNavItem[] };
 export type PublicNavEntry =
-  | { kind: "menu"; label: string; items: PublicNavItem[] }
+  | { kind: "menu"; label: string; sections: PublicNavSection[] }
   | { kind: "link"; label: string; href: string }
   | { kind: "external"; label: string; href: string; description?: string };
 
 export const PUBLIC_NAV: PublicNavEntry[] = [
   {
     kind: "menu",
-    label: "Products",
-    items: [
-      { label: "Fleet control", href: "/",         description: "Web command center for agent operations" },
-      { label: "Fleet Runner",  href: "/download", description: "Local desktop execution layer" },
-      { label: "Roadmap",       href: "/roadmap",  description: "Desktop, mobile, teams, and robotics" },
-    ],
-  },
-  {
-    kind: "menu",
-    label: "Developers",
-    items: [
-      { label: "Download",    href: "/download",   description: "Build or install the local runner" },
-      { label: "Whitepaper",  href: "/whitepaper", description: "Architecture and control-plane details" },
-      { label: "Thoughts",    href: "/thoughts",   description: "Technical essays and product thinking" },
-    ],
-  },
-  {
-    kind: "menu",
-    label: "Company",
-    items: [
-      { label: "Mission",    href: "/mission",    description: "Why FleetCrown exists" },
-      { label: "Philosophy", href: "/philosophy", description: "Principles we build by" },
-      { label: "Investors",  href: "/investors",  description: "The market and operating thesis" },
+    label: "Platform",
+    sections: [
+      {
+        title: "Operate",
+        items: [
+          { label: "Fleet control", href: "/", description: "Web command center for agent operations" },
+          { label: "Fleet Runner", href: "/download", description: "Local desktop execution layer" },
+          { label: "Roadmap", href: "/roadmap", description: "Desktop, mobile, teams, and robotics" },
+        ],
+      },
+      {
+        title: "Install",
+        items: [
+          { label: "Download", href: "/download", description: "Linux app, dependencies, and setup path" },
+          { label: "Whitepaper", href: "/whitepaper", description: "Architecture and control-plane details" },
+          { label: "Thoughts", href: "/thoughts", description: "Technical essays and product thinking" },
+        ],
+      },
+      {
+        title: "Company",
+        items: [
+          { label: "Mission", href: "/mission", description: "Why FleetCrown exists" },
+          { label: "Philosophy", href: "/philosophy", description: "Principles we build by" },
+          { label: "Investors", href: "/investors", description: "The market and operating thesis" },
+        ],
+      },
     ],
   },
   {
@@ -79,6 +83,6 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
 // fallbacks). Derived from PUBLIC_NAV so the two never drift.
 export const PUBLIC_NAV_LINKS: NavLink[] = PUBLIC_NAV.flatMap((entry) =>
   entry.kind === "menu"
-    ? entry.items.map(({ label, href }) => ({ label, href }))
+    ? entry.sections.flatMap((section) => section.items.map(({ label, href }) => ({ label, href })))
     : [{ label: entry.label, href: entry.href }],
 );

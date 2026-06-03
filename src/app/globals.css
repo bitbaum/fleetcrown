@@ -518,7 +518,7 @@
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
   }
   .ui-public-nav {
-    @apply relative z-10 flex items-center justify-between border-b border-border-subtle px-6 py-5 sm:px-10;
+    @apply relative z-40 flex items-center justify-between border-b border-border-subtle px-6 py-5 sm:px-10;
   }
   .ui-public-nav-action {
     @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
@@ -534,8 +534,18 @@
   /* Dropdown panel anchored to the trigger — grid of label + description per
      destination. */
   .ui-public-nav-panel {
-    @apply absolute left-0 top-full z-30 mt-2 w-80 rounded-2xl border border-border-subtle bg-surface-overlay p-2;
+    width: min(720px, calc(100vw - 48px));
+    @apply grid gap-2 rounded-2xl border border-border-subtle bg-surface-base p-3 lg:grid-cols-3;
     box-shadow: var(--shadow-panel-strong);
+  }
+  .ui-public-nav-panel-wrap {
+    @apply absolute left-0 top-full z-30 pt-2;
+  }
+  .ui-public-nav-panel-section {
+    @apply min-w-0;
+  }
+  .ui-public-nav-panel-section-label {
+    @apply px-4 pb-2 pt-1 text-micro font-semibold uppercase tracking-caps text-text-muted;
   }
   .ui-public-nav-panel-item {
     @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
@@ -569,6 +579,9 @@
   }
   .ui-public-drawer-section {
     @apply space-y-2;
+  }
+  .ui-public-drawer-subsection-label {
+    @apply px-4 pt-4 text-micro font-semibold uppercase tracking-caps text-text-muted first:pt-0;
   }
   .ui-public-drawer-item {
     @apply block rounded-xl px-4 py-3 transition-colors hover:bg-surface-raised;
@@ -906,6 +919,9 @@
   .ui-public-download-cta:hover .ui-public-download-cta-note {
     color: rgba(255, 255, 255, 0.6);
   }
+  .ui-public-download-secondary {
+    @apply inline-flex items-center rounded-full border border-white/20 px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:border-white/40 hover:text-white;
+  }
   .ui-public-download-platform-bar {
     @apply flex justify-center gap-1.5 mb-12;
   }
@@ -917,6 +933,39 @@
   }
   .ui-public-download-platform-idle {
     @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white hover:-translate-y-px;
+  }
+  .ui-public-download-command {
+    @apply mb-10 rounded-2xl border border-white/10 bg-white/5 p-4 text-left;
+  }
+  .ui-public-download-command span {
+    @apply mb-2 block text-micro font-semibold uppercase tracking-caps text-white/40;
+  }
+  .ui-public-download-command code {
+    @apply block whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-white/70;
+  }
+  .ui-public-download-prereqs {
+    @apply mb-10 border-t border-white/10 pt-9 text-left;
+  }
+  .ui-public-download-prereqs-heading {
+    @apply mb-4 text-center text-micro font-mono uppercase tracking-[3.5px] text-white/40;
+  }
+  .ui-public-download-prereq-card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.03] p-4;
+  }
+  .ui-public-download-prereq-title {
+    @apply text-sm font-medium text-white;
+  }
+  .ui-public-download-prereq-role {
+    @apply mt-0.5 text-xs text-white/40;
+  }
+  .ui-public-download-prereq-card p {
+    @apply mt-3 text-xs leading-relaxed text-white/55;
+  }
+  .ui-public-download-prereq-card code {
+    @apply mt-3 block whitespace-pre-wrap break-words rounded-lg border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs text-white/65;
+  }
+  .ui-public-download-prereq-link {
+    @apply mt-3 inline-flex text-xs font-medium text-white underline underline-offset-4;
   }
   .ui-public-download-fallback {
     @apply border-t border-white/10 pt-9 text-center text-sm;

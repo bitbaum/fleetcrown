@@ -24,16 +24,19 @@ export default function DownloadPage() {
 
       <div className="mx-auto max-w-3xl px-6 pb-24 ui-public-meta space-y-4">
         <p>
-          The Fleet Runner is the native desktop app that owns execution on your machine. 
-          Build it from the source repo (the packaged AppImage and .deb are produced in <code>desktop/dist/</code> after the commands below).
+          The Fleet Runner is the native desktop app that owns execution on your machine.
+          On Linux, download the AppImage or Debian package above and run it like a normal app.
+          Fleet Runner still needs local tools to do useful work: install Zellij and at least one supported agent CLI.
         </p>
-        <div className="bg-surface-raised border border-border-subtle rounded-xl p-6 font-mono text-sm">
+        <p>
+          macOS and Windows packages are not published yet. Until they are, build the app from source on that platform:
+        </p>
+        <div className="bg-surface-raised border border-border-subtle rounded-xl p-6 font-mono text-sm text-text-secondary">
           {DESKTOP_DOWNLOAD.buildFromSource.steps.split(" && ").map((part, i, arr) => (
             <span key={i}>{part}{i < arr.length - 1 ? <br /> : null}</span>
           ))}
         </div>
         <p>
-          Run the resulting <code>Fleet Runner-*.AppImage</code> (make it executable with <code>chmod +x</code>) or install the .deb.
           It reads your existing <code>~/.config/agent-projects.conf</code>, shows your projects, and lets you dispatch intents that execute locally using the real orchestration logic (it will attempt to inject into a matching zellij session).
         </p>
         <p>
