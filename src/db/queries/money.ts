@@ -1,5 +1,6 @@
 import { db } from "@/db";
 import { subscriptions, commitments } from "@/db/schema";
+import { syncSubscriptionToOrangeCat } from "@/lib/integrations/orangecat";
 
 type SubscriptionRow = typeof subscriptions.$inferSelect;
 import { eq, and, sql } from "drizzle-orm";
@@ -60,6 +61,23 @@ export async function createSubscription(userId: string, data: CreateSubscriptio
       status: SUB_STATUS.ACTIVE,
     })
     .returning();
+
+  // Loop A: mirror the subscription into OrangeCat as a `service` record.
+  // Fire-and-forget — a network blip on OrangeCat must not fail the
+  // subscription POST. The integration no-ops when ORANGECAT_API_KEY is
+  // unset, which is the case for most dev environments today.
+  if (created) {
+    void syncSubscriptionToOrangeCat({
+      id: created.id,
+      name: created.name,
+      vendor: created.vendor,
+      amount: created.amount,
+      currency: created.currency,
+      frequency: created.frequency,
+      notes: created.notes,
+    });
+  }
+
   return created;
 }
 
