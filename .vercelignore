@@ -2,8 +2,10 @@
 # from CLI. .gitignore is only partially honored, so this is the
 # authoritative list of "things Vercel doesn't need to build the web app."
 
-# Desktop app — entirely separate runtime, not built or served by Vercel
-desktop/
+# Desktop app — entirely separate runtime, not built or served by Vercel.
+# Leading slash anchors the pattern to repo root so it doesn't also exclude
+# src/components/desktop/ (the web-side IPC bridge for the desktop shell).
+/desktop/
 
 # Local-only toolchains and vendor dirs
 .local-toolchain/
