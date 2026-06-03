@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Tray, Menu, nativeImage, Notification, session, shell } from 'electron'
+import type { MenuItemConstructorOptions } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -79,13 +80,293 @@ let tray: Tray | null = null
 // Refresh the tooltip on a short timer so "last poll Ns ago" stays accurate
 // between status events (the long-poll cycle is up to 25s).
 let trayTickHandle: NodeJS.Timeout | null = null
+// Debounce timer for window-state writes so dragging/resizing doesn't hammer
+// the disk. Coalesces a burst of move/resize events into a single save.
+let saveBoundsHandle: NodeJS.Timeout | null = null
+
+// Brand black + cream pulled from globals.css :root tokens. Hardcoded here
+// because the main process can't import the renderer's CSS — when these
+// drift, update both. The splash + offline + window backgroundColor all
+// reference these so the user never sees a Chromium-white flash before our
+// content paints.
+const BRAND_BG = '#0a0a0a'
+const BRAND_FG = '#FAF8F5'
+const BRAND_ACCENT = '#E06B3A'
+
+// Inline HTML for the splash screen — shown immediately on window create so
+// the user sees the brand mark + spinner instead of a black void while the
+// real web shell loads. Replaced by the real URL once loadURL resolves.
+function splashHtml(): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Fleet Runner</title>
+<style>
+  html,body{margin:0;height:100%;background:${BRAND_BG};color:${BRAND_FG};
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    user-select:none;-webkit-user-select:none;}
+  .logo{width:64px;height:64px;margin-bottom:24px;opacity:0.95;}
+  .name{font-size:15px;font-weight:500;letter-spacing:0.01em;opacity:0.85;}
+  .status{font-size:11px;font-weight:400;letter-spacing:0.08em;text-transform:uppercase;
+    opacity:0.4;margin-top:18px;}
+  .spinner{margin-top:14px;width:18px;height:18px;border:1.5px solid rgba(255,255,255,0.12);
+    border-top-color:${BRAND_ACCENT};border-radius:50%;animation:spin .9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body>
+<svg class="logo" viewBox="0 0 64 64" fill="none">
+  <rect x="6" y="6" width="52" height="52" rx="12" stroke="${BRAND_FG}" stroke-opacity="0.85" stroke-width="2"/>
+  <rect x="14" y="18" width="22" height="3.5" rx="1.5" fill="${BRAND_FG}" fill-opacity="0.8"/>
+  <rect x="14" y="27" width="30" height="3.5" rx="1.5" fill="${BRAND_FG}" fill-opacity="0.6"/>
+  <rect x="14" y="36" width="18" height="3.5" rx="1.5" fill="${BRAND_FG}" fill-opacity="0.45"/>
+  <circle cx="47" cy="46" r="3" fill="${BRAND_ACCENT}"/>
+</svg>
+<div class="name">Fleet Runner</div>
+<div class="status">Connecting</div>
+<div class="spinner"></div>
+</body></html>`
+}
+
+// Branded offline page. Replaces the previous bare data-URL fallback so a
+// transient network blip or Vercel outage doesn't dump the user in an
+// unstyled error. The retry button reloads via IPC (handled below) — the
+// user does not need to relaunch the app to recover.
+function offlineHtml(targetUrl: string): string {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Fleet Runner — offline</title>
+<style>
+  html,body{margin:0;height:100%;background:${BRAND_BG};color:${BRAND_FG};
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,system-ui,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:40px;box-sizing:border-box;text-align:center;user-select:none;-webkit-user-select:none;}
+  h1{font-size:20px;font-weight:600;margin:0 0 8px;letter-spacing:-0.01em;}
+  p{font-size:13px;color:rgba(255,255,255,0.55);margin:0 0 24px;max-width:420px;line-height:1.6;}
+  .target{font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:11px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+    padding:6px 10px;border-radius:6px;color:rgba(255,255,255,0.45);margin-bottom:24px;}
+  button{background:${BRAND_ACCENT};color:${BRAND_FG};border:0;padding:10px 20px;
+    border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:0.01em;}
+  button:hover{filter:brightness(1.08);}
+  .hint{margin-top:18px;font-size:11px;color:rgba(255,255,255,0.35);max-width:360px;line-height:1.6;}
+</style></head><body>
+<h1>Can't reach FleetCrown</h1>
+<p>The web app didn't respond. This is usually a transient network issue
+or a Vercel hiccup. Your local agents keep running regardless.</p>
+<div class="target">${targetUrl}</div>
+<button onclick="window.location.reload()">Try again</button>
+<div class="hint">If this persists, check your connection and the FleetCrown
+status page. Closing and reopening Fleet Runner is also safe — no local
+data depends on the web app being up.</div>
+</body></html>`
+}
+
+const SPLASH_URL = `data:text/html;charset=utf-8,${encodeURIComponent(splashHtml())}`
+const OFFLINE_URL = `data:text/html;charset=utf-8,${encodeURIComponent(offlineHtml(WEB_SHELL_URL))}`
+
+// Persist window bounds across launches so users don't have to resize/move
+// every time they open Fleet Runner. Stored as JSON in the userData dir
+// (~/.config/Fleet\ Runner on Linux, ~/Library/Application\ Support/Fleet\ Runner
+// on mac, %APPDATA%/Fleet Runner on Windows). Failure-tolerant: a corrupt
+// file just falls back to defaults.
+type WindowState = { width: number; height: number; x?: number; y?: number; isMaximized?: boolean }
+
+function windowStateFile(): string {
+  return join(app.getPath('userData'), 'window-state.json')
+}
+
+function loadWindowState(): WindowState {
+  const defaults: WindowState = { width: 1200, height: 800 }
+  try {
+    const path = windowStateFile()
+    if (!existsSync(path)) return defaults
+    const data = JSON.parse(readFileSync(path, 'utf8')) as Partial<WindowState>
+    // Clamp to a sane range — display config may have changed between launches
+    // and we don't want to restore a window onto a disconnected monitor or at
+    // a size that's smaller than the app can render usably.
+    return {
+      width: clamp(data.width ?? 1200, 800, 4000),
+      height: clamp(data.height ?? 800, 600, 4000),
+      x: typeof data.x === 'number' ? data.x : undefined,
+      y: typeof data.y === 'number' ? data.y : undefined,
+      isMaximized: !!data.isMaximized,
+    }
+  } catch {
+    return defaults
+  }
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n))
+}
+
+function saveWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  try {
+    // Use getNormalBounds() so a maximized window saves the underlying
+    // restored size, not the screen dimensions (otherwise un-maximizing
+    // next launch leaves the window at screen size).
+    const bounds = mainWindow.getNormalBounds()
+    const state: WindowState = {
+      width: bounds.width,
+      height: bounds.height,
+      x: bounds.x,
+      y: bounds.y,
+      isMaximized: mainWindow.isMaximized(),
+    }
+    writeFileSync(windowStateFile(), JSON.stringify(state), 'utf8')
+  } catch (e) {
+    console.warn('[desktop] could not save window state:', (e as Error).message)
+  }
+}
+
+function scheduleSaveWindowState() {
+  if (saveBoundsHandle) clearTimeout(saveBoundsHandle)
+  saveBoundsHandle = setTimeout(saveWindowState, 400)
+}
+
+// Native application menu — gives Fleet Runner the File/Edit/View/Window/Help
+// structure macOS users expect at the top of the screen, and Linux/Windows
+// users expect at the top of the window. Without this the app feels like a
+// browser tab in a wrapper. About dialog uses the native About panel on mac;
+// Linux/Windows fall back to a styled message box.
+function buildAppMenu(): Menu {
+  const isMac = process.platform === 'darwin'
+
+  const showAbout = () => {
+    if (isMac) {
+      // Native About panel on mac — populated via setAboutPanelOptions in
+      // whenReady. Just trigger it.
+      app.showAboutPanel()
+      return
+    }
+    void dialog.showMessageBox({
+      type: 'info',
+      title: 'About Fleet Runner',
+      message: 'Fleet Runner',
+      detail:
+        `Version ${app.getVersion()}\n\n` +
+        'The local authoritative desktop application for the FleetCrown AI agent fleet platform.\n\n' +
+        '© 2026 Mao Nakamoto · FleetCrown',
+      buttons: ['Visit Website', 'Close'],
+      defaultId: 1,
+      cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 0) void shell.openExternal('https://fleetcrown.vercel.app')
+    })
+  }
+
+  const reload = () => mainWindow?.webContents.reload()
+  const openExternal = (url: string) => () => void shell.openExternal(url)
+
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac
+      ? [{
+          label: app.name,
+          submenu: [
+            { role: 'about' as const },
+            { type: 'separator' as const },
+            { label: 'Check for Updates…', click: () => void autoUpdater.checkForUpdates() },
+            { type: 'separator' as const },
+            { role: 'services' as const },
+            { type: 'separator' as const },
+            { role: 'hide' as const },
+            { role: 'hideOthers' as const },
+            { role: 'unhide' as const },
+            { type: 'separator' as const },
+            { role: 'quit' as const },
+          ],
+        }]
+      : []),
+    {
+      label: 'File',
+      submenu: [
+        isMac ? { role: 'close' as const } : { role: 'quit' as const },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        ...(isMac
+          ? [
+              { role: 'pasteAndMatchStyle' as const },
+              { role: 'delete' as const },
+              { role: 'selectAll' as const },
+            ]
+          : [
+              { role: 'delete' as const },
+              { type: 'separator' as const },
+              { role: 'selectAll' as const },
+            ]),
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: reload },
+        { label: 'Force Reload', accelerator: 'CmdOrCtrl+Shift+R', click: () => mainWindow?.webContents.reloadIgnoringCache() },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        ...(isMac
+          ? [
+              { type: 'separator' as const },
+              { role: 'front' as const },
+              { type: 'separator' as const },
+              { role: 'window' as const },
+            ]
+          : [{ role: 'close' as const }]),
+      ],
+    },
+    {
+      label: 'Help',
+      submenu: [
+        { label: 'FleetCrown Website', click: openExternal('https://fleetcrown.vercel.app') },
+        { label: 'Quickstart Docs', click: openExternal('https://fleetcrown.vercel.app/docs/quickstart') },
+        { label: 'Report an Issue', click: openExternal('https://github.com/maonakamoto/fleetcrown/issues/new') },
+        { label: 'View Releases', click: openExternal('https://github.com/maonakamoto/fleetcrown-releases/releases') },
+        { type: 'separator' },
+        { label: 'Privacy', click: openExternal('https://fleetcrown.vercel.app/privacy') },
+        { label: 'Terms', click: openExternal('https://fleetcrown.vercel.app/terms') },
+        { label: 'License', click: openExternal('https://fleetcrown.vercel.app/license') },
+        ...(isMac ? [] : [
+          { type: 'separator' as const },
+          { label: 'About Fleet Runner', click: showAbout },
+        ]),
+      ],
+    },
+  ]
+
+  return Menu.buildFromTemplate(template)
+}
 
 function createWindow(): void {
+  const restored = loadWindowState()
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: restored.width,
+    height: restored.height,
+    ...(restored.x !== undefined && restored.y !== undefined
+      ? { x: restored.x, y: restored.y }
+      : {}),
+    minWidth: 800,
+    minHeight: 600,
     show: false,
-    autoHideMenuBar: true,
+    // Brand background so the first paint isn't Chromium-white before our
+    // content (splash → web shell) appears. Combined with show:false and
+    // ready-to-show, eliminates the white flash entirely.
+    backgroundColor: BRAND_BG,
     ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -93,8 +374,29 @@ function createWindow(): void {
     }
   })
 
+  // If the previous session ended maximized, restore that state once the
+  // window is visible (sized to the saved bounds but expanded to full
+  // screen). Doing this before show keeps the transition imperceptible.
+  if (restored.isMaximized) mainWindow.maximize()
+
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
+  })
+
+  // Persist window geometry across launches. Debounced so a drag/resize
+  // gesture doesn't write the file on every pixel of motion.
+  mainWindow.on('resize', scheduleSaveWindowState)
+  mainWindow.on('move', scheduleSaveWindowState)
+  mainWindow.on('maximize', scheduleSaveWindowState)
+  mainWindow.on('unmaximize', scheduleSaveWindowState)
+
+  mainWindow.on('close', () => {
+    // Flush any pending debounce — the window is going away.
+    if (saveBoundsHandle) {
+      clearTimeout(saveBoundsHandle)
+      saveBoundsHandle = null
+    }
+    saveWindowState()
   })
 
   mainWindow.on('closed', () => {
@@ -114,28 +416,39 @@ function createWindow(): void {
       }
       // Everything else (external links, marketing pages) opens in the user's
       // default browser — desktop apps shouldn't become mini-browsers.
-      void import('electron').then(({ shell }) => shell.openExternal(url))
+      void shell.openExternal(url)
       return { action: 'deny' }
+    })
+
+    // Catch later load failures (e.g. Vercel goes down mid-session, the
+    // user's wifi drops, an in-window OAuth callback redirects to a host
+    // that's unreachable). did-fail-load fires for every aborted/failed
+    // navigation; filter out the ones we trigger ourselves and the ABORTED
+    // code that's normal during fast successive loadURL calls.
+    mainWindow.webContents.on('did-fail-load', (_e, code, desc, validatedUrl) => {
+      if (code === -3) return // ABORTED — fires harmlessly on every successful navigation
+      if (validatedUrl === SPLASH_URL || validatedUrl === OFFLINE_URL) return // our own pages
+      if (!validatedUrl.startsWith('http')) return // data: URLs etc.
+      console.warn(`[desktop] load failed (${code}: ${desc}) for ${validatedUrl}`)
+      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
     })
   }
 
   if (USE_WEB_SHELL) {
-    // Spike mode: point the main window at the FleetCrown web app. Same React
-    // tree the browser serves runs inside the Electron window. Native APIs
-    // remain available via the preload-injected window.fleetRunner bridge.
-    console.log(`[desktop] web-shell mode → loading ${WEB_SHELL_URL}`)
-    mainWindow.loadURL(WEB_SHELL_URL).catch((err) => {
-      console.error('[desktop] failed to load web shell:', err)
-      // Fallback to a tiny inline page so the window isn't blank on failure.
-      mainWindow?.loadURL(
-        `data:text/html,${encodeURIComponent(
-          `<body style="background:#000;color:#fff;font-family:sans-serif;padding:40px">
-             <h1>Could not reach ${WEB_SHELL_URL}</h1>
-             <p>${String(err)}</p>
-             <p>Unset FLEETCROWN_WEB_URL to fall back to the bundled renderer.</p>
-           </body>`,
-        )}`,
-      )
+    // Load the brand splash immediately so the user sees Fleet Runner the
+    // moment the window paints, not a black void. ready-to-show fires fast
+    // for the data: URL, then we swap to the real web shell. Chromium
+    // replaces the document in-place when WEB_SHELL_URL finishes loading.
+    console.log(`[desktop] web-shell mode → splash, then ${WEB_SHELL_URL}`)
+    void mainWindow.loadURL(SPLASH_URL)
+    // Swap to the real URL on the next tick — gives ready-to-show a chance
+    // to fire on the splash first so the window appears with content, not
+    // blank. The OFFLINE_URL fallback path covers the network-error case.
+    setImmediate(() => {
+      mainWindow?.loadURL(WEB_SHELL_URL).catch((err) => {
+        console.error('[desktop] failed to load web shell:', err)
+        mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+      })
     })
     // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
     if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
@@ -317,9 +630,46 @@ if (!gotLock) {
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.fleetcrown.fleet-runner')
+
+  // Crash reporting via Sentry — opt-in. The SDK is no-op until a DSN is
+  // present in the environment (SENTRY_DSN or VITE_SENTRY_DSN), so this
+  // ships silent by default. When the Sentry project is created and the
+  // DSN is set on the user's machine or build env, uncaught exceptions
+  // in the main process (and native crashes via minidumps) start flowing.
+  const sentryDsn = process.env.SENTRY_DSN || process.env.VITE_SENTRY_DSN
+  if (sentryDsn) {
+    try {
+      const { init } = await import('@sentry/electron/main')
+      init({
+        dsn: sentryDsn,
+        release: `fleet-runner@${app.getVersion()}`,
+        environment: is.dev ? 'development' : 'production',
+      })
+      console.log('[desktop] Sentry main-process reporting enabled')
+    } catch (e) {
+      console.warn('[desktop] Sentry init failed:', (e as Error).message)
+    }
+  }
+
+  // Application menu — File / Edit / View / Window / Help with proper
+  // shortcuts. macOS gets the application menu (with About, Quit, etc.)
+  // as the first item; Linux/Windows skip that. Without this Fleet Runner
+  // looks like a webview wrapper instead of a native app.
+  Menu.setApplicationMenu(buildAppMenu())
+
+  // Native About panel — used by the {role: 'about'} menu item on macOS
+  // (which triggers the system About dialog). On Linux/Windows the menu
+  // calls dialog.showMessageBox in buildAppMenu instead.
+  app.setAboutPanelOptions({
+    applicationName: 'Fleet Runner',
+    applicationVersion: app.getVersion(),
+    copyright: '© 2026 Mao Nakamoto · FleetCrown',
+    website: 'https://fleetcrown.vercel.app',
+    credits: 'Bundled Zellij, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
+  })
 
   // Linux/Win cold-start: if Fleet Runner was launched directly via a
   // fleetcrown:// click (not while already running), the URL is in argv.
