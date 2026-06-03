@@ -1,10 +1,20 @@
 # Fleet Runner desktop release — multi-platform build + GitHub Release.
 #
 # Trigger: pushing a tag matching `fleet-runner-v*` (e.g. fleet-runner-v0.2.0).
-# Output: signed installers for macOS (.dmg, .zip), Windows (NSIS .exe), and
-# Linux (.AppImage, .deb), uploaded as assets on a GitHub release matching the
-# tag. The download page reads from `/releases/latest/download/<asset>` so
-# `npm version patch && git push --follow-tags` is the entire release flow.
+# Output: installers for macOS (.dmg, .zip), Windows (NSIS .exe), and
+# Linux (.AppImage, .deb), uploaded as assets on a DRAFT GitHub release on
+# this repo (maonakamoto/fleetcrown) with electron-builder's default tag
+# `v<version>` (no `fleet-runner-` prefix — that's an electron-builder
+# limitation, it derives the tag from package.json version).
+#
+# The canonical public download host is maonakamoto/fleetcrown-releases
+# (matching the existing fleet-runner-v* tag convention), which is where the
+# marketing /download page's /releases/latest/... URLs resolve. After this
+# workflow turns green, run scripts/mirror-desktop-release.sh <version> from
+# any machine with `gh` logged in to mirror the draft → public release with
+# the correct tag. That step will go away once a cross-repo PAT secret is
+# wired in (TODO: `RELEASES_REPO_TOKEN` with repo scope on fleetcrown-
+# releases, then swap GITHUB_TOKEN below for it).
 #
 # Why this exists: macOS and Windows users could not download Fleet Runner
 # before — there was only a Linux AppImage produced manually. electron-builder
