@@ -22,7 +22,6 @@ next-env.d.ts
 desktop/node_modules
 desktop/dist
 desktop/out
-desktop/package-lock.json
 desktop/.vite
 desktop/.turbo
 # Bundled Zellij binary — downloaded by desktop/scripts/download-zellij.mjs at
