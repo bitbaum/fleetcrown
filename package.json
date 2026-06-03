@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
-    "@orangecat/sdk": "file:vendor/orangecat-sdk-0.1.0.tgz",
+    "@orangecat/sdk": "file:vendor/orangecat-sdk-0.2.0.tgz",
     "@base-ui/react": "^1.3.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

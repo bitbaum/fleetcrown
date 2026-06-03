@@ -50,6 +50,14 @@ function SubRow({ sub }: { sub: Awaited<ReturnType<typeof getAllSubscriptions>>[
               <ExternalLink className="h-3 w-3" />
             </a>
           )}
+          {sub.orangecatServiceId && (
+            <span
+              className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-status-positive/10 text-status-positive"
+              title={`Synced to OrangeCat service ${sub.orangecatServiceId}`}
+            >
+              OC ✓
+            </span>
+          )}
         </div>
         <div className="text-sm text-text-secondary">
           {sub.vendor}

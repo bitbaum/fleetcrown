@@ -18,6 +18,11 @@ export const subscriptions = pgTable("subscriptions", {
   nextDue: timestamp("next_due", { withTimezone: true }),
   paymentMethod: text("payment_method"),
   notes: text("notes"),
+  // OrangeCat link — service id we mirrored this subscription into via
+  // syncSubscriptionToOrangeCat. Null when the integration isn't
+  // configured, when the sync failed, or for rows created before the
+  // integration shipped.
+  orangecatServiceId: uuid("orangecat_service_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

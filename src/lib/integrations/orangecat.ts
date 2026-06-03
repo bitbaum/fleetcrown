@@ -20,7 +20,10 @@
  * Created: 2026-06-03
  */
 
+import { eq } from "drizzle-orm";
 import { OrangeCatClient, OrangeCatError } from "@orangecat/sdk";
+import { db } from "@/db";
+import { subscriptions } from "@/db/schema";
 
 interface SubscriptionForSync {
   id: string;
@@ -84,6 +87,21 @@ export async function syncSubscriptionToOrangeCat(
         idempotencyKey: `fleetcrown_sub_${sub.id}`,
       },
     );
+    // Persist the back-link so /money can render a "Synced ✓" badge and
+    // future backfills know which rows have already been mirrored. Errors
+    // here are non-fatal — the OrangeCat side has the truth either way.
+    try {
+      await db
+        .update(subscriptions)
+        .set({ orangecatServiceId: service.id })
+        .where(eq(subscriptions.id, sub.id));
+    } catch (linkErr) {
+      console.warn("[orangecat] back-link write failed (non-fatal)", {
+        fleetcrown_subscription_id: sub.id,
+        orangecat_service_id: service.id,
+        linkErr,
+      });
+    }
     console.log("[orangecat] subscription synced", {
       fleetcrown_subscription_id: sub.id,
       orangecat_service_id: service.id,
