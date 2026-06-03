@@ -16,6 +16,7 @@ import {
   getPollerStatus,
   formatTrayTooltip,
 } from './poller'
+import { startPusher, stopPusher, restartPusher } from './pusher'
 
 // Web-shell mode — the production default.
 //
@@ -507,8 +508,10 @@ function createWindow(): void {
       writeFileSync(tokenFile, token.trim(), 'utf8')
       // Pick up the new token immediately — without this the poller would
       // keep running with the previous token (or stay idle) until the next
-      // restart, defeating the "paste and go" UX.
+      // restart, defeating the "paste and go" UX. Same for the pusher,
+      // which marks the daemon as online on the web UI.
       restartPoller()
+      restartPusher()
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
@@ -533,6 +536,7 @@ function createWindow(): void {
     try {
       if (existsSync(tokenFile)) unlinkSync(tokenFile)
       stopPoller()
+      stopPusher()
       return { ok: true }
     } catch (e) {
       return { ok: false, error: (e as Error).message }
@@ -603,11 +607,12 @@ function handleDeepLinkUrl(url: string) {
     if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true })
     writeFileSync(tokenFile, tok.trim(), 'utf8')
     restartPoller()
+    restartPusher()
     if (mainWindow) {
       if (!mainWindow.isVisible()) mainWindow.show()
       mainWindow.focus()
     }
-    console.log('[desktop] deep-link auth: token saved, poller restarted')
+    console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
   } catch (e) {
     console.error('[desktop] deep-link auth failed:', (e as Error).message)
   }
@@ -748,6 +753,12 @@ app.whenReady().then(async () => {
     })
   })
   startPoller()
+  // Heartbeat to the cloud control plane so the web UI's "Local daemon
+  // online" indicator actually reflects reality. v0.4.0–v0.4.3 had the
+  // poller (commands cloud → local) but no pusher (state local → cloud),
+  // so /control showed "Local daemon offline" even when dispatch was
+  // working. See pusher.ts for the why.
+  startPusher()
   // Refresh the "last poll Ns ago" string between status events so the
   // tooltip never feels frozen during the 25-second long-poll wait.
   trayTickHandle = setInterval(() => {
@@ -833,6 +844,7 @@ app.on('before-quit', () => {
     trayTickHandle = null
   }
   try { stopPoller() } catch { /* ignore */ }
+  try { stopPusher() } catch { /* ignore */ }
 })
 
 function createTray() {
