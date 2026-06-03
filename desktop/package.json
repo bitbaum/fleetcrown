@@ -1,6 +1,6 @@
 {
   "name": "fleet-runner",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Fleet Runner — the local authoritative desktop application for the FleetCrown AI agent fleet platform.",
   "main": "./out/main/index.js",
   "author": {
@@ -69,6 +69,7 @@
         "--no-sandbox"
       ]
     },
+    "afterPack": "./scripts/afterPack.cjs",
     "publish": {
       "provider": "github",
       "owner": "maonakamoto",
