@@ -22,6 +22,7 @@ import { buildCardProps } from "./control-panel-card-props";
 import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
 import { ProjectOperationsView } from "./ProjectOperationsView";
+import { EmptyStateWelcome } from "./EmptyStateWelcome";
 import { useAutomationPolicy } from "@/hooks/use-automation-policy";
 
 export function ControlPanel() {
@@ -231,6 +232,14 @@ export function ControlPanel() {
         runtimeAvailable={runtimeAvailable}
         onRefresh={() => refresh(true)}
       />
+
+      {/* New-user welcome card. Shows ONLY when the user has zero registered
+          projects — the dead-end blank /control was the worst first-touch
+          we had. Three CTAs: import from GitHub (multi-select), add manually,
+          install Fleet Runner. Disappears the moment they add anything. */}
+      {data && data.projects.length === 0 && (
+        <EmptyStateWelcome onAddManual={() => setNewProjectOpen(true)} />
+      )}
 
       <ControlFleetStatus
         dashboard={dashboard}
