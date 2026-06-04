@@ -16,7 +16,7 @@ import {
   getPollerStatus,
   formatTrayTooltip,
 } from './poller'
-import { startPusher, stopPusher, restartPusher } from './pusher'
+import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
 
 // Web-shell mode — the production default.
 //
@@ -956,6 +956,13 @@ function createTray() {
 // the handoff immediately. Health is encoded in the title so a glance tells
 // the user whether a run succeeded.
 function notifyOnIdle({ project, handoff }: { project: string; handoff: { done: string; next: string; health: string } }) {
+  // v0.6 — push immediately to the cloud so the web UI's SSE feed gets
+  // the change within seconds, not after the 5-minute heartbeat. The
+  // pushNow() helper coalesces back-to-back calls so a burst of worker.idle
+  // events (multiple projects handoffing within the same second) only
+  // produces a single round-trip.
+  void pushNow().catch(() => { /* non-fatal; next heartbeat picks it up */ })
+
   if (!Notification.isSupported()) return
   const healthBadge = handoff.health === 'good' ? '✓'
     : handoff.health === 'critical' ? '✗'

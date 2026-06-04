@@ -37,12 +37,19 @@ import { APP_URL } from '@/config/brand'
 const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
 const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
 
-// 60s strikes a balance between freshness on the web UI ("sync 30s ago"
-// still feels live) and not hammering the cloud. The existing daemonOffline
-// check considers >90s without a push as offline, so 60s leaves a 30s
-// safety margin. Previously 30s — halved to reduce DB egress on hosts
-// with bandwidth caps (Neon free tier, etc.).
-const PUSH_INTERVAL_MS = 60_000
+// v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
+// pushNow() the moment the watcher detects an agent file change (wired
+// from index.ts's onIdle hook). So the steady-state cadence is one
+// heartbeat every five minutes plus N pushes per real event. For an
+// idle fleet (most minutes), the total drops from one push per minute
+// (v0.5) to one push per five minutes (v0.6) — 5× reduction on the
+// always-on heartbeat path.
+//
+// The web's daemon-offline threshold (90s today) is too aggressive for
+// this cadence; v0.6 Phase E raises it to ~6 min. Until then the badge
+// will briefly flicker "offline" between heartbeats, but the SSE bridge
+// makes the badge mostly obsolete anyway.
+const PUSH_INTERVAL_MS = 5 * 60_000
 
 const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 
@@ -121,6 +128,29 @@ export function stopPusher(): void {
   if (timer) {
     clearInterval(timer)
     timer = null
+  }
+}
+
+/**
+ * Force an immediate push outside the heartbeat schedule. Called when
+ * a local event occurred that the cloud should learn about NOW — e.g.,
+ * an agent went idle (worker.idle from the embedded watcher), a Zellij
+ * tab opened or closed, or a deep-link auth just landed a new token.
+ *
+ * Coalesced via a tiny lock: if a push is already in-flight, the next
+ * call skips. The next event after the in-flight one finishes triggers
+ * a fresh push. This stops a burst (e.g., three handoffs in two seconds)
+ * from queuing three round-trips to the cloud — one is enough because
+ * the payload sends the whole openTabs list anyway.
+ */
+let pushNowInFlight = false
+export async function pushNow(): Promise<void> {
+  if (stopped || pushNowInFlight) return
+  pushNowInFlight = true
+  try {
+    await pushOnce()
+  } finally {
+    pushNowInFlight = false
   }
 }
 

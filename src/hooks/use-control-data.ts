@@ -7,6 +7,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import type { Agent } from "@/lib/agent-registry";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { useEventStream, isBridgeConfigured } from "@/lib/event-stream";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 export interface ControlDataHook {
@@ -99,13 +100,63 @@ export function useControlData(): ControlDataHook {
     // polls do — without waiting for the 30s tick.
     const onFleetCrownRefresh = () => { poll(); };
     window.addEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
-    const id = setInterval(poll, 30_000);
+
+    // Polling cadence — v0.6 tuning:
+    //   - Bridge configured (SSE active): poll every 5 min as a belt-and-
+    //     braces backup in case the bridge drops events. SSE drives the
+    //     freshness; this just catches any state drift.
+    //   - Bridge NOT configured (legacy path): keep the 30s polling.
+    //
+    // The bridge URL is a build-time env var so this decision is stable
+    // across the session — no thrashing if it flips.
+    const intervalMs = isBridgeConfigured() ? 5 * 60_000 : 30_000;
+    const id = setInterval(poll, intervalMs);
     return () => {
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
     };
   }, [refresh]);
+
+  // v0.6 — subscribe to the SSE bridge for live change events. Any event
+  // for the user (project_states, runtime_snapshots, pending_commands,
+  // etc.) triggers a coalesced refetch of /api/control. The bridge tells
+  // us *something* changed; the cloud snapshot tells us *what* it now is.
+  //
+  // This gives us push-driven freshness WITHOUT replacing the snapshot
+  // route's role — the snapshot still owns the merged view. Phase B-2
+  // could move toward applying patches client-side without a re-fetch,
+  // but the "refetch on event" pattern already cuts egress by 10x or
+  // more because we stop the 30s clock.
+  //
+  // The fallback when no bridge URL is configured is full no-op; the
+  // useEventStream hook returns mode:"disabled" and never opens a
+  // connection. Legacy polling stays intact for that path.
+  const eventCoalesce = useRef<NodeJS.Timeout | null>(null);
+  const eventState = useEventStream({
+    onChange: () => {
+      // Coalesce bursts of events (a Run state machine often touches
+      // 3-4 rows in succession) into a single refetch. 200ms is short
+      // enough to feel instant and long enough to absorb a burst.
+      if (eventCoalesce.current) clearTimeout(eventCoalesce.current);
+      eventCoalesce.current = setTimeout(() => {
+        eventCoalesce.current = null;
+        if (!document.hidden && !inFlight.current) {
+          inFlight.current = true;
+          refresh().finally(() => { inFlight.current = false; });
+        }
+      }, 200);
+    },
+  });
+  // Expose the live-mode indicator to consumers via a window-level event
+  // for any small "live updates: on" badge that wants to render. Cheaper
+  // than threading state through the existing hook's return shape, which
+  // is already wide. Tabs that don't care about the mode just ignore it.
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("fleetcrown:event-stream-mode", { detail: eventState }));
+    }
+  }, [eventState]);
 
   const mergeProjectPatches = useCallback((patches: FastProjectState[]) => {
     setData((prev) => {
