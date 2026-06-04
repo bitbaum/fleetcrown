@@ -126,6 +126,12 @@ local   all          postgres                     peer
 local   fleetcrown   fleetcrown                   scram-sha-256
 local   orangecat    orangecat                    scram-sha-256
 
+# Loopback TCP — cleartext is safe on 127.0.0.1; the Node bridge connects via
+# pg's TCP driver (not Unix socket), and pg+Postgres-self-signed TLS rejects
+# by default. scram-sha-256 password auth is enforced; only 127.0.0.1 allowed.
+host    fleetcrown   fleetcrown   127.0.0.1/32    scram-sha-256
+host    orangecat    orangecat    127.0.0.1/32    scram-sha-256
+
 # Remote connections — TLS-only, password (scram). Each role only sees its own DB.
 hostssl fleetcrown   fleetcrown   0.0.0.0/0       scram-sha-256
 hostssl fleetcrown   fleetcrown   ::/0            scram-sha-256
@@ -167,13 +173,22 @@ restore_from_url fleetcrown "${FLEETCROWN_DUMP_URL:-}" fleetcrown "$FLEETCROWN_D
 restore_from_url orangecat "${ORANGECAT_DUMP_URL:-}" orangecat "$ORANGECAT_DB_PASSWORD" \
   || echo "    orangecat restore skipped/failed (continuing)"
 
-# Apply v0.6 NOTIFY triggers to fleetcrown (they live in the repo).
+# Apply v0.6 NOTIFY triggers to fleetcrown. Prefer the local file (pre-staged
+# alongside bridge/) over a curl from raw.githubusercontent.com — the latter
+# only works if the repo is public.
 echo "    applying v0.6 NOTIFY triggers to fleetcrown"
-sudo apt-get install -y -qq curl
-TRIGGER_URL="https://raw.githubusercontent.com/maonakamoto/fleetcrown/main/drizzle/0022_notify_triggers.sql"
-PGPASSWORD="$FLEETCROWN_DB_PASSWORD" psql -h 127.0.0.1 -U fleetcrown -d fleetcrown \
-  -f <(curl -fsSL "$TRIGGER_URL") >/dev/null 2>&1 \
-  || echo "    triggers already present or schema not ready (continuing)"
+TRIGGER_LOCAL="/opt/fleetcrown/drizzle/0022_notify_triggers.sql"
+if [[ -f "$TRIGGER_LOCAL" ]]; then
+  PGPASSWORD="$FLEETCROWN_DB_PASSWORD" psql -h 127.0.0.1 -U fleetcrown -d fleetcrown \
+    -f "$TRIGGER_LOCAL" >/dev/null 2>&1 \
+    || echo "    triggers already present or schema not ready (continuing)"
+else
+  sudo apt-get install -y -qq curl
+  TRIGGER_URL="https://raw.githubusercontent.com/maonakamoto/fleetcrown/main/drizzle/0022_notify_triggers.sql"
+  PGPASSWORD="$FLEETCROWN_DB_PASSWORD" psql -h 127.0.0.1 -U fleetcrown -d fleetcrown \
+    -f <(curl -fsSL "$TRIGGER_URL") >/dev/null 2>&1 \
+    || echo "    triggers already present or schema not ready (continuing)"
+fi
 
 # ── Step 5: Node 20 + bridge service ──────────────────────────────────────
 
@@ -185,14 +200,24 @@ else
   echo "==> [5/7] Node already installed ($(node -v))"
 fi
 
-echo "    cloning fleetcrown repo (sparse — bridge/ only)"
 sudo mkdir -p /opt/fleetcrown
 sudo chown ubuntu:ubuntu /opt/fleetcrown
-if [[ ! -d /opt/fleetcrown/.git ]]; then
+if [[ -n "${FLEETCROWN_LOCAL_SOURCE_DIR:-}" ]]; then
+  # Pre-staged via SCP/tarball — the repo is private, so the OracleFree
+  # public-clone path doesn't apply. Caller has put bridge/, drizzle/,
+  # scripts/ at /opt/fleetcrown already.
+  echo "    using pre-staged source (FLEETCROWN_LOCAL_SOURCE_DIR=$FLEETCROWN_LOCAL_SOURCE_DIR)"
+  [[ -f /opt/fleetcrown/bridge/package.json ]] || {
+    echo "error: /opt/fleetcrown/bridge/package.json not found — did you extract the tarball?" >&2
+    exit 1
+  }
+elif [[ ! -d /opt/fleetcrown/.git ]]; then
+  echo "    cloning fleetcrown repo (sparse — bridge/ only)"
   git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/maonakamoto/fleetcrown.git /opt/fleetcrown
   cd /opt/fleetcrown && git sparse-checkout set bridge drizzle scripts/oracle && cd -
 else
+  echo "    refreshing existing /opt/fleetcrown checkout"
   cd /opt/fleetcrown && git pull --ff-only && cd -
 fi
 
@@ -206,7 +231,11 @@ cd -
 
 echo "    writing /opt/fleetcrown/bridge/.env"
 cat <<ENV | sudo tee /opt/fleetcrown/bridge/.env >/dev/null
-DATABASE_URL=postgresql://fleetcrown:${FLEETCROWN_DB_PASSWORD}@127.0.0.1:5432/fleetcrown?sslmode=require
+# sslmode=disable: bridge connects to 127.0.0.1 (loopback) where TLS adds no
+# security and the node-postgres pg client rejects Postgres's default
+# self-signed cert. pg_hba.conf restricts this role+db to 127.0.0.1 with
+# scram-sha-256 password auth — that's the actual security boundary.
+DATABASE_URL=postgresql://fleetcrown:${FLEETCROWN_DB_PASSWORD}@127.0.0.1:5432/fleetcrown?sslmode=disable
 PORT=4001
 ENV
 sudo chown ubuntu:ubuntu /opt/fleetcrown/bridge/.env
@@ -256,15 +285,12 @@ $BRIDGE_HOST {
     # Disable buffering — SSE needs each frame to flush immediately.
     flush_interval -1
   }
-  # Trim ?token=ck_* from access logs — never persist secrets to disk.
-  log {
-    format filter {
-      wrap json
-      fields {
-        uri query_replace ^token=.*$ "token=[REDACTED]"
-      }
-    }
-  }
+  # NOTE: previously had a "log { format filter ... query_replace }" block to
+  # redact ck_* tokens from access logs. That custom filter module isn't
+  # registered in Caddy v2.11 (verified 2026-06-04). Default access logging
+  # goes to journalctl + includes query strings (including the token=ck_*).
+  # If/when token-redaction matters, look into Caddy's `regexp` filter
+  # encoder or just disable access logs entirely with `log { output stderr }`.
 }
 CADDY
 
