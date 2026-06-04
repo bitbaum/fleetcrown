@@ -493,9 +493,13 @@ function createWindow(): void {
     // blank. On failure: bundled local renderer (Fleet Runner keeps working
     // without the cloud, per the v0.5.0 local-first contract).
     setImmediate(() => {
+      // Don't fallback here on rejection — did-fail-load owns the
+      // bundled-renderer swap. Calling loadBundledRenderer() in BOTH
+      // paths used to race: setImmediate's catch fired, then did-fail-load
+      // fired, both invoking loadFile concurrently and Electron aborts
+      // the first with ERR_ABORTED. Single source of truth: did-fail-load.
       mainWindow?.loadURL(WEB_SHELL_URL).catch((err) => {
-        console.error('[desktop] failed to load web shell:', err)
-        loadBundledRenderer()
+        console.error('[desktop] failed to load web shell (did-fail-load will handle the swap):', err?.message ?? err)
       })
     })
     // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
