@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Loader2, Lock, Star, Check } from "lucide-react";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
+import { LinkGithubButton } from "./LinkGithubButton";
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript: "ui-lang-ts",
@@ -85,9 +86,15 @@ export function RepoMultiPicker({ onSelectionChange, filter = "" }: Props) {
 
   if (hasGithub === false) {
     return (
-      <div className="ui-empty-page">
-        <p className="ui-page-subtitle">No GitHub account linked.</p>
-        <p className="ui-text-muted">Sign in with GitHub to import your repositories as FleetCrown projects.</p>
+      <div className="ui-empty-page space-y-4">
+        <div>
+          <p className="ui-page-subtitle">No GitHub account linked yet.</p>
+          <p className="ui-text-muted">
+            Connect your GitHub here and you&apos;ll come right back to this page with your repos
+            listed — no need to sign out.
+          </p>
+        </div>
+        <LinkGithubButton callbackUrl="/control/import" />
       </div>
     );
   }
