@@ -1,41 +1,66 @@
-# scripts/db — FleetCrown database migration toolkit
+# scripts/db — FleetCrown + OrangeCat database migration toolkit
 
-These scripts and runbooks let you migrate the FleetCrown production database
-between hosts in ~30 min (Hetzner) or ~1 hour (Oracle Free Tier), without
-guessing at the order of operations.
+These scripts and runbooks let you migrate both products' production
+databases off their managed-DB providers (Neon for FleetCrown, Supabase
+for OrangeCat) and onto a single self-hosted Postgres box in ~30 min
+(Hetzner) or ~1 hour (Oracle Free Tier).
 
 ## Why this exists
 
-Neon's free tier capped FleetCrown's data transfer in early-June 2026 and
-took down every DB-dependent endpoint until the cap reset. Self-hosting on
-a Hetzner CX22 (€4.5/mo) or Oracle Free Tier (free forever) eliminates that
-class of failure — egress to Vercel is uncharged on a VM you control.
+Both Neon and Supabase price on data transfer / row-egress beyond a
+generous-looking free tier, then cliff into "upgrade or be silently
+broken" once you trip a cap. We hit Neon's wall in early-June 2026 —
+every DB-dependent endpoint 500'd until the cap reset. Supabase's caps
+are similar in shape; OrangeCat would hit them eventually.
+
+Self-hosting on a Hetzner CX22 (€4.51/mo) or Oracle Always-Free ARM
+(free forever) eliminates that class of failure entirely. Vercel-to-VM
+egress is uncharged on a box you control.
+
+A CX22 is over-provisioned for both products combined at today's scale
+— see `BOTH_PRODUCTS_ONE_HOST.md` for capacity math.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `dump-from-neon.sh` | `pg_dump` the source DB to a plain SQL file + manifest of row counts. |
-| `restore-to-target.sh` | `psql` the dump into a fresh target, verify row counts match the manifest. |
+| `dump-from-neon.sh` | `pg_dump` FleetCrown out of Neon to a plain SQL file + row-count manifest. |
+| `dump-from-supabase.sh` | Same shape for OrangeCat. Defaults to `public` schema only (auth/storage stay on Supabase). `FULL_DUMP=1` for everything. |
+| `restore-to-target.sh` | `psql` either dump into a fresh target, verify row counts match the manifest. Halts before flipping Vercel if anything mismatches. |
 | `SETUP_HETZNER.md` | Provision + install + secure a Hetzner CX22 for Postgres 17. |
-| `SETUP_ORACLE_FREE.md` | Same, for Oracle Always-Free ARM. |
+| `SETUP_ORACLE_FREE.md` | Same shape for Oracle Always-Free ARM. |
+| `BOTH_PRODUCTS_ONE_HOST.md` | Layer two databases on one Postgres instance — role + pg_hba + Vercel env setup, plus capacity math and a "when to split" trigger list. |
 
 ## End-to-end migration (cookbook)
 
+For migrating **both products together**, follow `BOTH_PRODUCTS_ONE_HOST.md`
+— it sequences FleetCrown first (it's the broken one), OrangeCat second.
+The steps below cover one product at a time.
+
 ### Step 1 — dump source
 
+**FleetCrown / Neon:**
 ```bash
 SOURCE_DATABASE_URL="$(vercel env pull --environment=production /tmp/env >/dev/null && grep ^DATABASE_URL= /tmp/env | cut -d= -f2- | tr -d '"')" \
   scripts/db/dump-from-neon.sh
 ```
 
-Outputs:
-- `neon-dump-<timestamp>.sql`
-- `neon-dump-<timestamp>.manifest.txt`
+**OrangeCat / Supabase:**
+```bash
+# Use the DIRECT URL (port 5432), NOT the pooler (port 6543).
+# Supabase dashboard → Settings → Database → Connection string → "Direct connection"
+SOURCE_DATABASE_URL="postgresql://postgres:...@db.<project>.supabase.co:5432/postgres" \
+  scripts/db/dump-from-supabase.sh
+```
 
-If this fails with "Your project has exceeded the data transfer quota," you
-must either upgrade the Neon plan once (just long enough to dump) OR wait
-for the monthly reset. The script otherwise streams as fast as Neon allows.
+Outputs (same shape for both):
+- `<source>-dump-<timestamp>.sql`
+- `<source>-dump-<timestamp>.manifest.txt`
+
+If Neon fails with "Your project has exceeded the data transfer quota,"
+either upgrade the Neon plan once (just long enough to dump) OR wait for
+the monthly reset. Supabase's caps are different — they typically allow
+dumps even past the cap as long as the direct connection still responds.
 
 ### Step 2 — stand up target
 
