@@ -37,10 +37,12 @@ import { APP_URL } from '@/config/brand'
 const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
 const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
 
-// 30s is a balance between freshness on the web UI ("sync 12s ago" feels
-// live) and not hammering the cloud when nothing's happening. The existing
-// `daemonOffline` check considers >90s without a push as offline.
-const PUSH_INTERVAL_MS = 30_000
+// 60s strikes a balance between freshness on the web UI ("sync 30s ago"
+// still feels live) and not hammering the cloud. The existing daemonOffline
+// check considers >90s without a push as offline, so 60s leaves a 30s
+// safety margin. Previously 30s — halved to reduce DB egress on hosts
+// with bandwidth caps (Neon free tier, etc.).
+const PUSH_INTERVAL_MS = 60_000
 
 const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 

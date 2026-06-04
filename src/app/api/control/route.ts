@@ -462,34 +462,44 @@ export async function GET() {
   });
   });
 
-  return NextResponse.json({
-    agentRegistry,
-    agentConfig,
-    orchestration: {
-      manualPromptInjection: true,
-      autonomousPromptLoop: true,
-      sessionLifecycleSignals: true,
+  return NextResponse.json(
+    {
+      agentRegistry,
+      agentConfig,
+      orchestration: {
+        manualPromptInjection: true,
+        autonomousPromptLoop: true,
+        sessionLifecycleSignals: true,
+      },
+      inventory: {
+        source: "user_projects",
+        trackedProjectCount: dbUserProjects.length,
+        controlProjectCount: projects.length,
+        linkedDirectoryCount: dbUserProjects.filter((project) => Boolean(project.dirPath)).length,
+      },
+      projects: states,
+      prompts,
+      zellijTabs,
+      recentActivity: recentActivity ?? [],
+      runtimeAvailable: isRuntimeAvailable(),
+      daemonLastPushedAt: !isRuntimeAvailable()
+        ? (() => {
+            let maxAt: Date | null = runtimeSnapshotUpdatedAt;
+            for (const s of dbStatesArr) {
+              if (!maxAt || s.updatedAt > maxAt) maxAt = s.updatedAt;
+            }
+            return maxAt?.toISOString() ?? null;
+          })()
+        : null,
+      failedCommands: failedCommands ?? [],
+    } satisfies ControlData,
+    {
+      // Browser-side cache: private (per-user payload — never share at the
+      // edge) + 5s freshness. Multi-tab users + rapid SWR refetches now
+      // serve from the local HTTP cache instead of re-running this route's
+      // full query chain on every navigation. Critical for keeping egress
+      // bounded on caps like Neon free tier.
+      headers: { "Cache-Control": "private, max-age=5" },
     },
-    inventory: {
-      source: "user_projects",
-      trackedProjectCount: dbUserProjects.length,
-      controlProjectCount: projects.length,
-      linkedDirectoryCount: dbUserProjects.filter((project) => Boolean(project.dirPath)).length,
-    },
-    projects: states,
-    prompts,
-    zellijTabs,
-    recentActivity: recentActivity ?? [],
-    runtimeAvailable: isRuntimeAvailable(),
-    daemonLastPushedAt: !isRuntimeAvailable()
-      ? (() => {
-          let maxAt: Date | null = runtimeSnapshotUpdatedAt;
-          for (const s of dbStatesArr) {
-            if (!maxAt || s.updatedAt > maxAt) maxAt = s.updatedAt;
-          }
-          return maxAt?.toISOString() ?? null;
-        })()
-      : null,
-    failedCommands: failedCommands ?? [],
-  } satisfies ControlData);
+  );
 }
