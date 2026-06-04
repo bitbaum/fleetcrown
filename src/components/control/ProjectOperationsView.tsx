@@ -1,6 +1,7 @@
 "use client";
 
-import { Activity, Plus, Sparkles } from "lucide-react";
+import { Activity, GitBranch, Plus, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
@@ -51,6 +52,10 @@ export function ProjectOperationsView({
             <Plus className="h-3.5 w-3.5" />
             Register existing project
           </button>
+          <Link href="/control/import" className="ui-btn-secondary gap-1.5 inline-flex items-center">
+            <GitBranch className="h-3.5 w-3.5" />
+            Import from GitHub
+          </Link>
         </div>
       </div>
     );
