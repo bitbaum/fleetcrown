@@ -51,8 +51,10 @@ export const authConfig = {
         const legacyAllowed = (process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ?? process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
-        // On Vercel, the Edge Runtime sees the deployment URL (cockpit-orangecat.vercel.app)
-        // not the custom alias. x-forwarded-host carries the real host the user typed.
+        // On Vercel, the Edge Runtime sees the raw deployment URL (the internal
+        // Vercel project is legacy-named "cockpit" pending rename, so URLs are
+        // cockpit-<hash>-<org>.vercel.app) not the custom fleetcrown.vercel.app
+        // alias. x-forwarded-host carries the real host the user typed.
         const host =
           request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto =

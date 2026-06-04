@@ -280,7 +280,7 @@ export function ControlPanel() {
           daemon is offline or never-seen. The Projects grid above already
           shows every registered project's last-known state; in offline mode
           this panel duplicates the same fact in a different layout (caught in
-          dogfood: Projects list + Terminal workspaces both rendering Cockpit
+          dogfood: Projects list + Terminal workspaces both rendering FleetCrown
           with identical status read as broken). When the daemon is live the
           panel auto-opens on desktop so the quick send-to-any-tab affordance
           stays one click away. */}

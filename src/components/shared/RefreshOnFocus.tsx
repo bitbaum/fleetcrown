@@ -6,7 +6,7 @@ import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 /**
  * When the tab returns visible after ≥30s hidden, fire a router.refresh() +
- * cockpit:refresh broadcast so server-component data and every client-side
+ * fleetcrown:refresh broadcast so server-component data and every client-side
  * useFetch poll catch up in lockstep — same shape as PullToRefresh's commit
  * path, just triggered by tab-focus return instead of a finger gesture.
  *
