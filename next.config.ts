@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
     // every route bundle.
     "*": [
       "./desktop/**",
+      // The v0.6 event bridge is its own Node service that runs on Oracle
+      // (or wherever we host Postgres) — not on Vercel. Excluding the
+      // directory keeps its node_modules out of every serverless function
+      // bundle. Same lesson as desktop/.
+      "./bridge/**",
       // AppImage extraction artifacts (e.g., from `./Fleet-Runner-*.AppImage
       // --appimage-extract`) drop a `squashfs-root/` tree containing the
       // full unpacked Electron app (~300 MB). It also has nothing to do
