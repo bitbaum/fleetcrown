@@ -31,4 +31,13 @@ contextBridge.exposeInMainWorld('fleetRunner', {
     ipcRenderer.on('poller-status', handler)
     return () => ipcRenderer.removeListener('poller-status', handler)
   },
+
+  // Cloud reconnection — invoked by the bundled local renderer when the
+  // user wants to retry the web shell after Fleet Runner fell back to
+  // local-only mode (Vercel outage, DB quota, no wifi). probeCloud()
+  // returns a quick reachability check; switchToCloud() navigates the
+  // window to the web shell. On a fresh failure the did-fail-load hook
+  // drops the user back into the bundled renderer automatically.
+  probeCloud: (): Promise<boolean> => ipcRenderer.invoke('probe-cloud'),
+  switchToCloud: (): Promise<boolean> => ipcRenderer.invoke('switch-to-cloud'),
 })

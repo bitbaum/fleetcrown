@@ -94,6 +94,35 @@ let trayTickHandle: NodeJS.Timeout | null = null
 // the disk. Coalesces a burst of move/resize events into a single save.
 let saveBoundsHandle: NodeJS.Timeout | null = null
 
+// Loads the bundled local renderer (out/renderer/index.html). Called when:
+//   - the cloud web shell fails to load on launch
+//   - did-fail-load fires later in the session (Vercel down, no wifi)
+//   - the user explicitly clicks "Go local" from the cloud UI (future)
+//
+// The bundled renderer talks to Fleet Runner's main process via the
+// window.fleetRunner.* IPC bridge — same one the cloud UI uses for
+// dispatch — so all the local agent ops keep working. v0.5.0's contract:
+// Fleet Runner is functional even when the cloud is unreachable.
+function loadBundledRenderer(): void {
+  if (!mainWindow) return
+  const localHtml = is.dev && process.env['ELECTRON_RENDERER_URL']
+    ? process.env['ELECTRON_RENDERER_URL']
+    : join(__dirname, '../renderer/index.html')
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(localHtml).catch((err) => {
+      console.error('[desktop] bundled renderer load failed:', err)
+      // Last resort: branded offline page so the window isn't blank.
+      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+    })
+  } else {
+    mainWindow.loadFile(localHtml).catch((err) => {
+      console.error('[desktop] bundled renderer load failed:', err)
+      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+    })
+  }
+  console.log('[desktop] loaded bundled local renderer (cloud-independent mode)')
+}
+
 // Brand black + cream pulled from globals.css :root tokens. Hardcoded here
 // because the main process can't import the renderer's CSS — when these
 // drift, update both. The splash + offline + window backgroundColor all
@@ -435,12 +464,20 @@ function createWindow(): void {
     // that's unreachable). did-fail-load fires for every aborted/failed
     // navigation; filter out the ones we trigger ourselves and the ABORTED
     // code that's normal during fast successive loadURL calls.
+    //
+    // On real failure we drop to the *bundled local renderer* (built into
+    // the app, not a network fetch) — Fleet Runner v0.5.0's "local-first"
+    // promise: the desktop app keeps working when the cloud is down.
+    // The local renderer reads agent state directly through IPC
+    // (window.fleetRunner.*) without touching the cloud. A "Try cloud"
+    // button in that renderer relaunches the web shell when the user
+    // wants to reconnect.
     mainWindow.webContents.on('did-fail-load', (_e, code, desc, validatedUrl) => {
       if (code === -3) return // ABORTED — fires harmlessly on every successful navigation
       if (validatedUrl === SPLASH_URL || validatedUrl === OFFLINE_URL) return // our own pages
-      if (!validatedUrl.startsWith('http')) return // data: URLs etc.
-      console.warn(`[desktop] load failed (${code}: ${desc}) for ${validatedUrl}`)
-      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+      if (!validatedUrl.startsWith('http')) return // data: URLs etc. (incl. bundled renderer)
+      console.warn(`[desktop] cloud unreachable (${code}: ${desc}) for ${validatedUrl} — falling back to bundled local renderer`)
+      loadBundledRenderer()
     })
   }
 
@@ -453,11 +490,12 @@ function createWindow(): void {
     void mainWindow.loadURL(SPLASH_URL)
     // Swap to the real URL on the next tick — gives ready-to-show a chance
     // to fire on the splash first so the window appears with content, not
-    // blank. The OFFLINE_URL fallback path covers the network-error case.
+    // blank. On failure: bundled local renderer (Fleet Runner keeps working
+    // without the cloud, per the v0.5.0 local-first contract).
     setImmediate(() => {
       mainWindow?.loadURL(WEB_SHELL_URL).catch((err) => {
         console.error('[desktop] failed to load web shell:', err)
-        mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+        loadBundledRenderer()
       })
     })
     // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
@@ -552,6 +590,40 @@ function createWindow(): void {
   // and listen to the 'poller-status' event below for live updates.
   ipcMain.handle('get-poller-status', async () => {
     return getPollerStatus()
+  })
+
+  // "Try cloud" — invoked by the bundled local renderer when the user
+  // wants to reconnect to the web shell after a fallback. Returns true
+  // if the cloud URL responded quickly enough that the web shell will
+  // likely succeed; the renderer can then call switch-to-cloud to
+  // actually navigate. Decoupled so the renderer can show a spinner
+  // between "checking" and "switching."
+  ipcMain.handle('probe-cloud', async () => {
+    if (!USE_WEB_SHELL) return false
+    try {
+      const ctrl = new AbortController()
+      const t = setTimeout(() => ctrl.abort(), 4_000)
+      const resp = await fetch(`${WEB_SHELL_URL}/api/health`, { signal: ctrl.signal })
+      clearTimeout(t)
+      return resp.ok
+    } catch {
+      return false
+    }
+  })
+
+  // Navigate to the cloud web shell from the bundled local renderer.
+  // Used by "Try cloud" / "Reconnect" buttons. did-fail-load auto-falls
+  // back to bundled renderer again if the cloud is still unreachable, so
+  // the user can keep clicking without getting stuck.
+  ipcMain.handle('switch-to-cloud', async () => {
+    if (!USE_WEB_SHELL || !mainWindow) return false
+    try {
+      await mainWindow.loadURL(WEB_SHELL_URL)
+      return true
+    } catch (e) {
+      console.warn('[desktop] switch-to-cloud failed:', (e as Error).message)
+      return false
+    }
   })
 }
 

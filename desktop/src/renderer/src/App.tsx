@@ -10,6 +10,12 @@ declare global {
       getProjects: () => Promise<any>
       dispatchIntent: (args: { projectKey: string; intent: string; queueHead?: string }) => Promise<any>
       getCurrentState: () => Promise<any>
+      loadToken: () => Promise<string | null>
+      saveToken: (token: string) => Promise<{ ok: boolean }>
+      clearToken: () => Promise<{ ok: boolean }>
+      getConfigDir: () => Promise<string | null>
+      probeCloud: () => Promise<boolean>
+      switchToCloud: () => Promise<boolean>
     }
   }
 }
@@ -131,6 +137,30 @@ function App(): JSX.Element {
     setResponse(res)
   }
 
+  const [reconnecting, setReconnecting] = useState(false)
+
+  // "Try cloud" — probe + switch. The user lands here when the cloud was
+  // unreachable on launch (Vercel down, no wifi, DB quota). Once they want
+  // to retry, this opens the web shell again. If the probe fails the
+  // button stays here; if the probe succeeds we navigate and Electron's
+  // did-fail-load will auto-fall-back if the switch breaks mid-load.
+  const handleTryCloud = async () => {
+    setReconnecting(true)
+    try {
+      const reachable = await window.fleetRunner.probeCloud()
+      if (!reachable) {
+        setResponse('Cloud is still unreachable. Staying in local mode.')
+        return
+      }
+      const switched = await window.fleetRunner.switchToCloud()
+      if (!switched) {
+        setResponse('Could not switch to cloud — staying in local mode.')
+      }
+    } finally {
+      setReconnecting(false)
+    }
+  }
+
   const handleDispatch = async (projectKey: string, intent: string, prompt?: string) => {
     const target = selectedProject || projectKey
     setDispatching(target + ':' + intent)
@@ -160,7 +190,18 @@ function App(): JSX.Element {
             <div className="text-sm font-medium tracking-[-0.2px] -mt-0.5">Fleet Runner</div>
           </div>
         </div>
-        <div className="text-xs text-[var(--text-muted)] font-mono tracking-[1px]">LOCAL • AUTHORITATIVE</div>
+        <div className="flex items-center gap-4">
+          <div className="text-xs text-[var(--text-muted)] font-mono tracking-[1px]">LOCAL • AUTHORITATIVE</div>
+          <button
+            type="button"
+            onClick={handleTryCloud}
+            disabled={reconnecting}
+            className="text-xs px-2.5 py-1 rounded border border-[var(--border)] hover:border-[var(--border-hover,var(--border))] text-[var(--text-muted)] hover:text-[var(--text)] transition disabled:opacity-50"
+            title="Try connecting to the FleetCrown web shell again"
+          >
+            {reconnecting ? 'Probing…' : 'Try cloud'}
+          </button>
+        </div>
       </div>
 
       <div className="max-w-[860px] mx-auto px-8 pt-16 pb-24">
