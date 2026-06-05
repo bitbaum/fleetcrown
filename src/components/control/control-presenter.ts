@@ -7,6 +7,7 @@ import {
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
 import { getIntentLabel } from "@/config/control-intents";
+import { AGENT_LABELS, ALL_AGENT_IDS, type AnyAgentId } from "@/lib/agent-registry";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
 /**
@@ -305,11 +306,19 @@ function attentionScore(project: ProjectState): { score: number; reason: string 
   return { score, reason: reasons[0] ?? "" };
 }
 
+/** "agent" is a legacy process basename for Cursor — see scripts/_agents.sh
+ *  AGENT_PROCESS_NAMES[cursor]="agent". Only relevant when reading active
+ *  process names, never as a UI id. */
+const PROCESS_NAME_ALIASES: Record<string, AnyAgentId> = {
+  agent: "cursor",
+};
+
+function labelForProcessOrAdapter(name: string): string {
+  const id = (PROCESS_NAME_ALIASES[name] ?? name) as AnyAgentId;
+  return AGENT_LABELS[id] ?? (name[0]?.toUpperCase() + name.slice(1));
+}
+
 export function formatAgentRuntimeLabel(project: ProjectState, liveTab?: string): string {
-  const labels: Record<string, string> = {
-    cursor: "Cursor",
-    agent: "Cursor",
-  };
   // Prefer live process detection
   let names = project.activeAgents.length ? project.activeAgents : [];
   // Then current prompt adapter (what was last dispatched)
@@ -323,30 +332,19 @@ export function formatAgentRuntimeLabel(project: ProjectState, liveTab?: string)
     const inferred = inferAdapterFromTabName(liveTab);
     if (inferred) names = [inferred];
   }
-  return names
-    .map((name) => labels[name] ?? (name[0]?.toUpperCase() + name.slice(1)))
-    .join(", ");
+  return names.map(labelForProcessOrAdapter).join(", ");
 }
 
 export function inferAgentLabelFromTabName(tabName: string): string | null {
   const id = inferAdapterFromTabName(tabName);
-  if (!id) return null;
-  const labels: Record<string, string> = {
-    claude: "Claude",
-    codex: "Codex",
-    cursor: "Cursor",
-    grok: "Grok",
-    gemini: "Gemini",
-    openclaw: "OpenClaw",
-  };
-  return labels[id] ?? null;
+  return id ? (AGENT_LABELS[id] ?? null) : null;
 }
 
-/** Tab suffix → adapter id: "FleetCrown Cursor" → "cursor". Mirrors scripts/_agents.sh. */
-export function inferAdapterFromTabName(tabName: string): string | null {
+/** Tab suffix → adapter id: "FleetCrown Cursor" → "cursor". Mirrors scripts/_agents.sh.
+ *  IDs come from ALL_AGENT_IDS in agent-registry — the single source of truth. */
+export function inferAdapterFromTabName(tabName: string): AnyAgentId | null {
   const normalized = tabName.toLowerCase();
-  const ids = ["grok", "claude", "codex", "gemini", "cursor", "openclaw"] as const;
-  for (const id of ids) {
+  for (const id of ALL_AGENT_IDS) {
     if (normalized === id || normalized.endsWith(` ${id}`) || normalized.endsWith(`-${id}`)) {
       return id;
     }

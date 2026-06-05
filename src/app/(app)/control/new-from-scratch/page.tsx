@@ -157,6 +157,29 @@ export default function NewFromScratchPage() {
               </details>
             </div>
 
+            <details className="text-xs text-text-tertiary">
+              <summary className="cursor-pointer">After cloning — open in editor</summary>
+              <p className="mt-2 mb-1 text-text-muted">
+                These deeplinks assume you cloned to{" "}
+                <code className="px-1 rounded bg-surface-base">~/dev/{result.repo.name}</code> (default).
+                The browser will hand the URL to your editor if it&apos;s installed.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <a
+                  href={`cursor://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
+                  className="ui-btn-secondary text-xs"
+                >
+                  Open in Cursor
+                </a>
+                <a
+                  href={`vscode://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
+                  className="ui-btn-secondary text-xs"
+                >
+                  Open in VS Code
+                </a>
+              </div>
+            </details>
+
             <div className="pt-3 border-t border-border-subtle flex justify-end gap-2">
               <button type="button" onClick={() => router.push("/control")} className="ui-btn-secondary">
                 Open Control
