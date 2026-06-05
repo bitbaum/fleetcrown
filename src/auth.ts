@@ -191,6 +191,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.GITHUB_CLIENT_ID ?? "",
       clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
       allowDangerousEmailAccountLinking: true,
+      // Scopes:
+      //   read:user + user:email — sign-in identity (Auth.js defaults)
+      //   repo                   — create + read + write private and public
+      //                            repos. Required by /api/projects/create-
+      //                            with-github (the "Start a new project"
+      //                            flow on /control) and by /api/github/repos
+      //                            for listing repos including private ones.
+      // Without `repo`, GitHub returns 404 from POST /user/repos rather than
+      // a clear 403 (security-through-obscurity on their side). Surfaced
+      // during dogfood 2026-06-05 as "GitHub API rejected the create (404)".
+      // Existing tokens minted before this change won't pick up the new
+      // scope automatically — users must sign out + sign back in to re-mint.
+      authorization: { params: { scope: "read:user user:email repo" } },
     }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
       Google({
