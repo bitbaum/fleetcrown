@@ -20,6 +20,7 @@ import { db } from "@/db";
 import { accounts } from "@/db/schema";
 import { createProject } from "@/db/queries/projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
+import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templates";
 
 const Body = z.object({
   name: z.string().trim().min(1, "name is required").max(80),
@@ -27,7 +28,96 @@ const Body = z.object({
   visibility: z.enum(["private", "public"]).default("private"),
   /** Initialize with a README.md so the repo isn't empty. */
   init_readme: z.boolean().default(true),
+  /** Starter template to seed into the repo. "bare" leaves it as just a README. */
+  template: z.enum(["bare", "nextjs-tailwind"]).default("bare"),
 });
+
+/**
+ * Commit a set of template files to the new repo in one round-trip via the
+ * Git Trees API. Returns true on success, false on failure (the repo still
+ * exists; only the template seeding failed, which is non-fatal).
+ *
+ * Flow: get the auto-init README commit → create blobs for each template
+ * file → create a new tree on top of the README tree → create a commit →
+ * fast-forward the main branch ref. Sequential API calls but the blob
+ * creation is fan-out parallel.
+ */
+async function seedTemplate(
+  token: string,
+  ownerLogin: string,
+  repoName: string,
+  templateId: TemplateId,
+  values: { name: string; description: string },
+): Promise<boolean> {
+  const template = TEMPLATES[templateId];
+  if (!template || Object.keys(template.files).length === 0) return true;
+
+  const gh = (path: string, init?: RequestInit) =>
+    fetch(`https://api.github.com${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+        ...(init?.headers ?? {}),
+      },
+    });
+
+  const repoPath = `/repos/${ownerLogin}/${repoName}`;
+
+  // 1. Read main branch's latest commit + tree.
+  const branchRes = await gh(`${repoPath}/branches/main`);
+  if (!branchRes.ok) return false;
+  const branchData = (await branchRes.json()) as {
+    commit: { sha: string; commit: { tree: { sha: string } } };
+  };
+  const baseCommitSha = branchData.commit.sha;
+  const baseTreeSha = branchData.commit.commit.tree.sha;
+
+  // 2. Create blobs in parallel — render placeholders first.
+  const fileEntries = Object.entries(template.files);
+  const blobs = await Promise.all(
+    fileEntries.map(async ([path, body]) => {
+      const content = renderTemplate(body, values);
+      const blobRes = await gh(`${repoPath}/git/blobs`, {
+        method: "POST",
+        body: JSON.stringify({ content, encoding: "utf-8" }),
+      });
+      if (!blobRes.ok) throw new Error(`blob create failed for ${path}`);
+      const { sha } = (await blobRes.json()) as { sha: string };
+      return { path, mode: "100644" as const, type: "blob" as const, sha };
+    }),
+  ).catch(() => null);
+  if (!blobs) return false;
+
+  // 3. Create a tree on top of the existing one (so README from auto_init stays).
+  const treeRes = await gh(`${repoPath}/git/trees`, {
+    method: "POST",
+    body: JSON.stringify({ base_tree: baseTreeSha, tree: blobs }),
+  });
+  if (!treeRes.ok) return false;
+  const { sha: newTreeSha } = (await treeRes.json()) as { sha: string };
+
+  // 4. Create the commit.
+  const commitRes = await gh(`${repoPath}/git/commits`, {
+    method: "POST",
+    body: JSON.stringify({
+      message: `Add ${template.label} starter (seeded by FleetCrown)`,
+      tree: newTreeSha,
+      parents: [baseCommitSha],
+    }),
+  });
+  if (!commitRes.ok) return false;
+  const { sha: newCommitSha } = (await commitRes.json()) as { sha: string };
+
+  // 5. Move the main branch ref forward.
+  const refRes = await gh(`${repoPath}/git/refs/heads/main`, {
+    method: "PATCH",
+    body: JSON.stringify({ sha: newCommitSha }),
+  });
+  return refRes.ok;
+}
 
 async function getGithubToken(userId: string): Promise<string | null> {
   const row = await db.query.accounts.findFirst({
@@ -48,7 +138,7 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { name, description, visibility, init_readme } = parsed.data;
+  const { name, description, visibility, init_readme, template } = parsed.data;
 
   const token = await getGithubToken(userId);
   if (!token) {
@@ -108,7 +198,22 @@ export async function POST(req: NextRequest) {
     ssh_url: string;
     clone_url: string;
     private: boolean;
+    owner: { login: string };
   };
+
+  // If the user picked a non-bare template, seed its files into the repo
+  // before we return. Failure here is non-fatal — the repo still exists, the
+  // user can clone the bare version and add files manually.
+  let templateSeeded = true;
+  if (template !== "bare") {
+    templateSeeded = await seedTemplate(
+      token,
+      repo.owner.login,
+      repo.name,
+      template,
+      { name, description: description ?? `Started from FleetCrown · ${name}` },
+    );
+  }
 
   // Now create the FleetCrown project entity. We use the original (un-slugged)
   // name as the display name; the slugged repo name lives in description.
@@ -151,6 +256,8 @@ export async function POST(req: NextRequest) {
       cloneUrl: repo.clone_url,
       private: repo.private,
     },
+    template,
+    templateSeeded,
     cloneCmd: `git clone ${repo.ssh_url}`,
     cloneHttpsCmd: `git clone ${repo.clone_url}`,
   });

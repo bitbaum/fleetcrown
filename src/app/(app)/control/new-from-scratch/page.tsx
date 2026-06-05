@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, GitBranch, Check, Copy } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
+import { TEMPLATES, type TemplateId } from "@/lib/project-templates";
 
 type CreateResponse = {
   ok: boolean;
@@ -24,6 +25,8 @@ type CreateResponse = {
     cloneUrl: string;
     private: boolean;
   };
+  template?: TemplateId;
+  templateSeeded?: boolean;
   cloneCmd?: string;
   cloneHttpsCmd?: string;
   error?: string;
@@ -36,6 +39,7 @@ export default function NewFromScratchPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"private" | "public">("private");
+  const [template, setTemplate] = useState<TemplateId>("bare");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreateResponse | null>(null);
   const [error, setError] = useState("");
@@ -55,6 +59,7 @@ export default function NewFromScratchPage() {
           description: description.trim() || undefined,
           visibility,
           init_readme: true,
+          template,
         }),
       });
       const body = (await res.json()) as CreateResponse;
@@ -106,7 +111,14 @@ export default function NewFromScratchPage() {
             <div>
               <h2 className="ui-page-subtitle">{result.project.name}</h2>
               <p className="text-sm text-text-muted mt-1">
-                GitHub repo created ({result.repo.private ? "private" : "public"}) and registered in FleetCrown.
+                GitHub repo created ({result.repo.private ? "private" : "public"}) and registered in FleetCrown
+                {result.template && result.template !== "bare" && result.templateSeeded && (
+                  <> · seeded with the <strong>{TEMPLATES[result.template].label}</strong> starter</>
+                )}
+                {result.template && result.template !== "bare" && !result.templateSeeded && (
+                  <> · template seeding failed (repo is bare with just a README — sorry, run <code className="text-xs">npx create-next-app</code> in your clone)</>
+                )}
+                .
               </p>
             </div>
 
@@ -278,6 +290,28 @@ export default function NewFromScratchPage() {
                     <div className="text-xs text-text-muted">Anyone can find and read it.</div>
                   </div>
                 </label>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-text-primary mb-1">Starter</div>
+              <div className="space-y-2">
+                {Object.values(TEMPLATES).map((t) => (
+                  <label key={t.id} className="flex items-start gap-2 cursor-pointer ui-card-shell p-3">
+                    <input
+                      type="radio"
+                      name="template"
+                      value={t.id}
+                      checked={template === t.id}
+                      onChange={() => setTemplate(t.id)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <div className="text-sm font-medium">{t.label}</div>
+                      <div className="text-xs text-text-muted">{t.description}</div>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
