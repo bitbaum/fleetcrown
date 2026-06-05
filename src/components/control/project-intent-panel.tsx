@@ -163,7 +163,7 @@ export function IntentButtonPanel({
 
   return (
     <div className="space-y-3 ui-card-section">
-      <PromptInput {...inputProps} placeholder="Custom prompt…" />
+      <PromptInput {...inputProps} placeholder="What should the agent work on? e.g. summarize this repo" />
       {queue.length > 0 && (
         <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
       )}

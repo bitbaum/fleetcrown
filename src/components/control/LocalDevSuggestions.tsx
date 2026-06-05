@@ -12,10 +12,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Terminal, Loader2 } from "lucide-react";
+import { Terminal, Loader2, Check } from "lucide-react";
 import type { FleetRunnerBridge, LocalDevProject } from "../desktop/types";
 
 const SUGGESTED_COUNT = 5;
+// Mirror of GitHubRepoSuggestions — the success dwell timing should match
+// across both suggesters so the post-import beat feels consistent.
+const SUCCESS_DWELL_MS = 1500;
 
 function hasIPC(b: Window["fleetRunner"]): b is Pick<FleetRunnerBridge, "getLocalDevProjects"> {
   return typeof b?.getLocalDevProjects === "function";
@@ -25,6 +28,7 @@ export function LocalDevSuggestions() {
   const router = useRouter();
   const [projects, setProjects] = useState<LocalDevProject[]>([]);
   const [importing, setImporting] = useState(false);
+  const [successCount, setSuccessCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tokenMissing, setTokenMissing] = useState(false);
 
@@ -37,6 +41,19 @@ export function LocalDevSuggestions() {
   }, []);
 
   if (projects.length === 0) return null;
+
+  if (successCount !== null) {
+    return (
+      <section className="ui-card-shell-raised p-4 md:p-5">
+        <div className="flex items-center gap-3">
+          <Check className="h-5 w-5 text-status-positive shrink-0" />
+          <div className="font-medium text-text-primary">
+            Imported {successCount} local repo{successCount === 1 ? "" : "s"}. Your fleet is alive.
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   async function importAll() {
     setImporting(true);
@@ -71,7 +88,10 @@ export function LocalDevSuggestions() {
         setError(body.error ?? `Import failed (HTTP ${res.status})`);
         return;
       }
-      router.refresh();
+      // Brief celebration before the refresh swaps the suggester for the
+      // populated /control. See GitHubRepoSuggestions for the same pattern.
+      setSuccessCount(projects.length);
+      setTimeout(() => router.refresh(), SUCCESS_DWELL_MS);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {

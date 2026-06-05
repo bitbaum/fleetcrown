@@ -15,10 +15,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GitBranch, Loader2 } from "lucide-react";
+import { GitBranch, Loader2, Check } from "lucide-react";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
 
 const SUGGESTED_COUNT = 5;
+// Hold the success banner this long before refreshing /control. Gives the
+// user a moment to see "we just did the thing" before projects appear below.
+const SUCCESS_DWELL_MS = 1500;
 
 export function GitHubRepoSuggestions() {
   const router = useRouter();
@@ -26,6 +29,7 @@ export function GitHubRepoSuggestions() {
   const [hasGithub, setHasGithub] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [successCount, setSuccessCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,14 +62,29 @@ export function GitHubRepoSuggestions() {
         setError(body.error ?? `Import failed (HTTP ${res.status})`);
         return;
       }
-      // Force a server refetch so /control's projects list repopulates
-      // without a hard reload.
-      router.refresh();
+      // Celebrate the moment before the page transitions. Without this the
+      // user clicks "Import all 5" and the suggester unmounts instantly —
+      // they don't feel the act of importing, just see projects appear.
+      setSuccessCount(repos.length);
+      setTimeout(() => router.refresh(), SUCCESS_DWELL_MS);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
     } finally {
       setImporting(false);
     }
+  }
+
+  if (successCount !== null) {
+    return (
+      <section className="ui-card-shell-raised p-4 md:p-5">
+        <div className="flex items-center gap-3">
+          <Check className="h-5 w-5 text-status-positive shrink-0" />
+          <div className="font-medium text-text-primary">
+            Imported {successCount} GitHub repo{successCount === 1 ? "" : "s"}. Welcome to your fleet.
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
