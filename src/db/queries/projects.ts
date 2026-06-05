@@ -11,6 +11,9 @@ export const RECENT_INTERACTION_LIMIT = 5;
 export const CreateProjectBody = z.object({
   name: z.string().trim().min(1, "name is required"),
   description: z.string().trim().optional(),
+  /** Canonical repo URL (https://github.com/user/repo). Optional —
+   *  set by GitHub-import flows and the cloud bootstrap. */
+  gitUrl: z.string().trim().url().optional(),
 });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectBody>;
@@ -19,6 +22,7 @@ export const PatchProjectBody = z
   .object({
     name: z.string().trim().min(1, "name cannot be empty").optional(),
     description: z.string().optional(),
+    gitUrl: z.union([z.string().trim().url(), z.literal("")]).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
@@ -32,9 +36,10 @@ export async function createProject(userId: string, data: CreateProjectInput, so
       name: data.name,
       type: ENTITY_TYPE.PROJECT,
       description: data.description || null,
+      gitUrl: data.gitUrl || null,
       source: source ?? null,
     })
-    .returning({ id: entities.id, name: entities.name });
+    .returning({ id: entities.id, name: entities.name, gitUrl: entities.gitUrl });
   return created;
 }
 
@@ -42,6 +47,7 @@ export async function patchProject(userId: string, id: string, data: PatchProjec
   const patch: Partial<typeof entities.$inferInsert> = { updatedAt: new Date() };
   if (data.name !== undefined) patch.name = data.name;
   if (data.description !== undefined) patch.description = data.description.trim() || null;
+  if (data.gitUrl !== undefined) patch.gitUrl = data.gitUrl.trim() || null;
   const [updated] = await db
     .update(entities)
     .set(patch)

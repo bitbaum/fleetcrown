@@ -50,15 +50,18 @@ export async function POST(req: NextRequest) {
   const skipped: { name: string; reason: string }[] = [];
 
   for (const folder of parsed.data.folders) {
-    // Description is human-readable: "<path> · <remote_url?>"
-    const descParts = [folder.path];
-    if (folder.remote_url) descParts.push(folder.remote_url);
-    const description = descParts.join(" · ");
+    // Description holds the local path (the user's machine truth); gitUrl
+    // holds the canonical origin URL when present.
+    const description = folder.path;
 
     try {
       const project = await createProject(
         userId,
-        { name: folder.name, description },
+        {
+          name: folder.name,
+          description,
+          gitUrl: folder.remote_url || undefined,
+        },
         SOURCE_FLEETCROWN_UI, // ok to reuse — source field is just for analytics
       );
       created.push({ id: project.id, name: project.name, path: folder.path });

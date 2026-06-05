@@ -56,7 +56,11 @@ export function ProjectDetailHeader({
   const owner = attrs["owner"] ?? null;
   const effectiveStatus = statusOverride ?? attrs["status"] ?? null;
   const effectiveMaturity = maturityOverride ?? attrs["maturity"] ?? null;
-  const { prodUrl, repo } = getProjectLinks(attrs);
+  // Prefer the first-class entities.git_url (set by GitHub-import flows) over
+  // legacy attrs.repo. `data` shape varies by caller — `data.gitUrl` may be
+  // undefined for older code paths, falling back to attrs.repo.
+  const dataAny = data as { gitUrl?: string | null } | null;
+  const { prodUrl, repo } = getProjectLinks(attrs, dataAny?.gitUrl);
   const hasIssues = HEALTH_SIGNAL_CONFIG.some((cfg) => attrs[cfg.key]);
   const editable = !!data && !loading && !data.readonly;
 

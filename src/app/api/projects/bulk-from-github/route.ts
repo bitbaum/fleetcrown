@@ -77,7 +77,11 @@ export async function POST(req: NextRequest) {
     try {
       const project = await createProject(
         userId,
-        { name: repo.name, description: repo.description ?? undefined },
+        {
+          name: repo.name,
+          description: repo.description ?? undefined,
+          gitUrl: repo.html_url,
+        },
         SOURCE_FLEETCROWN_UI,
       );
       created.push({ id: project.id, name: project.name, repoId });

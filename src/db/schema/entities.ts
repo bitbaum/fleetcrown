@@ -9,6 +9,13 @@ export const entities = pgTable("entities", {
   type: text("type").$type<EntityType>().notNull(),
   externalId: text("external_id"),
   description: text("description"),
+  /** Canonical repo URL for project entities (e.g. https://github.com/user/repo).
+   *  Nullable because non-project entities (people, commitments, ...) never
+   *  have one, and projects added before this column existed may still lack
+   *  it. Used by /control + /projects to render an "Open repo" link.
+   *  Populated by /api/projects/create-with-github + bulk-from-github +
+   *  import-from-local. */
+  gitUrl: text("git_url"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   source: text("source"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

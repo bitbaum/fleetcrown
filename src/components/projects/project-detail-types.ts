@@ -122,13 +122,21 @@ export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "d
  * Resolve project quick-link attrs into ready-to-use href strings.
  * Single source of truth for which attrs feed each link plus the
  * "bare host → https://, bare slug → https://github.com/" prefixing.
+ *
+ * `gitUrl` is the first-class entities.git_url column populated by the
+ * GitHub-import + cloud-bootstrap flows (introduced 2026-06-05). It
+ * overrides legacy `attrs.repo` when both are set — entity column wins.
  */
-export function getProjectLinks(attrs: Record<string, string>): {
+export function getProjectLinks(
+  attrs: Record<string, string>,
+  gitUrl?: string | null,
+): {
   prodUrl: string | null;
   repo: string | null;
 } {
   const prod = attrs["production_url"] ?? attrs["url"];
-  const repo = attrs["repo"] ?? attrs["github_repo"];
+  const attrRepo = attrs["repo"] ?? attrs["github_repo"];
+  const repo = gitUrl || attrRepo;
   return {
     prodUrl: prod ? (prod.startsWith("http") ? prod : `https://${prod}`) : null,
     repo:    repo ? (repo.startsWith("http") ? repo : `https://github.com/${repo}`) : null,

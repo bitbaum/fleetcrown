@@ -226,7 +226,8 @@ export async function POST(req: NextRequest) {
       userId,
       {
         name,
-        description: `${repo.html_url}${description ? " · " + description : ""}`,
+        description: description ?? undefined,
+        gitUrl: repo.html_url,
       },
       SOURCE_FLEETCROWN_UI,
     );

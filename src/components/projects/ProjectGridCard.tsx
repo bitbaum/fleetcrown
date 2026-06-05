@@ -20,6 +20,9 @@ export type ProjectGridRow = {
   id: string;
   name: string;
   description: string | null;
+  /** Canonical repo URL from entities.git_url (the first-class column).
+   *  When present, overrides attrs.repo for the "Open repo" quick link. */
+  gitUrl?: string | null;
   attrs: Record<string, string>;
   readonly?: boolean;
   // Surfaced from user_projects via getProjects join so bare-attr tiles can
@@ -44,7 +47,7 @@ export function ProjectGridCard({
 }) {
   const { attrs } = project;
   const description = project.description ?? attrs["description"] ?? null;
-  const { prodUrl, repo } = getProjectLinks(attrs);
+  const { prodUrl, repo } = getProjectLinks(attrs, project.gitUrl);
   const maturity = attrs["maturity"];
   const status = attrs["status"];
   const nextStep = attrs["next_step"] ?? null;
