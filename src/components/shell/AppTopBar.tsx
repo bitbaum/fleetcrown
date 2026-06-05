@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, LayoutPanelLeft } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { NotificationsPill } from "./NotificationsPill";
@@ -20,7 +20,13 @@ import { isCurrentPath } from "@/lib/navigation";
  * on the right. Phone users get a clear "where am I?" cue without
  * sacrificing the search affordance.
  */
-export function AppTopBar() {
+export function AppTopBar({
+  onOpenSessions,
+}: {
+  /** Toggles the cross-page Sessions drawer (project inventory + status).
+   *  Optional so AppTopBar can also be rendered in isolation/storybook. */
+  onOpenSessions?: () => void;
+}) {
   const { setOpen } = useCommandPalette();
   const pathname = usePathname();
   const platformHint = typeof navigator !== "undefined" && /mac/i.test(navigator.platform) ? "⌘K" : "Ctrl K";
@@ -61,6 +67,18 @@ export function AppTopBar() {
         >
           <Search className="h-4 w-4" aria-hidden="true" />
         </button>
+        {/* Sessions drawer toggle — cross-page project inventory + status. */}
+        {onOpenSessions && (
+          <button
+            type="button"
+            onClick={onOpenSessions}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary"
+            aria-label="Open Sessions drawer"
+            title="Sessions"
+          >
+            <LayoutPanelLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
         <FleetRunnerStatusPill />
         <NotificationsPill />
       </div>

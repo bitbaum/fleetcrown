@@ -7,6 +7,7 @@ import { AskIvyButton } from "./AskIvyButton";
 import { AppTopBar } from "./AppTopBar";
 import { AppFooter } from "./AppFooter";
 import { CommandPalette } from "./CommandPalette";
+import { SessionsDrawer } from "./SessionsDrawer";
 import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
 import { FleetRunnerAutoMint } from "@/components/desktop/FleetRunnerAutoMint";
 import {
@@ -21,6 +22,7 @@ import {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sessionsOpen, setSessionsOpen] = useState(false);
   const paletteApi = useCommandPaletteState();
   useCommandPaletteHotkey(paletteApi);
 
@@ -50,7 +52,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
         />
         <div className="app-main-column">
-          <AppTopBar />
+          <AppTopBar onOpenSessions={() => setSessionsOpen(true)} />
           <main className="app-main">{children}</main>
           <AppFooter />
         </div>
@@ -59,6 +61,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <RefreshOnFocus />
         <CommandPalette />
         <FleetRunnerAutoMint />
+        <SessionsDrawer open={sessionsOpen} onClose={() => setSessionsOpen(false)} />
       </div>
     </CommandPaletteProvider>
   );
