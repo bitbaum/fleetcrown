@@ -259,8 +259,12 @@ export function DaemonStatusBanner({
             local daemon reachable from cloud, the buttons silently no-op and
             their helper text ("When your Local Agent Helper is running…")
             directly contradicts the banner just above. Keep them visible in
-            the never-seen (setup) flow and when running locally. */}
-        {(daemonNeverSeen || runtimeAvailable) && (
+            the never-seen (setup) flow and when running locally.
+            Also suppressed when inside Fleet Runner — MissingCLIsBanner
+            handles that case with the same buttons but only shows the ones
+            ACTUALLY missing (via the v0.6.0 getInstalledCLIs IPC), so the
+            full 5-button grid here would be both noisy and redundant. */}
+        {(daemonNeverSeen || runtimeAvailable) && !insideFleetRunner && (
           <div className="pt-2 border-t border-border-subtle">
             <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
             <div className="flex flex-wrap gap-2">
