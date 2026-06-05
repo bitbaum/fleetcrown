@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { GitBranch } from "lucide-react";
@@ -53,18 +53,28 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  // Hold the latest update() callback in a ref so the bootstrap effect can
+  // call it without depending on its identity. Without this, every call to
+  // update() triggers a session re-render → new update() reference → effect
+  // re-fires → infinite loop of /api/onboarding pending requests (observed
+  // 2026-06-05 during dogfood; 200+ requests in flight, all stuck pending).
+  const updateRef = useRef(update);
+  useEffect(() => {
+    updateRef.current = update;
+  }, [update]);
+
   useEffect(() => {
     let cancelled = false;
 
     async function bootstrap() {
       try {
         // Sync JWT from DB (fixes migrated accounts with stale cookies).
-        await update();
+        await updateRef.current();
         const data = await getJson<OnboardingBootstrap>("/api/onboarding");
         if (cancelled) return;
 
         if (data.complete) {
-          if (data.needsSessionRefresh) await update();
+          if (data.needsSessionRefresh) await updateRef.current();
           router.replace(ROUTES.APP_HOME);
           return;
         }
@@ -72,7 +82,7 @@ export default function OnboardingPage() {
         if (data.isReturningUser) {
           const res = await postJson("/api/onboarding", {});
           if (res.ok) {
-            await update();
+            await updateRef.current();
             router.replace(ROUTES.APP_HOME);
             return;
           }
@@ -103,7 +113,12 @@ export default function OnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, update]);
+    // Intentionally empty deps: this is one-shot bootstrap. router is stable
+    // from useRouter(); update() is held in a ref above. Adding either here
+    // would re-fire the effect on every session change — the bug this fix
+    // closes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function finishOnboarding() {
     setSaving(true);
