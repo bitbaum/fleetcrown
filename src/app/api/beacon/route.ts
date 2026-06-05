@@ -1,38 +1,44 @@
+// Beacon popup creation + helpers — Change 4 (DB-backed).
+//
+// Previously this module wrote one JSON file per session to
+// /tmp/<APP_SLUG>-beacon/<id>.json and read directly from the filesystem.
+// That worked but had three drawbacks (see src/db/schema/beacon-sessions.ts
+// for the rationale). The migration is a near-1:1 swap: the route shapes
+// stay the same, just the storage moves to a DB table.
+//
+// Backward-compat: the named exports beaconPath / readBeaconSession /
+// readLatestPendingSession / cancelActiveBeaconSessions kept their names
+// where call sites depend on them; the implementations now delegate to
+// src/db/queries/beacon-sessions.ts. beaconPath no longer makes sense for
+// DB-backed storage and is removed — its three call sites switched to
+// direct getBeaconSession() calls.
+
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "crypto";
-import fs from "fs";
-import path from "path";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type Agent } from "@/lib/agent-registry";
 import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
-import { APP_SLUG } from "@/config/brand";
+import {
+  createBeaconSession,
+  getBeaconSession as getBeaconSessionFromDb,
+  getLatestPendingSession as getLatestPendingSessionFromDb,
+  cancelActiveBeaconSessions as cancelActiveBeaconSessionsInDb,
+  purgeOldBeaconSessions,
+  type BeaconSession,
+} from "@/db/queries/beacon-sessions";
 
-const BEACON_DIR = `/tmp/${APP_SLUG}-beacon`;
+// Re-export the type so callers that imported BeaconSession from this
+// module continue to work without touching their imports.
+export type { BeaconSession };
 
-export type BeaconSession = {
-  id: string;
-  project: string;
-  sessionContent: string;
-  createdAt: number;
-  choice: string | null;
-  currentAgent: Agent | null;
-  nextAgent: Agent | null;
-  capacityIssue: boolean;
-  countdownSeconds: number;
-  popupMode: string;
-  gitBranch?: string | null;
-};
-
-async function readConfiguredSettings(): Promise<{ countdownSeconds: number; popupMode: string }> {
-  try {
-    const userId = await getApiUserId();
-    if (userId) {
+async function readConfiguredSettings(userId: string | null): Promise<{ countdownSeconds: number; popupMode: string }> {
+  if (userId) {
+    try {
       const s = await getBeaconSettings(userId);
       return { countdownSeconds: s.countdown_seconds, popupMode: s.popup_mode };
-    }
-  } catch { /* no auth or DB error — use defaults */ }
+    } catch { /* DB hiccup — fall through to defaults */ }
+  }
   return { countdownSeconds: DEFAULT_BEACON_COUNTDOWN_S, popupMode: DEFAULT_POPUP_MODE };
 }
 
@@ -42,102 +48,64 @@ const CreateBody = z.object({
   currentAgent: z.string().max(40).optional(),
 });
 
-export function beaconPath(id: string): string {
-  return path.join(BEACON_DIR, `${id}.json`);
+/** Read a beacon session by id. Backward-compatible name for callers that
+ *  used the file-based version. Async now because storage is async. */
+export async function readBeaconSession(id: string): Promise<BeaconSession | null> {
+  return getBeaconSessionFromDb(id);
 }
 
-export function readBeaconSession(id: string): BeaconSession | null {
-  try {
-    return JSON.parse(fs.readFileSync(beaconPath(id), "utf-8")) as BeaconSession;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Return the most recently created pending session, if any. Used by the
- * /beacon/live page to SSR-preload the popup state so the first paint
- * already shows the Ready UI instead of the Standby placeholder.
+/** Most recent pending session for the caller's user. SSR-preload helper
+ *  used by /beacon/live. Async now (was sync filesystem read).
  *
- * Only sessions younger than 5 minutes are considered pending. Older entries
- * in /tmp/cockpit-beacon are abandoned (the agent process that wrote them is
- * almost certainly gone) — surfacing them as "pending" makes the popup look
- * empty / show stale content. A separate purge happens on the POST path.
- */
-const PENDING_TTL_MS = 5 * 60_000;
-
-export function readLatestPendingSession(): BeaconSession | null {
-  try {
-    const minCreatedAt = Date.now() - PENDING_TTL_MS;
-    let best: BeaconSession | null = null;
-    for (const file of fs.readdirSync(BEACON_DIR)) {
-      if (!file.endsWith(".json")) continue;
-      try {
-        const s = JSON.parse(fs.readFileSync(path.join(BEACON_DIR, file), "utf-8")) as BeaconSession;
-        if (s.choice !== null) continue;
-        if (s.createdAt < minCreatedAt) continue;
-        if (!best || s.createdAt > best.createdAt) best = s;
-      } catch { /* skip unreadable */ }
-    }
-    return best;
-  } catch {
-    return null;
-  }
+ *  Note: file version was userId-agnostic (it just scanned /tmp). DB
+ *  version is user-scoped — safer, and the file version's lack of
+ *  scoping was incidental rather than intentional. */
+export async function readLatestPendingSession(userId: string): Promise<BeaconSession | null> {
+  return getLatestPendingSessionFromDb(userId);
 }
 
 /**
- * Cancel any active beacon sessions for the given tab (project name).
- * Setting choice to "" signals beacon.py's polling loop to exit cleanly,
- * and the beacon popup page polls the same endpoint and closes itself.
- * Called by /api/inject so panel injections don't race with an open popup.
+ * Cancel any active beacon sessions for the given (user, tab). Setting
+ * choice to "" preserves the file-based contract — beacon.py's polling
+ * loop and the popup page both treat "" as "close cleanly." Called by
+ * /api/inject so panel injections don't race with an open popup.
+ *
+ * The file version took only `tab` and scanned all sessions globally; the
+ * DB version is properly user-scoped. Existing call sites that don't have
+ * a userId in scope must add one (small fix at the call site).
  */
-export function cancelActiveBeaconSessions(tab: string): void {
-  try {
-    const cutoff = Date.now() - 150_000;
-    for (const file of fs.readdirSync(BEACON_DIR)) {
-      if (!file.endsWith(".json")) continue;
-      try {
-        const p = path.join(BEACON_DIR, file);
-        const s = JSON.parse(fs.readFileSync(p, "utf-8")) as BeaconSession;
-        if (s.project === tab && s.choice === null && s.createdAt > cutoff) {
-          fs.writeFileSync(p, JSON.stringify({ ...s, choice: "" }));
-        }
-      } catch { /* corrupt or race-deleted file */ }
-    }
-  } catch { /* BEACON_DIR doesn't exist — nothing to cancel */ }
+export async function cancelActiveBeaconSessions(userId: string, tab: string): Promise<number> {
+  return cancelActiveBeaconSessionsInDb(userId, tab);
 }
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, CreateBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  fs.mkdirSync(BEACON_DIR, { recursive: true });
+  // Best-effort purge of stale rows on every create — matches the file
+  // version's purge-on-POST behavior. Errors don't block the new session.
+  purgeOldBeaconSessions().catch(() => {});
 
-  // Purge sessions older than 10 minutes to prevent /tmp accumulation.
-  const purge = Date.now() - 600_000;
-  for (const file of fs.readdirSync(BEACON_DIR)) {
-    if (!file.endsWith(".json")) continue;
-    try {
-      const p = path.join(BEACON_DIR, file);
-      const s = JSON.parse(fs.readFileSync(p, "utf-8")) as BeaconSession;
-      if (s.createdAt < purge) fs.unlinkSync(p);
-    } catch { /* corrupt or already deleted */ }
+  const userId = await getApiUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { countdownSeconds, popupMode } = await readConfiguredSettings();
+  const { countdownSeconds, popupMode } = await readConfiguredSettings(userId);
 
-  const session: BeaconSession = {
-    id: randomUUID(),
+  const currentAgent: Agent | null = isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude";
+  const nextAgent = resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude");
+
+  const id = await createBeaconSession({
+    userId,
     project: dataOrResp.project,
     sessionContent: dataOrResp.sessionContent,
-    createdAt: Date.now(),
-    choice: null,
-    currentAgent: isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude",
-    nextAgent: resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude"),
+    currentAgent,
+    nextAgent,
     capacityIssue: looksLikeAgentCapacityIssue(dataOrResp.sessionContent),
     countdownSeconds,
     popupMode,
-  };
-  fs.writeFileSync(beaconPath(session.id), JSON.stringify(session));
-  return NextResponse.json({ id: session.id });
+  });
+
+  return NextResponse.json({ id });
 }

@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       import("fs"),
     ]);
 
-    cancelActiveBeaconSessions(effectiveTab);
+    await cancelActiveBeaconSessions(userId, effectiveTab);
 
     fs.writeFileSync(stateFile.prompt(effectiveTab), JSON.stringify({
       key: promptKey ?? "custom",

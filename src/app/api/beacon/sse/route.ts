@@ -1,23 +1,40 @@
-import fs from "fs";
-import path from "path";
+// Beacon popup SSE — Change 4 (DB-backed).
+//
+// Pre-Change-4: scanned /tmp/<APP_SLUG>-beacon every 150ms for new JSON
+// files and pushed them as SSE frames. Now: queries the DB on the same
+// cadence and pushes only this user's pending sessions. Same protocol on
+// the wire, just durable + user-scoped storage underneath.
+//
+// Polling is preserved (vs LISTEN/NOTIFY push) to keep the diff small.
+// A v2 step adds a NOTIFY trigger on beacon_sessions; the bridge already
+// has the LISTEN plumbing, so the SSE here would degrade to a single
+// initial fetch + bus-driven pushes.
+
 import { execSync } from "child_process";
-import type { BeaconSession } from "@/app/api/beacon/route";
+import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { parseProjectsConf } from "@/lib/agent-config";
-import { APP_SLUG } from "@/config/brand";
+import { getLatestPendingSession, type BeaconSession } from "@/db/queries/beacon-sessions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BEACON_DIR = `/tmp/${APP_SLUG}-beacon`;
 const POLL_MS = 150;
 const KEEPALIVE_MS = 20_000;
 
-export async function GET() {
+export async function GET(): Promise<Response> {
+  const userId = await getSessionUserId();
+  if (!userId) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const encoder = new TextEncoder();
   let closed = false;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
+  // Track the last session id we've pushed so we don't replay it every
+  // poll while the user is sitting on the popup.
+  let lastPushedId: string | null = null;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -32,81 +49,42 @@ export async function GET() {
 
       send(": keepalive\n\n");
 
-      // Seed seen-set with already-resolved sessions so we never replay them on
-      // reconnect. Active (choice=null) sessions are NOT seeded — they get pushed
-      // immediately below and again on any reconnect until the user responds.
-      const seen = new Set<string>();
-      try {
-        for (const file of fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json"))) {
+      function enrichAndPush(session: BeaconSession) {
+        // Enrich with git branch on local-runtime nodes so the popup
+        // shows what branch the agent was operating on. Identical
+        // logic to the pre-Change-4 file-based version.
+        if (isRuntimeAvailable() && !session.gitBranch) {
           try {
-            const raw = fs.readFileSync(path.join(BEACON_DIR, file), "utf-8");
-            const s = JSON.parse(raw) as BeaconSession;
-            if (s.choice !== null) seen.add(file);
-          } catch { /* skip unreadable */ }
+            const projects = parseProjectsConf();
+            const match = projects.find((p) => p.tab.toLowerCase() === session.project.toLowerCase());
+            if (match) {
+              session.gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+                cwd: match.dir, encoding: "utf-8", timeout: 2000,
+              }).trim() || null;
+            }
+          } catch { /* not a git repo or dir missing */ }
         }
-      } catch { /* dir missing */ }
-
-      function pushSession(file: string, raw: string) {
-        try {
-          const session = JSON.parse(raw) as BeaconSession;
-          if (session.choice !== null) { seen.add(file); return; }
-          if (isRuntimeAvailable() && !session.gitBranch) {
-            try {
-              const projects = parseProjectsConf();
-              const match = projects.find((p) => p.tab.toLowerCase() === session.project.toLowerCase());
-              if (match) {
-                session.gitBranch = execSync("git rev-parse --abbrev-ref HEAD", {
-                  cwd: match.dir, encoding: "utf-8", timeout: 2000,
-                }).trim() || null;
-              }
-            } catch { /* not a git repo or dir missing */ }
-          }
-          send(`data: ${JSON.stringify(session)}\n\n`);
-        } catch { /* malformed JSON */ }
+        send(`data: ${JSON.stringify(session)}\n\n`);
+        lastPushedId = session.id;
       }
 
-      // Deliver the most recently created pending session at connect time so a
-      // pre-warmed /beacon/live window picks up sessions written before it opened.
-      // Only sessions younger than 5 min are considered pending — older files
-      // in /tmp are abandoned (agent that wrote them is gone) and replaying
-      // them ghost-populates the popup with stale content. All other
-      // pre-existing files are seeded into `seen` so they're not replayed.
-      try {
-        const PENDING_TTL_MS = 5 * 60_000;
-        const minCreatedAt = Date.now() - PENDING_TTL_MS;
-        type Entry = { file: string; raw: string; createdAt: number };
-        let newest: Entry | null = null;
-        for (const file of fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json"))) {
-          if (seen.has(file)) continue;
-          try {
-            const raw = fs.readFileSync(path.join(BEACON_DIR, file), "utf-8");
-            const s = JSON.parse(raw) as BeaconSession;
-            if (s.choice === null && s.createdAt >= minCreatedAt) {
-              if (!newest || s.createdAt > newest.createdAt) newest = { file, raw, createdAt: s.createdAt };
-            }
-          } catch { /* skip */ }
-          seen.add(file);
-        }
-        if (newest) pushSession(newest.file, newest.raw);
-      } catch { /* dir missing */ }
-
-      pollTimer = setInterval(() => {
+      async function pollOnce() {
         if (closed) return;
         try {
-          const current = new Set(
-            fs.readdirSync(BEACON_DIR).filter((f) => f.endsWith(".json")),
-          );
-          for (const file of current) {
-            if (!seen.has(file)) {
-              try {
-                pushSession(file, fs.readFileSync(path.join(BEACON_DIR, file), "utf-8"));
-              } catch { /* file deleted between readdir and readFile */ }
-              seen.add(file);
-            }
+          const session = await getLatestPendingSession(userId!);
+          if (session && session.id !== lastPushedId) {
+            enrichAndPush(session);
           }
-        } catch { /* BEACON_DIR deleted — nothing to push */ }
-      }, POLL_MS);
+        } catch {
+          // DB error during this tick — keep the stream alive; next tick may succeed.
+        }
+      }
 
+      // Initial deliver: surface any pending row at connect time. void to
+      // avoid blocking the readable-stream start() handler.
+      void pollOnce();
+
+      pollTimer = setInterval(() => { void pollOnce(); }, POLL_MS);
       keepaliveTimer = setInterval(() => send(": keepalive\n\n"), KEEPALIVE_MS);
     },
 

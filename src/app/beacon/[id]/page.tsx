@@ -8,7 +8,7 @@ import { parseProjectsConf } from "@/lib/agent-config";
 // page render includes the full session content without any client-side API call.
 export default async function BeaconPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = readBeaconSession(id);
+  const session = await readBeaconSession(id);
 
   if (!session) {
     return <BeaconLoading />;
