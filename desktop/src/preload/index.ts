@@ -49,4 +49,12 @@ contextBridge.exposeInMainWorld('fleetRunner', {
     zellij: boolean;
     agents: Record<string, boolean>;
   }> => ipcRenderer.invoke('get-installed-clis'),
+
+  // Local /dev scan — walks ~/dev, ~/code, ~/Code, ~/Projects (overridable
+  // via FLEETCROWN_DEV_ROOTS) for git repos. The web app uses this to
+  // surface "we see your local repos, register them?" CTAs alongside the
+  // GitHub-side suggestions on /control. Returns up to 50 most-recent.
+  getLocalDevProjects: (): Promise<{
+    projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
+  }> => ipcRenderer.invoke('get-local-dev-projects'),
 })

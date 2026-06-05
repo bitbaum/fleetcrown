@@ -37,6 +37,13 @@ export type FleetRunnerBridge = {
   /** Local prerequisite scan — true if the named binary is on the user's PATH.
    *  Added in Fleet Runner v0.6.0; older builds won't expose this method. */
   getInstalledCLIs: () => Promise<{ zellij: boolean; agents: Record<string, boolean> }>;
+  /** Cursor-style "recent local projects" — walks the user's dev folder
+   *  roots (default ~/dev, ~/code, ~/Code, ~/Projects) for git repos and
+   *  returns them sorted by recency. Used by the web app to surface
+   *  an "Import these N local repos" CTA on /control. v0.6.0+. */
+  getLocalDevProjects: () => Promise<{
+    projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
+  }>;
 };
 
 declare global {

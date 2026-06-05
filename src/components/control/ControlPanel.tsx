@@ -23,6 +23,9 @@ import { LaunchTabModal, NewProjectModal } from "./control-panel-modals";
 import { BootstrapModal } from "./BootstrapModal";
 import { ProjectOperationsView } from "./ProjectOperationsView";
 import { EmptyStateWelcome } from "./EmptyStateWelcome";
+import { GitHubRepoSuggestions } from "./GitHubRepoSuggestions";
+import { LocalDevSuggestions } from "./LocalDevSuggestions";
+import { MissingCLIsBanner } from "@/components/desktop/MissingCLIsBanner";
 import { useAutomationPolicy } from "@/hooks/use-automation-policy";
 
 export function ControlPanel() {
@@ -233,18 +236,33 @@ export function ControlPanel() {
         onRefresh={() => refresh(true)}
       />
 
+      {/* Desktop-only — surfaces missing zellij + agent CLIs so the user
+          knows what to install before dispatching. Renders null outside
+          Fleet Runner (no IPC) and when all expected tools are present. */}
+      <MissingCLIsBanner />
+
       {/* New-user welcome card. Shows ONLY when the user has zero registered
           projects — the dead-end blank /control was the worst first-touch
           we had. Three CTAs: import from GitHub (multi-select), add manually,
           install Fleet Runner. Disappears the moment they add anything. */}
       {data && data.projects.length === 0 && (
-        <EmptyStateWelcome
-          onAddManual={() => setNewProjectOpen(true)}
-          // Bootstrap requires the local Fleet Runner daemon (writes to ~/dev,
-          // shells out to `gh repo create`); hide the CTA when runtime isn't
-          // available so we don't 503 the user on click.
-          onBootstrap={runtimeAvailable ? () => setBootstrapOpen(true) : undefined}
-        />
+        <>
+          {/* "We already know your work" — two parallel one-click bulk
+              imports. GitHub suggestions render for users with a GitHub
+              OAuth account linked; LocalDevSuggestions renders inside Fleet
+              Runner when ~/dev has git repos. Either or both can be empty
+              (collapses to nothing) so the welcome cards still anchor the
+              empty state for users without either signal. */}
+          <GitHubRepoSuggestions />
+          <LocalDevSuggestions />
+          <EmptyStateWelcome
+            onAddManual={() => setNewProjectOpen(true)}
+            // Bootstrap requires the local Fleet Runner daemon (writes to ~/dev,
+            // shells out to `gh repo create`); hide the CTA when runtime isn't
+            // available so we don't 503 the user on click.
+            onBootstrap={runtimeAvailable ? () => setBootstrapOpen(true) : undefined}
+          />
+        </>
       )}
 
       <ControlFleetStatus

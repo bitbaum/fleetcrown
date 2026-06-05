@@ -596,6 +596,63 @@ function createWindow(): void {
     return getPollerStatus()
   })
 
+  // Local-dev scan — walks the user's common dev folders for git repos
+  // (whether or not they're registered in agent-projects.conf). The web
+  // app uses this (when running inside Fleet Runner) to surface the
+  // Cursor-style "we see your local repos, import them?" CTA.
+  // Roots are configurable via env; default covers the common layouts.
+  ipcMain.handle('get-local-dev-projects', async () => {
+    const roots = (process.env.FLEETCROWN_DEV_ROOTS ?? '~/dev:~/code:~/Code:~/Projects')
+      .split(':')
+      .map((p) => p.trim().replace(/^~/, homedir()))
+      .filter(Boolean)
+
+    const fs_ = await import('node:fs/promises')
+    const { join } = await import('node:path')
+
+    const found: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }> = []
+    const seen = new Set<string>()
+
+    // Bounded depth-3 scan: most dev folder layouts are at depth 1 (root/repo)
+    // or 2 (root/org/repo). 3 catches monorepo sub-projects without exploding.
+    async function walk(dir: string, depth: number) {
+      if (depth > 3 || seen.has(dir)) return
+      seen.add(dir)
+      let entries: import('node:fs').Dirent[]
+      try {
+        entries = await fs_.readdir(dir, { withFileTypes: true })
+      } catch { return }
+      const hasGit = entries.some((e) => e.name === '.git')
+      if (hasGit) {
+        try {
+          const stat = await fs_.stat(dir)
+          let remoteUrl: string | null = null
+          try {
+            const cfg = await fs_.readFile(join(dir, '.git', 'config'), 'utf8')
+            const match = cfg.match(/\[remote "origin"\][\s\S]*?url\s*=\s*(\S+)/)
+            if (match) remoteUrl = match[1] || null
+          } catch { /* no remote configured — fine */ }
+          found.push({ name: dir.split('/').pop() ?? dir, path: dir, mtimeMs: stat.mtimeMs, remoteUrl })
+        } catch { /* skip on stat error */ }
+        return  // don't recurse into .git'd repos — sub-projects are usually a different concept
+      }
+      for (const e of entries) {
+        if (!e.isDirectory()) continue
+        if (e.name.startsWith('.')) continue
+        if (['node_modules', 'dist', 'out', '.next', 'venv', '__pycache__'].includes(e.name)) continue
+        await walk(join(dir, e.name), depth + 1)
+      }
+    }
+
+    for (const root of roots) {
+      await walk(root, 0)
+    }
+
+    // Most recently modified first — matches "Recent projects" mental model.
+    found.sort((a, b) => b.mtimeMs - a.mtimeMs)
+    return { projects: found.slice(0, 50) }
+  })
+
   // Local prerequisite scan — checks PATH for zellij + each agent CLI.
   // Cached for the lifetime of the process (re-launch to re-detect; CLIs
   // installed mid-session won't appear, which is fine because Fleet Runner
