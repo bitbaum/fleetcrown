@@ -7,7 +7,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import type { Agent } from "@/lib/agent-registry";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
-import { useEventStream, isBridgeConfigured } from "@/lib/event-stream";
+import { useEventStream } from "@/lib/event-stream";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
 export interface ControlDataHook {
@@ -93,45 +93,38 @@ export function useControlData(): ControlDataHook {
     inFlight.current = true;
     refresh().finally(() => { inFlight.current = false; });
 
+    // Three triggers for refetch after mount, all event-driven — no setInterval:
+    //   1. visibilitychange: tab comes back to foreground (covers backgrounded
+    //      tabs whose SSE was throttled by the browser).
+    //   2. FLEETCROWN_REFRESH_EVENT: pull-to-refresh, manual refresh button,
+    //      and other surfaces that broadcast "the world might have changed."
+    //   3. The bridge SSE useEventStream subscription below — fires on every
+    //      Postgres NOTIFY for this user.
+    // Plus the dedicated /api/control/stream EventSource further down, which
+    // pushes projects-update patches directly into setData without a full
+    // /api/control refetch. With both push paths active, polling on a timer
+    // is paying for an outage that hasn't happened — delete it.
     const onVisibilityChange = () => { if (!document.hidden) poll(); };
     document.addEventListener("visibilitychange", onVisibilityChange);
-    // Listen for global refresh (PullToRefresh, RefreshOnFocus) so fleet state
-    // catches up at the same moment server-component data and other useFetch
-    // polls do — without waiting for the 30s tick.
     const onFleetCrownRefresh = () => { poll(); };
     window.addEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
 
-    // Polling cadence — v0.6 tuning:
-    //   - Bridge configured (SSE active): poll every 5 min as a belt-and-
-    //     braces backup in case the bridge drops events. SSE drives the
-    //     freshness; this just catches any state drift.
-    //   - Bridge NOT configured (legacy path): keep the 30s polling.
-    //
-    // The bridge URL is a build-time env var so this decision is stable
-    // across the session — no thrashing if it flips.
-    const intervalMs = isBridgeConfigured() ? 5 * 60_000 : 30_000;
-    const id = setInterval(poll, intervalMs);
     return () => {
-      clearInterval(id);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener(FLEETCROWN_REFRESH_EVENT, onFleetCrownRefresh);
     };
   }, [refresh]);
 
-  // v0.6 — subscribe to the SSE bridge for live change events. Any event
-  // for the user (project_states, runtime_snapshots, pending_commands,
-  // etc.) triggers a coalesced refetch of /api/control. The bridge tells
-  // us *something* changed; the cloud snapshot tells us *what* it now is.
+  // Subscribe to the SSE bridge for live change events. Any event for the
+  // user (project_states, runtime_snapshots, pending_commands, etc.)
+  // triggers a coalesced refetch of /api/control. The bridge tells us
+  // *something* changed; the cloud snapshot tells us *what* it now is.
   //
-  // This gives us push-driven freshness WITHOUT replacing the snapshot
-  // route's role — the snapshot still owns the merged view. Phase B-2
-  // could move toward applying patches client-side without a re-fetch,
-  // but the "refetch on event" pattern already cuts egress by 10x or
-  // more because we stop the 30s clock.
-  //
-  // The fallback when no bridge URL is configured is full no-op; the
-  // useEventStream hook returns mode:"disabled" and never opens a
-  // connection. Legacy polling stays intact for that path.
+  // This is push-driven freshness without replacing the snapshot route's
+  // role — the snapshot still owns the merged view. With the setInterval
+  // baseline removed above, this and the /api/control/stream EventSource
+  // below are the only refresh triggers between mount and tab visibility
+  // changes.
   const eventCoalesce = useRef<NodeJS.Timeout | null>(null);
   const eventState = useEventStream({
     onChange: () => {

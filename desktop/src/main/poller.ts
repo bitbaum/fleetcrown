@@ -29,6 +29,7 @@ import { join } from 'path'
 import { readFileSync, existsSync } from 'fs'
 import { injectIntoTab } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
+import { startBridgeSubscriber } from './bridge-subscriber'
 
 const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
 const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
@@ -65,8 +66,17 @@ let currentStatus: PollerStatus = {
   commandsHandled: 0,
   commandsRejected: 0,
 }
-let abortCtrl: AbortController | null = null
+// Two abort controllers, two scopes:
+//   - lifetimeCtrl: outer — aborts on stopPoller(). Cancels everything.
+//   - currentFetchCtrl: inner — per-iteration. Bridge-wake aborts THIS one
+//     so the loop continues with a fresh fast-drain fetch.
+let lifetimeCtrl: AbortController | null = null
+let currentFetchCtrl: AbortController | null = null
 let running = false
+let bridgeHandle: { stop: () => void } | null = null
+// Set by the bridge subscriber when a pending_commands INSERT arrives. The
+// loop drops the next wait=25 and uses wait=0 to drain immediately.
+let pendingWake = false
 
 export function onPollerStatus(cb: StatusListener): () => void {
   listeners.add(cb)
@@ -109,21 +119,40 @@ export function startPoller(): void {
     return
   }
   running = true
-  abortCtrl = new AbortController()
+  lifetimeCtrl = new AbortController()
   updateStatus({
     state: 'connecting',
     tokenPrefix: token.slice(0, 12) + '…',
     lastError: null,
     lastErrorAt: null,
   })
-  void runLoop(token, abortCtrl.signal)
+  // Open the bridge SSE subscription alongside the long-poll loop. The
+  // bridge is the fast path (<500ms after INSERT); the long-poll is the
+  // safety net. Both drain the same /api/control/commands endpoint with
+  // FOR UPDATE SKIP LOCKED, so commands go to exactly one consumer.
+  bridgeHandle = startBridgeSubscriber(token, {
+    onCommandPending: () => {
+      // Wake the long-poll loop by aborting the in-flight wait=25 request.
+      // The loop's next iteration sees pendingWake and uses wait=0 to drain
+      // the queue immediately. Aborting the inner controller (not lifetime)
+      // keeps the loop alive.
+      pendingWake = true
+      currentFetchCtrl?.abort()
+    },
+  })
+  void runLoop(token, lifetimeCtrl.signal)
 }
 
 export function stopPoller(): void {
-  if (!running && !abortCtrl) return
+  if (!running && !lifetimeCtrl && !bridgeHandle) return
   running = false
-  abortCtrl?.abort()
-  abortCtrl = null
+  lifetimeCtrl?.abort()
+  lifetimeCtrl = null
+  currentFetchCtrl?.abort()
+  currentFetchCtrl = null
+  bridgeHandle?.stop()
+  bridgeHandle = null
+  pendingWake = false
   updateStatus({ state: 'idle' })
 }
 
@@ -132,17 +161,24 @@ export function restartPoller(): void {
   startPoller()
 }
 
-async function runLoop(token: string, signal: AbortSignal): Promise<void> {
+async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void> {
   const base = currentStatus.baseUrl
   // Backoff for connection errors — successful polls reset it. The long-poll
   // already paces normal traffic to ~one request per 25s when there's no work.
   let backoffMs = 1_000
 
-  while (!signal.aborted && running) {
+  while (!lifetimeSignal.aborted && running) {
+    // Fresh per-iteration controller so a bridge-wake aborts only this fetch,
+    // not the loop. pendingWake collapses the next wait=25 to wait=0 — the
+    // bridge already told us there's a row to drain.
+    currentFetchCtrl = new AbortController()
+    const wakeRequested = pendingWake
+    pendingWake = false
+    const waitSec = wakeRequested ? 0 : 25
     try {
-      const resp = await fetch(`${base}/api/control/commands?wait=25`, {
+      const resp = await fetch(`${base}/api/control/commands?wait=${waitSec}`, {
         headers: { Authorization: `Bearer ${token}` },
-        signal,
+        signal: currentFetchCtrl.signal,
       })
 
       if (resp.status === 401 || resp.status === 403) {
@@ -174,7 +210,10 @@ async function runLoop(token: string, signal: AbortSignal): Promise<void> {
         await handleCommand(base, token, data.command)
       }
     } catch (err) {
-      if (signal.aborted) return
+      // Two abort sources: lifetimeSignal (stopPoller — exit) vs.
+      // currentFetchCtrl (bridge-wake — continue with wait=0 next iter).
+      if (lifetimeSignal.aborted) return
+      if (currentFetchCtrl?.signal.aborted) continue
       const msg = (err as Error).message || 'unknown error'
       updateStatus({
         state: 'error',

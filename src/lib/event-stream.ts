@@ -9,23 +9,18 @@
 // keeps working.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BRIDGE_URL } from "@/config/brand";
+import type { ChangeEvent } from "./event-stream-types";
 
-/** Mirror of the bridge's ChangeEvent payload. */
-export interface BridgeChangeEvent {
-  /** Short table name — "project_states", "runtime_snapshots", etc. */
-  t: string;
-  /** Owning user UUID (the bridge already filtered to the connected user). */
-  u: string;
-  /** Row identifier — project_key, snapshot id, etc. */
-  k: string;
-  /** SQL op that fired the trigger. */
-  op: "INSERT" | "UPDATE" | "DELETE";
-  /** Unix seconds at NOTIFY emit time. */
-  ts: number;
-}
+/** Re-export under the legacy name to avoid breaking existing call sites
+ *  that import { BridgeChangeEvent }. The canonical type lives in
+ *  event-stream-types.ts and is shared with the desktop subscriber. */
+export type BridgeChangeEvent = ChangeEvent;
 
+// Bridge connection lifecycle. The "disabled" mode that existed when the
+// bridge URL came from env-only is gone — brand.ts now guarantees a URL,
+// so the only states are connecting / connected / reconnecting / no-token.
 export type EventStreamState =
-  | { mode: "disabled" } // no bridge URL configured — caller should keep polling
   | { mode: "connecting" }
   | { mode: "connected"; serverTime: number }
   | { mode: "reconnecting"; lastError: string | null }
@@ -45,14 +40,9 @@ export type EventStreamState =
 export function useEventStream(opts: {
   /** Fired for every change event the bridge sends for this user. */
   onChange: (event: BridgeChangeEvent) => void;
-  /** Whether to actually connect. Defaults to true; useful for pausing
-   *  during things like sign-out flows. */
-  enabled?: boolean;
 }): EventStreamState {
-  const { onChange, enabled = true } = opts;
-  const [state, setState] = useState<EventStreamState>(() =>
-    bridgeUrl() ? { mode: "connecting" } : { mode: "disabled" },
-  );
+  const { onChange } = opts;
+  const [state, setState] = useState<EventStreamState>({ mode: "connecting" });
 
   // Keep the latest onChange in a ref so we don't tear down the EventSource
   // every time the parent component re-renders with a new closure.
@@ -62,15 +52,9 @@ export function useEventStream(opts: {
   }, [onChange]);
 
   useEffect(() => {
-    const url = bridgeUrl();
-    if (!url || !enabled) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing state with deps change (enabled toggle); not a render loop because nothing in the deps reads `state`
-      setState({ mode: "disabled" });
-      return;
-    }
-    // Pin the non-null value for the inner async closure — TS's narrow
-    // doesn't reach into nested functions through closure capture.
-    const sseBase: string = url;
+    // Pin the bridge URL for the inner async closures. brand.ts guarantees
+    // a non-null value; env override is just for local dev.
+    const sseBase: string = bridgeUrl();
 
     let es: EventSource | null = null;
     let cancelled = false;
@@ -149,25 +133,24 @@ export function useEventStream(opts: {
         es = null;
       }
     };
-  }, [enabled]);
+    // Effect runs once per mount. The bridge URL is stable for the lifetime
+    // of the session (resolved from build-time env + brand constant).
+  }, []);
 
   return state;
 }
 
-/** Read NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL on the client. Memoized via the
- *  module-level binding so we don't re-read process.env on every render. */
-let cachedUrl: string | null | undefined;
-function bridgeUrl(): string | null {
+/** Resolve the bridge SSE URL. Env override first (for dev pointing at a
+ *  local bridge); otherwise the canonical BRIDGE_URL from brand.ts. Memoized
+ *  via the module-level binding so we don't re-read process.env on every
+ *  render. Always returns a non-empty string — brand.ts guarantees the
+ *  production fallback. */
+let cachedUrl: string | undefined;
+function bridgeUrl(): string {
   if (cachedUrl !== undefined) return cachedUrl;
-  const raw = (process.env.NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL ?? "").trim();
-  cachedUrl = raw.length > 0 ? raw : null;
+  const override = (process.env.NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL ?? "").trim();
+  cachedUrl = override.length > 0 ? override : BRIDGE_URL;
   return cachedUrl;
-}
-
-/** Exported for the few components that want to render different UI when
- *  the bridge is configured (e.g., "Live updates: on" indicator). */
-export function isBridgeConfigured(): boolean {
-  return bridgeUrl() !== null;
 }
 
 /** Memoizable helper that filters which tables a caller cares about.

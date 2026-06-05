@@ -43,6 +43,19 @@ export const APP_DESCRIPTION = "Command your agents, projects, and personal syst
 export const APP_URL         = `https://${APP_DOMAIN}`;
 export const APP_PROFILE_URL = (username: string) => `${APP_DOMAIN}/u/${username}`;
 
+// Bridge — the Hetzner SSE fan-out service that delivers fc:state events to
+// every connected browser, desktop, and phone. Hosted on the shared bitbaum
+// box at bridge.orangecat.ch (shared between FleetCrown + OrangeCat, see
+// memory:decision_hetzner_consolidation). Always HTTPS, always /sse path.
+//
+// Override per-runtime:
+//   - Web (Next.js):    NEXT_PUBLIC_FLEETCROWN_BRIDGE_URL
+//   - Desktop (Node):   FLEETCROWN_BRIDGE_URL
+// Override use cases: pointing a dev instance at a local bridge (http://localhost:4001/sse)
+// during testing. Production never overrides — the constant below is the truth.
+export const BRIDGE_DOMAIN = "bridge.orangecat.ch";
+export const BRIDGE_URL    = `https://${BRIDGE_DOMAIN}/sse`;
+
 // Email "From" address. Kept separate from APP_DOMAIN because the email host
 // is usually a different domain than the app host (vercel.app is hostable but
 // not a deliverable email domain). Override via EMAIL_FROM env var.
