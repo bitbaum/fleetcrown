@@ -29,7 +29,9 @@ const Body = z.object({
   /** Initialize with a README.md so the repo isn't empty. */
   init_readme: z.boolean().default(true),
   /** Starter template to seed into the repo. "bare" leaves it as just a README. */
-  template: z.enum(["bare", "nextjs-tailwind"]).default("bare"),
+  template: z
+    .enum(["bare", "nextjs-tailwind", "python-fastapi", "hono-cloudflare", "html-tailwind"])
+    .default("bare"),
 });
 
 /**
