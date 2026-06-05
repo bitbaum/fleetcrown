@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Radio, WifiOff } from "lucide-react";
+import Link from "next/link";
+import { X, Radio, WifiOff, Sparkles, Download, Terminal } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
 import { getJson } from "@/lib/api/fetch";
@@ -76,19 +77,57 @@ export function DaemonStatusBanner({
         {daemonNeverSeen ? (
           <>
             <p className="text-text-secondary leading-relaxed">
-              Welcome! {APP_NAME} lets you control AI agents (Grok, Claude, Cursor, etc.) that run on <strong>your own computer</strong> from this website.
+              {APP_NAME} can do two things — pick whichever you need first:
             </p>
-            <p className="text-sm text-text-secondary">
-              A one-time setup is needed so the website can talk to your agents safely. We’re making this as easy as possible.
-            </p>
-            <div className="space-y-2 text-sm text-text-secondary">
-              <div>1. Install <a href="https://zellij.dev/" target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">Zellij</a> (quick terminal tool).</div>
-              <div>2. Pick an agent CLI (Grok is great for new users) and install it with one command.</div>
-              <div>3. Generate a token below and run the one-line installer. Done.</div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              {/* Path A — works TODAY, no install. */}
+              <Link
+                href="/control/new-from-scratch"
+                className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
+              >
+                <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  Start a new project
+                </div>
+                <p className="text-xs text-text-muted">
+                  Creates a GitHub repo + project record right from this website. No install. Pick a starter (Next.js, FastAPI, Hono, plain HTML), clone wherever.
+                </p>
+                <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">No install needed →</span>
+              </Link>
+
+              {/* Path B — agent dispatch (requires local helper). */}
+              <Link
+                href="/download"
+                className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
+              >
+                <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
+                  <Download className="h-3.5 w-3.5 text-accent" />
+                  Install Fleet Runner desktop
+                </div>
+                <p className="text-xs text-text-muted">
+                  Required only if you want to <strong>dispatch agents at local repos</strong>. Detects your ~/dev folders, runs Claude/Codex/Grok/Gemini/Cursor from this website.
+                </p>
+                <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">Download for your OS →</span>
+              </Link>
             </div>
-            <p className="text-xs text-text-muted mt-2">
-              Once the helper is running (ideally as a background service — run the installer in scripts/install-daemon.sh), these buttons will open a fresh terminal tab with the exact installer already running. After that, the website becomes the magic control plane for all your agents.
-            </p>
+
+            <details className="text-xs text-text-tertiary mt-1">
+              <summary className="cursor-pointer hover:text-text-secondary">
+                <Terminal className="inline h-3 w-3 mr-1 -mt-0.5" />
+                Prefer a terminal-only install? (CLI agent installer)
+              </summary>
+              <div className="mt-2 ml-4 space-y-1.5">
+                <p>
+                  Mint a token at{" "}
+                  <Link href="/settings" className="text-accent underline">/settings → Agent tokens</Link>{" "}
+                  and paste this in a terminal:
+                </p>
+                <pre className="ui-card-shell p-2 overflow-x-auto text-xs">
+                  <code>curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_xxxxxxxx</code>
+                </pre>
+              </div>
+            </details>
           </>
         ) : (
           <>
@@ -101,9 +140,17 @@ export function DaemonStatusBanner({
               onAfter={refreshAfterAction}
             />
             {!runtimeAvailable && (
-              <p className="text-xs text-text-muted">
-                You&apos;re on the cloud install — daemon control runs only from your local machine. Open {APP_NAME} at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
-              </p>
+              <div className="space-y-2 text-xs text-text-muted">
+                <p>
+                  You&apos;re on the cloud install — daemon control runs only from your local machine.
+                  Open {APP_NAME} at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
+                </p>
+                <p>
+                  Token expired or migrated DB?{" "}
+                  <Link href="/settings" className="text-accent underline">Mint a fresh ck_* token</Link>{" "}
+                  and re-paste it into Fleet Runner / your CLI installer.
+                </p>
+              </div>
             )}
           </>
         )}
