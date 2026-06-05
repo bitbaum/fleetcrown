@@ -596,6 +596,33 @@ function createWindow(): void {
     return getPollerStatus()
   })
 
+  // Local prerequisite scan — checks PATH for zellij + each agent CLI.
+  // Cached for the lifetime of the process (re-launch to re-detect; CLIs
+  // installed mid-session won't appear, which is fine because Fleet Runner
+  // restarts on update anyway). Uses shell -c so the scan inherits the
+  // user's PATH the same way the daemon's exec calls do.
+  let installedCache: { zellij: boolean; agents: Record<string, boolean> } | null = null
+  ipcMain.handle('get-installed-clis', async () => {
+    if (installedCache) return installedCache
+    const { exec } = await import('child_process')
+    const { promisify } = await import('util')
+    const execAsync = promisify(exec)
+    const has = async (name: string): Promise<boolean> => {
+      try {
+        await execAsync(`command -v ${name}`, { timeout: 2000 })
+        return true
+      } catch {
+        return false
+      }
+    }
+    const agents: Record<string, boolean> = {}
+    for (const a of ['claude', 'codex', 'grok', 'gemini', 'cursor']) {
+      agents[a] = await has(a)
+    }
+    installedCache = { zellij: await has('zellij'), agents }
+    return installedCache
+  })
+
   // "Try cloud" — invoked by the bundled local renderer when the user
   // wants to reconnect to the web shell after a fallback. Returns true
   // if the cloud URL responded quickly enough that the web shell will

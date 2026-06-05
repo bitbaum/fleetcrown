@@ -40,4 +40,13 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   // drops the user back into the bundled renderer automatically.
   probeCloud: (): Promise<boolean> => ipcRenderer.invoke('probe-cloud'),
   switchToCloud: (): Promise<boolean> => ipcRenderer.invoke('switch-to-cloud'),
+
+  // Local prerequisite scan — surface whether agent CLIs (claude, codex,
+  // grok, gemini, cursor) and zellij are on PATH. The web app uses this
+  // (when running inside Fleet Runner) to render an "Install Claude" CTA
+  // instead of silently dispatching to a missing binary.
+  getInstalledCLIs: (): Promise<{
+    zellij: boolean;
+    agents: Record<string, boolean>;
+  }> => ipcRenderer.invoke('get-installed-clis'),
 })

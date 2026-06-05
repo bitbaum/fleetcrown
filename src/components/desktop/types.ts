@@ -34,6 +34,9 @@ export type FleetRunnerBridge = {
   getConfigDir: () => Promise<string>;
   getPollerStatus: () => Promise<PollerStatus>;
   onPollerStatus: (cb: (status: PollerStatus) => void) => () => void;
+  /** Local prerequisite scan — true if the named binary is on the user's PATH.
+   *  Added in Fleet Runner v0.6.0; older builds won't expose this method. */
+  getInstalledCLIs: () => Promise<{ zellij: boolean; agents: Record<string, boolean> }>;
 };
 
 declare global {
