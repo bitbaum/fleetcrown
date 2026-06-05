@@ -13,11 +13,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Terminal, Loader2 } from "lucide-react";
-import type { FleetRunnerBridge } from "../desktop/types";
+import type { FleetRunnerBridge, LocalDevProject } from "../desktop/types";
 
 const SUGGESTED_COUNT = 5;
-
-type LocalProject = { name: string; path: string; mtimeMs: number; remoteUrl: string | null };
 
 function hasIPC(b: Window["fleetRunner"]): b is Pick<FleetRunnerBridge, "getLocalDevProjects"> {
   return typeof b?.getLocalDevProjects === "function";
@@ -25,7 +23,7 @@ function hasIPC(b: Window["fleetRunner"]): b is Pick<FleetRunnerBridge, "getLoca
 
 export function LocalDevSuggestions() {
   const router = useRouter();
-  const [projects, setProjects] = useState<LocalProject[]>([]);
+  const [projects, setProjects] = useState<LocalDevProject[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenMissing, setTokenMissing] = useState(false);

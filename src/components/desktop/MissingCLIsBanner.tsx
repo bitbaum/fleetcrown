@@ -12,10 +12,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Terminal, ExternalLink, RefreshCw } from "lucide-react";
-import type { FleetRunnerBridge } from "./types";
+import type { FleetRunnerBridge, InstalledCLIs } from "./types";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
-
-type Detected = { zellij: boolean; agents: Record<string, boolean> };
 
 const AGENTS_TO_CHECK: AnyAgentId[] = ["claude", "codex", "grok", "gemini", "cursor"];
 
@@ -24,7 +22,7 @@ function hasIPC(b: Window["fleetRunner"]): b is Pick<FleetRunnerBridge, "getInst
 }
 
 export function MissingCLIsBanner() {
-  const [detected, setDetected] = useState<Detected | null>(null);
+  const [detected, setDetected] = useState<InstalledCLIs | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [installing, setInstalling] = useState<string | null>(null);
 

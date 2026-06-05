@@ -22,6 +22,20 @@ export type PollerStatus = {
   commandsRejected: number;
 };
 
+/** Result of the v0.6.0 `getInstalledCLIs` IPC scan. */
+export type InstalledCLIs = {
+  zellij: boolean;
+  agents: Record<string, boolean>;
+};
+
+/** Single entry returned by the v0.6.0 `getLocalDevProjects` IPC walker. */
+export type LocalDevProject = {
+  name: string;
+  path: string;
+  mtimeMs: number;
+  remoteUrl: string | null;
+};
+
 export type FleetRunnerBridge = {
   ping: () => Promise<string>;
   getRuntimeStatus: () => Promise<unknown>;
@@ -36,14 +50,12 @@ export type FleetRunnerBridge = {
   onPollerStatus: (cb: (status: PollerStatus) => void) => () => void;
   /** Local prerequisite scan — true if the named binary is on the user's PATH.
    *  Added in Fleet Runner v0.6.0; older builds won't expose this method. */
-  getInstalledCLIs: () => Promise<{ zellij: boolean; agents: Record<string, boolean> }>;
+  getInstalledCLIs: () => Promise<InstalledCLIs>;
   /** Cursor-style "recent local projects" — walks the user's dev folder
    *  roots (default ~/dev, ~/code, ~/Code, ~/Projects) for git repos and
    *  returns them sorted by recency. Used by the web app to surface
    *  an "Import these N local repos" CTA on /control. v0.6.0+. */
-  getLocalDevProjects: () => Promise<{
-    projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
-  }>;
+  getLocalDevProjects: () => Promise<{ projects: LocalDevProject[] }>;
 };
 
 declare global {
