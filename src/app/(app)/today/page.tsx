@@ -16,6 +16,7 @@ import { LogConversationButton } from "@/components/today/LogConversationButton"
 import { QuickCaptureButton } from "@/components/today/QuickCaptureButton";
 import { HabitsCard } from "@/components/today/HabitsCard";
 import { RecentRunsCard } from "@/components/today/RecentRunsCard";
+import { FleetBriefCard } from "@/components/today/FleetBriefCard";
 import { StuckGoalsCard } from "@/components/today/StuckGoalsCard";
 import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
 import { TodayWatch } from "@/components/today/TodayWatch";
@@ -93,6 +94,13 @@ export default async function TodayPage() {
           plus a totals strip across categories. Renders only when unlocked. */}
       <Suspense fallback={<CardSkeleton />}>
         <TodayWatch />
+      </Suspense>
+
+      {/* Fleet brief — at-a-glance counts of projects/runs today + this week.
+          Lives above RecentRunsCard because it answers "what happened?"
+          (aggregate) before "what specifically happened?" (timeline). */}
+      <Suspense fallback={<CardSkeleton />}>
+        <FleetBriefCard userId={userId} />
       </Suspense>
 
       {/* Recent agent outcomes — what agents shipped since last visit */}
