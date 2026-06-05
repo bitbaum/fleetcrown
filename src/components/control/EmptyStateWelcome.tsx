@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { GitBranch, Plus, Monitor } from "lucide-react";
+import { GitBranch, Plus, Monitor, Terminal } from "lucide-react";
 
 /**
  * Empty-state welcome shown when a new user lands on /control with zero
@@ -23,7 +23,7 @@ export function EmptyStateWelcome({ onAddManual }: { onAddManual: () => void }) 
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         {/* Primary CTA: import from GitHub. Works immediately if user signed in via GitHub. */}
         <Link
           href="/control/import"
@@ -38,6 +38,23 @@ export function EmptyStateWelcome({ onAddManual }: { onAddManual: () => void }) 
           </div>
           <div className="text-xs text-accent mt-auto pt-2 group-hover:underline">
             Recommended →
+          </div>
+        </Link>
+
+        {/* Secondary CTA: import from local ~/dev folder via terminal one-liner. */}
+        <Link
+          href="/control/import-local"
+          className="ui-card-shell hover:border-accent transition-colors p-4 flex flex-col gap-2 group"
+        >
+          <Terminal className="h-5 w-5 text-accent" />
+          <div>
+            <div className="font-medium text-text-primary">Import from ~/dev</div>
+            <div className="text-sm text-text-muted mt-1">
+              Paste one terminal line. Scans ~/dev for git repos, imports them all.
+            </div>
+          </div>
+          <div className="text-xs text-accent mt-auto pt-2 group-hover:underline">
+            One-liner →
           </div>
         </Link>
 
