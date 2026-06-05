@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getBearerUserId } from "@/lib/daemon-auth";
 import { createProject } from "@/db/queries/projects";
-import { SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 
 const FolderItem = z.object({
   /** Display name — typically the directory basename. */
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
       const project = await createProject(
         userId,
         { name: folder.name, description },
-        SOURCE_COCKPIT_UI, // ok to reuse — source field is just for analytics
+        SOURCE_FLEETCROWN_UI, // ok to reuse — source field is just for analytics
       );
       created.push({ id: project.id, name: project.name, path: folder.path });
     } catch (e: unknown) {

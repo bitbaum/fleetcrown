@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
-import { SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { createProject } from "@/db/queries/projects";
 import { db } from "@/db";
 import { accounts } from "@/db/schema";
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       const project = await createProject(
         userId,
         { name: repo.name, description: repo.description ?? undefined },
-        SOURCE_COCKPIT_UI,
+        SOURCE_FLEETCROWN_UI,
       );
       created.push({ id: project.id, name: project.name, repoId });
     } catch (e: unknown) {

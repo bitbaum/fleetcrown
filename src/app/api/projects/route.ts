@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { getSessionUserId } from "@/lib/session";
 import { createProject, CreateProjectBody } from "@/db/queries/projects";
 import { readJsonBody, handleDuplicateEntityNameError } from "@/lib/api/route-helpers";
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
   try {
-    const created = await createProject(userId, dataOrResp, SOURCE_COCKPIT_UI);
+    const created = await createProject(userId, dataOrResp, SOURCE_FLEETCROWN_UI);
     return NextResponse.json({ ok: true, project: created }, { status: 201 });
   } catch (e: unknown) {
     const dup = handleDuplicateEntityNameError(e, "project");

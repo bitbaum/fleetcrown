@@ -18,7 +18,7 @@ export const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL ?? "http://
 /** Source attribution for rows created via the app UI. Distinguishes
  *  manual-from-app rows from seeded knowledge.sqlite + contact-resolver
  *  imports so future audit/cleanup queries can filter by origin. */
-export const SOURCE_COCKPIT_UI = `${APP_SLUG}-ui`;
+export const SOURCE_FLEETCROWN_UI = `${APP_SLUG}-ui`;
 
 /** How many days of history the /habits page (and its heatmap) covers. */
 export const HABIT_HISTORY_DAYS = 30;

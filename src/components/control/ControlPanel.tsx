@@ -238,7 +238,13 @@ export function ControlPanel() {
           we had. Three CTAs: import from GitHub (multi-select), add manually,
           install Fleet Runner. Disappears the moment they add anything. */}
       {data && data.projects.length === 0 && (
-        <EmptyStateWelcome onAddManual={() => setNewProjectOpen(true)} />
+        <EmptyStateWelcome
+          onAddManual={() => setNewProjectOpen(true)}
+          // Bootstrap requires the local Fleet Runner daemon (writes to ~/dev,
+          // shells out to `gh repo create`); hide the CTA when runtime isn't
+          // available so we don't 503 the user on click.
+          onBootstrap={runtimeAvailable ? () => setBootstrapOpen(true) : undefined}
+        />
       )}
 
       <ControlFleetStatus

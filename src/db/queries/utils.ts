@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { attributes, entities, interactions, orgMemberships, type Interaction } from "@/db/schema";
 import { alias } from "drizzle-orm/pg-core";
 import { and, eq, inArray, ne } from "drizzle-orm";
-import { SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
 import { z } from "zod";
 
@@ -78,7 +78,7 @@ export async function upsertEntityAttribute(
       entityId,
       key: key.toLowerCase().replace(/\s+/g, "_"),
       value,
-      source: SOURCE_COCKPIT_UI,
+      source: SOURCE_FLEETCROWN_UI,
     })
     .onConflictDoUpdate({
       target: [attributes.userId, attributes.entityId, attributes.key],

@@ -1,4 +1,4 @@
-import { DEFAULT_USER_EXTERNAL_ID, SOURCE_COCKPIT_UI } from "@/lib/constants";
+import { DEFAULT_USER_EXTERNAL_ID, SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { ENTITY_TYPE, SORT_MODE, type InteractionDirection, type SortMode } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, attributes, entityRelations, interactions } from "@/db/schema";
@@ -189,7 +189,7 @@ export async function getPersonDetail(userId: string, id: string) {
 export async function createPerson(userId: string, { name, description }: CreatePersonInput) {
   const [created] = await db
     .insert(entities)
-    .values({ userId, name, type: ENTITY_TYPE.PERSON, description: description || null, source: SOURCE_COCKPIT_UI })
+    .values({ userId, name, type: ENTITY_TYPE.PERSON, description: description || null, source: SOURCE_FLEETCROWN_UI })
     .returning({ id: entities.id, name: entities.name });
   return created;
 }

@@ -1,19 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { GitBranch, Plus, Monitor, Terminal } from "lucide-react";
+import { GitBranch, Plus, Monitor, Terminal, Sparkles } from "lucide-react";
 
 /**
  * Empty-state welcome shown when a new user lands on /control with zero
  * registered projects. Replaces the dead-end blank fleet status that made
  * the captain-mode pitch fall apart at first contact.
  *
- * Three paths offered, in order of expected usage:
- *   1. Import from GitHub  — for users who signed in with GitHub (most common)
- *   2. Add a project       — for users without GitHub OR for one-off projects
- *   3. Install Fleet Runner — for users who want local-dev folder detection
+ * Five paths offered, in priority order:
+ *   1. Start a new idea — Bootstrap (AI brief → GitHub repo → local folder → DB)
+ *   2. Import from GitHub — multi-select existing repos
+ *   3. Import from ~/dev — terminal one-liner for local git repos
+ *   4. Add a project — manual one-off entry
+ *   5. Install Fleet Runner — local detection desktop app
+ *
+ * `onBootstrap` and `onAddManual` are bound to the two modals owned by
+ * ControlPanel (the only meaningful caller). If `onBootstrap` is omitted
+ * (e.g., daemon unavailable), the bootstrap card is hidden — Bootstrap
+ * requires local runtime today.
  */
-export function EmptyStateWelcome({ onAddManual }: { onAddManual: () => void }) {
+export function EmptyStateWelcome({
+  onAddManual,
+  onBootstrap,
+}: {
+  onAddManual: () => void;
+  onBootstrap?: () => void;
+}) {
   return (
     <section className="ui-card-shell-raised p-6 md:p-8">
       <div className="space-y-2 mb-6">
@@ -23,8 +36,31 @@ export function EmptyStateWelcome({ onAddManual }: { onAddManual: () => void }) 
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-        {/* Primary CTA: import from GitHub. Works immediately if user signed in via GitHub. */}
+      <div className={`grid gap-3 md:grid-cols-2 ${onBootstrap ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+        {/* TOP CTA when daemon is running: scaffold a brand-new idea end-to-end
+            (AI brief → GitHub repo → local folder → DB row → agent launched).
+            Hidden when runtime is unavailable because /api/project/bootstrap
+            currently requires the local Fleet Runner daemon. */}
+        {onBootstrap && (
+          <button
+            type="button"
+            onClick={onBootstrap}
+            className="ui-card-shell hover:border-accent transition-colors p-4 flex flex-col gap-2 group text-left"
+          >
+            <Sparkles className="h-5 w-5 text-accent" />
+            <div>
+              <div className="font-medium text-text-primary">Start a new idea</div>
+              <div className="text-sm text-text-muted mt-1">
+                Describe it once. AI fills in the brief, creates the GitHub repo + local folder, launches the agent.
+              </div>
+            </div>
+            <div className="text-xs text-accent mt-auto pt-2 group-hover:underline">
+              Bootstrap →
+            </div>
+          </button>
+        )}
+
+        {/* Primary CTA when daemon offline (and secondary otherwise): import from GitHub. */}
         <Link
           href="/control/import"
           className="ui-card-shell hover:border-accent transition-colors p-4 flex flex-col gap-2 group"

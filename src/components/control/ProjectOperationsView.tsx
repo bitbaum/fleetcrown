@@ -1,7 +1,5 @@
 "use client";
 
-import { Activity, GitBranch, Plus, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
@@ -32,33 +30,12 @@ export function ProjectOperationsView({
   }
 
   if (snapshots.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border-default px-8 py-16 text-center">
-        <Activity className="h-12 w-12 text-text-muted" />
-        <div>
-          <h3 className="text-lg font-semibold text-text-primary">Register a project to begin</h3>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-text-secondary">
-            Control tracks current agent work, queued instructions, and saved context for each project.
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
-          {runtimeAvailable && (
-            <button onClick={onBootstrap} className="ui-btn-primary gap-2">
-              <Sparkles className="h-3.5 w-3.5" />
-              Bootstrap project
-            </button>
-          )}
-          <button onClick={onNewProject} className={runtimeAvailable ? "ui-btn-secondary gap-1.5" : "ui-btn-primary gap-1.5"}>
-            <Plus className="h-3.5 w-3.5" />
-            Register existing project
-          </button>
-          <Link href="/control/import" className="ui-btn-secondary gap-1.5 inline-flex items-center">
-            <GitBranch className="h-3.5 w-3.5" />
-            Import from GitHub
-          </Link>
-        </div>
-      </div>
-    );
+    // Empty state moved one level up to ControlPanel → EmptyStateWelcome
+    // (2026-06-05 audit: this view was rendering a second, less-discoverable
+    // empty state below the welcome card). Returning null here lets the
+    // welcome card breathe alone; callers that don't render the welcome
+    // (none today) would need to handle their own zero-state.
+    return null;
   }
 
   const selected = snapshots.find((snapshot) => snapshot.project.tab === selectedTab) ?? snapshots[0];
