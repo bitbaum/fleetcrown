@@ -18,21 +18,45 @@ import {
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
 
-// Web-shell mode — the production default.
+// v0.7 / Phase C — bundled local renderer is the primary boot target.
 //
-// Fleet Runner is a native window around the same React tree fleetcrown.vercel.app
-// serves. Native IPC remains available via the preload-injected window.fleetRunner
-// bridge; the UI itself is the deployed web app, so the desktop and the browser
-// stay at parity automatically (one codebase, one source of truth).
+// Rationale (see thoughts/from-polling-to-listening + the v0.7
+// architectural review): the cloud should be a thin sync layer, not the
+// authoritative source of the desktop's UI. Fleet Runner owns local
+// execution — Zellij injection, the home/ event log, project file
+// reads — and the bundled renderer at desktop/src/renderer/ is the
+// view of that local state. The cloud web shell remains one click away
+// via the "Try cloud" button for cross-device surfaces (settings,
+// prompt library, history archive, billing).
 //
-// FLEETCROWN_WEB_URL overrides the URL (useful for pointing at a preview
-// deployment or a local `npm run dev`). The literal value "local" disables
-// web-shell entirely and loads the bundled renderer — kept around as the
-// development surface for the IPC layer.
+// Initial-mode resolution:
+//   - If the user has no saved ck_* token, FIRST-LAUNCH goes to the
+//     cloud web shell so they can sign in + the auto-mint flow can
+//     drop a fresh token. Subsequent launches land local.
+//   - FLEETCROWN_WEB_URL=https://... → opts back into cloud-as-primary
+//     (preserves dev/preview workflows). Also becomes the URL the
+//     "Try cloud" button targets.
+//   - FLEETCROWN_WEB_URL=cloud → cloud-as-primary using APP_URL.
+//   - FLEETCROWN_WEB_URL=local OR unset → local-primary (the new default).
+//
+// WEB_SHELL_URL is always defined regardless of initial mode so the
+// "Try cloud" IPC handler has a target. Distinguishing "what's the cloud
+// URL?" from "do we boot into it?" was the key factoring miss in
+// pre-v0.7 — the two were conflated under USE_WEB_SHELL.
 const RAW_URL_OVERRIDE = (process.env.FLEETCROWN_WEB_URL || '').trim()
-const DISABLE_WEB_SHELL = RAW_URL_OVERRIDE.toLowerCase() === 'local'
-const WEB_SHELL_URL = DISABLE_WEB_SHELL ? '' : (RAW_URL_OVERRIDE || APP_URL)
-const USE_WEB_SHELL = WEB_SHELL_URL.length > 0
+const lowered = RAW_URL_OVERRIDE.toLowerCase()
+const isHttpOverride = RAW_URL_OVERRIDE.startsWith('http://') || RAW_URL_OVERRIDE.startsWith('https://')
+const WEB_SHELL_URL = isHttpOverride ? RAW_URL_OVERRIDE : APP_URL
+
+// First-launch heuristic: no token → user needs to sign in → go to cloud.
+// TOKEN_FILE matches the path poller.ts writes to (~/.config/fleetcrown/fleet-runner-token).
+const FLEET_RUNNER_TOKEN_FILE = join(homedir(), '.config', 'fleetcrown', 'fleet-runner-token')
+const HAS_LOCAL_TOKEN = existsSync(FLEET_RUNNER_TOKEN_FILE)
+
+const USE_WEB_SHELL =
+  isHttpOverride ||                 // explicit URL override → boot cloud
+  lowered === 'cloud' ||            // explicit "cloud" → boot cloud
+  (!HAS_LOCAL_TOKEN && lowered !== 'local')  // first launch, no token → cloud to sign in
 
 // Resolve a packaged resource file. electron-builder copies `resources/` into
 // `process.resourcesPath` at install time; during dev we read it directly from
@@ -504,11 +528,10 @@ function createWindow(): void {
     })
     // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
     if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
-  } else if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    // HMR for renderer based on electron-vite cli (existing flow).
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    // v0.7 default — bundled local renderer is the primary boot target.
+    console.log('[desktop] local-renderer mode — bundled renderer is primary')
+    loadBundledRenderer()
   }
 
   // IPC for local runtime (integrated home/ stack)
@@ -687,7 +710,10 @@ function createWindow(): void {
   // actually navigate. Decoupled so the renderer can show a spinner
   // between "checking" and "switching."
   ipcMain.handle('probe-cloud', async () => {
-    if (!USE_WEB_SHELL) return false
+    // v0.7 — works regardless of USE_WEB_SHELL boot mode. WEB_SHELL_URL is
+    // now always defined; "Try cloud" should resolve whether we booted local
+    // or cloud. Pre-v0.7 this gated on USE_WEB_SHELL and silently no-op'd
+    // when the user was in local mode, leaving the button broken.
     try {
       const ctrl = new AbortController()
       const t = setTimeout(() => ctrl.abort(), 4_000)
@@ -704,7 +730,7 @@ function createWindow(): void {
   // back to bundled renderer again if the cloud is still unreachable, so
   // the user can keep clicking without getting stuck.
   ipcMain.handle('switch-to-cloud', async () => {
-    if (!USE_WEB_SHELL || !mainWindow) return false
+    if (!mainWindow) return false
     try {
       await mainWindow.loadURL(WEB_SHELL_URL)
       return true
