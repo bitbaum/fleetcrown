@@ -16,6 +16,13 @@ export const entities = pgTable("entities", {
    *  Populated by /api/projects/create-with-github + bulk-from-github +
    *  import-from-local. */
   gitUrl: text("git_url"),
+  /** Per-project override for the user's beacon_settings.auto_inject_mode.
+   *  NULL = inherit the user-level mode (today's behavior). Set to any
+   *  AUTO_INJECT_MODE_VALUES value to pin this specific project to a
+   *  different autopilot tier — e.g. user is on "strategist" globally but
+   *  flips this one project to "off" while iterating on something fragile.
+   *  Read by /api/control/dispatch before falling back to user default. */
+  autoInjectModeOverride: text("auto_inject_mode_override"),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   source: text("source"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

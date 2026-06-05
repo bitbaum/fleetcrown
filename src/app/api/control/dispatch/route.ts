@@ -18,6 +18,7 @@ import { getApiUserId } from "@/lib/session";
 import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { getProjectAutopilotOverride } from "@/db/queries/projects";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
@@ -231,11 +232,24 @@ export async function POST(req: NextRequest) {
   const streak = streakLine(recentOutcomes);
   const streakSuffix = streak ? `  [last 5: ${streak}]` : "";
 
-  // Per-user auto-inject mode + the two safety gates (status:working,
-  // pending blockers) added 2026-05-31. Centralized in evaluateDispatchGates
-  // so the invariants are unit-tested without spinning up a real route.
+  // Auto-inject mode resolution (per-project override → user default):
+  //
+  // Pre-v0.7: a single user-level mode applied to every project; users
+  // dogfooding multi-project workflows asked for per-project pause/resume.
+  // Now each entities row carries an optional auto_inject_mode_override —
+  // when set, it wins; when null, fall back to the user's beacon_settings
+  // value. This is also how the "pause this project's autopilot" UI on
+  // ProjectCard does its work (it writes "off" to the override).
+  //
+  // Both the project override lookup and the user-settings lookup fail-safe
+  // to the default mode so a transient DB hiccup doesn't kill dispatch.
   const settings = await getBeaconSettings(userId).catch(() => null);
-  const mode = (settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE) as AutoInjectMode;
+  const userMode = (settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE) as AutoInjectMode;
+  let mode: AutoInjectMode = userMode;
+  if (projectKey) {
+    const override = await getProjectAutopilotOverride(userId, projectKey).catch(() => null);
+    if (override) mode = override;
+  }
 
   const gated = evaluateDispatchGates({
     status: handoff.status,

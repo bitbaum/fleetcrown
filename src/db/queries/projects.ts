@@ -5,6 +5,7 @@ import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { z } from "zod";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
+import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
 
 export const RECENT_INTERACTION_LIMIT = 5;
 
@@ -23,6 +24,13 @@ export const PatchProjectBody = z
     name: z.string().trim().min(1, "name cannot be empty").optional(),
     description: z.string().optional(),
     gitUrl: z.union([z.string().trim().url(), z.literal("")]).optional(),
+    /** Per-project autopilot override. Pass null (or omit) to inherit the
+     *  user-level beacon_settings.auto_inject_mode. Pass an AutoInjectMode
+     *  value (e.g. "off", "queue_only", "strategist") to pin this project. */
+    autoInjectModeOverride: z.union([
+      z.enum(AUTO_INJECT_MODE_VALUES),
+      z.null(),
+    ]).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "Nothing to update" });
 
@@ -48,12 +56,42 @@ export async function patchProject(userId: string, id: string, data: PatchProjec
   if (data.name !== undefined) patch.name = data.name;
   if (data.description !== undefined) patch.description = data.description.trim() || null;
   if (data.gitUrl !== undefined) patch.gitUrl = data.gitUrl.trim() || null;
+  if (data.autoInjectModeOverride !== undefined) {
+    patch.autoInjectModeOverride = data.autoInjectModeOverride;
+  }
   const [updated] = await db
     .update(entities)
     .set(patch)
     .where(and(eq(entities.id, id), eq(entities.userId, userId)))
     .returning({ id: entities.id });
   return updated ?? null;
+}
+
+/**
+ * Resolve a project's autopilot override by projectKey (the slug daemons and
+ * dispatch routes use). Returns null when there's no override OR when the
+ * stored value isn't a known AutoInjectMode (defensive — the column has no
+ * CHECK constraint so unknown values must be tolerated). Project lookup is
+ * by exact name match; FleetCrown bootstrap stores entities.name = projectKey
+ * for cloud-created projects.
+ */
+export async function getProjectAutopilotOverride(
+  userId: string,
+  projectKey: string,
+): Promise<AutoInjectMode | null> {
+  const row = await db.query.entities.findFirst({
+    where: and(
+      eq(entities.userId, userId),
+      eq(entities.name, projectKey),
+      eq(entities.type, ENTITY_TYPE.PROJECT),
+    ),
+    columns: { autoInjectModeOverride: true },
+  });
+  const stored = row?.autoInjectModeOverride ?? null;
+  if (!stored) return null;
+  return AUTO_INJECT_MODE_VALUES.includes(stored as AutoInjectMode)
+    ? (stored as AutoInjectMode)
+    : null;
 }
 
 export async function deleteProject(userId: string, id: string) {

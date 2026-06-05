@@ -4,6 +4,7 @@ import { promisify } from "util";
 import path from "path";
 import { getZellijTabs, shellEscape } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
+import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
 import { createOrchestrationEventOnce, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
@@ -206,6 +207,36 @@ function matchProfileById(
   if (!entityProjectId) return null;
   const match = dbProjects.find((p) => p.id === entityProjectId);
   return match ? rowToProfile(match) : null;
+}
+
+/** Resolve the per-project autopilot override for a tab. Returns null if no
+ *  match or if the stored value isn't a known AutoInjectMode (the column has
+ *  no CHECK constraint; the typeguard happens here at the API boundary so
+ *  consumers can trust the value). Lookup mirrors matchProfile — by entity
+ *  id when known, otherwise fuzzy match on tab/dir basename. */
+function resolveAutoInjectOverride(
+  entityProjectId: string | null,
+  tab: string,
+  dir: string,
+  dbProjects: ProjectRow[],
+): AutoInjectMode | null {
+  let match: ProjectRow | undefined;
+  if (entityProjectId) {
+    match = dbProjects.find((p) => p.id === entityProjectId);
+  }
+  if (!match) {
+    const tabLower = tab.toLowerCase().replace(/[-_]/g, "");
+    const dirBaseLower = path.basename(dir).toLowerCase().replace(/[-_]/g, "");
+    match = dbProjects.find((p) => {
+      const n = p.name.toLowerCase().replace(/[-_]/g, "");
+      return n === tabLower || n === dirBaseLower;
+    });
+  }
+  const stored = match?.autoInjectModeOverride ?? null;
+  if (!stored) return null;
+  return AUTO_INJECT_MODE_VALUES.includes(stored as AutoInjectMode)
+    ? (stored as AutoInjectMode)
+    : null;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -445,6 +476,7 @@ export async function GET() {
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     recentInjections: activityByProject.get(tab) ?? [],
     recentOutcomes: recentOutcomesMap.get(tab) ?? [],
+    autoInjectModeOverride: resolveAutoInjectOverride(projectId, tab, dir, effectiveDbProjects),
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,
       intent: latestRun.intent,

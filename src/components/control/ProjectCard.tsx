@@ -14,6 +14,7 @@ import { ProjectCardHeader, SessionSummary } from "./project-card-sections";
 import { ProjectBanners } from "./project-card-banners";
 import { ProjectActivitySection } from "./project-card-activity";
 import { IntentButtonPanel } from "./project-intent-panel";
+import { ProjectAutopilotToggle } from "./ProjectAutopilotToggle";
 import { usePromptQueue } from "@/hooks/use-prompt-queue";
 import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
@@ -212,6 +213,17 @@ export function ProjectCard({
         onSwitchAgent={handleSwitchAgent}
         runtimeStateKnown={runtimeStateKnown}
       />
+
+      {/* Per-project autopilot pause/resume. Hidden when no entity id is
+          available (legacy paths-only projects can't be overridden — see
+          ProjectAutopilotToggle for the rationale). */}
+      <div className="px-4 pt-2 sm:px-5 md:px-6">
+        <ProjectAutopilotToggle
+          projectId={project.projectId}
+          currentOverride={project.autoInjectModeOverride}
+          inheritedMode={automationMode}
+        />
+      </div>
 
       {profileOpen ? (
         <ProjectProfile

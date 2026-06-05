@@ -73,6 +73,10 @@ export type ProjectState = {
   recentInjections: import("@/db/queries/prompt-history").ActivityItem[];
   /** Last 5 outcomes for this project, newest first. Powers the streak chip + dispatch reasoner. */
   recentOutcomes: OrchestrationOutcome[];
+  /** Per-project autopilot mode override. NULL = inherit the user-level
+   *  beacon_settings.auto_inject_mode. Set by the per-project pause/resume
+   *  toggle on ProjectCard. Read by /api/control/dispatch (v0.7+). */
+  autoInjectModeOverride: import("@/config/beacon").AutoInjectMode | null;
   latestOrchestrationRun: {
     adapter: string;
     intent: string;
