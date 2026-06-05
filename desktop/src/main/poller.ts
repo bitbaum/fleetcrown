@@ -30,6 +30,7 @@ import { readFileSync, existsSync } from 'fs'
 import { injectIntoTab } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { startBridgeSubscriber } from './bridge-subscriber'
+import { validateCommand } from './command-validator'
 
 const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
 const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
@@ -234,28 +235,19 @@ async function handleCommand(
   let ok = false
   let error: string | undefined
 
-  try {
-    switch (command.type) {
+  // Validate at the IPC boundary BEFORE touching any executor. Pre-v0.7
+  // the payload was an unchecked cast; once the autonomous scheduler (v0.7+)
+  // starts queuing pending_commands unattended, an unchecked cast lets a
+  // typo'd cron payload through to injectIntoTab() which would fail in a
+  // less actionable place. See command-validator.ts for the contract.
+  const validation = validateCommand(command)
+  if (!validation.ok) {
+    error = validation.error
+  } else try {
+    switch (validation.command.type) {
       case 'inject': {
-        const { tab, prompt } = command.payload as { tab?: string; prompt?: string }
-        if (!tab || !prompt) {
-          ok = false
-          error = `Malformed inject payload: tab and prompt are required.`
-          break
-        }
-        injectIntoTab(tab, prompt)
+        injectIntoTab(validation.command.payload.tab, validation.command.payload.prompt)
         ok = true
-        break
-      }
-      default: {
-        // Unsupported types: mark failed with an actionable message instead of
-        // letting them re-claim after the 90s stale-claim window — that would
-        // jam the queue. Users who need full command-type coverage can run the
-        // bash daemon (the atomic claim ensures the two drainers don't collide).
-        ok = false
-        error =
-          `Fleet Runner v0.1 does not yet handle command type '${command.type}'. ` +
-          `Run scripts/fleetcrown-daemon.sh for full command coverage, or wait for the next release.`
         break
       }
     }
