@@ -36,12 +36,13 @@ export function EmptyStateWelcome({
         </p>
       </div>
 
-      <div className={`grid gap-3 md:grid-cols-2 ${onBootstrap ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
-        {/* TOP CTA when daemon is running: scaffold a brand-new idea end-to-end
-            (AI brief → GitHub repo → local folder → DB row → agent launched).
-            Hidden when runtime is unavailable because /api/project/bootstrap
-            currently requires the local Fleet Runner daemon. */}
-        {onBootstrap && (
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+        {/* TOP CTA: scaffold a brand-new project from an idea. Two modes:
+            - With local runtime: opens BootstrapModal (AI brief → GitHub repo
+              → local folder → agent launched).
+            - Cloud only: links to /control/new-from-scratch which creates a
+              GitHub repo + FleetCrown row, and tells the user to `git clone`. */}
+        {onBootstrap ? (
           <button
             type="button"
             onClick={onBootstrap}
@@ -58,6 +59,23 @@ export function EmptyStateWelcome({
               Bootstrap →
             </div>
           </button>
+        ) : (
+          <Link
+            href="/control/new-from-scratch"
+            className="ui-card-shell hover:border-accent transition-colors p-4 flex flex-col gap-2 group"
+          >
+            <Sparkles className="h-5 w-5 text-accent" />
+            <div>
+              <div className="font-medium text-text-primary">Start a new project</div>
+              <div className="text-sm text-text-muted mt-1">
+                Type a name. We create the GitHub repo + project record. You{" "}
+                <code className="px-1 rounded bg-surface-base text-xs">git clone</code> it when you&apos;re ready.
+              </div>
+            </div>
+            <div className="text-xs text-accent mt-auto pt-2 group-hover:underline">
+              Recommended →
+            </div>
+          </Link>
         )}
 
         {/* Primary CTA when daemon offline (and secondary otherwise): import from GitHub. */}
