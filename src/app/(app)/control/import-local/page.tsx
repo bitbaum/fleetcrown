@@ -6,12 +6,14 @@ import Link from "next/link";
 import { ArrowLeft, Terminal, ExternalLink } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { CopyableCommand } from "@/components/control/CopyableCommand";
+import { APP_URL } from "@/config/brand";
 
 export const metadata = { title: "Import from local ~/dev — FleetCrown" };
 
 export default function ImportFromLocalPage() {
-  const command = `curl -sS https://fleetcrown.vercel.app/import-from-local.sh \\
+  const command = `curl -sS ${APP_URL}/import-from-local.sh \\
   | FC_TOKEN=ck_xxxxxxxxxxxx bash`;
+  const customRootsCommand = `FC_ROOTS="$HOME/my-stuff:$HOME/work" FC_TOKEN=ck_... bash <(curl -sS ${APP_URL}/import-from-local.sh)`;
 
   return (
     <PageLayout title="Import from your local dev folder">
@@ -79,7 +81,7 @@ export default function ImportFromLocalPage() {
               <span className="font-medium text-text-secondary">Custom dev folders?</span> Override the scan paths:
             </p>
             <code className="block p-2 rounded bg-surface-base text-text-secondary overflow-x-auto">
-              FC_ROOTS=&quot;$HOME/my-stuff:$HOME/work&quot; FC_TOKEN=ck_... bash &lt;(curl -sS https://fleetcrown.vercel.app/import-from-local.sh)
+              {customRootsCommand}
             </code>
           </div>
         </div>
