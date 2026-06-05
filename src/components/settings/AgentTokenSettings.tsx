@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, Plus, Trash2, Loader2, Terminal, ExternalLink } from "lucide-react";
+import { Copy, Check, Plus, Trash2, Loader2, Terminal, ExternalLink, Cpu } from "lucide-react";
 import { postJson, deleteJson } from "@/lib/api/fetch";
 import { APP_URL } from "@/config/brand";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
+// Window.fleetRunner type lives in src/components/desktop/types.ts (the
+// canonical SSOT for the IPC bridge). Importing the side-effects of that
+// module pulls in the declare-global so we can use window.fleetRunner here.
+import "@/components/desktop/types";
 
 type TokenMeta = {
   id: string;
@@ -22,12 +26,22 @@ export function AgentTokenSettings() {
   const [error, setError] = useState("");
   const [tokens, setTokens] = useState<TokenMeta[]>([]);
   const [revealed, setRevealed] = useState<NewToken | null>(null);
+  // "auto-pair" state — when the React tree runs inside Fleet Runner,
+  // we hand any newly-minted token straight to the desktop daemon over
+  // IPC. The UI replaces the "Open in Fleet Runner" deep-link button
+  // with a confirmation chip so the user knows it already paired.
+  const [insideFleetRunner, setInsideFleetRunner] = useState(false);
+  const [autoPaired, setAutoPaired] = useState<{ tokenId: string } | null>(null);
+  const [autoPairError, setAutoPairError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/agent-tokens")
       .then((r) => r.json())
       .then((d: { tokens?: TokenMeta[] }) => setTokens(d.tokens ?? []))
       .catch(() => {});
+    // Detect Fleet Runner once on mount — the preload script injects this
+    // synchronously before the React tree renders.
+    setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
   }, []);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -37,6 +51,8 @@ export function AgentTokenSettings() {
     if (!label.trim()) return;
     setCreating(true);
     setError("");
+    setAutoPaired(null);
+    setAutoPairError(null);
     try {
       const res = await postJson("/api/agent-tokens", { label: label.trim() });
       const data = await res.json();
@@ -44,6 +60,23 @@ export function AgentTokenSettings() {
       setRevealed({ token: data.token, id: data.id, label: data.label });
       setTokens((prev) => [...prev, { id: data.id, label: data.label, lastUsedAt: null, createdAt: data.createdAt, prefix: data.prefix }]);
       setLabel("");
+      // If we're inside Fleet Runner, hand the new token straight to the
+      // desktop daemon over IPC. The user gets paired in one click instead
+      // of the 3-step "copy → close → paste" deep-link dance.
+      // Every method on FleetRunnerBridge is typed optional (older shipped
+      // desktop builds may lack newer methods), so check before invoking.
+      if (typeof window !== "undefined" && window.fleetRunner?.saveToken) {
+        try {
+          const saveRes = await window.fleetRunner.saveToken(data.token);
+          if (saveRes?.ok) {
+            setAutoPaired({ tokenId: data.id });
+          } else {
+            setAutoPairError(saveRes?.error ?? "Token saved on server but Fleet Runner refused it");
+          }
+        } catch (ipcErr) {
+          setAutoPairError(ipcErr instanceof Error ? ipcErr.message : "Fleet Runner IPC failed");
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -128,25 +161,65 @@ export function AgentTokenSettings() {
               {copiedKey === "token" ? <Check className="h-4 w-4 text-status-positive" /> : <Copy className="h-4 w-4" />}
             </button>
           </div>
-          {/* Deep-link: hands the freshly-revealed token to the desktop app
-              without a manual paste. Falls back gracefully — if Fleet Runner
-              isn't installed or the protocol isn't registered, the browser
-              shows its standard "this protocol isn't handled" dialog and the
-              user can still use the copy-token path above. */}
-          <a
-            href={`fleetcrown://auth?token=${encodeURIComponent(revealed.token)}`}
-            className="ui-btn-primary self-start gap-1.5 text-xs"
-          >
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open in Fleet Runner
-          </a>
-          <p className="text-xs text-text-tertiary">
-            Requires Fleet Runner v0.2 or newer installed.{" "}
-            <a href="/download" className="underline">
-              Get it here
-            </a>
-            .
-          </p>
+          {/* Three branches based on the running surface:
+              1. Inside Fleet Runner + auto-pair succeeded → confirmation chip.
+              2. Inside Fleet Runner + auto-pair failed → "Retry" button.
+              3. In a regular browser → deep-link to hand the token to the
+                 desktop app via the fleetcrown:// protocol. */}
+          {insideFleetRunner && autoPaired?.tokenId === revealed.id ? (
+            <div className="self-start inline-flex items-center gap-1.5 rounded-md bg-status-positive-subtle px-3 py-1.5 text-xs text-status-positive">
+              <Cpu className="h-3.5 w-3.5" />
+              <span>Paired with this Fleet Runner — daemon connecting now.</span>
+            </div>
+          ) : insideFleetRunner ? (
+            <div className="space-y-1 self-start">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!revealed) return;
+                  const save = window.fleetRunner?.saveToken;
+                  if (!save) {
+                    setAutoPairError("This Fleet Runner build is missing the saveToken IPC — update to v0.2+");
+                    return;
+                  }
+                  setAutoPairError(null);
+                  try {
+                    const r = await save(revealed.token);
+                    if (r?.ok) setAutoPaired({ tokenId: revealed.id });
+                    else setAutoPairError(r?.error ?? "Save failed");
+                  } catch (e) {
+                    setAutoPairError(e instanceof Error ? e.message : "IPC failed");
+                  }
+                }}
+                className="ui-btn-primary gap-1.5 text-xs"
+              >
+                <Cpu className="h-3.5 w-3.5" />
+                Pair with this Fleet Runner
+              </button>
+              {autoPairError && (
+                <p className="text-xs text-status-warning">
+                  Couldn&apos;t pair automatically: {autoPairError}. You can still copy the token and paste it manually.
+                </p>
+              )}
+            </div>
+          ) : (
+            <>
+              <a
+                href={`fleetcrown://auth?token=${encodeURIComponent(revealed.token)}`}
+                className="ui-btn-primary self-start gap-1.5 text-xs"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open in Fleet Runner
+              </a>
+              <p className="text-xs text-text-tertiary">
+                Requires Fleet Runner v0.2 or newer installed.{" "}
+                <a href="/download" className="underline">
+                  Get it here
+                </a>
+                .
+              </p>
+            </>
+          )}
           <p className="text-xs text-text-tertiary flex items-center gap-1">
             <Terminal className="h-3 w-3 shrink-0" />
             Or one-shot install (token pre-filled, no prompt):

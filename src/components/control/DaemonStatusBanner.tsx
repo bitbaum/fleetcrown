@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X, Radio, WifiOff, Sparkles, Download, Terminal } from "lucide-react";
+import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
-import { getJson } from "@/lib/api/fetch";
+import { getJson, postJson } from "@/lib/api/fetch";
 import { DaemonControls } from "./DaemonControls";
+import "@/components/desktop/types"; // declare global window.fleetRunner
 
 type DaemonState = "active" | "inactive" | "failed" | "unknown";
 
@@ -29,6 +30,13 @@ export function DaemonStatusBanner({
 }: Props) {
   const [dismissed, setDismissed] = useState(false);
   const [unitState, setUnitState] = useState<DaemonState>("unknown");
+  // Detect Fleet Runner so we can short-circuit the "Install Fleet Runner"
+  // CTA and replace it with a one-click "Pair this app" button when the
+  // user is already running inside the desktop shell.
+  const [insideFleetRunner, setInsideFleetRunner] = useState(false);
+  const [pairing, setPairing] = useState(false);
+  const [pairError, setPairError] = useState<string | null>(null);
+  const [pairedTokenLabel, setPairedTokenLabel] = useState<string | null>(null);
 
   // Probe systemd unit state on mount + after every successful control
   // action. Decoupled from daemonOffline (which is "is the daemon pushing
@@ -40,6 +48,45 @@ export function DaemonStatusBanner({
       .then((r) => setUnitState(r.state))
       .catch(() => setUnitState("unknown"));
   }, [runtimeAvailable]);
+
+  useEffect(() => {
+    setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
+  }, []);
+
+  /** Mint a fresh agent token + hand it to the in-app Fleet Runner over IPC.
+   *  One click instead of: open /settings, fill label, click "Open in Fleet
+   *  Runner" deep-link. Only meaningful when running inside the desktop app. */
+  async function pairInAppFleetRunner() {
+    const save = window.fleetRunner?.saveToken;
+    if (!save) {
+      setPairError("This Fleet Runner build is missing the saveToken IPC — please update.");
+      return;
+    }
+    setPairing(true);
+    setPairError(null);
+    try {
+      const res = await postJson("/api/agent-tokens", {
+        label: `Fleet Runner · ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}`,
+      });
+      const body = (await res.json()) as { ok?: boolean; error?: string; token?: string; label?: string };
+      if (!res.ok || !body.token) {
+        setPairError(body.error ?? `Failed to mint token (HTTP ${res.status})`);
+        return;
+      }
+      const saveRes = await save(body.token);
+      if (!saveRes?.ok) {
+        setPairError(saveRes?.error ?? "Token minted but Fleet Runner refused to save it");
+        return;
+      }
+      setPairedTokenLabel(body.label ?? "Fleet Runner token");
+      // Trigger a /api/onboarding re-probe so the banner can hide on next render.
+      onRefresh?.();
+    } catch (e) {
+      setPairError(e instanceof Error ? e.message : "Pairing failed");
+    } finally {
+      setPairing(false);
+    }
+  }
 
   if (dismissed || (!daemonNeverSeen && !daemonOffline)) return null;
 
@@ -96,20 +143,70 @@ export function DaemonStatusBanner({
                 <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">No install needed →</span>
               </Link>
 
-              {/* Path B — agent dispatch (requires local helper). */}
-              <Link
-                href="/download"
-                className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
-              >
-                <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
-                  <Download className="h-3.5 w-3.5 text-accent" />
-                  Install Fleet Runner desktop
-                </div>
-                <p className="text-xs text-text-muted">
-                  Required only if you want to <strong>dispatch agents at local repos</strong>. Detects your ~/dev folders, runs Claude/Codex/Grok/Gemini/Cursor from this website.
-                </p>
-                <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">Download for your OS →</span>
-              </Link>
+              {/* Path B branches on whether we're already inside Fleet Runner.
+                  When yes: replace the "download" CTA with a one-click pair
+                  button (the user already has the app, they just need the
+                  daemon's auth glue to land). When no: keep the download
+                  card so new users know to install for local dispatch. */}
+              {insideFleetRunner ? (
+                pairedTokenLabel ? (
+                  <div className="ui-card-shell p-3 flex flex-col gap-1 border-status-positive">
+                    <div className="flex items-center gap-1.5 font-medium text-status-positive text-sm">
+                      <Cpu className="h-3.5 w-3.5" />
+                      Paired with this Fleet Runner
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      Token <strong>{pairedTokenLabel}</strong> saved to the desktop. Daemon will appear online within ~30s.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="ui-card-shell p-3 flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
+                      <Cpu className="h-3.5 w-3.5 text-accent" />
+                      Pair this Fleet Runner
+                    </div>
+                    <p className="text-xs text-text-muted">
+                      You&apos;re already inside the desktop app. One click mints an agent token + hands it to the daemon
+                      — no manual copy-paste.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={pairInAppFleetRunner}
+                      disabled={pairing}
+                      className="ui-btn-primary self-start gap-1.5 text-xs disabled:opacity-50"
+                    >
+                      {pairing ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Pairing…
+                        </>
+                      ) : (
+                        <>
+                          <Cpu className="h-3.5 w-3.5" />
+                          Pair now
+                        </>
+                      )}
+                    </button>
+                    {pairError && (
+                      <p className="text-xs text-status-warning">{pairError}</p>
+                    )}
+                  </div>
+                )
+              ) : (
+                <Link
+                  href="/download"
+                  className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
+                >
+                  <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
+                    <Download className="h-3.5 w-3.5 text-accent" />
+                    Install Fleet Runner desktop
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    Required only if you want to <strong>dispatch agents at local repos</strong>. Detects your ~/dev folders, runs Claude/Codex/Grok/Gemini/Cursor from this website.
+                  </p>
+                  <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">Download for your OS →</span>
+                </Link>
+              )}
             </div>
 
             <details className="text-xs text-text-tertiary mt-1">
