@@ -28,9 +28,16 @@ function runTests(): void {
     console.log(`  ✓ ${label}`);
   };
 
-  check("brand-new user (no projects, never onboarded) → no heal", () => {
+  check("brand-new user + free suggested username → auto-heal (sets both)", () => {
     const patch = decideHealPatch(newUser, 0, true);
-    assert(patch === null, "expected null patch for non-returning user");
+    assert(patch !== null, "expected auto-heal patch on first sign-in");
+    assert(patch!.username === "jane-doe", `expected jane-doe, got ${patch!.username}`);
+    assert(patch!.onboardedAt instanceof Date, "expected onboardedAt date");
+  });
+
+  check("brand-new user + suggested username taken → no heal (manual /onboarding fallback)", () => {
+    const patch = decideHealPatch(newUser, 0, false);
+    assert(patch === null, "expected null patch when no username can be derived");
   });
 
   check("returning user with projects + no username + suggestion free → patch sets both", () => {
@@ -40,11 +47,12 @@ function runTests(): void {
     assert(patch!.onboardedAt instanceof Date, "expected onboardedAt date");
   });
 
-  check("returning user with projects + suggested username taken → patch sets onboardedAt only", () => {
+  check("returning user with projects + suggested username taken → no heal (avoid wasted write)", () => {
+    // Without a valid username, setting onboardedAt is a no-op because
+    // isOnboardingComplete still gates on hasValidUsername. Skip the write
+    // and let the user fall through to /onboarding to pick manually.
     const patch = decideHealPatch(newUser, 3, false);
-    assert(patch !== null, "expected patch");
-    assert(patch!.username === undefined, "expected no username when suggestion taken");
-    assert(patch!.onboardedAt instanceof Date, "expected onboardedAt date");
+    assert(patch === null, "expected null patch — no username, no point setting onboardedAt");
   });
 
   check("already-onboarded user with valid username → no heal needed", () => {

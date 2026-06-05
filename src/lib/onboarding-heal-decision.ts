@@ -15,15 +15,24 @@ export type HealPatch = { username?: string; onboardedAt?: Date };
  * Lives in its own file (rather than inside onboarding-heal.ts) because the
  * test script must not pull in @/db at import time — that file initializes
  * the Postgres pool and fails without DATABASE_URL.
+ *
+ * Policy (updated 2026-06-05): heal fires for ANY user with a derivable,
+ * unclaimed username — first-time sign-ins included. This bypasses the
+ * /onboarding page entirely for the common GitHub-OAuth case (name + email
+ * present → suggestion derives cleanly → mark onboarded). The username is
+ * editable later from /settings → Profile, so we're not stealing the user's
+ * choice — just defaulting it. Users whose suggestion collides or comes back
+ * empty still fall through to the manual /onboarding flow.
+ *
+ * Project-count is now unused; kept in the signature for the heal wrapper's
+ * convenience (it queries it anyway for other purposes) and to preserve the
+ * test signature.
  */
 export function decideHealPatch(
   user: Pick<UserRow, "name" | "email" | "username" | "onboardedAt">,
-  projectCount: number,
+  _projectCount: number,
   suggestedUsernameAvailable: boolean,
 ): HealPatch | null {
-  const isReturning = projectCount > 0 || user.onboardedAt != null;
-  if (!isReturning) return null;
-
   let username = user.username;
   if (!hasValidUsername(username)) {
     const suggested = suggestUsername(user.name, user.email);
@@ -33,7 +42,10 @@ export function decideHealPatch(
   }
 
   const needsUsername = !hasValidUsername(user.username) && hasValidUsername(username);
-  const needsOnboarded = user.onboardedAt == null;
+  // Only set onboardedAt once a valid username is in hand. Setting it without
+  // a username is a no-op (isOnboardingComplete still returns false), so we
+  // skip the wasted DB write — the user falls through to manual /onboarding.
+  const needsOnboarded = user.onboardedAt == null && hasValidUsername(username);
 
   if (!needsUsername && !needsOnboarded) return null;
 
