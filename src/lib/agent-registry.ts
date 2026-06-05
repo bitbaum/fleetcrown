@@ -13,21 +13,12 @@ export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "code
 export type Agent = (typeof AGENT_IDS)[number];
 export type AgentOption = Agent | "openclaw";
 
-/** All agent IDs including non-switchable ones (used for tab-name detection,
- *  label lookup, etc.). Mirrors `AGENTS` in scripts/_agents.sh. */
-export const ALL_AGENT_IDS = [...AGENT_IDS, "openclaw"] as const;
-export type AnyAgentId = (typeof ALL_AGENT_IDS)[number];
-
-/** Display labels for every agent ID — the SINGLE source of truth.
- *  Used by control-presenter, tab-name parsers, prompt UI, etc. */
-export const AGENT_LABELS: Record<AnyAgentId, string> = {
-  claude: "Claude",
-  codex:  "Codex",
-  cursor: "Cursor",
-  gemini: "Gemini",
-  grok:   "Grok",
-  openclaw: "OpenClaw",
-};
+// AGENT_LABELS / ALL_AGENT_IDS / AnyAgentId moved to src/lib/agent-labels.ts
+// (a leaf file with no Node imports) so client components can use them
+// without dragging agent-registry's fs/child_process imports into the
+// browser bundle. Re-exported here for backward compat with existing
+// server-side callers.
+export { ALL_AGENT_IDS, AGENT_LABELS, type AnyAgentId } from "./agent-labels";
 
 export const AGENT_DEFAULT_MODELS: Record<Agent, string> = {
   claude: "sonnet",

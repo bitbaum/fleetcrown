@@ -7,7 +7,7 @@ import {
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
 import { getIntentLabel } from "@/config/control-intents";
-import { AGENT_LABELS, ALL_AGENT_IDS, type AnyAgentId } from "@/lib/agent-registry";
+import { AGENT_LABELS, ALL_AGENT_IDS, type AnyAgentId } from "@/lib/agent-labels";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
 /**
