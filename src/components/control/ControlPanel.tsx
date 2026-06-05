@@ -228,13 +228,22 @@ export function ControlPanel() {
           work, queued instructions, and saved context by project" section
           header: that subtitle taught the user nothing they couldn't infer
           from the table itself. */}
-      <DaemonStatusBanner
-        daemonNeverSeen={daemonNeverSeen}
-        daemonOffline={daemonOffline}
-        daemonLastPushedAt={daemonLastPushedAt}
-        runtimeAvailable={runtimeAvailable}
-        onRefresh={() => refresh(true)}
-      />
+      {/* Suppress the daemon banner during the zero-project empty state —
+          EmptyStateWelcome below already pitches "Start a project" / "Install
+          Fleet Runner" with the full card grid, and rendering both led to
+          the same two CTAs appearing twice on the same screen. The banner
+          still fires for users with projects but no daemon (legit warning:
+          they can't dispatch) and for daemon-was-online-now-offline (legit
+          troubleshooting). */}
+      {!(data && data.projects.length === 0 && daemonNeverSeen && !daemonOffline) && (
+        <DaemonStatusBanner
+          daemonNeverSeen={daemonNeverSeen}
+          daemonOffline={daemonOffline}
+          daemonLastPushedAt={daemonLastPushedAt}
+          runtimeAvailable={runtimeAvailable}
+          onRefresh={() => refresh(true)}
+        />
+      )}
 
       {/* Desktop-only — surfaces missing zellij + agent CLIs so the user
           knows what to install before dispatching. Renders null outside
