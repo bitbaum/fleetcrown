@@ -23,14 +23,19 @@ export function NotificationsPill() {
     else              void push.subscribe();
   };
 
+  // Icon-only — the bell on/off state communicates the same thing the text
+  // label used to ("Notifications on" / "Notifications off"). Hover-tooltip
+  // (title) carries the longer state explanation for users who need it. The
+  // text-label version visually read as two elements (icon + word) for one
+  // button; users called it out as confusing duplication.
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={isWorking}
       className={cn(
-        "ui-topbar-pill",
-        isSubscribed && "ui-topbar-pill-active",
+        "inline-flex h-9 w-9 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-secondary",
+        isSubscribed && "text-accent-text",
       )}
       title={
         push.publicKeyMissing
@@ -43,12 +48,9 @@ export function NotificationsPill() {
       }
       aria-label={isSubscribed ? "Disable push notifications" : "Enable push notifications"}
     >
-      {isWorking ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        : isSubscribed ? <Bell className="h-3.5 w-3.5" />
-        : <BellOff className="h-3.5 w-3.5" />}
-      <span className="ui-topbar-pill-label">
-        {isSubscribed ? "Notifications on" : "Notifications off"}
-      </span>
+      {isWorking ? <Loader2 className="h-4 w-4 animate-spin" />
+        : isSubscribed ? <Bell className="h-4 w-4" />
+        : <BellOff className="h-4 w-4" />}
     </button>
   );
 }
