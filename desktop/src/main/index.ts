@@ -933,10 +933,37 @@ function createTray() {
     ? nativeImage.createFromPath(TRAY_ICON_PATH)
     : nativeImage.createEmpty()
   tray = new Tray(trayIcon)
+
+  // Surface a window AND navigate to the given path. Used by the tray's
+  // quick-link menu items. If we're in web-shell mode, this navigates the
+  // BrowserWindow; in local-renderer mode it surfaces the window only
+  // (router state inside the bundled renderer drives that surface).
+  const surfaceAt = (path: string) => {
+    if (!mainWindow) return
+    mainWindow.show()
+    mainWindow.focus()
+    if (USE_WEB_SHELL) {
+      const target = new URL(path, WEB_SHELL_URL).toString()
+      mainWindow.webContents.loadURL(target).catch((e) => {
+        console.warn('[desktop] tray: failed to load', target, e)
+      })
+    }
+  }
+
+  // Quick-link items are deliberately minimal — anything that requires more
+  // than one click belongs in the main window's chrome (sidebar, command
+  // palette). Tray = "I'm focused elsewhere, just bounce me to the page I
+  // need." Order matters: Control (most common entry) first, then create
+  // flows, then settings, then quit.
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show Fleet Runner', click: () => mainWindow?.show() },
+    { label: 'Show Fleet Runner', click: () => surfaceAt('/control') },
     { type: 'separator' },
-    { label: 'Quit', click: () => app.quit() }
+    { label: 'Open Control',       click: () => surfaceAt('/control') },
+    { label: 'New project…',       click: () => surfaceAt('/control/new-from-scratch') },
+    { label: 'Decisions log',      click: () => surfaceAt('/decisions') },
+    { label: 'Sign-in / Settings', click: () => surfaceAt('/settings') },
+    { type: 'separator' },
+    { label: 'Quit Fleet Runner', click: () => app.quit() }
   ])
   tray.setToolTip(formatTrayTooltip(getPollerStatus()))
   tray.setContextMenu(contextMenu)
