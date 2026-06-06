@@ -7,15 +7,20 @@ import { PromptRow } from "./PromptRow";
 import { FeaturedCard } from "./FeaturedCard";
 import { CategoryBar } from "./CategoryBar";
 import { ALL_CATEGORIES } from "@/config/prompt-library";
+import { UserPromptsSection, type UserPromptCard } from "./UserPromptsSection";
 import type { Project } from "./types";
 import { useEscapeKey } from "@/hooks/use-escape-key";
 
 export function PromptLibraryClient({
   templates,
   projects,
+  userPrompts = [],
 }: {
   templates: PromptTemplate[];
   projects: Project[];
+  /** v2.1 — user-owned prompts merged from the prompts DB table. Optional
+   *  for backward compat with callers that haven't been updated yet. */
+  userPrompts?: UserPromptCard[];
 }) {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<PromptCategory | "all">("all");
@@ -45,7 +50,13 @@ export function PromptLibraryClient({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* v2.1 — user-owned prompts section. Above FC defaults because the
+          user's own prompts grow with use and become more relevant than
+          the seed catalog. When the user has no prompts yet, this section
+          renders a "build your library" CTA + the New button. */}
+      <UserPromptsSection prompts={userPrompts} projects={projects} />
+
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-text-muted" />
