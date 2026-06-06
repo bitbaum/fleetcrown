@@ -30,12 +30,21 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
   const now = new Date();
   const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekStart = new Date(dayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
+  // Drizzle's raw-SQL template interpolation calls .toString() on Date params,
+  // which Postgres rejects ("Sat Jun 06 2026 00:00:00 GMT+0000" ≠ valid
+  // timestamp literal). Convert to ISO before the FILTER (WHERE ...) clauses
+  // so PG gets a parseable timestamp. This crashed /today end-to-end until
+  // diagnostics localized it (2026-06-06). The non-template builder helpers
+  // (gte/lte/eq) serialize Date correctly; only the raw `sql` interpolation
+  // path was broken.
+  const dayStartIso = dayStart.toISOString();
+  const weekStartIso = weekStart.toISOString();
 
   const [projectsAgg, runsAgg, topProjects, tokensAgg] = await Promise.all([
     db
       .select({
-        today: sql<number>`count(*) filter (where ${entities.createdAt} >= ${dayStart})`,
-        thisWeek: sql<number>`count(*) filter (where ${entities.createdAt} >= ${weekStart})`,
+        today: sql<number>`count(*) filter (where ${entities.createdAt} >= ${dayStartIso}::timestamptz)`,
+        thisWeek: sql<number>`count(*) filter (where ${entities.createdAt} >= ${weekStartIso}::timestamptz)`,
         total: sql<number>`count(*)`,
       })
       .from(entities)
@@ -43,8 +52,8 @@ async function loadStats(userId: string): Promise<FleetBriefStats> {
 
     db
       .select({
-        today: sql<number>`count(*) filter (where ${orchestrationRuns.startedAt} >= ${dayStart})`,
-        thisWeek: sql<number>`count(*) filter (where ${orchestrationRuns.startedAt} >= ${weekStart})`,
+        today: sql<number>`count(*) filter (where ${orchestrationRuns.startedAt} >= ${dayStartIso}::timestamptz)`,
+        thisWeek: sql<number>`count(*) filter (where ${orchestrationRuns.startedAt} >= ${weekStartIso}::timestamptz)`,
       })
       .from(orchestrationRuns)
       .where(eq(orchestrationRuns.userId, userId)),
