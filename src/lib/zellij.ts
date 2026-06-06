@@ -1,7 +1,10 @@
 import fs from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 import { exec, execSync, execFileSync } from "child_process";
 import { promisify } from "util";
 import { APP_SLUG } from "@/config/brand";
+import { stripAnsi } from "@/lib/ansi";
 
 // Filename prefix the zsh typing hooks write to /tmp. Must match
 // scripts/install-cockpit-hooks.sh (which generates the hooks) — derived
@@ -16,10 +19,9 @@ export function shellEscape(value: string): string {
 }
 
 function cleanZellijLines(stdout: string): string[] {
-  const ansiRe = /\x1b\[[0-9;]*m/g;
-  return stdout
+  return stripAnsi(stdout)
     .split("\n")
-    .map((s) => s.replace(ansiRe, "").trim())
+    .map((s) => s.trim())
     .filter((s) => s.length > 0 && !s.includes("[Created "));
 }
 
@@ -233,7 +235,10 @@ export function peekTab(tab: string): string {
   const session = findSessionForTab(tab);
   const originalTab = getCurrentTab(session);
 
-  const tmpFile = `/tmp/fc-peek-${process.pid}-${Date.now()}.txt`;
+  // os.tmpdir() picks the platform-appropriate temp dir: /tmp on Linux/mac,
+  // %TEMP% on Windows. Hardcoding /tmp would break the Windows desktop build
+  // (the release pipeline ships .exe binaries, so this matters).
+  const tmpFile = join(tmpdir(), `fc-peek-${process.pid}-${Date.now()}.txt`);
   const go = session
     ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`
     : `zellij action go-to-tab-name ${shellEscape(tab)}`;
@@ -256,12 +261,7 @@ export function peekTab(tab: string): string {
     // zellij builds. 60ms covers the observed window without making the round-
     // trip feel laggy.
     execSync("sleep 0.06");
-    content = fs.readFileSync(tmpFile, "utf8");
-    // Strip ANSI escape sequences (color, cursor moves) so the output is plain
-    // text suitable for <pre> rendering. Zellij sometimes embeds OSC sequences
-    // (title-set, hyperlink) on top of CSI — the broader regex below catches
-    // both. If we ever want to preserve color, swap in xterm-style ANSI-to-HTML.
-    content = content.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+    content = stripAnsi(fs.readFileSync(tmpFile, "utf8"));
   } catch (e) {
     dumpErr = e as Error;
   } finally {

@@ -24,16 +24,12 @@
  * means each command goes to exactly one drainer).
  */
 
-import { homedir } from 'os'
-import { join } from 'path'
-import { readFileSync, existsSync } from 'fs'
 import { injectIntoTab } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
+import { DAEMON_LONG_POLL_SECONDS } from '@/lib/constants/daemon'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
-
-const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
-const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
+import { loadToken } from './token-store'
 
 export type PollerState = 'idle' | 'connecting' | 'connected' | 'error'
 
@@ -97,15 +93,6 @@ function updateStatus(patch: Partial<PollerStatus>): void {
   }
 }
 
-function loadToken(): string | null {
-  try {
-    if (!existsSync(TOKEN_FILE)) return null
-    const t = readFileSync(TOKEN_FILE, 'utf8').trim()
-    return t || null
-  } catch {
-    return null
-  }
-}
 
 /**
  * Start the poller. Idempotent — calling while already running is a no-op.
@@ -175,7 +162,7 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
     currentFetchCtrl = new AbortController()
     const wakeRequested = pendingWake
     pendingWake = false
-    const waitSec = wakeRequested ? 0 : 25
+    const waitSec = wakeRequested ? 0 : DAEMON_LONG_POLL_SECONDS
     try {
       const resp = await fetch(`${base}/api/control/commands?wait=${waitSec}`, {
         headers: { Authorization: `Bearer ${token}` },

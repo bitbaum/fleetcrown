@@ -1899,6 +1899,16 @@
     @apply rounded-2xl border border-dashed border-border-subtle/60 bg-surface-base px-5 py-10 text-center;
     /* High-flier esthetics: more refined empty state for live workspaces — softer dashed, better padding, subtle hierarchy for 'command ready' feel */
   }
+  /* Terminal display frame — used by PeekTabDrawer to render captured Zellij
+     screen content. Always-dark surface + light monospace text matches the
+     ui-public-terminal-demo treatment from the marketing surface, so the
+     "this is a terminal frame" affordance reads the same across the app. */
+  .ui-control-terminal-frame {
+    @apply h-full overflow-auto whitespace-pre p-4 font-mono text-xs leading-relaxed bg-black text-white;
+  }
+  .ui-control-terminal-surface {
+    @apply flex-1 min-h-0 overflow-hidden bg-black;
+  }
   .ui-control-live-empty p:first-child {
     @apply font-medium text-text-secondary;
   }

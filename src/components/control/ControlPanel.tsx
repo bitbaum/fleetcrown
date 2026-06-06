@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Plus, Settings2 } from "lucide-react";
+import { DAEMON_OFFLINE_THRESHOLD_MS } from "@/lib/constants/daemon";
 import { timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
 import { useControlData } from "@/hooks/use-control-data";
@@ -87,7 +88,7 @@ export function ControlPanel() {
     creatingProject, createError, createAndLaunch,
   } = useCreateProject({ openLaunchModal, refresh });
   const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
-  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > 90_000;
+  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > DAEMON_OFFLINE_THRESHOLD_MS;
   const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
   // Only hide cached runtime when the daemon has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.

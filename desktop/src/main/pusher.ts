@@ -28,14 +28,10 @@
  * the pusher's 30s cadence would slip. Two timers, two responsibilities.
  */
 
-import { homedir } from 'os'
-import { join } from 'path'
-import { readFileSync, existsSync } from 'fs'
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
-
-const CONFIG_DIR = join(homedir(), '.config', 'fleetcrown')
-const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
+import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
+import { loadToken } from './token-store'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
 // pushNow() the moment the watcher detects an agent file change (wired
@@ -45,26 +41,17 @@ const TOKEN_FILE = join(CONFIG_DIR, 'fleet-runner-token')
 // (v0.5) to one push per five minutes (v0.6) — 5× reduction on the
 // always-on heartbeat path.
 //
-// The web's daemon-offline threshold (90s today) is too aggressive for
-// this cadence; v0.6 Phase E raises it to ~6 min. Until then the badge
-// will briefly flicker "offline" between heartbeats, but the SSE bridge
-// makes the badge mostly obsolete anyway.
-const PUSH_INTERVAL_MS = 5 * 60_000
+// The web's daemon-offline threshold is now derived from this cadence in
+// lib/constants/daemon.ts — see DAEMON_OFFLINE_THRESHOLD_MS. Pre-2026-06-06
+// they were edited independently and disagreed (90s threshold against a
+// 5min heartbeat), causing flicker. Bumping THIS constant auto-bumps the
+// threshold to the right multiple.
+const PUSH_INTERVAL_MS = DAEMON_HEARTBEAT_MS
 
 const BASE_URL = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
 
 let timer: NodeJS.Timeout | null = null
 let stopped = false
-
-function loadToken(): string | null {
-  try {
-    if (!existsSync(TOKEN_FILE)) return null
-    const t = readFileSync(TOKEN_FILE, 'utf8').trim()
-    return t || null
-  } catch {
-    return null
-  }
-}
 
 async function pushOnce(): Promise<void> {
   const token = loadToken()

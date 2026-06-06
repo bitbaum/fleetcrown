@@ -142,7 +142,7 @@ export function BrainConfigPanel({
                 title={isAvailable ? `${entry.label} is available on the connected computer` : entry.availabilityReason ?? `${entry.label} is not available`}
               >
                 {entry.label}
-                {!isAvailable && <span className="ml-1 text-[9px] opacity-60">(missing)</span>}
+                {!isAvailable && <span className="ml-1 text-micro opacity-60">(missing)</span>}
               </button>
               {!isAvailable && onRequestInstall && (
                 <button

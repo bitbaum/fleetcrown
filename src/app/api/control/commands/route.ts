@@ -2,10 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
 import { getApiUserId } from "@/lib/session";
+import { DAEMON_LONG_POLL_MS } from "@/lib/constants/daemon";
 
 // Daemon polls this to claim the next pending command.
 // Auth: Bearer (env token or ck_* agent token) OR browser session.
-// ?wait=N (seconds, max 25): long-poll — holds until a command arrives or wait expires.
+// ?wait=N (seconds, max DAEMON_LONG_POLL_SECONDS): long-poll — holds until a
+// command arrives or wait expires. Cap lives in @/lib/constants/daemon so the
+// desktop poller's request shape and this server-side ceiling can't drift.
 export async function GET(request: NextRequest) {
   // Resolve user IDs once (supports both browser session and Bearer token).
   let userIds: string[];
@@ -23,7 +26,7 @@ export async function GET(request: NextRequest) {
   // Long-poll: hold the request until a command arrives or the wait expires.
   const waitMs = Math.min(
     parseInt(request.nextUrl.searchParams.get("wait") ?? "0", 10) * 1000,
-    25_000,
+    DAEMON_LONG_POLL_MS,
   );
   if (waitMs > 0) {
     const deadline = Date.now() + waitMs;

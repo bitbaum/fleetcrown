@@ -67,7 +67,7 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                 <td className="py-0.5">
                   <span className="font-medium text-text-primary">{row.tabName}</span>
                   {!row.registered && (
-                    <span className="ml-1.5 ui-tag ui-tag-warning text-[9px]">Unlinked</span>
+                    <span className="ml-1.5 ui-tag ui-tag-warning text-micro">Unlinked</span>
                   )}
                 </td>
                 <td className="py-0.5 text-text-secondary">{row.agentLabel ?? "—"}</td>

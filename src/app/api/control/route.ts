@@ -37,7 +37,7 @@ import {
 // delegate more to lib/orchestration (deriveLifecycleState etc already used).
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { isAgentId } from "@/lib/agent-registry";
+import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
 import { getRecentFailedCommands } from "@/db/queries/pending-commands";
@@ -271,16 +271,16 @@ export async function GET() {
   // Slow data (git + DB) served from cache — no fork needed for CWD check
   const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
+  // Pull the canonical agent ID list straight from the registry — same source
+  // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
+  // a hand-typed array, which silently drifted every time we added an agent
+  // to lib/agent-registry until someone happened to grep for it.
+  const agentIds = listAgentRegistry().map((entry) => entry.id);
   const daemonAvailability: AgentAvailabilityOverride | undefined = runtimeAvailable
     ? undefined
     : installedAgents.length === 0
-      ? Object.fromEntries(
-          ["claude", "codex", "gemini", "cursor", "grok", "openclaw"].map((agent) => [agent, true]),
-        ) as AgentAvailabilityOverride
-    : Object.fromEntries(
-        ["claude", "codex", "gemini", "cursor", "grok", "openclaw"]
-          .map((agent) => [agent, installedAgents.includes(agent)]),
-      ) as AgentAvailabilityOverride;
+      ? Object.fromEntries(agentIds.map((agent) => [agent, true])) as AgentAvailabilityOverride
+      : Object.fromEntries(agentIds.map((agent) => [agent, installedAgents.includes(agent)])) as AgentAvailabilityOverride;
   const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, daemonAvailability);
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);

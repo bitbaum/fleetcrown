@@ -6,7 +6,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
 import { peekTab as peekZellijTab } from '@/lib/zellij'
-import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { writeFileSync, readFileSync, existsSync } from 'fs'
 import { homedir } from 'os'
 import { APP_URL } from '@/config/brand'
 import {
@@ -18,6 +18,7 @@ import {
   formatTrayTooltip,
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
+import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 
 // v0.7.0a — REVERT of the v0.7 Phase C primary-flip.
 //
@@ -552,61 +553,37 @@ function createWindow(): void {
     return getCurrentState()
   })
 
-  // Token / connect support for using this app as the local runtime for hosted FleetCrown
-  // Use the product slug for the local config dir (transition: old ~/.config/cockpit/ tokens are not auto-migrated).
-  const configDir = join(homedir(), '.config', 'fleetcrown')
-  const tokenFile = join(configDir, 'fleet-runner-token')
-
-  function ensureConfigDir() {
-    if (!existsSync(configDir)) {
-      mkdirSync(configDir, { recursive: true })
-    }
-  }
-
+  // Token / connect support for using this app as the local runtime for hosted FleetCrown.
+  // All persistence + path SSOT lives in ./token-store; this section is only the IPC
+  // surface + the restart-on-write side effects the renderer wants.
   ipcMain.handle('save-token', async (_event, token: string) => {
-    try {
-      ensureConfigDir()
-      writeFileSync(tokenFile, token.trim(), 'utf8')
+    const result = saveToken(token)
+    if (result.ok) {
       // Pick up the new token immediately — without this the poller would
       // keep running with the previous token (or stay idle) until the next
       // restart, defeating the "paste and go" UX. Same for the pusher,
       // which marks the daemon as online on the web UI.
       restartPoller()
       restartPusher()
-      return { ok: true }
-    } catch (e) {
-      return { ok: false, error: (e as Error).message }
     }
+    return result
   })
 
-  ipcMain.handle('load-token', async () => {
-    try {
-      if (existsSync(tokenFile)) {
-        return readFileSync(tokenFile, 'utf8').trim()
-      }
-      return null
-    } catch {
-      return null
-    }
-  })
+  ipcMain.handle('load-token', async () => loadToken())
 
   // Used by the in-window auto-mint flow (and Settings UI) when the user
   // wants to disconnect this machine from the control plane without quitting
   // the app — clears the saved token and stops the poller.
   ipcMain.handle('clear-token', async () => {
-    try {
-      if (existsSync(tokenFile)) unlinkSync(tokenFile)
+    const result = clearToken()
+    if (result.ok) {
       stopPoller()
       stopPusher()
-      return { ok: true }
-    } catch (e) {
-      return { ok: false, error: (e as Error).message }
     }
+    return result
   })
 
-  ipcMain.handle('get-config-dir', async () => {
-    return configDir
-  })
+  ipcMain.handle('get-config-dir', async () => tokenDir)
 
   // Live connection status — the renderer (and any in-window React tree
   // running inside web-shell mode) can call this for an immediate snapshot,
@@ -806,23 +783,20 @@ function handleDeepLinkUrl(url: string) {
     console.warn('[desktop] ignored malformed deep-link:', url)
     return
   }
-  // Persist via the same path the manual-paste flow uses, so there's only
-  // one code path for "token reached this machine" — easier to reason about.
-  try {
-    const configDir = join(homedir(), '.config', 'fleetcrown')
-    const tokenFile = join(configDir, 'fleet-runner-token')
-    if (!existsSync(configDir)) mkdirSync(configDir, { recursive: true })
-    writeFileSync(tokenFile, tok.trim(), 'utf8')
-    restartPoller()
-    restartPusher()
-    if (mainWindow) {
-      if (!mainWindow.isVisible()) mainWindow.show()
-      mainWindow.focus()
-    }
-    console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
-  } catch (e) {
-    console.error('[desktop] deep-link auth failed:', (e as Error).message)
+  // Persist via the shared token-store, so there's only one code path for
+  // "token reached this machine" — same as save-token IPC + auto-mint flow.
+  const result = saveToken(tok)
+  if (!result.ok) {
+    console.error('[desktop] deep-link auth failed:', result.error)
+    return
   }
+  restartPoller()
+  restartPusher()
+  if (mainWindow) {
+    if (!mainWindow.isVisible()) mainWindow.show()
+    mainWindow.focus()
+  }
+  console.log('[desktop] deep-link auth: token saved, poller + pusher restarted')
 }
 
 // Mac: 'open-url' fires when fleetcrown:// is clicked, even before whenReady.

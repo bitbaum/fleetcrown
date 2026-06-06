@@ -108,7 +108,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-hidden bg-[#0a0a0a]">
+      <div className="ui-control-terminal-surface">
         {error ? (
           <div className="p-6 text-sm text-text-secondary">
             <p className="font-medium text-status-warning">Couldn&apos;t peek this tab</p>
@@ -123,10 +123,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
             <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" /> Capturing screen…
           </div>
         ) : (
-          <pre
-            ref={preRef}
-            className="h-full overflow-auto whitespace-pre p-4 font-mono text-xs leading-relaxed text-[#FAF8F5]"
-          >
+          <pre ref={preRef} className="ui-control-terminal-frame">
             {content}
           </pre>
         )}

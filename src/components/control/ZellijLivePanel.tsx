@@ -98,7 +98,7 @@ export function ZellijLivePanel({
                 document.querySelectorAll scan). Desktop renders this panel
                 directly with no surrounding summary, so the H2 still appears. */}
             {!embedded && <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>}
-            <span className="ui-tag ui-tag-neutral text-[9px]">
+            <span className="ui-tag ui-tag-neutral text-micro">
               {daemonNeverSeen ? "offline" : daemonSyncStale ? `${rows.length} open · stale` : `${rows.length} open`}
             </span>
           </div>
@@ -112,7 +112,7 @@ export function ZellijLivePanel({
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {dashboard && !daemonNeverSeen && (
-            <span className="ui-micro-label text-text-muted text-[9px]">
+            <span className="ui-micro-label text-text-muted text-micro">
               {dashboard.runningCount} working · {dashboard.waitingCount} awaiting input
             </span>
           )}
