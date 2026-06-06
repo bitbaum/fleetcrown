@@ -5,6 +5,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
+import { peekTab as peekZellijTab } from '@/lib/zellij'
 import { writeFileSync, readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { homedir } from 'os'
 import { APP_URL } from '@/config/brand'
@@ -717,6 +718,31 @@ function createWindow(): void {
       return resp.ok
     } catch {
       return false
+    }
+  })
+
+  // Peek tab — snapshot the visible scrollback of a Zellij tab without
+  // requiring the user to context-switch into the terminal. v0.7.2 ships
+  // this so /control can show "what's actually in the tab" inline; the
+  // user clicks the eye icon next to a tab name and a drawer opens with
+  // the current screen content. Implementation: src/lib/zellij.peekTab
+  // (focus → dump-screen → restore focus dance, sub-200ms round-trip).
+  //
+  // Returns a discriminated result so the renderer can show a specific
+  // error message ("tab not open in zellij", "zellij not running") instead
+  // of a generic failure. Errors are swallowed at the IPC boundary and
+  // converted into {ok:false, error} — never raises across the bridge.
+  ipcMain.handle('peek-tab', async (_event, tab: string) => {
+    if (typeof tab !== 'string' || tab.trim().length === 0) {
+      return { ok: false as const, error: 'invalid tab name' }
+    }
+    try {
+      const content = peekZellijTab(tab.trim())
+      return { ok: true as const, content }
+    } catch (e) {
+      const msg = (e as Error).message || 'peek failed'
+      console.warn(`[desktop] peek-tab failed for "${tab}":`, msg)
+      return { ok: false as const, error: msg }
     }
   })
 

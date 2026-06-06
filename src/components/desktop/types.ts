@@ -56,6 +56,9 @@ export type FleetRunnerBridge = {
    *  returns them sorted by recency. Used by the web app to surface
    *  an "Import these N local repos" CTA on /control. v0.6.0+. */
   getLocalDevProjects: () => Promise<{ projects: LocalDevProject[] }>;
+  /** Capture a snapshot of what's visible in a Zellij tab right now. Returns
+   *  the screen content as plain text (ANSI stripped). v0.7.2+. */
+  peekTab: (tab: string) => Promise<{ ok: true; content: string } | { ok: false; error: string }>;
 };
 
 declare global {

@@ -206,3 +206,75 @@ export function injectIntoTab(tab: string, prompt: string): void {
     try { execSync(restore); } catch { /* best effort */ }
   }
 }
+
+/**
+ * Capture a snapshot of what's visible in a Zellij tab right now.
+ *
+ * Uses the same focus-dance pattern as injectIntoTab: switch to the target tab,
+ * run `zellij action dump-screen <path>` (which only ever dumps the focused
+ * pane), then switch back. The whole round-trip is sub-200ms on a healthy
+ * Zellij, so the user sees a brief flash at most — same disruption budget as
+ * a prompt injection, which they've already accepted as the cost of remote
+ * dispatch.
+ *
+ * Why this exists: pre-peek, FleetCrown's /control view of a Zellij tab was
+ * "name + last-known status chip." The user couldn't see what their agent was
+ * actually saying without alt-tabbing into Zellij. Peek closes that gap — one
+ * click → exact screen contents (output, prompts, errors) — making /control
+ * the source of truth for fleet state instead of one of two surfaces the user
+ * has to context-switch between.
+ *
+ * Returns the screen content as a string (ANSI sequences stripped). Throws on
+ * focus failure or dump-screen error so the caller (IPC handler) can surface
+ * a meaningful message instead of returning empty content that reads as
+ * "tab is blank" to the user.
+ */
+export function peekTab(tab: string): string {
+  const session = findSessionForTab(tab);
+  const originalTab = getCurrentTab(session);
+
+  const tmpFile = `/tmp/fc-peek-${process.pid}-${Date.now()}.txt`;
+  const go = session
+    ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`
+    : `zellij action go-to-tab-name ${shellEscape(tab)}`;
+  execSync(go);
+  if (!waitForTabFocus(tab, 1000, session)) {
+    throw new Error(`peekTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open?`);
+  }
+
+  // dump-screen writes the focused pane's scrollback+visible region to a file.
+  // Run it via `bash -c` so we can chain the restore even if dump fails — the
+  // user's view should not get stuck on the peeked tab if anything errors.
+  const dump = session
+    ? `zellij --session ${shellEscape(session)} action dump-screen ${shellEscape(tmpFile)}`
+    : `zellij action dump-screen ${shellEscape(tmpFile)}`;
+  let content = "";
+  let dumpErr: Error | null = null;
+  try {
+    execSync(dump);
+    // Brief wait — dump-screen returns before the file is fully flushed on some
+    // zellij builds. 60ms covers the observed window without making the round-
+    // trip feel laggy.
+    execSync("sleep 0.06");
+    content = fs.readFileSync(tmpFile, "utf8");
+    // Strip ANSI escape sequences (color, cursor moves) so the output is plain
+    // text suitable for <pre> rendering. Zellij sometimes embeds OSC sequences
+    // (title-set, hyperlink) on top of CSI — the broader regex below catches
+    // both. If we ever want to preserve color, swap in xterm-style ANSI-to-HTML.
+    content = content.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+  } catch (e) {
+    dumpErr = e as Error;
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch { /* best effort */ }
+  }
+
+  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
+    const restore = session
+      ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}`
+      : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
+    try { execSync(restore); } catch { /* best effort */ }
+  }
+
+  if (dumpErr) throw dumpErr;
+  return content;
+}

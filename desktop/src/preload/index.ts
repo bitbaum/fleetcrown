@@ -57,4 +57,13 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   getLocalDevProjects: (): Promise<{
     projects: Array<{ name: string; path: string; mtimeMs: number; remoteUrl: string | null }>;
   }> => ipcRenderer.invoke('get-local-dev-projects'),
+
+  // Peek tab — snapshot the visible scrollback of a Zellij tab without
+  // requiring the user to switch their focused terminal. Implemented in main
+  // process via src/lib/zellij.peekTab (focus → dump-screen → restore focus).
+  // Returns plain text with ANSI escapes stripped, ready to render in <pre>.
+  // v0.7.2+ — older Fleet Runner builds don't expose this, so callers must
+  // typeof-check before invoking.
+  peekTab: (tab: string): Promise<{ ok: true; content: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('peek-tab', tab),
 })

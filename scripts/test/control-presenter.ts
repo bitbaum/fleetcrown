@@ -56,7 +56,7 @@ function runTests(): void {
 
   check("findProjectForOpenTab exact match", () => {
     const projects = [stubProject({ tab: "FleetCrown", liveTab: "FleetCrown" })];
-    assert(findProjectForOpenTab("cockpit", projects)?.tab === "FleetCrown", "expected FleetCrown");
+    assert(findProjectForOpenTab("FleetCrown", projects)?.tab === "FleetCrown", "expected FleetCrown");
   });
 
   check("findProjectForOpenTab prefix match (agent suffix tab)", () => {

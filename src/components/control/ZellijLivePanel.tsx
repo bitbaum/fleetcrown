@@ -152,7 +152,7 @@ export function ZellijLivePanel({
           </p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
             <a
-              href="https://github.com/maonakamoto/fleetcrown-releases/releases/tag/fleet-runner-v0.7.0"
+              href="https://github.com/maonakamoto/fleetcrown-releases/releases/latest"
               target="_blank"
               rel="noreferrer"
               className="ui-btn-primary"
