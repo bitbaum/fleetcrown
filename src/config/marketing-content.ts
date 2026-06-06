@@ -355,25 +355,31 @@ export const DESKTOP_DOWNLOAD = {
       label: "Linux",
       status: "ready" as const,
       primary: {
-        label: "Download AppImage",
-        note: "Recommended · ~108 MB",
+        // .deb is the recommended default — system package manager handles
+        // perms + integration. AppImage hits KDE/KIO "for security reasons"
+        // refusal on double-click (Dolphin blocks the +x bit by policy) and
+        // requires terminal chmod, which is a dead-end for non-power-users.
+        // Most FleetCrown users are on Ubuntu/Debian derivatives where .deb
+        // Just Works. AppImage stays as a secondary for Arch / Fedora /
+        // immutable distros where .deb isn't the right format.
+        label: "Download .deb (Ubuntu / Debian / Mint)",
+        note: "Recommended · ~80 MB · installs via package manager",
         // /releases/latest/download/... — GitHub redirects to the current
-        // release, so this URL survives future version bumps without a
-        // marketing-content edit per release.
+        // release, so this URL survives future version bumps.
         url:
-          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
+          "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
       },
       secondary: [
         {
-          label: ".deb (Ubuntu / Debian)",
+          label: "AppImage (other distros)",
           url:
-            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-amd64.deb",
+            "https://github.com/maonakamoto/fleetcrown-releases/releases/latest/download/Fleet-Runner-linux-x86_64.AppImage",
         },
       ],
       afterDownload:
-        "Linux marks downloads non-executable by default. Open a terminal and paste this one line — it makes the file runnable and launches it. If KDE / Dolphin blocked it \"for security reasons,\" this is the fix:",
+        "Open a terminal and paste this one line. It installs Fleet Runner system-wide, then launches it. No file-manager dance, no KDE security popup:",
       command:
-        "chmod +x ~/Downloads/Fleet-Runner-linux-*.AppImage && ~/Downloads/Fleet-Runner-linux-*.AppImage",
+        "sudo dpkg -i ~/Downloads/Fleet-Runner-linux-amd64.deb && fleet-runner",
     },
     {
       id: "mac",
