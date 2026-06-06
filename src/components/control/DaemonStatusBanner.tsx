@@ -17,6 +17,10 @@ type Props = {
   daemonLastPushedAt: string | null;
   /** True on local installs only. Cloud renders DaemonControls disabled. */
   runtimeAvailable?: boolean;
+  /** When true, the user already has at least one project. Drop the
+   *  "Start a new project" pitch from the never-seen variant — they
+   *  already have one; they need the daemon. */
+  hasProjects?: boolean;
   /** Caller refreshes its data view after the daemon lifecycle changes. */
   onRefresh?: () => void;
 };
@@ -26,6 +30,7 @@ export function DaemonStatusBanner({
   daemonOffline,
   daemonLastPushedAt,
   runtimeAvailable = false,
+  hasProjects = false,
   onRefresh,
 }: Props) {
   const [dismissed, setDismissed] = useState(false);
@@ -124,11 +129,17 @@ export function DaemonStatusBanner({
         {daemonNeverSeen ? (
           <>
             <p className="text-text-secondary leading-relaxed">
-              {APP_NAME} can do two things — pick whichever you need first:
+              {hasProjects
+                ? "Install Fleet Runner to dispatch agents at your local repos."
+                : `${APP_NAME} can do two things — pick whichever you need first:`}
             </p>
 
-            <div className="grid gap-2 md:grid-cols-2">
-              {/* Path A — works TODAY, no install. */}
+            <div className={`grid gap-2 ${hasProjects ? "" : "md:grid-cols-2"}`}>
+              {/* Path A — "Start a new project" pitch. Hidden when the user
+                  already has projects (the welcome cards on /control's empty
+                  state already cover that case; users-with-projects don't
+                  need to be told to start one). */}
+              {!hasProjects && (
               <Link
                 href="/control/new-from-scratch"
                 className="ui-card-shell hover:border-accent transition-colors p-3 flex flex-col gap-1 group"
@@ -142,6 +153,7 @@ export function DaemonStatusBanner({
                 </p>
                 <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">No install needed →</span>
               </Link>
+              )}
 
               {/* Path B branches on whether we're already inside Fleet Runner.
                   When yes: replace the "download" CTA with a one-click pair

@@ -241,6 +241,7 @@ export function ControlPanel() {
           daemonOffline={daemonOffline}
           daemonLastPushedAt={daemonLastPushedAt}
           runtimeAvailable={runtimeAvailable}
+          hasProjects={(data?.projects.length ?? 0) > 0}
           onRefresh={() => refresh(true)}
         />
       )}
