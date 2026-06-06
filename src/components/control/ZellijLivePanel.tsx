@@ -145,10 +145,26 @@ export function ZellijLivePanel({
           <div className="mb-2 text-text-tertiary">
             <Terminal className="mx-auto h-6 w-6" />
           </div>
-          <p className="font-medium text-text-secondary">No live workspace data</p>
+          <p className="font-medium text-text-secondary">No live workspace data — yet</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
-            The cloud control plane needs your local daemon running and pushing state.
-            Start an agent workspace, then check the local connection in Settings.
+            The cloud can&apos;t see your local Zellij tabs until something on your
+            machine pushes state to it. Two ways to fix this (5 minutes):
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+            <a
+              href="https://github.com/maonakamoto/fleetcrown-releases/releases/tag/fleet-runner-v0.7.0"
+              target="_blank"
+              rel="noreferrer"
+              className="ui-btn-primary"
+            >
+              Download Fleet Runner (desktop app)
+            </a>
+            <a href="/docs/quickstart#daemon" className="ui-btn-ghost text-xs">
+              Or run the bash daemon →
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-text-tertiary">
+            Fleet Runner auto-mints a token from your signed-in session — install, launch, your workspaces appear here within 30s.
           </p>
         </div>
       ) : rows.length === 0 ? (
