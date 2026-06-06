@@ -1,6 +1,6 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
-import { entities, entityRelations, interactions, goals, userProjects, orgMemberships } from "@/db/schema";
+import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs } from "@/db/schema";
 import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { z } from "zod";
@@ -48,6 +48,34 @@ export async function createProject(userId: string, data: CreateProjectInput, so
       source: source ?? null,
     })
     .returning({ id: entities.id, name: entities.name, gitUrl: entities.gitUrl });
+
+  // Also ensure a user_projects row exists. /api/control reads from
+  // user_projects (not directly from entities), so without this row the new
+  // project lives on /projects but is invisible on /control — the exact gap
+  // user dogfood surfaced on 2026-06-06 with truthseeker (entity inserted via
+  // bootstrap-style flow, no user_projects link, missing from /control).
+  // dir_path stays null until the user clones locally and registers the path
+  // via /control/import-local; the UI will eventually surface a "needs local
+  // clone" affordance for these rows (v0.7.1 work).
+  const [orgRow] = await db
+    .select({ id: orgs.id })
+    .from(orgs)
+    .where(eq(orgs.ownerId, userId))
+    .limit(1);
+  await db
+    .insert(userProjects)
+    .values({
+      userId,
+      entityProjectId: created.id,
+      name: created.name,
+      description: data.description || null,
+      gitUrl: data.gitUrl || null,
+      dirPath: null,
+      isActive: true,
+      orgId: orgRow?.id ?? null,
+    })
+    .onConflictDoNothing();
+
   return created;
 }
 
