@@ -17,8 +17,11 @@
 //   - One-shot: each cron tick fires at most one nudge per eligible project,
 //     capped at MAX_NUDGES_PER_TICK total.
 //
-// Schedule: every 30 minutes (vercel.json). Conservative on purpose — the
-// downside of over-firing is more obvious to a user than under-firing.
+// Schedule: daily at 04:00 UTC (vercel.json). Vercel Hobby tier limits
+// crons to one fire per day per job; sub-daily schedules require Pro.
+// When/if we upgrade, drop the schedule to */30 * * * * for tighter
+// idle-nudge cadence. For now the daily run picks up any project that
+// has been idle > IDLE_WINDOW_HOURS and fires next_best on it once.
 
 import { type NextRequest, NextResponse } from "next/server";
 import { and, eq, gt, sql } from "drizzle-orm";

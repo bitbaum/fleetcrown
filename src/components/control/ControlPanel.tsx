@@ -274,7 +274,14 @@ export function ControlPanel() {
         </>
       )}
 
-      <ControlFleetStatus
+      {/* ControlFleetStatus shows daemon health + working/ready/open counters
+          + autopilot pill. When the user has 0 projects, all counters are 0
+          and the panel reads as noise stacked under the empty-state welcome
+          ("Setup needed · Autopilot Manual · 0 working · 0 ready · 0 open
+          · All clear"). Hide it in the empty state; the welcome cards are
+          the right surface there. Status panel returns as soon as projects
+          exist. */}
+      {data && data.projects.length > 0 && <ControlFleetStatus
         dashboard={dashboard}
         attentionCount={attention.length}
         failedCount={failedCount}
@@ -288,7 +295,7 @@ export function ControlPanel() {
         refreshing={refreshing}
         onRefresh={() => refresh(true)}
         onAutomationChange={automationPolicy.updateMode}
-      />
+      />}
 
       {headerRight && (
         <section className="ui-control-operations-header">
