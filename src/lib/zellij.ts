@@ -149,64 +149,69 @@ export function isUserTypingInTab(tab: string): boolean {
   return false;
 }
 
+// ── Focus-dance helpers ──────────────────────────────────────────────────────
+// Every "do something to a non-focused tab" operation in Zellij (write,
+// write-chars, dump-screen) requires the same dance: switch to the tab,
+// wait for focus, do the thing, switch back. Pre-extraction this was
+// triplicated across sendRawKey / injectIntoTab / peekTab with copy-pasted
+// `session ? \`zellij --session X action …\` : \`zellij action …\`` ternaries
+// — 8 occurrences of the same branch. Two helpers below collapse it.
+
+/** Build a zellij command string for an action call, with or without the
+ *  --session flag. `args` is the action sub-command and its arguments,
+ *  pre-escaped where needed (write-chars takes -- to stop option parsing,
+ *  which the caller is responsible for placing). */
+function zellijCmd(session: string | null, ...args: string[]): string {
+  const prefix = session
+    ? `zellij --session ${shellEscape(session)} action`
+    : `zellij action`;
+  return `${prefix} ${args.join(" ")}`;
+}
+
+/** Switch focus to `tab`, run `fn`, then restore the previously focused
+ *  tab. The `fn` callback gets the resolved session (null if no multi-
+ *  session) so it can build further commands via zellijCmd(session, …).
+ *
+ *  Throws if the focus switch doesn't land within 1s — better to fail
+ *  loudly than to fire write-chars into whatever the user was actively
+ *  typing in. The restore is best-effort; if it fails, the user's view
+ *  is changed but the agent action already succeeded. */
+function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
+  const session = findSessionForTab(tab);
+  const originalTab = getCurrentTab(session);
+  execSync(zellijCmd(session, "go-to-tab-name", shellEscape(tab)));
+  if (!waitForTabFocus(tab, 1000, session)) {
+    throw new Error(`withFocusedTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
+  }
+  try {
+    return fn(session);
+  } finally {
+    if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
+      try { execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab))); } catch { /* best effort */ }
+    }
+  }
+}
+
 /**
  * Send a raw key code (e.g. 3 = Ctrl+C, 13 = Enter) to a tab without writing
  * any characters first. Use for interrupt signals where write-chars would be wrong.
  */
 export function sendRawKey(tab: string, keyCode: number): void {
-  const session = findSessionForTab(tab);
-  const originalTab = getCurrentTab(session);
-  const go = session ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}` : `zellij action go-to-tab-name ${shellEscape(tab)}`;
-  const write = session ? `zellij --session ${shellEscape(session)} action write ${keyCode}` : `zellij action write ${keyCode}`;
-  execSync(go);
-  if (!waitForTabFocus(tab, 1000, session)) {
-    throw new Error(`sendRawKey: zellij tab "${tab}" did not gain focus within 1s — is the tab open?`);
-  }
-  execSync(write);
-  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
-    const restore = session && originalTab ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}` : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
-    try { execSync(restore); } catch { /* best effort */ }
-  }
+  withFocusedTab(tab, (session) => {
+    execSync(zellijCmd(session, "write", String(keyCode)));
+  });
 }
 
 export function injectIntoTab(tab: string, prompt: string): void {
   // Capture where the user currently is so we can restore it after injection.
   // Zellij has no "write to unfocused pane" command — we must switch tabs to inject.
   // Switching back immediately keeps the disruption to a sub-200ms flash.
-  const session = findSessionForTab(tab);
-  const originalTab = getCurrentTab(session);
-
-  // go-to-tab-name is fire-and-forget; confirm the switch landed before
-  // sending characters so write-chars never types into the wrong pane.
-  // Use --session when we know it (multi-session safety) and the -- separator for write-chars.
-  const go = session
-    ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`
-    : `zellij action go-to-tab-name ${shellEscape(tab)}`;
-  execSync(go);
-  if (!waitForTabFocus(tab, 1000, session)) {
-    // Hard fail — typing into the wrong pane would garble the user's
-    // private terminal. Surface this so the caller (home/worker.ts or
-    // any of the API routes) emits a worker.crashed event / 500 instead
-    // of silently corrupting whatever pane is focused.
-    throw new Error(`injectIntoTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
-  }
-
-  // Use -- to stop option parsing in case the prompt text starts with a dash.
-  const writeChars = session
-    ? `zellij --session ${shellEscape(session)} action write-chars -- ${shellEscape(prompt)}`
-    : `zellij action write-chars -- ${shellEscape(prompt)}`;
-  execSync(writeChars);
-  execSync("sleep 0.1");
-  const enter = session ? `zellij --session ${shellEscape(session)} action write 13` : `zellij action write 13`;
-  execSync(enter);
-
-  // Restore original tab so the user's terminal view doesn't permanently change.
-  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
-    const restore = session
-      ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}`
-      : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
-    try { execSync(restore); } catch { /* best effort */ }
-  }
+  withFocusedTab(tab, (session) => {
+    // Use -- to stop option parsing in case the prompt text starts with a dash.
+    execSync(zellijCmd(session, "write-chars", "--", shellEscape(prompt)));
+    execSync("sleep 0.1");
+    execSync(zellijCmd(session, "write", "13"));
+  });
 }
 
 /**
@@ -232,48 +237,26 @@ export function injectIntoTab(tab: string, prompt: string): void {
  * "tab is blank" to the user.
  */
 export function peekTab(tab: string): string {
-  const session = findSessionForTab(tab);
-  const originalTab = getCurrentTab(session);
-
   // os.tmpdir() picks the platform-appropriate temp dir: /tmp on Linux/mac,
   // %TEMP% on Windows. Hardcoding /tmp would break the Windows desktop build
   // (the release pipeline ships .exe binaries, so this matters).
   const tmpFile = join(tmpdir(), `fc-peek-${process.pid}-${Date.now()}.txt`);
-  const go = session
-    ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`
-    : `zellij action go-to-tab-name ${shellEscape(tab)}`;
-  execSync(go);
-  if (!waitForTabFocus(tab, 1000, session)) {
-    throw new Error(`peekTab: zellij tab "${tab}" did not gain focus within 1s — is the tab open?`);
-  }
-
-  // dump-screen writes the focused pane's scrollback+visible region to a file.
-  // Run it via `bash -c` so we can chain the restore even if dump fails — the
-  // user's view should not get stuck on the peeked tab if anything errors.
-  const dump = session
-    ? `zellij --session ${shellEscape(session)} action dump-screen ${shellEscape(tmpFile)}`
-    : `zellij action dump-screen ${shellEscape(tmpFile)}`;
   let content = "";
   let dumpErr: Error | null = null;
-  try {
-    execSync(dump);
-    // Brief wait — dump-screen returns before the file is fully flushed on some
-    // zellij builds. 60ms covers the observed window without making the round-
-    // trip feel laggy.
-    execSync("sleep 0.06");
-    content = stripAnsi(fs.readFileSync(tmpFile, "utf8"));
-  } catch (e) {
-    dumpErr = e as Error;
-  } finally {
-    try { fs.unlinkSync(tmpFile); } catch { /* best effort */ }
-  }
-
-  if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
-    const restore = session
-      ? `zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(originalTab)}`
-      : `zellij action go-to-tab-name ${shellEscape(originalTab)}`;
-    try { execSync(restore); } catch { /* best effort */ }
-  }
+  withFocusedTab(tab, (session) => {
+    try {
+      execSync(zellijCmd(session, "dump-screen", shellEscape(tmpFile)));
+      // Brief wait — dump-screen returns before the file is fully flushed on
+      // some zellij builds. 60ms covers the observed window without making
+      // the round-trip feel laggy.
+      execSync("sleep 0.06");
+      content = stripAnsi(fs.readFileSync(tmpFile, "utf8"));
+    } catch (e) {
+      dumpErr = e as Error;
+    } finally {
+      try { fs.unlinkSync(tmpFile); } catch { /* best effort */ }
+    }
+  });
 
   if (dumpErr) throw dumpErr;
   return content;
