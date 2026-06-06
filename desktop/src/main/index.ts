@@ -18,45 +18,40 @@ import {
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
 
-// v0.7 / Phase C — bundled local renderer is the primary boot target.
+// v0.7.0a — REVERT of the v0.7 Phase C primary-flip.
 //
-// Rationale (see thoughts/from-polling-to-listening + the v0.7
-// architectural review): the cloud should be a thin sync layer, not the
-// authoritative source of the desktop's UI. Fleet Runner owns local
-// execution — Zellij injection, the home/ event log, project file
-// reads — and the bundled renderer at desktop/src/renderer/ is the
-// view of that local state. The cloud web shell remains one click away
-// via the "Try cloud" button for cross-device surfaces (settings,
-// prompt library, history archive, billing).
+// v0.7.0 shipped USE_WEB_SHELL=false as the default; the bundled local
+// renderer became the boot target. That was premature: the bundled
+// renderer reads from agent-projects.conf (a local file the average user
+// has never seen) and doesn't yet show the user's actual FleetCrown
+// projects from the cloud DB. User QA on 2026-06-06 launched Fleet
+// Runner and saw "0 active projects" + dev-surface copy + a "Sync
+// error: Failed to fetch" message — exactly the opposite of the
+// "cloud one click away" promise.
 //
-// Initial-mode resolution:
-//   - If the user has no saved ck_* token, FIRST-LAUNCH goes to the
-//     cloud web shell so they can sign in + the auto-mint flow can
-//     drop a fresh token. Subsequent launches land local.
-//   - FLEETCROWN_WEB_URL=https://... → opts back into cloud-as-primary
-//     (preserves dev/preview workflows). Also becomes the URL the
-//     "Try cloud" button targets.
-//   - FLEETCROWN_WEB_URL=cloud → cloud-as-primary using APP_URL.
-//   - FLEETCROWN_WEB_URL=local OR unset → local-primary (the new default).
+// Until the bundled renderer reaches feature parity with /control
+// (task #44 — Phase C v0.7.1, multi-day work), the safe default is
+// the v0.6 behavior: Fleet Runner opens fleetcrown.vercel.app inside
+// Electron. The user sees the SAME UI they know from the browser.
+// Cursor/Anthropic/Grok ship the same pattern at this maturity stage.
 //
-// WEB_SHELL_URL is always defined regardless of initial mode so the
-// "Try cloud" IPC handler has a target. Distinguishing "what's the cloud
-// URL?" from "do we boot into it?" was the key factoring miss in
-// pre-v0.7 — the two were conflated under USE_WEB_SHELL.
+// Env overrides:
+//   - FLEETCROWN_WEB_URL=https://...   → preview/dev URL inside Electron
+//   - FLEETCROWN_WEB_URL=cloud OR unset → fleetcrown.vercel.app (default)
+//   - FLEETCROWN_WEB_URL=local          → opt INTO the bundled renderer
+//                                          (power users / dogfooding only)
+//
+// When the bundled renderer's /control parity ships in v0.7.1, the
+// default flips back. Until then, web-shell-default keeps the desktop
+// app working as users expect.
 const RAW_URL_OVERRIDE = (process.env.FLEETCROWN_WEB_URL || '').trim()
 const lowered = RAW_URL_OVERRIDE.toLowerCase()
 const isHttpOverride = RAW_URL_OVERRIDE.startsWith('http://') || RAW_URL_OVERRIDE.startsWith('https://')
 const WEB_SHELL_URL = isHttpOverride ? RAW_URL_OVERRIDE : APP_URL
 
-// First-launch heuristic: no token → user needs to sign in → go to cloud.
-// TOKEN_FILE matches the path poller.ts writes to (~/.config/fleetcrown/fleet-runner-token).
-const FLEET_RUNNER_TOKEN_FILE = join(homedir(), '.config', 'fleetcrown', 'fleet-runner-token')
-const HAS_LOCAL_TOKEN = existsSync(FLEET_RUNNER_TOKEN_FILE)
-
-const USE_WEB_SHELL =
-  isHttpOverride ||                 // explicit URL override → boot cloud
-  lowered === 'cloud' ||            // explicit "cloud" → boot cloud
-  (!HAS_LOCAL_TOKEN && lowered !== 'local')  // first launch, no token → cloud to sign in
+// Bundled local renderer is OPT-IN now (FLEETCROWN_WEB_URL=local). Every
+// other resolution (default, "cloud", or an explicit URL) boots cloud.
+const USE_WEB_SHELL = lowered !== 'local'
 
 // Resolve a packaged resource file. electron-builder copies `resources/` into
 // `process.resourcesPath` at install time; during dev we read it directly from
