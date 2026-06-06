@@ -32,12 +32,41 @@ import { REFRESH_CADENCE } from "@/config/refresh";
 
 export const metadata = { title: "Today" };
 
-export default async function TodayPage() {
-  const [name, userId] = await Promise.all([getCurrentUserName(), requirePageUserId()]);
-  const [projects, orgProjects] = await Promise.all([
-    getUserProjects(userId),
-    getOrgProjects(userId),
+async function loadTodayInputs() {
+  // Inline diagnostic — /today has been crashing in production with an
+  // opaque "Server Components render" error that doesn't surface in the
+  // client error.message or via onRequestError. Wrap each upstream call
+  // in its own try/catch, log to debug_logs with the failure site, then
+  // re-throw so the error boundary still fires. Remove this once the
+  // root cause is fixed and stable.
+  const { logDebug } = await import("@/db/queries/debug-logs");
+  async function step<T>(label: string, fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      const err = e as Error;
+      await logDebug({
+        source: "today/page",
+        level: "error",
+        message: `step '${label}' threw: ${err.message ?? String(e)}`,
+        meta: { stack: (err.stack ?? "").split("\n").slice(0, 12).join("\n") },
+      }).catch(() => {});
+      throw e;
+    }
+  }
+  const [name, userId] = await Promise.all([
+    step("getCurrentUserName", () => getCurrentUserName()),
+    step("requirePageUserId", () => requirePageUserId()),
   ]);
+  const [projects, orgProjects] = await Promise.all([
+    step("getUserProjects", () => getUserProjects(userId)),
+    step("getOrgProjects", () => getOrgProjects(userId)),
+  ]);
+  return { name, userId, projects, orgProjects };
+}
+
+export default async function TodayPage() {
+  const { name, userId, projects, orgProjects } = await loadTodayInputs();
   const isFirstRun = projects.length === 0 && orgProjects.length === 0;
   const hour = new Date().getHours();
   const isEvening = hour >= 17;
