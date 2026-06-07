@@ -29,7 +29,7 @@ import { APP_URL } from '@/config/brand'
 import { DAEMON_LONG_POLL_SECONDS } from '@/lib/constants/daemon'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
-import { loadToken } from './token-store'
+import { loadToken, clearToken } from './token-store'
 
 export type PollerState = 'idle' | 'connecting' | 'connected' | 'error'
 
@@ -170,11 +170,17 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       })
 
       if (resp.status === 401 || resp.status === 403) {
-        // Token rejected — pollster's role is over until the user pastes a
-        // fresh one. Surface a clear message instead of looping forever.
+        // Token is dead — clear the stale file so the next auto-mint cycle
+        // (FleetRunnerAutoMint, which gates on "no existing token") can
+        // issue a fresh one from the user's signed-in session instead of
+        // leaving them permanently offline. Pre-fix: poller stopped but the
+        // bad token persisted, and auto-mint's "if (existing) return" guard
+        // kept it stuck. The same fix landed in pusher.ts.
+        console.warn(`[poller] token rejected (${resp.status}); clearing stale token + stopping`)
+        clearToken()
         updateStatus({
           state: 'error',
-          lastError: `Token rejected (${resp.status}). Create a new one in Settings → Agent tokens.`,
+          lastError: `Token rejected (${resp.status}). Reload the app — auto-mint will issue a fresh token from your signed-in session.`,
           lastErrorAt: Date.now(),
         })
         running = false

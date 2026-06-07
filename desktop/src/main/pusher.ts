@@ -31,7 +31,7 @@
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
-import { loadToken } from './token-store'
+import { loadToken, clearToken } from './token-store'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
 // pushNow() the moment the watcher detects an agent file change (wired
@@ -79,7 +79,12 @@ async function pushOnce(): Promise<void> {
       }),
     })
     if (resp.status === 401 || resp.status === 403) {
-      console.warn('[pusher] runtime-state token rejected; stopping pusher')
+      // Token is dead — the server doesn't recognize it. Delete the file
+      // so FleetRunnerAutoMint can mint a fresh one next time /control loads
+      // (its bail check is "if (existing) return", which used to keep the
+      // user stuck with a permanently-rejected token).
+      console.warn('[pusher] runtime-state token rejected; clearing stale token + stopping pusher')
+      clearToken()
       stopPusher()
       return
     }
