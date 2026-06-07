@@ -589,6 +589,37 @@
   .ui-public-badge {
     @apply inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-4 py-1.5 text-xs font-medium tracking-[0.02em] text-text-tertiary;
   }
+  /* "Current" pill on the latest release entry — picks up the accent color
+     so it pops against the muted version chips on older entries. */
+  .ui-public-badge-current {
+    @apply border-accent-primary/60 bg-accent-primary/15 text-accent-text;
+  }
+  /* Single release entry on /releases. The version/date row sits inside its
+     own header() above this; this class just wraps the article in a soft
+     rounded panel so the timeline reads as a list of self-contained cards. */
+  .ui-public-release-entry {
+    @apply rounded-xl bg-white/[0.02] p-6 ring-1 ring-white/5;
+  }
+  .ui-public-release-version {
+    @apply font-mono text-2xl font-semibold text-white;
+  }
+  .ui-public-release-date {
+    @apply text-sm text-white/45;
+  }
+  .ui-public-release-notes {
+    @apply mb-4 text-sm leading-relaxed text-white/70;
+  }
+  .ui-public-release-section-heading {
+    @apply mb-2 mt-4 text-micro uppercase tracking-caps text-white/40;
+  }
+  /* Breaking-changes section uses the status-warning hue to draw the eye —
+     these are the bits a returning user needs to read before upgrading. */
+  .ui-public-release-section-heading-breaking {
+    @apply text-status-warning/80;
+  }
+  .ui-public-release-list {
+    @apply space-y-2 pl-5 text-sm leading-relaxed text-white/75 list-disc marker:text-white/30;
+  }
   .ui-public-title {
     font-size: clamp(var(--public-title-min), var(--public-title-preferred), var(--public-title-max));
     line-height: 1;

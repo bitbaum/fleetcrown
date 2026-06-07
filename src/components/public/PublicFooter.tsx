@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CURRENT_RELEASE } from "@/config/changelog";
 
 // PublicFooter — links to legal pages and support surfaces on every
 // unauthenticated marketing page. Rendered by PublicSurface so individual
@@ -7,10 +8,6 @@ import Link from "next/link";
 // Group A (Product): the things a visitor might want to do next.
 // Group B (Legal): trust signals required for a credible product release.
 // Group C (Source): GitHub, the org the product ships from.
-//
-// Kept minimal on purpose — when the marketing site grows, additional
-// columns go here (changelog, status page, careers, etc.) without leaking
-// concerns into individual page components.
 
 const FOOTER_GROUPS = [
   {
@@ -20,6 +17,7 @@ const FOOTER_GROUPS = [
       { label: "Sign in", href: "/sign-in" },
       { label: "Docs", href: "/docs/quickstart" },
       { label: "Roadmap", href: "/roadmap" },
+      { label: "Releases", href: "/releases" },
     ],
   },
   {
@@ -34,7 +32,7 @@ const FOOTER_GROUPS = [
     heading: "Source",
     links: [
       { label: "GitHub", href: "https://github.com/maonakamoto/fleetcrown", external: true },
-      { label: "Releases", href: "https://github.com/maonakamoto/fleetcrown-releases/releases", external: true },
+      { label: "GitHub releases", href: "https://github.com/maonakamoto/fleetcrown-releases/releases", external: true },
       { label: "Issues", href: "https://github.com/maonakamoto/fleetcrown/issues", external: true },
     ],
   },
@@ -71,7 +69,9 @@ export function PublicFooter() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-white/40">
         <div>© {new Date().getFullYear()} FleetCrown · Mao Nakamoto</div>
-        <div className="font-mono">v0.4.0</div>
+        <Link href="/releases" className="ui-public-link font-mono">
+          Fleet Runner v{CURRENT_RELEASE.version}
+        </Link>
       </div>
     </footer>
   );
