@@ -128,6 +128,33 @@ export type ControlPhase =
   | "closing"
   | "completed";
 
+/** Status-dot color class for each phase. Maps the enum to a Tailwind
+ *  class that hits the design-token surface. Lives here next to the enum
+ *  itself so any future caller (mobile shell pill, push notification
+ *  icon) sees the same color-coding as /control's project rail — and a
+ *  new phase value can't ship without an explicit color choice (the
+ *  Record type forces it).
+ *
+ *  Mapping rationale:
+ *    working           → accent-primary + pulse (the only one that draws
+ *                        attention — agent actively doing work)
+ *    waiting_for_user  → positive (action available)
+ *    completed         → positive (terminal success state)
+ *    offline           → warning (action required to bring back online)
+ *    open_idle         → border-strong (present but inert)
+ *    not_running       → border-default (empty)
+ *    closing           → border-default (transient state)
+ */
+export const PHASE_DOT_CLASS: Record<ControlPhase, string> = {
+  working: "bg-accent-primary animate-pulse",
+  waiting_for_user: "bg-status-positive",
+  completed: "bg-status-positive",
+  offline: "bg-status-warning",
+  open_idle: "bg-border-strong",
+  not_running: "bg-border-default",
+  closing: "bg-border-default",
+};
+
 export type ProjectOperationsSnapshot = {
   project: ProjectState;
   phase: ControlPhase;

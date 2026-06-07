@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
-import type { ProjectOperationsSnapshot } from "./control-presenter";
+import { PHASE_DOT_CLASS, type ProjectOperationsSnapshot } from "./control-presenter";
 import { ProjectCard } from "./ProjectCard";
 
 type CardBaseProps = Omit<Parameters<typeof ProjectCard>[0], "snapshot" | "isOnlyReady">;
@@ -55,15 +55,7 @@ export function ProjectOperationsView({
         <div className="ui-control-project-list">
           {snapshots.map((snapshot) => {
             const active = snapshot.project.tab === selected.project.tab;
-            const dotClass = snapshot.phase === "working"
-              ? "bg-accent-primary animate-pulse"
-              : snapshot.phase === "waiting_for_user" || snapshot.phase === "completed"
-                ? "bg-status-positive"
-                : snapshot.phase === "open_idle"
-                  ? "bg-border-strong"
-                : snapshot.phase === "offline"
-                  ? "bg-status-warning"
-                  : "bg-border-default";
+            const dotClass = PHASE_DOT_CLASS[snapshot.phase];
             const evidence = snapshot.evidenceAt
               ? `${snapshot.evidenceLabel} ${compactRelativeDate(new Date(snapshot.evidenceAt))}`
               : snapshot.evidenceLabel;

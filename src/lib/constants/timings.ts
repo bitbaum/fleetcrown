@@ -28,3 +28,27 @@ export const TOAST_MEDIUM_MS = 4000;
 
 /** Verbose toast — multi-line commit results, long error payloads. */
 export const TOAST_LONG_MS = 6000;
+
+/** Refresh /control state after a dispatch round-trip. The dispatch returned;
+ *  give the daemon a beat to ack + reflect, then re-fetch so the UI shows
+ *  the new state instead of the optimistic one. 500ms tuned against the
+ *  bridge SSE fanout latency — slow enough to catch the daemon's state
+ *  push, fast enough to feel instant to the user. */
+export const REFRESH_AFTER_DISPATCH_MS = 500;
+
+/** Refresh after a Zellij tab-side action (close-tab, tab-inject). Slightly
+ *  longer than dispatch because Zellij's pane-state update can lag the
+ *  command return; 700ms covers the observed window. */
+export const REFRESH_AFTER_TAB_ACTION_MS = 700;
+
+/** Refresh after launching a brand-new project workspace. Larger budget
+ *  because the launch spawns Zellij + the agent CLI, both of which need a
+ *  moment before /control can see them. */
+export const REFRESH_AFTER_LAUNCH_MS = 1500;
+
+/** Wait between launching an agent CLI and dispatching the first prompt
+ *  into its newly-opened tab. The agent boots, prints its banner, and
+ *  reaches the input prompt — write-chars sent before that point gets
+ *  swallowed by the boot output. 3s is the observed worst case across
+ *  claude/codex/gemini cold starts. */
+export const AGENT_COLD_START_MS = 3000;

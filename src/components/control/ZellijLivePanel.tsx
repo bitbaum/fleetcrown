@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type RefObject } from "react";
 import { PanelsTopLeft, RefreshCw, Send, Terminal, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
-import { FEEDBACK_SHORT_MS } from "@/lib/constants/timings";
+import { FEEDBACK_SHORT_MS, REFRESH_AFTER_TAB_ACTION_MS } from "@/lib/constants/timings";
 import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
 import { ZellijLiveRows } from "./ZellijLiveRows";
 
@@ -57,7 +57,7 @@ export function ZellijLivePanel({
     if (!window.confirm(`Close the Zellij tab "${tabName}"?`)) return;
     try {
       const res = await postJson("/api/control/close-tab", { tab: tabName });
-      if (res.ok) setTimeout(onRefresh, 700);
+      if (res.ok) setTimeout(onRefresh, REFRESH_AFTER_TAB_ACTION_MS);
     } catch { /* best effort */ }
   };
 
@@ -76,7 +76,7 @@ export function ZellijLivePanel({
       const res = await postJson("/api/control/tab-inject", { tab: effectiveTarget, prompt: prompt.trim() });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setPrompt("");
-      setTimeout(onRefresh, 700);
+      setTimeout(onRefresh, REFRESH_AFTER_TAB_ACTION_MS);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Prompt send failed");
     } finally {

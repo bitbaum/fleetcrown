@@ -5,6 +5,7 @@ import type { ControlData, ProjectState } from "@/lib/control-types";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { REFRESH_AFTER_DISPATCH_MS, REFRESH_AFTER_LAUNCH_MS, AGENT_COLD_START_MS } from "@/lib/constants/timings";
 import type { Agent } from "@/lib/agent-registry";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 import { useEventStream } from "@/lib/event-stream";
@@ -223,7 +224,7 @@ export function useControlData(): ControlDataHook {
     const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));
-    setTimeout(refresh, 500);
+    setTimeout(refresh, REFRESH_AFTER_DISPATCH_MS);
     return { mode: body.mode === "queued" ? "queued" : "direct" };
   };
 
@@ -236,7 +237,7 @@ export function useControlData(): ControlDataHook {
       initialPrompt: initialPrompt?.trim() || undefined,
     });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
-    setTimeout(() => refresh(true), 1500);
+    setTimeout(() => refresh(true), REFRESH_AFTER_LAUNCH_MS);
   };
 
   const runWithBrain = async (project: ProjectState, intent: OrchestrationTaskIntentId) => {
@@ -264,7 +265,7 @@ export function useControlData(): ControlDataHook {
   const runCustomPrompt = async (project: ProjectState, prompt: string, ag: string) => {
     if (!project.agentRunning) {
       await postJson("/api/agent/launch", { tab: project.tab, dir: project.dir, agent: ag });
-      await new Promise((r) => setTimeout(r, 3000));
+      await new Promise((r) => setTimeout(r, AGENT_COLD_START_MS));
     }
     const res = await postJson("/api/orchestration/run", {
       projectId: project.projectId,
