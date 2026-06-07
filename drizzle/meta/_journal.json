@@ -1,1 +1,188 @@
-{"version":"7","dialect":"postgresql","entries":[]}
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1767225600000,
+      "tag": "0001_canonical_project_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767225601000,
+      "tag": "0002_project_states_composite_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1767225602000,
+      "tag": "0003_user_projects_unique_name",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1767225603000,
+      "tag": "0004_attributes_user_scoped_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1767225604000,
+      "tag": "0005_orchestration_runs_org_id_and_outcome",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767225605000,
+      "tag": "0006_project_states_align_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767225606000,
+      "tag": "0007_user_projects_org_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1767225607000,
+      "tag": "0008_beacon_settings_and_user_preferences",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1767225608000,
+      "tag": "0009_project_states_session_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1767225609000,
+      "tag": "0010_project_states_prompt_queue",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1767225610000,
+      "tag": "0011_beacon_settings_auto_inject_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1767225611000,
+      "tag": "0012_project_states_unique_lower_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1767225612000,
+      "tag": "0013_runtime_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1767225613000,
+      "tag": "0014_debug_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1767225614000,
+      "tag": "0015_project_states_auto_continue",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1767225615000,
+      "tag": "0016_project_states_prompt_queue_revision",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1767225616000,
+      "tag": "0017_orchestration_events_dedupe_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1767225617000,
+      "tag": "0018_runtime_observation_versions",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1767225618000,
+      "tag": "0019_beacon_settings_default_strategist",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1767225619000,
+      "tag": "0020_push_subscriptions",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1767225620000,
+      "tag": "0021_subscriptions_orangecat_service_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1767225621000,
+      "tag": "0022_notify_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1767225622000,
+      "tag": "0023_entities_auto_inject_mode_override",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1767225623000,
+      "tag": "0024_beacon_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1767225624000,
+      "tag": "0025_prompts",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1767225625000,
+      "tag": "0026_drop_legacy_project_states_trigger",
+      "breakpoints": true
+    }
+  ]
+}
