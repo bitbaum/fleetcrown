@@ -1,30 +1,32 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-// Expose the local runtime API to the renderer.
+// `window.fleetRunner` — the IPC bridge from the web shell (Next.js app
+// loaded from fleetcrown.vercel.app) into Fleet Runner's main process.
 //
-// `window.fleetRunner` is the bridge that lets the React tree (whether the
-// bundled IPC dev renderer or the web-shell-loaded fleetcrown.vercel.app)
-// reach into the Electron main process: dispatch through the local home/
-// runtime, store an agent token, and observe the command poller's live
-// status. The web app uses `navigator.userAgent.includes('FleetRunner/')`
-// to decide whether this object is present.
+// Every method must justify itself with a real local-only capability:
+// something the cloud literally cannot do because it requires reaching
+// into the user's machine. The web app uses
+// `navigator.userAgent.includes('FleetRunner/')` to detect this object
+// is present and degrade gracefully when running in a browser.
+//
+// v0.7.4 cleanup: dropped ping/getRuntimeStatus/getProjects/dispatchIntent/
+// getCurrentState/probeCloud/switchToCloud — those were used only by the
+// bundled renderer (now removed). The surviving methods are all consumed
+// by the web shell.
 contextBridge.exposeInMainWorld('fleetRunner', {
-  ping: () => ipcRenderer.invoke('ping'),
-  getRuntimeStatus: () => ipcRenderer.invoke('get-runtime-status'),
-  getProjects: () => ipcRenderer.invoke('get-projects'),
-  dispatchIntent: (args: { projectKey: string; intent: string; queueHead?: string }) =>
-    ipcRenderer.invoke('dispatch-intent', args),
-  getCurrentState: () => ipcRenderer.invoke('get-current-state'),
+  // Token persistence — FleetRunnerAutoMint reads/writes this so the
+  // signed-in browser session can hand a freshly-minted ck_* down to
+  // the local poller + pusher without copy-paste.
   saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
   loadToken: () => ipcRenderer.invoke('load-token'),
   clearToken: () => ipcRenderer.invoke('clear-token'),
   getConfigDir: () => ipcRenderer.invoke('get-config-dir'),
 
-  // Command poller — the cable that closes web → local Zellij. Renderers can
-  // either pull a snapshot (`getPollerStatus`) for an immediate read, or
-  // subscribe via `onPollerStatus` and react to every state transition (the
-  // returned function unsubscribes; React effects must call it on cleanup
-  // to avoid stacking listeners across re-mounts).
+  // Command poller status. Renderers either pull a snapshot
+  // (`getPollerStatus`) for an immediate read or subscribe via
+  // `onPollerStatus` and react to every state transition (the returned
+  // function unsubscribes; React effects must call it on cleanup to
+  // avoid stacking listeners across re-mounts).
   getPollerStatus: () => ipcRenderer.invoke('get-poller-status'),
   onPollerStatus: (cb: (status: unknown) => void) => {
     const handler = (_event: unknown, status: unknown) => cb(status)
@@ -32,19 +34,10 @@ contextBridge.exposeInMainWorld('fleetRunner', {
     return () => ipcRenderer.removeListener('poller-status', handler)
   },
 
-  // Cloud reconnection — invoked by the bundled local renderer when the
-  // user wants to retry the web shell after Fleet Runner fell back to
-  // local-only mode (Vercel outage, DB quota, no wifi). probeCloud()
-  // returns a quick reachability check; switchToCloud() navigates the
-  // window to the web shell. On a fresh failure the did-fail-load hook
-  // drops the user back into the bundled renderer automatically.
-  probeCloud: (): Promise<boolean> => ipcRenderer.invoke('probe-cloud'),
-  switchToCloud: (): Promise<boolean> => ipcRenderer.invoke('switch-to-cloud'),
-
-  // Local prerequisite scan — surface whether agent CLIs (claude, codex,
+  // Local prerequisite scan — surfaces whether agent CLIs (claude, codex,
   // grok, gemini, cursor) and zellij are on PATH. The web app uses this
-  // (when running inside Fleet Runner) to render an "Install Claude" CTA
-  // instead of silently dispatching to a missing binary.
+  // to render an "Install Claude" CTA instead of silently dispatching to
+  // a missing binary.
   getInstalledCLIs: (): Promise<{
     zellij: boolean;
     agents: Record<string, boolean>;
@@ -59,11 +52,14 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   }> => ipcRenderer.invoke('get-local-dev-projects'),
 
   // Peek tab — snapshot the visible scrollback of a Zellij tab without
-  // requiring the user to switch their focused terminal. Implemented in main
-  // process via src/lib/zellij.peekTab (focus → dump-screen → restore focus).
-  // Returns plain text with ANSI escapes stripped, ready to render in <pre>.
-  // v0.7.2+ — older Fleet Runner builds don't expose this, so callers must
-  // typeof-check before invoking.
+  // requiring the user to switch their focused terminal. Returns plain
+  // text with ANSI escapes stripped, ready to render in <pre>. v0.7.2+ —
+  // older builds don't expose this, so callers must typeof-check.
   peekTab: (tab: string): Promise<{ ok: true; content: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('peek-tab', tab),
+
+  // Reload the web shell from the offline page's retry button. Only
+  // available on the offline page; the cloud /control surface doesn't
+  // need this because it already has standard browser reload.
+  reloadWebShell: (): Promise<boolean> => ipcRenderer.invoke('reload-web-shell'),
 })

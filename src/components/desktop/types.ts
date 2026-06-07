@@ -37,11 +37,6 @@ export type LocalDevProject = {
 };
 
 export type FleetRunnerBridge = {
-  ping: () => Promise<string>;
-  getRuntimeStatus: () => Promise<unknown>;
-  getProjects: () => Promise<unknown>;
-  dispatchIntent: (args: { projectKey: string; intent: string; queueHead?: string }) => Promise<unknown>;
-  getCurrentState: () => Promise<unknown>;
   saveToken: (token: string) => Promise<{ ok: boolean; error?: string }>;
   loadToken: () => Promise<string | null>;
   clearToken: () => Promise<{ ok: boolean; error?: string }>;
@@ -59,6 +54,8 @@ export type FleetRunnerBridge = {
   /** Capture a snapshot of what's visible in a Zellij tab right now. Returns
    *  the screen content as plain text (ANSI stripped). v0.7.2+. */
   peekTab: (tab: string) => Promise<{ ok: true; content: string } | { ok: false; error: string }>;
+  /** Reload the cloud web shell. Only the offline page uses this. v0.7.4+. */
+  reloadWebShell: () => Promise<boolean>;
 };
 
 declare global {

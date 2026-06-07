@@ -3,7 +3,6 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { getLocalRuntimeStatus, getProjects, dispatchIntent, getCurrentState } from './runtime'
 import { startWatcher } from '@home/watcher'
 import { peekTab as peekZellijTab } from '@/lib/zellij'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
@@ -20,40 +19,25 @@ import {
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
 import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 
-// v0.7.0a — REVERT of the v0.7 Phase C primary-flip.
+// v0.7.4 — bundled renderer removed; one UI surface only.
 //
-// v0.7.0 shipped USE_WEB_SHELL=false as the default; the bundled local
-// renderer became the boot target. That was premature: the bundled
-// renderer reads from agent-projects.conf (a local file the average user
-// has never seen) and doesn't yet show the user's actual FleetCrown
-// projects from the cloud DB. User QA on 2026-06-06 launched Fleet
-// Runner and saw "0 active projects" + dev-surface copy + a "Sync
-// error: Failed to fetch" message — exactly the opposite of the
-// "cloud one click away" promise.
-//
-// Until the bundled renderer reaches feature parity with /control
-// (task #44 — Phase C v0.7.1, multi-day work), the safe default is
-// the v0.6 behavior: Fleet Runner opens fleetcrown.vercel.app inside
-// Electron. The user sees the SAME UI they know from the browser.
-// Cursor/Anthropic/Grok ship the same pattern at this maturity stage.
+// Fleet Runner wraps fleetcrown.vercel.app in a BrowserWindow + adds native
+// integrations (tray, deep-link auth, IPC for Peek + auto-mint + local-dev
+// scan, auto-update, splash, persisted window bounds). There is no longer
+// a parallel local renderer — the cloud /control IS the UI.
 //
 // Env overrides:
-//   - FLEETCROWN_WEB_URL=https://...   → preview/dev URL inside Electron
-//   - FLEETCROWN_WEB_URL=cloud OR unset → fleetcrown.vercel.app (default)
-//   - FLEETCROWN_WEB_URL=local          → opt INTO the bundled renderer
-//                                          (power users / dogfooding only)
+//   - FLEETCROWN_WEB_URL=https://...  → load a preview/dev URL instead of
+//                                       the production cloud (for testing).
+//   - FLEETCROWN_WEB_URL unset/cloud  → fleetcrown.vercel.app (default).
 //
-// When the bundled renderer's /control parity ships in v0.7.1, the
-// default flips back. Until then, web-shell-default keeps the desktop
-// app working as users expect.
+// On load failure (Vercel down, no wifi, OAuth callback to unreachable
+// host) the user sees a branded offline page with a retry button, NOT
+// a half-working stub UI. The principle: be honest about cloud
+// dependency — Slack, Linear, Notion all do the same.
 const RAW_URL_OVERRIDE = (process.env.FLEETCROWN_WEB_URL || '').trim()
-const lowered = RAW_URL_OVERRIDE.toLowerCase()
 const isHttpOverride = RAW_URL_OVERRIDE.startsWith('http://') || RAW_URL_OVERRIDE.startsWith('https://')
 const WEB_SHELL_URL = isHttpOverride ? RAW_URL_OVERRIDE : APP_URL
-
-// Bundled local renderer is OPT-IN now (FLEETCROWN_WEB_URL=local). Every
-// other resolution (default, "cloud", or an explicit URL) boots cloud.
-const USE_WEB_SHELL = lowered !== 'local'
 
 // Resolve a packaged resource file. electron-builder copies `resources/` into
 // `process.resourcesPath` at install time; during dev we read it directly from
@@ -117,33 +101,6 @@ let saveBoundsHandle: NodeJS.Timeout | null = null
 
 // Loads the bundled local renderer (out/renderer/index.html). Called when:
 //   - the cloud web shell fails to load on launch
-//   - did-fail-load fires later in the session (Vercel down, no wifi)
-//   - the user explicitly clicks "Go local" from the cloud UI (future)
-//
-// The bundled renderer talks to Fleet Runner's main process via the
-// window.fleetRunner.* IPC bridge — same one the cloud UI uses for
-// dispatch — so all the local agent ops keep working. v0.5.0's contract:
-// Fleet Runner is functional even when the cloud is unreachable.
-function loadBundledRenderer(): void {
-  if (!mainWindow) return
-  const localHtml = is.dev && process.env['ELECTRON_RENDERER_URL']
-    ? process.env['ELECTRON_RENDERER_URL']
-    : join(__dirname, '../renderer/index.html')
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(localHtml).catch((err) => {
-      console.error('[desktop] bundled renderer load failed:', err)
-      // Last resort: branded offline page so the window isn't blank.
-      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
-    })
-  } else {
-    mainWindow.loadFile(localHtml).catch((err) => {
-      console.error('[desktop] bundled renderer load failed:', err)
-      mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
-    })
-  }
-  console.log('[desktop] loaded bundled local renderer (cloud-independent mode)')
-}
-
 // Brand black + cream pulled from globals.css :root tokens. Hardcoded here
 // because the main process can't import the renderer's CSS — when these
 // drift, update both. The splash + offline + window backgroundColor all
@@ -206,13 +163,15 @@ function offlineHtml(targetUrl: string): string {
   .hint{margin-top:18px;font-size:11px;color:rgba(255,255,255,0.35);max-width:360px;line-height:1.6;}
 </style></head><body>
 <h1>Can't reach FleetCrown</h1>
-<p>The web app didn't respond. This is usually a transient network issue
-or a Vercel hiccup. Your local agents keep running regardless.</p>
+<p>The cloud surface didn't respond. This is usually a transient network
+issue or a Vercel hiccup. Your local agents and Zellij tabs are running
+regardless — only the /control UI is offline.</p>
 <div class="target">${targetUrl}</div>
-<button onclick="window.location.reload()">Try again</button>
-<div class="hint">If this persists, check your connection and the FleetCrown
-status page. Closing and reopening Fleet Runner is also safe — no local
-data depends on the web app being up.</div>
+<button onclick="window.location.assign('${targetUrl}')">Try again</button>
+<div class="hint">If this persists, check your connection. Closing and
+reopening Fleet Runner is safe — no local data depends on the web app
+being up; the daemon keeps pushing state so /control catches up
+instantly once it comes back.</div>
 </body></html>`
 }
 
@@ -463,95 +422,52 @@ function createWindow(): void {
     mainWindow = null
   })
 
-  // Web-shell mode: keep OAuth redirects in the same window instead of spawning
-  // a popup Electron can't follow. GitHub's authorize page opens cleanly that
-  // way; rejecting it would otherwise break sign-in inside the desktop app.
-  if (USE_WEB_SHELL) {
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      // Auth flows (GitHub OAuth, NextAuth callback) stay in the main window.
-      const isAuthFlow = /\/(api\/)?auth\/|github\.com\/login\/oauth\//i.test(url)
-      if (isAuthFlow) {
-        mainWindow?.loadURL(url).catch(() => {})
-        return { action: 'deny' }
-      }
-      // Everything else (external links, marketing pages) opens in the user's
-      // default browser — desktop apps shouldn't become mini-browsers.
-      void shell.openExternal(url)
+  // Keep OAuth redirects in the same window instead of spawning a popup
+  // Electron can't follow. GitHub's authorize page opens cleanly that way;
+  // rejecting it would otherwise break sign-in inside the desktop app.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    // Auth flows (GitHub OAuth, NextAuth callback) stay in the main window.
+    const isAuthFlow = /\/(api\/)?auth\/|github\.com\/login\/oauth\//i.test(url)
+    if (isAuthFlow) {
+      mainWindow?.loadURL(url).catch(() => {})
       return { action: 'deny' }
+    }
+    // Everything else (external links, marketing pages) opens in the user's
+    // default browser — desktop apps shouldn't become mini-browsers.
+    void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  // Catch load failures (Vercel down, no wifi, OAuth callback to unreachable
+  // host). did-fail-load fires for every aborted/failed navigation; filter
+  // out the ones we trigger ourselves and the ABORTED code that's normal
+  // during fast successive loadURL calls. On real failure we show a branded
+  // offline page with a retry button — honest about the cloud dependency
+  // instead of pretending with a half-working local UI (the v0.7.0 mistake).
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc, validatedUrl) => {
+    if (code === -3) return // ABORTED — fires harmlessly on every successful navigation
+    if (validatedUrl === SPLASH_URL || validatedUrl === OFFLINE_URL) return // our own pages
+    if (!validatedUrl.startsWith('http')) return // data: URLs etc.
+    console.warn(`[desktop] cloud unreachable (${code}: ${desc}) for ${validatedUrl} — showing offline page`)
+    mainWindow?.loadURL(OFFLINE_URL).catch(() => {})
+  })
+
+  // Load the brand splash immediately so the user sees Fleet Runner the
+  // moment the window paints, not a black void. ready-to-show fires fast
+  // for the data: URL, then we swap to the real web shell. Chromium
+  // replaces the document in-place when WEB_SHELL_URL finishes loading.
+  console.log(`[desktop] booting web shell → splash, then ${WEB_SHELL_URL}`)
+  void mainWindow.loadURL(SPLASH_URL)
+  // Swap to the real URL on the next tick — gives ready-to-show a chance
+  // to fire on the splash first so the window appears with content, not
+  // blank. On failure: did-fail-load handler above shows the offline page.
+  setImmediate(() => {
+    mainWindow?.loadURL(WEB_SHELL_URL).catch((err) => {
+      console.error('[desktop] failed to load web shell (did-fail-load will swap to offline page):', err?.message ?? err)
     })
-
-    // Catch later load failures (e.g. Vercel goes down mid-session, the
-    // user's wifi drops, an in-window OAuth callback redirects to a host
-    // that's unreachable). did-fail-load fires for every aborted/failed
-    // navigation; filter out the ones we trigger ourselves and the ABORTED
-    // code that's normal during fast successive loadURL calls.
-    //
-    // On real failure we drop to the *bundled local renderer* (built into
-    // the app, not a network fetch) — Fleet Runner v0.5.0's "local-first"
-    // promise: the desktop app keeps working when the cloud is down.
-    // The local renderer reads agent state directly through IPC
-    // (window.fleetRunner.*) without touching the cloud. A "Try cloud"
-    // button in that renderer relaunches the web shell when the user
-    // wants to reconnect.
-    mainWindow.webContents.on('did-fail-load', (_e, code, desc, validatedUrl) => {
-      if (code === -3) return // ABORTED — fires harmlessly on every successful navigation
-      if (validatedUrl === SPLASH_URL || validatedUrl === OFFLINE_URL) return // our own pages
-      if (!validatedUrl.startsWith('http')) return // data: URLs etc. (incl. bundled renderer)
-      console.warn(`[desktop] cloud unreachable (${code}: ${desc}) for ${validatedUrl} — falling back to bundled local renderer`)
-      loadBundledRenderer()
-    })
-  }
-
-  if (USE_WEB_SHELL) {
-    // Load the brand splash immediately so the user sees Fleet Runner the
-    // moment the window paints, not a black void. ready-to-show fires fast
-    // for the data: URL, then we swap to the real web shell. Chromium
-    // replaces the document in-place when WEB_SHELL_URL finishes loading.
-    console.log(`[desktop] web-shell mode → splash, then ${WEB_SHELL_URL}`)
-    void mainWindow.loadURL(SPLASH_URL)
-    // Swap to the real URL on the next tick — gives ready-to-show a chance
-    // to fire on the splash first so the window appears with content, not
-    // blank. On failure: bundled local renderer (Fleet Runner keeps working
-    // without the cloud, per the v0.5.0 local-first contract).
-    setImmediate(() => {
-      // Don't fallback here on rejection — did-fail-load owns the
-      // bundled-renderer swap. Calling loadBundledRenderer() in BOTH
-      // paths used to race: setImmediate's catch fired, then did-fail-load
-      // fired, both invoking loadFile concurrently and Electron aborts
-      // the first with ERR_ABORTED. Single source of truth: did-fail-load.
-      mainWindow?.loadURL(WEB_SHELL_URL).catch((err) => {
-        console.error('[desktop] failed to load web shell (did-fail-load will handle the swap):', err?.message ?? err)
-      })
-    })
-    // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
-    if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
-  } else {
-    // v0.7 default — bundled local renderer is the primary boot target.
-    console.log('[desktop] local-renderer mode — bundled renderer is primary')
-    loadBundledRenderer()
-  }
-
-  // IPC for local runtime (integrated home/ stack)
-  ipcMain.handle('ping', async () => {
-    const status = await getLocalRuntimeStatus()
-    return `pong from main (FleetCrown Fleet Runner). Runtime: ${JSON.stringify(status)}`
   })
-
-  ipcMain.handle('get-runtime-status', async () => {
-    return getLocalRuntimeStatus()
-  })
-
-  ipcMain.handle('get-projects', async () => {
-    return getProjects()
-  })
-
-  ipcMain.handle('dispatch-intent', async (_event, { projectKey, intent, queueHead }) => {
-    return dispatchIntent(projectKey, intent, queueHead)
-  })
-
-  ipcMain.handle('get-current-state', async () => {
-    return getCurrentState()
-  })
+  // Open devtools in dev so we can inspect cookies, CSP, network during the spike.
+  if (is.dev) mainWindow.webContents.openDevTools({ mode: 'detach' })
 
   // Token / connect support for using this app as the local runtime for hosted FleetCrown.
   // All persistence + path SSOT lives in ./token-store; this section is only the IPC
@@ -676,28 +592,6 @@ function createWindow(): void {
     return installedCache
   })
 
-  // "Try cloud" — invoked by the bundled local renderer when the user
-  // wants to reconnect to the web shell after a fallback. Returns true
-  // if the cloud URL responded quickly enough that the web shell will
-  // likely succeed; the renderer can then call switch-to-cloud to
-  // actually navigate. Decoupled so the renderer can show a spinner
-  // between "checking" and "switching."
-  ipcMain.handle('probe-cloud', async () => {
-    // v0.7 — works regardless of USE_WEB_SHELL boot mode. WEB_SHELL_URL is
-    // now always defined; "Try cloud" should resolve whether we booted local
-    // or cloud. Pre-v0.7 this gated on USE_WEB_SHELL and silently no-op'd
-    // when the user was in local mode, leaving the button broken.
-    try {
-      const ctrl = new AbortController()
-      const t = setTimeout(() => ctrl.abort(), 4_000)
-      const resp = await fetch(`${WEB_SHELL_URL}/api/health`, { signal: ctrl.signal })
-      clearTimeout(t)
-      return resp.ok
-    } catch {
-      return false
-    }
-  })
-
   // Peek tab — snapshot the visible scrollback of a Zellij tab without
   // requiring the user to context-switch into the terminal. v0.7.2 ships
   // this so /control can show "what's actually in the tab" inline; the
@@ -723,17 +617,16 @@ function createWindow(): void {
     }
   })
 
-  // Navigate to the cloud web shell from the bundled local renderer.
-  // Used by "Try cloud" / "Reconnect" buttons. did-fail-load auto-falls
-  // back to bundled renderer again if the cloud is still unreachable, so
-  // the user can keep clicking without getting stuck.
-  ipcMain.handle('switch-to-cloud', async () => {
+  // Reload the web shell from the offline page's retry button. Posts a
+  // simple "retry" message via window.postMessage that the offline.html
+  // listens for via the preload bridge.
+  ipcMain.handle('reload-web-shell', async () => {
     if (!mainWindow) return false
     try {
       await mainWindow.loadURL(WEB_SHELL_URL)
       return true
     } catch (e) {
-      console.warn('[desktop] switch-to-cloud failed:', (e as Error).message)
+      console.warn('[desktop] reload-web-shell failed:', (e as Error).message)
       return false
     }
   })
@@ -872,16 +765,14 @@ app.whenReady().then(async () => {
   const argvUrl = process.argv.find((a) => a.startsWith('fleetcrown://'))
   if (argvUrl) pendingDeepLink = argvUrl
 
-  // Web-shell mode: mark requests with a Fleet-Runner UA suffix so the deployed
-  // app can detect when it's being rendered inside the desktop shell (enabling
-  // tray hooks, hotkeys, etc.) without affecting normal browser traffic.
-  // Cookies persist by default in Electron's user-data dir → NextAuth session
-  // survives across launches with no extra wiring.
-  if (USE_WEB_SHELL) {
-    const ua = session.defaultSession.getUserAgent()
-    if (!ua.includes('FleetRunner/')) {
-      session.defaultSession.setUserAgent(`${ua} FleetRunner/${app.getVersion()}`)
-    }
+  // Mark requests with a Fleet-Runner UA suffix so the deployed app can detect
+  // when it's being rendered inside the desktop shell (enabling tray hooks,
+  // hotkeys, etc.) without affecting normal browser traffic. Cookies persist
+  // by default in Electron's user-data dir → NextAuth session survives across
+  // launches with no extra wiring.
+  const ua = session.defaultSession.getUserAgent()
+  if (!ua.includes('FleetRunner/')) {
+    session.defaultSession.setUserAgent(`${ua} FleetRunner/${app.getVersion()}`)
   }
 
   // Default open or close DevTools by F12 in development
@@ -1039,20 +930,16 @@ function createTray() {
     : nativeImage.createEmpty()
   tray = new Tray(trayIcon)
 
-  // Surface a window AND navigate to the given path. Used by the tray's
-  // quick-link menu items. If we're in web-shell mode, this navigates the
-  // BrowserWindow; in local-renderer mode it surfaces the window only
-  // (router state inside the bundled renderer drives that surface).
+  // Surface the window AND navigate to the given path. Used by the tray's
+  // quick-link menu items.
   const surfaceAt = (path: string) => {
     if (!mainWindow) return
     mainWindow.show()
     mainWindow.focus()
-    if (USE_WEB_SHELL) {
-      const target = new URL(path, WEB_SHELL_URL).toString()
-      mainWindow.webContents.loadURL(target).catch((e) => {
-        console.warn('[desktop] tray: failed to load', target, e)
-      })
-    }
+    const target = new URL(path, WEB_SHELL_URL).toString()
+    mainWindow.webContents.loadURL(target).catch((e) => {
+      console.warn('[desktop] tray: failed to load', target, e)
+    })
   }
 
   // Quick-link items are deliberately minimal — anything that requires more

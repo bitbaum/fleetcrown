@@ -1,8 +1,23 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from 'tailwindcss'
 
+// v0.7.4 — bundled renderer removed.
+//
+// Pre-0.7.4 the desktop app shipped TWO UI implementations:
+//   1. The Next.js app at fleetcrown.vercel.app (the real UI, all features)
+//   2. A 407-line bundled renderer in src/renderer/ that read agent-projects.conf
+//      and never reached feature parity with /control
+//
+// The two-UI design violated SSOT and produced the v0.7.0 disaster where
+// the bundled renderer briefly became the boot target and users saw a
+// crippled, dev-surface UI instead of their actual /control page.
+//
+// Phase 1 of the architecture cleanup deletes the bundled renderer entirely.
+// Electron's only job now is to wrap the web shell with native integrations:
+// tray, deep-link auth, IPC (peek, auto-mint, local-dev scan), auto-update,
+// splash, persistent window state.
+//
+// This config no longer builds a renderer. main + preload are all that ship.
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
@@ -25,27 +40,6 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/preload'
-    }
-  },
-  renderer: {
-    root: resolve('src/renderer'),
-    build: {
-      outDir: resolve('out/renderer')
-    },
-    resolve: {
-      alias: {
-        '@renderer': resolve('src/renderer/src'),
-        // Match the main-process alias so the renderer can import shared
-        // config (e.g. @/config/brand) from the web app's source tree.
-        // Goes away when packages/design-tokens + packages/ui are extracted.
-        '@': resolve(__dirname, '../src')
-      }
-    },
-    plugins: [react()],
-    css: {
-      postcss: {
-        plugins: [tailwindcss()]
-      }
     }
   }
 })
