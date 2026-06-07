@@ -21,7 +21,7 @@
 
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
-import { createAgentToken, listAgentTokens } from "@/db/queries/agent-tokens";
+import { createAgentToken, getReusableEventStreamToken } from "@/db/queries/agent-tokens";
 import { getOwnerOrgId } from "@/db/queries/orgs";
 
 export async function GET() {
@@ -30,22 +30,30 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Prefer reusing a recent event-stream token if one already exists
-  // and was used in the last 7 days. The listAgentTokens query never
-  // returns the plaintext value (only metadata), so we always mint a
-  // fresh one here regardless — the cost of mint is a single insert
-  // and a 64-char string returned to the client, which we eat for
-  // simplicity. If/when token mint becomes a hot path, swap in a
-  // dedicated event_stream_tokens table with TTL.
+  // Reuse a recent event-stream token if one exists and was used in the
+  // last 7 days; otherwise mint a fresh one. Pre-2026-06-07 this endpoint
+  // ALWAYS minted, which leaked ~1 token per browser session per day per
+  // user (caught in DB inspection: 10 stale 'event-stream' rows for a
+  // single account over 36 hours). Reuse caps the per-user footprint at
+  // "one live token per active week."
+  //
+  // Reuse uses last_used_at — the bridge stamps it on every successful
+  // validateAgentToken call, so the freshness signal is real bridge
+  // activity, not just mint age. A token minted 6 days ago but used 1 hour
+  // ago counts as reusable.
+  const reused = await getReusableEventStreamToken(userId).catch(() => null);
+  if (reused) {
+    return NextResponse.json(
+      { token: reused.token, label: "event-stream", reused: true },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } },
+    );
+  }
+
   const orgId = await getOwnerOrgId(userId).catch(() => null);
   const { token } = await createAgentToken(userId, "event-stream", orgId);
 
-  // Touch — count existing event-stream tokens for hygiene logs.
-  const all = await listAgentTokens(userId).catch(() => []);
-  const eventStreamCount = all.filter((t) => t.label === "event-stream").length;
-
   return NextResponse.json(
-    { token, label: "event-stream", existingCount: eventStreamCount },
+    { token, label: "event-stream", reused: false },
     {
       // Never cache. This response contains a secret bound to the
       // session that requested it.

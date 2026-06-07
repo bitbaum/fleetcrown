@@ -5,7 +5,8 @@
   "installCommand": "npm install",
   "alias": ["fleetcrown.vercel.app"],
   "crons": [
-    { "path": "/api/crons/prune-debug-logs", "schedule": "0 3 * * *" },
-    { "path": "/api/crons/nudge-idle",       "schedule": "0 4 * * *" }
+    { "path": "/api/crons/prune-debug-logs",   "schedule": "0 3 * * *" },
+    { "path": "/api/crons/nudge-idle",         "schedule": "0 4 * * *" },
+    { "path": "/api/crons/prune-agent-tokens", "schedule": "0 5 * * *" }
   ]
 }
