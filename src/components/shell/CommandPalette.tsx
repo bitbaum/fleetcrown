@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Zap, FolderOpen, History as HistoryIcon, Mic, MicOff, Loader2 } from "lucide-react";
+import { Search, ArrowRight, Zap, FolderOpen, FolderKanban, History as HistoryIcon, Mic, MicOff, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useVoiceInput } from "@/hooks/use-voice-input";
@@ -14,7 +14,10 @@ import { cn } from "@/lib/utils";
 type PaletteEntry =
   | { kind: "agent-prompt";   key: string; label: string; sub: string; icon: string; href: string }
   | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string };
+  | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string }
+  | { kind: "project";         key: string; label: string; sub: string; icon: null;   href: string };
+
+type UserProjectLite = { id: string; name: string; dirPath?: string | null; isActive?: boolean };
 
 const RECENT_KEY = "fleetcrown.palette.recent";
 const RECENT_KEY_LEGACY = "cockpit.palette.recent";
@@ -46,6 +49,10 @@ export function CommandPalette() {
   }, [open, setOpen]);
 
   const { data: agentPrompts } = useFetch<AgentPrompt[]>(open ? "/api/prompts/agent" : null);
+  // User's projects appear in the palette so Cmd-K → typing the project name
+  // jumps straight to /control with that project focused. Only fetched while
+  // the palette is open (saves one network round-trip per page load).
+  const { data: projects } = useFetch<UserProjectLite[]>(open ? "/api/user-projects" : null);
 
   const onTranscript = useCallback((text: string) => {
     setQuery(text);
@@ -107,8 +114,22 @@ export function CommandPalette() {
       icon: null,
       href: n.href,
     }));
-    return [...agent, ...templates, ...nav];
-  }, [agentPrompts]);
+    // Projects come right after navigation because the most-common Cmd-K
+    // intent in a fleet-management product is "jump to project X". The href
+    // uses /control?focus=<tab> which the ControlPanel deep-link handler
+    // picks up (existing behavior from v0.6 push notification flow).
+    const projectEntries = (projects ?? [])
+      .filter((p) => p.isActive !== false && p.name)
+      .map<PaletteEntry>((p) => ({
+        kind: "project",
+        key: `project:${p.id}`,
+        label: p.name,
+        sub: `Project · ${p.dirPath ?? "no local path"}`,
+        icon: null,
+        href: `/control?focus=${encodeURIComponent(p.name)}`,
+      }));
+    return [...projectEntries, ...nav, ...agent, ...templates];
+  }, [agentPrompts, projects]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -223,8 +244,9 @@ export function CommandPalette() {
               >
                 <span className="ui-palette-row-icon" aria-hidden="true">
                   {entry.kind === "agent-prompt"   && <span className="text-base leading-none">{entry.icon}</span>}
-                  {entry.kind === "prompt-template" && <Zap        className="h-3.5 w-3.5" />}
-                  {entry.kind === "nav"             && <FolderOpen className="h-3.5 w-3.5" />}
+                  {entry.kind === "prompt-template" && <Zap          className="h-3.5 w-3.5" />}
+                  {entry.kind === "nav"             && <FolderOpen   className="h-3.5 w-3.5" />}
+                  {entry.kind === "project"         && <FolderKanban className="h-3.5 w-3.5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-text-primary">{entry.label}</span>
