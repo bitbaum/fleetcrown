@@ -39,6 +39,30 @@ export function shellEscape(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
+function resolveZellijExecutable(): string {
+  const candidates = [
+    process.env.FLEETCROWN_ZELLIJ_BIN,
+    "/usr/local/bin/zellij",
+    "/usr/bin/zellij",
+    "/opt/homebrew/bin/zellij",
+  ].filter((value): value is string => Boolean(value));
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && (fs.statSync(candidate).mode & 0o111)) return candidate;
+    } catch {
+      // Ignore unreadable candidates.
+    }
+  }
+  return "zellij";
+}
+
+/** Shell-escaped zellij executable. Prefer the user's installed binary over
+ * the bundled fallback because an older bundled zellij may not see sessions
+ * created by the user's newer terminal zellij. */
+export function zellijExecutableForShell(): string {
+  return shellEscape(resolveZellijExecutable());
+}
+
 function cleanZellijLines(stdout: string): string[] {
   return stripAnsi(stdout)
     .split("\n")
@@ -48,7 +72,7 @@ function cleanZellijLines(stdout: string): string[] {
 
 export function getZellijSessionsSync(): string[] {
   try {
-    const stdout = execSync("zellij list-sessions --no-formatting 2>/dev/null", {
+    const stdout = execSync(`${zellijExecutableForShell()} list-sessions --no-formatting 2>/dev/null`, {
       encoding: "utf-8",
       timeout: 2000,
     });
@@ -63,8 +87,8 @@ export function getZellijSessionsSync(): string[] {
 
 function getTabsForSessionSync(session: string): string[] {
   const commands = [
-    `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
-    `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action query-tab-names 2>/dev/null`,
+    `${zellijExecutableForShell()} --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
+    `ZELLIJ_SESSION_NAME=${shellEscape(session)} ${zellijExecutableForShell()} action query-tab-names 2>/dev/null`,
   ];
   for (const command of commands) {
     try {
@@ -98,7 +122,7 @@ async function getTabsAsync(): Promise<string[]> {
     if (tabs.length > 0) return [...new Set(tabs)];
   }
   try {
-    const { stdout } = await execAsync("zellij action query-tab-names 2>/dev/null || true", { timeout: 2000 });
+    const { stdout } = await execAsync(`${zellijExecutableForShell()} action query-tab-names 2>/dev/null || true`, { timeout: 2000 });
     return cleanZellijLines(stdout);
   } catch {
     return [];
@@ -110,7 +134,7 @@ function buildDumpCmd(session: string | null): string {
   // version when known, else fall back to the implicit one (which uses
   // ZELLIJ_SESSION_NAME if set, otherwise whatever session ran us).
   const sess = session ? `--session ${shellEscape(session)} ` : "";
-  return `zellij ${sess}action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
+  return `${zellijExecutableForShell()} ${sess}action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`;
 }
 
 function getCurrentTab(sessionHint: string | null = null): string | null {
@@ -155,7 +179,7 @@ function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
 }
 
 function zellijCmd(session: string | null, ...args: string[]): string {
-  const prefix = session ? `zellij --session ${shellEscape(session)} action` : `zellij action`;
+  const prefix = session ? `${zellijExecutableForShell()} --session ${shellEscape(session)} action` : `${zellijExecutableForShell()} action`;
   return `${prefix} ${args.join(" ")}`;
 }
 

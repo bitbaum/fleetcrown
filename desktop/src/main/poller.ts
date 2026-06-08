@@ -24,9 +24,9 @@
 import fs from 'fs'
 import { execSync } from 'child_process'
 import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync } from '@/lib/zellij'
+import { zellijExecutableForShell } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
-import { DAEMON_LONG_POLL_SECONDS } from '@/lib/constants/daemon'
 import { launchAgentInTab } from '@/lib/agent-runtime'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
 import { startBridgeSubscriber } from './bridge-subscriber'
@@ -55,6 +55,7 @@ export type PollerStatus = {
 type StatusListener = (s: PollerStatus) => void
 
 const listeners = new Set<StatusListener>()
+const COMMAND_POLL_IDLE_MS = 2_000
 let currentStatus: PollerStatus = {
   state: 'idle',
   baseUrl: (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL,
@@ -105,9 +106,11 @@ export function startPoller(): void {
   if (running) return
   const token = loadToken()
   if (!token) {
+    console.warn('[poller] not started: no saved token')
     updateStatus({ state: 'idle', tokenPrefix: null, lastError: null, lastErrorAt: null })
     return
   }
+  console.log(`[poller] starting against ${currentStatus.baseUrl} with token ${token.slice(0, 12)}…`)
   running = true
   lifetimeCtrl = new AbortController()
   updateStatus({
@@ -122,10 +125,9 @@ export function startPoller(): void {
   // FOR UPDATE SKIP LOCKED, so commands go to exactly one consumer.
   bridgeHandle = startBridgeSubscriber(token, {
     onCommandPending: () => {
-      // Wake the long-poll loop by aborting the in-flight wait=25 request.
-      // The loop's next iteration sees pendingWake and uses wait=0 to drain
-      // the queue immediately. Aborting the inner controller (not lifetime)
-      // keeps the loop alive.
+        // Wake the polling loop by aborting the in-flight request/sleep. The
+        // loop always drains with wait=0; this just removes up to 2s of idle
+        // delay when the bridge is healthy.
       pendingWake = true
       currentFetchCtrl?.abort()
     },
@@ -153,6 +155,7 @@ export function restartPoller(): void {
 
 async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void> {
   const base = currentStatus.baseUrl
+  console.log(`[poller] loop started; short-poll idle=${COMMAND_POLL_IDLE_MS}ms`)
   // Backoff for connection errors — successful polls reset it. The long-poll
   // already paces normal traffic to ~one request per 25s when there's no work.
   let backoffMs = 1_000
@@ -164,9 +167,13 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
     currentFetchCtrl = new AbortController()
     const wakeRequested = pendingWake
     pendingWake = false
-    const waitSec = wakeRequested ? 0 : DAEMON_LONG_POLL_SECONDS
     try {
-      const resp = await fetch(`${base}/api/control/commands?wait=${waitSec}`, {
+      // Use wait=0 short polling. The production long-poll/SSE path is the
+      // right architecture eventually, but dogfood showed it can leave desktop
+      // commands claimed without visible progress under Vercel/bridge edge
+      // conditions. A 2s deterministic poll is cheap and makes phone/web
+      // control reliable today.
+      const resp = await fetch(`${base}/api/control/commands?wait=0`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: currentFetchCtrl.signal,
       })
@@ -203,7 +210,10 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
 
       const data = (await resp.json()) as { command: { id: string; type: string; payload: unknown } | null }
       if (data.command) {
+        console.log(`[poller] claimed ${data.command.type} command ${data.command.id}`)
         await handleCommand(base, token, data.command)
+      } else if (!wakeRequested) {
+        await new Promise<void>((r) => setTimeout(r, COMMAND_POLL_IDLE_MS))
       }
     } catch (err) {
       // Two abort sources: lifetimeSignal (stopPoller — exit) vs.
@@ -211,6 +221,7 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       if (lifetimeSignal.aborted) return
       if (currentFetchCtrl?.signal.aborted) continue
       const msg = (err as Error).message || 'unknown error'
+      console.warn('[poller] loop error:', msg)
       updateStatus({
         state: 'error',
         lastError: msg,
@@ -246,7 +257,7 @@ async function handleCommand(
         break
       }
       case 'focus_tab': {
-        focusTab(validation.command.payload.tab)
+        focusWorkspaceTab(validation.command.payload.tab)
         ok = true
         break
       }
@@ -295,6 +306,7 @@ async function handleCommand(
   // leave a half-finished row that only recovers via the 90s stale-claim
   // reaper. Surfacing the error to the web UI is more useful.
   try {
+    console.log(`[poller] acking ${command.type} command ${command.id}: ${ok ? 'ok' : 'error'}`)
     await fetch(`${base}/api/control/commands/${command.id}`, {
       method: 'PATCH',
       headers: {
@@ -302,6 +314,7 @@ async function handleCommand(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ ok, ...(error ? { error } : {}) }),
+      signal: AbortSignal.timeout(5000),
     })
   } catch (e) {
     // If we can't reach the server to mark done, the next poll will retry the
@@ -311,8 +324,10 @@ async function handleCommand(
   }
 
   if (ok) {
+    console.log(`[poller] handled ${command.type} command ${command.id}`)
     updateStatus({ commandsHandled: currentStatus.commandsHandled + 1 })
   } else {
+    console.warn(`[poller] rejected ${command.type} command ${command.id}: ${error ?? 'unknown error'}`)
     updateStatus({ commandsRejected: currentStatus.commandsRejected + 1 })
   }
 }
@@ -325,8 +340,8 @@ function assertKnownLaunchAgent(agent: string): void {
 
 function tabNamesForSession(session: string): string[] {
   const commands = [
-    `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
-    `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action query-tab-names 2>/dev/null`,
+    `${zellijExecutableForShell()} --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
+    `ZELLIJ_SESSION_NAME=${shellEscape(session)} ${zellijExecutableForShell()} action query-tab-names 2>/dev/null`,
   ]
   for (const command of commands) {
     try {
@@ -355,23 +370,45 @@ function firstZellijSession(): string {
   return session
 }
 
-function focusTab(tab: string): void {
+function focusWorkspaceTab(tab: string): void {
   const session = findSessionForTab(tab)
   if (!session) throw new Error(`tab not found: ${tab}`)
-  execSync(`zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+  const liveTab = tabNamesForSession(session).find((candidate) => candidate.toLowerCase() === tab.toLowerCase()) ?? tab
+  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(liveTab)}`, { stdio: 'ignore', timeout: 3000 })
+  waitForFocusedTab(session, liveTab)
 }
 
 function closeTab(tab: string): void {
   const session = findSessionForTab(tab)
   if (!session) throw new Error(`tab not found: ${tab}`)
-  execSync(`zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+  focusWorkspaceTab(tab)
   execSync('sleep 0.15')
-  execSync(`zellij --session ${shellEscape(session)} action close-tab`, { stdio: 'ignore', timeout: 3000 })
+  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action close-tab`, { stdio: 'ignore', timeout: 3000 })
   clearHandoffSentinel(tab)
 }
 
+function focusedTabForSession(session: string): string | null {
+  try {
+    return execSync(
+      `${zellijExecutableForShell()} --session ${shellEscape(session)} action dump-layout 2>/dev/null | grep 'focus=true' | grep 'tab name=' | sed 's/.*tab name="\\([^"]*\\)".*/\\1/' | head -1`,
+      { encoding: 'utf8', timeout: 2000 },
+    ).trim() || null
+  } catch {
+    return null
+  }
+}
+
+function waitForFocusedTab(session: string, tab: string): void {
+  const deadline = Date.now() + 2000
+  while (Date.now() < deadline) {
+    if (focusedTabForSession(session) === tab) return
+    execSync('sleep 0.05', { timeout: 1000 })
+  }
+  throw new Error(`zellij tab "${tab}" did not gain focus`)
+}
+
 function newTab(session: string, tab: string): void {
-  execSync(`zellij --session ${shellEscape(session)} action new-tab --name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+  execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action new-tab --name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
   execSync('sleep 0.5')
 }
 

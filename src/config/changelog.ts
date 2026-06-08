@@ -29,6 +29,17 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.7.9",
+    tag: "fleet-runner-v0.7.9",
+    date: "2026-06-08T00:00:00Z",
+    highlights: [
+      "Remote focus-tab commands now use the same Zellij adapter path as Peek/injection, including focus confirmation.",
+      "Desktop command handling now logs handled/rejected command IDs, making remote-control failures debuggable from systemd logs.",
+    ],
+    breaking: [],
+    notes: "Closes the last dogfood gap found while testing production Control against the local Zellij workspace: queued focus commands were claimed but could appear to land on the wrong tab without useful logs.",
+  },
+  {
     version: "0.7.8",
     tag: "fleet-runner-v0.7.8",
     date: "2026-06-08T00:00:00Z",
