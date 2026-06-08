@@ -1,12 +1,13 @@
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
-import { runtimeSnapshots } from "@/db/schema/runtime-snapshots";
+import { runtimeSnapshots, type PaneRecord } from "@/db/schema/runtime-snapshots";
 
 export async function upsertRuntimeSnapshotIfNewer(
   userId: string,
   openTabs: string[],
   observedAt: Date,
   installedAgents?: string[],
+  panes?: PaneRecord[],
 ) {
   const snapshot = {
     userId,
@@ -14,6 +15,7 @@ export async function upsertRuntimeSnapshotIfNewer(
     observedAt,
     updatedAt: new Date(),
     ...(installedAgents ? { installedAgents } : {}),
+    ...(panes ? { panes } : {}),
   };
   const [inserted] = await db
     .insert(runtimeSnapshots)

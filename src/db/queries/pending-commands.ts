@@ -113,7 +113,11 @@ export async function getPendingCommandsForUser(userId: string) {
     .orderBy(pendingCommands.createdAt);
 }
 
-// Returns commands that were executed but reported ok=false in the last 10 minutes.
+// Returns commands the user should know about: executed-and-failed (ok=false)
+// PLUS executed-but-unverified inject commands (ok=true, verified=false — the
+// keystrokes landed but the agent didn't react within the post-flight window).
+// Limited to the last 10 minutes so a long-running daemon doesn't keep
+// surfacing stale errors after the user has moved on.
 export async function getRecentFailedCommands(userIds: string[]): Promise<FailedCommand[]> {
   if (userIds.length === 0) return [];
   const userFilter = userIds.length === 1
@@ -131,7 +135,7 @@ export async function getRecentFailedCommands(userIds: string[]): Promise<Failed
     .where(and(
       userFilter,
       isNotNull(pendingCommands.executedAt),
-      sql`(${pendingCommands.result}->>'ok') = 'false'`,
+      sql`((${pendingCommands.result}->>'ok') = 'false' OR ((${pendingCommands.result}->>'ok') = 'true' AND (${pendingCommands.result}->>'verified') = 'false'))`,
       sql`${pendingCommands.executedAt} > NOW() - INTERVAL '10 minutes'`,
     ))
     .orderBy(desc(pendingCommands.executedAt))
@@ -139,11 +143,20 @@ export async function getRecentFailedCommands(userIds: string[]): Promise<Failed
 
   return rows
     .filter((r) => r.executedAt != null)
-    .map((r) => ({
-      id: r.id,
-      tab: (r.payload as Record<string, unknown>)?.tab as string ?? "unknown",
-      type: r.type,
-      error: (r.result as Record<string, unknown>)?.error as string ?? "command failed",
-      executedAt: r.executedAt!.toISOString(),
-    }));
+    .map((r) => {
+      const result = (r.result ?? {}) as Record<string, unknown>;
+      const isFailure = result.ok === false;
+      const isUnverified = result.ok === true && result.verified === false;
+      const error = isFailure
+        ? (result.error as string) ?? "command failed"
+        : (result.warning as string) ?? "delivered but agent did not pick up";
+      return {
+        id: r.id,
+        tab: (r.payload as Record<string, unknown>)?.tab as string ?? "unknown",
+        type: r.type,
+        error,
+        executedAt: r.executedAt!.toISOString(),
+        ...(isUnverified ? { unverified: true as const } : {}),
+      };
+    });
 }

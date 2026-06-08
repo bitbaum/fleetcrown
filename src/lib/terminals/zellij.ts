@@ -150,29 +150,48 @@ function getCurrentTab(sessionHint: string | null = null): string | null {
 function waitForTabFocus(tab: string, maxWaitMs = 1000, session: string | null = null): boolean {
   const deadline = Date.now() + maxWaitMs;
   const cmd = buildDumpCmd(session);
+  const target = tab.toLowerCase();
   while (Date.now() < deadline) {
     try {
       const active = execFileSync("bash", ["-c", cmd], { timeout: 2000 }).toString().trim();
-      if (active === tab) return true;
+      // Case-insensitive: zellij stores tabs with whatever case the user typed
+      // when creating them (often PascalCase) while our DB / inject payload
+      // may be lowercase. Strict equality used to silently fail the focus
+      // confirmation 100% of dispatches when the cases drifted.
+      if (active.toLowerCase() === target) return true;
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
     execSync("sleep 0.05");
   }
   return false;
 }
 
+/** Return the live tab name (preserving zellij's casing) that case-insensitively
+ *  matches `tab`, or null if no such tab exists. Used by withFocusedTab so
+ *  subsequent zellij `action` commands address the tab by the name zellij
+ *  actually knows. */
+function resolveLiveTabName(session: string | null, tab: string): string | null {
+  const candidates = session ? getTabsForSessionSync(session) : [];
+  const target = tab.toLowerCase();
+  return candidates.find((candidate) => candidate.toLowerCase() === target) ?? null;
+}
+
 /** Higher-order helper: switch focus to `tab`, run `fn`, restore original.
- *  Throws on focus failure within 1s. */
+ *  Throws on focus failure within 1s. Looks up the live tab name from
+ *  zellij so case mismatches between the DB and zellij are handled
+ *  transparently — `go-to-tab-name "fleetcrown"` would silently no-op if
+ *  zellij has the tab as "FleetCrown", causing the focus check to time out. */
 function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
   const session = findSessionForTab(tab);
+  const liveTab = resolveLiveTabName(session, tab) ?? tab;
   const originalTab = getCurrentTab(session);
-  execSync(zellijCmd(session, "go-to-tab-name", shellEscape(tab)));
-  if (!waitForTabFocus(tab, 1000, session)) {
-    throw new Error(`zellij tab "${tab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
+  execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)));
+  if (!waitForTabFocus(liveTab, 1000, session)) {
+    throw new Error(`zellij tab "${liveTab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
   }
   try {
     return fn(session);
   } finally {
-    if (originalTab && originalTab.toLowerCase() !== tab.toLowerCase()) {
+    if (originalTab && originalTab.toLowerCase() !== liveTab.toLowerCase()) {
       try { execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab))); } catch { /* best effort */ }
     }
   }

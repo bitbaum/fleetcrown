@@ -9,6 +9,7 @@ import { PrivacySettings } from "./PrivacySettings";
 import { LocationSettings } from "./LocationSettings";
 import { AgentTokenSettings } from "./AgentTokenSettings";
 import { BeaconSettings } from "./BeaconSettings";
+import { FleetLifecycleSettings } from "./FleetLifecycleSettings";
 import { BillingSettings } from "./BillingSettings";
 import { ProjectsSettings } from "./ProjectsSettings";
 import { TeamSettings } from "./TeamSettings";
@@ -120,6 +121,7 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
       {activeTab === "agent" && (
         <div className="space-y-6">
           <AgentTokenSettings />
+          <FleetLifecycleSettings />
           <BeaconSettings />
         </div>
       )}

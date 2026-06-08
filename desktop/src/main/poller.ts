@@ -22,16 +22,32 @@
  */
 
 import fs from 'fs'
+import os from 'os'
+import path from 'path'
 import { execSync } from 'child_process'
 import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync } from '@/lib/zellij'
 import { zellijExecutableForShell } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
 import { launchAgentInTab } from '@/lib/agent-runtime'
-import { getAgentInstallCommand, isAgentId, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
+import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
+import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken } from './token-store'
+import { ensureZellijReady } from '@/lib/zellij-bootstrap'
+
+/** Where Claude (and our handoff parser) writes the per-tab session file.
+ *  Used by post-flight verification: if the file's mtime advances within a
+ *  few seconds of an inject, we know the agent received and reacted. */
+const SESSIONS_DIR =
+  process.env.APP_SESSIONS_DIR ?? path.join(os.homedir(), '.claude', 'sessions')
+
+const DEFAULT_SESSION_NAME = 'fleet'
+const COMMAND_DEDUP_DIR = path.join(os.tmpdir())
+function dedupSentinelPath(commandId: string): string {
+  return path.join(COMMAND_DEDUP_DIR, `fc-cmd-${commandId}.done`)
+}
 
 export type PollerState = 'idle' | 'connecting' | 'connected' | 'error'
 
@@ -233,6 +249,83 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
   }
 }
 
+/**
+ * Pre-flight: ensure a zellij session is alive before we try to inject
+ * into it. If the session died (PC restart with poller still queueing
+ * commands, user did `zellij kill-all-sessions`, etc.) bootstrap one
+ * from an empty layout. Tabs get created on-demand by the existing
+ * launch/inject paths. Cheap when the session is already live — just a
+ * `zellij list-sessions` shellout.
+ */
+async function ensureSessionForCommand(): Promise<void> {
+  await ensureZellijReady(DEFAULT_SESSION_NAME, [], { mode: 'fresh-spawn' })
+}
+
+/**
+ * Post-flight verification for `inject`: did the agent actually receive
+ * the prompt? Cheap heuristic — claude (and our session.md format) bump
+ * the session file's mtime when an agent picks up a prompt. We snapshot
+ * mtime before injection then poll for up to 5s. If it advances → the
+ * agent received it. If not → injection landed in a shell, a stalled
+ * agent, or zellij ate it.
+ *
+ * Returns the verification verdict; the caller decides what to do with it.
+ */
+function sessionFilePath(tab: string): string {
+  return path.join(SESSIONS_DIR, `${tab}.md`)
+}
+
+function readMtimeMs(file: string): number {
+  try { return fs.statSync(file).mtimeMs } catch { return 0 }
+}
+
+async function waitForSessionFileBump(tab: string, baselineMtime: number, timeoutMs = 5000): Promise<boolean> {
+  const file = sessionFilePath(tab)
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const cur = readMtimeMs(file)
+    if (cur > baselineMtime) return true
+    await new Promise((r) => setTimeout(r, 200))
+  }
+  return false
+}
+
+/**
+ * PATCH the pending_commands row done. Always called once per command
+ * (success, error, or already-done dedup hit) so a claimed row never
+ * lingers waiting for the 90s stale-claim reaper.
+ */
+type AckPayload = { ok: boolean; error?: string; verified?: boolean; warning?: string }
+
+async function ackCommand(
+  base: string,
+  token: string,
+  command: { id: string; type: string },
+  body: AckPayload,
+): Promise<void> {
+  try {
+    console.log(`[poller] acking ${command.type} command ${command.id}: ${body.ok ? 'ok' : 'error'}${body.warning ? ` (${body.warning})` : ''}`)
+    await fetch(`${base}/api/control/commands/${command.id}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ok: body.ok,
+        ...(body.error ? { error: body.error } : {}),
+        ...(body.verified !== undefined ? { verified: body.verified } : {}),
+        ...(body.warning ? { warning: body.warning } : {}),
+      }),
+      signal: AbortSignal.timeout(5000),
+    })
+  } catch (e) {
+    // If we can't reach the server to mark done, the next poll will retry the
+    // command — the dedup sentinel above keeps the agent from running it twice.
+    console.warn('[poller] failed to PATCH command done:', (e as Error).message)
+  }
+}
+
 async function handleCommand(
   base: string,
   token: string,
@@ -240,6 +333,21 @@ async function handleCommand(
 ): Promise<void> {
   let ok = false
   let error: string | undefined
+  let verified: boolean | undefined
+  let warning: string | undefined
+
+  // Idempotency dedup. If the PATCH ack timed out on a previous run, the
+  // server will hand us the same command again. Without this, the prompt
+  // fires twice — which CAN be data loss (the agent runs both copies).
+  // The sentinel survives across poller restarts but not reboots; that's
+  // the right window (after reboot, queued commands are stale enough that
+  // re-dispatch is fine).
+  const sentinel = dedupSentinelPath(command.id)
+  if (fs.existsSync(sentinel)) {
+    console.log(`[poller] dedup hit for ${command.type} ${command.id} — already done, acking only`)
+    await ackCommand(base, token, command, { ok: true, warning: 'already-done' })
+    return
+  }
 
   // Validate at the IPC boundary BEFORE touching any executor. Pre-v0.7
   // the payload was an unchecked cast; once the autonomous scheduler (v0.7+)
@@ -250,10 +358,25 @@ async function handleCommand(
   if (!validation.ok) {
     error = validation.error
   } else try {
+    // Pre-flight: zellij has to be alive for any of these to land. Self-heals
+    // the "I rebooted and nothing's running" path so the user doesn't have
+    // to open a terminal first.
+    const t = validation.command.type
+    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
+      await ensureSessionForCommand()
+    }
     switch (validation.command.type) {
       case 'inject': {
-        injectIntoTab(validation.command.payload.tab, validation.command.payload.prompt)
+        const { tab, prompt } = validation.command.payload
+        const baseline = readMtimeMs(sessionFilePath(tab))
+        injectIntoTab(tab, prompt)
         ok = true
+        // Post-flight verification — best effort, doesn't block the ack on
+        // failure (we still report ok:true because the keystrokes landed).
+        verified = await waitForSessionFileBump(tab, baseline, 5000)
+        if (!verified) {
+          warning = 'delivered but agent did not pick up within 5s (agent may be hung or idle)'
+        }
         break
       }
       case 'focus_tab': {
@@ -302,26 +425,14 @@ async function handleCommand(
     error = (e as Error).message
   }
 
-  // PATCH the row done regardless of outcome — claiming without acking would
-  // leave a half-finished row that only recovers via the 90s stale-claim
-  // reaper. Surfacing the error to the web UI is more useful.
-  try {
-    console.log(`[poller] acking ${command.type} command ${command.id}: ${ok ? 'ok' : 'error'}`)
-    await fetch(`${base}/api/control/commands/${command.id}`, {
-      method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ok, ...(error ? { error } : {}) }),
-      signal: AbortSignal.timeout(5000),
-    })
-  } catch (e) {
-    // If we can't reach the server to mark done, the next poll will retry the
-    // command — that's safe because `injectIntoTab` is idempotent at the user
-    // level (the duplicate prompt just gets ignored or re-sent — not data loss).
-    console.warn('[poller] failed to PATCH command done:', (e as Error).message)
+  // Drop the dedup sentinel on success so a re-served command (PATCH ack
+  // race) doesn't get re-executed. Skip for error paths because retry is
+  // the right behavior there.
+  if (ok) {
+    try { fs.writeFileSync(sentinel, '1', 'utf-8') } catch { /* tmpdir unwritable — fall back to "best effort" */ }
   }
+
+  await ackCommand(base, token, command, { ok, error, verified, warning })
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)
@@ -468,18 +579,42 @@ function sleep(ms: number): void {
   execSync(`sleep ${Math.max(0, ms / 1000)}`)
 }
 
-function switchAgent(tab: string, dir: string, toAgent: AgentOption, fromAgent?: string, model?: string): void {
+function quitAgentInTab(tab: string, agentId: Agent, dir: string): void {
   const registry = listAgentRegistry()
-  const fromEntry = fromAgent ? registry.find((entry) => entry.id === fromAgent) : null
-  if (fromEntry && fromEntry.id !== toAgent) {
-    if (fromEntry.quitCommand) {
-      try { injectIntoTab(tab, fromEntry.quitCommand) } catch { /* Ctrl+C fallback below */ }
-      sleep(600)
+  const entry = registry.find((candidate) => candidate.id === agentId)
+  if (!entry || entry.id === 'openclaw') return
+
+  if (entry.quitCommand) {
+    try { injectIntoTab(tab, entry.quitCommand) } catch { /* Ctrl+C fallback below */ }
+    sleep(500)
+  }
+  try { sendRawKey(tab, 3) } catch { /* best effort */ }
+  sleep(700)
+
+  if (entry.processMatchers?.length) {
+    const deadline = Date.now() + 2000
+    while (Date.now() < deadline) {
+      sleep(200)
+      if (!agentRunningInDir(agentId, dir)) return
     }
-    if (agentRunningInDir(fromAgent, dir)) {
-      try { sendRawKey(tab, 3) } catch { /* best effort */ }
-      sleep(800)
-    }
+  }
+}
+
+function switchAgent(tab: string, dir: string, toAgent: AgentOption, fromAgent?: string, model?: string): void {
+  const running = resolveRunningAgentsInDir(dir)
+  const outgoing = resolveOutgoingAgentForDir(dir, fromAgent)
+  const agentsToQuit = running.length
+    ? running.filter((id) => id !== toAgent)
+    : outgoing && outgoing !== toAgent
+    ? [outgoing]
+    : []
+
+  for (const agentId of agentsToQuit) {
+    quitAgentInTab(tab, agentId, dir)
+  }
+
+  if (agentsToQuit.length === 0 && fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
+    quitAgentInTab(tab, fromAgent, dir)
   }
 
   clearHandoffSentinel(tab)

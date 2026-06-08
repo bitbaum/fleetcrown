@@ -17,6 +17,8 @@ import {
   formatTrayTooltip,
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
+import { ensureZellijReady } from '@/lib/zellij-bootstrap'
+import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 
 // v0.7.4 — bundled renderer removed; one UI surface only.
@@ -613,31 +615,31 @@ function createWindow(): void {
     return { projects: found.slice(0, 50) }
   })
 
-  // Local prerequisite scan — checks PATH for zellij + each agent CLI.
-  // Cached for the lifetime of the process (re-launch to re-detect; CLIs
-  // installed mid-session won't appear, which is fine because Fleet Runner
-  // restarts on update anyway). Uses shell -c so the scan inherits the
-  // user's PATH the same way the daemon's exec calls do.
-  let installedCache: { zellij: boolean; agents: Record<string, boolean> } | null = null
+  // Local prerequisite scan — uses the shared commandExistsInPath helper
+  // (~/.local/bin, ~/.npm-global/bin, ~/.bun/bin, nvm versions, etc.) so a
+  // user-local install of claude isn't reported as missing just because
+  // Electron's stripped PATH doesn't include those directories.
+  //
+  // Why no lifetime cache: pre-fix the cache locked the first result for
+  // the whole process — if detection failed at boot (PATH not yet
+  // augmented, bundled-bin not yet prepended), the user saw "Missing
+  // Claude / Install Claude" forever even after refreshing. Each call is
+  // ~10ms of file existence checks; cheap. Sub-100ms total scan.
+  //
+  // Also consults the agent adapter's detectAvailable() — claude.ts always
+  // reports available (Anthropic ships installation out-of-band, the
+  // binary check is a weak signal). Trusting the adapter aligns this UI
+  // with every other call site that reads listAgentRegistry().
   ipcMain.handle('get-installed-clis', async () => {
-    if (installedCache) return installedCache
-    const { exec } = await import('child_process')
-    const { promisify } = await import('util')
-    const execAsync = promisify(exec)
-    const has = async (name: string): Promise<boolean> => {
-      try {
-        await execAsync(`command -v ${name}`, { timeout: 2000 })
-        return true
-      } catch {
-        return false
-      }
-    }
+    const { commandExistsInPath } = await import('@/lib/agents/helpers')
+    const { listAgentRegistry } = await import('@/lib/agent-registry')
+    const registry = listAgentRegistry()
     const agents: Record<string, boolean> = {}
-    for (const a of ['claude', 'codex', 'grok', 'gemini', 'cursor']) {
-      agents[a] = await has(a)
+    for (const id of ['claude', 'codex', 'grok', 'gemini', 'cursor'] as const) {
+      const entry = registry.find((r) => r.id === id)
+      agents[id] = entry?.available ?? commandExistsInPath(id)
     }
-    installedCache = { zellij: await has('zellij'), agents }
-    return installedCache
+    return { zellij: commandExistsInPath('zellij'), agents }
   })
 
   // Peek tab — snapshot the visible scrollback of a Zellij tab without
@@ -895,6 +897,12 @@ app.whenReady().then(async () => {
       if (!w.isDestroyed()) w.webContents.send('poller-status', status)
     })
   })
+  // Cold-start fleet restoration. Fetch "what should be running" from the
+  // cloud (= last observed snapshot's panes), then make sure zellij is up
+  // with those panes. Fire-and-forget; on failure the poller still starts
+  // so any queued dispatch flushes once the user brings zellij up by hand.
+  // No-op if no token is saved yet (auto-mint flow happens later).
+  void restoreFleetOnBoot()
   startPoller()
   // Heartbeat to the cloud control plane so the web UI's "Local daemon
   // online" indicator actually reflects reality. v0.4.0–v0.4.3 had the
@@ -1059,6 +1067,67 @@ function createTray() {
       }
     }
   })
+}
+
+/**
+ * Cold-start the user's zellij fleet. Fetches the last observed pane
+ * topology from the cloud (= what should be running) and asks
+ * ensureZellijReady to spawn it. Idempotent: a re-launch on a running
+ * fleet is a fast no-op because ensureZellijReady detects the live
+ * session.
+ *
+ * Failure modes are surfaced as a desktop notification but never block
+ * the rest of boot — the poller still starts so any queued dispatch
+ * flushes the moment the user brings zellij up by hand.
+ *
+ * TODO when FleetLifecycleSettings ships: replace the hardcoded defaults
+ * (autoRestore=true, mode='fresh-spawn') with values from the settings
+ * API.
+ */
+async function restoreFleetOnBoot(): Promise<void> {
+  const token = loadToken()
+  if (!token) {
+    console.log('[desktop] fleet-restore: no token yet, skipping cold-start')
+    return
+  }
+  const baseUrl = (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL
+  let panes: PaneRecord[] = []
+  let sessionName = 'fleet'
+  try {
+    const resp = await fetch(`${baseUrl}/api/control/runtime-state/desired`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (resp.ok) {
+      const data = (await resp.json()) as { panes?: PaneRecord[]; sessionName?: string }
+      panes = Array.isArray(data.panes) ? data.panes : []
+      if (typeof data.sessionName === 'string' && data.sessionName.trim()) {
+        sessionName = data.sessionName.trim()
+      }
+    } else if (resp.status === 401 || resp.status === 403) {
+      console.warn('[desktop] fleet-restore: token rejected, skipping cold-start')
+      return
+    } else {
+      console.warn(`[desktop] fleet-restore: /desired returned ${resp.status}, proceeding with empty panes`)
+    }
+  } catch (e) {
+    console.warn('[desktop] fleet-restore: /desired fetch failed:', (e as Error).message)
+  }
+
+  const result = await ensureZellijReady(sessionName, panes, { mode: 'fresh-spawn' })
+  if (result.ok) {
+    console.log(`[desktop] fleet-restore: zellij session "${result.sessionName}" → ${result.mode}`)
+  } else {
+    console.warn(`[desktop] fleet-restore failed: ${result.error}`)
+    if (Notification.isSupported()) {
+      new Notification({
+        title: 'Fleet Runner — restore failed',
+        body: `Could not bring zellij up: ${result.error}. Open Settings to retry or start zellij yourself.`,
+        silent: true,
+        ...(APP_ICON_PATH ? { icon: APP_ICON_PATH } : {}),
+      }).show()
+    }
+  }
 }
 
 // OS notification fired on each worker.idle event from the embedded watcher.

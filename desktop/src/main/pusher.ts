@@ -34,7 +34,10 @@ import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
 import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
 import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
 import { listAgentRegistry } from '@/lib/agent-registry'
+import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, clearToken } from './token-store'
+
+const DEFAULT_SESSION_NAME = 'fleet'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
 // pushNow() the moment the watcher detects an agent file change (wired
@@ -63,6 +66,7 @@ async function pushOnce(): Promise<void> {
   let openTabs: string[] = []
   let projects: ReturnType<typeof buildProjectRuntimePayload> = []
   let installedAgents: string[] = []
+  let panes: PaneRecord[] = []
   try {
     openTabs = await getZellijTabs()
   } catch {
@@ -74,6 +78,7 @@ async function pushOnce(): Promise<void> {
       .filter((entry) => entry.available)
       .map((entry) => entry.id)
     projects = buildProjectRuntimePayload(openTabs)
+    panes = buildPaneTopology(openTabs)
   } catch (err) {
     // Rich project state is best-effort. Keep the openTabs heartbeat flowing
     // so the web UI can still show the daemon as connected.
@@ -91,6 +96,7 @@ async function pushOnce(): Promise<void> {
         openTabs,
         installedAgents,
         projects,
+        panes,
         observedAt: Date.now(),
       }),
     })
@@ -140,6 +146,44 @@ type ProjectRuntimePayload = {
   sessionBlockReason?: string
   sessionNoOpCount?: number
   sessionUpdatedAt?: number | null
+}
+
+/**
+ * Build the per-pane topology for the cold-start restore path. For each
+ * project (tab + dir) in agent-projects.conf, find every live agent process
+ * with cwd inside that dir and emit one PaneRecord per process. paneIndex
+ * is the array position within the tab — stable for sort but doesn't
+ * correspond to zellij's internal pane index (we can't query that cheaply
+ * without a dump-layout shellout per tab). Stable order is the contract.
+ *
+ * Non-project tabs (scratch, logs, ssh) are intentionally not captured —
+ * we have no way to know what command was running there without zellij's
+ * own serialization, and those tabs are typically transient anyway.
+ */
+function buildPaneTopology(openTabs: string[]): PaneRecord[] {
+  const registry = listAgentRegistry()
+  const agentProcesses = getAgentProcesses(registry)
+  const conf = parseProjectsConf()
+  const records: PaneRecord[] = []
+  for (const { tab, dir } of conf) {
+    const resolvedTab = resolveEffectiveTab(tab, openTabs)
+    if (!openTabs.some((t) => t.toLowerCase() === resolvedTab.toLowerCase())) continue
+    const matches = agentProcesses
+      .filter((p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
+      // Stable sort by (agentId, cwd) so paneIndex doesn't churn between
+      // heartbeats. AgentProcess has no pid field; this is the next best key.
+      .sort((a, b) => (a.agentId + a.cwd).localeCompare(b.agentId + b.cwd))
+    matches.forEach((p, i) => {
+      records.push({
+        tab: resolvedTab,
+        paneIndex: i,
+        agentCli: p.agentId,
+        cwd: p.cwd,
+        sessionName: DEFAULT_SESSION_NAME,
+      })
+    })
+  }
+  return records
 }
 
 function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[] {

@@ -111,6 +111,10 @@ export type FailedCommand = {
   type: string;
   error: string;
   executedAt: string;
+  /** True when result.ok was reported true but verified was false — the
+   *  keystrokes landed but the agent didn't react within the verification
+   *  window. The user should re-launch the agent or check zellij. */
+  unverified?: boolean;
 };
 
 export type ControlData = {

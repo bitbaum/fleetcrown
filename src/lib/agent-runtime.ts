@@ -1,5 +1,7 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { buildAgentOptionLaunchCommand, type AgentOption } from "@/lib/agent-registry";
+
+const DEFAULT_SESSION_NAME = "fleet";
 
 function escapeTabValue(value: string): string {
   return value.replace(/'/g, `'"'"'`);
@@ -73,13 +75,52 @@ function ensureTabExists(tab: string, session: string): void {
 
 function restartTab(tab: string, command: string, session: string): void {
   const env = `ZELLIJ_SESSION_NAME='${escapeTabValue(session)}'`;
-  execSync(`${env} zellij action go-to-tab-name '${escapeTabValue(tab)}'`);
+  // Resolve the live tab name so `go-to-tab-name` doesn't silently no-op
+  // when our input case (e.g., DB-stored "fleetcrown") differs from zellij's
+  // stored case ("FleetCrown"). Falls back to the input if no live tab matches.
+  const liveTabs = getOpenZellijTabs(session);
+  const target = tab.toLowerCase();
+  const liveTab = liveTabs.find((t) => t.toLowerCase() === target) ?? tab;
+  execSync(`${env} zellij action go-to-tab-name '${escapeTabValue(liveTab)}'`);
   execSync("sleep 0.2");
   execSync(`${env} zellij action write 3`);
   execSync("sleep 0.1");
   execSync(`${env} zellij action write-chars '${escapeTabValue(command)}'`);
   execSync("sleep 0.1");
   execSync(`${env} zellij action write 13`);
+}
+
+/**
+ * Bootstrap a minimal zellij session if none exists. Synchronous wrapper
+ * around the spawn-detached path used elsewhere — agent-runtime.ts has
+ * always been synchronous and the callers don't await it. Returns the
+ * spawned session name on success, null on failure (caller throws then).
+ */
+function spawnDefaultSession(): string | null {
+  // Spawn `zellij --session fleet` detached; wait up to 3s for it to appear.
+  // We don't pass --layout here because the caller will create the tab they
+  // need next via ensureTabExists. The default zellij session shows a single
+  // empty tab — fine; restartTab fills it.
+  try {
+    spawnSync("bash", ["-c", `nohup zellij --session ${DEFAULT_SESSION_NAME} >/dev/null 2>&1 &`], {
+      timeout: 2000,
+    });
+  } catch {
+    return null;
+  }
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    try {
+      const sessions = execSync("zellij list-sessions -n 2>/dev/null || true", { encoding: "utf-8" })
+        .split("\n")
+        .map((line) => line.trim().split(/\s+/)[0])
+        .filter(Boolean);
+      if (sessions.includes(DEFAULT_SESSION_NAME)) return DEFAULT_SESSION_NAME;
+      if (sessions.length > 0) return sessions[0]!;
+    } catch { /* keep waiting */ }
+    execSync("sleep 0.2");
+  }
+  return null;
 }
 
 export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, model?: string): void {
@@ -98,7 +139,15 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
   }
 
   if (!session) {
-    throw new Error("No Zellij session found — start Zellij first.");
+    // Self-heal: spawn a default session so the user never sees the old
+    // "start Zellij first" error. The poller does the same pre-flight up
+    // its own call path; this is defense in depth for callers that bypass
+    // the poller (e.g., /api/agent/launch on a local self-hosted server).
+    session = spawnDefaultSession();
+  }
+
+  if (!session) {
+    throw new Error("No Zellij session found and auto-spawn failed — install zellij or check $PATH.");
   }
 
   ensureTabExists(tab, session);

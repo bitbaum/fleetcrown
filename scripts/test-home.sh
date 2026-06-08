@@ -23,10 +23,11 @@ declare -A SUITES=(
   [log]="home/log.ts --self-test"
   [watcher]="home/watcher.ts --self-test"
   [worker]="home/worker.ts --self-test"
+  [layout-generator]="src/lib/zellij-layout-generator.ts --self-test"
 )
 
 # Stable order so the output reads top-to-bottom predictably.
-SUITES_ORDER=(state decide projects render emit log watcher worker)
+SUITES_ORDER=(state decide projects render emit log watcher worker layout-generator)
 
 cd "$REPO_ROOT"
 

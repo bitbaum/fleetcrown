@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getProjectStatesByUserId, persistProjectRuntimeIfNewer, persistProjectSessionIfNewer } from "@/db/queries/project-states";
 import { upsertRuntimeSnapshotIfNewer } from "@/db/queries/runtime-snapshots";
+import type { PaneRecord } from "@/db/schema/runtime-snapshots";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
+
+function sanitizePanes(raw: unknown[]): PaneRecord[] {
+  const out: PaneRecord[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const tab = typeof obj.tab === "string" ? obj.tab.trim() : "";
+    if (!tab) continue;
+    const paneIndex = typeof obj.paneIndex === "number" && Number.isFinite(obj.paneIndex)
+      ? Math.max(0, Math.floor(obj.paneIndex))
+      : 0;
+    const rec: PaneRecord = { tab, paneIndex };
+    if (typeof obj.agentCli === "string" && obj.agentCli.trim()) rec.agentCli = obj.agentCli.trim();
+    if (typeof obj.cwd === "string" && obj.cwd.trim()) rec.cwd = obj.cwd.trim();
+    if (typeof obj.sessionName === "string" && obj.sessionName.trim()) rec.sessionName = obj.sessionName.trim();
+    out.push(rec);
+  }
+  return out;
+}
 
 interface ProjectRuntimePatch {
   tab: string;
@@ -48,7 +68,7 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -64,7 +84,8 @@ export async function POST(req: NextRequest) {
     const installedAgents = Array.isArray(body.installedAgents)
       ? body.installedAgents.filter((agent): agent is string => typeof agent === "string" && agent.trim().length > 0)
       : undefined;
-    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents)
+    const panes = Array.isArray(body.panes) ? sanitizePanes(body.panes) : undefined;
+    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents, panes)
       .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 
