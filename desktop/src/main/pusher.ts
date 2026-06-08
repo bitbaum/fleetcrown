@@ -31,6 +31,9 @@
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
+import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
+import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
+import { listAgentRegistry } from '@/lib/agent-registry'
 import { loadToken, clearToken } from './token-store'
 
 // v0.6 — liveness heartbeat ONLY. Actual state changes are pushed via
@@ -58,11 +61,23 @@ async function pushOnce(): Promise<void> {
   if (!token) return
 
   let openTabs: string[] = []
+  let projects: ReturnType<typeof buildProjectRuntimePayload> = []
+  let installedAgents: string[] = []
   try {
     openTabs = await getZellijTabs()
   } catch {
     // No Zellij running, tab query failed — push anyway with an empty list
     // so the daemon presence signal still gets through.
+  }
+  try {
+    installedAgents = listAgentRegistry()
+      .filter((entry) => entry.available)
+      .map((entry) => entry.id)
+    projects = buildProjectRuntimePayload(openTabs)
+  } catch (err) {
+    // Rich project state is best-effort. Keep the openTabs heartbeat flowing
+    // so the web UI can still show the daemon as connected.
+    console.warn('[pusher] project runtime snapshot failed:', (err as Error).message)
   }
 
   try {
@@ -74,7 +89,8 @@ async function pushOnce(): Promise<void> {
       },
       body: JSON.stringify({
         openTabs,
-        projects: [],
+        installedAgents,
+        projects,
         observedAt: Date.now(),
       }),
     })
@@ -96,6 +112,73 @@ async function pushOnce(): Promise<void> {
     // Network blip, DNS failure, etc. — non-fatal, retry next tick.
     console.warn('[pusher] runtime-state push failed:', (err as Error).message)
   }
+}
+
+type ProjectRuntimePayload = {
+  tab: string
+  observedAt: number
+  agentRunning: boolean
+  tabOpen: boolean
+  activeAgents: string[]
+  currentPromptKey?: string | null
+  currentPromptLabel?: string | null
+  currentPromptStartedAt?: number | null
+  readyAt?: number | null
+  lockAt?: number | null
+  closingAt?: number | null
+  closedAt?: number | null
+  sessionDone?: string
+  sessionStatus?: string
+  sessionNext?: string
+  sessionTests?: string
+  sessionTodos?: string
+  sessionHealth?: string
+  sessionUpdatedAt?: number | null
+}
+
+function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[] {
+  const agentRegistry = listAgentRegistry()
+  const agentProcesses = getAgentProcesses(agentRegistry)
+  const projects = parseProjectsConf().map(({ tab, dir }) => {
+    const resolvedTab = resolveEffectiveTab(tab, openTabs)
+    const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
+    const activeAgents = [...new Set(projectProcesses.map((p) => p.agentId))]
+    const agentId = activeAgents[0]
+    const registryEntry = agentId ? agentRegistry.find((entry) => entry.id === agentId) : null
+    return {
+      canonicalTab: tab,
+      tab: resolvedTab,
+      dir,
+      activeAgents,
+      sessionLifecycleSignals: projectProcesses.length > 0
+        ? projectProcesses.some((p) => p.sessionLifecycleSignals)
+        : registryEntry?.capabilities.sessionLifecycleSignals ?? true,
+      tabOpen: openTabs.some((openTab) => openTab.toLowerCase() === resolvedTab.toLowerCase()),
+    }
+  })
+  const agentCwds = agentProcesses.map((p) => p.cwd)
+  const observedAt = Date.now()
+  return readFastState(projects, agentCwds).map((state, index) => ({
+    tab: projects[index]?.canonicalTab ?? state.tab,
+    observedAt,
+    agentRunning: state.agentRunning,
+    tabOpen: state.tabOpen,
+    activeAgents: state.activeAgents,
+    currentPromptKey: state.currentPrompt?.key ?? null,
+    currentPromptLabel: state.currentPrompt?.label ?? null,
+    currentPromptStartedAt: state.currentPrompt?.startedAt ?? null,
+    readyAt: state.readyAt,
+    lockAt: state.lockAt,
+    closingAt: state.closingAt,
+    closedAt: state.closedAt,
+    sessionStatus: state.session?.status,
+    sessionDone: state.session?.done,
+    sessionNext: state.session?.next,
+    sessionTests: state.session?.tests,
+    sessionTodos: state.session?.todos,
+    sessionHealth: state.session?.health,
+    sessionUpdatedAt: state.session?.mtime ? Math.floor(state.session.mtime / 1000) : null,
+  }))
 }
 
 /**

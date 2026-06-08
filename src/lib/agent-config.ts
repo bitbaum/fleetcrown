@@ -143,6 +143,12 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
   const findAlive = (name: string) => activeTabs.find((t) => t.toLowerCase() === name.toLowerCase());
   const liveMatch = findAlive(canonical);
   if (liveMatch) return liveMatch;
+  // Human-created tab names often differ only by punctuation/casing from the
+  // project key: `revampit` vs `revamp-it`, `FleetCrown` vs `Fleetcrown`.
+  // Treat those as the same tab before falling back to suffix matching.
+  const normalizedCanonical = normalizeTabName(canonical);
+  const normalizedMatch = activeTabs.find((tab) => normalizeTabName(tab) === normalizedCanonical);
+  if (normalizedMatch) return normalizedMatch;
   const lower = canonical.toLowerCase();
   const suffixedMatch = activeTabs.find((tab) => {
     const active = tab.toLowerCase();
@@ -155,6 +161,10 @@ export function resolveEffectiveTab(canonical: string, activeTabs: string[]): st
   if (!canonicalDir) return canonical;
   const aliasEntry = all.find((p) => p.dir === canonicalDir && findAlive(p.tab));
   return aliasEntry ? (findAlive(aliasEntry.tab) ?? canonical) : canonical;
+}
+
+function normalizeTabName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 /**

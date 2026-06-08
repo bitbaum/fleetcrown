@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.7.7",
+    tag: "fleet-runner-v0.7.7",
+    date: "2026-06-08T00:00:00Z",
+    highlights: [
+      "Runtime heartbeats now push per-project session and process state, not just the list of open Zellij tabs.",
+      "The Control UI can show last done, next step, session health, current prompt, and active agent state after a refresh even if no new handoff event fired.",
+      "Project-to-tab matching now tolerates punctuation and case differences such as `revampit` versus `revamp-it`.",
+    ],
+    breaking: [],
+    notes: "Fixes the UI drift where Fleet Runner showed open workspaces but each project still said 'No live observation'. The pusher now sends the same rich runtime snapshot the server route already knew how to store.",
+  },
+  {
     version: "0.7.6",
     tag: "fleet-runner-v0.7.6",
     date: "2026-06-08T00:00:00Z",
