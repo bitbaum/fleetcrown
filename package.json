@@ -17,6 +17,7 @@
     "smoke": "bash scripts/smoke.sh",
     "test:home": "bash scripts/test-home.sh",
     "test:control-presenter": "npx tsx scripts/test/control-presenter.ts",
+    "test:agent-resolution": "npx tsx scripts/test/agent-resolution.ts",
     "test:autopilot-defaults": "npx tsx scripts/test/autopilot-defaults.ts",
     "test:push-notifications": "npx tsx scripts/test/push-notifications.ts",
     "test:onboarding": "npx tsx scripts/test/onboarding.ts",

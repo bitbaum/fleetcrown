@@ -51,6 +51,8 @@ export function ControlPanel() {
   const router = useRouter();
   const pathname = usePathname();
   const focusParam = searchParams.get("focus")?.trim() ?? null;
+  const switchToParam = searchParams.get("switchTo")?.trim() ?? null;
+  const [switchNotice, setSwitchNotice] = useState<string | null>(null);
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const liveDetailsRef = useRef<HTMLDetailsElement>(null);
   // eslint-disable-next-line react-hooks/purity
@@ -121,13 +123,13 @@ export function ControlPanel() {
     setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
   }, [snapshots, selectedTab]);
 
-  // Push notification deep-link: /control?focus=<tab> lands on the live panel
-  // and selects the matching workspace (registered project or open tab).
+  // Push notification / palette deep-link: /control?focus=<tab>&switchTo=<agent>
   useEffect(() => {
     if (!focusParam || !data) return;
 
     const tabLower = focusParam.toLowerCase();
-    const snapshotTab = snapshots?.find((s) => s.project.tab.toLowerCase() === tabLower)?.project.tab;
+    const snapshot = snapshots?.find((s) => s.project.tab.toLowerCase() === tabLower);
+    const snapshotTab = snapshot?.project.tab;
     const liveTab = liveTabRows.find((r) => r.tabName.toLowerCase() === tabLower)?.tabName;
     const resolvedTab = snapshotTab ?? liveTab;
     if (!resolvedTab) return;
@@ -139,11 +141,31 @@ export function ControlPanel() {
     livePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     postJson("/api/control/focus-tab", { tab: resolvedTab }).catch(() => { /* best effort */ });
 
+    if (switchToParam && snapshot?.project.dir) {
+      const label = switchableRegistry.find((e) => e.id === switchToParam)?.label ?? switchToParam;
+      setSwitchNotice(`Switching ${snapshot.project.tab} to ${label}…`);
+      postJson("/api/control/switch-agent", {
+        tab: snapshot.project.liveTab ?? snapshot.project.tab,
+        dir: snapshot.project.dir,
+        toAgent: switchToParam,
+        fromAgent: snapshot.project.activeAgents[0] ?? snapshot.project.agentPref ?? undefined,
+      })
+        .then(() => {
+          setSwitchNotice(`Switched ${snapshot.project.tab} to ${label}`);
+          setTimeout(() => setSwitchNotice(null), 6000);
+        })
+        .catch(() => {
+          setSwitchNotice(`Could not switch ${snapshot.project.tab} to ${label}`);
+          setTimeout(() => setSwitchNotice(null), 8000);
+        });
+    }
+
     const params = new URLSearchParams(searchParams.toString());
     params.delete("focus");
+    params.delete("switchTo");
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [focusParam, data, snapshots, liveTabRows, pathname, router, searchParams]);
+  }, [focusParam, switchToParam, data, snapshots, liveTabRows, pathname, router, searchParams, switchableRegistry]);
 
   // Build cardProps unconditionally — the closure is fine with empty arrays
   // when `data` hasn't loaded yet. ProjectOperationsView only invokes the
@@ -426,10 +448,10 @@ export function ControlPanel() {
 
 
       {error && <p className="ui-box-error">{error}</p>}
-      {queuedNotice && (
+      {(queuedNotice || switchNotice) && (
         <div className="ui-control-notice">
           <Sparkles className="h-3.5 w-3.5 shrink-0" />
-          {queuedNotice}
+          {switchNotice ?? queuedNotice}
         </div>
       )}
 

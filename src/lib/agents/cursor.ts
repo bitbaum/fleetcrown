@@ -24,7 +24,7 @@ export const cursorAdapter: AgentAdapter = {
   defaultModel: "auto",
   modelSuggestions: ["auto", "composer-1", "gpt-5.4", "claude-sonnet-4"],
   switchable: true,
-  quitCommand: "",
+  quitCommand: "/quit",
   capabilities: {
     tabSwitching: true,
     manualPromptInjection: true,

@@ -20,6 +20,7 @@
 
 import { ALL_ADAPTERS, findAdapter, effectiveDefaultModel, effectiveModelSuggestions } from "@/lib/agents";
 import type { AgentAdapter } from "@/lib/agents";
+import { looksLikeAgentCapacityIssue as detectCapacityIssue } from "@/lib/agent-resolution";
 
 export const AGENT_IDS = ["codex", "claude", "gemini", "cursor", "grok"] as const;
 export const AGENT_FALLBACK_ORDER: readonly Agent[] = ["claude", "cursor", "codex", "gemini", "grok"];
@@ -98,7 +99,7 @@ export function isAgentId(value: string | undefined | null): value is Agent {
 }
 
 export function looksLikeAgentCapacityIssue(text: string): boolean {
-  return /rate\s*limit|quota|credit|usage\s*limit|token\s*limit|out\s+of\s+tokens|context\s*(window|length|limit)|maximum\s+context|insufficient\s+quota/i.test(text);
+  return detectCapacityIssue(text);
 }
 
 /** Find the next agent in `AGENT_FALLBACK_ORDER` that's installed + switchable.

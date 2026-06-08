@@ -84,6 +84,21 @@ src/lib/terminals/
 
 **Adding a new multiplexer** (tmux, screen, browser-shell): same pattern.
 
+### Agent switching (v0.8.0)
+
+Users switch agents without typing quit commands in Zellij:
+
+| Surface | How |
+|---|---|
+| Project card chip | Click the agent status chip (e.g. "Codex ready") → pick another installed agent |
+| Cmd+K palette | `Switch <project> to Cursor` → focuses tab + queues switch |
+| Rate-limit banner | Appears when session text matches capacity regex; one-click fallback |
+| API | `POST /api/control/switch-agent` — scans `/proc`, quits all running agents in `dir`, launches `toAgent` |
+
+**Detection SSOT:** `src/lib/agent-resolution.ts` (client-safe) + `src/lib/agent-process-scan.ts` (server `/proc`). The UI warns on mismatch when `agentPref` disagrees with `activeAgents`.
+
+**Cloud mode:** switch enqueues `pending_commands` type `switch_agent`; Fleet Runner poller executes locally (improved in v0.8.0 to quit every running agent in the directory).
+
 ### What's deferred
 
 A `TransportAdapter` (Hetzner SSE bridge → Cloudflare Durable Objects → WebSocket → ...) and a `StorageAdapter` (Postgres → SQLite local-first → ...) are the next two ports if the user demand pulls us there. **Don't build them speculatively.** Today the Hetzner+Vercel stack handles a 1-user workload trivially.

@@ -20,6 +20,12 @@ import { useAutoContinue } from "@/hooks/use-auto-continue";
 import { useProjectLifecycleSync } from "@/hooks/use-project-lifecycle-sync";
 import { useProjectCardActions } from "@/hooks/use-project-card-actions";
 import type { AutoInjectMode } from "@/config/beacon";
+import { CapacityIssueBanner } from "./CapacityIssueBanner";
+import {
+  detectCapacityIssueFromProject,
+  resolveNextFallbackAgent,
+  resolveOutgoingAgent,
+} from "@/lib/agent-resolution";
 
 export function ProjectCard({
   project,
@@ -68,28 +74,49 @@ export function ProjectCard({
   const [profileOpen, setProfileOpen] = useState(false);
   const [localAgent, setLocalAgent] = useState<string | null>(project.agentPref ?? null);
   const [switchingAgent, setSwitchingAgent] = useState(false);
+  const [capacityDismissed, setCapacityDismissed] = useState(false);
 
-  const handleSwitchAgent = async (agentId: string | null) => {
-    const currentAgent = project.activeAgents[0] ?? localAgent ?? project.agentPref ?? null;
+  const installedAgentIds = availableAgents.map((a) => a.id);
+  const outgoingAgent = resolveOutgoingAgent(project, localAgent);
+  const capacityIssue = detectCapacityIssueFromProject(project);
+  const suggestedFallback = resolveNextFallbackAgent(outgoingAgent, installedAgentIds);
+
+  useEffect(() => {
+    if (capacityIssue) setCapacityDismissed(false);
+  }, [capacityIssue, project.session?.mtime, project.currentPrompt?.label]);
+
+  const performAgentSwitch = async (agentId: string) => {
+    const currentAgent = resolveOutgoingAgent(project, localAgent);
     setLocalAgent(agentId);
     if (project.id) {
-      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId ?? undefined }).catch(() => {});
+      patchJson(`/api/user-projects/${project.id}`, { agentPref: agentId }).catch(() => {});
     }
     const workspaceTab = project.liveTab ?? project.tab;
     const tabIsOpen = isProjectTabOpen(project, zellijTabs);
-    if (agentId && agentId !== currentAgent && tabIsOpen && project.dir) {
-      setSwitchingAgent(true);
-      try {
-        await postJson("/api/control/switch-agent", {
-          tab: workspaceTab,
-          dir: project.dir,
-          toAgent: agentId,
-          fromAgent: currentAgent ?? undefined,
-        });
-      } catch { /* best effort */ } finally {
-        setSwitchingAgent(false);
-      }
+    if (agentId === currentAgent || !tabIsOpen || !project.dir) return;
+
+    setSwitchingAgent(true);
+    try {
+      await postJson("/api/control/switch-agent", {
+        tab: workspaceTab,
+        dir: project.dir,
+        toAgent: agentId,
+        fromAgent: currentAgent ?? undefined,
+      });
+    } catch { /* best effort */ } finally {
+      setSwitchingAgent(false);
     }
+  };
+
+  const handleSwitchAgent = async (agentId: string | null) => {
+    if (!agentId) {
+      setLocalAgent(null);
+      if (project.id) {
+        patchJson(`/api/user-projects/${project.id}`, { agentPref: undefined }).catch(() => {});
+      }
+      return;
+    }
+    await performAgentSwitch(agentId);
   };
 
   const [dismissed, setDismissed] = useState(false);
@@ -190,6 +217,16 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
+      {capacityIssue && suggestedFallback && !capacityDismissed && (
+        <CapacityIssueBanner
+          currentAgentId={outgoingAgent ?? project.agentPref ?? "claude"}
+          nextAgentId={suggestedFallback}
+          switching={switchingAgent}
+          onSwitch={() => performAgentSwitch(suggestedFallback)}
+          onDismiss={() => setCapacityDismissed(true)}
+        />
+      )}
+
       <ProjectCardHeader
         project={project}
         tabOpen={display.tabOpen}

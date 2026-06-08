@@ -29,6 +29,19 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.0",
+    tag: "fleet-runner-v0.8.0",
+    date: "2026-06-08T00:00:00Z",
+    highlights: [
+      "One-click agent switching from the project card chip or Cmd+K — quits the live CLI and launches the new agent without typing /quit in the terminal.",
+      "Rate-limit and quota banners on project cards offer a single \"Switch to …\" button with automatic fallback order (Claude → Cursor → Codex → Gemini → Grok).",
+      "Agent label mismatch warnings when the UI preference disagrees with the live process scan, so \"Claude\" no longer silently shows while Codex is running.",
+      "Switch-agent commands now scan /proc and quit every running agent in the project directory before launching the replacement.",
+    ],
+    breaking: [],
+    notes: "Mostly a web UI + API release — deploys immediately on fleetcrown.vercel.app. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
+  },
+  {
     version: "0.7.9",
     tag: "fleet-runner-v0.7.9",
     date: "2026-06-08T00:00:00Z",

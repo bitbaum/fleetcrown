@@ -2,10 +2,11 @@ import fs from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand } from "@/lib/agent-registry";
+import { listAgentRegistry, isAgentId, buildAgentOptionLaunchCommand, type Agent } from "@/lib/agent-registry";
 import { injectIntoTab, sendRawKey } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
+import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from "@/lib/agent-process-scan";
 
 const SwitchAgentBody = z.object({
   tab:       z.string().trim().min(1).max(120),
@@ -19,11 +20,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Scan /proc to check whether any process matching the given basenames is
- * currently running with a cwd equal to or inside dir. Used to verify the
- * outgoing agent actually exited before we launch the replacement.
- */
 function isAgentRunningInDir(processMatchers: string[], dir: string): boolean {
   try {
     for (const entry of fs.readdirSync("/proc")) {
@@ -41,6 +37,33 @@ function isAgentRunningInDir(processMatchers: string[], dir: string): boolean {
   return false;
 }
 
+async function quitAgentInTab(
+  tab: string,
+  agentId: Agent,
+  dir: string,
+  registry: ReturnType<typeof listAgentRegistry>,
+): Promise<void> {
+  const entry = registry.find((e) => e.id === agentId);
+  if (!entry) return;
+
+  if (entry.quitCommand) {
+    injectIntoTab(tab, entry.quitCommand);
+    await sleep(400);
+  }
+
+  await sleep(200);
+  sendRawKey(tab, 3);
+  await sleep(600);
+
+  if (entry.processMatchers?.length) {
+    const deadline = Date.now() + 2000;
+    while (Date.now() < deadline) {
+      await sleep(200);
+      if (!isAgentRunningInDir(entry.processMatchers, dir)) return;
+    }
+  }
+}
+
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, SwitchAgentBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
@@ -55,44 +78,45 @@ export async function POST(req: NextRequest) {
   if (!isRuntimeAvailable()) {
     const userId = await getSessionUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const commandId = await enqueueSwitchAgentCommand(userId, { tab, dir, toAgent, fromAgent, model });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
+    const resolvedFrom = resolveOutgoingAgentForDir(dir, fromAgent) ?? fromAgent;
+    const commandId = await enqueueSwitchAgentCommand(userId, {
+      tab,
+      dir,
+      toAgent,
+      fromAgent: resolvedFrom,
+      model,
+    });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, fromAgent: resolvedFrom ?? null });
   }
 
   const registry = listAgentRegistry();
 
   try {
-    // Step 1: quit the current agent if we know what it is.
-    // Make this aggressive: always send quitCommand (if any) + Ctrl+C.
-    // This makes the switcher actually work in practice for the user's custom
-    // launches (Grok, custom Claude wrappers, etc.).
-    if (fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
-      const fromEntry = registry.find((e) => e.id === fromAgent);
-      if (fromEntry?.quitCommand) {
-        injectIntoTab(tab, fromEntry.quitCommand);
-      }
+    const running = resolveRunningAgentsInDir(dir);
+    const outgoing = resolveOutgoingAgentForDir(dir, fromAgent);
+    const agentsToQuit = running.length
+      ? running.filter((id) => id !== toAgent)
+      : outgoing && outgoing !== toAgent
+      ? [outgoing]
+      : [];
 
-      // Always send a hard Ctrl+C as a reliable way to interrupt whatever
-      // prompt or tool the agent is stuck on.
-      await sleep(300);
-      sendRawKey(tab, 3);
-      await sleep(800);
-
-      // Best-effort poll to give the process time to exit before we launch the next one.
-      if (fromEntry?.processMatchers?.length) {
-        const deadline = Date.now() + 1500;
-        while (Date.now() < deadline) {
-          await sleep(200);
-          if (!isAgentRunningInDir(fromEntry.processMatchers, dir)) break;
-        }
-      }
+    for (const agentId of agentsToQuit) {
+      await quitAgentInTab(tab, agentId, dir, registry);
     }
 
-    // Step 2: launch the new agent.
+    if (agentsToQuit.length === 0 && fromAgent && isAgentId(fromAgent) && fromAgent !== toAgent) {
+      await quitAgentInTab(tab, fromAgent, dir, registry);
+    }
+
     const launchCmd = buildAgentOptionLaunchCommand({ agent: toAgent, model }, dir);
     injectIntoTab(tab, launchCmd);
 
-    return NextResponse.json({ ok: true, toAgent, fromAgent: fromAgent ?? null });
+    return NextResponse.json({
+      ok: true,
+      toAgent,
+      fromAgent: outgoing ?? fromAgent ?? null,
+      quitAgents: agentsToQuit,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to switch agent" },

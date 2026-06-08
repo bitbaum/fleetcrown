@@ -38,6 +38,7 @@ export function AgentSwitcherPopover({
       className="absolute left-0 top-full z-50 mt-1.5 min-w-[130px] rounded-xl border border-border-default bg-surface-overlay py-1.5 shadow-card"
     >
       <p className="px-3 pb-1 pt-0.5 text-micro uppercase tracking-wide text-text-muted">Switch agent</p>
+      <p className="px-3 pb-1.5 text-[10px] leading-snug text-text-muted">Quits the current CLI and launches the new one — no /quit in terminal.</p>
       {agents.map((agent) => {
         const isActive = agent.id === activeAgentId;
         return (

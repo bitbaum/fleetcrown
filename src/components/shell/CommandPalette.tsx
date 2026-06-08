@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight, Zap, FolderOpen, FolderKanban, History as HistoryIcon, Mic, MicOff, Loader2 } from "lucide-react";
+import { Search, ArrowRight, Zap, FolderOpen, FolderKanban, History as HistoryIcon, Mic, MicOff, Loader2, Repeat2 } from "lucide-react";
+import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { useFetch } from "@/hooks/use-fetch";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { useVoiceInput } from "@/hooks/use-voice-input";
@@ -15,7 +16,10 @@ type PaletteEntry =
   | { kind: "agent-prompt";   key: string; label: string; sub: string; icon: string; href: string }
   | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null;   href: string }
   | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "project";         key: string; label: string; sub: string; icon: null;   href: string };
+  | { kind: "project";         key: string; label: string; sub: string; icon: null;   href: string }
+  | { kind: "switch-agent";   key: string; label: string; sub: string; icon: null;   href: string };
+
+const SWITCHABLE_AGENT_IDS = ["claude", "cursor", "codex", "gemini", "grok"] as const satisfies readonly AnyAgentId[];
 
 type UserProjectLite = { id: string; name: string; dirPath?: string | null; isActive?: boolean };
 
@@ -128,7 +132,19 @@ export function CommandPalette() {
         icon: null,
         href: `/control?focus=${encodeURIComponent(p.name)}`,
       }));
-    return [...projectEntries, ...nav, ...agent, ...templates];
+    const switchEntries = (projects ?? [])
+      .filter((p) => p.isActive !== false && p.name && p.dirPath)
+      .flatMap((p) =>
+        SWITCHABLE_AGENT_IDS.map<PaletteEntry>((agentId) => ({
+          kind: "switch-agent",
+          key: `switch:${p.id}:${agentId}`,
+          label: `Switch ${p.name} to ${AGENT_LABELS[agentId]}`,
+          sub: `Agent · quits current CLI and launches ${AGENT_LABELS[agentId]}`,
+          icon: null,
+          href: `/control?focus=${encodeURIComponent(p.name)}&switchTo=${encodeURIComponent(agentId)}`,
+        })),
+      );
+    return [...projectEntries, ...switchEntries, ...nav, ...agent, ...templates];
   }, [agentPrompts, projects]);
 
   const filtered = useMemo(() => {
@@ -201,7 +217,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={voice.status === "recording" ? "Listening…" : "Search prompts, templates, pages…"}
+            placeholder={voice.status === "recording" ? "Listening…" : "Search projects, switch agent, prompts…"}
             className="ui-palette-input"
             spellCheck={false}
             autoComplete="off"
@@ -247,6 +263,7 @@ export function CommandPalette() {
                   {entry.kind === "prompt-template" && <Zap          className="h-3.5 w-3.5" />}
                   {entry.kind === "nav"             && <FolderOpen   className="h-3.5 w-3.5" />}
                   {entry.kind === "project"         && <FolderKanban className="h-3.5 w-3.5" />}
+                  {entry.kind === "switch-agent"   && <Repeat2       className="h-3.5 w-3.5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-text-primary">{entry.label}</span>
