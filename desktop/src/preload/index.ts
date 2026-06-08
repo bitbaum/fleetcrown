@@ -62,4 +62,21 @@ contextBridge.exposeInMainWorld('fleetRunner', {
   // available on the offline page; the cloud /control surface doesn't
   // need this because it already has standard browser reload.
   reloadWebShell: (): Promise<boolean> => ipcRenderer.invoke('reload-web-shell'),
+
+  // Auto-update state — used by the UpdateBanner on /control to show
+  // "Update available: vX.Y.Z — Restart to install / Run: sudo dpkg -i ..."
+  // The renderer reads getUpdateState() once on mount + subscribes via
+  // onUpdateState for live changes during the session (the user may stay
+  // open for hours; an update could land mid-session).
+  //
+  // quitAndInstall() applies the downloaded update for self-applying
+  // formats (AppImage, dmg, exe). For .deb installs the renderer shows
+  // the manual dpkg command instead and this method returns false.
+  getUpdateState: (): Promise<unknown> => ipcRenderer.invoke('get-update-state'),
+  onUpdateState: (cb: (state: unknown) => void) => {
+    const handler = (_event: unknown, state: unknown) => cb(state)
+    ipcRenderer.on('update-state', handler)
+    return () => ipcRenderer.removeListener('update-state', handler)
+  },
+  quitAndInstall: (): Promise<boolean> => ipcRenderer.invoke('quit-and-install'),
 })

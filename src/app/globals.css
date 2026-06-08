@@ -1940,6 +1940,25 @@
   .ui-control-terminal-surface {
     @apply flex-1 min-h-0 overflow-hidden bg-black;
   }
+  /* Update-available banner — rendered at the top of the app shell when
+     electron-updater detects a new version. Accent-tinted so it reads as
+     "action available" without looking like an error. Pinned full-width;
+     content wraps on narrow viewports. */
+  .ui-update-banner {
+    @apply fixed left-0 right-0 top-0 z-40 flex flex-wrap items-center gap-3 border-b border-accent-primary/40 bg-accent-primary/10 px-4 py-2 text-sm text-text-primary backdrop-blur-sm;
+  }
+  .ui-update-banner-icon {
+    @apply text-accent-text;
+  }
+  .ui-update-banner-text {
+    @apply flex flex-wrap items-baseline gap-2;
+  }
+  .ui-update-banner-cmd {
+    @apply ml-0 inline-block rounded bg-black/40 px-2 py-0.5 font-mono text-xs text-text-primary;
+  }
+  .ui-update-banner-actions {
+    @apply flex shrink-0 items-center gap-2;
+  }
   .ui-control-live-empty p:first-child {
     @apply font-medium text-text-secondary;
   }

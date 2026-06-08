@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getBearerUserId } from "@/lib/daemon-auth";
-import { createProject } from "@/db/queries/projects";
+import { upsertLocalUserProject } from "@/db/queries/user-projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 
 const FolderItem = z.object({
@@ -50,20 +50,14 @@ export async function POST(req: NextRequest) {
   const skipped: { name: string; reason: string }[] = [];
 
   for (const folder of parsed.data.folders) {
-    // Description holds the local path (the user's machine truth); gitUrl
-    // holds the canonical origin URL when present.
-    const description = folder.path;
-
     try {
-      const project = await createProject(
+      const project = await upsertLocalUserProject({
         userId,
-        {
-          name: folder.name,
-          description,
-          gitUrl: folder.remote_url || undefined,
-        },
-        SOURCE_FLEETCROWN_UI, // ok to reuse — source field is just for analytics
-      );
+        name: folder.name,
+        dirPath: folder.path,
+        description: folder.remote_url ? `Local repository imported from ${SOURCE_FLEETCROWN_UI}` : "Local repository",
+        gitUrl: folder.remote_url || null,
+      });
       created.push({ id: project.id, name: project.name, path: folder.path });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);

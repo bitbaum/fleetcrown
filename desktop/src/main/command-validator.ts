@@ -18,7 +18,7 @@
  *
  * Mirrors the per-type payload contracts defined in
  * src/db/schema/pending-commands.ts on the cloud side. Keep the two in sync
- * by hand for now (only the inject path is desktop-active today).
+ * by hand for now.
  */
 
 export interface InjectCommand {
@@ -39,9 +39,59 @@ export interface InjectCommand {
   }
 }
 
+export interface TabCommand {
+  type: 'focus_tab' | 'close_tab'
+  payload: {
+    tab: string
+  }
+}
+
+export interface LaunchAgentCommand {
+  type: 'launch_agent'
+  payload: {
+    tab: string
+    dir: string
+    agent: string
+    model?: string
+    initialPrompt?: string
+  }
+}
+
+export interface SwitchAgentCommand {
+  type: 'switch_agent'
+  payload: {
+    tab: string
+    dir: string
+    toAgent: string
+    fromAgent?: string
+    model?: string
+  }
+}
+
+export interface AutoContinueCommand {
+  type: 'auto_continue'
+  payload: {
+    tab: string
+    enabled: boolean
+  }
+}
+
+export interface InstallCliCommand {
+  type: 'install_cli'
+  payload: {
+    agent: string
+  }
+}
+
 /** Every command type the desktop is allowed to execute today. Adding a
  *  new type means: extend this union + write a guard + handle it in poller. */
-export type ValidatedCommand = InjectCommand
+export type ValidatedCommand =
+  | InjectCommand
+  | TabCommand
+  | LaunchAgentCommand
+  | SwitchAgentCommand
+  | AutoContinueCommand
+  | InstallCliCommand
 
 export type ValidationResult =
   | { ok: true; command: ValidatedCommand }
@@ -68,10 +118,21 @@ export function validateCommand(raw: unknown): ValidationResult {
   switch (type) {
     case 'inject':
       return validateInject(payload)
+    case 'focus_tab':
+    case 'close_tab':
+      return validateTab(type, payload)
+    case 'launch_agent':
+      return validateLaunchAgent(payload)
+    case 'switch_agent':
+      return validateSwitchAgent(payload)
+    case 'auto_continue':
+      return validateAutoContinue(payload)
+    case 'install_cli':
+      return validateInstallCli(payload)
     default:
       return {
         ok: false,
-        error: `Fleet Runner v0.7 does not yet handle command type '${type}'. Add it to command-validator.ts when you wire a new executor.`,
+        error: `Fleet Runner does not handle command type '${type}'. Add it to command-validator.ts when you wire a new executor.`,
       }
   }
 }
@@ -114,6 +175,102 @@ function validateInject(payload: Record<string, unknown>): ValidationResult {
       },
     },
   }
+}
+
+function validateTab(type: 'focus_tab' | 'close_tab', payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: `${type} payload missing required string 'tab'` }
+  }
+  return { ok: true, command: { type, payload: { tab } } }
+}
+
+function validateLaunchAgent(payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  const dir = payload.dir
+  const agent = payload.agent
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: "launch_agent payload missing required string 'tab'" }
+  }
+  if (typeof dir !== 'string' || dir.trim().length === 0) {
+    return { ok: false, error: "launch_agent payload missing required string 'dir'" }
+  }
+  if (typeof agent !== 'string' || agent.trim().length === 0) {
+    return { ok: false, error: "launch_agent payload missing required string 'agent'" }
+  }
+  for (const field of ['model', 'initialPrompt'] as const) {
+    const v = payload[field]
+    if (v !== undefined && typeof v !== 'string') {
+      return { ok: false, error: `launch_agent payload field '${field}' must be a string if present` }
+    }
+  }
+  return {
+    ok: true,
+    command: {
+      type: 'launch_agent',
+      payload: {
+        tab,
+        dir,
+        agent,
+        model: payload.model as string | undefined,
+        initialPrompt: payload.initialPrompt as string | undefined,
+      },
+    },
+  }
+}
+
+function validateSwitchAgent(payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  const dir = payload.dir
+  const toAgent = payload.toAgent
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: "switch_agent payload missing required string 'tab'" }
+  }
+  if (typeof dir !== 'string' || dir.trim().length === 0) {
+    return { ok: false, error: "switch_agent payload missing required string 'dir'" }
+  }
+  if (typeof toAgent !== 'string' || toAgent.trim().length === 0) {
+    return { ok: false, error: "switch_agent payload missing required string 'toAgent'" }
+  }
+  for (const field of ['fromAgent', 'model'] as const) {
+    const v = payload[field]
+    if (v !== undefined && typeof v !== 'string') {
+      return { ok: false, error: `switch_agent payload field '${field}' must be a string if present` }
+    }
+  }
+  return {
+    ok: true,
+    command: {
+      type: 'switch_agent',
+      payload: {
+        tab,
+        dir,
+        toAgent,
+        fromAgent: payload.fromAgent as string | undefined,
+        model: payload.model as string | undefined,
+      },
+    },
+  }
+}
+
+function validateAutoContinue(payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  const enabled = payload.enabled
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: "auto_continue payload missing required string 'tab'" }
+  }
+  if (typeof enabled !== 'boolean') {
+    return { ok: false, error: "auto_continue payload missing required boolean 'enabled'" }
+  }
+  return { ok: true, command: { type: 'auto_continue', payload: { tab, enabled } } }
+}
+
+function validateInstallCli(payload: Record<string, unknown>): ValidationResult {
+  const agent = payload.agent
+  if (typeof agent !== 'string' || agent.trim().length === 0) {
+    return { ok: false, error: "install_cli payload missing required string 'agent'" }
+  }
+  return { ok: true, command: { type: 'install_cli', payload: { agent } } }
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {

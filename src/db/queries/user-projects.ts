@@ -118,6 +118,49 @@ export async function createUserProject(
   return row;
 }
 
+export async function upsertLocalUserProject(
+  data: Pick<NewUserProject, "userId" | "name" | "dirPath"> &
+    Partial<Pick<NewUserProject, "gitUrl" | "description" | "agentPref" | "modelPref">>,
+): Promise<UserProject> {
+  const entityProjectId = await findOrCreateProjectEntity(data.userId, data.name, data.description);
+
+  let orgId: string | null = null;
+  const [orgRow] = await db.select({ id: orgs.id }).from(orgs).where(eq(orgs.ownerId, data.userId)).limit(1);
+  orgId = orgRow?.id ?? null;
+
+  const values = {
+    userId: data.userId,
+    name: data.name,
+    dirPath: data.dirPath,
+    gitUrl: data.gitUrl ?? null,
+    description: data.description ?? null,
+    agentPref: data.agentPref ?? null,
+    modelPref: data.modelPref ?? null,
+    entityProjectId,
+    orgId,
+    isActive: true,
+  };
+
+  const [row] = await db
+    .insert(userProjects)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [userProjects.userId, userProjects.name],
+      set: {
+        dirPath: values.dirPath,
+        gitUrl: values.gitUrl,
+        description: values.description,
+        entityProjectId,
+        orgId,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+
+  return row;
+}
+
 export async function updateUserProject(
   id: string,
   userId: string,

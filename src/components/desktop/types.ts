@@ -56,6 +56,25 @@ export type FleetRunnerBridge = {
   peekTab: (tab: string) => Promise<{ ok: true; content: string } | { ok: false; error: string }>;
   /** Reload the cloud web shell. Only the offline page uses this. v0.7.4+. */
   reloadWebShell: () => Promise<boolean>;
+  /** Auto-update state — null until electron-updater detects something.
+   *  Used by the UpdateBanner on /control to surface a "newer version
+   *  available" banner with the exact upgrade path. v0.7.5+. */
+  getUpdateState: () => Promise<UpdateState | null>;
+  onUpdateState: (cb: (state: UpdateState | null) => void) => () => void;
+  /** Apply downloaded update (AppImage/dmg/exe only). Returns false on
+   *  .deb where Electron can't escalate sudo — renderer shows manual
+   *  dpkg -i command instead. v0.7.5+. */
+  quitAndInstall: () => Promise<boolean>;
+};
+
+/** Result of the v0.7.5 update-state IPC. */
+export type UpdateState = {
+  phase?: "available" | "downloaded";
+  newVersion?: string;
+  currentVersion?: string;
+  downloadedFile?: string | null;
+  installFormat?: "deb" | "rpm" | "appimage" | "dmg" | "exe" | "unknown";
+  error?: string;
 };
 
 declare global {

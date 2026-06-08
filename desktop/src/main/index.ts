@@ -89,6 +89,54 @@ if (BUNDLED_BIN_DIR) {
 
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
+
+// Latest auto-update state — captured from electron-updater events, exposed
+// to renderers via IPC so the cloud /control surface can show an "Update
+// available" banner whenever a new version exists. The state is sticky
+// (not cleared between events) so a renderer that mounts AFTER the
+// update-available event still sees the info via the initial getUpdateState().
+//
+// The `installFormat` is critical for the banner: on .deb installs
+// electron-updater can DOWNLOAD a new package but cannot APPLY it
+// (needs sudo, which Electron can't escalate from userspace). The
+// banner shows the exact `sudo dpkg -i <path>` command in that case.
+// On AppImage/.dmg/.exe the banner shows a "Restart to install" button
+// that calls autoUpdater.quitAndInstall().
+type InstallFormat = 'deb' | 'rpm' | 'appimage' | 'dmg' | 'exe' | 'unknown'
+
+type UpdateState = {
+  phase?: 'available' | 'downloaded'
+  newVersion?: string
+  currentVersion?: string
+  downloadedFile?: string | null
+  installFormat?: InstallFormat
+  error?: string
+}
+
+let latestUpdate: UpdateState | null = null
+
+/** Detect the install format from the running binary path. The .deb installer
+ *  drops the binary under `/opt/Fleet Runner/`; AppImage runs from wherever
+ *  the user launched it (their Downloads folder, /opt, etc.) and exposes
+ *  APPIMAGE env var; mac uses .dmg → /Applications; Windows uses .exe + nsis. */
+function detectInstallFormat(): InstallFormat {
+  if (process.platform === 'darwin') return 'dmg'
+  if (process.platform === 'win32') return 'exe'
+  if (process.platform === 'linux') {
+    if (process.env.APPIMAGE) return 'appimage'
+    if (process.execPath.startsWith('/opt/Fleet Runner') || process.execPath.startsWith('/usr/lib/fleet-runner')) return 'deb'
+    return 'unknown'
+  }
+  return 'unknown'
+}
+
+function broadcastUpdateState(): void {
+  for (const w of BrowserWindow.getAllWindows()) {
+    if (!w.isDestroyed()) {
+      try { w.webContents.send('update-state', latestUpdate) } catch { /* ignore */ }
+    }
+  }
+}
 // Tray is lifted to module scope so the poller's status callback can refresh
 // its tooltip without going through createTray() every time.
 let tray: Tray | null = null
@@ -617,6 +665,29 @@ function createWindow(): void {
     }
   })
 
+  // Update state — the renderer's UpdateBanner reads this on mount and
+  // subscribes via 'update-state' events for live changes. The state is
+  // null until electron-updater fires its first 'update-available' event.
+  ipcMain.handle('get-update-state', async () => latestUpdate)
+
+  // Apply a downloaded update by quitting + re-launching. Only meaningful
+  // for AppImage/dmg/exe — for .deb the renderer should show the manual
+  // dpkg command (see UpdateBanner.tsx). Returns true on success; failure
+  // (no update downloaded, autoUpdater not initialized) returns false.
+  ipcMain.handle('quit-and-install', async () => {
+    if (!latestUpdate || latestUpdate.phase !== 'downloaded') return false
+    try {
+      // electron-updater's quitAndInstall internally calls app.quit() + relaunch.
+      // No need for an explicit before-quit save — our before-quit handler
+      // tears down the watcher + poller + pusher cleanly.
+      autoUpdater.quitAndInstall()
+      return true
+    } catch (e) {
+      console.warn('[desktop] quit-and-install failed:', (e as Error).message)
+      return false
+    }
+  })
+
   // Reload the web shell from the offline page's retry button. Posts a
   // simple "retry" message via window.postMessage that the offline.html
   // listens for via the preload bridge.
@@ -863,12 +934,32 @@ app.whenReady().then(async () => {
       })
       autoUpdater.on('error', (err) => {
         console.warn('[desktop] auto-update error:', err?.message ?? err)
+        // Surface the failure to renderers so the in-app banner can pivot
+        // to the "manual upgrade required" message instead of silently
+        // claiming the update path works.
+        latestUpdate = { ...(latestUpdate ?? {}), error: err?.message ?? String(err) }
+        broadcastUpdateState()
       })
       autoUpdater.on('update-available', (info) => {
         console.log(`[desktop] auto-update: ${info.version} available (current ${app.getVersion()})`)
+        latestUpdate = { phase: 'available', newVersion: info.version, currentVersion: app.getVersion() }
+        broadcastUpdateState()
       })
       autoUpdater.on('update-downloaded', (info) => {
         console.log(`[desktop] auto-update: ${info.version} downloaded — will install on next quit`)
+        // electron-updater stores the downloaded asset path in info.downloadedFile
+        // (typed loosely in 6.x; cast at the boundary). On .deb installs this is
+        // the path the user needs to `sudo dpkg -i` since Electron can't escalate
+        // sudo. On AppImage/dmg/exe, autoUpdater.quitAndInstall() handles it.
+        const downloadedFile = (info as { downloadedFile?: string }).downloadedFile ?? null
+        latestUpdate = {
+          phase: 'downloaded',
+          newVersion: info.version,
+          currentVersion: app.getVersion(),
+          downloadedFile,
+          installFormat: detectInstallFormat(),
+        }
+        broadcastUpdateState()
         if (Notification.isSupported()) {
           new Notification({
             title: `Fleet Runner ${info.version} ready`,

@@ -15,18 +15,20 @@
  * Auth: Bearer <token> where <token> is the ck_… string created from
  * Settings → Agent tokens (and saved here at ~/.config/fleetcrown/fleet-runner-token).
  *
- * v1 handles the `inject` command type — the path /api/inject takes for any
- * web/phone dispatch when the server is on Vercel. Other types (focus_tab,
- * launch_agent, switch_agent, repair_helper, auto_continue) are deferred and
- * report a clear "not yet supported" error so the row gets cleared from the
- * queue instead of silently jamming it; users who need those types can still
- * run the bash daemon in parallel (atomic claim via FOR UPDATE SKIP LOCKED
- * means each command goes to exactly one drainer).
+ * The desktop poller handles the same core command set as the bash daemon:
+ * inject, focus/close tab, launch/switch agent, auto-continue, and install
+ * CLI. This is what makes the hosted web app and phone UI a real remote for
+ * the local Zellij workspace instead of just an inject-only transport.
  */
 
-import { injectIntoTab } from '@/lib/zellij'
+import fs from 'fs'
+import { execSync } from 'child_process'
+import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
+import { APP_SLUG } from '@/config/brand'
 import { DAEMON_LONG_POLL_SECONDS } from '@/lib/constants/daemon'
+import { launchAgentInTab } from '@/lib/agent-runtime'
+import { getAgentInstallCommand, isAgentId, listAgentRegistry, type AgentOption } from '@/lib/agent-registry'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken } from './token-store'
@@ -243,6 +245,46 @@ async function handleCommand(
         ok = true
         break
       }
+      case 'focus_tab': {
+        focusTab(validation.command.payload.tab)
+        ok = true
+        break
+      }
+      case 'close_tab': {
+        closeTab(validation.command.payload.tab)
+        ok = true
+        break
+      }
+      case 'launch_agent': {
+        const { tab, dir, agent, model, initialPrompt } = validation.command.payload
+        assertKnownLaunchAgent(agent)
+        launchAgentInTab(tab, dir, agent as AgentOption, model)
+        clearHandoffSentinel(tab)
+        if (initialPrompt?.trim()) {
+          setTimeout(() => {
+            try { injectIntoTab(tab, initialPrompt.trim()) } catch (e) { console.warn('[poller] initial prompt after launch failed:', (e as Error).message) }
+          }, 2500)
+        }
+        ok = true
+        break
+      }
+      case 'switch_agent': {
+        const { tab, dir, toAgent, fromAgent, model } = validation.command.payload
+        assertKnownLaunchAgent(toAgent)
+        switchAgent(tab, dir, toAgent as AgentOption, fromAgent, model)
+        ok = true
+        break
+      }
+      case 'auto_continue': {
+        applyAutoContinue(validation.command.payload.tab, validation.command.payload.enabled)
+        ok = true
+        break
+      }
+      case 'install_cli': {
+        openInstallerTab(validation.command.payload.agent)
+        ok = true
+        break
+      }
     }
   } catch (e) {
     ok = false
@@ -273,6 +315,138 @@ async function handleCommand(
   } else {
     updateStatus({ commandsRejected: currentStatus.commandsRejected + 1 })
   }
+}
+
+function assertKnownLaunchAgent(agent: string): void {
+  if (!listAgentRegistry().some((entry) => entry.id === agent && entry.capabilities.tabSwitching)) {
+    throw new Error(`unknown or non-launchable agent: ${agent}`)
+  }
+}
+
+function tabNamesForSession(session: string): string[] {
+  const commands = [
+    `zellij --session ${shellEscape(session)} action query-tab-names 2>/dev/null`,
+    `ZELLIJ_SESSION_NAME=${shellEscape(session)} zellij action query-tab-names 2>/dev/null`,
+  ]
+  for (const command of commands) {
+    try {
+      const out = execSync(command, { encoding: 'utf8', timeout: 2000 })
+      const tabs = out.split('\n').map((line) => line.trim()).filter(Boolean)
+      if (tabs.length > 0) return tabs
+    } catch {
+      // Try the next addressing mode.
+    }
+  }
+  return []
+}
+
+function findSessionForTab(tab: string): string | null {
+  for (const session of getZellijSessionsSync()) {
+    if (tabNamesForSession(session).some((candidate) => candidate.toLowerCase() === tab.toLowerCase())) {
+      return session
+    }
+  }
+  return null
+}
+
+function firstZellijSession(): string {
+  const session = getZellijSessionsSync()[0]
+  if (!session) throw new Error('no zellij session found')
+  return session
+}
+
+function focusTab(tab: string): void {
+  const session = findSessionForTab(tab)
+  if (!session) throw new Error(`tab not found: ${tab}`)
+  execSync(`zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+}
+
+function closeTab(tab: string): void {
+  const session = findSessionForTab(tab)
+  if (!session) throw new Error(`tab not found: ${tab}`)
+  execSync(`zellij --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+  execSync('sleep 0.15')
+  execSync(`zellij --session ${shellEscape(session)} action close-tab`, { stdio: 'ignore', timeout: 3000 })
+  clearHandoffSentinel(tab)
+}
+
+function newTab(session: string, tab: string): void {
+  execSync(`zellij --session ${shellEscape(session)} action new-tab --name ${shellEscape(tab)}`, { stdio: 'ignore', timeout: 3000 })
+  execSync('sleep 0.5')
+}
+
+function clearHandoffSentinel(tab: string): void {
+  try { fs.unlinkSync(`/tmp/agent-handoff-sent-${tab}`) } catch { /* absent */ }
+}
+
+function autoContinueSentinel(tab: string): string {
+  return `/tmp/${APP_SLUG}-auto-continue-${tab.toLowerCase()}`
+}
+
+function applyAutoContinue(tab: string, enabled: boolean): void {
+  if (enabled) {
+    try { fs.unlinkSync(autoContinueSentinel(tab)) } catch { /* absent */ }
+  } else {
+    fs.writeFileSync(autoContinueSentinel(tab), 'off', 'utf8')
+  }
+}
+
+function openInstallerTab(agent: string): void {
+  const command = getAgentInstallCommand(agent as AgentOption)
+  if (!command) throw new Error(`unknown agent for install: ${agent}`)
+  const label = listAgentRegistry().find((entry) => entry.id === agent)?.label ?? agent
+  const tab = `Install ${label}`
+  newTab(firstZellijSession(), tab)
+  injectIntoTab(tab, command)
+}
+
+function isAgentProcess(entry: { processMatchers: readonly string[] }, argv0: string): boolean {
+  const basename = argv0.includes('/') ? argv0.split('/').pop() ?? argv0 : argv0
+  return entry.processMatchers.some((matcher) => basename === matcher || basename.startsWith(`${matcher}-`))
+}
+
+function agentRunningInDir(agent: string | undefined, dir: string): boolean {
+  if (!agent || !isAgentId(agent)) return false
+  const entry = listAgentRegistry().find((candidate) => candidate.id === agent)
+  if (!entry) return false
+  try {
+    for (const proc of fs.readdirSync('/proc')) {
+      if (!/^\d+$/.test(proc)) continue
+      try {
+        const argv0 = fs.readFileSync(`/proc/${proc}/cmdline`, 'utf8').split('\0')[0] ?? ''
+        if (!isAgentProcess(entry, argv0)) continue
+        const cwd = fs.readlinkSync(`/proc/${proc}/cwd`)
+        if (cwd === dir || cwd.startsWith(`${dir}/`)) return true
+      } catch {
+        // Process disappeared or is not readable.
+      }
+    }
+  } catch {
+    // /proc unavailable.
+  }
+  return false
+}
+
+function sleep(ms: number): void {
+  execSync(`sleep ${Math.max(0, ms / 1000)}`)
+}
+
+function switchAgent(tab: string, dir: string, toAgent: AgentOption, fromAgent?: string, model?: string): void {
+  const registry = listAgentRegistry()
+  const fromEntry = fromAgent ? registry.find((entry) => entry.id === fromAgent) : null
+  if (fromEntry && fromEntry.id !== toAgent) {
+    if (fromEntry.quitCommand) {
+      try { injectIntoTab(tab, fromEntry.quitCommand) } catch { /* Ctrl+C fallback below */ }
+      sleep(600)
+    }
+    if (agentRunningInDir(fromAgent, dir)) {
+      try { sendRawKey(tab, 3) } catch { /* best effort */ }
+      sleep(800)
+    }
+  }
+
+  clearHandoffSentinel(tab)
+  launchAgentInTab(tab, dir, toAgent, model)
 }
 
 /**

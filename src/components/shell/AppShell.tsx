@@ -10,6 +10,7 @@ import { CommandPalette } from "./CommandPalette";
 import { SessionsDrawer } from "./SessionsDrawer";
 import { RefreshOnFocus } from "@/components/shared/RefreshOnFocus";
 import { FleetRunnerAutoMint } from "@/components/desktop/FleetRunnerAutoMint";
+import { UpdateBanner } from "@/components/desktop/UpdateBanner";
 import {
   CommandPaletteProvider,
   useCommandPaletteHotkey,
@@ -61,6 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <RefreshOnFocus />
         <CommandPalette />
         <FleetRunnerAutoMint />
+        <UpdateBanner />
         <SessionsDrawer open={sessionsOpen} onClose={() => setSessionsOpen(false)} />
       </div>
     </CommandPaletteProvider>

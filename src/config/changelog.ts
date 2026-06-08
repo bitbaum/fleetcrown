@@ -29,6 +29,19 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.7.5",
+    tag: "fleet-runner-v0.7.5",
+    date: new Date().toISOString().split("T")[0] + "T00:00:00Z",
+    highlights: [
+      "In-app update banner — when a newer version is detected, /control shows the exact upgrade path with a one-click Copy button.",
+      "On .deb installs (Linux), the banner shows the `sudo dpkg -i <path>` command since electron-updater can't escalate sudo. No more silent update failures.",
+      "On AppImage/dmg/exe, the banner has a 'Restart to install' button that triggers electron-updater's quitAndInstall directly.",
+      "Banner is dismissable per-version (sessionStorage) so it doesn't nag, but re-appears on the next release.",
+    ],
+    breaking: [],
+    notes: "Permanent fix for the .deb auto-update problem the user surfaced on 2026-06-07: they installed v0.7.0, received zero update notifications across 4 shipped releases (v0.7.1-v0.7.4), and didn't know they were stale. The auto-updater was downloading the new .debs but couldn't apply them — Linux dpkg requires sudo and Electron can't escalate. Now even when auto-apply fails, the user always sees what to do.",
+  },
+  {
     version: "0.7.4",
     tag: "fleet-runner-v0.7.4",
     date: "2026-06-07T14:35:53Z",
