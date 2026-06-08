@@ -22,17 +22,29 @@ export type CurrentPrompt = {
 
 export type SessionState = {
   /** Agent's self-reported lifecycle state: 'ready' = done, auto-inject may
-   *  proceed; 'working' = mid-task, suppress auto-inject. Missing/undefined
-   *  is treated as NOT ready by the auto-inject gates (conservative). Optional
-   *  so legacy construction sites that don't yet plumb session_status can
-   *  omit it during the back-compat window — they'll just suppress auto-fire
-   *  which matches the user's stated intent. */
+   *  proceed; 'working' = mid-task, suppress auto-inject; 'blocked' = agent
+   *  has handed control back to the user (loop must not fire). Missing/
+   *  undefined is treated as NOT ready by the auto-inject gates (conservative).
+   *  Optional so legacy construction sites that don't yet plumb session_status
+   *  can omit it during the back-compat window — they'll just suppress
+   *  auto-fire which matches the user's stated intent. */
   status?: string;
   done: string;
   next: string;
   tests: string;
   todos: string;
   health: string;
+  /** Why the agent is blocked, when status: 'blocked' OR the agent's last
+   *  turn was a no-op pending user input. SSOT for the "Awaiting you" chip.
+   *  Sourced from `block-reason:` line in session.md. Optional because
+   *  pre-2026-06-08 sessions don't emit it — deriveLoopState falls back to
+   *  content-sniffing health/status for those. */
+  blockReason?: string;
+  /** Number of consecutive no-op turns the autopilot loop has fired. The
+   *  agent increments this each turn it picks no work. Sourced from
+   *  `no-op-count:` line in session.md. Pure metric — no business logic
+   *  attached, the bash guard skips when this is >= 1. */
+  noOpCount?: number;
   mtime: number; // epoch milliseconds
 };
 

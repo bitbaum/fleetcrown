@@ -412,12 +412,14 @@ When you finish the current task (or need to hand off), write your final status 
 $correct_handoff_file
 
 Use exactly this format (one field per line):
-status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
+status: ready | working | blocked       # 'ready' = fully done (auto-inject may fire); 'working' = more to do; 'blocked' = awaiting a human action you cannot take (no auto-inject)
 done: <one clear sentence of what you accomplished in this turn>
 next: <precise next step or exact state to resume from>
 tests: <N pass · N fail, or 'no suite'>
 todos: <count of open TODO/FIXME/HACK items>
 health: good | needs attention | critical
+block-reason: <awaiting_user | external_dependency | manual_pause | none>   # 'none' (or omit) when status != blocked. Required when status: blocked.
+no-op-count: <integer>   # 0 if you did real work this turn. Increment from the previous value if this was a no-op turn (queue empty, nothing to pick).
 last-3-same-dir: yes | no
 wip-or-revert-in-last-5: yes | no
 tsc: pass | fail(N)

@@ -8,7 +8,19 @@ import type { ProjectState } from "@/lib/control-types";
 import { formatAgentRuntimeLabel } from "./control-presenter";
 import { AgentSwitcherPopover } from "./agent-switcher-popover";
 import type { AgentEntry } from "./agent-switcher-popover";
+import {
+  agentLabel,
+  hasAgentLabelMismatch,
+  resolveDisplayedAgentId,
+} from "@/lib/agent-resolution";
+import { deriveLoopState } from "@/lib/session-state";
 import { FEEDBACK_MEDIUM_MS, TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
+
+/** Below this count, a no-op turn could be coincidence (queue drained between
+ *  user turns). At or above, it's a pattern worth surfacing. The autopilot-
+ *  needs-fire bash guard catches even count=1 to stop the spiral; this UI
+ *  threshold is purely about how loudly to display it. */
+const LOOP_NO_OP_DISPLAY_THRESHOLD = 2;
 
 function statusChipClass(tone: "neutral" | "positive" | "warning" = "neutral", clickable = false) {
   return cn(
@@ -81,9 +93,21 @@ export function ProjectStatusChips({
     ? `Pending changes means files were edited in this project but are not saved into Git history yet. Branch: ${git.branch}. In Git, a commit is the checkpoint that records those changes.`
     : `Branch: ${git?.branch}. No local file changes detected.`;
 
-  // localAgentId wins (reflects in-session switch before next API poll)
-  const effectiveAgentId = localAgentId ?? project.agentPref ?? (availableAgents?.[0]?.id ?? "");
+  const effectiveAgentId = resolveDisplayedAgentId(project, localAgentId, project.liveTab)
+    || localAgentId
+    || project.agentPref
+    || (availableAgents?.[0]?.id ?? "");
+  const labelMismatch = hasAgentLabelMismatch(project, localAgentId, project.liveTab);
   const canSwitchAgent = onSwitchAgent && availableAgents && availableAgents.length > 1;
+
+  // Loop state lives on a separate axis from per-turn agent state. An agent
+  // can be `ready` (current chip says "ready") while the autopilot loop is
+  // about to re-fire it for the 22nd no-op turn — invisible without this.
+  // See src/lib/session-state.ts and the OC 2026-06-08 incident analysis.
+  const loop = deriveLoopState(project.session);
+  const showAwaitingUser = loop.awaitingUser;
+  const showLoopSpiral =
+    !showAwaitingUser && loop.state === "firing" && (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
 
   const focusWorkspace = async (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -136,11 +160,24 @@ export function ProjectStatusChips({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); if (!switchingAgent) setAgentPopoverOpen((v) => !v); }}
-              title={switchingAgent ? "Switching agent…" : `${runtimeLabel} — click to switch agent for this project`}
+              title={
+                switchingAgent
+                  ? "Switching agent…"
+                  : labelMismatch
+                  ? `Live: ${project.activeAgents.map(agentLabel).join(", ")} — preference: ${agentLabel(localAgentId ?? project.agentPref ?? "?")}. Click to switch.`
+                  : `${runtimeLabel} — click to switch agent for this project`
+              }
               disabled={switchingAgent}
               className={compact
-                ? "flex items-center gap-1 text-text-secondary transition-colors hover:text-text-primary disabled:opacity-60"
-                : cn(statusChipClass(switchingAgent ? "neutral" : working ? "warning" : "neutral", !switchingAgent), "cursor-pointer disabled:cursor-default disabled:opacity-70")}
+                ? cn(
+                    "flex items-center gap-1 transition-colors hover:text-text-primary disabled:opacity-60",
+                    labelMismatch ? "text-status-warning" : "text-text-secondary",
+                  )
+                : cn(
+                    statusChipClass(switchingAgent ? "neutral" : working ? "warning" : labelMismatch ? "warning" : "neutral", !switchingAgent),
+                    "cursor-pointer disabled:cursor-default disabled:opacity-70",
+                    labelMismatch && !switchingAgent && "ring-1 ring-status-warning/50 animate-pulse",
+                  )}
             >
               {switchingAgent
                 ? <><Loader2 className="h-3 w-3 shrink-0 animate-spin" /><span>Switching…</span></>
@@ -159,12 +196,52 @@ export function ProjectStatusChips({
           </div>
         ) : (
           <span
-            className={compact ? undefined : statusChipClass(working ? "warning" : "neutral")}
-            title={`Live agent in this workspace: ${runtimeLabel}. Source: local process scan on your machine (via daemon or direct). Not a cloud guess. If this says the wrong agent (e.g. "Claude" while you're running Grok), the tab name or active process detection may be stale — use the switcher or repair helper.`}
+            className={cn(
+              compact ? undefined : statusChipClass(working ? "warning" : labelMismatch ? "warning" : "neutral"),
+              labelMismatch && !compact && "ring-1 ring-status-warning/50",
+            )}
+            title={
+              labelMismatch
+                ? `Detected ${project.activeAgents.map(agentLabel).join(", ")} running, but preference shows ${agentLabel(localAgentId ?? project.agentPref ?? "?")}. Open project settings or use Brain config to align.`
+                : `Live agent in this workspace: ${runtimeLabel}. Click the agent chip on an open tab to switch without typing quit commands in the terminal.`
+            }
           >
             {runtimeStateLabel}
+            {labelMismatch && !compact && (
+              <span className="ml-1 text-status-warning">· mismatch</span>
+            )}
           </span>
         )
+      )}
+
+      {/* Agent-declared "I'm blocked on you" state. Sourced from session.md
+          (health contains "awaiting user" OR status: blocked) — the agent
+          itself raises this via the blocker_create flow. Takes priority
+          over the loop-spiral chip because it tells the captain WHY the
+          loop isn't progressing. */}
+      {showAwaitingUser && (
+        <span
+          className={compact ? "text-status-warning" : statusChipClass("warning")}
+          title={`Agent is waiting on you. Last reported next step: "${project.session?.next ?? "(none)"}". Open the project's session handoff or check ~/.claude/sessions/${project.tab}.blockers/pending/ for the blocker file.`}
+        >
+          Awaiting you
+        </span>
+      )}
+
+      {/* Loop spiral detection. The agent writes `done: No-op turn #N.` when
+          the autopilot loop fires a turn with nothing to do; counting those
+          is the cheapest spiral-detector available. Visible only when the
+          agent is "ready" AND has logged N>=2 no-op turns. Once the bash
+          guard sees the same signal it stops firing, so this chip should
+          disappear within one tick of the next session.md write — if it
+          persists, the wrapper isn't calling autopilot-needs-fire. */}
+      {showLoopSpiral && (
+        <span
+          className={compact ? "text-status-warning" : statusChipClass("warning")}
+          title={`Autopilot loop has fired ${loop.noOpCount} consecutive no-op turns. The bash guard (~/.claude/bin/autopilot-needs-fire) should stop further firings; if you see this count keep climbing, the wrapper isn't calling the guard.`}
+        >
+          Looping · {loop.noOpCount} no-ops
+        </span>
       )}
 
       {/* Per-project pause indicator — makes the existing auto-continue toggle obvious at card level */}

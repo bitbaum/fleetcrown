@@ -171,7 +171,8 @@ export async function prependProjectPrompt(
 
 type SessionFields = Pick<
   NewProjectState,
-  "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth"
+  "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth" |
+    "sessionBlockReason" | "sessionNoOpCount"
 >;
 
 type RuntimeFields = Pick<
@@ -234,7 +235,11 @@ export async function persistProjectSessionIfNewer(
     updatedAt: new Date(),
     sessionUpdatedAt: patch.sessionUpdatedAt,
   };
-  for (const key of ["projectId", "tabName", "sessionStatus", "sessionDone", "sessionNext", "sessionTests", "sessionTodos", "sessionHealth"] as const) {
+  for (const key of [
+    "projectId", "tabName", "sessionStatus", "sessionDone", "sessionNext",
+    "sessionTests", "sessionTodos", "sessionHealth",
+    "sessionBlockReason", "sessionNoOpCount",
+  ] as const) {
     const value = patch[key];
     if (value !== undefined) (updateSet as Record<string, unknown>)[key] = value;
   }

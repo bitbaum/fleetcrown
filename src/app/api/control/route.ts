@@ -209,6 +209,9 @@ export async function GET() {
           tests: dbState.sessionTests ?? "",
           todos: dbState.sessionTodos ?? "",
           health: dbState.sessionHealth ?? "",
+          ...(dbState.sessionBlockReason ? { blockReason: dbState.sessionBlockReason } : {}),
+          ...(dbState.sessionNoOpCount !== null && dbState.sessionNoOpCount !== undefined
+            ? { noOpCount: dbState.sessionNoOpCount } : {}),
           mtime: dbState.sessionUpdatedAt?.getTime() ?? 0,
         }
       : null);
@@ -234,6 +237,8 @@ export async function GET() {
         sessionTests:  session.tests,
         sessionTodos:  session.todos,
         sessionHealth: session.health,
+        sessionBlockReason: session.blockReason,
+        sessionNoOpCount:   session.noOpCount,
         sessionUpdatedAt: new Date(sessionMtimeMs),
       }).then((updated) => {
         // Append only for the writer that won the timestamp race.

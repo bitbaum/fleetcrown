@@ -25,6 +25,10 @@ interface ProjectRuntimePatch {
   sessionTests?: string;
   sessionTodos?: string;
   sessionHealth?: string;
+  /** Structured loop-control fields. See ProjectRuntimePayload in
+   *  desktop/src/main/pusher.ts and src/lib/orchestration/contract.ts. */
+  sessionBlockReason?: string;
+  sessionNoOpCount?: number;
   sessionUpdatedAt?: number | null;       // epoch seconds (file mtime)
 }
 
@@ -105,6 +109,8 @@ export async function POST(req: NextRequest) {
         ...(p.sessionTests !== undefined && { sessionTests: p.sessionTests }),
         ...(p.sessionTodos !== undefined && { sessionTodos: p.sessionTodos }),
         ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
+        ...(p.sessionBlockReason !== undefined && { sessionBlockReason: p.sessionBlockReason }),
+        ...(p.sessionNoOpCount !== undefined && { sessionNoOpCount: p.sessionNoOpCount }),
       }).catch((err) => console.error("[runtime-state] session write failed:", err));
     }
   }));

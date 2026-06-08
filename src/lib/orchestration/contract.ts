@@ -100,6 +100,14 @@ export const ORCHESTRATION_TASK_SUMMARY_FIELDS = [
   "next",
   // Retained for summaries written before LOOP v2.
   "health",
+  // 2026-06-08 — explicit loop-control fields. Added because the OC no-op
+  // spiral surfaced that all three consumers (bash guard, React chips, agent)
+  // were parsing the same intent ("agent is blocked on user", "21 no-ops")
+  // out of free-text done:/health: strings with different rules. These fields
+  // are the SSOT; content-sniffs in session-state.ts + the bash guard remain
+  // as fallbacks for sessions written before agents started emitting them.
+  "block-reason",     // "awaiting_user" | "external_dependency" | "manual_pause"
+  "no-op-count",      // integer, monotonically incremented by the agent on each no-op turn
 ] as const;
 export type OrchestrationTaskSummaryField = (typeof ORCHESTRATION_TASK_SUMMARY_FIELDS)[number];
 
@@ -116,6 +124,8 @@ export type OrchestrationTaskSummary = {
   "wip-or-revert-in-last-5"?: string;
   tsc?: string;
   lint?: string;
+  "block-reason"?: string;
+  "no-op-count"?: string;
 };
 
 export type OrchestrationTaskStatus = {

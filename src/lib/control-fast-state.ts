@@ -11,7 +11,21 @@ export function parseSession(tab: string, adapter = "claude"): SessionState | nu
     const raw = fs.readFileSync(file, "utf-8");
     const fields = parseSessionFile(raw);
     const mtime = fs.statSync(file).mtimeMs;
-    return { ...fields, mtime };
+    // Project the kebab-case loop-control fields into camelCase SessionState
+    // shape. Kept narrow: only the two structured fields are surfaced; the
+    // other kebab fields (last-3-same-dir, wip-or-revert-in-last-5) stay in
+    // OrchestrationTaskSummary's purview and don't leak into ProjectState.
+    const blockReasonRaw = fields["block-reason"]?.trim();
+    const noOpCountRaw = fields["no-op-count"]?.trim();
+    const noOpCount = noOpCountRaw && /^\d+$/.test(noOpCountRaw)
+      ? parseInt(noOpCountRaw, 10)
+      : undefined;
+    return {
+      ...fields,
+      ...(blockReasonRaw ? { blockReason: blockReasonRaw } : {}),
+      ...(noOpCount !== undefined ? { noOpCount } : {}),
+      mtime,
+    };
   } catch {
     return null;
   }

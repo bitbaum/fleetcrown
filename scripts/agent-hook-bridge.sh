@@ -555,12 +555,14 @@ autopilot_dispatch_and_inject() {
     return 1
   fi
   session_update_block="When done, update ${session_file} with exactly these lines:
-status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
+status: ready | working | blocked       # 'ready' = fully done (auto-inject may fire); 'working' = more to do; 'blocked' = awaiting a human action you cannot take (no auto-inject)
 done: <one sentence what you completed>
 next: <one sentence what remains>
 tests: <N pass · N fail, or 'no suite'>
 todos: <count> TODOs
-health: <good | needs attention | critical>"
+health: <good | needs attention | critical>
+block-reason: <awaiting_user | external_dependency | manual_pause | none>   # 'none' (or omit) when status != blocked. Required when status: blocked.
+no-op-count: <integer>   # 0 if you did real work this turn. Increment from the previous value if this was a no-op turn (queue empty, nothing to pick)."
 
   if [ -f "$session_file" ]; then
     session=$(cat "$session_file")
@@ -818,12 +820,14 @@ handle_notification() {
   base=$(get_prompt "$auto_key")
   [ -z "$base" ] && exit 0
   session_update_block="When done, update ${session_file} with exactly these lines:
-status: ready | working     # 'ready' = fully done; auto-inject may fire. 'working' = more to do.
+status: ready | working | blocked       # 'ready' = fully done (auto-inject may fire); 'working' = more to do; 'blocked' = awaiting a human action you cannot take (no auto-inject)
 done: <one sentence what you completed>
 next: <one sentence what remains>
 tests: <N pass · N fail, or 'no suite'>
 todos: <count> TODOs
-health: <good | needs attention | critical>"
+health: <good | needs attention | critical>
+block-reason: <awaiting_user | external_dependency | manual_pause | none>   # 'none' (or omit) when status != blocked. Required when status: blocked.
+no-op-count: <integer>   # 0 if you did real work this turn. Increment from the previous value if this was a no-op turn (queue empty, nothing to pick)."
 
   if [ -f "$session_file" ]; then
     session=$(cat "$session_file")

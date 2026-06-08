@@ -24,6 +24,11 @@ export const projectStates = pgTable("project_states", {
   sessionTests:           text("session_tests"),
   sessionTodos:           text("session_todos"),
   sessionHealth:          text("session_health"),
+  // 2026-06-08 — explicit loop-control fields added so the autopilot decision
+  // (skip vs. fire) reads structured data instead of content-sniffing the
+  // free-text done:/health: strings. See src/lib/orchestration/contract.ts.
+  sessionBlockReason:     text("session_block_reason"),     // 'awaiting_user' | 'external_dependency' | 'manual_pause' | null
+  sessionNoOpCount:       integer("session_no_op_count"),   // consecutive no-op turns; agent increments each turn
   sessionUpdatedAt:       timestamp("session_updated_at", { withTimezone: true }),
   currentPromptKey:       text("current_prompt_key"),
   currentPromptLabel:     text("current_prompt_label"),

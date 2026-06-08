@@ -133,6 +133,12 @@ type ProjectRuntimePayload = {
   sessionTests?: string
   sessionTodos?: string
   sessionHealth?: string
+  /** Structured loop-control fields written by the agent itself. See
+   *  src/lib/orchestration/contract.ts and the OC 2026-06-08 incident.
+   *  Sourced from `block-reason:` and `no-op-count:` lines in session.md;
+   *  optional because pre-2026-06-08 sessions don't emit them. */
+  sessionBlockReason?: string
+  sessionNoOpCount?: number
   sessionUpdatedAt?: number | null
 }
 
@@ -177,6 +183,8 @@ function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[]
     sessionTests: state.session?.tests,
     sessionTodos: state.session?.todos,
     sessionHealth: state.session?.health,
+    sessionBlockReason: state.session?.blockReason,
+    sessionNoOpCount: state.session?.noOpCount,
     sessionUpdatedAt: state.session?.mtime ? Math.floor(state.session.mtime / 1000) : null,
   }))
 }
