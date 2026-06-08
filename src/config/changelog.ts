@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.7.6",
+    tag: "fleet-runner-v0.7.6",
+    date: "2026-06-08T00:00:00Z",
+    highlights: [
+      "Fleet Runner now drains the full remote-control command set from the hosted web app: launch agent, focus tab, close tab, switch agent, install CLI, auto-continue, and prompt injection.",
+      "Local project import now writes and repairs the canonical `dirPath`, so imported repositories actually appear in /control and can launch agents.",
+      "The desktop command boundary has regression coverage for every supported queued command type.",
+    ],
+    breaking: [],
+    notes: "Fixes the dogfood gap where the cloud UI looked connected but only `truthseeker` appeared and most remote actions were rejected by the desktop poller. This release makes the web app and phone UI a real controller for the local Zellij workspace.",
+  },
+  {
     version: "0.7.5",
     tag: "fleet-runner-v0.7.5",
     date: new Date().toISOString().split("T")[0] + "T00:00:00Z",
