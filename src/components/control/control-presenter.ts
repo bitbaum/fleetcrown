@@ -7,7 +7,10 @@ import {
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
 import { getIntentLabel } from "@/config/control-intents";
-import { AGENT_LABELS, ALL_AGENT_IDS, type AnyAgentId } from "@/lib/agent-labels";
+import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
+import { inferAdapterFromTabName } from "@/lib/agent-resolution";
+
+export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
 /**
@@ -37,21 +40,19 @@ function staleEvidenceLabel(
   project: ProjectState,
   lastSyncedAt: string | null | undefined,
 ): string {
-  // 2026-05-31: dropped the "Last sync X ago" prefix from per-row strings
-  // when daemon is offline globally. Showing the same fact 21 times (once
-  // per project row) was the loudest information-duplication in the page —
-  // the global offline banner already owns the "system is stale" signal,
-  // rows should just describe the last-known state. Preserve the prefix
-  // ONLY when we have NO other evidence to show (rare).
+  // 2026-06-08: harmonized to use display.stateLabel as the SSOT for state
+  // wording. Pre-fix this function emitted "Agent shell open", "Workspace
+  // tab open", "Idle" — three custom strings that drifted from the canonical
+  // labels rendered next to them in the badge. One state → one phrase,
+  // everywhere. The currentPrompt.label override stays because it's
+  // task-specific content, not state.
   if (display.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
-  if (display.isReady) return "Ready for next step";
-  if (display.isSessionOpen) return "Agent shell open";
-  if (display.tabOpen) return "Workspace tab open";
+  if (display.tone !== "offline") return display.stateLabel;
   // Session mtime is rendered as evidenceAt; falling through to
   // staleSyncLabel would put two unlabeled timestamps side by side.
-  if (project.session?.mtime) return "Idle";
+  if (project.session?.mtime) return "Not running";
   return staleSyncLabel(lastSyncedAt);
 }
 
@@ -185,7 +186,7 @@ export type LiveTabRow = {
   tabName: string;
   project: ProjectState | null;
   agentLabel: string | null;
-  stateLabel: ProjectDisplayState["stateLabel"] | "Open" | "Open, idle";
+  stateLabel: ProjectDisplayState["stateLabel"] | "Open";
   stateTagClass: string;
   activity: string;
   isWorking: boolean;
@@ -204,7 +205,6 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Completed: 3,
   "Not running": 4,
   "Tab open": 4,
-  "Open, idle": 4,
   Open: 5,
 };
 
@@ -251,16 +251,16 @@ export function getTabActivityText(
   // row layout. Activity text is for human-readable lifecycle states only;
   // handoff content belongs in a per-project expand/tooltip, not the
   // always-visible row.
+  //
+  // 2026-06-08: harmonized to use display.stateLabel as SSOT. Pre-fix
+  // emitted "Ready — pick the next task" / "Agent open · idle" / "Tab open
+  // · no agent process" / "Closed" — four custom strings that disagreed
+  // with the badge phrasing on the same row.
   if (!project) return "Tab open — not registered in fleet";
   if (display?.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
-  if (display?.isReady || display?.isOrchestrationReady) {
-    return "Ready — pick the next task";
-  }
-  if (project.agentRunning) return "Agent open · idle";
-  if (display?.tabOpen) return "Tab open · no agent process";
-  return "Closed";
+  return display?.stateLabel ?? "Not running";
 }
 
 export function buildLiveTabRows(
@@ -290,9 +290,11 @@ export function buildLiveTabRows(
         : display?.isRunning
           ? "Agent"
           : inferAgentLabelFromTabName(tabName);
-      const stateLabel: LiveTabRow["stateLabel"] = display?.tone === "idle" && display.tabOpen
-        ? "Open, idle"
-        : display?.stateLabel ?? "Open";
+      // SSOT alignment: previous code emitted "Open, idle" here, which was
+      // a third phrasing for the same conceptual state ("Tab open" /
+      // "Waiting for instructions"). Display.stateLabel already handles the
+      // idle-with-tab-open case as "Tab open" — use that directly.
+      const stateLabel: LiveTabRow["stateLabel"] = display?.stateLabel ?? "Open";
       const stateTagClass = display?.stateTagClass ?? "ui-tag ui-tag-neutral";
       return {
         tabName,
@@ -367,17 +369,6 @@ export function inferAgentLabelFromTabName(tabName: string): string | null {
   return id ? (AGENT_LABELS[id] ?? null) : null;
 }
 
-/** Tab suffix → adapter id: "FleetCrown Cursor" → "cursor". Mirrors scripts/_agents.sh.
- *  IDs come from ALL_AGENT_IDS in agent-registry — the single source of truth. */
-export function inferAdapterFromTabName(tabName: string): AnyAgentId | null {
-  const normalized = tabName.toLowerCase();
-  for (const id of ALL_AGENT_IDS) {
-    if (normalized === id || normalized.endsWith(` ${id}`) || normalized.endsWith(`-${id}`)) {
-      return id;
-    }
-  }
-  return null;
-}
 
 export function getProjectDisplayState(
   project: ProjectState,
@@ -575,6 +566,13 @@ export function buildProjectOperationsSnapshot(
       ? `Last dispatch ${timeAgo(new Date(latestInjection.dispatchedAt).getTime())}${latestInjectionLabel ? ` · ${latestInjectionLabel}` : ""}`
       : null;
 
+  // Evidence labels are the LONG-form descriptions shown as subtitles next
+  // to the badge. They INTENTIONALLY add detail the badge can't fit (e.g.,
+  // "Agent signaled ready on connected computer" vs the badge's "Ready for
+  // next step"). 2026-06-08: simplified "Agent shell waiting for
+  // instructions" → "Waiting for instructions" so the subtitle matches the
+  // badge wording — no need for two different ways to say the same thing
+  // stacked on the same row.
   const liveEvidenceLabel = display.isRunning
     ? "Live agent process detected"
     : display.isReady
@@ -582,7 +580,7 @@ export function buildProjectOperationsSnapshot(
       : display.isOrchestrationReady
         ? "Last run completed"
         : display.isSessionOpen
-          ? "Agent shell waiting for instructions"
+          ? "Waiting for instructions"
           : display.tabOpen
             ? recentDispatchSuffix
               ? `Workspace tab open · ${recentDispatchSuffix}`

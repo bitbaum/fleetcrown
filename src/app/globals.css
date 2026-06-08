@@ -1890,8 +1890,19 @@
     @apply flex w-[15rem] shrink-0 gap-3 rounded-2xl px-3 py-3 text-left transition-all hover:bg-surface-overlay hover:-translate-x-px lg:w-full;
     /* High-flier esthetics: softer rounding, lift on hover for tactile 'rail' in command workspace */
   }
+  /* Dim non-selected rows in the rail when SOMETHING is selected. Pre-fix
+     the list looked like 20 identical rows above an expanded card — users
+     thought the card was a duplicate row. The dim + bold-accent-on-selected
+     pattern makes the "this row IS the expanded card" connection obvious. */
+  .ui-control-project-list:has(.ui-control-project-row-active) .ui-control-project-row {
+    @apply opacity-60;
+  }
+  .ui-control-project-list:has(.ui-control-project-row-active) .ui-control-project-row:hover {
+    @apply opacity-100;
+  }
   .ui-control-project-row-active {
     @apply bg-accent-muted ring-1 ring-accent-primary/30 shadow-sm;
+    opacity: 1 !important;
   }
   .ui-control-sidepanel {
     @apply space-y-4 rounded-2xl border border-border-subtle bg-surface-raised p-4 sm:p-5 md:p-6 xl:sticky xl:top-6;

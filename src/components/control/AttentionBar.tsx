@@ -1,11 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { AttentionItem } from "./control-presenter";
 import type { FailedCommand } from "@/lib/control-types";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { timeAgo } from "@/lib/dates";
+
+/** Group consecutive failures that match on (type, tab, error). Stops the
+ *  "three identical error rows" stacking that happens when the user clicks
+ *  Send → fail → Send → fail. Each group keeps the most recent id (so
+ *  dismiss still works) and a count of how many failures collapsed into it. */
+type FailureGroup = {
+  representative: FailedCommand;
+  count: number;
+  dismissIds: string[];
+};
+
+function groupConsecutive(items: FailedCommand[]): FailureGroup[] {
+  const groups: FailureGroup[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.representative.type === item.type && last.representative.tab === item.tab && last.representative.error === item.error) {
+      last.count++;
+      last.dismissIds.push(item.id);
+    } else {
+      groups.push({ representative: item, count: 1, dismissIds: [item.id] });
+    }
+  }
+  return groups;
+}
 
 export function AttentionBar({
   items,
@@ -32,8 +56,9 @@ export function AttentionBar({
   };
 
   const visibleFailures = (failedCommands ?? []).filter((f) => !dismissed.has(f.id));
+  const groupedFailures = useMemo(() => groupConsecutive(visibleFailures), [visibleFailures]);
 
-  if (items.length === 0 && visibleFailures.length === 0) return null;
+  if (items.length === 0 && groupedFailures.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -68,27 +93,36 @@ export function AttentionBar({
         </div>
       )}
 
-      {visibleFailures.map((f) => (
-        <div key={f.id} className="ui-callout-negative justify-between">
-          <div className="flex items-start gap-3 min-w-0">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-negative" />
-            <span className="text-xs text-text-primary">
-              <span className="font-medium">{f.type}</span>
-              {f.tab !== "unknown" && <> → <span className="font-medium">{f.tab}</span></>}
-              {" failed: "}
-              <span className="text-text-secondary">{f.error}</span>
-              <span className="ml-2 text-text-muted">{timeAgo(new Date(f.executedAt).getTime())}</span>
-            </span>
+      {groupedFailures.map((group) => {
+        const f = group.representative;
+        const verb = f.unverified ? "delivered" : "failed";
+        return (
+          <div key={f.id} className="ui-callout-negative justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-status-negative" />
+              <span className="text-xs text-text-primary">
+                <span className="font-medium">{f.type}</span>
+                {f.tab !== "unknown" && <> → <span className="font-medium">{f.tab}</span></>}
+                {` ${verb}: `}
+                <span className="text-text-secondary">{f.error}</span>
+                {group.count > 1 && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-status-negative/10 px-1.5 py-0.5 text-[10px] font-semibold text-status-negative">
+                    ×{group.count}
+                  </span>
+                )}
+                <span className="ml-2 text-text-muted">{timeAgo(new Date(f.executedAt).getTime())}</span>
+              </span>
+            </div>
+            <button
+              onClick={() => group.dismissIds.forEach(dismiss)}
+              className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
-          <button
-            onClick={() => dismiss(f.id)}
-            className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
-            aria-label="Dismiss"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

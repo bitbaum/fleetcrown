@@ -121,10 +121,10 @@ export function ZellijLivePanel({
               type="button"
               onClick={repairHelper}
               className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
-              title="Update and repair the local helper"
+              title="Re-install / repair the local helper daemon"
             >
               <Wrench className="h-3 w-3" />
-              <span className="hidden sm:inline">Repair connection</span>
+              <span className="hidden sm:inline">Restart helper</span>
             </button>
           )}
           <button
@@ -200,7 +200,8 @@ export function ZellijLivePanel({
                 }
               }}
               className="ui-control-live-input"
-              placeholder="Send a prompt to any open tab"
+              placeholder="Quick send to any open tab"
+              title="Quick send: fires immediately into the selected zellij tab. For project-focused dispatch with intent buttons, use the project card above."
               aria-label="Prompt for selected Zellij tab"
             />
             <button
