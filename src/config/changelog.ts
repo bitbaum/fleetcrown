@@ -29,6 +29,17 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.7.8",
+    tag: "fleet-runner-v0.7.8",
+    date: "2026-06-08T00:00:00Z",
+    highlights: [
+      "Agent availability detection now searches common user CLI install locations, including nvm Node bins and `~/.local/bin`, instead of trusting Electron's reduced PATH.",
+      "Fixes false 'Missing local tools' banners when Claude, Gemini, Codex, Cursor, or Grok are installed and work in the terminal.",
+    ],
+    breaking: [],
+    notes: "Completes the v0.7.7 Control-state fix by making the desktop app report the same installed tools the user's terminal can actually run.",
+  },
+  {
     version: "0.7.7",
     tag: "fleet-runner-v0.7.7",
     date: "2026-06-08T00:00:00Z",

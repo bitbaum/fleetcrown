@@ -9,13 +9,38 @@
  */
 
 import fs from "fs";
+import path from "path";
 import { existsSync } from "fs";
+import { HOME } from "@/lib/constants";
+
+function candidatePathDirs(): string[] {
+  const dirs = (process.env.PATH ?? "").split(":").filter(Boolean);
+  const userDirs = [
+    path.join(HOME, ".local", "bin"),
+    path.join(HOME, ".npm-global", "bin"),
+    path.join(HOME, ".bun", "bin"),
+    path.join(HOME, ".deno", "bin"),
+    path.join(HOME, ".cargo", "bin"),
+    path.join(HOME, ".opencode", "bin"),
+    "/usr/local/bin",
+    "/opt/homebrew/bin",
+  ];
+
+  const nvmVersionsDir = path.join(HOME, ".nvm", "versions", "node");
+  try {
+    for (const version of fs.readdirSync(nvmVersionsDir)) {
+      userDirs.push(path.join(nvmVersionsDir, version, "bin"));
+    }
+  } catch {
+    // nvm is optional.
+  }
+
+  return [...new Set([...dirs, ...userDirs])];
+}
 
 /** Does `command` exist as an executable file on the user's $PATH? */
 export function commandExistsInPath(command: string): boolean {
-  const pathValue = process.env.PATH ?? "";
-  for (const dir of pathValue.split(":")) {
-    if (!dir) continue;
+  for (const dir of candidatePathDirs()) {
     const candidate = `${dir}/${command}`;
     try {
       if (existsSync(candidate) && fs.statSync(candidate).mode & 0o111) {
