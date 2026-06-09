@@ -44,6 +44,7 @@ export const NAV = {
   control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: true  },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
+  activity:   { id: "activity", label: "Activity", description: "Digests, history, and decisions",     href: "/activity", icon: Newspaper,    active: true,  mobile: false },
   history:    { id: "history",  label: "History",  description: "Full log of every agent dispatch",  href: "/history",    icon: History,      active: true,  mobile: false },
   decisions:  { id: "decisions",label: "Decisions",description: "Timeline of fleet activity & choices",href: "/decisions",icon: ScrollText,   active: true,  mobile: false },
   digests:    { id: "digests",  label: "Digests",  description: "Readable project progress summaries", href: "/digests", icon: Newspaper,    active: true,  mobile: false },
@@ -87,7 +88,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // project state, prompt library, audit log, system health, and the
     // Thoughts essays the user authors and publishes from inside the app.
     label: "Work",
-    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.digests, NAV.history, NAV.decisions, NAV.system, NAV.thoughts],
+    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
   },
   {
     id: "private",

@@ -79,7 +79,7 @@ export function HistoryFeed({ items }: { items: HistoryItem[] }) {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-start gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-raised transition-colors"
+                      className="flex items-start gap-3 rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2.5"
                     >
                       <span className="shrink-0 w-14 text-xs text-text-muted font-mono pt-0.5">
                         {formatTime(item.dispatchedAt)}

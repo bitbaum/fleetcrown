@@ -4,7 +4,7 @@ import { requirePageUserId } from "@/lib/session";
 
 export const metadata = { title: "Activity" };
 
-export default async function DigestsPage({
+export default async function ActivityPage({
   searchParams,
 }: {
   searchParams: Promise<{ window?: string; project?: string }>;
