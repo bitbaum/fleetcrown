@@ -106,10 +106,12 @@ function runTests(): void {
 
   check("Stop hook loads daemon.env for production URL and token", () => {
     const sh = readFileSync("scripts/agent-hook-bridge.sh", "utf8");
-    assert(/_load_cockpit_daemon_env/.test(sh), "hook must load ~/.config/fleetcrown/daemon.env");
-    assert(/COCKPIT_BASE_URL/.test(sh), "hook must honor COCKPIT_BASE_URL");
-    assert(/daemon\.env.*COCKPIT_\$\{key\}/.test(sh.replace(/\n/g, " ")),
-      "token helper must read COCKPIT_DAEMON_TOKEN from daemon.env");
+    assert(/_load_daemon_env/.test(sh), "hook must load daemon.env (fleetcrown + legacy cockpit)");
+    assert(/fleetcrown\/daemon\.env/.test(sh), "hook must read ~/.config/fleetcrown/daemon.env");
+    assert(/COCKPIT_BASE_URL|FLEETCROWN_BASE_URL|APP_BASE_URL/.test(sh),
+      "hook must honor production base URL env vars");
+    assert(/APP\|FLEETCROWN\|COCKPIT/.test(sh),
+      "token helper must read daemon token from daemon.env with brand prefixes");
   });
 
   check("Daemon autopilot watchdog backs up Stop hook", () => {
