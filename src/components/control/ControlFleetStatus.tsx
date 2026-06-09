@@ -37,6 +37,7 @@ type Props = {
   refreshing: boolean;
   onRefresh: () => void;
   onAutomationChange: (mode: AutoInjectMode) => void;
+  projectOverrideCount?: number;
 };
 
 /** Fleet pulse + trust layer — the first thing you see on Control (especially mobile). */
@@ -54,6 +55,7 @@ export function ControlFleetStatus({
   refreshing,
   onRefresh,
   onAutomationChange,
+  projectOverrideCount = 0,
 }: Props) {
   // Vocabulary reconciled with ProjectOperationsView's rail counts
   // 2026-05-31: header now shows "X working · Y ready · Z open" matching the
@@ -185,6 +187,11 @@ export function ControlFleetStatus({
         <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
         {" "}
         {getAutomationHint(APP_NAME)[automationMode]}
+        {projectOverrideCount > 0 && (
+          <span className="ml-1 text-accent-text">
+            {projectOverrideCount} project{projectOverrideCount === 1 ? "" : "s"} use individual autopilot settings.
+          </span>
+        )}
       </p>
     </section>
   );

@@ -22,6 +22,7 @@ import { QueueItemRow, SortableQueueItem, type RowProps } from "./queue-item-row
 
 export function QueueList({
   queue,
+  blockedReason,
   onSend,
   onRemove,
   onReorder,
@@ -31,6 +32,7 @@ export function QueueList({
   onMergeItems,
 }: {
   queue: string[];
+  blockedReason?: string | null;
   onSend?: (i: number) => void;
   onRemove?: (i: number) => void;
   onReorder?: (from: number, to: number) => void;
@@ -120,7 +122,14 @@ export function QueueList({
   return (
     <div className="border-t border-border-subtle">
       <div className="flex items-center justify-between px-4 pt-3 pb-2 sm:px-5">
-        <p className="ui-kicker">Queue · {queue.length}</p>
+        <div className="min-w-0">
+          <p className="ui-kicker">Queue · {queue.length}</p>
+          {blockedReason && (
+            <p className="mt-1 text-micro text-status-warning" title="Next best will stay on recovery work while this gate is active. Use the row send button to run a queued item now.">
+              {blockedReason} · pick an item manually
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {selected.size >= 2 && onMergeItems && (
             <button

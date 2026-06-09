@@ -24,6 +24,7 @@ export function IntentButtonPanel({
   onClearSendError,
   custom,
   queue = [],
+  queueBlockedReason,
   bannerActive,
   merging,
   onToggleAutoContinue,
@@ -60,6 +61,7 @@ export function IntentButtonPanel({
   onClearSendError?: () => void;
   custom: string;
   queue?: string[];
+  queueBlockedReason?: string | null;
   bannerActive?: boolean;
   merging?: boolean;
   onToggleAutoContinue?: () => void;
@@ -128,6 +130,7 @@ export function IntentButtonPanel({
       // These pollute history (the "Setup (run, read outputs)..." ones the user sees).
       if (t.startsWith("setup (run, read outputs)")) return false;
       if (t.includes("picked ") && t.includes(" (t")) return false; // the accountability line
+      if (/\bwaiting for instructions\b/.test(t)) return false;
       return true;
     })
     .slice(0, isRunning ? 3 : 5);
@@ -138,7 +141,7 @@ export function IntentButtonPanel({
       <div className="ui-card-section space-y-3">
         <PromptInput {...inputProps} placeholder="Send interrupt…" />
         {queue.length > 0 && (
-          <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
+          <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
         )}
       {/* Only show "Reuse recent" when there are multiple useful (non-meta) items.
           This reduces the three competing lists feeling (Sent / Reuse recent / Prompt library)
@@ -171,7 +174,7 @@ export function IntentButtonPanel({
     <div className="space-y-3 ui-card-section">
       <PromptInput {...inputProps} placeholder="What should the agent work on? e.g. summarize this repo" />
       {queue.length > 0 && (
-        <QueueList queue={queue} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
+        <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
       )}
 
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
@@ -185,7 +188,9 @@ export function IntentButtonPanel({
           <button
             onClick={() => handleSendIntent(primary.id)}
             disabled={sending !== null}
-            title="Strategist picks the next task autonomously based on session handoff + queue + recent commits. This click dispatches without preview."
+            title={queueBlockedReason
+              ? `${queueBlockedReason}: Next best stays on recovery work and will not consume the queue. Use a queue row's send button to run that item now.`
+              : "Strategist picks the next task autonomously based on session handoff + queue + recent commits. This click dispatches without preview."}
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
             {sending === primary.id

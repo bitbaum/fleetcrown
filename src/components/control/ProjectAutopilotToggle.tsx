@@ -17,11 +17,11 @@
 // and keeps the UI scan-light. Power users can still use the global tier
 // in Settings → Beacon.
 
-import { useState } from "react";
-import { Pause, Play, Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Zap } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
-import type { AutoInjectMode } from "@/config/beacon";
+import { AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
 
 export interface ProjectAutopilotToggleProps {
   /** Entity id (UUID) of the project. Required for the PATCH endpoint. */
@@ -41,8 +41,13 @@ export function ProjectAutopilotToggle({
   inheritedMode,
   onAfter,
 }: ProjectAutopilotToggleProps) {
+  const [localOverride, setLocalOverride] = useState<AutoInjectMode | null>(currentOverride);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalOverride(currentOverride);
+  }, [currentOverride]);
 
   // Projects without a registered entity id (legacy paths-only projects
   // discovered from agent-projects.conf) can't be overridden — there's no
@@ -50,19 +55,25 @@ export function ProjectAutopilotToggle({
   // 404s on click.
   if (!projectId) return null;
 
-  const isPaused = currentOverride === "off";
+  const effectiveMode = localOverride ?? inheritedMode;
+  const effectiveMeta = AUTO_INJECT_MODES.find((mode) => mode.value === effectiveMode);
+  const inheritedMeta = AUTO_INJECT_MODES.find((mode) => mode.value === inheritedMode);
+  const overridden = localOverride !== null;
 
-  async function toggle() {
+  async function saveOverride(nextRaw: string) {
     setSaving(true);
     setError(null);
+    const nextOverride = nextRaw === "inherit" ? null : nextRaw as AutoInjectMode;
+    const previous = localOverride;
+    setLocalOverride(nextOverride);
     try {
-      const nextOverride: AutoInjectMode | null = isPaused ? null : "off";
       const res = await patchJson(`/api/projects/${projectId}`, {
         autoInjectModeOverride: nextOverride,
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setError(body.error ?? `HTTP ${res.status}`);
+        setLocalOverride(previous);
         return;
       }
       // Trigger a global refresh so /control re-fetches and every consumer
@@ -73,32 +84,42 @@ export function ProjectAutopilotToggle({
       onAfter?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
+      setLocalOverride(previous);
     } finally {
       setSaving(false);
     }
   }
 
-  const tooltip = isPaused
-    ? `Autopilot paused for this project. Click to resume (will follow your global mode: ${inheritedMode}).`
-    : `Autopilot active for this project (currently inheriting global mode: ${inheritedMode}). Click to pause.`;
+  const tooltip = overridden
+    ? `Project override: ${effectiveMeta?.label ?? effectiveMode}. Global mode is ${inheritedMeta?.label ?? inheritedMode}.`
+    : `Inherits global autopilot mode: ${inheritedMeta?.label ?? inheritedMode}.`;
 
   return (
-    <div className="inline-flex items-center gap-1.5">
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={saving}
+    <div className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs">
+      <label
         title={tooltip}
-        aria-label={isPaused ? "Resume autopilot for this project" : "Pause autopilot for this project"}
-        className="ui-btn-ghost inline-flex items-center gap-1.5 text-xs disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-text-secondary"
       >
-        {saving
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          : isPaused
-            ? <Play className="h-3.5 w-3.5" />
-            : <Pause className="h-3.5 w-3.5" />}
-        {isPaused ? "Paused" : "Active"}
-      </button>
+        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin text-text-muted" /> : <Zap className="h-3.5 w-3.5 text-accent-text" />}
+        <span className="text-text-muted">Project autopilot</span>
+        <select
+          value={localOverride ?? "inherit"}
+          disabled={saving}
+          onChange={(event) => saveOverride(event.target.value)}
+          className="bg-transparent font-medium text-text-primary outline-none disabled:opacity-60"
+          aria-label="Project autopilot mode"
+        >
+          <option value="inherit">Inherit global ({inheritedMeta?.label ?? inheritedMode})</option>
+          {AUTO_INJECT_MODES.map((mode) => (
+            <option key={mode.value} value={mode.value}>{mode.label}</option>
+          ))}
+        </select>
+      </label>
+      {overridden && (
+        <span className="text-micro text-accent-text" title="This project no longer follows the global autopilot selector.">
+          override
+        </span>
+      )}
       {error && <span className="text-xs text-status-warning">{error}</span>}
     </div>
   );

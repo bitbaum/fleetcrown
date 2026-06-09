@@ -30,7 +30,7 @@ FC_DESCRIPTION_TAB_OPEN='Terminal workspace exists for this project but no agent
 FC_COUNTER_CATEGORY_TAB_OPEN='idle'
 
 FC_LABEL_OPEN_IDLE='Awaiting input'
-FC_DESCRIPTION_OPEN_IDLE='Agent process detected but no recent lifecycle signal — Claude is at the prompt waiting for your next message.'
+FC_DESCRIPTION_OPEN_IDLE='Agent process detected but no recent lifecycle signal — the agent is at the prompt waiting for your next message.'
 FC_COUNTER_CATEGORY_OPEN_IDLE='waiting'
 
 FC_LABEL_WORKING='Working'

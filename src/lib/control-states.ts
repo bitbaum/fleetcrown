@@ -119,7 +119,7 @@ export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> 
   },
   open_idle: {
     label: "Awaiting input",
-    description: "Agent process detected but no recent lifecycle signal — Claude is at the prompt waiting for your next message.",
+    description: "Agent process detected but no recent lifecycle signal — the agent is at the prompt waiting for your next message.",
     dotClass: "bg-border-default",
     tagClass: "ui-tag ui-tag-neutral",
     counterCategory: "waiting",

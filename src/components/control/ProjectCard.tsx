@@ -168,6 +168,12 @@ export function ProjectCard({
   });
 
   const latestOrchRun = project.latestOrchestrationRun;
+  const showPreviousRunPanel = display.showLatestOrchestration && !display.tabOpen;
+  const queueBlockedReason = sessionHealthBlocksQueue() && queue.length > 0
+    ? project.session?.health?.toLowerCase().includes("critical")
+      ? "Health critical"
+      : "Tests failing"
+    : null;
   const paused = !automaticContinuationEnabled || customFocused || custom.trim().length > 0 || display.isBeaconActive;
 
   // Smart "send to queue" (user request #2):
@@ -311,7 +317,7 @@ export function ProjectCard({
               <SessionSummary session={project.session} isClosed={false} />
             </div>
           )}
-          {display.showLatestOrchestration && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
+          {showPreviousRunPanel && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
 
           {display.tone === "idle" && !display.tabOpen && runtimeStateKnown && onLaunch && (
             <div className="ui-card-section flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -362,6 +368,7 @@ export function ProjectCard({
             onCustomChange={setCustom}
             onCustomFocusChange={setCustomFocused}
             automationStatusLabel={automationStatusLabel}
+            queueBlockedReason={queueBlockedReason}
           />
           <ProjectActivitySection injections={project.recentInjections} git={project.git} />
         </>

@@ -6,7 +6,6 @@ import {
   withinWindow,
 } from "@/lib/constants/control";
 import { timeAgo } from "@/lib/dates";
-import { getIntentLabel } from "@/config/control-intents";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import {
@@ -541,15 +540,12 @@ export function buildProjectOperationsSnapshot(
   const latestInjectionAgeS = latestInjection?.dispatchedAt
     ? nowS - Math.floor(new Date(latestInjection.dispatchedAt).getTime() / 1000)
     : null;
-  const latestInjectionLabel = latestInjection
-    ? (latestInjection.customPrompt?.trim() || getIntentLabel(latestInjection.intent))
-    : null;
   const recentDispatchSuffix =
     latestInjection &&
     latestInjectionAgeS !== null &&
     latestInjectionAgeS >= 0 &&
     latestInjectionAgeS < 30 * 60
-      ? `Last dispatch ${timeAgo(new Date(latestInjection.dispatchedAt).getTime())}${latestInjectionLabel ? ` · ${latestInjectionLabel}` : ""}`
+      ? `Last dispatch ${timeAgo(new Date(latestInjection.dispatchedAt).getTime())}`
       : null;
 
   // Evidence labels are the LONG-form descriptions shown as subtitles next

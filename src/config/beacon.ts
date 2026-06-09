@@ -54,17 +54,17 @@ export const AUTO_INJECT_MODES: readonly {
   {
     value: "beacon",
     label: "Beacon",
-    description: "L3 · Popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. FleetCrown suggests, you decide.",
+    description: "L3 · When the agent finishes, FleetCrown prepares the next action and shows a handoff popup. If you are away, the countdown can auto-submit that prepared action.",
   },
   {
     value: "next_best",
     label: "Continuous",
-    description: "L4 · Drains your queue then auto-fires the canned next-best template, no popup. The project keeps moving while you work elsewhere.",
+    description: "L4 · Drains your queue, then sends the canned next-best recovery/progress template without a popup. Useful for routine cleanup; less context-aware than Mission.",
   },
   {
     value: "strategist",
     label: "Mission",
-    description: "L5 · Groq composes context-aware prompts from project mission, goals, roadmap, and recent commits. Fall asleep, wake up shipped. Advanced — requires trust in the composer.",
+    description: "L5 · FleetCrown composes a prompt from the handoff, queue, project mission, recent commits, and outcomes, then dispatches it without asking. Highest autonomy; review results regularly.",
   },
 ];
 

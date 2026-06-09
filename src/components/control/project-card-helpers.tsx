@@ -160,8 +160,8 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="ui-kicker" title="Result from a background agent run. Live terminal state is shown in the project header.">
-          Background run result
+        <span className="ui-kicker" title="Previous automated run. Live terminal state is shown in the project header.">
+          Previous automated run
         </span>
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{run.state}</span>

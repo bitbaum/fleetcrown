@@ -219,7 +219,7 @@ export function ProjectCardHeader({
           )}
           <button
             onClick={onProfileToggle}
-            title={profileOpen ? "Close profile" : "Project profile"}
+            title={profileOpen ? "Close context" : "Project context and settings"}
             className={cn(
               "ui-icon-action",
               profileOpen ? "text-accent-text" : "text-text-muted",

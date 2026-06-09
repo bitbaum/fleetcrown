@@ -1,15 +1,8 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import type { AutoInjectMode } from "@/config/beacon";
+import { AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
 import { cn } from "@/lib/utils";
-
-const MODES: { value: AutoInjectMode; label: string }[] = [
-  { value: "off", label: "Manual" },
-  { value: "queue_only", label: "Continue queued work" },
-  { value: "strategist", label: "Autonomous" },
-  { value: "next_best", label: "Canned next-best" },
-];
 
 /**
  * Per-mode visual state. Color + tooltip make the dispatch behavior
@@ -37,17 +30,17 @@ const MODE_STYLE: Record<AutoInjectMode, { dotClass: string; tooltip: string; pu
   },
   beacon: {
     dotClass: "bg-accent-text",
-    tooltip: "Beacon (L3) — popup appears when the agent finishes. Pick a queued item, the canned next-best, or type your own. Countdown auto-picks if you don't. FleetCrown suggests, you decide.",
+    tooltip: "Beacon (L3) — prepares the next action and shows a handoff popup. If you are away, the countdown can auto-submit that prepared action.",
     pulse: true,
   },
   next_best: {
     dotClass: "bg-accent-primary",
-    tooltip: "Continuous (L4) — drains your queue then auto-fires the canned next-best template, no popup. The project keeps moving while you work elsewhere.",
+    tooltip: "Continuous (L4) — drains your queue, then sends the canned next-best recovery/progress template without a popup.",
     pulse: true,
   },
   strategist: {
     dotClass: "bg-status-positive",
-    tooltip: "Mission (L5) — Groq composes context-aware prompts from project mission, goals, roadmap, and recent commits. Fall asleep, wake up shipped. Advanced — requires trust in the composer.",
+    tooltip: "Mission (L5) — composes from handoff, queue, mission, recent commits, and outcomes, then dispatches without asking.",
     pulse: true,
   },
 };
@@ -80,7 +73,7 @@ export function AutomationPolicyControl({
         onChange={(event) => onChange(event.target.value as AutoInjectMode)}
         className="bg-transparent font-medium text-text-primary outline-none disabled:opacity-60"
       >
-        {MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        {AUTO_INJECT_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
     </label>
   );

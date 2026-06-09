@@ -5,11 +5,13 @@
 // "what happened on my fleet last week?" without reading 5 session.md files.
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Sparkles, Bot, KeyRound, ScrollText, RefreshCw } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { getJson } from "@/lib/api/fetch";
 import { timeAgo } from "@/lib/dates";
 import type { DecisionEvent, DecisionFeedResponse } from "@/app/api/decisions/feed/route";
+import { NAV } from "@/config/navigation";
 
 const KIND_META: Record<DecisionEvent["kind"], { icon: typeof Sparkles; label: string; tone: string }> = {
   project_created: { icon: Sparkles, label: "Created", tone: "text-accent" },
@@ -73,6 +75,7 @@ export default function DecisionsPage() {
     <PageLayout
       title="Decisions"
       subtitle="What your fleet did and decided, newest first"
+      right={<Link href={NAV.digests.href} className="ui-btn-secondary">Read digests</Link>}
     >
       <div className="space-y-4 max-w-3xl">
         {/* Filter bar */}

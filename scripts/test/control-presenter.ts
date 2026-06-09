@@ -175,7 +175,7 @@ function runTests(): void {
     const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
     const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Ready for next step", "ready signal must name the action state");
-    assert(snapshot.phase === "waiting_for_user", "ready signal remains actionable");
+    assert(snapshot.phase === "ready", "ready signal remains actionable");
     assert(snapshot.evidenceLabel === "Agent signaled ready on connected computer", "ready evidence should identify the signal");
   });
 

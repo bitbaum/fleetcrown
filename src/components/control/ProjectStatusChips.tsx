@@ -79,13 +79,7 @@ export function ProjectStatusChips({
   const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
   const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
   const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project, project.liveTab) : "";
-  const runtimeStateLabel = working
-    ? `${runtimeLabel} working`
-    : project.readyAt
-      ? `${runtimeLabel} ready`
-      : project.agentRunning
-        ? `${runtimeLabel} open`
-        : `${runtimeLabel} detected`;
+  const runtimeStateLabel = working ? `${runtimeLabel} working` : runtimeLabel;
   const git = project.git;
   const workspaceTab = project.liveTab ?? project.tab;
   const changesLabel = pendingChangesLabel(project);
@@ -224,7 +218,7 @@ export function ProjectStatusChips({
           className={compact ? "text-status-warning" : statusChipClass("warning")}
           title={`Agent is waiting on you. Last reported next step: "${project.session?.next ?? "(none)"}". Open the project's session handoff or check ~/.claude/sessions/${project.tab}.blockers/pending/ for the blocker file.`}
         >
-          Awaiting you
+          Needs input
         </span>
       )}
 

@@ -35,7 +35,7 @@ export type SessionState = {
   todos: string;
   health: string;
   /** Why the agent is blocked, when status: 'blocked' OR the agent's last
-   *  turn was a no-op pending user input. SSOT for the "Awaiting you" chip.
+   *  turn was a no-op pending user input. SSOT for the "Needs input" chip.
    *  Sourced from `block-reason:` line in session.md. Optional because
    *  pre-2026-06-08 sessions don't emit it — deriveLoopState falls back to
    *  content-sniffing health/status for those. */

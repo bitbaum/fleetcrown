@@ -20,6 +20,7 @@ import {
   FileText,
   Download,
   ScrollText,
+  Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -45,6 +46,7 @@ export const NAV = {
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
   history:    { id: "history",  label: "History",  description: "Full log of every agent dispatch",  href: "/history",    icon: History,      active: true,  mobile: false },
   decisions:  { id: "decisions",label: "Decisions",description: "Timeline of fleet activity & choices",href: "/decisions",icon: ScrollText,   active: true,  mobile: false },
+  digests:    { id: "digests",  label: "Digests",  description: "Readable project progress summaries", href: "/digests", icon: Newspaper,    active: true,  mobile: false },
   system:     { id: "system",   label: "System",   description: "Runtime health & autopilot jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },
 
   memory:     { id: "memory",   label: "Memory",   description: "Knowledge graph & entity activity", href: "/memory",     icon: Brain,        active: true,  mobile: false },
@@ -85,7 +87,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // project state, prompt library, audit log, system health, and the
     // Thoughts essays the user authors and publishes from inside the app.
     label: "Work",
-    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.history, NAV.decisions, NAV.system, NAV.thoughts],
+    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.digests, NAV.history, NAV.decisions, NAV.system, NAV.thoughts],
   },
   {
     id: "private",

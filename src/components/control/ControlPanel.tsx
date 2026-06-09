@@ -112,6 +112,7 @@ export function ControlPanel() {
     : null;
 
   const failedCount = data?.failedCommands?.length ?? 0;
+  const projectOverrideCount = data?.projects.filter((project) => project.autoInjectModeOverride !== null).length ?? 0;
 
   useEffect(() => {
     if (!snapshots?.length) return;
@@ -319,6 +320,7 @@ export function ControlPanel() {
         refreshing={refreshing}
         onRefresh={() => refresh(true)}
         onAutomationChange={automationPolicy.updateMode}
+        projectOverrideCount={projectOverrideCount}
       />}
 
       {headerRight && (

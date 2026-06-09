@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, GitBranch, Loader2, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFetch } from "@/hooks/use-fetch";
 import { patchJson } from "@/lib/api/fetch";
@@ -19,9 +19,84 @@ import {
   RemoveSection,
   QuickProfileForm,
 } from "./project-profile-helpers";
+import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 
 type AgentEntry = { id: string; label: string; modelSuggestions: string[] };
 type AgentId = string;
+
+function ProjectContextSummary({ project }: { project: ProjectState }) {
+  const handoff = buildSessionHandoffFromProjectSession(project.session);
+  const profile = project.profile;
+  const recentCommits = project.git?.recentCommits?.slice(0, 3) ?? [];
+
+  return (
+    <div className="border-t border-border-subtle px-4 py-4 sm:px-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="ui-kicker text-accent-text">Project context</p>
+        {profile?.url && (
+          <a
+            href={profile.url.startsWith("http") ? profile.url : `https://${profile.url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-micro text-text-muted transition-colors hover:text-text-secondary"
+          >
+            Open product <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-2">
+          <div>
+            <p className="ui-kicker">Mission</p>
+            <p className="mt-1 text-sm leading-relaxed text-text-primary">
+              {profile?.mission || profile?.description || "No mission saved yet."}
+            </p>
+          </div>
+          {profile?.stack && (
+            <div>
+              <p className="ui-kicker">Stack</p>
+              <p className="mt-1 text-sm leading-relaxed text-text-secondary">{profile.stack}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {project.dir && (
+            <div className="flex min-w-0 gap-2 text-sm text-text-secondary">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate" title={project.dir}>{project.dir}</span>
+            </div>
+          )}
+          {project.git && (
+            <div className="flex min-w-0 gap-2 text-sm text-text-secondary">
+              <GitBranch className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
+              <span className="truncate" title={project.git.branch}>
+                {project.git.branch}{project.git.dirty ? ` · ${project.git.dirtyCount || 1} pending` : ""}
+              </span>
+            </div>
+          )}
+          {recentCommits.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="ui-kicker">Recent commits</p>
+              {recentCommits.map((commit) => (
+                <p key={commit} className="truncate text-xs text-text-tertiary" title={commit}>
+                  {commit}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {handoff && (
+        <div className="mt-4 border-t border-border-subtle pt-3">
+          <SessionHandoff data={handoff} surface="plain" microLabels />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ProjectProfile({
   project,
@@ -104,6 +179,31 @@ export function ProjectProfile({
 
   return (
     <div>
+      <ProjectContextSummary project={project} />
+
+      {/* Project metadata editor when profile context is missing */}
+      {project.profile ? (
+        <MetaSection profile={project.profile} />
+      ) : project.projectId && !project.readonly ? (
+        <div className="border-t border-border-subtle">
+          <div className="px-4 pt-3 sm:px-5">
+            <p className="text-xs text-text-tertiary">
+              No profile yet — add context so agents know what this project is about.
+            </p>
+          </div>
+          <QuickProfileForm
+            projectId={project.projectId}
+            onSaved={() => onProfileSaved?.()}
+          />
+        </div>
+      ) : !project.profile ? (
+        <div className="px-4 py-6 text-center sm:px-5">
+          <p className="text-sm text-text-secondary">
+            No profile — add metadata in the Projects view to enable full awareness.
+          </p>
+        </div>
+      ) : null}
+
       {/* Agent selector */}
       <div className="flex flex-col gap-3 border-t border-border-subtle px-4 py-3 sm:flex-row sm:items-center sm:px-5">
         <span className="ui-kicker shrink-0">Agent</span>
@@ -158,29 +258,6 @@ export function ProjectProfile({
           </div>
         );
       })()}
-
-      {/* Project metadata */}
-      {project.profile ? (
-        <MetaSection profile={project.profile} />
-      ) : project.projectId && !project.readonly ? (
-        <div className="border-t border-border-subtle">
-          <div className="px-4 pt-3 sm:px-5">
-            <p className="text-xs text-text-tertiary">
-              No profile yet — add context so agents know what this project is about.
-            </p>
-          </div>
-          <QuickProfileForm
-            projectId={project.projectId}
-            onSaved={() => onProfileSaved?.()}
-          />
-        </div>
-      ) : !project.profile ? (
-        <div className="px-4 py-6 text-center sm:px-5">
-          <p className="text-sm text-text-secondary">
-            No profile — add metadata in the Projects view to enable full awareness.
-          </p>
-        </div>
-      ) : null}
 
       {/* Dimension prompt sections — sourced via /api/prompts/agent which merges
           src/config/prompt-library.ts (SSOT) with the legacy JSON file. */}

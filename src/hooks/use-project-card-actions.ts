@@ -8,6 +8,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { mapClaudePromptToIntent } from "@/lib/orchestration";
 import type { DispatchResult } from "@/app/api/control/dispatch/route";
 import { clearDraft, getDraft, setDraft } from "@/lib/draft-storage";
+import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 
 export function useProjectCardActions({
   project,
@@ -48,7 +49,7 @@ export function useProjectCardActions({
   const markSent = useCallback((id: string) => {
     setJustSent({ id, at: Date.now() });
     if (justSentTimer.current) clearTimeout(justSentTimer.current);
-    justSentTimer.current = setTimeout(() => setJustSent(null), 1500);
+    justSentTimer.current = setTimeout(() => setJustSent(null), FEEDBACK_MEDIUM_MS);
   }, []);
   useEffect(() => () => { if (justSentTimer.current) clearTimeout(justSentTimer.current); }, []);
   // Lazy-init from localStorage draft so a failed send / page reload / tab
