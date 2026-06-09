@@ -35,6 +35,22 @@ export function useProjectCardActions({
   autoContinueEnabled: boolean;
 }) {
   const [sending, setSending] = useState<string | null>(null);
+  // Transient "✓ Dispatched" confirmation per action — set on confirmed-
+  // successful inject/orchestration call, auto-cleared after FEEDBACK_MS.
+  // The user reported (UX audit) that Send / Test & fix / Quality / Commit /
+  // Next best return 200 silently — textarea clears, button reverts, no
+  // confirmation. This mirrors the proven "Tab switched ✓" pattern from
+  // ProjectStatusChips → focusWorkspace. Stores both id (so each button
+  // confirms only itself) and the timestamp (so React rerenders fire at
+  // the right time).
+  const [justSent, setJustSent] = useState<{ id: string; at: number } | null>(null);
+  const justSentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const markSent = useCallback((id: string) => {
+    setJustSent({ id, at: Date.now() });
+    if (justSentTimer.current) clearTimeout(justSentTimer.current);
+    justSentTimer.current = setTimeout(() => setJustSent(null), 1500);
+  }, []);
+  useEffect(() => () => { if (justSentTimer.current) clearTimeout(justSentTimer.current); }, []);
   // Lazy-init from localStorage draft so a failed send / page reload / tab
   // close doesn't drop the user's typed prompt. clearDraft is called only on
   // confirmed-successful sendCustom / sendText. See incident 2026-05-20:
@@ -108,6 +124,7 @@ export function useProjectCardActions({
       // from the UI), prefer direct execution over queueing.
       await onInject(project.tab, undefined, trimmed);
       setCustom("");
+      markSent("custom");
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
@@ -125,12 +142,13 @@ export function useProjectCardActions({
       // Belt-and-suspenders: sendText bypasses setCustom (the draft auto-clear
       // path), so explicit clearDraft after successful send.
       clearDraft(project.tab);
+      markSent("custom");
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setSending(null);
     }
-  }, [project.tab, onInject, setDismissed]);
+  }, [project.tab, onInject, setDismissed, markSent]);
 
   const sendIntent = async (intent: OrchestrationTaskIntentId) => {
     if (intent === "next_best" && !sessionHealthBlocksQueue()) {
@@ -142,6 +160,7 @@ export function useProjectCardActions({
         try {
           await onInject(project.tab, undefined, queued);
           removeFromQueue(0);
+          markSent(intent);
         }
         catch (err) { setSendError(err instanceof Error ? err.message : "Send failed"); }
         finally { setSending(null); }
@@ -153,6 +172,7 @@ export function useProjectCardActions({
     setDismissed(true);
     try {
       await onRunWithBrain(project, intent);
+      markSent(intent);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
@@ -161,7 +181,8 @@ export function useProjectCardActions({
   };
 
   const send = async (promptKey?: string, customPrompt?: string) => {
-    setSending(promptKey ?? "custom");
+    const dispatchId = promptKey ?? "custom";
+    setSending(dispatchId);
     setSendError(null);
     setDismissed(true);
     try {
@@ -188,6 +209,7 @@ export function useProjectCardActions({
       // Only clear input on confirmed-successful custom send. setCustom("")
       // triggers setDraft(tab, "") which clears the localStorage draft too.
       if (!promptKey) setCustom("");
+      markSent(dispatchId);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
@@ -310,6 +332,7 @@ export function useProjectCardActions({
 
   return {
     sending,
+    justSent,
     custom,
     setCustom,
     customFocused,

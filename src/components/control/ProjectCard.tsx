@@ -156,7 +156,7 @@ export function ProjectCard({
           : "Autonomous: the next task may start when the agent waits.";
 
   const {
-    sending, custom, setCustom, customFocused, setCustomFocused,
+    sending, justSent, custom, setCustom, customFocused, setCustomFocused,
     merging, preloadedDispatch, sendError, clearSendError,
     sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
     handleAutoInject, handleSendFromQueue, handleMergeQueue,
@@ -341,6 +341,7 @@ export function ProjectCard({
             isRunning={display.isRunning}
             autoContinueEnabled={automationMode === "off" ? false : autoContinueEnabled}
             sending={sending}
+            justSent={justSent}
             sendError={sendError}
             onClearSendError={clearSendError}
             custom={custom}

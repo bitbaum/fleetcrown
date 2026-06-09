@@ -19,6 +19,7 @@ export function IntentButtonPanel({
   isRunning,
   autoContinueEnabled,
   sending,
+  justSent,
   sendError,
   onClearSendError,
   custom,
@@ -48,6 +49,11 @@ export function IntentButtonPanel({
   isRunning: boolean;
   autoContinueEnabled: boolean;
   sending: string | null;
+  /** Transient "✓ Dispatched" confirmation. Set on confirmed-successful
+   *  send; consumers render the ✓ glyph on the matching button until the
+   *  hook auto-clears it. UX audit gap: post-200 silence on every dispatch
+   *  read as "did it actually do anything?" — this closes the loop. */
+  justSent?: { id: string; at: number } | null;
   /** Inline error from the last sendCustom/sendText/sendIntent attempt — surfaced near the send button. */
   sendError?: string | null;
   /** Dismiss the inline error (called from the dismiss button on PromptInput). */
@@ -96,7 +102,7 @@ export function IntentButtonPanel({
   const handleSendIntent = useCallback((id: OrchestrationTaskIntentId) => { haptic(); onSendIntent(id); }, [onSendIntent]);
 
   const inputProps = {
-    custom, listening, processing, micError, sending, waveformBars, recordingSeconds, maxRecordingSeconds,
+    custom, listening, processing, micError, sending, justSent, waveformBars, recordingSeconds, maxRecordingSeconds,
     sendError, onClearSendError,
     onCustomChange, onCustomFocusChange, toggleMic,
     showQueue: !!onEnqueueCustom,
@@ -182,7 +188,11 @@ export function IntentButtonPanel({
             title="Strategist picks the next task autonomously based on session handoff + queue + recent commits. This click dispatches without preview."
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
-            {sending === primary.id ? "…" : `${primary.label} →`}
+            {sending === primary.id
+              ? "…"
+              : justSent?.id === primary.id
+                ? `✓ Dispatched`
+                : `${primary.label} →`}
           </button>
 
           {/* Secondary intents: compact chips + More toggle */}
@@ -194,7 +204,7 @@ export function IntentButtonPanel({
                 disabled={sending !== null}
                 className="ui-chip-action-compact text-text-secondary"
               >
-                {sending === id ? "…" : label}
+                {sending === id ? "…" : justSent?.id === id ? "✓" : label}
               </button>
             ))}
             <button
@@ -215,7 +225,7 @@ export function IntentButtonPanel({
                   disabled={sending !== null}
                   className="ui-chip-action-compact text-text-tertiary"
                 >
-                  {sending === id ? "…" : label}
+                  {sending === id ? "…" : justSent?.id === id ? "✓" : label}
                 </button>
               ))}
               {/* Hide on cloud — /api/project/clear-context calls

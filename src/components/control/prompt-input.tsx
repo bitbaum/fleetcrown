@@ -9,6 +9,7 @@ export function PromptInput({
   processing,
   micError,
   sending,
+  justSent,
   sendError,
   onClearSendError,
   placeholder,
@@ -31,6 +32,9 @@ export function PromptInput({
   processing: boolean;
   micError: string;
   sending: string | null;
+  /** Transient "✓ Sent" confirmation. When justSent.id === "custom" within
+   *  the recent window, the Send button flashes the check. */
+  justSent?: { id: string; at: number } | null;
   /** Inline error banner shown above the input when the last send attempt
    *  failed. The draft text is preserved (custom state survives), so the user
    *  can retry from the same input. */
@@ -200,13 +204,14 @@ export function PromptInput({
             title={listening ? "Stop recording and send" : undefined}
             className={cn(
               "inline-flex shrink-0 min-h-11 sm:min-h-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              custom.trim() || listening
-                ? "bg-text-primary text-text-inverted hover:opacity-90"
-                : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
+              justSent?.id === "custom"
+                ? "bg-status-positive text-text-inverted"
+                : custom.trim() || listening
+                  ? "bg-text-primary text-text-inverted hover:opacity-90"
+                  : "pointer-events-none bg-surface-overlay text-text-muted opacity-40",
             )}
           >
-            Send
-            <Send className="h-3 w-3" />
+            {justSent?.id === "custom" ? "Sent ✓" : <>Send <Send className="h-3 w-3" /></>}
           </button>
       </div>
     </div>
