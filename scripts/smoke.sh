@@ -31,6 +31,7 @@ PAGE_ROUTES=(
   "/habits"
   "/events"
   "/money"
+  "/digests"
   "/history"
   "/prompts"
   "/system"
