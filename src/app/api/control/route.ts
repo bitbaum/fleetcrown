@@ -351,6 +351,11 @@ export async function GET() {
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
     recentInjections: activityByProject.get(tab) ?? [],
     recentOutcomes: recentOutcomesMap.get(tab) ?? [],
+    // Stream-aligned per-tab fields so the first render carries what the SSE
+    // patches will keep fresh — replaces per-card polling on mount.
+    promptQueue: dbState?.promptQueue ?? [],
+    promptQueueRevision: dbState?.promptQueueRevision ?? 0,
+    autoContinueEnabled: dbState?.autoContinueEnabled ?? true,
     autoInjectModeOverride: resolveAutoInjectOverride(projectId, tab, dir, effectiveDbProjects),
     latestOrchestrationRun: latestRun ? {
       adapter: latestRun.adapter,

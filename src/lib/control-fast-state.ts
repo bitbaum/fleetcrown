@@ -123,6 +123,12 @@ export type FastProjectState = {
   lockAt: number | null;
   closingAt: number | null;
   closedAt: number | null;
+  // Per-tab state previously fetched by per-card polling. Always set when the
+  // stream sources from the DB; left undefined by the local /proc path so the
+  // hook-side fallback still does a one-shot HTTP load.
+  promptQueue?: string[];
+  promptQueueRevision?: number;
+  autoContinueEnabled?: boolean;
 };
 
 export function readFastState(

@@ -56,6 +56,9 @@ function dbToFastState(
       lockAt:    r.lockAt    ? Math.floor(r.lockAt.getTime()    / 1000) : null,
       closingAt: r.closingAt ? Math.floor(r.closingAt.getTime() / 1000) : null,
       closedAt:  r.closedAt  ? Math.floor(r.closedAt.getTime()  / 1000) : null,
+      promptQueue: r.promptQueue ?? [],
+      promptQueueRevision: r.promptQueueRevision,
+      autoContinueEnabled: r.autoContinueEnabled,
     };
   });
 }

@@ -6,18 +6,27 @@ import { getJson, postJson } from "@/lib/api/fetch";
 /**
  * Per-project continuation permission persisted by the control API. A browser
  * may render the setting, but does not own operational authorization.
+ *
+ * Reads come from the SSE control stream — pass `initialEnabled` sourced from
+ * the streamed project state. The hook only falls back to a one-shot HTTP GET
+ * when the prop is absent (local /proc-backed runtime that doesn't project
+ * this field). Per-card polling is gone.
  */
-export function useAutoContinue(tab: string) {
-  const [enabled, setEnabled] = useState(false);
+export function useAutoContinue(tab: string, initialEnabled?: boolean) {
+  const [enabled, setEnabled] = useState(initialEnabled ?? false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (initialEnabled !== undefined) {
+      setEnabled(initialEnabled);
+      return;
+    }
     let cancelled = false;
     getJson<{ enabled: boolean }>(`/api/control/auto-continue?tab=${encodeURIComponent(tab)}`)
       .then((result) => { if (!cancelled) setEnabled(result.enabled); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [tab]);
+  }, [tab, initialEnabled]);
 
   const toggle = useCallback(async () => {
     if (saving) return;

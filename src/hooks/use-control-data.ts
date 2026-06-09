@@ -168,6 +168,9 @@ export function useControlData(): ControlDataHook {
           lockAt: patch.lockAt,
           closingAt: patch.closingAt,
           closedAt: patch.closedAt,
+          ...(patch.promptQueue !== undefined ? { promptQueue: patch.promptQueue } : {}),
+          ...(patch.promptQueueRevision !== undefined ? { promptQueueRevision: patch.promptQueueRevision } : {}),
+          ...(patch.autoContinueEnabled !== undefined ? { autoContinueEnabled: patch.autoContinueEnabled } : {}),
         };
       });
       // Sync zellijTabs from tabOpen patches so active/idle categorisation stays live

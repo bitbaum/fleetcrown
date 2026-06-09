@@ -83,6 +83,11 @@ export type ProjectState = {
   closedAt: number | null;
   recentCustomPrompts: RecentCustomPrompt[];
   recentInjections: import("@/db/queries/prompt-history").ActivityItem[];
+  /** Per-tab queue + autopilot toggle, streamed via /api/control/stream so
+   *  per-card hooks read from props instead of polling /api/beacon/queue/*. */
+  promptQueue?: string[];
+  promptQueueRevision?: number;
+  autoContinueEnabled?: boolean;
   /** Last 5 outcomes for this project, newest first. Powers the streak chip + dispatch reasoner. */
   recentOutcomes: OrchestrationOutcome[];
   /** Per-project autopilot mode override. NULL = inherit the user-level
