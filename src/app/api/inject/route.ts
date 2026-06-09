@@ -7,7 +7,8 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
-import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
+import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
+import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
 import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 
@@ -140,7 +141,19 @@ export async function POST(req: NextRequest) {
       const prompts = readPrompts();
       const base = prompts[promptKey];
       if (!base) return NextResponse.json({ error: `Unknown prompt key: ${promptKey}` }, { status: 400 });
-      prompt = buildPromptWithSession(base, effectiveTab);
+      // Project state context — same description shown on the badge
+      // tooltip, prepended so the agent reasons from the same WHY.
+      const injectRow = await getProjectState(userId, effectiveTab).catch(() => null);
+      const stateKey = deriveProjectStateKey({
+        agentRunning: injectRow?.agentRunning,
+        tabOpen: injectRow?.tabOpen,
+        sessionStatus: injectRow?.sessionStatus,
+        readyAt: injectRow?.readyAt ? Math.floor(injectRow.readyAt.getTime() / 1000) : null,
+        lockAt: injectRow?.lockAt ? Math.floor(injectRow.lockAt.getTime() / 1000) : null,
+        closingAt: injectRow?.closingAt ? Math.floor(injectRow.closingAt.getTime() / 1000) : null,
+        closedAt: injectRow?.closedAt ? Math.floor(injectRow.closedAt.getTime() / 1000) : null,
+      });
+      prompt = buildPromptWithSession(base, effectiveTab, projectStateDescription(stateKey));
       const meta = readPromptMeta().find((m) => m.key === promptKey);
       promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
     } else {

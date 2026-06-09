@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
 
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { injectIntoTab, shellEscape, getZellijTabs } from "@/lib/zellij";
@@ -241,11 +242,26 @@ export async function POST(req: NextRequest) {
     try {
       const nowS = Math.floor(Date.now() / 1000);
       const prompt = renderTaskForAdapter(request);
+      // Fetch the project's current state so the agent receives the same
+      // one-line WHY the human sees on the badge tooltip. Same SSOT
+      // (STATE_DEFINITIONS[k].description) — no paraphrasing — so reading
+      // /control and reading the prompt feel like one shared truth.
+      const projectRow = await getProjectState(userId, request.projectKey).catch(() => null);
+      const stateKey = deriveProjectStateKey({
+        agentRunning: projectRow?.agentRunning,
+        tabOpen: projectRow?.tabOpen,
+        sessionStatus: projectRow?.sessionStatus,
+        readyAt: projectRow?.readyAt ? Math.floor(projectRow.readyAt.getTime() / 1000) : null,
+        lockAt: projectRow?.lockAt ? Math.floor(projectRow.lockAt.getTime() / 1000) : null,
+        closingAt: projectRow?.closingAt ? Math.floor(projectRow.closingAt.getTime() / 1000) : null,
+        closedAt: projectRow?.closedAt ? Math.floor(projectRow.closedAt.getTime() / 1000) : null,
+      });
+      const stateDescription = projectStateDescription(stateKey);
       // hard_stop skips session context — inject the bare stop directive, then immediately
       // block auto-continue so stop.sh won't re-open even after Claude goes idle.
       const fullPrompt = request.intent === "hard_stop"
         ? prompt
-        : buildPromptWithSession(prompt, request.projectKey);
+        : buildPromptWithSession(prompt, request.projectKey, stateDescription);
       injectIntoTab(effectiveKey, fullPrompt);
       await cancelActiveBeaconSessions(userId, effectiveKey);
       clearHandshakeFiles(effectiveKey);
@@ -294,8 +310,19 @@ export async function POST(req: NextRequest) {
   if (request.adapter === "codex" || request.adapter === "gemini") {
     try {
       const basePrompt = renderTaskForAdapter(request);
-
-      const prompt = buildPromptWithSession(basePrompt, effectiveKey);
+      // Same SSOT description threaded in — see the Claude branch above
+      // for the WHY (human and agent share one source of state context).
+      const cxgRow = await getProjectState(userId, request.projectKey).catch(() => null);
+      const cxgStateKey = deriveProjectStateKey({
+        agentRunning: cxgRow?.agentRunning,
+        tabOpen: cxgRow?.tabOpen,
+        sessionStatus: cxgRow?.sessionStatus,
+        readyAt: cxgRow?.readyAt ? Math.floor(cxgRow.readyAt.getTime() / 1000) : null,
+        lockAt: cxgRow?.lockAt ? Math.floor(cxgRow.lockAt.getTime() / 1000) : null,
+        closingAt: cxgRow?.closingAt ? Math.floor(cxgRow.closingAt.getTime() / 1000) : null,
+        closedAt: cxgRow?.closedAt ? Math.floor(cxgRow.closedAt.getTime() / 1000) : null,
+      });
+      const prompt = buildPromptWithSession(basePrompt, effectiveKey, projectStateDescription(cxgStateKey));
       const promptFile = path.join("/tmp", `${APP_SLUG}-${request.adapter}-prompt-${randomUUID()}.txt`);
       fs.writeFileSync(promptFile, prompt);
 

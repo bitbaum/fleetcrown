@@ -1,12 +1,17 @@
 "use client";
 
 import { RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState } from "./control-presenter";
 import type { AutoInjectMode } from "@/config/beacon";
 import { AutomationPolicyControl } from "./AutomationPolicyControl";
 import { APP_NAME } from "@/config/brand";
+import {
+  DAEMON_STATE_DEFINITIONS,
+  deriveDaemonStateKey,
+} from "@/lib/control-states";
 
 // Single-line hint shown under the fleet chips when this mode is active.
 // Five-level trust ladder (2026-05-31): Manual / Queue / Beacon / Continuous / Mission.
@@ -62,13 +67,15 @@ export function ControlFleetStatus({
   const working = dashboard?.runningCount ?? 0;
   const openTabs = dashboard?.openTabCount ?? 0;
 
-  const daemonLabel = daemonNeverSeen
-    ? "Setup needed"
-    : daemonOffline
-      ? "Daemon offline"
-      : daemonStateUnknown
-        ? "Status uncertain"
-        : "Connected";
+  // SSOT: label/description/problem-CTA all come from DAEMON_STATE_DEFINITIONS
+  // (lib/control-states.ts). Hand-rolled label trees that drifted between this
+  // component and DaemonStatusBanner are gone — both read the same source.
+  const daemonStateKey = deriveDaemonStateKey({
+    neverSeen: daemonNeverSeen,
+    offline: daemonOffline,
+    stateUnknown: daemonStateUnknown,
+  });
+  const daemonDef = DAEMON_STATE_DEFINITIONS[daemonStateKey];
 
   const daemonDetail = !daemonNeverSeen && daemonLastPushedAt
     ? `sync ${timeAgo(new Date(daemonLastPushedAt).getTime())}`
@@ -76,18 +83,43 @@ export function ControlFleetStatus({
       ? `page ${timeAgo(lastUpdated)}`
       : null;
 
-  const DaemonIcon = daemonNeverSeen || daemonOffline ? WifiOff : Radio;
-  const daemonTone = daemonNeverSeen || daemonOffline || daemonStateUnknown
-    ? "ui-control-fleet-daemon-warn"
-    : "ui-control-fleet-daemon-ok";
+  const DaemonIcon = daemonStateKey === "setup_needed" || daemonStateKey === "offline" ? WifiOff : Radio;
+  const daemonTone = daemonStateKey === "connected"
+    ? "ui-control-fleet-daemon-ok"
+    : "ui-control-fleet-daemon-warn";
 
   return (
     <section className="ui-control-fleet">
       <div className="ui-control-fleet-top">
-        <div className={cn("ui-control-fleet-daemon", daemonTone)}>
+        <div
+          className={cn("ui-control-fleet-daemon", daemonTone)}
+          title={daemonDef.description}
+        >
           <DaemonIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="font-medium">{daemonLabel}</span>
+          <span className="font-medium">{daemonDef.label}</span>
           {daemonDetail && <span className="text-text-muted">· {daemonDetail}</span>}
+          {/* When the daemon state itself signals a problem with a fix
+              we know (setup_needed → install Fleet Runner), surface the
+              CTA as a small action chip next to the label. Hover gives
+              the longer how-to hint. */}
+          {daemonDef.problem && (
+            daemonDef.problem.ctaHref ? (
+              <Link
+                href={daemonDef.problem.ctaHref}
+                className="ui-tag ui-tag-warning gap-1"
+                title={daemonDef.problem.hint}
+              >
+                {daemonDef.problem.ctaLabel ?? "Fix"}
+              </Link>
+            ) : (
+              <span
+                className="ui-tag ui-tag-warning gap-1"
+                title={daemonDef.problem.hint}
+              >
+                {daemonDef.problem.ctaLabel ?? "Action needed"}
+              </span>
+            )
+          )}
         </div>
         <div className="ui-control-fleet-actions">
           <AutomationPolicyControl

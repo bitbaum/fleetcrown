@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npx tsx scripts/generate-bash-state-vocab.ts",
     "build": "next build",
     "postbuild": "bash scripts/deploy-local.sh",
     "start": "next start",

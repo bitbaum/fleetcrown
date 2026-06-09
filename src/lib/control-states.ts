@@ -205,3 +205,132 @@ export function projectStateCounterCategory(
 ): ProjectCounterCategory {
   return STATE_DEFINITIONS[key].counterCategory;
 }
+
+/* ── Daemon-side states ──────────────────────────────────────────────────────
+ *
+ * The daemon banner uses a different state space than the per-project badge —
+ * a single user can have many project states at once but only ever one daemon
+ * connectivity state. Same shape as the per-project SSOT so the banner gets
+ * the same hover-tooltip + problem-CTA treatment automatically.
+ */
+
+export const DAEMON_STATES = [
+  "setup_needed",   // The daemon has never been seen — first-run path.
+  "offline",        // Daemon was seen but the last push exceeded the offline threshold.
+  "state_unknown",  // We have a connection but the daemon hasn't pushed a valid state yet.
+  "connected",     // Healthy — daemon pushed within the freshness window.
+] as const;
+
+export type DaemonStateKey = (typeof DAEMON_STATES)[number];
+
+export type DaemonStateDefinition = {
+  label: string;
+  description: string;
+  dotClass: string;
+  tagClass: string;
+  problem: { hint: string; ctaLabel?: string; ctaHref?: string } | null;
+};
+
+export const DAEMON_STATE_DEFINITIONS: Record<DaemonStateKey, DaemonStateDefinition> = {
+  setup_needed: {
+    label: "Setup needed",
+    description: "No daemon push has ever reached the cloud. Install Fleet Runner (or the local bash daemon) to start pushing state.",
+    dotClass: "bg-status-warning",
+    tagClass: "ui-tag ui-tag-warning",
+    problem: {
+      hint: "Install Fleet Runner desktop or run `bash scripts/home-start.sh` from your project directory.",
+      ctaLabel: "Install Fleet Runner",
+      ctaHref: "/download",
+    },
+  },
+  offline: {
+    label: "Daemon offline",
+    description: "Daemon was running but has stopped pushing state. The control surface is showing the last cached values and may be stale.",
+    dotClass: "bg-status-warning",
+    tagClass: "ui-tag ui-tag-warning",
+    problem: {
+      hint: "Start the local daemon: `bash scripts/home-start.sh` (or relaunch Fleet Runner).",
+    },
+  },
+  state_unknown: {
+    label: "Status uncertain",
+    description: "We have a connection but no usable state push has arrived yet. Wait a few seconds; if it persists, your local daemon may be crashing.",
+    dotClass: "bg-status-warning",
+    tagClass: "ui-tag ui-tag-warning",
+    problem: null,
+  },
+  connected: {
+    label: "Connected",
+    description: "Daemon pushed state within the freshness window — what you see is current.",
+    dotClass: "bg-status-positive",
+    tagClass: "ui-tag ui-tag-positive",
+    problem: null,
+  },
+};
+
+export function daemonStateLabel(key: DaemonStateKey): string {
+  return DAEMON_STATE_DEFINITIONS[key].label;
+}
+
+export function daemonStateDescription(key: DaemonStateKey): string {
+  return DAEMON_STATE_DEFINITIONS[key].description;
+}
+
+export function daemonStateDotClass(key: DaemonStateKey): string {
+  return DAEMON_STATE_DEFINITIONS[key].dotClass;
+}
+
+export function daemonStateProblem(key: DaemonStateKey): DaemonStateDefinition["problem"] {
+  return DAEMON_STATE_DEFINITIONS[key].problem;
+}
+
+/** Derive the daemon's state from the same fields ControlFleetStatus.tsx
+ *  already computes locally (daemonNeverSeen / daemonOffline / etc.). One
+ *  signal in, one key out — the components below stop hand-rolling label /
+ *  dot / tone trees and read the SSOT instead. */
+export function deriveDaemonStateKey(signals: {
+  neverSeen: boolean;
+  offline: boolean;
+  stateUnknown: boolean;
+}): DaemonStateKey {
+  if (signals.neverSeen) return "setup_needed";
+  if (signals.offline) return "offline";
+  if (signals.stateUnknown) return "state_unknown";
+  return "connected";
+}
+
+/** Coarse derivation of a ProjectStateKey from the raw signal set the
+ *  daemon and the API routes carry around — primarily for places that
+ *  want to prepend the SSOT description to the agent prompt context but
+ *  don't want to pull in the full presenter machinery.
+ *
+ *  Inputs map 1:1 onto the columns in `project_states` (DB) and the
+ *  `/tmp/agent-*-<tab>` sentinel files (local runtime). Either source can
+ *  drive this; just pass whichever pair of fields you have.
+ *
+ *  Granular fields like `currentPrompt` aren't checked here because the
+ *  callers using this helper are about to ENQUEUE a new prompt, not
+ *  observe one in flight. */
+export function deriveProjectStateKey(signals: {
+  agentRunning?: boolean;
+  tabOpen?: boolean;
+  sessionStatus?: string | null;
+  readyAt?: number | null;
+  lockAt?: number | null;
+  closingAt?: number | null;
+  closedAt?: number | null;
+  daemonOffline?: boolean;
+}): ProjectStateKey {
+  const now = Math.floor(Date.now() / 1000);
+  const within = (t: number | null | undefined, windowS: number) =>
+    typeof t === "number" && t > 0 && now - t < windowS;
+  if (signals.daemonOffline) return "offline";
+  if (within(signals.closedAt, 60)) return "completed";
+  if (within(signals.closingAt, 60)) return "closing";
+  if (within(signals.readyAt, 60)) return "ready";
+  if (within(signals.lockAt, 60)) return "working";
+  if (signals.sessionStatus === "working") return "working";
+  if (signals.agentRunning) return "open_idle";
+  if (signals.tabOpen) return "tab_open";
+  return "not_running";
+}

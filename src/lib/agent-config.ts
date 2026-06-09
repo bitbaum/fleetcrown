@@ -196,8 +196,15 @@ export function readPrompts(): Record<string, string> {
  * Wrap a base prompt with session context from the project's session file.
  * If the session file exists, appends it + update instruction.
  * If not, asks Claude to create it with the standard fields.
+ *
+ * `projectStateDescription` (optional) — the SSOT one-line WHY for the
+ * project's current state (e.g. "Stop hook fired recently — the agent
+ * finished a turn and is ready for the next instruction"). When provided,
+ * it is prepended as a "Project state:" line so the agent reads the same
+ * inferred-state context the human sees on the badge hover tooltip.
+ * Source: src/lib/control-states.ts -> projectStateDescription(stateKey).
  */
-export function buildPromptWithSession(base: string, tab: string): string {
+export function buildPromptWithSession(base: string, tab: string, projectStateDescription?: string): string {
   const sessionFile = path.join(SESSIONS_DIR(), `${tab}.md`);
   // LOOP v2 handoff template (deployed 2026-05-25).
   // Gravity signals (last-3-same-dir, wip-or-revert) come FIRST so the next
@@ -218,10 +225,17 @@ export function buildPromptWithSession(base: string, tab: string): string {
     "next: <state to resume from — NOT a verb. EMPTY if nothing mid-flight; empty > lie.>",
   ].join("\n");
 
+  // Project-state block — same one-line description the badge tooltip
+  // shows, prepended so the agent reasons from the same context the
+  // human sees. Empty when caller didn't provide it (transitional).
+  const stateBlock = projectStateDescription
+    ? `Project state: ${projectStateDescription}\n\n`
+    : "";
+
   try {
     if (fs.existsSync(sessionFile)) {
       const session = fs.readFileSync(sessionFile, "utf-8");
-      return `${base}
+      return `${stateBlock}${base}
 
 Session state from last run:
 ${session}
@@ -232,7 +246,7 @@ ${sessionUpdateBlock}`;
     /* fall through */
   }
 
-  return `${base}
+  return `${stateBlock}${base}
 
 Before stopping, create ${sessionFile}.
 ${sessionUpdateBlock}`;

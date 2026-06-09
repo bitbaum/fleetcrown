@@ -38,3 +38,4 @@ desktop/resources/bin/
 # committed so packaged binaries include them without a generation step).
 !desktop/resources/*.png
 
+.env.vercel.production.snapshot.OLD

@@ -32,6 +32,16 @@ source "$SCRIPT_DIR/agent-hook-lib.sh" 2>/dev/null || {
 # shellcheck source=_agents.sh
 source "$SCRIPT_DIR/_agents.sh" 2>/dev/null || true
 
+# Source the generated state vocabulary so the daemon reports states using
+# the same label / description strings the UI and the agent see. Generated
+# from src/lib/control-states.ts via scripts/generate-bash-state-vocab.ts
+# (wired into npm run build's prebuild step). Missing file = stale checkout
+# or fresh clone — we don't fail the daemon, but a warning surfaces.
+if [ -f "$SCRIPT_DIR/control-states.generated.sh" ]; then
+  # shellcheck source=control-states.generated.sh
+  source "$SCRIPT_DIR/control-states.generated.sh"
+fi
+
 # Multi-source polling: FLEETCROWN_BASE_URLS (or APP_BASE_URLS) is a comma-separated list of base URLs
 # (e.g. "http://127.0.0.1:3000,https://fleetcrown.vercel.app"). When 2+ are
 # present, this parent forks one child per extra URL — each runs the full
@@ -1421,10 +1431,23 @@ _shutdown() {
   # _CONF_SYNC_PID only exists in the parent (child daemons skip the loop).
   [ -n "${_CONF_SYNC_PID:-}" ] && kill "$_CONF_SYNC_PID" 2>/dev/null || true
   [ -n "${_CHILD_WATCHDOG_PID:-}" ] && kill "$_CHILD_WATCHDOG_PID" 2>/dev/null || true
+  # Tear down sibling daemons too — they're parented at startup but not
+  # process-grouped, so without this they survive the parent and accumulate
+  # into the fork-bomb the user reported (12+ orphans observed). The kill
+  # is best-effort; signal them TERM, give them a beat, then KILL stragglers.
+  if [ ${#_DAEMON_CHILD_PIDS[@]} -gt 0 ]; then
+    for _cpid in "${_DAEMON_CHILD_PIDS[@]}"; do
+      kill -TERM "$_cpid" 2>/dev/null || true
+    done
+    sleep 0.5
+    for _cpid in "${_DAEMON_CHILD_PIDS[@]}"; do
+      kill -KILL "$_cpid" 2>/dev/null || true
+    done
+  fi
   rm -f "$_AUTH_HEADER"
   exit 0
 }
-trap '_shutdown' INT TERM
+trap '_shutdown' INT TERM EXIT
 
 while true; do
   _ensure_push_loop
