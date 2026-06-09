@@ -155,14 +155,18 @@ function runTests(): void {
     assert(snapshot.evidenceKind === "historical", "handoff provenance must be historical");
   });
 
-  check("open session is not mislabeled as waiting for input", () => {
+  check("open session is labeled 'Awaiting input' to match the summary chip", () => {
     const nowS = 1_700_000_000;
     const project = stubProject({ tab: "FleetCrown", agentRunning: true });
     const state = getProjectDisplayState(project, ["FleetCrown"], nowS);
     const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
-    assert(state.stateLabel === "Waiting for instructions", "open inactive agent must describe the observed shell");
-    assert(snapshot.phase === "open_idle", "open inactive agent must not count as waiting for input");
-    assert(snapshot.evidenceLabel === "Waiting for instructions", "evidence should match the badge wording for open idle tabs");
+    // Previous label "Waiting for instructions" implied the project itself was
+    // dormant when really the only known fact is "agent process detected, no
+    // recent handoff signal" — actionable wording matches the summary section
+    // ("X awaiting input") so the row + chip agree.
+    assert(state.stateLabel === "Awaiting input", "open inactive agent must read as awaiting your next prompt");
+    assert(snapshot.phase === "open_idle", "open_idle phase is still the underlying state");
+    assert(snapshot.evidenceLabel === "Awaiting input", "evidence label must match the badge wording");
   });
 
   check("ready sentinel is a next-step state, not generic waiting", () => {

@@ -115,7 +115,7 @@ export type ProjectDisplayState = {
     | "closed"
     | "idle";
   /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Ready for next step" | "Waiting for instructions" | "Closing" | "Completed" | "Not running" | "Tab open";
+  stateLabel: "Offline" | "Working" | "Ready for next step" | "Awaiting input" | "Closing" | "Completed" | "Not running" | "Tab open";
   /** Tailwind classes for the ui-tag badge */
   stateTagClass: string;
 };
@@ -200,7 +200,7 @@ const LIVE_TAB_RANK: Record<LiveTabRankLabel, number> = {
   Offline: 0,
   Working: 0,
   "Ready for next step": 1,
-  "Waiting for instructions": 3,
+  "Awaiting input": 3,
   Closing: 2,
   Completed: 3,
   "Not running": 4,
@@ -292,7 +292,7 @@ export function buildLiveTabRows(
           : inferAgentLabelFromTabName(tabName);
       // SSOT alignment: previous code emitted "Open, idle" here, which was
       // a third phrasing for the same conceptual state ("Tab open" /
-      // "Waiting for instructions"). Display.stateLabel already handles the
+      // "Awaiting input"). Display.stateLabel already handles the
       // idle-with-tab-open case as "Tab open" — use that directly.
       const stateLabel: LiveTabRow["stateLabel"] = display?.stateLabel ?? "Open";
       const stateTagClass = display?.stateTagClass ?? "ui-tag ui-tag-neutral";
@@ -476,7 +476,7 @@ export function getProjectDisplayState(
   const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
     offline:               "Offline",
     running:               "Working",
-    "session-open":        "Waiting for instructions",
+    "session-open":        "Awaiting input",
     ready:                 "Ready for next step",
     "orchestration-ready": "Ready for next step",
     closing:               "Closing",
@@ -570,7 +570,7 @@ export function buildProjectOperationsSnapshot(
   // to the badge. They INTENTIONALLY add detail the badge can't fit (e.g.,
   // "Agent signaled ready on connected computer" vs the badge's "Ready for
   // next step"). 2026-06-08: simplified "Agent shell waiting for
-  // instructions" → "Waiting for instructions" so the subtitle matches the
+  // instructions" → "Awaiting input" so the subtitle matches the
   // badge wording — no need for two different ways to say the same thing
   // stacked on the same row.
   const liveEvidenceLabel = display.isRunning
@@ -580,7 +580,7 @@ export function buildProjectOperationsSnapshot(
       : display.isOrchestrationReady
         ? "Last run completed"
         : display.isSessionOpen
-          ? "Waiting for instructions"
+          ? "Awaiting input"
           : display.tabOpen
             ? recentDispatchSuffix
               ? `Workspace tab open · ${recentDispatchSuffix}`
