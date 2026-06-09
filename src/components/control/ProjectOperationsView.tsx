@@ -3,7 +3,8 @@
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
-import { PHASE_DOT_CLASS, type ProjectOperationsSnapshot } from "./control-presenter";
+import type { ProjectOperationsSnapshot } from "./control-presenter";
+import { STATE_DEFINITIONS } from "@/lib/control-states";
 import { ProjectCard } from "./ProjectCard";
 
 type CardBaseProps = Omit<Parameters<typeof ProjectCard>[0], "snapshot" | "isOnlyReady">;
@@ -39,9 +40,21 @@ export function ProjectOperationsView({
   }
 
   const selected = snapshots.find((snapshot) => snapshot.project.tab === selectedTab) ?? snapshots[0];
-  const readyCount = snapshots.filter((snapshot) => snapshot.phase === "waiting_for_user").length;
-  const workingCount = snapshots.filter((snapshot) => snapshot.phase === "working").length;
-  const openIdleCount = snapshots.filter((snapshot) => snapshot.phase === "open_idle").length;
+  // Counter categories are sourced from STATE_DEFINITIONS via the SSOT, so
+  // the badge on the row and the count in the chip can never disagree:
+  // "X working" counts ProjectStateKeys whose counterCategory === "working",
+  // "Y awaiting input" counts category === "waiting" (covers ready,
+  // orchestration_ready, AND open_idle — all three states where the user's
+  // next action is "type a prompt"), "Z open" counts category === "idle".
+  const isWaiting = (snapshot: typeof snapshots[number]) =>
+    STATE_DEFINITIONS[snapshot.phase].counterCategory === "waiting";
+  const isWorking = (snapshot: typeof snapshots[number]) =>
+    STATE_DEFINITIONS[snapshot.phase].counterCategory === "working";
+  const isIdle = (snapshot: typeof snapshots[number]) =>
+    STATE_DEFINITIONS[snapshot.phase].counterCategory === "idle";
+  const readyCount = snapshots.filter(isWaiting).length;
+  const workingCount = snapshots.filter(isWorking).length;
+  const openIdleCount = snapshots.filter(isIdle).length;
 
   return (
     <section className="ui-control-workspace">
@@ -55,15 +68,23 @@ export function ProjectOperationsView({
         <div className="ui-control-project-list">
           {snapshots.map((snapshot) => {
             const active = snapshot.project.tab === selected.project.tab;
-            const dotClass = PHASE_DOT_CLASS[snapshot.phase];
+            const stateDef = STATE_DEFINITIONS[snapshot.phase];
+            const dotClass = stateDef.dotClass;
             const evidence = snapshot.evidenceAt
               ? `${snapshot.evidenceLabel} ${compactRelativeDate(new Date(snapshot.evidenceAt))}`
               : snapshot.evidenceLabel;
+            // Row-level tooltip combines the SSOT description with the
+            // problem hint when one exists — same content the inline
+            // action chip on the main badge shows, kept consistent here.
+            const rowTitle = stateDef.problem
+              ? `${stateDef.description}\n\n${stateDef.problem.hint}`
+              : stateDef.description;
             return (
               <button
                 key={snapshot.project.tab}
                 onClick={() => onSelect(snapshot.project.tab)}
                 className={cn("ui-control-project-row", active && "ui-control-project-row-active")}
+                title={rowTitle}
               >
                 <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", dotClass)} />
                 <span className="min-w-0 flex-1">
@@ -85,7 +106,7 @@ export function ProjectOperationsView({
           key={selected.project.tab}
           {...cardProps(selected.project)}
           snapshot={selected}
-          isOnlyReady={readyCount === 1 && selected.phase === "waiting_for_user"}
+          isOnlyReady={readyCount === 1 && isWaiting(selected)}
         />
       </div>
     </section>

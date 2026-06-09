@@ -235,6 +235,7 @@ export function ProjectCard({
         isReady={display.isReady}
         isOrchReady={display.isOrchestrationReady}
         isRunning={display.isRunning}
+        stateKey={display.stateKey}
         stateLabel={display.stateLabel}
         stateTagClass={display.stateTagClass}
         evidenceLabel={snapshot?.evidenceLabel}

@@ -13,6 +13,7 @@ import type { ProjectState } from "@/lib/control-types";
 import { buildSessionHandoffFromProjectSession, SessionHandoff } from "./SessionHandoff";
 import { ProjectStatusChips } from "./ProjectStatusChips";
 import { OutcomeStreak } from "./OutcomeStreak";
+import { STATE_DEFINITIONS, type ProjectStateKey } from "@/lib/control-states";
 
 export function ProjectCardHeader({
   project,
@@ -22,6 +23,7 @@ export function ProjectCardHeader({
   isReady,
   isOrchReady,
   isRunning,
+  stateKey,
   stateLabel,
   stateTagClass,
   evidenceLabel,
@@ -44,6 +46,7 @@ export function ProjectCardHeader({
   isReady: boolean;
   isOrchReady: boolean;
   isRunning: boolean;
+  stateKey: ProjectStateKey;
   stateLabel: string;
   stateTagClass: string;
   evidenceLabel?: string;
@@ -68,17 +71,27 @@ export function ProjectCardHeader({
     ? compactRelativeDate(new Date(lastActiveMs))
     : git?.lastWhen ?? null;
 
-  const dotColor = !runtimeStateKnown
-    ? "text-status-warning"
-    : isRunning
-    ? "text-accent-text animate-pulse"
-    : isClosing
-    ? "text-status-warning"
-    : project.agentRunning
-    ? "text-text-secondary"
-    : isClosed || isReady || isOrchReady
-    ? "text-status-positive"
-    : "text-text-muted";
+  // The dot color, description (hover), and problem hint all come from the
+  // SSOT (STATE_DEFINITIONS) keyed by `stateKey`. Adding a state can never
+  // ship without an explicit dot class — the Record type enforces it.
+  // Hand-rolled local color trees that drifted (gray vs brown vs green
+  // depending on which component looked at it) are gone.
+  const stateDefinition = STATE_DEFINITIONS[stateKey];
+  // Dot uses `text-current fill-current` on the Circle below + the
+  // text-color form of the same semantic token. The "bg-*" classes in
+  // STATE_DEFINITIONS apply to the dot variants used elsewhere
+  // (ProjectOperationsView's rail), so map them to the text-color
+  // equivalent for this inline Circle icon.
+  const DOT_BG_TO_TEXT: Record<string, string> = {
+    "bg-status-warning": "text-status-warning",
+    "bg-status-positive": "text-status-positive",
+    "bg-accent-primary animate-pulse": "text-accent-text animate-pulse",
+    "bg-border-default": "text-text-muted",
+    "bg-border-strong": "text-text-secondary",
+  };
+  const dotColor = DOT_BG_TO_TEXT[stateDefinition.dotClass] ?? "text-text-muted";
+  const stateDescription = stateDefinition.description;
+  const stateProblem = stateDefinition.problem;
 
   return (
     <div className="px-4 py-4 sm:px-5 md:px-6">
@@ -94,13 +107,42 @@ export function ProjectCardHeader({
                 {/* When we have a real handoff with "next", show the actual next step instead of generic "Ready for next step".
                     This reduces the duplicate "Ready for next step ✓ ✓" noise the user reported. */}
                 { (isReady || isOrchReady) && project.session?.next?.trim() ? (
-                  <span className={cn("gap-1.5", stateTagClass)}>
+                  <span
+                    className={cn("gap-1.5", stateTagClass)}
+                    title={stateDescription}
+                  >
                     Next: {project.session.next.split('\n')[0].slice(0, 60)}
                   </span>
                 ) : (
-                  <span className={cn("gap-1.5", stateTagClass)}>
+                  <span
+                    className={cn("gap-1.5", stateTagClass)}
+                    title={stateDescription}
+                  >
                     {stateLabel}
                   </span>
+                )}
+                {/* When the state itself signals a problem (e.g. Offline →
+                    daemon needs starting), surface the remediation as a
+                    small action chip the user can click. Honest by
+                    construction: only renders when STATE_DEFINITIONS says
+                    this state HAS a fix the user should take. */}
+                {stateProblem && (
+                  stateProblem.ctaHref ? (
+                    <Link
+                      href={stateProblem.ctaHref}
+                      className="ui-tag ui-tag-warning gap-1"
+                      title={stateProblem.hint}
+                    >
+                      {stateProblem.ctaLabel ?? "Fix"}
+                    </Link>
+                  ) : (
+                    <span
+                      className="ui-tag ui-tag-warning gap-1"
+                      title={stateProblem.hint}
+                    >
+                      {stateProblem.ctaLabel ?? "Action needed"}
+                    </span>
+                  )
                 )}
                 <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>

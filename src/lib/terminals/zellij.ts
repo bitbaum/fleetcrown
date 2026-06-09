@@ -180,13 +180,38 @@ function resolveLiveTabName(session: string | null, tab: string): string | null 
  *  zellij so case mismatches between the DB and zellij are handled
  *  transparently — `go-to-tab-name "fleetcrown"` would silently no-op if
  *  zellij has the tab as "FleetCrown", causing the focus check to time out. */
+/** Build a directive error string that names what we observed and the
+ *  exact next step. Replaces generic "did not gain focus" / "is zellij
+ *  reachable?" wording that left the user guessing what to do. */
+function buildFocusError(tab: string, session: string | null, allSessions: string[]): string {
+  // No zellij at all — surface the install/launch directive.
+  if (allSessions.length === 0) {
+    return `Cannot inject into "${tab}": no zellij session is running on the connected computer. Start zellij (or Fleet Runner, which manages it for you) and retry.`;
+  }
+  // Tab not found in any session — list what IS open so the user can see
+  // the actual session/tab inventory and either rename or open the target.
+  if (session === null) {
+    const inventory = allSessions
+      .map((s) => {
+        const tabs = getTabsForSessionSync(s);
+        return tabs.length ? `${s}: ${tabs.join(", ")}` : `${s}: (no tabs)`;
+      })
+      .join(" | ");
+    return `Cannot inject into "${tab}": no zellij tab with that name in any active session. Open it (e.g. zellij action new-tab --name "${tab}") or rename an existing tab. Currently open — ${inventory}.`;
+  }
+  // Tab is known but focus didn't take. Most common cause: stale zellij
+  // server state after a session detach/reattach, or the tab is locked
+  // by a modal. Tell the user the exact remediation.
+  return `Cannot inject into "${tab}": found in session "${session}" but focus did not take within 1s. Reattach (zellij attach ${session}) or restart the session, then retry.`;
+}
+
 function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
   const session = findSessionForTab(tab);
   const liveTab = resolveLiveTabName(session, tab) ?? tab;
   const originalTab = getCurrentTab(session);
   execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)));
   if (!waitForTabFocus(liveTab, 1000, session)) {
-    throw new Error(`zellij tab "${liveTab}" did not gain focus within 1s — is the tab open and zellij reachable?`);
+    throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
   }
   try {
     return fn(session);
@@ -225,7 +250,7 @@ export const zellijAdapter: TerminalAdapter = {
     const session = findSessionForTab(tab);
     execSync(zellijCmd(session, "go-to-tab-name", shellEscape(tab)));
     if (!waitForTabFocus(tab, 1000, session)) {
-      throw new Error(`focusTab: zellij tab "${tab}" did not gain focus within 1s`);
+      throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
     }
   },
 

@@ -9,6 +9,10 @@ import { timeAgo } from "@/lib/dates";
 import { getIntentLabel } from "@/config/control-intents";
 import { AGENT_LABELS, type AnyAgentId } from "@/lib/agent-labels";
 import { inferAdapterFromTabName } from "@/lib/agent-resolution";
+import {
+  STATE_DEFINITIONS,
+  type ProjectStateKey,
+} from "@/lib/control-states";
 
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
@@ -114,47 +118,34 @@ export type ProjectDisplayState = {
     | "closing"
     | "closed"
     | "idle";
-  /** Human-readable label for the state badge — single source of truth */
-  stateLabel: "Offline" | "Working" | "Ready for next step" | "Awaiting input" | "Closing" | "Completed" | "Not running" | "Tab open";
-  /** Tailwind classes for the ui-tag badge */
+  /** SSOT key for this state — index into STATE_DEFINITIONS for label,
+   *  description, dot color, problem hint, counter category. All downstream
+   *  consumers (chips, rows, banner, tooltip, agent prompt context) should
+   *  read from here, not from the legacy `tone` / `stateLabel` fields. */
+  stateKey: ProjectStateKey;
+  /** Human-readable label for the state badge — derived from
+   *  STATE_DEFINITIONS[stateKey].label (kept here for transitional access
+   *  during the consumer migration; new code should call
+   *  projectStateLabel(stateKey) directly). */
+  stateLabel: string;
+  /** Tailwind classes for the ui-tag badge — derived from
+   *  STATE_DEFINITIONS[stateKey].tagClass. */
   stateTagClass: string;
 };
 
-export type ControlPhase =
-  | "offline"
-  | "not_running"
-  | "working"
-  | "waiting_for_user"
-  | "open_idle"
-  | "closing"
-  | "completed";
+/** Legacy ControlPhase enum — retained as an alias of ProjectStateKey while
+ *  callers migrate. New code should use ProjectStateKey directly. The
+ *  values are identical so the migration is purely nominal. */
+export type ControlPhase = ProjectStateKey;
 
-/** Status-dot color class for each phase. Maps the enum to a Tailwind
- *  class that hits the design-token surface. Lives here next to the enum
- *  itself so any future caller (mobile shell pill, push notification
- *  icon) sees the same color-coding as /control's project rail — and a
- *  new phase value can't ship without an explicit color choice (the
- *  Record type forces it).
- *
- *  Mapping rationale:
- *    working           → accent-primary + pulse (the only one that draws
- *                        attention — agent actively doing work)
- *    waiting_for_user  → positive (action available)
- *    completed         → positive (terminal success state)
- *    offline           → warning (action required to bring back online)
- *    open_idle         → border-strong (present but inert)
- *    not_running       → border-default (empty)
- *    closing           → border-default (transient state)
- */
-export const PHASE_DOT_CLASS: Record<ControlPhase, string> = {
-  working: "bg-accent-primary animate-pulse",
-  waiting_for_user: "bg-status-positive",
-  completed: "bg-status-positive",
-  offline: "bg-status-warning",
-  open_idle: "bg-border-strong",
-  not_running: "bg-border-default",
-  closing: "bg-border-default",
-};
+/** Status-dot color class per state. Sourced from the SSOT
+ *  (`STATE_DEFINITIONS[k].dotClass`) so the dot, badge, tooltip, and counter
+ *  cannot disagree — adding a state forces an explicit dot class in one
+ *  place. The Record below is just a typed cache to keep call-site syntax
+ *  stable for components that index it directly. */
+export const PHASE_DOT_CLASS: Record<ControlPhase, string> = (Object.fromEntries(
+  (Object.keys(STATE_DEFINITIONS) as ProjectStateKey[]).map((k) => [k, STATE_DEFINITIONS[k].dotClass]),
+) as Record<ProjectStateKey, string>);
 
 export type ProjectOperationsSnapshot = {
   project: ProjectState;
@@ -186,6 +177,10 @@ export type LiveTabRow = {
   tabName: string;
   project: ProjectState | null;
   agentLabel: string | null;
+  /** SSOT key for this row's state, when a registered project backs it.
+   *  Null for unmatched zellij tabs ("Open" rows). Consumers look up
+   *  description + problem from STATE_DEFINITIONS via this key. */
+  stateKey: ProjectStateKey | null;
   stateLabel: ProjectDisplayState["stateLabel"] | "Open";
   stateTagClass: string;
   activity: string;
@@ -300,6 +295,7 @@ export function buildLiveTabRows(
         tabName,
         project,
         agentLabel: agentLabel || null,
+        stateKey: display?.stateKey ?? null,
         stateLabel,
         stateTagClass,
         activity: getTabActivityText(project, display),
@@ -392,8 +388,9 @@ export function getProjectDisplayState(
       showLatestOrchestration: false,
       tabOpen: false,
       tone: "offline",
-      stateLabel: "Offline",
-      stateTagClass: "ui-tag ui-tag-warning",
+      stateKey: "offline",
+      stateLabel: STATE_DEFINITIONS.offline.label,
+      stateTagClass: STATE_DEFINITIONS.offline.tagClass,
     };
   }
   // Track active work from a fresh current-prompt sentinel. Do not require
@@ -473,32 +470,28 @@ export function getProjectDisplayState(
     ? "session-open"
     : "idle";
 
-  const STATE_LABEL: Record<ProjectDisplayState["tone"], ProjectDisplayState["stateLabel"]> = {
-    offline:               "Offline",
-    running:               "Working",
-    "session-open":        "Awaiting input",
-    ready:                 "Ready for next step",
-    "orchestration-ready": "Ready for next step",
-    closing:               "Closing",
-    closed:                "Completed",
-    idle:                  "Not running",
-  };
-  const STATE_TAG: Record<ProjectDisplayState["tone"], string> = {
-    offline:               "ui-tag ui-tag-warning",
-    running:               "ui-tag ui-tag-accent",
-    "session-open":        "ui-tag ui-tag-neutral",
-    ready:                 "ui-tag ui-tag-positive",
-    "orchestration-ready": "ui-tag ui-tag-positive",
-    closing:               "ui-tag ui-tag-warning",
-    closed:                "ui-tag ui-tag-positive",
-    idle:                  "ui-tag ui-tag-neutral",
-  };
+  // Labels and tag classes used to be a pair of Records here. Now they come
+  // from STATE_DEFINITIONS in lib/control-states — adding a state requires
+  // exactly one literal edit, and the badge + dot + chip + tooltip + agent
+  // prompt context cannot disagree.
 
-  // When the Zellij tab is open but no agent/prompt is tracked, "Not running"
-  // reads like nothing exists — "Tab open" matches what the user can verify.
-  const stateLabel = tone === "idle" && tabOpen && !isSessionOpen
-    ? "Tab open"
-    : STATE_LABEL[tone];
+  // Map the legacy 8-value tone enum onto the SSOT 9-value ProjectStateKey.
+  // The "idle + tabOpen" special case becomes its own first-class key, so the
+  // badge, the dot color, and the agent prompt context all read the same.
+  const TONE_TO_STATE_KEY: Record<ProjectDisplayState["tone"], ProjectStateKey> = {
+    offline: "offline",
+    running: "working",
+    "session-open": "open_idle",
+    ready: "ready",
+    "orchestration-ready": "orchestration_ready",
+    closing: "closing",
+    closed: "completed",
+    idle: "not_running",
+  };
+  const stateKey: ProjectStateKey =
+    tone === "idle" && tabOpen && !isSessionOpen
+      ? "tab_open"
+      : TONE_TO_STATE_KEY[tone];
 
   return {
     isClosed,
@@ -514,8 +507,9 @@ export function getProjectDisplayState(
     showLatestOrchestration,
     tabOpen,
     tone,
-    stateLabel,
-    stateTagClass: STATE_TAG[tone],
+    stateKey,
+    stateLabel: STATE_DEFINITIONS[stateKey].label,
+    stateTagClass: STATE_DEFINITIONS[stateKey].tagClass,
   };
 }
 
@@ -528,19 +522,11 @@ export function buildProjectOperationsSnapshot(
 ): ProjectOperationsSnapshot {
   const { syncStale = false, lastSyncedAt = null } = syncCtx;
   const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
-  const phase: ControlPhase = display.tone === "offline"
-    ? "offline"
-    : display.isRunning
-      ? "working"
-      : display.isClosing
-        ? "closing"
-        : display.isClosed
-          ? "completed"
-          : display.isReady || display.isOrchestrationReady
-            ? "waiting_for_user"
-            : display.isSessionOpen
-              ? "open_idle"
-            : "not_running";
+  // Phase IS stateKey now — the SSOT enum is the only enum. Operations
+  // snapshot just exposes the same key under the legacy `phase` field for
+  // callers mid-migration. Once those callers move, this whole block
+  // collapses to `const phase = display.stateKey;`.
+  const phase: ControlPhase = display.stateKey;
   const attention = attentionScore(project);
   const handoffAt = project.session?.mtime ?? null;
   const contextSummary = display.isRunning && project.currentPrompt?.label

@@ -5,6 +5,26 @@ import { Eye, Focus, Terminal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LiveTabRow } from "./control-presenter";
 import { PeekTabDrawer } from "./PeekTabDrawer";
+import { STATE_DEFINITIONS } from "@/lib/control-states";
+
+/** Look up the SSOT description + problem hint for a row's state. Unmatched
+ *  zellij tabs (stateKey === null, "Open" rows) get a generic description
+ *  honest about what we know: only that a tab exists. */
+function rowStateMeta(row: LiveTabRow): {
+  description: string;
+  problem: (typeof STATE_DEFINITIONS)[keyof typeof STATE_DEFINITIONS]["problem"];
+} {
+  if (row.stateKey === null) {
+    return {
+      description: "Terminal tab exists but no FleetCrown project is registered for it.",
+      problem: null,
+    };
+  }
+  return {
+    description: STATE_DEFINITIONS[row.stateKey].description,
+    problem: STATE_DEFINITIONS[row.stateKey].problem,
+  };
+}
 
 type Props = {
   rows: LiveTabRow[];
@@ -72,7 +92,7 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                 </td>
                 <td className="py-0.5 text-text-secondary">{row.agentLabel ?? "—"}</td>
                 <td className="py-0.5">
-                  <span className={row.stateTagClass}>{row.stateLabel}</span>
+                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
                 </td>
                 <td className="py-0.5 max-w-md">
                   <p className="line-clamp-1 text-xs text-text-secondary" title={row.activity}>
@@ -135,7 +155,7 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="truncate font-medium text-text-primary text-sm">{row.tabName}</span>
-                  <span className={row.stateTagClass}>{row.stateLabel}</span>
+                  <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
                 </div>
                 {row.agentLabel && (
                   <p className="mt-0.5 text-micro text-text-tertiary">{row.agentLabel}</p>

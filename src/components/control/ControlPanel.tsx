@@ -118,7 +118,7 @@ export function ControlPanel() {
     const currentValid = selectedTab && snapshots.some((s) => s.project.tab === selectedTab);
     if (currentValid) return;
     const priority = snapshots.find(
-      (s) => s.phase === "waiting_for_user" || s.attentionReason,
+      (s) => s.phase === "ready" || s.phase === "orchestration_ready" || s.attentionReason,
     );
     setSelectedTab(priority?.project.tab ?? snapshots[0].project.tab);
   }, [snapshots, selectedTab]);
