@@ -162,7 +162,7 @@ function runTests(): void {
     const snapshot = buildProjectOperationsSnapshot(project, ["FleetCrown"], nowS);
     assert(state.stateLabel === "Waiting for instructions", "open inactive agent must describe the observed shell");
     assert(snapshot.phase === "open_idle", "open inactive agent must not count as waiting for input");
-    assert(snapshot.evidenceLabel === "Agent shell waiting for instructions", "evidence should explain the live signal");
+    assert(snapshot.evidenceLabel === "Waiting for instructions", "evidence should match the badge wording for open idle tabs");
   });
 
   check("ready sentinel is a next-step state, not generic waiting", () => {
