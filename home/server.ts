@@ -24,6 +24,8 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { APP_NAME, APP_SLUG } from "@/config/brand";
 import type { Autonomy, Adapter } from "@/lib/events";
 import { ADAPTERS, parseEvent } from "@/lib/events";
@@ -48,6 +50,13 @@ Env:    APP_HOME_PORT  port to bind (default 3001)`);
 
 const LOG_PATH = path.join(os.homedir(), `.${APP_SLUG}`, "events.jsonl");
 const PORT = parseInt(process.env.APP_HOME_PORT ?? process.env.FLEETCROWN_HOME_PORT ?? process.env.COCKPIT_HOME_PORT ?? "3001", 10);
+
+// Repo root derived from this file's location — used by the same-machine
+// inject fast path below to spawn bash with the right script paths.
+const __filename = fileURLToPath(import.meta.url);
+const REPO_ROOT = path.resolve(path.dirname(__filename), "..");
+const AGENT_HOOK_LIB = path.join(REPO_ROOT, "scripts", "agent-hook-lib.sh");
+const BRAND_LIB = path.join(REPO_ROOT, "scripts", "_brand.sh");
 
 let state: GlobalState = new Map();
 let lastError: { ts: string; message: string; raw?: string } | null = null;
@@ -331,8 +340,50 @@ setInterval(refresh, 2000);
 
 // ── HTTP handlers ────────────────────────────────────────────────────────────
 
+// ── Same-machine fast path ───────────────────────────────────────────────────
+//
+// /control in the browser tries POST http://localhost:3001/api/inject before
+// falling back to the cloud /api/inject. Cutting Vercel + Postgres + long-poll
+// out of the local case turns 7 hops into 3 (browser → home → zellij → agent)
+// and removes the failure modes that come with each missing hop.
+//
+// Security model:
+//   - The home server binds to 127.0.0.1 only (see listen() at the bottom),
+//     so machines on the LAN cannot reach it.
+//   - CORS allow-list is tight: only the deployed cloud origin and the local
+//     dev server can read responses. The browser blocks cross-origin reads
+//     from anywhere else, so a malicious page in another tab cannot tell
+//     whether the inject succeeded.
+//   - POST is harmless without a valid project name — bad inputs return 4xx
+//     with no side effect.
+
+const ALLOWED_ORIGINS = new Set<string>([
+  "https://fleetcrown.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+
+function applyCors(req: http.IncomingMessage, res: http.ServerResponse): void {
+  const origin = (req.headers.origin ?? "") as string;
+  if (ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+}
+
 const server = http.createServer((req, res) => {
   const url = req.url ?? "/";
+
+  // Preflight for the fast-path inject from cross-origin /control.
+  if (req.method === "OPTIONS") {
+    applyCors(req, res);
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+  applyCors(req, res);
 
   if (url === "/" || url === "/control") {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -368,6 +419,77 @@ const server = http.createServer((req, res) => {
   if (url === "/api/health") {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ ok: true, projectCount: state.size, logPath: LOG_PATH }));
+    return;
+  }
+
+  // Same-machine fast path. Body: { project: string, prompt: string }.
+  // Looks up the project's filesystem path from agent-projects.conf, then
+  // spawns bash to source agent-hook-lib.sh and call inject_prompt directly.
+  // Returns {ok:true} on success or {ok:false, reason} on failure — the
+  // reason is the structured single-line message inject_prompt emits via
+  // _inject_fail_reason, so the caller can render it to the user without
+  // having to re-diagnose.
+  if (url === "/api/inject" && req.method === "POST") {
+    let body = "";
+    req.on("data", (chunk) => { body += String(chunk); });
+    req.on("end", () => {
+      try {
+        const parsed = body.trim() ? JSON.parse(body) : {};
+        const project: string | undefined = parsed.project;
+        const prompt: string | undefined = parsed.prompt;
+        if (typeof project !== "string" || !project || typeof prompt !== "string") {
+          res.statusCode = 400;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: false, reason: "bad-request: body must be {project: string, prompt: string}" }));
+          return;
+        }
+        // Resolve project_dir from the same SSOT the daemon reads. Falls
+        // back to empty string — inject_prompt's cwd path is optional.
+        const projectDir = resolveProjectPath(project) ?? "";
+
+        // Source brand + agent-hook-lib then invoke inject_prompt with our
+        // three positional args. Stderr lines starting with "inject:" carry
+        // the structured failure reason; we grep for the last one.
+        const result = spawnSync(
+          "bash",
+          [
+            "-c",
+            `source "${BRAND_LIB}" 2>/dev/null; source "${AGENT_HOOK_LIB}" || exit 90; inject_prompt "$1" "$2" "$3"`,
+            "fleetcrown-inject",
+            project,
+            prompt,
+            projectDir,
+          ],
+          { encoding: "utf8", timeout: 8000 },
+        );
+
+        if (result.status === 0) {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ ok: true }));
+          return;
+        }
+
+        // Pull the last "inject:" line out of stderr for the reason; otherwise
+        // synthesize a fallback that still names the failure mode.
+        const stderr = (result.stderr ?? "").toString();
+        const lastReasonLine = stderr.split("\n").filter((l) => l.startsWith("inject:")).pop();
+        const reason = lastReasonLine
+          ? lastReasonLine.slice("inject:".length)
+          : result.status === 90
+            ? `bash-init: could not source ${AGENT_HOOK_LIB} — is the repo checked out and home/ daemon started from it?`
+            : result.signal === "SIGTERM" || result.signal === null && result.status === null
+              ? "timeout: inject_prompt did not return within 8s — zellij may be hung; restart your session"
+              : `inject_prompt exit=${result.status}: ${stderr.trim().split("\n").pop() ?? "no output"}`;
+
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: false, reason }));
+      } catch (err) {
+        res.statusCode = 500;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: false, reason: `home-inject crash: ${err instanceof Error ? err.message : String(err)}` }));
+      }
+    });
     return;
   }
 
@@ -644,8 +766,11 @@ function buildPromptForDispatch(
   });
 }
 
-server.listen(PORT, () => {
-  console.log(`[home] ${APP_NAME} brain listening on http://localhost:${PORT}`);
+// Bind to 127.0.0.1 only so the same-machine fast-path /api/inject endpoint
+// is unreachable from the LAN. Cross-origin browser callers reach it via
+// fetch("http://localhost:3001/...") with the CORS allow-list above.
+server.listen(PORT, "127.0.0.1", () => {
+  console.log(`[home] ${APP_NAME} brain listening on http://127.0.0.1:${PORT}`);
   console.log(`[home] tailing ${LOG_PATH}`);
 });
 

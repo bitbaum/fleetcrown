@@ -358,14 +358,112 @@ _find_session_for_tab() {
   done
 }
 
+# Build a structured single-line failure reason string that names what we
+# observed and the exact next step the user can take. The daemon captures
+# this from stderr and forwards it to the cloud as pending_commands.error.
+# Goal: kill "inject_prompt failed" as a user-facing message — every reason
+# should tell the user what's actually broken and how to fix it.
+_inject_fail_reason() {
+  local reason="$1"
+  printf 'inject:%s\n' "$reason" >&2
+  INJECT_FAIL_REASON="$reason"
+  return 1
+}
+
+# Cwd-based fallback. Parses zellij dump-layout for each session, which
+# reports each tab as:
+#   layout { cwd "<session-cwd>"
+#     tab name="FleetCrown" hide_floating_panes=true {
+#       pane cwd="dev/fleetcrown"
+#       ...
+#
+# We resolve "session-cwd" + "pane cwd" to an absolute path and compare
+# against project_dir. The first tab whose pane cwd resolves to the project
+# directory wins. Lets a project with key "revampit" still inject into a
+# zellij tab named "Revamp-It" (or anything else) as long as the tab is
+# rooted in the project directory.
+_resolve_live_tab_by_cwd() {
+  local project_dir="$1"
+  [ -z "$project_dir" ] && return 1
+  [ ! -d "$project_dir" ] && return 1
+  # Normalize: strip trailing slash so the awk equality check matches.
+  project_dir="${project_dir%/}"
+
+  local s tab_for_dir
+  for s in $(zellij list-sessions -n 2>/dev/null | awk '{print $1}'); do
+    [ -z "$s" ] && continue
+    tab_for_dir=$(ZELLIJ_SESSION_NAME="$s" timeout 3 zellij action dump-layout 2>/dev/null \
+      | awk -v target="$project_dir" '
+          # Track the session-level cwd from the outer layout block.
+          /^layout / { in_layout=1 }
+          in_layout && /^[[:space:]]*cwd "/ {
+            match($0, /cwd "[^"]*"/)
+            sess_cwd = substr($0, RSTART+5, RLENGTH-6)
+            in_layout=0
+          }
+          # Record the current tab name as we see it.
+          /tab name=/ {
+            match($0, /tab name="[^"]*"/)
+            tab = substr($0, RSTART+10, RLENGTH-11)
+          }
+          # Each pane line carries the panes own cwd, often relative to
+          # the layout cwd. Reconstruct the absolute path and compare.
+          /pane cwd="/ {
+            match($0, /pane cwd="[^"]*"/)
+            # "pane cwd=\"" is 10 chars (skip), final "\"" trims 1 more.
+            pane_cwd = substr($0, RSTART+10, RLENGTH-11)
+            if (pane_cwd ~ /^\//) abs = pane_cwd
+            else if (sess_cwd != "") abs = sess_cwd "/" pane_cwd
+            else abs = pane_cwd
+            # Strip trailing slash for the equality check.
+            sub(/\/$/, "", abs)
+            if (abs == target && tab != "") { print tab; exit }
+          }
+        ')
+    if [ -n "$tab_for_dir" ]; then
+      printf '%s' "$tab_for_dir"
+      return 0
+    fi
+  done
+  return 1
+}
+
 inject_prompt() {
   local tab="$1"
   local prompt="$2"
-  [ -z "$tab" ] && return 1
+  local project_dir="${3:-}"  # optional — enables cwd-based fallback
+  INJECT_FAIL_REASON=""
+  [ -z "$tab" ] && { _inject_fail_reason "no-tab: empty project key passed to inject_prompt"; return 1; }
 
+  # Layer 1: name-based resolution (case-insensitive exact + suffix match).
   local live_tab="$tab"
   if type _resolve_live_tab_name >/dev/null 2>&1; then
-    live_tab=$(_resolve_live_tab_name "$tab" 2>/dev/null) || live_tab="$tab"
+    live_tab=$(_resolve_live_tab_name "$tab" 2>/dev/null) || live_tab=""
+  fi
+
+  # Layer 2: cwd-based fallback for projects whose zellij tab name doesn't
+  # match the registered key (e.g. project "revampit" with tab "Revamp-It").
+  # Only fires when the caller passed project_dir AND name-match returned
+  # nothing — preserves the cheap fast path for the common case.
+  if [ -z "$live_tab" ] && [ -n "$project_dir" ]; then
+    if type _resolve_live_tab_by_cwd >/dev/null 2>&1; then
+      live_tab=$(_resolve_live_tab_by_cwd "$project_dir" 2>/dev/null) || live_tab=""
+    fi
+  fi
+
+  if [ -z "$live_tab" ]; then
+    # Surface what we DID see so the user knows the rename target.
+    local available
+    available=$(zellij list-sessions -n 2>/dev/null | awk '{print $1}' | while read -r s; do
+      [ -z "$s" ] && continue
+      ZELLIJ_SESSION_NAME="$s" timeout 3 zellij action query-tab-names 2>/dev/null
+    done | tr '\n' ',' | sed 's/,$//; s/,/, /g')
+    if [ -n "$project_dir" ]; then
+      _inject_fail_reason "no-tab: no zellij tab matches '$tab' and no agent process found under '$project_dir'. Open zellij tab named '$tab' or launch an agent in $project_dir. Currently open: ${available:-(none)}"
+    else
+      _inject_fail_reason "no-tab: no zellij tab matches '$tab'. Open a tab with that name or rename an existing one. Currently open: ${available:-(none)}"
+    fi
+    return 1
   fi
 
   # When called from outside a zellij session (e.g. systemd daemon), find which
@@ -374,23 +472,33 @@ inject_prompt() {
   local zellij_session="${ZELLIJ_SESSION_NAME:-}"
   if [ -z "$zellij_session" ]; then
     zellij_session=$(_find_session_for_tab "$live_tab")
-    [ -z "$zellij_session" ] && return 1
+    if [ -z "$zellij_session" ]; then
+      _inject_fail_reason "no-session: tab '$live_tab' resolved but not found in any active zellij session. Run 'zellij attach' or restart your session."
+      return 1
+    fi
   fi
 
   # go-to-tab-name is fire-and-forget — the switch completes asynchronously.
   # Poll dump-layout until the focused tab matches before sending characters,
   # so write-chars never lands in the previously focused pane.
   ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action go-to-tab-name "$live_tab" 2>/dev/null
-  local i active
+  local i active focused_ok=""
   for i in $(seq 1 20); do
     active=$(ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action dump-layout 2>/dev/null \
       | grep 'focus=true' | grep 'tab name=' \
       | sed 's/.*tab name="\([^"]*\)".*/\1/' | head -1)
-    [ "$active" = "$live_tab" ] && break
+    if [ "$active" = "$live_tab" ]; then focused_ok=1; break; fi
     sleep 0.05
   done
+  if [ -z "$focused_ok" ]; then
+    _inject_fail_reason "focus-timeout: tab '$live_tab' in session '$zellij_session' did not gain focus within 1s. Reattach (zellij attach $zellij_session) or restart the session, then retry."
+    return 1
+  fi
 
-  ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write-chars -- "$prompt" 2>/dev/null || true
+  if ! ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write-chars -- "$prompt" 2>/dev/null; then
+    _inject_fail_reason "write-chars-failed: characters did not reach tab '$live_tab' in session '$zellij_session'. Known zellij 0.43.x EWOULDBLOCK bug on large prompts — upgrade zellij or split the prompt."
+    return 1
+  fi
   sleep 0.2
   ZELLIJ_SESSION_NAME="$zellij_session" timeout 3 zellij action write 13 2>/dev/null || true
 }

@@ -303,7 +303,7 @@ execute_inject() {
       log "inject: no $adapter in $tab — auto-launching"
       # Fresh agent → fresh session → re-deliver the handoff template once.
       rm -f "/tmp/agent-handoff-sent-${tab}"
-      inject_prompt "$tab" "$_launch_cmd" 2>/dev/null || true
+      inject_prompt "$tab" "$_launch_cmd" "$project_dir" 2>/dev/null || true
       # Poll for the process to appear (Claude/Cursor TUI need ~1–3s to spawn).
       local _deadline=$(( $(date +%s) + 20 ))
       while (( $(date +%s) < _deadline )); do
@@ -427,7 +427,14 @@ lint: pass | fail(N errors, M warnings)
 "
   fi
 
-  if inject_prompt "$tab" "$prompt" 2>/dev/null; then
+  # Capture structured failure reason from inject_prompt's stderr (see
+  # _inject_fail_reason in agent-hook-lib.sh) so the user sees what's
+  # actually broken — "no-tab: ...", "focus-timeout: ...", etc. — instead
+  # of the previous generic "inject_prompt failed".
+  local _inject_err
+  _inject_err=$(mktemp 2>/dev/null) || _inject_err="/tmp/fc-inject-err-$$"
+  if inject_prompt "$tab" "$prompt" "$project_dir" 2>"$_inject_err"; then
+    rm -f "$_inject_err"
     mark_done "$id" "true"
     log "inject done ✓"
     # Mark the handoff template as delivered for this session.
@@ -448,8 +455,12 @@ lint: pass | fail(N errors, M warnings)
         > "/tmp/agent-current-prompt-${tab}"
     fi
   else
-    mark_done "$id" "false" "inject_prompt failed"
-    log "inject failed ✗"
+    local _reason
+    _reason=$(grep '^inject:' "$_inject_err" 2>/dev/null | tail -1 | sed 's/^inject://')
+    rm -f "$_inject_err"
+    [ -z "$_reason" ] && _reason="inject_prompt failed (no reason emitted — daemon may need restart with refreshed agent-hook-lib.sh)"
+    mark_done "$id" "false" "$_reason"
+    log "inject failed ✗ — $_reason"
   fi
 }
 
@@ -531,16 +542,26 @@ execute_launch_agent() {
   log "launch_agent → tab=$tab agent=$agent"
   # Fresh agent process → fresh session → handoff template re-delivered next inject.
   rm -f "/tmp/agent-handoff-sent-${tab}"
-  if inject_prompt "$tab" "$command" 2>/dev/null; then
+  local _le
+  _le=$(mktemp 2>/dev/null) || _le="/tmp/fc-launch-err-$$"
+  # `$dir` is the project directory passed by the dispatcher — same value
+  # execute_inject's $project_dir resolves to. Threading it into
+  # inject_prompt unlocks the cwd-based tab fallback.
+  if inject_prompt "$tab" "$command" "$dir" 2>"$_le"; then
+    rm -f "$_le"
     if [ -n "$initial_prompt" ]; then
       sleep 2
-      inject_prompt "$tab" "$initial_prompt" 2>/dev/null || true
+      inject_prompt "$tab" "$initial_prompt" "$dir" 2>/dev/null || true
     fi
     mark_done "$id" "true"
     log "launch_agent done ✓"
   else
-    mark_done "$id" "false" "agent launch injection failed"
-    log "launch_agent failed ✗"
+    local _lr
+    _lr=$(grep '^inject:' "$_le" 2>/dev/null | tail -1 | sed 's/^inject://')
+    rm -f "$_le"
+    [ -z "$_lr" ] && _lr="agent launch injection failed"
+    mark_done "$id" "false" "$_lr"
+    log "launch_agent failed ✗ — $_lr"
   fi
 }
 
@@ -616,7 +637,7 @@ execute_switch_agent() {
     local quit_cmd
     quit_cmd=$(_agent_quit_cmd "$from_agent")
     if [ -n "$quit_cmd" ]; then
-      inject_prompt "$tab" "$quit_cmd" 2>/dev/null || true
+      inject_prompt "$tab" "$quit_cmd" "$dir" 2>/dev/null || true
 
       local gone=0 deadline
       deadline=$(( $(date +%s) + 2 ))
@@ -652,12 +673,19 @@ execute_switch_agent() {
 
   # Different agent process → fresh session → handoff template re-delivered.
   rm -f "/tmp/agent-handoff-sent-${tab}"
-  if inject_prompt "$tab" "$launch_cmd" 2>/dev/null; then
+  local _se
+  _se=$(mktemp 2>/dev/null) || _se="/tmp/fc-switch-err-$$"
+  if inject_prompt "$tab" "$launch_cmd" "$dir" 2>"$_se"; then
+    rm -f "$_se"
     mark_done "$id" "true"
     log "switch_agent done ✓ ($from_agent → $to_agent)"
   else
-    mark_done "$id" "false" "inject launch command failed"
-    log "switch_agent failed ✗"
+    local _sr
+    _sr=$(grep '^inject:' "$_se" 2>/dev/null | tail -1 | sed 's/^inject://')
+    rm -f "$_se"
+    [ -z "$_sr" ] && _sr="inject launch command failed"
+    mark_done "$id" "false" "$_sr"
+    log "switch_agent failed ✗ — $_sr"
   fi
 }
 
@@ -729,13 +757,22 @@ execute_install_cli() {
   ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action new-tab --name "$tab_name" 2>/dev/null || true
   sleep 0.6
 
-  # Inject the install command
-  if inject_prompt "$tab_name" "$cmd" 2>/dev/null; then
+  # Inject the install command. No project_dir is meaningful for an
+  # installer tab (it isn't pinned to a project), so we skip the cwd
+  # fallback path here on purpose.
+  local _ie
+  _ie=$(mktemp 2>/dev/null) || _ie="/tmp/fc-install-err-$$"
+  if inject_prompt "$tab_name" "$cmd" "" 2>"$_ie"; then
+    rm -f "$_ie"
     mark_done "$id" "true"
     log "install_cli done ✓ (tab '$tab_name' opened with installer)"
   else
-    mark_done "$id" "false" "failed to create tab or inject installer command"
-    log "install_cli failed to inject into new tab"
+    local _ir
+    _ir=$(grep '^inject:' "$_ie" 2>/dev/null | tail -1 | sed 's/^inject://')
+    rm -f "$_ie"
+    [ -z "$_ir" ] && _ir="failed to create tab or inject installer command"
+    mark_done "$id" "false" "$_ir"
+    log "install_cli failed ✗ — $_ir"
   fi
 }
 

@@ -83,12 +83,24 @@ export function resolveProjectAdapter(
   return projects.get(name.toLowerCase())?.adapter;
 }
 
-/** Case-insensitive lookup of the dirPath for a given project name. */
+/** Lookup the dirPath for a given project name.
+ *  Layered:
+ *    1. Case-insensitive literal key (the common case).
+ *    2. Loose match — strip hyphens + underscores from both sides and
+ *       compare. Lets the cloud send "revampit" find the conf entry
+ *       "revamp-it" without forcing the user to rebrand. */
 export function resolveProjectPath(
   name: string,
   projects: Map<string, ProjectConfig> = loadProjects(),
 ): string | undefined {
-  return projects.get(name.toLowerCase())?.dirPath;
+  const lower = name.toLowerCase();
+  const direct = projects.get(lower)?.dirPath;
+  if (direct) return direct;
+  const looseTarget = lower.replace(/[-_]/g, "");
+  for (const [key, cfg] of projects) {
+    if (key.replace(/[-_]/g, "") === looseTarget) return cfg.dirPath;
+  }
+  return undefined;
 }
 
 // ── Self-test ────────────────────────────────────────────────────────────────
