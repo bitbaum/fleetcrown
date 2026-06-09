@@ -26,10 +26,11 @@ type ParsedSession = {
   tests: string;
   todos: string;
   health: string;
+  noOpCount: number | null;
 };
 
 export function parseSessionText(content: string): ParsedSession {
-  const result: ParsedSession = { status: "", done: [], next: [], in_progress: [], tests: "", todos: "", health: "" };
+  const result: ParsedSession = { status: "", done: [], next: [], in_progress: [], tests: "", todos: "", health: "", noOpCount: null };
   for (const line of content.split("\n")) {
     const idx = line.indexOf(":");
     if (idx <= 0) continue;
@@ -42,6 +43,7 @@ export function parseSessionText(content: string): ParsedSession {
     else if (k === "tests") result.tests = v;
     else if (k === "todos") result.todos = v;
     else if (k === "health") result.health = v;
+    else if (k === "no-op-count" && /^\d+$/.test(v)) result.noOpCount = parseInt(v, 10);
   }
   return result;
 }

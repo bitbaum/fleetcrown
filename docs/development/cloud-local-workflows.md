@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-05-30
-last_modified_summary: Autopilot loop fix — session-handoff watchdog for agents without Stop hooks, inject queued via /api/inject with daemon bearer token, live tab name resolution.
+last_modified_date: 2026-06-09
+last_modified_summary: Clarify beacon vs daemon vs web app roles; fix install script names; document autopilot gate alignment and per-project mode resolution.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -36,13 +36,17 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
    # or after generating a token:
    curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_... --base-url https://fleetcrown.vercel.app
    ```
-   Config is written to `~/.config/cockpit/daemon.env`.
+   Config is written to `~/.config/fleetcrown/daemon.env` (legacy: `~/.config/cockpit/daemon.env`).
 5. **Install and start the daemon (recommended — systemd user service):**
    ```bash
-   bash scripts/install-daemon.sh
+   bash scripts/install-fleetcrown-daemon.sh
    # after code changes:
-   bash scripts/install-daemon.sh --restart
-   # or: cockpit daemon restart
+   bash scripts/install-fleetcrown-daemon.sh --restart
+   ```
+   Also install beacon hooks and the pre-warmed popup window:
+   ```bash
+   bash scripts/install-beacon.sh
+   bash scripts/install-fleetcrown-beacon-window.sh
    ```
    The service uses `Restart=always`, a singleton file lock (one instance only), push-loop self-healing, and automatic reclaim of stale queued commands after daemon crashes.
 
@@ -60,10 +64,23 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | **Autopilot Stop hook** | On agent stop, loads `~/.config/cockpit/daemon.env` so dispatch hits production (not localhost) with your daemon token; autopilot runs before any other stop-hook step |
 | **Autopilot watchdog** | Daemon push loop fires next_best when (a) fresh `agent-ready-<tab>` exists, or (b) session handoff has `status: ready` within 120s — covers Cursor/Codex without Stop hooks |
 | **Inject via daemon queue** | Autopilot queues `/api/inject` with bearer token; daemon executes Zellij inject reliably (direct hook inject was failing silently) |
-| **`install-daemon.sh --restart`** | Stop service, kill orphans, sync beacon hooks, start fresh — use after pulling daemon changes |
+| **`install-fleetcrown-daemon.sh --restart`** | Stop service, kill orphans, sync beacon hooks, start fresh — use after pulling daemon changes |
+| **Per-project autopilot override** | `GET /api/beacon-settings?project=<tab>` returns `effective_mode` (project override → user default) for stop-hook gating |
+| **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by stop hook, notification hook, and daemon |
 
-**Logs:** `journalctl --user -u cockpit-daemon -f`  
-**Status:** `systemctl --user status cockpit-daemon` or `cockpit status`
+**Logs:** `journalctl --user -u fleetcrown-daemon -f`  
+**Status:** `systemctl --user status fleetcrown-daemon`
+
+## Component roles (beacon vs daemon vs web app)
+
+| Component | Runs where | Responsibility |
+|-----------|------------|----------------|
+| **Web app** | Cloud (Vercel) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates, beacon popup UI |
+| **Daemon** | Your machine (`fleetcrown-daemon.service`) | Polls command queue, injects into Zellij, pushes runtime snapshots, autopilot watchdog |
+| **Beacon** | Your machine (hooks + optional Chromium window) | On agent **stop**: opens `/beacon/live` popup, waits for user/countdown choice, injects via same API path as Control |
+| **`home/` stack** | Your machine (`:3001`, experimental) | Local JSONL event loop — separate from production path; see `home/README.md` |
+
+**Production control flow:** Browser → API → Postgres queue → daemon → Zellij → agent CLI. Beacon is a *local launcher* for the popup UI, not a second control plane.
 
 ## Workflow matrix
 
@@ -114,14 +131,17 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 ## Architecture sketch
 
 ```
- Browser (fleetcrown.vercel.app)
-   │  auth, DB, UI, command queue
+ Browser (fleetcrown.vercel.app or localhost:3000)
+   │  auth, DB, UI, command queue, dispatch gates
    ▼
- PostgreSQL (pending_commands, cron_jobs, …)
+ PostgreSQL (pending_commands, runtime_snapshots, beacon_sessions, …)
    ▲
    │  poll + push runtime state
- Local daemon (cockpit-daemon.sh)
+ Local daemon (fleetcrown-daemon.sh)
    │  inject → Zellij tabs → agent CLIs
+   ▲
+   │  stop hook → beacon.py → /beacon/live popup → choice → /api/inject
+ Agent Stop hooks (agent-hook-bridge.sh)
    ▼
  Your projects on disk
 ```

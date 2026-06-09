@@ -23,6 +23,7 @@ import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
 import { getOrangeCatContext, renderOrangeCatContext } from "@/lib/integrations/orangecat-context";
+import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -57,6 +58,7 @@ const DispatchBody = z.object({
    *  the local daemon. Any value > 0 short-circuits dispatch — a blocker file
    *  is a human-action gate and autopilot has to wait until it clears. */
   blockerCount:  z.number().int().nonnegative().default(0),
+  noOpCount:     z.number().int().nonnegative().default(0),
   projectName:   z.string().optional(),
   projectKey:    z.string().optional(),
   gitBranch:     z.string().optional(),
@@ -221,7 +223,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, blockerCount, projectName, projectKey, gitBranch, recentCommits, mission } = dataOrResp;
+  const { handoff, queue, blockerCount, noOpCount, projectName, projectKey, gitBranch, recentCommits, mission } = dataOrResp;
 
   // Recent outcomes for this project — feeds Groq and is surfaced in the reason.
   // Safe-defaults: if the lookup fails, dispatch still proceeds.
@@ -251,14 +253,45 @@ export async function POST(req: NextRequest) {
     if (override) mode = override;
   }
 
+  const recordAndReturn = (result: DispatchResult) => {
+    const fingerprint = promptFingerprint(result.prompt);
+    recordControlAuditEvent({
+      userId,
+      projectKey: projectKey ?? projectName ?? null,
+      tabName: projectName ?? projectKey ?? null,
+      event: "dispatch_decision",
+      source: "api/control/dispatch",
+      action: result.action,
+      decisionSource: result.source,
+      reason: result.reason,
+      status: handoff.status || null,
+      health: handoff.health || null,
+      blockerCount,
+      noOpCount,
+      queueLength: queue.length,
+      mode,
+      promptHash: fingerprint.promptHash,
+      promptPreview: fingerprint.promptPreview,
+      meta: {
+        tests: handoff.tests,
+        todos: handoff.todos,
+        hasMission: Boolean(mission?.trim()),
+        recentCommits: recentCommits?.slice(0, 5) ?? [],
+        streak,
+      },
+    });
+    return NextResponse.json(result satisfies DispatchResult);
+  };
+
   const gated = evaluateDispatchGates({
     status: handoff.status,
     blockerCount,
     mode,
     queueLength: queue.length,
     streakSuffix,
+    noOpCount,
   });
-  if (gated) return NextResponse.json(gated satisfies DispatchResult);
+  if (gated) return recordAndReturn(gated);
 
   // mode === "strategist" — fall through to Groq composition.
 
@@ -272,11 +305,11 @@ export async function POST(req: NextRequest) {
   const health = handoff.health.toLowerCase();
   const tests  = handoff.tests.toLowerCase();
   if (health.includes("critical") || tests.includes("fail")) {
-    return NextResponse.json({
+    return recordAndReturn({
       action: "nextbest",
       reason: `${health.includes("critical") ? "Health critical" : "Tests failing"} — agent must stay focused on recovery before switching concerns.${streakSuffix}`,
       source: "health_gate",
-    } satisfies DispatchResult);
+    });
   }
 
   // Fetch the actor's commercial state from OrangeCat in parallel with
@@ -294,12 +327,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const { action, reason, prompt: composedPrompt } = await callGroq(prompt);
-    return NextResponse.json({
+    return recordAndReturn({
       action,
       reason: `${reason}${streakSuffix}`,
       source: "groq",
       ...(composedPrompt ? { prompt: composedPrompt } : {}),
-    } satisfies DispatchResult);
+    });
   } catch (e) {
     // Groq unavailable, key invalid, or timeout — surface the actual cause so
     // the user knows whether to top up credits / rotate the key / wait it out.
@@ -317,12 +350,12 @@ export async function POST(req: NextRequest) {
       message: `Groq fallback (${hint}): ${raw}`,
       meta: { userId, projectKey, hint, queueLen: queue.length },
     });
-    return NextResponse.json({
+    return recordAndReturn({
       action: queue.length > 0 ? "queue" : "nextbest",
       reason: queue.length > 0
         ? `Groq unavailable (${hint}) — using queue order.${streakSuffix}`
         : `Groq unavailable (${hint}) — falling back to next_best.${streakSuffix}`,
       source: "fallback",
-    } satisfies DispatchResult);
+    });
   }
 }

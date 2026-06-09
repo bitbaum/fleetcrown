@@ -21,18 +21,18 @@ mkdir -p "$HOME/.config/systemd/user"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=FleetCrown beacon window (pre-warmed Chromium app for instant popup)
-Documentation=https://github.com/maonakamoto/cockpit
+Documentation=https://github.com/maonakamoto/fleetcrown
 After=fleetcrown-app.service
 Wants=fleetcrown-app.service
+# Cap the restart rate so a permanently broken browser doesn't thrash systemd.
+StartLimitBurst=10
+StartLimitIntervalSec=60
 
 [Service]
 Type=simple
 ExecStart=${SCRIPT_DIR}/fleetcrown-beacon-window.sh
 Restart=always
 RestartSec=2
-# Cap the restart rate so a permanently broken browser doesn't thrash systemd.
-StartLimitBurst=10
-StartLimitIntervalSec=60
 
 StandardOutput=journal
 StandardError=journal

@@ -46,6 +46,19 @@ function runTests(): void {
     assert(result?.source === "status_gate", "status_gate must win over mode_gate even with queue items");
   });
 
+  check("status:blocked short-circuits before any other gate", () => {
+    const result = evaluateDispatchGates({
+      status: "blocked",
+      blockerCount: 0,
+      mode: "strategist",
+      queueLength: 5,
+      streakSuffix: "",
+    });
+    assert(result?.action === "off", "blocked status must yield action=off");
+    assert(result?.source === "status_gate", `expected source=status_gate, got ${result?.source}`);
+    assert(result!.reason.includes("status:blocked"), "reason must name blocked status");
+  });
+
   check("pending blocker short-circuits before mode gate", () => {
     const result = evaluateDispatchGates({
       status: "ready",
@@ -57,6 +70,20 @@ function runTests(): void {
     assert(result?.source === "blocker_gate", "blocker_gate must fire when count > 0");
     assert(result?.action === "off", "blocked dispatch must yield action=off");
     assert(result!.reason.includes("1 pending blocker"), "reason must surface the count");
+  });
+
+  check("no-op fuse short-circuits before mode gate", () => {
+    const result = evaluateDispatchGates({
+      status: "ready",
+      blockerCount: 0,
+      mode: "strategist",
+      queueLength: 0,
+      streakSuffix: "",
+      noOpCount: 3,
+    });
+    assert(result?.action === "off", "no-op fuse must yield action=off");
+    assert(result?.source === "status_gate", `expected source=status_gate, got ${result?.source}`);
+    assert(result!.reason.includes("3 consecutive no-op"), "reason must name the no-op count");
   });
 
   check("blocker count plural in reason when > 1", () => {

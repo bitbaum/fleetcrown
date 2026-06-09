@@ -13,11 +13,11 @@
 #   bash scripts/install-beacon.sh
 #
 # To uninstall:
-#   rm -rf ~/.local/share/cockpit-beacon
+#   rm -rf ~/.local/share/fleetcrown-beacon
 #   # then restore ~/.claude/hooks/stop.sh from the .bak if it existed
 set -euo pipefail
 
-BEACON_HOME="${BEACON_HOME:-$HOME/.local/share/cockpit-beacon}"
+BEACON_HOME="${BEACON_HOME:-$HOME/.local/share/fleetcrown-beacon}"
 HOOKS_DIR="$HOME/.claude/hooks"
 CONFIG_DIR="$HOME/.config"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

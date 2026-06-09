@@ -1,0 +1,53 @@
+import { ListChecks, PauseCircle, PlayCircle, Send, XCircle } from "lucide-react";
+import { Card, CardHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getRecentControlAuditEvents } from "@/db/queries/control-audit-events";
+import { compactRelativeDate } from "@/lib/dates";
+
+const ICONS = {
+  off: PauseCircle,
+  refused: PauseCircle,
+  failed: XCircle,
+  queued: Send,
+  injected: Send,
+  queue: Send,
+  composed: Send,
+  nextbest: PlayCircle,
+};
+
+export async function RecentControlAuditCard({ userId }: { userId: string }) {
+  const rows = await getRecentControlAuditEvents(userId, 12).catch(() => []);
+  const blocked = rows.filter((r) => r.action === "off" || r.action === "refused").length;
+
+  return (
+    <Card>
+      <CardHeader
+        icon={ListChecks}
+        title="Control decisions"
+        right={<span className="text-xs text-text-tertiary">{blocked} blocked</span>}
+      />
+      {rows.length === 0 ? (
+        <EmptyState>No control decisions recorded yet</EmptyState>
+      ) : (
+        <ul className="space-y-1.5">
+          {rows.map((row) => {
+            const Icon = ICONS[row.action as keyof typeof ICONS] ?? ListChecks;
+            return (
+              <li key={row.id} className="flex items-start gap-2 text-xs">
+                <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-tertiary" />
+                <span className="shrink-0 font-mono text-text-tertiary">
+                  {compactRelativeDate(row.createdAt)}
+                </span>
+                <span className="shrink-0 text-text-muted">{row.projectKey ?? row.tabName ?? "system"}</span>
+                <span className="shrink-0 font-medium text-text-primary">{row.action}</span>
+                <span className="min-w-0 flex-1 truncate text-text-secondary" title={row.reason ?? row.promptPreview ?? ""}>
+                  {row.reason ?? row.promptPreview ?? row.source}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}

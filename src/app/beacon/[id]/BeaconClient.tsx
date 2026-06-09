@@ -185,6 +185,7 @@ function BeaconBody({
 
   const handleAutoInject = useCallback(async () => {
     if (!automaticContinuationEnabled) return;
+    // Beacon mode is handled by the stop hook; strategist paths only here.
     // BeaconSession carries raw sessionContent — parse it here to extract
     // the handoff status. Capacity-issue dispatches bypass since the user
     // explicitly asked for the agent switch.
@@ -198,7 +199,7 @@ function BeaconBody({
       ? `${SWITCH_CHOICE_PREFIX}${session.nextAgent}`
       : queue.length > 0
       ? `${CUSTOM_CHOICE_PREFIX}${queue[0]}`
-      : primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
+      : primary ? primary.key : "next_best";
 
     if (!session.capacityIssue) {
       const response = await postJson("/api/control/dispatch", {
@@ -208,7 +209,10 @@ function BeaconBody({
           health: handoff.health ?? "",
           tests: handoff.tests ?? "",
           todos: handoff.todos ?? "",
+          status: handoff.status ?? "",
         },
+        noOpCount: handoff.noOpCount ?? 0,
+        blockerCount: 0,
         queue,
         projectName: session.project,
         projectKey: session.project,
@@ -222,7 +226,7 @@ function BeaconBody({
           choice = `${CUSTOM_CHOICE_PREFIX}${queue[0]}`;
           removesQueueHead = true;
         } else {
-          choice = primary ? (primary.slot != null ? String(primary.slot) : primary.key) : "1";
+          choice = primary ? primary.key : "next_best";
         }
       } else if (queue.length > 0) {
         removesQueueHead = true;

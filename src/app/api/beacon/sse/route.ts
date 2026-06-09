@@ -14,6 +14,7 @@ import { execSync } from "child_process";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { parseProjectsConf } from "@/lib/agent-config";
+import { getDefaultUser } from "@/db/queries/users";
 import { getLatestPendingSession, type BeaconSession } from "@/db/queries/beacon-sessions";
 
 export const runtime = "nodejs";
@@ -23,7 +24,9 @@ const POLL_MS = 150;
 const KEEPALIVE_MS = 20_000;
 
 export async function GET(): Promise<Response> {
-  const userId = await getSessionUserId();
+  const sessionUserId = await getSessionUserId();
+  const defaultUser = !sessionUserId && isRuntimeAvailable() ? await getDefaultUser() : null;
+  const userId = sessionUserId ?? defaultUser?.id ?? null;
   if (!userId) {
     return new Response("Unauthorized", { status: 401 });
   }

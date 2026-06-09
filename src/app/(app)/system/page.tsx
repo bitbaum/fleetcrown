@@ -4,6 +4,9 @@ import { SystemStats } from "@/components/system/SystemStats";
 import { AutopilotCard } from "@/components/system/AutopilotCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { RecentFailuresCard } from "@/components/system/RecentFailuresCard";
+import { FleetDoctorCard } from "@/components/system/FleetDoctorCard";
+import { RecentControlAuditCard } from "@/components/system/RecentControlAuditCard";
+import { GlobalAutoContinueCard } from "@/components/system/GlobalAutoContinueCard";
 import { CardSkeleton } from "@/components/ui/card";
 import { PullToRefresh } from "@/components/shared/PullToRefresh";
 import { AutoRefresh } from "@/components/shared/AutoRefresh";
@@ -34,12 +37,17 @@ export default async function SystemPage() {
     <PullToRefresh>
       <PageLayout title="System" subtitle="Infrastructure health and Ivy autopilot">
         <SystemStats />
+        <FleetDoctorCard />
+        <GlobalAutoContinueCard />
         <AutopilotCard initialJobs={jobs} />
         <Suspense fallback={<CardSkeleton />}>
           <MemorySummaryCard />
         </Suspense>
         <Suspense fallback={<CardSkeleton />}>
           <RecentFailuresCard />
+        </Suspense>
+        <Suspense fallback={<CardSkeleton />}>
+          <RecentControlAuditCard userId={userId} />
         </Suspense>
         <AutoRefresh intervalMs={REFRESH_CADENCE.system} />
       </PageLayout>

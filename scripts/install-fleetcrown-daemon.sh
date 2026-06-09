@@ -13,6 +13,7 @@
 # Environment (FLEETCROWN_* preferred; COCKPIT_* read for transition):
 #   FLEETCROWN_DAEMON_TOKEN   bearer token (read from .env.local if not set)
 #   FLEETCROWN_BASE_URL       override the cloud URL (optional)
+#   FLEETCROWN_BASE_URLS      comma-separated URLs to poll, e.g. local + cloud
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -44,7 +45,8 @@ if [[ "${1:-}" == "--restart" ]]; then
   info "Refreshing systemd unit…"
   FLEETCROWN_DAEMON_TOKEN="${FLEETCROWN_DAEMON_TOKEN:-${COCKPIT_DAEMON_TOKEN:-$(grep -E '^(FLEETCROWN_DAEMON_TOKEN|COCKPIT_DAEMON_TOKEN)=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs || true)}}"
   FLEETCROWN_BASE_URL="${FLEETCROWN_BASE_URL:-${COCKPIT_BASE_URL:-$(grep -E '^(FLEETCROWN_BASE_URL|COCKPIT_BASE_URL)=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs || echo "https://fleetcrown.vercel.app")}}"
-  export FLEETCROWN_DAEMON_TOKEN FLEETCROWN_BASE_URL
+  FLEETCROWN_BASE_URLS="${FLEETCROWN_BASE_URLS:-$(grep -E '^(FLEETCROWN_BASE_URLS|COCKPIT_BASE_URLS)=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs || true)}"
+  export FLEETCROWN_DAEMON_TOKEN FLEETCROWN_BASE_URL FLEETCROWN_BASE_URLS
   info "Re-installing service unit and restarting with latest scripts…"
   set --
 fi
@@ -75,6 +77,10 @@ if [ -z "$TOKEN" ]; then
 fi
 
 BASE_URL="${FLEETCROWN_BASE_URL:-${COCKPIT_BASE_URL:-https://fleetcrown.vercel.app}}"
+BASE_URLS="${FLEETCROWN_BASE_URLS:-${COCKPIT_BASE_URLS:-}}"
+if [ -z "$BASE_URLS" ]; then
+  BASE_URLS="http://127.0.0.1:3000,${BASE_URL}"
+fi
 
 # ── Check dependencies ────────────────────────────────────────────────────────
 missing=()
@@ -97,6 +103,7 @@ mkdir -p "$(dirname "$ENV_FILE")"
 cat > "$ENV_FILE" <<EOF
 FLEETCROWN_DAEMON_TOKEN=${TOKEN}
 FLEETCROWN_BASE_URL=${BASE_URL}
+FLEETCROWN_BASE_URLS=${BASE_URLS}
 FLEETCROWN_DAEMON_FORCE_REMOTE=1
 EOF
 chmod 600 "$ENV_FILE"
@@ -107,7 +114,7 @@ mkdir -p "$(dirname "$SERVICE_FILE")"
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=FleetCrown local daemon
-Documentation=https://github.com/maonakamoto/cockpit
+Documentation=https://github.com/maonakamoto/fleetcrown
 After=network.target
 # If it crashes 5× in 2 min, stop retrying — something is wrong
 StartLimitIntervalSec=120
@@ -147,13 +154,14 @@ ok "Service file written to ${SERVICE_FILE}"
 
 # Keep the hosted-install copy aligned with this checkout so repair_helper
 # does not downgrade to an older production bundle.
-INSTALL_DIR="${HOME}/.local/share/cockpit"
+INSTALL_DIR="${HOME}/.local/share/fleetcrown"
 mkdir -p "$INSTALL_DIR"
-for runtime_file in fleetcrown-daemon.sh cockpit agent-hook-lib.sh agent-hook-bridge.sh \
-    _agents.sh _brand.sh install-fleetcrown-daemon.sh run-codex-task.sh run-gemini-task.sh; do
+for runtime_file in fleetcrown-daemon.sh fleet agent-hook-lib.sh agent-hook-bridge.sh \
+    _agents.sh _brand.sh install-fleetcrown-daemon.sh run-codex-task.sh run-gemini-task.sh \
+    beacon.py _beacon_config.py get-idle-secs.py notify-choice.py sync-agent-runtime-config.py transcribe.py; do
   [ -f "$SCRIPT_DIR/$runtime_file" ] && cp "$SCRIPT_DIR/$runtime_file" "$INSTALL_DIR/$runtime_file"
 done
-chmod +x "$INSTALL_DIR/fleetcrown-daemon.sh" "$INSTALL_DIR/cockpit" \
+chmod +x "$INSTALL_DIR/fleetcrown-daemon.sh" "$INSTALL_DIR/fleet" \
   "$INSTALL_DIR/agent-hook-bridge.sh" "$INSTALL_DIR/install-fleetcrown-daemon.sh" 2>/dev/null || true
 ok "Runtime bundle synced to ${INSTALL_DIR}"
 
@@ -166,11 +174,11 @@ fi
 systemctl --user daemon-reload
 systemctl --user enable "$SERVICE_NAME"
 
-# Kill orphan manual daemons so only systemd owns the singleton lock.
+# Stop the systemd-owned daemon before restarting. Avoid broad pkill patterns:
+# the installer itself may be invoked through a command line containing
+# "fleetcrown-daemon.sh", and pkill -f would kill its own parent shell.
 info "Ensuring single daemon instance…"
 systemctl --user stop "$SERVICE_NAME" 2>/dev/null || true
-pkill -f "fleetcrown-daemon.sh" 2>/dev/null || true
-pkill -f "${INSTALL_DIR}/fleetcrown-daemon.sh" 2>/dev/null || true
 sleep 0.5
 
 # Start (or restart after stop above)

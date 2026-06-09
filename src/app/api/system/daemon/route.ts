@@ -2,9 +2,8 @@
  * POST /api/system/daemon  { action: "start" | "restart" | "stop" }
  * GET  /api/system/daemon  (returns current state)
  *
- * Controls the fleetcrown-daemon.service systemd user unit (legacy
- * cockpit-daemon.service is auto-detected as a fallback for transitional
- * installs). Local-only — Vercel cloud has no daemon to control, so the
+ * Controls the fleetcrown-daemon.service systemd user unit. Local-only —
+ * Vercel cloud has no daemon to control, so the
  * route 403s when isRuntimeAvailable() is false. This is the one-click
  * recovery path the user surfaced 2026-05-31: until now, when the daemon
  * went offline the only recovery was a terminal command, which is
@@ -19,7 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { getSessionUserId } from "@/lib/session";
+import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
 const execp = promisify(exec);
@@ -28,9 +27,7 @@ const DaemonAction = z.object({
   action: z.enum(["start", "restart", "stop", "status"]),
 });
 
-// Canonical first; legacy is the transition fallback. Both names are
-// hard-coded — no user input ever reaches systemctl.
-const UNIT_CANDIDATES = ["fleetcrown-daemon.service", "cockpit-daemon.service"] as const;
+const DAEMON_UNIT = "fleetcrown-daemon.service";
 
 // Resolved unit is cached after the first lookup. systemd unit installation is
 // a one-time setup event; this cache stays valid for the life of the process.
@@ -38,15 +35,10 @@ let _resolvedUnit: string | null = null;
 
 async function getUnit(): Promise<string> {
   if (_resolvedUnit) return _resolvedUnit;
-  for (const candidate of UNIT_CANDIDATES) {
-    try {
-      await execp(`systemctl --user cat ${candidate}`, { timeout: 2000 });
-      _resolvedUnit = candidate;
-      return candidate;
-    } catch { /* not installed under this name; try next */ }
-  }
-  // Default to canonical so error messages reference the name we want to be the standard.
-  _resolvedUnit = UNIT_CANDIDATES[0];
+  try {
+    await execp(`systemctl --user cat ${DAEMON_UNIT}`, { timeout: 2000 });
+  } catch { /* default to canonical so errors reference the only supported unit */ }
+  _resolvedUnit = DAEMON_UNIT;
   return _resolvedUnit;
 }
 
@@ -67,7 +59,7 @@ export async function GET() {
   if (!isRuntimeAvailable()) {
     return NextResponse.json({ error: "Daemon control unavailable on cloud — runs only on the local install." }, { status: 403 });
   }
-  const userId = await getSessionUserId();
+  const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const state = await systemctlState();
   return NextResponse.json({ state, unit: await getUnit() });
@@ -79,7 +71,7 @@ export async function POST(req: NextRequest) {
       error: "Daemon control unavailable on cloud — runs only on the local install. Start the daemon from your machine.",
     }, { status: 403 });
   }
-  const userId = await getSessionUserId();
+  const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const dataOrResp = await readJsonBody(req, DaemonAction);

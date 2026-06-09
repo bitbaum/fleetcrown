@@ -8,7 +8,7 @@ Prints the chosen key on stdout, then exits 0.
 Exits 0 with no output if dismissed or timed out.
 
 Side effect: when an action is chosen, also writes the choice to the matching
-/tmp/cockpit-beacon/{id}.json session file so the browser beacon page polls it
+/tmp/fleetcrown-beacon/{id}.json session file so offline diagnostics can read it
 and closes itself automatically.
 """
 
@@ -16,7 +16,7 @@ import sys, os, json, glob, time
 from gi.repository import Notify, GLib  # type: ignore[import]
 
 
-_BEACON_DIR = "/tmp/cockpit-beacon"
+_BEACON_DIR = "/tmp/fleetcrown-beacon"
 _TIMEOUT_MS = 12_000
 
 
@@ -56,7 +56,7 @@ def main() -> None:
             key, label = a.split("=", 1)
             actions.append((key.strip(), label.strip()))
 
-    Notify.init("cockpit-beacon")
+    Notify.init("fleetcrown-beacon")
     notif = Notify.Notification.new(summary, body, "dialog-information")
     notif.set_urgency(Notify.Urgency.NORMAL)
     notif.set_timeout(_TIMEOUT_MS)

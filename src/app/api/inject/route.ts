@@ -9,6 +9,7 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { logDebug } from "@/db/queries/debug-logs";
+import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 
 const InjectBody = z.object({
   tab:          z.string().min(1).max(80),
@@ -66,6 +67,20 @@ export async function POST(req: NextRequest) {
       level: "warn",
       message: `Unknown tab: ${tab}`,
       meta: { userId, tab, hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
+    });
+    recordControlAuditEvent({
+      userId,
+      projectKey: tab,
+      tabName: tab,
+      event: "inject_request",
+      source: "api/inject",
+      action: "refused",
+      reason: "Unknown tab",
+      queueLength: null,
+      blockerCount: null,
+      promptHash: null,
+      promptPreview: customPrompt?.slice(0, 220) ?? promptKey ?? null,
+      meta: { hasPromptKey: !!promptKey, hasCustomPrompt: !!customPrompt },
     });
     return NextResponse.json({ error: `Unknown tab: ${tab}` }, { status: 404 });
   }
@@ -154,7 +169,41 @@ export async function POST(req: NextRequest) {
   const resolvedProjectPath = projectPath ?? canonical;
   const nowS = Math.floor(Date.now() / 1000);
 
-  // Run local filesystem side-effects immediately — the server process can always write to /tmp
+  // Build the Zellij injection function — executor calls it only when ZELLIJ_SESSION_NAME
+  // is present in this process (dev server inside Zellij). Otherwise it queues for the daemon.
+  const injectFn = isRuntimeAvailable()
+    ? async () => {
+        const { injectIntoTab } = await import("@/lib/zellij");
+        injectIntoTab(effectiveTab, prompt);
+      }
+    : null;
+
+  // If the user is actively at the ZSH prompt in this tab, skip injection to
+  // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
+  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh).
+  // Side effects (beacon cancel, /tmp state) run only after this gate passes.
+  if (isRuntimeAvailable()) {
+    const { isUserTypingInTab } = await import("@/lib/zellij");
+    if (isUserTypingInTab(effectiveTab)) {
+      const fingerprint = promptFingerprint(prompt);
+      recordControlAuditEvent({
+        userId,
+        projectId,
+        projectKey: canonical,
+        tabName: effectiveTab,
+        event: "inject_request",
+        source: "api/inject",
+        action: "refused",
+        reason: "User is typing in the target tab",
+        promptHash: fingerprint.promptHash,
+        promptPreview: fingerprint.promptPreview,
+        meta: { adapter: eventAdapter, promptKey: promptKey ?? "custom", runtimeAvailable: true },
+      });
+      return NextResponse.json({ ok: true, blocked: true, reason: "user-typing", tab: effectiveTab });
+    }
+  }
+
+  // Run local filesystem side-effects — the server process can always write to /tmp
   // regardless of whether it's inside a Zellij pane or not.
   if (isRuntimeAvailable()) {
     const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] = await Promise.all([
@@ -184,25 +233,6 @@ export async function POST(req: NextRequest) {
       fs.writeFileSync(stateFile.closing(effectiveTab), String(nowS));
     } else {
       try { fs.unlinkSync(stateFile.closing(effectiveTab)); } catch { /* gone */ }
-    }
-  }
-
-  // Build the Zellij injection function — executor calls it only when ZELLIJ_SESSION_NAME
-  // is present in this process (dev server inside Zellij). Otherwise it queues for the daemon.
-  const injectFn = isRuntimeAvailable()
-    ? async () => {
-        const { injectIntoTab } = await import("@/lib/zellij");
-        injectIntoTab(effectiveTab, prompt);
-      }
-    : null;
-
-  // If the user is actively at the ZSH prompt in this tab, skip injection to
-  // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
-  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh).
-  if (isRuntimeAvailable()) {
-    const { isUserTypingInTab } = await import("@/lib/zellij");
-    if (isUserTypingInTab(effectiveTab)) {
-      return NextResponse.json({ ok: true, blocked: true, reason: "user-typing", tab: effectiveTab });
     }
   }
 
@@ -247,6 +277,26 @@ export async function POST(req: NextRequest) {
       detail: `${promptLabel}: ${result.error}`.slice(0, 400),
       happenedAt: new Date(nowS * 1000),
     }).catch((err) => console.error("[inject] db write failed:", err));
+    const fingerprint = promptFingerprint(prompt);
+    recordControlAuditEvent({
+      userId,
+      projectId,
+      projectKey: canonical,
+      tabName: effectiveTab,
+      event: "inject_request",
+      source: "api/inject",
+      action: "failed",
+      reason: result.error,
+      promptHash: fingerprint.promptHash,
+      promptPreview: fingerprint.promptPreview,
+      meta: {
+        mode: result.mode,
+        adapter: eventAdapter,
+        model: eventModel ?? null,
+        promptKey: promptKey ?? "custom",
+        runtimeAvailable: isRuntimeAvailable(),
+      },
+    });
     return NextResponse.json({ error: `Injection failed: ${result.error}` }, { status: 500 });
   }
 
@@ -300,6 +350,28 @@ export async function POST(req: NextRequest) {
       happenedAt: new Date(nowS * 1000),
     }).catch((err) => console.error("[inject] db write failed:", err));
   }
+
+  const fingerprint = promptFingerprint(prompt);
+  recordControlAuditEvent({
+    userId,
+    projectId,
+    projectKey: canonical,
+    tabName: effectiveTab,
+    event: "inject_request",
+    source: "api/inject",
+    action: result.mode === "queued" ? "queued" : "injected",
+    reason: result.mode === "queued" ? "Queued for local daemon" : "Injected into local runtime",
+    promptHash: fingerprint.promptHash,
+    promptPreview: fingerprint.promptPreview,
+    commandId: result.mode === "queued" ? (result as { commandId: string }).commandId : null,
+    meta: {
+      adapter: eventAdapter,
+      model: eventModel ?? null,
+      promptKey: promptKey ?? "custom",
+      promptLabel,
+      runtimeAvailable: isRuntimeAvailable(),
+    },
+  });
 
   return NextResponse.json({
     ok: true,

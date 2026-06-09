@@ -70,10 +70,13 @@ export function useProjectCardActions({
       health: project.session?.health ?? "",
       tests:  project.session?.tests  ?? "",
       todos:  project.session?.todos  ?? "",
+      status: project.session?.status ?? "",
     };
     let cancelled = false;
     postJson("/api/control/dispatch", {
       handoff,
+      blockerCount:  0,
+      noOpCount:     project.session?.noOpCount ?? 0,
       queue,
       projectName:   project.tab,
       projectKey:    project.tab,
@@ -194,6 +197,8 @@ export function useProjectCardActions({
 
   const handleAutoInject = useCallback(async () => {
     if (!autoContinueEnabled) return;
+    // Stop hook may have already injected — avoid double-fire from countdown.
+    if (project.agentRunning || project.currentPrompt) return;
     // Agent-driven gate: handoff.status must explicitly say "ready" before
     // auto-inject can fire. Anything else (empty, "working", or any other
     // value) suppresses. This is the model-agnostic signal — any adapter
@@ -238,7 +243,7 @@ export function useProjectCardActions({
     }
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
+  }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, project.agentRunning, project.currentPrompt, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);
 
   const handleSendFromQueue = useCallback(async (index: number) => {
     const item = queue[index];

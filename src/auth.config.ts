@@ -47,8 +47,12 @@ export const authConfig = {
         const authHeader = request.headers.get("authorization") ?? "";
         if (authHeader.startsWith("Bearer ck_")) return true;
         // Edge runtime — inline the alias logic instead of importing to keep the bundle tiny.
-        const daemonToken = process.env.APP_DAEMON_TOKEN ?? process.env.COCKPIT_DAEMON_TOKEN;
-        const legacyAllowed = (process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ?? process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN) === "1";
+        const daemonToken = process.env.APP_DAEMON_TOKEN ?? process.env.FLEETCROWN_DAEMON_TOKEN ?? process.env.COCKPIT_DAEMON_TOKEN;
+        const legacyAllowed = (
+          process.env.APP_ALLOW_LEGACY_DAEMON_TOKEN ??
+          process.env.FLEETCROWN_ALLOW_LEGACY_DAEMON_TOKEN ??
+          process.env.COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN
+        ) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
         // On Vercel, the Edge Runtime sees the raw deployment URL (the internal

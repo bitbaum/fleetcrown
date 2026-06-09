@@ -229,8 +229,8 @@ execute_inject() {
     if [ -f "$_session_file" ]; then
       _session_status=$(grep -m1 '^status:' "$_session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' || true)
     fi
-    if [ "$_session_status" = "working" ]; then
-      log "inject REFUSED — ${tab} session status=working (prompt_key=${prompt_key:-?}, id=${id})"
+    if [ "$_session_status" = "working" ] || [ "$_session_status" = "blocked" ]; then
+      log "inject REFUSED — ${tab} session status=${_session_status} (prompt_key=${prompt_key:-?}, id=${id})"
       return 1
     fi
     _blocker_dir="${HOME}/.claude/sessions/${tab}.blockers/pending"

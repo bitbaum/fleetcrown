@@ -12,28 +12,34 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_brand.sh
 source "$SCRIPT_DIR/_brand.sh"
 
-_load_cockpit_daemon_env() {
-  local f="${HOME}/.config/fleetcrown/daemon.env"
-  [ -f "$f" ] || return 0
-  set -a
-  # shellcheck source=/dev/null
-  . "$f"
-  set +a
+_load_daemon_env() {
+  local f
+  for f in "${HOME}/.config/cockpit/daemon.env" "${HOME}/.config/fleetcrown/daemon.env"; do
+    [ -f "$f" ] || continue
+    set -a
+    # shellcheck source=/dev/null
+    . "$f"
+    set +a
+  done
 }
 
 _resolve_app_base_url() {
-  if [ -n "${COCKPIT_BASE_URL:-}" ]; then
-    printf '%s' "${COCKPIT_BASE_URL}"
-    return
-  fi
   if [ -n "${APP_BASE_URL:-}" ]; then
     printf '%s' "${APP_BASE_URL}"
+    return
+  fi
+  if [ -n "${FLEETCROWN_BASE_URL:-}" ]; then
+    printf '%s' "${FLEETCROWN_BASE_URL}"
+    return
+  fi
+  if [ -n "${COCKPIT_BASE_URL:-}" ]; then
+    printf '%s' "${COCKPIT_BASE_URL}"
     return
   fi
   _brand_env URL "https://${APP_DOMAIN}"
 }
 
-_load_cockpit_daemon_env
+_load_daemon_env
 APP_BASE_URL="$(_resolve_app_base_url)"
 readonly APP_BASE_URL
 # Wire-format prefixes — must match CUSTOM_CHOICE_PREFIX / SWITCH_CHOICE_PREFIX in src/lib/constants/control.ts
@@ -48,20 +54,18 @@ log() { echo "[$(date '+%H:%M:%S')] ${MODE}: $*" >> "$LOG"; }
 
 _token_from_env_or_file() {
   local key="$1"
-  local val="" f="${HOME}/.config/fleetcrown/daemon.env"
+  local val="" f
   val="$(_brand_env "$key" "")"
   if [ -n "$val" ]; then
     printf '%s' "$val"
     return
   fi
-  if [ -f "$f" ]; then
-    val=$(grep -m1 "^COCKPIT_${key}=" "$f" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs 2>/dev/null || true)
-    if [ -n "$val" ]; then
-      printf '%s' "$val"
-      return
-    fi
-  fi
-  grep -m1 "^COCKPIT_${key}=" "$SCRIPT_DIR/../.env.local" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs 2>/dev/null || true
+  for f in "${HOME}/.config/fleetcrown/daemon.env" "${HOME}/.config/cockpit/daemon.env" "$SCRIPT_DIR/../.env.local"; do
+    [ -f "$f" ] || continue
+    val=$(grep -m1 -E "^(APP|FLEETCROWN|COCKPIT)_${key}=" "$f" 2>/dev/null | cut -d= -f2- | tr -d '"'"'" | xargs 2>/dev/null || true)
+    [ -n "$val" ] && { printf '%s' "$val"; return; }
+  done
+  true
 }
 
 # Read per-user beacon settings from the API (uses daemon token for auth).
@@ -280,6 +284,71 @@ finish_orchestration_run() {
 }
 
 
+_resolve_effective_autopilot_mode() {
+  local tab_name="$1"
+  if [ -n "${_BEACON_AUTH_HEADER:-}" ]; then
+    local encoded settings_json
+    encoded=$(printf '%s' "$tab_name" | jq -sRr @uri)
+    settings_json=$(curl -sf --max-time 2 \
+      -H "@$_BEACON_AUTH_HEADER" \
+      "${APP_BASE_URL}/api/beacon-settings?project=${encoded}" 2>/dev/null || true)
+    if [ -n "$settings_json" ]; then
+      printf '%s' "$settings_json" | python3 -c \
+        "import sys,json; d=json.load(sys.stdin); print(d.get('effective_mode', d.get('auto_inject_mode','beacon')))" 2>/dev/null && return 0
+    fi
+  fi
+  printf '%s' "${_BEACON_AUTO_MODE:-beacon}"
+}
+
+_autopilot_paused_for_tab() {
+  local tab_name="$1"
+  [ -f "/tmp/${APP_SLUG}-auto-continue-${tab_name,,}" ]
+}
+
+_resolve_beacon_choice_key() {
+  local choice="$1"
+  [ -z "$choice" ] && return 1
+  if [[ "$choice" =~ ^[0-9]+$ ]]; then
+    local key
+    key=$(jq -r --argjson slot "$choice" '.[] | select(.slot == $slot) | .key' "$_PROMPTS" 2>/dev/null | head -1)
+    if [ -n "$key" ] && [ "$key" != "null" ]; then
+      printf '%s' "$key"
+      return 0
+    fi
+  fi
+  printf '%s' "$choice"
+}
+
+_dispatch_beacon_choice() {
+  local tab_name="$1" choice="$2" session_file="${3:-}"
+  local custom_body resolved_key project_dir agent_id prompt_body
+  if [[ "$choice" == "${CUSTOM_CHOICE_PREFIX}"* ]] || [[ "$choice" == "__custom__"* ]]; then
+    custom_body="${choice#${CUSTOM_CHOICE_PREFIX}}"
+    custom_body="${custom_body#__custom__}"
+    emit_or_inject_prompt "$tab_name" "$custom_body" "custom" "Beacon custom prompt"
+    return $?
+  fi
+  if [[ "$choice" == "${SWITCH_CHOICE_PREFIX}"* ]]; then
+    agent_id="${choice#${SWITCH_CHOICE_PREFIX}}"
+    project_dir=""
+    while IFS='|' read -r t d _a || [ -n "$t" ]; do
+      [[ "$t" =~ ^[[:space:]]*# ]] && continue
+      t=$(echo "$t" | xargs 2>/dev/null)
+      d=$(echo "$d" | xargs 2>/dev/null)
+      [ -z "$t" ] || [ -z "$d" ] && continue
+      if [ "${t,,}" = "${tab_name,,}" ]; then
+        project_dir="$d"
+        break
+      fi
+    done < "$_CONF"
+    prompt_body=$(get_prompt "next_best" 2>/dev/null || true)
+    switch_agent_and_continue "$tab_name" "$project_dir" "$agent_id" "$prompt_body"
+    return $?
+  fi
+  resolved_key=$(_resolve_beacon_choice_key "$choice")
+  emit_or_inject_prompt "$tab_name" "" "$resolved_key" "Beacon: ${resolved_key}"
+}
+
 queue_inject_via_api() {
   local tab_name="$1" prompt_key="${2:-}" custom_prompt="${3:-}"
   [ -n "${_BEACON_AUTH_HEADER:-}" ] || return 1
@@ -287,7 +356,7 @@ queue_inject_via_api() {
   if type _resolve_live_tab_name >/dev/null 2>&1; then
     live_tab=$(_resolve_live_tab_name "$tab_name" 2>/dev/null) || live_tab="$tab_name"
   fi
-  local payload http_code resp
+  local payload http_code resp blocked
   if [ -n "$custom_prompt" ]; then
     payload=$(jq -nc --arg tab "$live_tab" --arg p "$custom_prompt" '{tab:$tab,customPrompt:$p}')
   elif [ -n "$prompt_key" ]; then
@@ -303,7 +372,10 @@ queue_inject_via_api() {
   http_code=$(printf '%s' "$resp" | tail -1)
   resp=$(printf '%s' "$resp" | sed '$d')
   [ "$http_code" = "200" ] || return 1
-  printf '%s' "$resp" | jq -e '.ok == true' >/dev/null 2>&1
+  printf '%s' "$resp" | jq -e '.ok == true' >/dev/null 2>&1 || return 1
+  blocked=$(printf '%s' "$resp" | jq -r '.blocked // false' 2>/dev/null || echo false)
+  [ "$blocked" = "true" ] && return 1
+  return 0
 }
 
 emit_or_inject_prompt() {
@@ -392,10 +464,35 @@ switch_agent_and_continue() {
 # looks. /control + push notifications carry the ambient signal.
 autopilot_dispatch_and_inject() {
   local tab_name="$1" session_file="$2"
-  local mode="${_BEACON_AUTO_MODE:-beacon}"
+  local mode
+  mode=$(_resolve_effective_autopilot_mode "$tab_name")
 
   if [ "$mode" = "off" ]; then
     log "autopilot: mode=off (Manual) — staying idle"
+    return 1
+  fi
+
+  if _autopilot_paused_for_tab "$tab_name"; then
+    log "autopilot: automatic continuation paused for ${tab_name} — staying idle"
+    return 1
+  fi
+
+  local early_status_line early_blocker_dir early_blocker_count
+  early_status_line=""
+  if [ -f "$session_file" ]; then
+    early_status_line=$(grep -m1 '^status:' "$session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' || true)
+  fi
+  if [ "$early_status_line" = "working" ] || [ "$early_status_line" = "blocked" ]; then
+    log "autopilot: session status=${early_status_line} — staying idle before beacon"
+    return 1
+  fi
+  early_blocker_dir="${HOME}/.claude/sessions/${tab_name}.blockers/pending"
+  early_blocker_count=0
+  if [ -d "$early_blocker_dir" ]; then
+    early_blocker_count=$(find "$early_blocker_dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  if [ "$early_blocker_count" -gt 0 ]; then
+    log "autopilot: ${early_blocker_count} pending blocker(s) at ${early_blocker_dir} — staying idle before beacon"
     return 1
   fi
 
@@ -414,15 +511,12 @@ autopilot_dispatch_and_inject() {
       log "autopilot: opening beacon popup for ${tab_name}"
       choice=$("$beacon_py" stop "$tab_name" "$session_file" 2>/dev/null || true)
       if [ -n "$choice" ]; then
-        if [[ "$choice" == "__custom__"* ]]; then
-          # Custom prompt prefix: "__custom__<body>". Treat the rest as the prompt body.
-          local custom_body="${choice#__custom__}"
-          emit_or_inject_prompt "$tab_name" "$custom_body" "custom" "Beacon custom prompt"
-        else
-          emit_or_inject_prompt "$tab_name" "" "$choice" "Beacon: ${choice}"
+        if _dispatch_beacon_choice "$tab_name" "$choice" "$session_file"; then
+          log "autopilot: beacon dispatched ${choice} for ${tab_name}"
+          return 0
         fi
-        log "autopilot: beacon dispatched ${choice} for ${tab_name}"
-        return 0
+        log "autopilot: beacon choice ${choice} failed to inject for ${tab_name}"
+        return 1
       fi
       log "autopilot: beacon timed out or user dismissed — staying idle"
       return 1
@@ -454,11 +548,8 @@ autopilot_dispatch_and_inject() {
       return 1
     fi
   fi
-  mkdir -p "$cool_dir" 2>/dev/null || true
-  touch "$cool_file" 2>/dev/null || true
-
-  local done_line next_line tests_line todos_line health_line status_line
-  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""; status_line=""
+  local done_line next_line tests_line todos_line health_line status_line no_op_count_line
+  done_line=""; next_line=""; tests_line=""; todos_line=""; health_line=""; status_line=""; no_op_count_line="0"
   if [ -f "$session_file" ]; then
     done_line=$(grep   -m1 '^done:'   "$session_file" 2>/dev/null | sed 's/^done:[[:space:]]*//' || true)
     next_line=$(grep   -m1 '^next:'   "$session_file" 2>/dev/null | sed 's/^next:[[:space:]]*//' || true)
@@ -466,13 +557,15 @@ autopilot_dispatch_and_inject() {
     todos_line=$(grep  -m1 '^todos:'  "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//' || true)
     health_line=$(grep -m1 '^health:' "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' || true)
     status_line=$(grep -m1 '^status:' "$session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' || true)
+    no_op_count_line=$(grep -m1 '^no-op-count:' "$session_file" 2>/dev/null | sed 's/^no-op-count:[[:space:]]*//' || true)
+    [[ "$no_op_count_line" =~ ^[0-9]+$ ]] || no_op_count_line="0"
   fi
 
   # SSOT for autopilot pause signals lives on the user's filesystem: the agent
   # writes status:working when mid-task, and drops blocker files in pending/
   # when it needs a human action. Both gate the dispatch endpoint below.
-  if [ "$status_line" = "working" ]; then
-    log "autopilot: session status=working — staying idle (agent owns the loop)"
+  if [ "$status_line" = "working" ] || [ "$status_line" = "blocked" ]; then
+    log "autopilot: session status=${status_line} — staying idle (agent owns the loop)"
     return 1
   fi
 
@@ -496,8 +589,9 @@ autopilot_dispatch_and_inject() {
     --arg tests "$tests_line" --arg todos "$todos_line" --arg status "$status_line" \
     --arg project "$tab_name" \
     --argjson blockers "$blocker_count" \
+    --argjson noops "$no_op_count_line" \
     --argjson queue "$queue_json" \
-    '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos,status:$status},blockerCount:$blockers,queue:$queue,projectName:$project,projectKey:$project}')
+    '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos,status:$status},blockerCount:$blockers,noOpCount:$noops,queue:$queue,projectName:$project,projectKey:$project}')
 
   local result action prompt reason
   result=$(curl -sf --max-time 18 -X POST "${APP_BASE_URL}/api/control/dispatch" \
@@ -514,22 +608,32 @@ autopilot_dispatch_and_inject() {
   case "$action" in
     composed)
       if [ -n "$prompt" ]; then
-        emit_or_inject_prompt "$tab_name" "$prompt" "strategist" "${reason:-Strategist autopilot}"
-        log "autopilot: injected COMPOSED — ${reason}"
-        return 0
+        if emit_or_inject_prompt "$tab_name" "$prompt" "strategist" "${reason:-Strategist autopilot}"; then
+          mkdir -p "$cool_dir" 2>/dev/null || true
+          touch "$cool_file" 2>/dev/null || true
+          log "autopilot: injected COMPOSED — ${reason}"
+          return 0
+        fi
+        log "autopilot: composed inject failed — falling through to next_best"
+      else
+        log "autopilot: composed action but empty prompt — falling through to next_best"
       fi
-      log "autopilot: composed action but empty prompt — falling through to next_best"
       ;;
     queue)
       local first_item
       first_item=$(printf '%s' "$queue_json" | jq -r '.[0] // empty' 2>/dev/null || true)
       if [ -n "$first_item" ]; then
-        dequeue_local_queue_item "$tab_name" "$first_item"
-        emit_or_inject_prompt "$tab_name" "$first_item" "custom" "Queued prompt"
-        log "autopilot: injected QUEUE head"
-        return 0
+        if emit_or_inject_prompt "$tab_name" "$first_item" "custom" "Queued prompt"; then
+          dequeue_local_queue_item "$tab_name" "$first_item"
+          mkdir -p "$cool_dir" 2>/dev/null || true
+          touch "$cool_file" 2>/dev/null || true
+          log "autopilot: injected QUEUE head"
+          return 0
+        fi
+        log "autopilot: queue inject failed — falling through to next_best"
+      else
+        log "autopilot: queue action but no queue item — falling through to next_best"
       fi
-      log "autopilot: queue action but no queue item — falling through to next_best"
       ;;
     off)
       log "autopilot: server gate said OFF (${reason}) — staying idle"
@@ -544,6 +648,8 @@ autopilot_dispatch_and_inject() {
   esac
 
   if emit_or_inject_prompt "$tab_name" "" "next_best" "Autopilot next_best"; then
+    mkdir -p "$cool_dir" 2>/dev/null || true
+    touch "$cool_file" 2>/dev/null || true
     log "autopilot: injected NEXTBEST — ${reason}"
     return 0
   fi
@@ -579,9 +685,14 @@ Before stopping, create ${session_file}.
 ${session_update_block}"
   fi
 
-  emit_or_inject_prompt "$tab_name" "$prompt" "next_best" "Autopilot next_best"
-  log "autopilot: injected NEXTBEST (local fallback) — ${reason}"
-  return 0
+  if emit_or_inject_prompt "$tab_name" "$prompt" "next_best" "Autopilot next_best"; then
+    mkdir -p "$cool_dir" 2>/dev/null || true
+    touch "$cool_file" 2>/dev/null || true
+    log "autopilot: injected NEXTBEST (local fallback) — ${reason}"
+    return 0
+  fi
+  log "autopilot: next_best fallback inject failed — staying idle"
+  return 1
 }
 
 # Fire-and-forget Web Push to the user's subscribed devices. The endpoint
@@ -730,11 +841,13 @@ handle_notification() {
     log "notification: beacon disabled by user settings — skipping auto-inject"
     exit 0
   fi
-  if [ "${_BEACON_AUTO_MODE:-strategist}" = "off" ]; then
+  local _notif_mode
+  _notif_mode=$(_resolve_effective_autopilot_mode "$TAB_NAME")
+  if [ "$_notif_mode" = "off" ]; then
     log "notification: automatic continuation policy is manual — skipping auto-inject"
     exit 0
   fi
-  if [ -f "/tmp/${APP_SLUG}-auto-continue-${TAB_NAME,,}" ]; then
+  if _autopilot_paused_for_tab "$TAB_NAME"; then
     log "notification: automatic continuation paused for ${TAB_NAME} — skipping auto-inject"
     exit 0
   fi
@@ -747,15 +860,43 @@ handle_notification() {
   # Degraded health → skip queue and use unblock (fix first, advance later).
   # This mirrors sessionHealthBlocksQueue() on the client and the server-side gate
   # in /api/orchestration/run — all three paths must agree.
-  local session_file auto_key _health
+  local session_file auto_key _health _status _blocker_dir _blocker_count
   session_file="$(_session_file "${TAB_NAME}" "${ADAPTER:-claude}")"
   auto_key="next_best"
   _health=""
+  _status=""
   if [ -f "$session_file" ]; then
     _health=$(grep "^health:" "$session_file" 2>/dev/null | sed 's/^health:[[:space:]]*//' | tr -d '\n\r')
+    _status=$(grep "^status:" "$session_file" 2>/dev/null | sed 's/^status:[[:space:]]*//' | tr -d '\n\r')
     case "$_health" in
       "needs attention"|"critical") auto_key="unblock" ;;
     esac
+  fi
+  if [ "$_status" = "working" ] || [ "$_status" = "blocked" ]; then
+    log "notification: session status=${_status} — skipping auto-inject"
+    exit 0
+  fi
+  _blocker_dir="${HOME}/.claude/sessions/${TAB_NAME}.blockers/pending"
+  _blocker_count=0
+  if [ -d "$_blocker_dir" ]; then
+    _blocker_count=$(find "$_blocker_dir" -maxdepth 1 -type f 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  if [ "$_blocker_count" -gt 0 ]; then
+    log "notification: ${_blocker_count} pending blocker(s) at ${_blocker_dir} — skipping auto-inject"
+    exit 0
+  fi
+
+  # Per-tab cooldown — notification path must share the stop-hook fuse so idle
+  # agents cannot loop strategist dispatches every notification tick.
+  local _notif_cool_dir _notif_cool_file _notif_cool_age
+  _notif_cool_dir="${COCKPIT_TMP_DIR:-/tmp/fleetcrown-daemon}"
+  _notif_cool_file="${_notif_cool_dir}/last-autopilot-${TAB_NAME}"
+  if [ -f "$_notif_cool_file" ]; then
+    _notif_cool_age=$(( $(date +%s) - $(stat -c %Y "$_notif_cool_file" 2>/dev/null || stat -f %m "$_notif_cool_file" 2>/dev/null || echo 0) ))
+    if [ "$_notif_cool_age" -lt "${COCKPIT_AUTOPILOT_COOLDOWN_S:-300}" ]; then
+      log "notification: cooldown ${_notif_cool_age}s/${COCKPIT_AUTOPILOT_COOLDOWN_S:-300}s for ${TAB_NAME} — skipping auto-inject"
+      exit 0
+    fi
   fi
 
   # Dequeue any user-dispatched task first — same logic handle_stop uses for slot 1.
@@ -763,7 +904,7 @@ handle_notification() {
   local _auto_action first_item queue_json
   queue_json=$(_fetch_prompt_queue_json "$TAB_NAME")
   first_item=$(printf '%s' "$queue_json" | jq -r '.[0] // empty' 2>/dev/null || true)
-  case "${_BEACON_AUTO_MODE:-strategist}" in
+  case "$_notif_mode" in
     queue_only)
       if [ -z "$first_item" ]; then
         log "notification: queue-only policy has no queued instruction — skipping auto-inject"
@@ -782,19 +923,25 @@ handle_notification() {
           --arg health "$_health" \
           --arg tests "$(grep -m1 '^tests:' "$session_file" 2>/dev/null | sed 's/^tests:[[:space:]]*//' || true)" \
           --arg todos "$(grep -m1 '^todos:' "$session_file" 2>/dev/null | sed 's/^todos:[[:space:]]*//' || true)" \
+          --arg status "$_status" \
+          --arg noops "$(grep -m1 '^no-op-count:' "$session_file" 2>/dev/null | sed 's/^no-op-count:[[:space:]]*//' | grep -E '^[0-9]+$' || echo 0)" \
           --arg project "$TAB_NAME" \
           --argjson queue "$queue_json" \
-          '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos},queue:$queue,projectName:$project,projectKey:$project}')
+          --argjson blockers "$_blocker_count" \
+          '{handoff:{done:$done,next:$next,health:$health,tests:$tests,todos:$todos,status:$status},blockerCount:$blockers,noOpCount:($noops|tonumber),queue:$queue,projectName:$project,projectKey:$project}')
         dispatch_result=$(curl -sf --max-time 18 -X POST "${APP_BASE_URL}/api/control/dispatch" \
           -H "Content-Type: application/json" -H "@$_BEACON_AUTH_HEADER" -d "$dispatch_payload" 2>/dev/null || true)
         _auto_action=$(printf '%s' "$dispatch_result" | jq -r '.action // "nextbest"' 2>/dev/null || echo nextbest)
         if [ "$_auto_action" = "composed" ]; then
           dispatch_prompt=$(printf '%s' "$dispatch_result" | jq -r '.prompt // empty' 2>/dev/null)
           if [ -n "$dispatch_prompt" ]; then
-            emit_or_inject_prompt "$TAB_NAME" "$dispatch_prompt"
-            write_inject_state "$TAB_NAME" "custom" "Strategist prompt"
-            log "notification: injected strategist-composed prompt"
-            exit 0
+            if emit_or_inject_prompt "$TAB_NAME" "$dispatch_prompt"; then
+              write_inject_state "$TAB_NAME" "custom" "Strategist prompt"
+              mkdir -p "$_notif_cool_dir" 2>/dev/null || true
+              touch "$_notif_cool_file" 2>/dev/null || true
+              log "notification: injected strategist-composed prompt"
+              exit 0
+            fi
           fi
           _auto_action="nextbest"
         elif [ "$_auto_action" = "off" ]; then
@@ -809,10 +956,13 @@ handle_notification() {
   if [ "$auto_key" = "next_best" ] && [ "$_auto_action" = "queue" ] && [ -n "$first_item" ]; then
     if [ -n "$first_item" ]; then
       log "notification: dequeuing queued prompt instead of next_best"
-      dequeue_local_queue_item "$TAB_NAME" "$first_item"
-      emit_or_inject_prompt "$TAB_NAME" "$first_item"
-      write_inject_state "$TAB_NAME" "custom" "Queued prompt"
-      exit 0
+      if emit_or_inject_prompt "$TAB_NAME" "$first_item"; then
+        dequeue_local_queue_item "$TAB_NAME" "$first_item"
+        write_inject_state "$TAB_NAME" "custom" "Queued prompt"
+        mkdir -p "$_notif_cool_dir" 2>/dev/null || true
+        touch "$_notif_cool_file" 2>/dev/null || true
+        exit 0
+      fi
     fi
   fi
 
@@ -844,9 +994,12 @@ Before stopping, create ${session_file}.
 ${session_update_block}"
   fi
 
-  emit_or_inject_prompt "$TAB_NAME" "$prompt"
-  write_inject_state "$TAB_NAME" "$auto_key" "▶ Auto: ${auto_key}"
-  log "notification: injected ${auto_key} (health=${_health:-unknown}) with session context"
+  if emit_or_inject_prompt "$TAB_NAME" "$prompt"; then
+    write_inject_state "$TAB_NAME" "$auto_key" "▶ Auto: ${auto_key}"
+    mkdir -p "$_notif_cool_dir" 2>/dev/null || true
+    touch "$_notif_cool_file" 2>/dev/null || true
+    log "notification: injected ${auto_key} (health=${_health:-unknown}) with session context"
+  fi
 }
 
 case "$MODE" in

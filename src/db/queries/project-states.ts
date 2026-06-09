@@ -274,6 +274,14 @@ export async function getProjectStatesByUserId(userId: string): Promise<(typeof 
   return db.select().from(projectStates).where(eq(projectStates.userId, userId));
 }
 
+export async function setAllProjectAutoContinue(userId: string, enabled: boolean) {
+  return db
+    .update(projectStates)
+    .set({ autoContinueEnabled: enabled, updatedAt: new Date() })
+    .where(eq(projectStates.userId, userId))
+    .returning({ projectKey: projectStates.projectKey, tabName: projectStates.tabName });
+}
+
 /** Batch version — avoids N separate queries when fetching states for own user + org team owners. */
 export async function getProjectStatesByUserIds(userIds: string[]): Promise<(typeof projectStates.$inferSelect)[]> {
   if (userIds.length === 0) return [];
