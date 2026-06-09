@@ -11,6 +11,15 @@
 
 set -euo pipefail
 
+# Vercel and other hosted CI builds must not run the local standalone-copy
+# + systemd restart path — Vercel ships its own runtime + has no systemd, so
+# any failure here surfaces as a misleading "Command npm run build exited
+# with 1". Skip cleanly when a known hosted-CI marker is set.
+if [ -n "${VERCEL:-}" ] || [ -n "${CI:-}" ]; then
+  echo "→ deploy: hosted CI detected (VERCEL/CI set) — skipping local standalone+systemd path"
+  exit 0
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
