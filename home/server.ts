@@ -370,6 +370,13 @@ function applyCors(req: http.IncomingMessage, res: http.ServerResponse): void {
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    // Chrome's Private Network Access blocks HTTPS pages (cloud /control)
+    // from reaching a private IP / loopback (this server on 127.0.0.1)
+    // unless the target opts in by acknowledging the cross-network
+    // request. Without this header the browser silently aborts the
+    // request before the daemon ever sees it.
+    // https://developer.chrome.com/blog/private-network-access-preflight
+    res.setHeader("Access-Control-Allow-Private-Network", "true");
   }
 }
 
