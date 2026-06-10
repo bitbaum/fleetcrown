@@ -75,7 +75,7 @@ export type DispatchResult = {
   action: DispatchAction;
   reason: string;
   /** Which inference path produced the decision. */
-  source: "groq" | "health_gate" | "empty_queue" | "fallback" | "mode_gate" | "status_gate" | "blocker_gate";
+  source: "groq" | "health_gate" | "empty_queue" | "fallback" | "mode_gate" | "status_gate" | "blocker_gate" | "evidence_guardrail";
   /** Strategist-composed prompt body when action="composed". The caller
    *  injects this as a custom prompt instead of firing the canned
    *  next_best template. Absent for queue / nextbest / off paths. */
@@ -143,16 +143,20 @@ Decide one of three actions:
 
 3. ACTION: COMPOSED — you write a fresh prompt body that names exactly what the agent should do right now, drawing on the handoff's "next", the queue tail, the last commit, the outcome streak, AND the project mission (if present). The composed body must stay aligned with the mission while executing the highest-impact immediate step. Prefer this when handoff.next is specific (e.g. "fix login flow", "ship migration 0011") or when a queue item plus commit history together point at one clear move. The body should sound like a teammate's next-step note — concrete verbs, named files or features where possible, ≤2000 characters.
 
+EVIDENCE REQUIREMENT (Strategist guardrail #2 — Evidence-for-pick):
+When you choose COMPOSED you MUST cite a specific short SHA from "Recent commits" above that grounds the thread you're picking. If no commit obviously justifies the thread, do NOT pick COMPOSED — choose QUEUE or NEXTBEST so a human can confirm. If "Recent commits" is empty there is nothing to ground a fresh composition in; default to QUEUE or NEXTBEST.
+
 Respond in this format (no extra text):
 
 ACTION: <QUEUE | NEXTBEST | COMPOSED>
 REASON: one sentence on why this action is right now
+CITED_COMMIT: <required when COMPOSED — the short SHA from Recent commits that justifies this thread; "none" otherwise>
 PROMPT: <only when ACTION is COMPOSED — the full prompt body the agent will receive. Omit this line otherwise.>`;
 }
 
 // ── Groq call ─────────────────────────────────────────────────────────────
 
-async function callGroq(prompt: string): Promise<{ action: DispatchAction; reason: string; prompt?: string }> {
+async function callGroq(prompt: string): Promise<{ action: DispatchAction; reason: string; prompt?: string; citedCommit: string | null }> {
   // maxTokens bumped from 100 → 1500 so the strategist has room for the
   // COMPOSED body (≤2000 chars ≈ ~500 tokens, plus 50 for ACTION + REASON
   // and a safety margin). Temperature stays low so the composer sticks to
@@ -161,12 +165,13 @@ async function callGroq(prompt: string): Promise<{ action: DispatchAction; reaso
   return parseGroqResponse(text);
 }
 
-function parseGroqResponse(text: string): { action: DispatchAction; reason: string; prompt?: string } {
+function parseGroqResponse(text: string): { action: DispatchAction; reason: string; prompt?: string; citedCommit: string | null } {
   const lines = text.split("\n");
 
   let action: DispatchAction = "queue";
   let reason = "Continuing with queue order.";
   let promptBody: string | undefined;
+  let citedCommit: string | null = null;
   // Collecting the PROMPT: body across multiple lines (it can be a paragraph).
   let inPrompt = false;
   const promptLines: string[] = [];
@@ -186,6 +191,12 @@ function parseGroqResponse(text: string): { action: DispatchAction; reason: stri
     }
     if (line.toLowerCase().startsWith("reason:")) {
       reason = line.slice("reason:".length).trim();
+      inPrompt = false;
+      continue;
+    }
+    if (line.toLowerCase().startsWith("cited_commit:")) {
+      const raw = line.slice("cited_commit:".length).trim().replace(/^[`*"']+|[`*"']+$/g, "");
+      citedCommit = raw && raw.toLowerCase() !== "none" ? raw : null;
       inPrompt = false;
       continue;
     }
@@ -211,7 +222,7 @@ function parseGroqResponse(text: string): { action: DispatchAction; reason: stri
     promptBody = undefined;
   }
 
-  return { action, reason, prompt: promptBody };
+  return { action, reason, prompt: promptBody, citedCommit };
 }
 
 // ── Route handler ──────────────────────────────────────────────────────────
@@ -326,7 +337,32 @@ export async function POST(req: NextRequest) {
   const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission, orangeCatContext);
 
   try {
-    const { action, reason, prompt: composedPrompt } = await callGroq(prompt);
+    const { action, reason, prompt: composedPrompt, citedCommit } = await callGroq(prompt);
+
+    // Evidence-for-pick guardrail (Strategist guardrail #2 from the roadmap):
+    // COMPOSED must cite a short SHA from the supplied recentCommits list.
+    // - No cited commit OR cite isn't in the list → downgrade to QUEUE or
+    //   NEXTBEST so a human can confirm the thread instead of letting Groq
+    //   improvise a "current focus" that isn't grounded.
+    // - When recentCommits is empty there's nothing to cite, so we still
+    //   downgrade — the strategist can't make a grounded composition
+    //   without commit evidence.
+    if (action === "composed") {
+      const knownShas = (recentCommits ?? []).map((c) => c.split(/\s+/, 1)[0]?.toLowerCase()).filter(Boolean);
+      const citedNormalized = citedCommit?.toLowerCase().split(/\s+/, 1)[0] ?? null;
+      const grounded = citedNormalized && knownShas.some((sha) => sha.startsWith(citedNormalized) || citedNormalized.startsWith(sha));
+      if (!grounded) {
+        const downgrade: DispatchAction = queue.length > 0 ? "queue" : "nextbest";
+        return recordAndReturn({
+          action: downgrade,
+          reason: citedCommit
+            ? `Strategist cited "${citedCommit}" but it isn't in recent commits — ungrounded, falling back to ${downgrade}.${streakSuffix}`
+            : `Strategist proposed COMPOSED without citing a commit — ungrounded, falling back to ${downgrade}.${streakSuffix}`,
+          source: "evidence_guardrail",
+        });
+      }
+    }
+
     return recordAndReturn({
       action,
       reason: `${reason}${streakSuffix}`,
