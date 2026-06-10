@@ -18,6 +18,7 @@ import { homedir } from "node:os";
 import { db } from "@/db";
 import { claudeCodeHistory, type NewClaudeCodeHistoryRow } from "@/db/schema/claude-code-history";
 import { userProjects } from "@/db/schema/user-projects";
+import { users } from "@/db/schema/users";
 import { getDefaultUser } from "@/db/queries/users";
 import { eq, and } from "drizzle-orm";
 
@@ -153,41 +154,53 @@ async function listJsonlFiles(root: string, sinceMs: number | null): Promise<str
   return out;
 }
 
-function parseArgs(argv: string[]): { dir: string; sinceMs: number | null } {
+function parseArgs(argv: string[]): { dir: string; sinceMs: number | null; userIdOverride: string | null; emailOverride: string | null } {
   let dir = CLAUDE_PROJECTS_DIR;
   let sinceMs: number | null = null;
+  let userIdOverride: string | null = null;
+  let emailOverride: string | null = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--dir" && argv[i + 1]) {
-      dir = argv[i + 1];
-      i++;
-    } else if (arg === "--since" && argv[i + 1]) {
+    if (arg === "--dir" && argv[i + 1]) { dir = argv[i + 1]; i++; }
+    else if (arg === "--since" && argv[i + 1]) {
       const t = Date.parse(argv[i + 1]);
       if (!Number.isNaN(t)) sinceMs = t;
       i++;
     }
+    else if (arg === "--user-id" && argv[i + 1]) { userIdOverride = argv[i + 1]; i++; }
+    else if (arg === "--user-email" && argv[i + 1]) { emailOverride = argv[i + 1]; i++; }
   }
-  return { dir, sinceMs };
+  return { dir, sinceMs, userIdOverride, emailOverride };
+}
+
+async function resolveUserId(opts: { userIdOverride: string | null; emailOverride: string | null }): Promise<string | null> {
+  if (opts.userIdOverride) return opts.userIdOverride;
+  if (opts.emailOverride) {
+    const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, opts.emailOverride)).limit(1);
+    return row?.id ?? null;
+  }
+  const u = await getDefaultUser();
+  return u?.id ?? null;
 }
 
 async function main() {
-  const { dir, sinceMs } = parseArgs(process.argv.slice(2));
-  const user = await getDefaultUser();
-  if (!user) {
-    console.error("ingest-history: no default user in DB. Onboard a user first.");
+  const args = parseArgs(process.argv.slice(2));
+  const userId = await resolveUserId(args);
+  if (!userId) {
+    console.error("ingest-history: no user found. Pass --user-id <uuid>, --user-email <addr>, or mark a user is_default=true.");
     process.exit(1);
   }
-  const projectIndex = await loadProjectIndex(user.id);
-  console.log(`ingest-history: scanning ${dir} (${projectIndex.length} projects indexed)`);
-  if (sinceMs !== null) console.log(`ingest-history: filtering files modified since ${new Date(sinceMs).toISOString()}`);
+  const projectIndex = await loadProjectIndex(userId);
+  console.log(`ingest-history: user=${userId} scanning ${args.dir} (${projectIndex.length} projects indexed)`);
+  if (args.sinceMs !== null) console.log(`ingest-history: filtering files modified since ${new Date(args.sinceMs).toISOString()}`);
 
-  const files = await listJsonlFiles(dir, sinceMs);
+  const files = await listJsonlFiles(args.dir, args.sinceMs);
   console.log(`ingest-history: ${files.length} JSONL file(s) to process`);
 
   let totalAdded = 0, totalSkipped = 0, totalErrored = 0;
   for (const file of files) {
     try {
-      const r = await ingestJsonl(file, user.id, projectIndex);
+      const r = await ingestJsonl(file, userId, projectIndex);
       totalAdded += r.added;
       totalSkipped += r.skipped;
       totalErrored += r.errored;
