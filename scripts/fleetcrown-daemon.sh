@@ -1510,6 +1510,22 @@ while true; do
   type=$(echo "$command_json" | jq -r '.type')
   payload=$(echo "$command_json" | jq -c '.payload')
 
+  # Crash-window guard: if we previously claimed this row and started executing,
+  # the attempted-marker file exists. A daemon crash between claim and mark_done
+  # leaves claimedAt set; server's reclaimStalePendingCommands clears it after
+  # ${STALE_CLAIM_SECONDS} so the row becomes claimable again. Without this
+  # guard, the second claim would replay execute_* and double-type into the
+  # terminal. With this guard we mark the row failed instead, the user sees
+  # what happened, and zero double-execution. Tmpfs is wiped on reboot which
+  # is the correct behaviour (zellij state is also gone, so replay is safe).
+  _attempt_marker="$(_brand_tmp "attempted-${id}")"
+  if [ -f "$_attempt_marker" ]; then
+    log "command $id re-claimed after previous attempt — refusing to re-execute (type=$type)"
+    mark_done "$id" "false" "abandoned mid-execution — daemon was killed between claim and mark_done; please retry"
+    continue
+  fi
+  printf '%s' "$(date +%s)" > "$_attempt_marker"
+
   case "$type" in
     inject)
       tab=$(echo "$payload" | jq -r '.tab')
@@ -1578,6 +1594,12 @@ while true; do
       mark_done "$id" "false" "unknown type: $type"
       ;;
   esac
+
+  # Dispatch returned — mark_done has been called inside the case body. Drop
+  # the attempted-marker so a future row with the same id (impossible in
+  # practice; uuids) wouldn't be falsely blocked, and so /tmp doesn't grow
+  # unbounded. Best-effort; leaving the file behind is also safe.
+  rm -f "$_attempt_marker" 2>/dev/null || true
 
   # Push updated state immediately so the UI reflects the execution result.
   push_runtime_state &
