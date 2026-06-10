@@ -31,6 +31,7 @@
     "test:activity-ssot": "node scripts/activity-ssot-check.mjs",
     "test:digest": "npx tsx scripts/test/digest.ts",
     "generate:agent-prompts": "npx tsx scripts/generate-agent-prompts.ts",
+    "ingest:history": "npx tsx scripts/ingest-claude-code-history.ts",
     "desktop:dev": "cd desktop && npm run dev",
     "desktop:build": "cd desktop && npm run build",
     "desktop:preview": "cd desktop && npm run preview",

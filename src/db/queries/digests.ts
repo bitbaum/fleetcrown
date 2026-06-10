@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { promptHistory, orchestrationRuns, userProjects } from "@/db/schema";
+import { promptHistory, orchestrationRuns, userProjects, claudeCodeHistory } from "@/db/schema";
 import { splitSessionItems } from "@/lib/session-content";
 import { getAdapterLabel, getIntentLabel } from "@/config/control-intents";
 import {
@@ -23,7 +23,8 @@ export type { EventStatus } from "@/lib/activity-status";
 const MAX_RAW_ROWS_PER_QUERY = 200;
 const MAX_PROMPT_SAMPLES_FOR_TIMELINE = 60;
 const MAX_RUN_SAMPLES_FOR_TIMELINE = 60;
-const MAX_TIMELINE_ITEMS = 80;
+const MAX_LOCAL_CHAT_SAMPLES_FOR_TIMELINE = 60;
+const MAX_TIMELINE_ITEMS = 120;
 const COMPACT_LIMITS = {
   completed: 10,
   next: 8,
@@ -85,7 +86,7 @@ export type DigestTimelineItem = {
   title: string;
   body: string;
   status: EventStatus;
-  kind: "prompt" | "run";
+  kind: "prompt" | "run" | "local_chat";
 };
 
 export type ProjectStatus = {
@@ -162,9 +163,16 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
   ];
   if (projectKey) runConditions.push(eq(orchestrationRuns.projectKey, projectKey));
 
+  const localChatConditions = [
+    eq(claudeCodeHistory.userId, userId),
+    gte(claudeCodeHistory.occurredAt, since),
+    eq(claudeCodeHistory.promptType, "user"),
+  ];
+  if (projectKey) localChatConditions.push(eq(claudeCodeHistory.projectKey, projectKey));
+
   // Activity counts per project run unfiltered so the chip wall can rank
   // projects by hotness even when one is currently selected.
-  const [projectRows, promptCounts, runCounts, prompts, runs] = await Promise.all([
+  const [projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats] = await Promise.all([
     db
       .select({ key: userProjects.name })
       .from(userProjects)
@@ -186,6 +194,18 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
       .from(orchestrationRuns)
       .where(and(eq(orchestrationRuns.userId, userId), gte(orchestrationRuns.startedAt, since)))
       .groupBy(orchestrationRuns.projectKey),
+    db
+      .select({
+        projectKey: claudeCodeHistory.projectKey,
+        n: sql<number>`count(*)::int`,
+      })
+      .from(claudeCodeHistory)
+      .where(and(
+        eq(claudeCodeHistory.userId, userId),
+        gte(claudeCodeHistory.occurredAt, since),
+        eq(claudeCodeHistory.promptType, "user"),
+      ))
+      .groupBy(claudeCodeHistory.projectKey),
     db
       .select({
         id: promptHistory.id,
@@ -217,14 +237,29 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
       .where(and(...runConditions))
       .orderBy(desc(orchestrationRuns.startedAt))
       .limit(MAX_RAW_ROWS_PER_QUERY),
+    db
+      .select({
+        id: claudeCodeHistory.id,
+        projectKey: claudeCodeHistory.projectKey,
+        projectPath: claudeCodeHistory.projectPath,
+        gitBranch: claudeCodeHistory.gitBranch,
+        sessionId: claudeCodeHistory.sessionId,
+        promptText: claudeCodeHistory.promptText,
+        occurredAt: claudeCodeHistory.occurredAt,
+      })
+      .from(claudeCodeHistory)
+      .where(and(...localChatConditions))
+      .orderBy(desc(claudeCodeHistory.occurredAt))
+      .limit(MAX_RAW_ROWS_PER_QUERY),
   ]);
 
-  return { projectRows, promptCounts, runCounts, prompts, runs };
+  return { projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats };
 }
 
 type ActivityRows = Awaited<ReturnType<typeof fetchActivityRows>>;
 type PromptRow = ActivityRows["prompts"][number];
 type RunRow = ActivityRows["runs"][number];
+type LocalChatRow = ActivityRows["localChats"][number];
 
 // ─── Builders — each one does one thing ─────────────────────────────────────
 
@@ -232,10 +267,15 @@ function buildProjectsList(
   projectRows: ActivityRows["projectRows"],
   promptCounts: ActivityRows["promptCounts"],
   runCounts: ActivityRows["runCounts"],
+  localChatCounts: ActivityRows["localChatCounts"],
 ): DigestProjectOption[] {
   const activityByProject = new Map<string, number>();
   for (const row of promptCounts) activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
   for (const row of runCounts) activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
+  for (const row of localChatCounts) {
+    if (!row.projectKey) continue;
+    activityByProject.set(row.projectKey, (activityByProject.get(row.projectKey) ?? 0) + row.n);
+  }
 
   return projectRows
     .map((row) => ({ key: row.key, label: row.key, activity: activityByProject.get(row.key) ?? 0 }))
@@ -263,6 +303,21 @@ function buildPromptTimeline(prompts: PromptRow[]): DigestTimelineItem[] {
     status: "neutral",
     kind: "prompt",
   }));
+}
+
+function buildLocalChatTimeline(rows: LocalChatRow[]): DigestTimelineItem[] {
+  return rows.slice(0, MAX_LOCAL_CHAT_SAMPLES_FOR_TIMELINE).map((row) => {
+    const branch = row.gitBranch ? ` · ${row.gitBranch}` : "";
+    return {
+      id: `local_chat:${row.id}`,
+      occurredAt: row.occurredAt.toISOString(),
+      projectKey: row.projectKey ?? "(unscoped)",
+      title: `Claude Code · local chat${branch}`,
+      body: row.promptText,
+      status: "neutral" as const,
+      kind: "local_chat" as const,
+    };
+  });
 }
 
 function buildRunTimeline(runs: RunRow[]): DigestTimelineItem[] {
@@ -336,7 +391,7 @@ export async function getProjectDigest(
 
   const rows = await fetchActivityRows(userId, since, projectKey);
 
-  const projects = buildProjectsList(rows.projectRows, rows.promptCounts, rows.runCounts);
+  const projects = buildProjectsList(rows.projectRows, rows.promptCounts, rows.runCounts, rows.localChatCounts);
   const projectStatuses = buildProjectStatuses(rows.runs, projects);
   const stats = buildStats(rows.prompts, rows.runs);
   const compacted = buildCompacted(rows.prompts, rows.runs);
@@ -344,6 +399,7 @@ export async function getProjectDigest(
   const timeline = [
     ...buildPromptTimeline(rows.prompts),
     ...buildRunTimeline(rows.runs),
+    ...buildLocalChatTimeline(rows.localChats),
   ]
     .sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))
     .slice(0, MAX_TIMELINE_ITEMS);

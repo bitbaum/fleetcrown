@@ -16,6 +16,7 @@ export * from "./habits";
 export * from "./orchestration-events";
 export * from "./orchestration-runs";
 export * from "./prompt-history";
+export * from "./claude-code-history";
 export * from "./auth";
 export * from "./user-projects";
 export * from "./project-states";
