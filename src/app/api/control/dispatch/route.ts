@@ -21,6 +21,7 @@ import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { getProjectAutopilotOverride } from "@/db/queries/projects";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
+import { wrapLoopV2 } from "@/lib/orchestration/wrap-loop-v2";
 import type { AutoInjectMode } from "@/config/beacon";
 import { getOrangeCatContext, renderOrangeCatContext } from "@/lib/integrations/orangecat-context";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
@@ -337,7 +338,15 @@ export async function POST(req: NextRequest) {
   const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission, orangeCatContext);
 
   try {
-    const { action, reason, prompt: composedPrompt, citedCommit } = await callGroq(prompt);
+    const groqResult = await callGroq(prompt);
+    const { action, reason, citedCommit } = groqResult;
+    // Templates can't opt out: wrap every composed body in LOOP v2
+    // invariants (accountability line + classification + scope cap +
+    // handoff requirement). Other actions (queue / nextbest) don't go
+    // through this code path — they either return null prompt (caller
+    // looks it up) or carry their own LOOP v2 preamble via the
+    // canonical template body.
+    const composedPrompt = groqResult.prompt ? wrapLoopV2(groqResult.prompt) : undefined;
 
     // Evidence-for-pick guardrail (Strategist guardrail #2 from the roadmap):
     // COMPOSED must cite a short SHA from the supplied recentCommits list.
