@@ -205,7 +205,11 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
         gte(claudeCodeHistory.occurredAt, since),
         eq(claudeCodeHistory.promptType, "user"),
       ))
-      .groupBy(claudeCodeHistory.projectKey),
+      .groupBy(claudeCodeHistory.projectKey)
+      // Degrade gracefully when the table doesn't exist yet (env where the
+      // schema hasn't been applied — typically prod before someone runs the
+      // CREATE TABLE). Empty array = digest still renders prompts + runs.
+      .catch(() => [] as { projectKey: string | null; n: number }[]),
     db
       .select({
         id: promptHistory.id,
@@ -250,7 +254,12 @@ async function fetchActivityRows(userId: string, since: Date, projectKey: string
       .from(claudeCodeHistory)
       .where(and(...localChatConditions))
       .orderBy(desc(claudeCodeHistory.occurredAt))
-      .limit(MAX_RAW_ROWS_PER_QUERY),
+      .limit(MAX_RAW_ROWS_PER_QUERY)
+      // Same fallback as localChatCounts — missing table degrades cleanly.
+      .catch(() => [] as Array<{
+        id: string; projectKey: string | null; projectPath: string;
+        gitBranch: string | null; sessionId: string; promptText: string; occurredAt: Date;
+      }>),
   ]);
 
   return { projectRows, promptCounts, runCounts, localChatCounts, prompts, runs, localChats };
