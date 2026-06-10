@@ -1,4 +1,3 @@
-import { getIntentLabel } from "@/config/control-intents";
 import type { ProjectState } from "@/lib/control-types";
 import type { ActivityItem } from "@/db/queries/prompt-history";
 
@@ -30,15 +29,13 @@ export function buildProjectActivityLedger({
   git: ProjectState["git"];
 }): ProjectActivityEvent[] {
   const promptEvents: ProjectActivityEvent[] = injections.map((item) => {
-    const isCustom = Boolean(item.customPrompt?.trim());
-    const body = isCustom ? item.customPrompt! : getIntentLabel(item.intent);
     return {
       id: `prompt:${item.id}`,
       kind: "user_prompt",
       occurredAt: new Date(item.dispatchedAt).getTime(),
       title: "Sent prompt",
-      body,
-      intent: isCustom ? null : item.intent,
+      body: item.displayText,
+      intent: item.isCustom ? null : item.intent,
     };
   });
 

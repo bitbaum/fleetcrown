@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { promptHistory, type NewPromptHistoryRow } from "@/db/schema/prompt-history";
+import { toPromptDisplayFields, type PromptDisplayFields } from "@/lib/activity-status";
 
 export async function insertPromptHistory(userId: string, row: Omit<NewPromptHistoryRow, "id" | "userId" | "dispatchedAt">) {
   await db.insert(promptHistory).values({ ...row, userId });
@@ -89,6 +90,7 @@ const DISPATCH_COLS = {
   adapter: promptHistory.adapter,
   intent: promptHistory.intent,
   customPrompt: promptHistory.customPrompt,
+  resolvedPrompt: promptHistory.resolvedPrompt,
   dispatchedAt: promptHistory.dispatchedAt,
 };
 
@@ -99,23 +101,25 @@ type RawDispatchRow = {
   adapter: string;
   intent: string;
   customPrompt: string | null;
+  resolvedPrompt: string | null;
   dispatchedAt: Date;
 };
 
 // All dispatches — for the dedicated history page (dispatchedAt stays as Date for RSC prop passing)
-export type HistoryItem = Omit<RawDispatchRow, "customPrompt"> & { customPrompt: string | null };
+export type HistoryItem = Omit<RawDispatchRow, "customPrompt" | "resolvedPrompt"> & PromptDisplayFields;
 
 // Last N dispatches — for activity feeds serialized through JSON API (dispatchedAt as ISO string)
 export type ActivityItem = Omit<HistoryItem, "dispatchedAt"> & { dispatchedAt: string };
 
 function toHistoryItem(r: RawDispatchRow): HistoryItem {
+  const display = toPromptDisplayFields(r);
   return {
     id: r.id,
     projectId: r.projectId ?? null,
     projectKey: r.projectKey,
     adapter: r.adapter,
     intent: r.intent,
-    customPrompt: r.customPrompt ?? null,
+    ...display,
     dispatchedAt: r.dispatchedAt,
   };
 }

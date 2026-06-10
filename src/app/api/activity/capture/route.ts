@@ -33,25 +33,27 @@ const Body = z.object({
 async function resolveProject(userId: string, cwd: string, projectKeyHint: string | undefined) {
   if (projectKeyHint) {
     const row = await db
-      .select({ id: userProjects.id, name: userProjects.name, dirPath: userProjects.dirPath })
+      .select({ entityProjectId: userProjects.entityProjectId, name: userProjects.name, dirPath: userProjects.dirPath })
       .from(userProjects)
       .where(and(eq(userProjects.userId, userId), eq(userProjects.name, projectKeyHint)))
       .limit(1);
-    if (row[0]) return { projectId: row[0].id, projectKey: row[0].name, projectPath: row[0].dirPath ?? cwd };
+    if (row[0]) return { projectId: row[0].entityProjectId ?? null, projectKey: row[0].name, projectPath: row[0].dirPath ?? cwd };
   }
   // Match against any user_projects.directory that is the cwd or an ancestor.
   const rows = await db
-    .select({ id: userProjects.id, name: userProjects.name, dirPath: userProjects.dirPath })
+    .select({ entityProjectId: userProjects.entityProjectId, name: userProjects.name, dirPath: userProjects.dirPath })
     .from(userProjects)
     .where(eq(userProjects.userId, userId));
-  let best: { id: string; name: string; dirPath: string } | null = null;
+  let best: { entityProjectId: string | null; name: string; dirPath: string } | null = null;
   for (const row of rows) {
     if (!row.dirPath) continue;
     if (cwd === row.dirPath || cwd.startsWith(row.dirPath + path.sep)) {
-      if (!best || row.dirPath.length > best.dirPath.length) best = { id: row.id, name: row.name, dirPath: row.dirPath };
+      if (!best || row.dirPath.length > best.dirPath.length) {
+        best = { entityProjectId: row.entityProjectId ?? null, name: row.name, dirPath: row.dirPath };
+      }
     }
   }
-  if (best) return { projectId: best.id, projectKey: best.name, projectPath: best.dirPath };
+  if (best) return { projectId: best.entityProjectId ?? null, projectKey: best.name, projectPath: best.dirPath };
   // Fall back to the directory's basename as the tab-name-style key. The row
   // gets recorded anyway so the user can audit unmatched work later.
   const basename = path.basename(cwd);

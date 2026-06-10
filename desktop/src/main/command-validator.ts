@@ -17,9 +17,11 @@
  * revisit the dep tradeoff.
  *
  * Mirrors the per-type payload contracts defined in
- * src/db/schema/pending-commands.ts on the cloud side. Keep the two in sync
- * by hand for now.
+ * src/db/schema/pending-commands.ts on the cloud side. The executable type
+ * list is shared through src/lib/pending-command-contract.ts.
  */
+
+import { isFleetRunnerCommandType } from '@/lib/pending-command-contract'
 
 export interface InjectCommand {
   type: 'inject'
@@ -123,6 +125,13 @@ export function validateCommand(raw: unknown): ValidationResult {
     return { ok: false, error: 'Command.payload must be an object' }
   }
 
+  if (!isFleetRunnerCommandType(type)) {
+    return {
+      ok: false,
+      error: `Fleet Runner does not handle command type '${type}'. Add it to command-validator.ts when you wire a new executor.`,
+    }
+  }
+
   switch (type) {
     case 'inject':
       return validateInject(payload)
@@ -139,11 +148,6 @@ export function validateCommand(raw: unknown): ValidationResult {
       return validateInstallCli(payload)
     case 'peek_tab':
       return validatePeekTab(payload)
-    default:
-      return {
-        ok: false,
-        error: `Fleet Runner does not handle command type '${type}'. Add it to command-validator.ts when you wire a new executor.`,
-      }
   }
 }
 

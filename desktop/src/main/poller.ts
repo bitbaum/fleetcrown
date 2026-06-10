@@ -36,6 +36,7 @@ import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken } from './token-store'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
+import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract'
 
 /** Where Claude (and our handoff parser) writes the per-tab session file.
  *  Used by post-flight verification: if the file's mtime advances within a
@@ -72,16 +73,6 @@ type StatusListener = (s: PollerStatus) => void
 
 const listeners = new Set<StatusListener>()
 const COMMAND_POLL_IDLE_MS = 2_000
-const SUPPORTED_COMMAND_TYPES = [
-  'inject',
-  'focus_tab',
-  'close_tab',
-  'launch_agent',
-  'switch_agent',
-  'auto_continue',
-  'install_cli',
-  'peek_tab',
-].join(',')
 let currentStatus: PollerStatus = {
   state: 'idle',
   baseUrl: (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL,
@@ -199,7 +190,7 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       // commands claimed without visible progress under Vercel/bridge edge
       // conditions. A 2s deterministic poll is cheap and makes phone/web
       // control reliable today.
-      const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(SUPPORTED_COMMAND_TYPES)}`, {
+      const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(FLEET_RUNNER_COMMAND_TYPES_PARAM)}`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: currentFetchCtrl.signal,
       })
@@ -373,7 +364,7 @@ async function handleCommand(
     // the "I rebooted and nothing's running" path so the user doesn't have
     // to open a terminal first.
     const t = validation.command.type
-    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli' || t === 'peek_tab') {
+    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
       await ensureSessionForCommand()
     }
     switch (validation.command.type) {

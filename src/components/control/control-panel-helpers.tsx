@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Bot, ChevronUp, ChevronDown } from "lucide-react";
-import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
+import { getAdapterLabel } from "@/config/control-intents";
 import { timeAgo } from "@/lib/dates";
 import type { ControlData } from "@/lib/control-types";
 
@@ -65,9 +65,9 @@ export function ActivityLogPanel({
               </div>
               <p
                 className="mt-1 text-sm leading-relaxed text-text-secondary"
-                title={item.customPrompt ?? getIntentLabel(item.intent ?? "")}
+                title={item.displayText}
               >
-                {item.customPrompt ? item.customPrompt.slice(0, 120) : getIntentLabel(item.intent ?? "")}
+                {item.displayText.slice(0, 120)}
               </p>
             </div>
           ))}

@@ -7,7 +7,6 @@
 // these rules anywhere, import from here instead.
 
 import { getIntentLabel } from "@/config/control-intents";
-import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 export type EventStatus = "negative" | "warning" | "positive" | "neutral";
 
@@ -33,7 +32,14 @@ export function runStatus(run: RunStatusInput): EventStatus {
 type PromptBodyInput = {
   customPrompt: string | null;
   resolvedPrompt: string | null;
-  intent: OrchestrationTaskIntentId;
+  intent: string;
+};
+
+export type PromptDisplayFields = {
+  customPrompt: string | null;
+  resolvedPrompt: string | null;
+  displayText: string;
+  isCustom: boolean;
 };
 
 // The most informative body for a prompt row. Custom text (what the user
@@ -42,6 +48,17 @@ type PromptBodyInput = {
 // render something. Used by every surface that displays a prompt.
 export function promptDisplayBody(row: PromptBodyInput): string {
   return row.customPrompt || row.resolvedPrompt || getIntentLabel(row.intent);
+}
+
+export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields {
+  const customPrompt = row.customPrompt?.trim() ? row.customPrompt : null;
+  const resolvedPrompt = row.resolvedPrompt?.trim() ? row.resolvedPrompt : null;
+  return {
+    customPrompt,
+    resolvedPrompt,
+    displayText: promptDisplayBody({ customPrompt, resolvedPrompt, intent: row.intent }),
+    isCustom: Boolean(customPrompt),
+  };
 }
 
 // Severity ordering for "worst of N events" reductions (status strip etc).
