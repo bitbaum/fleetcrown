@@ -2,7 +2,7 @@
  * SSOT for Postgres connection URLs — vendor-neutral.
  *
  * Any hosted Postgres (Neon, Supabase pooler, self-hosted PgBouncer on
- * Oracle/Hetzner) uses the same two env vars:
+ * Hetzner) uses the same two env vars:
  *
  *   DATABASE_URL       — direct session (migrations, LISTEN/NOTIFY, drizzle-kit)
  *   DATABASE_POOL_URL  — pooled session for app queries (Vercel serverless)

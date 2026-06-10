@@ -1,7 +1,7 @@
 // Fleet Brief — "what did my fleet do today + this week" summary card on /today.
 //
-// Tier 1 thesis surface #3 (after Sessions drawer + /decisions). Where
-// /decisions is the FULL chronological feed, this is the at-a-glance
+// Tier 1 thesis surface #3 (after Sessions drawer + /activity). Where the
+// activity stream is the FULL chronological feed, this is the at-a-glance
 // summary built around three rolling windows: today, last 7 days, all-time.
 // Renders as a Today-page card so users see fleet health alongside their
 // commitments and weather, not buried under another route.
@@ -97,7 +97,7 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
         title="Fleet brief"
         right={
           <Link
-            href="/decisions"
+            href="/activity"
             className="text-xs text-text-tertiary hover:text-text-secondary inline-flex items-center gap-0.5"
           >
             See timeline

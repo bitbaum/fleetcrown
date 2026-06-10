@@ -83,6 +83,13 @@ export interface InstallCliCommand {
   }
 }
 
+export interface PeekTabCommand {
+  type: 'peek_tab'
+  payload: {
+    tab: string
+  }
+}
+
 /** Every command type the desktop is allowed to execute today. Adding a
  *  new type means: extend this union + write a guard + handle it in poller. */
 export type ValidatedCommand =
@@ -92,6 +99,7 @@ export type ValidatedCommand =
   | SwitchAgentCommand
   | AutoContinueCommand
   | InstallCliCommand
+  | PeekTabCommand
 
 export type ValidationResult =
   | { ok: true; command: ValidatedCommand }
@@ -129,12 +137,22 @@ export function validateCommand(raw: unknown): ValidationResult {
       return validateAutoContinue(payload)
     case 'install_cli':
       return validateInstallCli(payload)
+    case 'peek_tab':
+      return validatePeekTab(payload)
     default:
       return {
         ok: false,
         error: `Fleet Runner does not handle command type '${type}'. Add it to command-validator.ts when you wire a new executor.`,
       }
   }
+}
+
+function validatePeekTab(payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: "peek_tab payload missing required string 'tab'" }
+  }
+  return { ok: true, command: { type: 'peek_tab', payload: { tab } } }
 }
 
 function validateInject(payload: Record<string, unknown>): ValidationResult {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap Postgres host on a fresh Ubuntu VM (Oracle Always Free / Hetzner).
+# Bootstrap Postgres host on a fresh Hetzner Ubuntu VM.
 #
 # Usage (on the VM):
 #   curl -fsSL https://raw.githubusercontent.com/.../deploy-host.sh | bash

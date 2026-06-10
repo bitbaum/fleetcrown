@@ -19,11 +19,28 @@ export function BrandMark({
           fill="none"
           className="text-text-primary"
         >
-          <rect x="4" y="5" width="16" height="14" rx="4" stroke="currentColor" strokeWidth="1.5" opacity="0.95" />
-          <path d="M12 7V17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
-          <path d="M7 12H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
-          <path d="M14 12H17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.75" />
-          <path d="M8 8.5H16" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" opacity="0.55" />
+          {/* Spiral mark — three alternating semicircles of growing radius
+              (2 → 4 → 6) tracing 1.5 turns outward from center. Two paths so
+              the inner arc reads bolder than the outer one (depth trick
+              inherited from the previous control-window mark). MUST stay
+              pixel-identical with public/icon.svg and every
+              opengraph-image.tsx — see comments there. */}
+          <path
+            d="M 12 14 A 2 2 0 0 1 12 10 A 4 4 0 0 0 12 16"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.95"
+          />
+          <path
+            d="M 12 16 A 6 6 0 0 1 12 6"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.7"
+          />
         </svg>
       </div>
       {showWordmark && !compact && (

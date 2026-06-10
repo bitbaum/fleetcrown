@@ -8,11 +8,12 @@
 //   APP_SLUG     Lowercase kebab. Used in URLs, file paths, env-var prefixes.
 //   APP_DOMAIN   Canonical hostname (no scheme). Used in callbacks, emails, copy.
 //
-// Visual identity: The primary mark is the "control window" SVG defined in
-// BrandMark.tsx (rounded rect + control bars). icon.svg + all opengraph-*.tsx
-// MUST stay pixel-identical (see comments in those files). Never introduce a
-// third mark. Public surfaces always dark; ui-public-* / ui-auth-* intentionally
-// use white/opacity inside globals.css only.
+// Visual identity: The primary mark is the spiral SVG defined in
+// BrandMark.tsx (alternating semicircular arcs of growing radius, two-layer
+// fade). icon.svg + all opengraph-*.tsx MUST stay pixel-identical (see
+// comments in those files). Never introduce a second mark. Public surfaces
+// always dark; ui-public-* / ui-auth-* intentionally use white/opacity inside
+// globals.css only.
 //
 // Name evaluation criteria (from first principles + product positioning):
 // - Must preserve "fleet" language in copy (run your fleet, fleet scale,

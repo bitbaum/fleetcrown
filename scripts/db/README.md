@@ -2,8 +2,8 @@
 
 These scripts and runbooks let you migrate both products' production
 databases off their managed-DB providers (Neon for FleetCrown, Supabase
-for OrangeCat) and onto a single self-hosted Postgres box in ~30 min
-(Hetzner) or ~1 hour (Oracle Free Tier).
+for OrangeCat) and onto a single self-hosted Hetzner Postgres box in
+~30 min.
 
 ## Why this exists
 
@@ -13,9 +13,9 @@ broken" once you trip a cap. We hit Neon's wall in early-June 2026 —
 every DB-dependent endpoint 500'd until the cap reset. Supabase's caps
 are similar in shape; OrangeCat would hit them eventually.
 
-Self-hosting on a Hetzner CX22 (€4.51/mo) or Oracle Always-Free ARM
-(free forever) eliminates that class of failure entirely. Vercel-to-VM
-egress is uncharged on a box you control.
+Self-hosting on a Hetzner CX22 (€4.51/mo) eliminates that class of
+failure entirely. Vercel-to-VM egress is uncharged on a box you
+control.
 
 A CX22 is over-provisioned for both products combined at today's scale
 — see `BOTH_PRODUCTS_ONE_HOST.md` for capacity math.
@@ -28,7 +28,6 @@ A CX22 is over-provisioned for both products combined at today's scale
 | `dump-from-supabase.sh` | Same shape for OrangeCat. Defaults to `public` schema only (auth/storage stay on Supabase). `FULL_DUMP=1` for everything. |
 | `restore-to-target.sh` | `psql` either dump into a fresh target, verify row counts match the manifest. Halts before flipping Vercel if anything mismatches. |
 | `SETUP_HETZNER.md` | Provision + install + secure a Hetzner CX22 for Postgres 17. |
-| `SETUP_ORACLE_FREE.md` | Same shape for Oracle Always-Free ARM. |
 | `BOTH_PRODUCTS_ONE_HOST.md` | Layer two databases on one Postgres instance — role + pg_hba + Vercel env setup, plus capacity math and a "when to split" trigger list. |
 
 ## End-to-end migration (cookbook)
@@ -64,9 +63,7 @@ dumps even past the cap as long as the direct connection still responds.
 
 ### Step 2 — stand up target
 
-Pick one:
-- **Hetzner** (recommended for paid simplicity): follow `SETUP_HETZNER.md` sections 1-5.
-- **Oracle Free**: follow `SETUP_ORACLE_FREE.md` sections 1-5.
+Follow `SETUP_HETZNER.md` sections 1-5.
 
 You end with a working `postgresql://fleetcrown:...@<host>:5432/fleetcrown?sslmode=require` URL.
 

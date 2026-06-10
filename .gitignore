@@ -6,6 +6,7 @@ node_modules
 .claude/
 *.tsbuildinfo
 .playwright-mcp/
+.tmp/
 *.png
 *.jpeg
 .local-toolchain/

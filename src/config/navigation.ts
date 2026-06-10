@@ -12,14 +12,12 @@ import {
   BookOpen,
   Settings,
   Brain,
-  History,
   Compass,
   Anchor,
   Map,
   TrendingUp,
   FileText,
   Download,
-  ScrollText,
   Newspaper,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -44,10 +42,7 @@ export const NAV = {
   control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: true  },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
-  activity:   { id: "activity", label: "Activity", description: "Digests, history, and decisions",     href: "/activity", icon: Newspaper,    active: true,  mobile: false },
-  history:    { id: "history",  label: "History",  description: "Full log of every agent dispatch",  href: "/history",    icon: History,      active: true,  mobile: false },
-  decisions:  { id: "decisions",label: "Decisions",description: "Timeline of fleet activity & choices",href: "/decisions",icon: ScrollText,   active: true,  mobile: false },
-  digests:    { id: "digests",  label: "Digests",  description: "Readable project progress summaries", href: "/digests", icon: Newspaper,    active: true,  mobile: false },
+  activity:   { id: "activity", label: "Activity", description: "Project status and event timeline",  href: "/activity", icon: Newspaper,    active: true,  mobile: false },
   system:     { id: "system",   label: "System",   description: "Runtime health & autopilot jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },
 
   memory:     { id: "memory",   label: "Memory",   description: "Knowledge graph & entity activity", href: "/memory",     icon: Brain,        active: true,  mobile: false },

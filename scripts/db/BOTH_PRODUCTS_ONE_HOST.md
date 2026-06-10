@@ -1,10 +1,9 @@
 # Both products, one Postgres host
 
-A single Hetzner CX22 (€4.51/mo) or Oracle Always-Free A1.Flex hosts both
-FleetCrown and OrangeCat's Postgres databases as separate `DATABASE` rows
-inside the same Postgres instance. This doc layers on top of
-`SETUP_HETZNER.md` / `SETUP_ORACLE_FREE.md` — the box itself is the same;
-only the role + database setup differs.
+A single Hetzner box hosts both FleetCrown and OrangeCat's Postgres
+databases as separate `DATABASE` rows inside the same Postgres instance.
+This doc layers on top of `SETUP_HETZNER.md` — the box itself is the
+same; only the role + database setup differs.
 
 ## Why one box, two databases
 

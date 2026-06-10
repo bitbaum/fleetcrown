@@ -132,3 +132,63 @@ export function resetPasswordEmailTemplate(resetUrl: string) {
   const text = `Reset your ${APP_NAME} password:\n\n${resetUrl}\n\nThis link expires in 2 hours. If you didn't request this, ignore it.`;
   return { subject, html, text };
 }
+
+// ─── Activity digest ────────────────────────────────────────────────────────
+
+// Render the Groq-produced digest markdown into the shared email shell.
+// Same paragraphs/bullets/headings/bold subset MarkdownText renders in the UI
+// so the email and the on-screen report stay visually consistent.
+function renderDigestMarkdown(markdown: string): string {
+  const blocks: string[] = [];
+  let listOpen = false;
+  const closeList = () => {
+    if (listOpen) {
+      blocks.push("</ul>");
+      listOpen = false;
+    }
+  };
+  const inline = (text: string) =>
+    text.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#09090b;">$1</strong>');
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) { closeList(); continue; }
+    if (line.startsWith("- ") || line.startsWith("* ")) {
+      if (!listOpen) {
+        blocks.push('<ul style="margin:0 0 16px 0;padding-left:20px;color:#374151;font-size:15px;line-height:1.7;">');
+        listOpen = true;
+      }
+      blocks.push(`<li>${inline(line.slice(2))}</li>`);
+    } else if (/^#{1,3} /.test(line)) {
+      closeList();
+      blocks.push(`<h3 style="margin:20px 0 8px 0;font-size:16px;font-weight:600;color:#09090b;">${inline(line.replace(/^#+\s+/, ""))}</h3>`);
+    } else {
+      closeList();
+      blocks.push(`<p style="margin:0 0 14px 0;font-size:15px;line-height:1.7;color:#374151;">${inline(line)}</p>`);
+    }
+  }
+  closeList();
+  return blocks.join("\n");
+}
+
+export function digestEmailTemplate({
+  markdown,
+  cadenceLabel,
+  windowLabel,
+  activityUrl,
+}: {
+  markdown: string;
+  cadenceLabel: string; // "daily" | "weekly" | "monthly"
+  windowLabel: string;  // "the last 24 hours" / "the last 7 days" / "the last 30 days"
+  activityUrl: string;
+}) {
+  const subject = `${APP_NAME} ${cadenceLabel} digest`;
+  const html = emailShell(`
+    <h2 style="margin:0 0 4px 0;font-size:22px;font-weight:700;color:#09090b;">${cadenceLabel.charAt(0).toUpperCase() + cadenceLabel.slice(1)} digest</h2>
+    ${p(`What your fleet did in ${windowLabel}.`)}
+    ${renderDigestMarkdown(markdown)}
+    <div style="text-align:center;">${btn(activityUrl, "Open Activity →")}</div>
+    ${small(`You're receiving this because you opted in to ${cadenceLabel} digests in your ${APP_NAME} notification preferences.`)}
+  `);
+  const text = `${APP_NAME} ${cadenceLabel} digest — what your fleet did in ${windowLabel}.\n\n${markdown}\n\nOpen Activity: ${activityUrl}`;
+  return { subject, html, text };
+}

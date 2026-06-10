@@ -13,6 +13,7 @@ import { FleetLifecycleSettings } from "./FleetLifecycleSettings";
 import { BillingSettings } from "./BillingSettings";
 import { ProjectsSettings } from "./ProjectsSettings";
 import { TeamSettings } from "./TeamSettings";
+import { NotificationSettings } from "./NotificationSettings";
 import type { UserPreferencesData } from "@/db/queries/user-preferences";
 import type { Plan } from "@/db/schema/users";
 import type { UserProject, Invitation } from "@/db/schema";
@@ -38,15 +39,16 @@ type Props = {
 };
 
 const TABS = [
-  { id: "profile",    label: "Profile"    },
-  { id: "account",    label: "Account"    },
-  { id: "appearance", label: "Appearance" },
-  { id: "privacy",    label: "Privacy"    },
-  { id: "location",   label: "Location"   },
-  { id: "agent",      label: "Agent"      },
-  { id: "projects",   label: "Projects"   },
-  { id: "team",       label: "Team"       },
-  { id: "billing",    label: "Billing"    },
+  { id: "profile",       label: "Profile"       },
+  { id: "account",       label: "Account"       },
+  { id: "notifications", label: "Notifications" },
+  { id: "appearance",    label: "Appearance"    },
+  { id: "privacy",       label: "Privacy"       },
+  { id: "location",      label: "Location"      },
+  { id: "agent",         label: "Agent"         },
+  { id: "projects",      label: "Projects"      },
+  { id: "team",          label: "Team"          },
+  { id: "billing",       label: "Billing"       },
 ] as const;
 
 type TabId = typeof TABS[number]["id"];
@@ -108,6 +110,9 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
       )}
       {activeTab === "account" && (
         <AccountSettings user={{ email: user.email, hasPassword: user.hasPassword }} />
+      )}
+      {activeTab === "notifications" && (
+        <NotificationSettings />
       )}
       {activeTab === "appearance" && (
         <AppearanceSettings />

@@ -25,7 +25,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execSync } from 'child_process'
-import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync } from '@/lib/zellij'
+import { injectIntoTab, sendRawKey, shellEscape, getZellijSessionsSync, peekTab as peekZellijTab } from '@/lib/zellij'
 import { zellijExecutableForShell } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
@@ -72,6 +72,16 @@ type StatusListener = (s: PollerStatus) => void
 
 const listeners = new Set<StatusListener>()
 const COMMAND_POLL_IDLE_MS = 2_000
+const SUPPORTED_COMMAND_TYPES = [
+  'inject',
+  'focus_tab',
+  'close_tab',
+  'launch_agent',
+  'switch_agent',
+  'auto_continue',
+  'install_cli',
+  'peek_tab',
+].join(',')
 let currentStatus: PollerStatus = {
   state: 'idle',
   baseUrl: (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL,
@@ -189,7 +199,7 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       // commands claimed without visible progress under Vercel/bridge edge
       // conditions. A 2s deterministic poll is cheap and makes phone/web
       // control reliable today.
-      const resp = await fetch(`${base}/api/control/commands?wait=0`, {
+      const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(SUPPORTED_COMMAND_TYPES)}`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: currentFetchCtrl.signal,
       })
@@ -295,7 +305,7 @@ async function waitForSessionFileBump(tab: string, baselineMtime: number, timeou
  * (success, error, or already-done dedup hit) so a claimed row never
  * lingers waiting for the 90s stale-claim reaper.
  */
-type AckPayload = { ok: boolean; error?: string; verified?: boolean; warning?: string }
+type AckPayload = { ok: boolean; error?: string; text?: string; verified?: boolean; warning?: string }
 
 async function ackCommand(
   base: string,
@@ -314,6 +324,7 @@ async function ackCommand(
       body: JSON.stringify({
         ok: body.ok,
         ...(body.error ? { error: body.error } : {}),
+        ...(body.text !== undefined ? { text: body.text } : {}),
         ...(body.verified !== undefined ? { verified: body.verified } : {}),
         ...(body.warning ? { warning: body.warning } : {}),
       }),
@@ -362,7 +373,7 @@ async function handleCommand(
     // the "I rebooted and nothing's running" path so the user doesn't have
     // to open a terminal first.
     const t = validation.command.type
-    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
+    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli' || t === 'peek_tab') {
       await ensureSessionForCommand()
     }
     switch (validation.command.type) {
@@ -418,6 +429,15 @@ async function handleCommand(
         openInstallerTab(validation.command.payload.agent)
         ok = true
         break
+      }
+      case 'peek_tab': {
+        const { tab } = validation.command.payload
+        const content = peekZellijTab(tab)
+        ok = true
+        await ackCommand(base, token, command, { ok, text: content })
+        console.log(`[poller] handled ${command.type} command ${command.id}`)
+        updateStatus({ commandsHandled: currentStatus.commandsHandled + 1 })
+        return
       }
     }
   } catch (e) {

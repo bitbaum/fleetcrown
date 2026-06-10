@@ -11,9 +11,8 @@ import { Drawer } from "@/components/ui/modal";
 // dump-screen round-trip (~200ms) — same disruption budget as a prompt
 // injection, which users have already accepted as the cost of remote dispatch.
 //
-// Works only inside Fleet Runner (window.fleetRunner.peekTab → main process →
-// zellij action dump-screen). Outside Fleet Runner the drawer shows an "open
-// in Fleet Runner" prompt rather than silently failing.
+// Uses the fastest available runtime: Fleet Runner IPC when the desktop bridge
+// exists, otherwise a pending_commands round-trip that the local daemon drains.
 //
 // Auto-refresh is opt-in: a re-peek every N seconds is useful for watching
 // long-running agents, but stays off by default so we don't disrupt the user
@@ -26,33 +25,73 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const requestSeq = useRef(0);
+
+  const applyContent = (nextContent: string) => {
+    setContent(nextContent);
+    setLastFetchedAt(Date.now());
+    requestAnimationFrame(() => {
+      if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight;
+    });
+  };
+
+  const fetchRemotePeek = async (seq: number) => {
+    const enqueue = await fetch("/api/control/peek-tab", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab }),
+    });
+    if (!enqueue.ok) {
+      const body = await enqueue.json().catch(() => ({}));
+      throw new Error(body.error || `Peek request failed (${enqueue.status})`);
+    }
+    const { peekId } = await enqueue.json() as { peekId?: string };
+    if (!peekId) throw new Error("Peek request did not return an id");
+
+    const deadline = Date.now() + 45_000;
+    while (Date.now() < deadline) {
+      if (seq !== requestSeq.current) return;
+      const poll = await fetch(`/api/control/peek-tab/${peekId}`, { cache: "no-store" });
+      if (!poll.ok) {
+        const body = await poll.json().catch(() => ({}));
+        throw new Error(body.error || `Peek poll failed (${poll.status})`);
+      }
+      const body = await poll.json() as { status: "pending" | "done" | "error"; content?: string; error?: string };
+      if (body.status === "done") {
+        applyContent(body.content ?? "");
+        return;
+      }
+      if (body.status === "error") {
+        throw new Error(body.error || "Peek failed");
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    throw new Error("No local daemon or Fleet Runner claimed the peek request within 45s.");
+  };
 
   const fetchPeek = async () => {
+    const seq = requestSeq.current + 1;
+    requestSeq.current = seq;
     const bridge = window.fleetRunner;
-    if (typeof bridge?.peekTab !== "function") {
-      setError("Peek requires Fleet Runner v0.7.2 or newer. Update via Help → Check for Updates, or download the latest from fleetcrown-releases.");
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      const result = await bridge.peekTab(tab);
-      if (result.ok) {
-        setContent(result.content);
-        setLastFetchedAt(Date.now());
-        // Scroll to bottom so the most recent output is visible — that's
-        // where the active agent state usually lives (prompt, current task,
-        // last error). Skip on user-initiated scroll-up though.
-        requestAnimationFrame(() => {
-          if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight;
-        });
+      if (typeof bridge?.peekTab === "function") {
+        const result = await bridge.peekTab(tab);
+        if (seq !== requestSeq.current) return;
+        if (result.ok) {
+          applyContent(result.content);
+        } else {
+          setError(result.error || "Peek failed");
+        }
       } else {
-        setError(result.error || "Peek failed");
+        await fetchRemotePeek(seq);
       }
     } catch (e) {
+      if (seq !== requestSeq.current) return;
       setError((e as Error).message || "Peek failed");
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   };
 
@@ -114,8 +153,8 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
             <p className="font-medium text-status-warning">Couldn&apos;t peek this tab</p>
             <p className="mt-2 text-text-tertiary">{error}</p>
             <p className="mt-4 text-xs text-text-muted">
-              Common reasons: the tab is no longer open in Zellij, Zellij isn&apos;t running on
-              your machine, or this Fleet Runner build predates v0.7.2.
+              Common reasons: the tab is no longer open in Zellij, Zellij is not running on
+              your machine, or neither Fleet Runner nor the local daemon is online.
             </p>
           </div>
         ) : content === null ? (

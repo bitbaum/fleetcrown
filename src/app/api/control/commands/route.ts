@@ -23,6 +23,11 @@ export async function GET(request: NextRequest) {
     userIds = [userId];
   }
 
+  const types = request.nextUrl.searchParams.get("types")
+    ?.split(",")
+    .map((type) => type.trim())
+    .filter(Boolean);
+
   // Long-poll: hold the request until a command arrives or the wait expires.
   const waitMs = Math.min(
     parseInt(request.nextUrl.searchParams.get("wait") ?? "0", 10) * 1000,
@@ -31,13 +36,13 @@ export async function GET(request: NextRequest) {
   if (waitMs > 0) {
     const deadline = Date.now() + waitMs;
     while (Date.now() < deadline && !request.signal.aborted) {
-      const command = await claimNextPendingCommand(userIds);
+      const command = await claimNextPendingCommand(userIds, types);
       if (command) return NextResponse.json({ command });
       await new Promise<void>((res) => setTimeout(res, 100));
     }
     return NextResponse.json({ command: null });
   }
 
-  const command = await claimNextPendingCommand(userIds);
+  const command = await claimNextPendingCommand(userIds, types);
   return NextResponse.json({ command: command ?? null });
 }

@@ -195,6 +195,7 @@ export async function POST(req: NextRequest) {
   };
 
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
+  const resolvedPromptBody = renderTaskForAdapter(request);
   insertPromptHistory(userId, {
     projectId: request.projectId ?? null,
     projectKey: request.projectKey,
@@ -202,6 +203,7 @@ export async function POST(req: NextRequest) {
     adapter: request.adapter as AdapterId,
     intent: request.intent as OrchestrationTaskIntentId,
     customPrompt: request.intent === "custom" ? (request.customInstructions ?? null) : null,
+    resolvedPrompt: resolvedPromptBody,
   }).catch((err) => console.error("[orchestration/run] db write failed:", err));
 
   // Create an orchestration_runs row for tab-injected adapters too — gives every dispatch

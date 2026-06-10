@@ -20,9 +20,9 @@ export const TRANSCRIPTION_PROVIDER_VALUES = ["auto", "local", "groq"] as const;
 type TranscriptionProvider = (typeof TRANSCRIPTION_PROVIDER_VALUES)[number];
 
 export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; label: string; note: string }[] = [
-  { value: "auto",  label: "Auto",         note: "local when runtime available, Groq as fallback" },
-  { value: "local", label: "Local Whisper", note: "your machine's Whisper model — requires runtime" },
-  { value: "groq",  label: "Groq cloud",   note: "whisper-large-v3-turbo via API — rate limited" },
+  { value: "auto",  label: "Auto",          note: "Groq first (~2s, free), local Whisper as fallback on auth/quota/timeout" },
+  { value: "groq",  label: "Groq cloud",    note: "whisper-large-v3-turbo via API — rate limited, no fallback" },
+  { value: "local", label: "Local Whisper", note: "your machine's Whisper model — requires runtime, no Groq attempt" },
 ];
 
 // The five-level autopilot trust ladder. Each level adds one more thing

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copy user-owned rows from one Postgres database to another, rewriting user_id.
-# Vendor-neutral — works for local→Neon, Neon→Hetzner, Neon→Oracle, etc.
+# Vendor-neutral — works for local→Neon, Neon→Hetzner, etc.
 #
 # Usage:
 #   SOURCE_DATABASE_URL=... TARGET_DATABASE_URL=... TARGET_USER_ID=<uuid> \

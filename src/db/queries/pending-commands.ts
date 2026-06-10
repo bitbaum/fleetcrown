@@ -47,7 +47,13 @@ export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchA
 // Atomically claims the next unclaimed command for one or more already
 // authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
-const STALE_CLAIM_SECONDS = 90;
+//
+// 10s (was 90s) because the multi-poller race (daemon + Fleet Runner) means a
+// row can be claimed by one runtime, validation-rejected, and left orphaned —
+// the other runtime should pick it up almost immediately. 10s mirrors the
+// upper bound on a Fleet Runner round-trip from claim to bail. Until Phase B's
+// ?types= filter lands, this is the user-facing "voice didn't fire" mitigation.
+const STALE_CLAIM_SECONDS = 10;
 
 /** Commands claimed but never finished (daemon crash/restart) become claimable again. */
 export async function reclaimStalePendingCommands(userIds: string[]): Promise<number> {
@@ -68,17 +74,19 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
   return reclaimed.length;
 }
 
-export async function claimNextPendingCommand(userIds: string[]) {
+export async function claimNextPendingCommand(userIds: string[], types?: string[]) {
   if (userIds.length === 0) return null;
   await reclaimStalePendingCommands(userIds);
   const userFilter = userIds.length === 1
     ? eq(pendingCommands.userId, userIds[0])
     : inArray(pendingCommands.userId, userIds);
+  const cleanTypes = types?.map((type) => type.trim()).filter(Boolean) ?? [];
+  const typeFilter = cleanTypes.length > 0 ? inArray(pendingCommands.type, cleanTypes) : undefined;
   return db.transaction(async (tx) => {
     const [row] = await tx
       .select()
       .from(pendingCommands)
-      .where(and(userFilter, isNull(pendingCommands.claimedAt)))
+      .where(and(userFilter, typeFilter, isNull(pendingCommands.claimedAt)))
       .orderBy(pendingCommands.createdAt)
       .limit(1)
       .for("update", { skipLocked: true });

@@ -6,6 +6,7 @@ import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
+import { createOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
@@ -17,12 +18,14 @@ const InjectBody = z.object({
   promptKey:    z.string().optional(),
   customPrompt: z.string().max(4000).optional(),
   adapter:      z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
+  runId:        z.string().uuid().optional(),
 }).refine((d) => d.promptKey || d.customPrompt, { message: "promptKey or customPrompt required" });
 
 export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, InjectBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const { tab, promptKey, customPrompt, adapter } = dataOrResp;
+  let runId = dataOrResp.runId;
   // Provisional adapter for early-return logging; the real resolution happens
   // after we've looked up dbMatch and can honor user_projects.agent_pref below.
   type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
@@ -191,6 +194,30 @@ export async function POST(req: NextRequest) {
       }
     : null;
 
+  const trackableIntent = eventIntent !== "hard_stop" && eventIntent !== "close_session";
+  if (!runId && trackableIntent && !isRuntimeAvailable()) {
+    try {
+      const run = await createOrchestrationRun({
+        userId,
+        projectId,
+        adapter: eventAdapter,
+        intent: eventIntent ?? "custom",
+        state: "waiting",
+        projectKey: canonical,
+        projectPath: resolvedProjectPath,
+        payload: {
+          projectId,
+          projectKey: canonical,
+          projectPath: resolvedProjectPath,
+          model: eventModel,
+        },
+      });
+      runId = run.id;
+    } catch (err) {
+      console.error("[inject] tracked-run create failed:", err);
+    }
+  }
+
   // If the user is actively at the ZSH prompt in this tab, skip injection to
   // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
   // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh).
@@ -250,7 +277,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical },
+    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );
@@ -323,6 +350,10 @@ export async function POST(req: NextRequest) {
     adapter: eventAdapter,
     intent: eventIntent ?? "custom",
     customPrompt: customPrompt ?? null,
+    // `prompt` is the fully assembled body — custom text or rendered intent
+    // template — that was injected into the agent's tab. Persisting it makes
+    // "Next best" rows showable as the actual prompt in the activity view.
+    resolvedPrompt: prompt,
   }).catch((err) => console.error("[inject] db write failed:", err));
 
   if (result.mode === "direct") {
@@ -391,5 +422,6 @@ export async function POST(req: NextRequest) {
     tab: effectiveTab,
     mode: result.mode,
     ...(result.mode === "queued" && { commandId: (result as { commandId: string }).commandId }),
+    ...(runId && { runId }),
   });
 }

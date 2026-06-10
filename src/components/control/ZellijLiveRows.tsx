@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Eye, Focus, Terminal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LiveTabRow } from "./control-presenter";
@@ -43,27 +43,12 @@ type Props = {
  * ~150 lines and obscures the panel's actual orchestration (header,
  * composer, empty states).
  *
- * The Peek button (eye icon) is only useful inside Fleet Runner v0.7.2+ —
- * outside the desktop app the bridge isn't injected and the drawer shows
- * an "open in Fleet Runner" message. We detect once on mount and just hide
- * the button when there's nothing to peek with, rather than render a button
- * that always errors. Detection is sticky for the session so a brief
- * preload race doesn't permanently hide the action.
+ * The Peek button uses Fleet Runner IPC when available and otherwise falls
+ * back to the daemon-backed pending_commands path, so it is useful from web
+ * and mobile too.
  */
 export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocusProject }: Props) {
   const [peekTab, setPeekTab] = useState<string | null>(null);
-  const [hasPeek, setHasPeek] = useState(false);
-
-  useEffect(() => {
-    // Defer one tick so preload finishes injecting window.fleetRunner before
-    // we read the bridge methods.
-    const id = setTimeout(() => {
-      if (typeof window !== "undefined" && typeof window.fleetRunner?.peekTab === "function") {
-        setHasPeek(true);
-      }
-    }, 60);
-    return () => clearTimeout(id);
-  }, []);
 
   const isHighlighted = (tabName: string) =>
     Boolean(highlightTab && tabName.toLowerCase() === highlightTab.toLowerCase());
@@ -101,16 +86,14 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                 </td>
                 <td className="py-0.5 text-right">
                   <div className="flex justify-end gap-0.5">
-                    {hasPeek && (
-                      <button
-                        type="button"
-                        onClick={() => setPeekTab(row.tabName)}
-                        className="ui-icon-action p-0.5"
-                        title={`Peek terminal contents of ${row.tabName}`}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPeekTab(row.tabName)}
+                      className="ui-icon-action p-0.5"
+                      title={`Peek terminal contents of ${row.tabName}`}
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => focusTab(row.tabName)}
@@ -162,16 +145,14 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                 )}
               </div>
               <div className="flex shrink-0 gap-0.5">
-                {hasPeek && (
-                  <button
-                    type="button"
-                    onClick={() => setPeekTab(row.tabName)}
-                    className="ui-icon-action p-0.5"
-                    title="Peek"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setPeekTab(row.tabName)}
+                  className="ui-icon-action p-0.5"
+                  title="Peek"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
                 <button
                   type="button"
                   onClick={() => focusTab(row.tabName)}

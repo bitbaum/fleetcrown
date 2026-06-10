@@ -2,19 +2,34 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-async function pollTranscriptionResult(id: string, maxWaitMs = 60_000): Promise<string | null> {
+// Hard upper bound on how stale a transcription can be by the time it lands.
+// Past this, the user has visibly moved on and a late inject would be a
+// surprise — drop the result with a "took too long" message rather than fire.
+// 45s mirrors the longest acceptable voice round-trip (record → daemon →
+// Whisper → result) before the average user assumes failure and retries.
+const TRANSCRIPTION_MAX_STALENESS_MS = 45_000;
+
+async function pollTranscriptionResult(
+  id: string,
+  recordingStoppedAt: number,
+): Promise<string | null> {
   const interval = 1500;
-  const deadline = Date.now() + maxWaitMs;
+  const deadline = recordingStoppedAt + TRANSCRIPTION_MAX_STALENESS_MS;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, interval));
     try {
       const res = await fetch(`/api/beacon/transcribe/${id}`);
       if (!res.ok) return null;
       const data = (await res.json()) as { status: string; text?: string; error?: string };
-      if (data.status === "done" && data.text) return data.text;
+      if (data.status === "done" && data.text) {
+        // Belt-and-braces — even if polling got a late callback, refuse
+        // to fire a result the user has long stopped caring about.
+        if (Date.now() - recordingStoppedAt > TRANSCRIPTION_MAX_STALENESS_MS) return null;
+        return data.text;
+      }
       if (data.status === "error") return null;
     } catch {
-      // network hiccup — keep polling
+      // network hiccup — keep polling within the deadline
     }
   }
   return null;
@@ -141,6 +156,11 @@ export function useWhisperMic(onResult: (text: string) => void) {
     };
 
     recorder.onstop = async () => {
+      // Stamp the moment recording ended so every downstream wait is gated
+      // against staleness. The user's "30 minutes later" inject came from
+      // measuring timeout against poll-start, not against this anchor.
+      const recordingStoppedAt = Date.now();
+
       cleanup();
       setListening(false);
       setProcessing(true);
@@ -171,18 +191,24 @@ export function useWhisperMic(onResult: (text: string) => void) {
           return;
         }
         if (data.text) {
+          // Even the "immediate" local-Whisper path can take 5–15s on a
+          // cold model. Refuse a result that landed past the staleness gate.
+          if (Date.now() - recordingStoppedAt > 45_000) {
+            setError("Transcription took too long — discarded so we don't inject stale text.");
+            return;
+          }
           onResult(data.text);
           setError("");
           return;
         }
-        // Remote path: poll for result
+        // Remote path: poll for result (with the same staleness gate).
         if (data.transcriptionId) {
-          const text = await pollTranscriptionResult(data.transcriptionId);
+          const text = await pollTranscriptionResult(data.transcriptionId, recordingStoppedAt);
           if (text) {
             onResult(text);
             setError("");
           } else {
-            setError("Transcription timed out — daemon may be offline");
+            setError("Transcription took too long — daemon may be slow or offline. Try again, or upgrade for instant cloud transcription.");
           }
           return;
         }

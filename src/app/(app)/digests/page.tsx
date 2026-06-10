@@ -1,20 +1,14 @@
-import { ActivityShell } from "@/components/activity/ActivityShell";
-import { DigestsView } from "@/components/activity/DigestsView";
-import { requirePageUserId } from "@/lib/session";
-
-export const metadata = { title: "Activity" };
+import { redirect } from "next/navigation";
 
 export default async function DigestsPage({
   searchParams,
 }: {
   searchParams: Promise<{ window?: string; project?: string }>;
 }) {
-  const userId = await requirePageUserId();
   const params = await searchParams;
-
-  return (
-    <ActivityShell active="digests">
-      <DigestsView userId={userId} window={params.window} project={params.project} />
-    </ActivityShell>
-  );
+  const qs = new URLSearchParams();
+  if (params.window) qs.set("window", params.window);
+  if (params.project) qs.set("project", params.project);
+  const tail = qs.toString();
+  redirect(tail ? `/activity?${tail}` : "/activity");
 }

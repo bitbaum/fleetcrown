@@ -89,6 +89,11 @@ export async function POST(req: NextRequest) {
       .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 
+  if (body.projects === undefined) {
+    emitStateChanged(userId);
+    return NextResponse.json({ ok: true, count: 0 });
+  }
+
   if (!Array.isArray(body.projects)) {
     return NextResponse.json({ error: "projects must be an array" }, { status: 400 });
   }

@@ -164,6 +164,17 @@ mark_done() {
     "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
 }
 
+mark_text() {
+  local id="$1" text="$2"
+  local body
+  body=$(printf '{"ok":true,"text":%s}' "$(printf '%s' "$text" | jq -Rs .)")
+  curl -sf --max-time 10 -X PATCH \
+    -H "@$_AUTH_HEADER" \
+    -H "Content-Type: application/json" \
+    -d "$body" \
+    "$(_base_url)/api/control/commands/$id" >/dev/null 2>&1 || true
+}
+
 # Returns 0 if user is actively typing in the given tab (marker file exists and is <60s old).
 _is_user_typing_in_tab() {
   local tab="$1" now
@@ -783,6 +794,37 @@ execute_install_cli() {
     [ -z "$_ir" ] && _ir="failed to create tab or inject installer command"
     mark_done "$id" "false" "$_ir"
     log "install_cli failed ✗ — $_ir"
+  fi
+}
+
+execute_peek_tab() {
+  local id="$1" tab="$2"
+  if [ "$DRY_RUN" = "1" ]; then
+    mark_text "$id" "dry run peek for ${tab}"
+    return 0
+  fi
+
+  local session tmp content
+  session=$(_find_session_for_tab "$tab" 2>/dev/null || true)
+  if [ -z "$session" ]; then
+    mark_done "$id" "false" "tab not found"
+    log "peek_tab failed — tab not found: $tab"
+    return 0
+  fi
+
+  tmp=$(mktemp "/tmp/${APP_SLUG}-peek-XXXXXX.txt")
+  log "peek_tab → $tab"
+  if ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action go-to-tab-name "$tab" 2>/dev/null \
+     && ZELLIJ_SESSION_NAME="$session" timeout 3 zellij action dump-screen "$tmp" 2>/dev/null; then
+    sleep 0.06
+    content=$(cat "$tmp" 2>/dev/null || true)
+    rm -f "$tmp"
+    mark_text "$id" "$content"
+    log "peek_tab done ✓"
+  else
+    rm -f "$tmp"
+    mark_done "$id" "false" "dump-screen failed"
+    log "peek_tab failed ✗"
   fi
 }
 
@@ -1523,6 +1565,10 @@ while true; do
     install_cli)
       agent=$(echo "$payload" | jq -r '.agent')
       execute_install_cli "$id" "$agent"
+      ;;
+    peek_tab)
+      tab=$(echo "$payload" | jq -r '.tab')
+      execute_peek_tab "$id" "$tab"
       ;;
     repair_helper)
       execute_repair_helper "$id"

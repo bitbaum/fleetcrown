@@ -795,9 +795,21 @@ handle_notification() {
   input=$(cat)
   cwd=$(echo "$input" | jq -r '.cwd // empty')
 
+  # Be lenient about how Claude Code reports cwd — some events omit the field,
+  # others pass a symlinked / non-canonical path that won't realpath-match the
+  # agent-projects.conf entry. Fall back to the hook process's own cwd; then
+  # canonicalize. Without this, resolve_tab returns empty for everything but
+  # the one project whose path canonicalizes identically, which is why before
+  # this fix sounds fired only for the OrangeCat tab.
+  [ -n "$cwd" ] || cwd="$PWD"
+  [ -n "$cwd" ] && cwd=$(realpath "$cwd" 2>/dev/null || echo "$cwd")
+
   resolve_tab "$cwd"
   resolve_adapter 2>/dev/null || true
-  [ -z "${TAB_NAME:-}" ] && exit 0
+  if [ -z "${TAB_NAME:-}" ]; then
+    log "notification: resolve_tab failed for cwd=$cwd (project may be unregistered or path mismatched)"
+    exit 0
+  fi
 
   # Capture rate-limit / capacity messages before any early-exit guard so the
   # stop hook that fires next can set capacityIssue=true in the beacon session.

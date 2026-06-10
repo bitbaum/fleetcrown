@@ -1,4 +1,5 @@
 export * from "./users";
+export * from "./notification-preferences";
 export * from "./orgs";
 export * from "./agent-tokens";
 export * from "./entities";

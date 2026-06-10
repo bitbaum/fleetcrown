@@ -10,14 +10,13 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
-import { enqueuePendingCommand } from "@/db/queries/pending-commands";
 
 const execFileAsync = promisify(execFile);
 
 // Resolve scripts/transcribe.py for both deployment modes:
 //   • `npm run dev`           → cwd = repo root            → scripts/transcribe.py
 //   • <app>-app.service       → cwd = .next/standalone     → ../../scripts/transcribe.py
-// APP_SCRIPTS_DIR (or legacy COCKPIT_SCRIPTS_DIR) can override (e.g. when the standalone bundle is moved).
+// APP_SCRIPTS_DIR (or legacy COCKPIT_SCRIPTS_DIR) can override.
 function resolveTranscribePy(): string {
   const envDir = process.env.APP_SCRIPTS_DIR ?? process.env.COCKPIT_SCRIPTS_DIR;
   const candidates = [
@@ -28,7 +27,7 @@ function resolveTranscribePy(): string {
   for (const p of candidates) {
     if (existsSync(p)) return p;
   }
-  return candidates[candidates.length - 1];  // fail loudly at exec time with the last guess
+  return candidates[candidates.length - 1];
 }
 const TRANSCRIBE_PY = resolveTranscribePy();
 
@@ -43,115 +42,91 @@ async function readTranscriptionSettings(): Promise<{ whisperModel: string; prov
   return { whisperModel: "base", provider: "auto" };
 }
 
-export async function POST(req: NextRequest) {
-  const form = await req.formData();
-  const audio = form.get("audio") as File | null;
-  if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
+// ─── Transcription attempt shape ─────────────────────────────────────────────
+// Both helpers return the same tagged union so the orchestrator can decide
+// whether a failure is recoverable (fall back to the other provider) or final
+// (return the error to the user).
+type AttemptResult =
+  | { ok: true; text: string }
+  | { ok: false; recoverable: boolean; status: number; error: string; detail?: string };
 
-  const [{ whisperModel: model, provider }, webmPath] = await Promise.all([
-    readTranscriptionSettings(),
-    Promise.resolve(join(tmpdir(), `beacon-${randomUUID()}.webm`)),
-  ]);
-
-  // Routing:
-  //   provider="groq"           → call Groq directly (cloud paid opt-in)
-  //   provider="local"/"auto" + runtime available → run local Whisper in-process
-  //   provider="local"/"auto" + runtime missing   → enqueue for the user's daemon
-  //                                                  to pick up and run on their
-  //                                                  machine. This is what makes
-  //                                                  fleetcrown.vercel.app's /control
-  //                                                  use the user's local STT by
-  //                                                  default — Vercel has no whisper.
-  const useGroq = provider === "groq";
-  const enqueueForDaemon = !useGroq && !isRuntimeAvailable();
-
-  if (useGroq) {
-    // Cloud transcription via Groq Whisper.
-    const buf = Buffer.from(await audio.arrayBuffer());
-    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
-    try {
-      const blob = new Blob([buf], { type: audio.type || "audio/webm" });
-      const text = await callGroqTranscribe(blob, audio.type || "audio/webm");
-      if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
-      return NextResponse.json({ text });
-    } catch (err) {
-      // Surface auth/quota problems with actionable status codes + hints so a
-      // user seeing "STT not working" sees the real cause in the network tab
-      // instead of a generic 500. callGroqTranscribe throws messages shaped
-      // "groq transcribe 401: <body>" — match on the status segment.
-      const msg = err instanceof Error ? err.message : String(err);
-      if (/groq transcribe 401/i.test(msg) || /invalid.*api.*key/i.test(msg)) {
-        return NextResponse.json({
-          error: "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY in your env.",
-          detail: msg,
-        }, { status: 502 });
-      }
-      if (/groq transcribe 429/i.test(msg) || /rate.?limit/i.test(msg)) {
-        return NextResponse.json({
-          error: "Groq rate-limited this transcription — retry in a moment or switch to local transcription.",
-          detail: msg,
-        }, { status: 429 });
-      }
-      if (/abort|timeout/i.test(msg)) {
-        return NextResponse.json({
-          error: "Groq transcription timed out (>30s) — try a shorter recording.",
-          detail: msg,
-        }, { status: 504 });
-      }
-      return NextResponse.json({ error: msg }, { status: 502 });
-    }
+// ─── Groq Whisper cloud ──────────────────────────────────────────────────────
+// Fast (~2s), free tier, lives outside our infra. Failure modes that should
+// trigger a local-Whisper fallback: invalid key, rate-limited, network 5xx.
+// "No speech" or "recording too short" are final — the audio is the audio,
+// retrying somewhere else won't help.
+async function attemptGroq(audio: File): Promise<AttemptResult> {
+  const buf = Buffer.from(await audio.arrayBuffer());
+  if (buf.length < 100) {
+    return { ok: false, recoverable: false, status: 422, error: "Recording too short" };
   }
-
-  if (enqueueForDaemon) {
-    // No local runtime here (we're on Vercel) — enqueue a transcribe command for
-    // the user's daemon to claim. Daemon already handles type="transcribe" with
-    // payload { audio: <base64>, model? } and posts result via /api/control/commands.
-    // The [id] route serves status from pending_commands.result on completion.
-    const userId = await getApiUserId();
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const buf = Buffer.from(await audio.arrayBuffer());
-    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
-    // Cap at ~6 MB raw (~8 MB base64) so a runaway recording doesn't blow up
-    // the pending_commands jsonb column or the daemon's claim payload.
-    if (buf.length > 6 * 1024 * 1024) {
-      return NextResponse.json({
-        error: "Recording too large for daemon bridge (>6 MB) — record a shorter clip or sign up for Groq cloud STT.",
-      }, { status: 413 });
+  try {
+    const blob = new Blob([buf], { type: audio.type || "audio/webm" });
+    const text = await callGroqTranscribe(blob, audio.type || "audio/webm");
+    if (!text) {
+      return { ok: false, recoverable: false, status: 422, error: "No speech detected" };
     }
-    try {
-      // Field names must match the daemon's jq selectors in
-      // scripts/cockpit-daemon.sh:701-704 — `audio_b64` and `mime_type`.
-      // `model` is included for forward compatibility but today's daemon
-      // reads its whisper model from ~/.config/cockpit/beacon.json, not
-      // the payload. (Future: daemon should prefer payload.model when set
-      // so the user's DB-stored setting flows through end-to-end.)
-      const id = await enqueuePendingCommand({
-        userId,
-        type: "transcribe",
-        payload: {
-          audio_b64: buf.toString("base64"),
-          mime_type: audio.type || "audio/webm",
-          model,
-        },
-      });
-      return NextResponse.json({ transcriptionId: id });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return NextResponse.json({ error: `enqueue failed: ${msg}` }, { status: 500 });
+    return { ok: true, text };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/groq transcribe 401/i.test(msg) || /invalid.*api.*key/i.test(msg)) {
+      return {
+        ok: false,
+        recoverable: true,
+        status: 502,
+        error: "Groq API key invalid — rotate it at https://console.groq.com and update GROQ_API_KEY.",
+        detail: msg,
+      };
     }
+    if (/groq transcribe 429/i.test(msg) || /rate.?limit/i.test(msg) || /quota/i.test(msg)) {
+      return {
+        ok: false,
+        recoverable: true,
+        status: 429,
+        error: "Groq rate-limited or over quota.",
+        detail: msg,
+      };
+    }
+    if (/abort|timeout/i.test(msg)) {
+      return {
+        ok: false,
+        recoverable: true,
+        status: 504,
+        error: "Groq transcription timed out (>30s).",
+        detail: msg,
+      };
+    }
+    return {
+      ok: false,
+      recoverable: true,
+      status: 502,
+      error: msg,
+    };
   }
+}
 
-  // Local path: run Whisper directly.
-  // Whisper receives a wav converted from the webm — avoids ffmpeg codec failures on
-  // incomplete MediaRecorder output (Chrome sometimes produces webm without an EBML
-  // EndOfFile tag, which makes Whisper's internal ffmpeg exit with status 254).
-  const wavPath = webmPath.replace(".webm", ".wav");
-
+// ─── Local Whisper subprocess ────────────────────────────────────────────────
+// Runs on whatever next-server handles the request — your Linux box in dev,
+// the Hetzner VPS in production. Requires ffmpeg + python3 + transcribe.py +
+// a whisper model file. Slower than Groq (5–30s depending on model size and
+// CPU) but durable when the cloud is down.
+async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptResult> {
+  if (!isRuntimeAvailable()) {
+    return {
+      ok: false,
+      recoverable: false,
+      status: 503,
+      error: "Local Whisper runtime not available on this server (no ffmpeg / python3 / model). Pick Groq under Settings → Beacon, or install Whisper.",
+    };
+  }
+  const webmPath = join(tmpdir(), `beacon-${randomUUID()}.webm`);
+  const wavPath  = webmPath.replace(".webm", ".wav");
   try {
     const buf = Buffer.from(await audio.arrayBuffer());
-    if (buf.length < 100) return NextResponse.json({ error: "Recording too short" }, { status: 422 });
+    if (buf.length < 100) {
+      return { ok: false, recoverable: false, status: 422, error: "Recording too short" };
+    }
     await writeFile(webmPath, buf);
-
     try {
       await execFileAsync("ffmpeg", [
         "-nostdin", "-threads", "0",
@@ -160,26 +135,73 @@ export async function POST(req: NextRequest) {
         "-f", "wav", "-ac", "1", "-ar", "16000", "-y", wavPath,
       ], { timeout: 15_000, encoding: "utf-8" });
     } catch {
-      return NextResponse.json({ error: "Audio decode failed — recording may be too short or corrupt" }, { status: 422 });
+      return { ok: false, recoverable: false, status: 422, error: "Audio decode failed — recording may be too short or corrupt" };
     }
-
     const { stdout } = await execFileAsync("python3", [TRANSCRIBE_PY, wavPath, model], {
       timeout: 60_000,
       maxBuffer: 1024 * 1024,
       encoding: "utf-8",
     });
     const text = stdout.trim();
-    if (!text) return NextResponse.json({ error: "No speech detected" }, { status: 422 });
-    return NextResponse.json({ text });
+    if (!text) {
+      return { ok: false, recoverable: false, status: 422, error: "No speech detected" };
+    }
+    return { ok: true, text };
   } catch (err) {
     type ExecError = Error & { stderr?: string };
     const e = err as ExecError;
     const detail = e.stderr?.trim() || e.message;
-    return NextResponse.json({ error: detail }, { status: 500 });
+    return { ok: false, recoverable: true, status: 500, error: detail };
   } finally {
     await Promise.all([
       unlink(webmPath).catch(() => {}),
       unlink(wavPath).catch(() => {}),
     ]);
   }
+}
+
+// ─── Orchestrator ────────────────────────────────────────────────────────────
+//   provider="auto"  → Groq first; on recoverable failure, fall back to local
+//   provider="groq"  → Groq only — no fallback even if local runtime is here
+//   provider="local" → local only — never call Groq
+//
+// Returns either { text } or an HTTP error matching the failing branch's status.
+export async function POST(req: NextRequest) {
+  const form = await req.formData();
+  const audio = form.get("audio") as File | null;
+  if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
+
+  const { whisperModel: model, provider } = await readTranscriptionSettings();
+
+  if (provider === "local") {
+    const result = await attemptLocalWhisper(audio, model);
+    if (result.ok) return NextResponse.json({ text: result.text });
+    return NextResponse.json({ error: result.error, ...(result.detail ? { detail: result.detail } : {}) }, { status: result.status });
+  }
+
+  const groqResult = await attemptGroq(audio);
+  if (groqResult.ok) return NextResponse.json({ text: groqResult.text });
+
+  if (provider === "auto" && groqResult.recoverable) {
+    // Groq tripped — try local. Wrap the message so the user knows what just
+    // happened (Groq failed, local picked up the slack) instead of seeing
+    // mysteriously-different latency for the same button.
+    const localResult = await attemptLocalWhisper(audio, model);
+    if (localResult.ok) {
+      return NextResponse.json({ text: localResult.text, via: "local", groqError: groqResult.error });
+    }
+    // Both paths failed — surface the Groq error (the user's actual default)
+    // with the local fallback's status appended so they understand neither
+    // worked. Prefer Groq's status as the response code since that was the
+    // attempted-first path.
+    return NextResponse.json({
+      error: `${groqResult.error} Local fallback also failed: ${localResult.error}`,
+      detail: groqResult.detail,
+    }, { status: groqResult.status });
+  }
+
+  return NextResponse.json({
+    error: groqResult.error,
+    ...(groqResult.detail ? { detail: groqResult.detail } : {}),
+  }, { status: groqResult.status });
 }
