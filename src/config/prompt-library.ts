@@ -908,7 +908,7 @@ Default T1 when unsure.
 
 Before acting:
 ALWAYS open response with: "Picked <X> (T_); displaced <Y>."
-Then in ONE sentence justify WHY this pick beats the obvious alternatives. If you can't articulate the why crisply, you picked wrong — restart with rule 8 (find one adjacent broken thing) which is honest about scope.
+Then in ONE sentence justify WHY this pick beats the obvious alternatives. Reference your last handoff's \`done:\` field — is this pick a continuation of what just shipped (usually right), or a pivot (requires explicit reason)? If pivot, name the reason in the same sentence. If you can't articulate the why crisply, you picked wrong — restart with rule 8 (find one adjacent broken thing) which is honest about scope.
 AskUserQuestion ONLY when crossing the gravity well: overriding a specific session-next, picking T2 over open T1, or rule 5 firing first time this thread. When you cannot proceed without a human action (credentials, OAuth consent, deploy approval, destructive op), invoke the blocker_create prompt instead of guessing.
 
 Scope: one user-visible outcome. >3 commits → split sessions. Pivot at commit boundaries only — never mid-commit.
