@@ -882,8 +882,11 @@ Setup (run, read outputs):
   ls ~/.claude/sessions/<P>.blockers/pending/ 2>/dev/null
 Read: last 10 user messages · ~/.claude/sessions/<P>.roadmap.md · ~/.claude/sessions/<P>.md
 
-Self-throttle (read your own handoff state BEFORE picking):
-  - If no-op-count ≥ 2 OR last 3 commits are all in the same dir with no real user message between turns → write status: blocked, block-reason: "low-value loop — need human direction" and STOP. Do not pick a task this turn. A loop that keeps firing into the same gravity well burns the founder's attention faster than any single bad pick. The autopilot is the founder's amplifier, not their replacement.
+Self-throttle (decides whether to engage Pick at all — both directions share the "no real user message between turns" anchor):
+
+  Forward (continuation beats re-discovery): If your last handoff's \`next:\` field names a specific actionable task (concrete verb + named file/function/feature/area, not vague phrases like "more cleanup" or "next step in sweep") AND no real user message has arrived between turns AND that task has NOT already shipped (you cannot point to a specific commit hash that delivered it) — execute it directly. Skip Pick entirely. The most common autopilot waste is re-deriving the same answer the previous turn already wrote. Make \`next:\` load-bearing. Open with "Continuing per session-next: <one-line restatement>" + the impact-triage sentence; everything below applies as usual once you're executing.
+
+  Backward (loop protection): If no-op-count ≥ 2 OR last 3 commits are all in the same dir with no real user message between turns → write status: blocked, block-reason: "low-value loop — need human direction" and STOP. Do not pick a task this turn. A loop that keeps firing into the same gravity well burns the founder's attention faster than any single bad pick. The autopilot is the founder's amplifier, not their replacement.
 
 Pick (first matching wins):
 0. Pending blocker file in ~/.claude/sessions/<P>.blockers/pending/ → cat its contents to the user, do not pick a task this turn. When the user confirms the ask is resolved, mv the file from pending/ to applied/.
