@@ -138,9 +138,20 @@ export async function POST(req: NextRequest) {
   // Hard health gate — defence in depth. If health is critical or tests are
   // failing, force the agent into recovery (next_best canned template) so
   // it stays focused on fixing what's broken instead of switching concerns.
+  //
+  // testsAreFailing: the bash-bridge contract for the tests handoff field is
+  // "N pass · M fail" or "fail(N errors, M warnings)" or "no suite" — so we
+  // must match "fail" as a distinct word/token, not as a substring. The
+  // previous tests.includes("fail") matched "0 fail" (which is a passing
+  // suite!) and "no suite" doesn't say fail at all. Now: only count as
+  // failing when there's a digit > 0 before "fail", or the literal word
+  // "fail" appears unmodified (no leading "0 "). 2026-06-11 live test
+  // surfaced the false positive — Fleet Runner dispatched "Tests failing"
+  // on a "130 pass · 0 fail" handoff.
   const health = handoff.health.toLowerCase();
   const tests  = handoff.tests.toLowerCase();
-  if (health.includes("critical") || tests.includes("fail")) {
+  const testsAreFailing = /(^|\s)([1-9]\d*)\s*fail/.test(tests) || /fail\(\s*[1-9]/.test(tests);
+  if (health.includes("critical") || testsAreFailing) {
     return recordAndReturn({
       action: "nextbest",
       reason: `${health.includes("critical") ? "Health critical" : "Tests failing"} — agent must stay focused on recovery before switching concerns.${streakSuffix}`,
