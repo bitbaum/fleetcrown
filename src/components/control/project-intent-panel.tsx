@@ -190,7 +190,7 @@ export function IntentButtonPanel({
             disabled={sending !== null}
             title={queueBlockedReason
               ? `${queueBlockedReason}: Next best stays on recovery work and will not consume the queue. Use a queue row's send button to run that item now.`
-              : "Strategist picks the next task autonomously based on session handoff + queue + recent commits. This click dispatches without preview."}
+              : "Fires the next_best autopilot template — the agent re-reads ground truth (git, types, lint, TODOs, roadmap, session handoff), picks the single highest-impact task per LOOP v2 rules, and executes. Dispatches immediately, no preview. Self-throttles when productivity is low."}
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
             {sending === primary.id
