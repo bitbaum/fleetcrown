@@ -1,5 +1,21 @@
 import { getOrchestrationIntent } from "./intents";
 import type { AdapterId, OrchestrationTaskRequest } from "./contract";
+import { PROMPT_TEMPLATES } from "@/config/prompt-library";
+
+/** SSOT autopilot prompts: keyed by intent ID, value is the template body
+ *  from prompt-library.ts (the canonical source where the body lives,
+ *  including Session 5's role + self-throttle + worked-examples refinements).
+ *  Built lazily so the import order isn't load-bearing. */
+let _autopilotBodies: Map<string, string> | null = null;
+function autopilotBody(intentKey: string): string | null {
+  if (!_autopilotBodies) {
+    _autopilotBodies = new Map();
+    for (const t of PROMPT_TEMPLATES) {
+      if (t.agentKey) _autopilotBodies.set(t.agentKey, t.template);
+    }
+  }
+  return _autopilotBodies.get(intentKey) ?? null;
+}
 
 function renderSharedHandoffBlock(): string {
   return [
@@ -27,24 +43,23 @@ function renderSharedExecutionRules(): string {
 }
 
 function renderIntentBody(request: OrchestrationTaskRequest): string {
+  // Autopilot intents (next_best / test_and_fix / quality) read their body
+  // from prompt-library.ts as the SSOT — same source the /control palette
+  // UI and (formerly) the bash bridge used. Session 5 of killing-the-bash-
+  // daemon (2026-06-11) added the role line + self-throttle primitive +
+  // worked examples to those bodies; without this lookup, autopilot fires
+  // through Fleet Runner's /api/inject would still get the old generic
+  // body (caught live when an autopilot fire delivered the pre-Session-5
+  // text post-deploy). Other intents fall through to their inline cases.
+  const fromLibrary = autopilotBody(request.intent);
+  if (fromLibrary !== null) {
+    // The library bodies don't interpolate projectPath the way the inline
+    // ones did — but they do reference <P> patterns that work generically.
+    // Prepend the project-path line for adapter context, then the body.
+    return `Work on the project at ${request.projectPath}.\n\n${fromLibrary}`;
+  }
+
   switch (request.intent) {
-    case "next_best":
-      // SSOT'd 2026-05-20 against ~/.config/agent-prompts.json (bash hook's
-      // slot 1). The bash hook's version was sharper — concrete gates first,
-      // then session-handoff awareness, then "find the adjacent broken
-      // thing." The previous TS text was an abstract scan ladder that
-      // produced drift. Model-agnostic shape: no assumed tech stack.
-      return [
-        `Work on the project at ${request.projectPath}.`,
-        "",
-        "Verify health first:",
-        "1. Are there type/lint/compile errors? Fix them before anything else.",
-        "2. Is there uncommitted or merge-conflicted work? Resolve and commit.",
-        "3. Does the session handoff's `next:` field name a specific task? Execute it exactly.",
-        "4. If `next:` is vague or missing, find the single most impactful gap: scan recent commits for what was just built and look for the adjacent broken thing — a silent error, a flow that doesn't close, a feature half-wired.",
-        "",
-        "One thing. Done and committed.",
-      ].join("\n");
     case "test_and_fix":
       return [
         `Run the full test and fix loop for ${request.projectPath}.`,
@@ -103,6 +118,10 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
     case "custom":
       return request.customInstructions?.trim() ?? "";
   }
+  // Unreachable: all OrchestrationTaskIntentId values are either handled
+  // above or routed through the autopilotBody() lookup at the top. Kept as
+  // a defensive fallback so the function has an unconditional return.
+  return `Work on the project at ${request.projectPath}.`;
 }
 
 // Surface the user's prompt queue in the dispatched prompt. The agent now
