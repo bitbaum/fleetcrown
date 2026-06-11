@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 # fleetcrown-beacon-window.sh — keep a chromium --app= window open on /beacon/live.
 #
+# ⚠️  DEPRECATED as of 2026-06-11 (Session 1 of killing-the-bash-daemon plan).
+#     The fleetcrown-beacon-window.service systemd unit is now masked
+#     (/dev/null symlink in ~/.config/systemd/user/) and the original unit
+#     file is preserved at ~/.config/systemd/user/fleetcrown-beacon-window
+#     .service.disabled-2026-06-11. This script is kept in git history
+#     only — it will be deleted in Session 4 along with the rest of the
+#     bash bridge. See /home/g/.claude/plans/structured-baking-kazoo.md
+#     and content/thoughts/killing-the-bash-daemon.md for context.
+#     The L3 "beacon popup" mode that this window served is being collapsed
+#     into a simpler ON/OFF model; Fleet Runner desktop is the sole local
+#     executor going forward.
+#
+# Original purpose (for historical reference):
 # Run by the fleetcrown-beacon-window.service systemd user unit. Restart=always
 # means systemd brings the window back within ~2s whenever it dies, so a stop
 # hook always finds a pre-warmed window to focus (PyQt-equivalent <100ms).
