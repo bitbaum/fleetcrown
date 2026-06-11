@@ -5,42 +5,21 @@ import { AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
 import { cn } from "@/lib/utils";
 
 /**
- * Per-mode visual state. Color + tooltip make the dispatch behavior
- * unmistakable at a glance — the root frustration the user surfaced
- * 2026-05-31 ("what are these random injections / this is dysfunctional")
- * was that the autopilot's current mode wasn't visible enough to know what
- * a click anywhere on /control was going to do next.
- *
- *   off         → gray dot   · "Manual — you dispatch every prompt"
- *   queue_only  → amber dot  · "Queue — drain your written list, stop when empty"
- *   beacon      → cyan dot, animated · "Beacon — popup + countdown auto-pick"
- *   next_best   → blue dot, animated · "Continuous — auto-fires next-best, no popup"
- *   strategist  → green dot, animated · "Mission — Groq composes from full context"
+ * Per-mode visual state. After the 2026-06-11 collapse autopilot is binary:
+ * gray dot (off) or pulsing accent dot (on). Color + tooltip make the
+ * dispatch behavior unmistakable at a glance — the user can tell from the
+ * /control top bar whether the next status:ready is going to fire something
+ * or sit idle.
  */
 const MODE_STYLE: Record<AutoInjectMode, { dotClass: string; tooltip: string; pulse: boolean }> = {
   off: {
     dotClass: "bg-text-tertiary",
-    tooltip: "Manual (L1) — FleetCrown dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
+    tooltip: "Autopilot off — FleetCrown dispatches nothing. You type every prompt in /control and click Send.",
     pulse: false,
   },
-  queue_only: {
-    dotClass: "bg-status-warning",
-    tooltip: "Queue (L2) — when the agent finishes, FleetCrown fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
-    pulse: false,
-  },
-  beacon: {
-    dotClass: "bg-accent-text",
-    tooltip: "Beacon (L3) — prepares the next action and shows a handoff popup. If you are away, the countdown can auto-submit that prepared action.",
-    pulse: true,
-  },
-  next_best: {
+  on: {
     dotClass: "bg-accent-primary",
-    tooltip: "Continuous (L4) — drains your queue, then sends the canned next-best recovery/progress template without a popup.",
-    pulse: true,
-  },
-  strategist: {
-    dotClass: "bg-status-positive",
-    tooltip: "Mission (L5) — composes from handoff, queue, mission, recent commits, and outcomes, then dispatches without asking.",
+    tooltip: "Autopilot on — when an agent finishes, FleetCrown fires the queue head (or the canned next_best template if the queue is empty). Status:working, blockers, and health gates still apply.",
     pulse: true,
   },
 };

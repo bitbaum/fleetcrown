@@ -9,16 +9,16 @@ export const beaconSettings = pgTable("beacon_settings", {
   minIdleSeconds:        integer("min_idle_seconds").notNull().default(0),
   whisperModel:          text("whisper_model").notNull().default("base"),
   transcriptionProvider: text("transcription_provider").notNull().default("auto"),
-  // off | queue_only | beacon | next_best | strategist — the five-level
-  // autopilot trust ladder (Manual / Queue / Beacon / Continuous / Mission).
-  // Default is "beacon" (L3): popup with smart choices + countdown auto-pick
-  // when the agent finishes. Right starting trust level — new users see
-  // every dispatch through a popup before opting into Continuous (L4) or
-  // Mission (L5). Was "strategist" (L5) until 2026-05-31 — flipped after
-  // user feedback that L5 felt like a loose cannon (composed AI prompts
-  // fired without consent step). Safety rails (status:working gate,
-  // pending-blocker gate) apply at every level above off.
-  autoInjectMode:        text("auto_inject_mode").notNull().default("beacon"),
+  // off | on — autopilot is binary after the 2026-06-11 collapse (see
+  // src/config/beacon.ts and content/thoughts/killing-the-bash-daemon.md).
+  // Default is "on": when an agent self-reports status:ready, FleetCrown
+  // fires the queue head (or the canned next_best template if the queue
+  // is empty). Safety rails (status:working/blocked, pending-blocker gate,
+  // no-op fuse, health gate) all still apply. Legacy values queue_only |
+  // beacon | next_best | strategist were migrated to "on" in the same
+  // commit; coerceAutoInjectMode in src/db/queries/beacon-settings.ts
+  // tolerates them for any row that escapes the UPDATE.
+  autoInjectMode:        text("auto_inject_mode").notNull().default("on"),
   updatedAt:             timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_beacon_settings_user_id").on(t.userId),

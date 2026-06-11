@@ -46,7 +46,7 @@ export function ProjectCard({
   runtimeStateKnown = true,
   daemonSyncStale = false,
   snapshot,
-  automationMode = "queue_only",
+  automationMode = "on",
   countdownSeconds,
 }: {
   project: ProjectState;
@@ -136,24 +136,21 @@ export function ProjectCard({
     : snapshot?.display ?? getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow);
-  const automaticContinuationEnabled = autoContinueEnabled && (
-    automationMode === "strategist" ||
-    automationMode === "next_best" ||
-    (automationMode === "queue_only" && queue.length > 0)
-  );
-  const queuePolicyWaiting = automationMode === "queue_only" && autoContinueEnabled && queue.length === 0;
+  // After the 2026-06-11 collapse autopilot is binary. "on" continues when
+  // the agent self-reports ready; "off" never does. The queue is drained
+  // head-first; nextbest fills in when the queue runs dry. Auto-continue
+  // remains a per-project pause/resume toggle independent of the mode.
+  const automaticContinuationEnabled = autoContinueEnabled && automationMode === "on";
   const tabOpenUntracked = display.tone === "idle" && display.tabOpen && !display.isRunning;
   const automationStatusLabel = tabOpenUntracked
     ? "Tab open on your computer — focus the workspace to check the agent, or send a prompt below."
     : automationMode === "off"
-    ? "Manual: this project waits for your instruction."
-    : !autoContinueEnabled
-      ? "Automatic continuation paused for this project."
-      : queuePolicyWaiting
-        ? "Continue queued work: add an instruction to run it when the agent waits."
-        : automationMode === "queue_only"
-          ? "Continue queued work: the next queued instruction will send when the agent waits."
-          : "Autonomous: the next task may start when the agent waits.";
+      ? "Autopilot off: this project waits for your instruction."
+      : !autoContinueEnabled
+        ? "Automatic continuation paused for this project."
+        : queue.length > 0
+          ? "Autopilot on: the next queued instruction will send when the agent waits."
+          : "Autopilot on: next_best will fire when the agent waits (queue is empty).";
 
   const {
     sending, justSent, custom, setCustom, customFocused, setCustomFocused,
@@ -299,13 +296,13 @@ export function ProjectCard({
             nextQueueItem={sessionHealthBlocksQueue() ? undefined : queue[0]}
             queueTotal={sessionHealthBlocksQueue() ? 0 : queue.length}
             healthBypass={sessionHealthBlocksQueue() && queue.length > 0 ? (project.session?.health?.toLowerCase().includes("critical") ? "Health critical" : "Tests failing") : undefined}
-            dispatchReason={!sessionHealthBlocksQueue() && preloadedDispatch?.source === "groq" ? preloadedDispatch.reason : undefined}
+            dispatchReason={undefined}
             onDismiss={() => setDismissed(true)}
             onSend={send}
             onAutoInject={runtimeAvailable !== false ? handleAutoInject : undefined}
-            onToggleAutoContinue={automationMode === "off" || queuePolicyWaiting ? undefined : toggleAutoContinue}
+            onToggleAutoContinue={automationMode === "off" ? undefined : toggleAutoContinue}
             showKeyHints={isOnlyReady}
-            inactiveLabel={queuePolicyWaiting ? "Queue empty" : undefined}
+            inactiveLabel={undefined}
             countdownSeconds={countdownSeconds}
           />
           {(display.isReady || display.isOrchestrationReady) && (

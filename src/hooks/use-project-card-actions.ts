@@ -251,19 +251,11 @@ export function useProjectCardActions({
         return;
       }
     }
-    // Strategist v1: when /api/control/dispatch composed a context-aware
-    // body, inject that directly as a custom prompt instead of falling
-    // back to the canned next_best template. Closes the "auto-inject is
-    // generic and unrelated to what I last asked for" gap. The composed
-    // body is constructed from session handoff, queue tail, recent
-    // commits, and outcome streak by Groq — see /api/control/dispatch.
-    if (action === "composed" && decision?.prompt && decision.prompt.length > 10) {
-      setSending("custom");
-      setDismissed(true);
-      try { await onInject(project.tab, undefined, decision.prompt); }
-      finally { setSending(null); }
-      return;
-    }
+    // Strategist composer was removed in the 2026-06-11 collapse — no more
+    // "composed" action coming back from dispatch. The dispatch route now
+    // only returns "queue", "nextbest", or "off". If we get here it's
+    // because the gate-evaluator picked nextbest (or the caller asked
+    // without a queue head); fire the canned template.
     await sendIntent("next_best");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoContinueEnabled, preloadedDispatch, queue, removeFromQueue, project.tab, project.agentRunning, project.currentPrompt, onInject, setDismissed, project.session?.status, project.session?.health, project.session?.tests]);

@@ -1,28 +1,34 @@
 /**
  * POST /api/control/dispatch
  *
- * Strategist layer (v2, 2026-05-20): decides whether to drain the queue,
- * fire the canned next_best template, OR compose a context-aware prompt
- * body from session handoff + queue tail + recent commits + outcome
- * streak. The composed path is the answer to "the agent's auto-injected
- * prompts are dumb" — see content/thoughts/strategist-and-prompt-quality.md.
+ * Tells the caller (Fleet Runner desktop, or any client that triggers on
+ * status:ready) what to fire next when an agent reports done. After the
+ * 2026-06-11 mode collapse (killing-the-bash-daemon, Session 3) this is a
+ * thin decision layer:
  *
- * Returns quickly (< 1.5s on Groq free tier; composed bodies add latency
- * proportional to maxTokens). Falls back to QUEUE when Groq is unavailable.
+ *   off → action:off (autopilot disabled)
+ *   on  → action:queue if queue non-empty, else action:nextbest
+ *
+ * Safety rails are layered on TOP of the mode (in evaluateDispatchGates):
+ * status:working/blocked, pending blockers, no-op fuse, and the explicit
+ * health/tests-failing gate here all short-circuit to action:off.
+ *
+ * The previous Groq composer ("strategist mode") was removed in the same
+ * commit. It produced clever but inconsistent prompts on a path most users
+ * never opted into; the queue + canned next_best path is what they actually
+ * use. The composer can come back as an opt-in /control button if needed,
+ * not as part of the auto-fire path.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { callGroqText } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
-import { logDebug } from "@/db/queries/debug-logs";
 import { getRecentOutcomes, type RecentOutcome } from "@/db/queries/orchestration-runs";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
 import { getProjectAutopilotOverride } from "@/db/queries/projects";
 import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
-import { getOrangeCatContext, renderOrangeCatContext } from "@/lib/integrations/orangecat-context";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
@@ -44,177 +50,36 @@ const HandoffSchema = z.object({
   health: z.string().default(""),
   tests:  z.string().default(""),
   todos:  z.string().default(""),
-  /** Agent's self-reported lifecycle. "working" means the agent is mid-task and
-   *  the autopilot must NOT inject anything. "ready" means handoff is final and
-   *  the strategist may pick the next task. Empty string is legacy / unknown
-   *  (treated permissively as "ready" so existing behavior is preserved). */
+  /** Agent's self-reported lifecycle. "working"/"blocked" → autopilot must
+   *  NOT inject. "ready" → autopilot may fire. Empty is legacy/unknown
+   *  (treated permissively as ready). */
   status: z.string().default(""),
 });
 
 const DispatchBody = z.object({
   handoff:       HandoffSchema,
   queue:         z.array(z.string().trim().min(1)).max(20),
-  /** Count of files in ~/.claude/sessions/<P>.blockers/pending/ as reported by
-   *  the local daemon. Any value > 0 short-circuits dispatch — a blocker file
-   *  is a human-action gate and autopilot has to wait until it clears. */
+  /** Count of files in ~/.claude/sessions/<P>.blockers/pending/ as reported
+   *  by the caller. >0 short-circuits dispatch — human-action gate. */
   blockerCount:  z.number().int().nonnegative().default(0),
   noOpCount:     z.number().int().nonnegative().default(0),
   projectName:   z.string().optional(),
   projectKey:    z.string().optional(),
-  gitBranch:     z.string().optional(),
-  recentCommits: z.array(z.string()).max(5).optional(),
-  /** Project mission / charter from profile — fed to strategist so composed
-   *  next-best prompts are aware of the user's larger intent, not just the
-   *  immediate handoff. */
-  mission:       z.string().optional(),
+  /** Optional context kept on the wire for audit/log purposes only — the
+   *  decision logic no longer reads these. Removed in the 2026-06-11
+   *  simplification: gitBranch, recentCommits, mission. The bash bridge
+   *  may still send them; they are silently ignored. */
 });
 
-export type DispatchAction = "queue" | "nextbest" | "composed" | "off";
+export type DispatchAction = "queue" | "nextbest" | "off";
 
 export type DispatchResult = {
   action: DispatchAction;
   reason: string;
-  /** Which inference path produced the decision. */
-  source: "groq" | "health_gate" | "empty_queue" | "fallback" | "mode_gate" | "status_gate" | "blocker_gate";
-  /** Strategist-composed prompt body when action="composed". The caller
-   *  injects this as a custom prompt instead of firing the canned
-   *  next_best template. Absent for queue / nextbest / off paths. */
-  prompt?: string;
+  source: "health_gate" | "empty_queue" | "mode_gate" | "status_gate" | "blocker_gate";
 };
 
-// ── Prompt construction ────────────────────────────────────────────────────
-
-function buildPrompt(
-  handoff: z.infer<typeof HandoffSchema>,
-  queue: string[],
-  projectName?: string,
-  gitBranch?: string,
-  recentCommits?: string[],
-  recentOutcomes?: RecentOutcome[],
-  mission?: string,
-  orangeCatContext?: string,
-): string {
-  const projectCtx = [
-    projectName ? `Project: ${projectName}` : "",
-    gitBranch   ? `Branch: ${gitBranch}`    : "",
-    mission && mission.trim() ? `Mission: ${mission.trim()}` : "",
-  ].filter(Boolean).join("  |  ");
-
-  // Strip leading hash so the model focuses on message content, not SHAs.
-  // Raw format from GitState: "abc1234 2025-05-14: feat(x): add thing"
-  const commitsSection = recentCommits && recentCommits.length > 0
-    ? `\nRecent commits (newest first):\n${recentCommits.slice(0, 3).map((c) => `  • ${c.replace(/^[0-9a-f]+ /, "")}`).join("\n")}\n`
-    : "";
-
-  // Outcome streak — most recent first. ✓=success ~=partial ✗=error/hang ✕=user_abort.
-  const outcomesSection = recentOutcomes && recentOutcomes.length > 0
-    ? `\nRecent run outcomes (most recent first): ${streakLine(recentOutcomes)}\n`
-    : "";
-
-  // Commercial context from OrangeCat (services/products the actor lists),
-  // surfaced so the strategist can prefer revenue-adjacent moves when handoff
-  // signals are weak. Empty when no OC key configured or the actor has no
-  // commercial state — strategist proceeds with FC-only context as before.
-  const orangeCatSection = orangeCatContext ?? "";
-
-  const queueList = queue
-    .slice(0, 5)
-    .map((item, i) => `${i + 1}. ${item}`)
-    .join("\n");
-  const queueOverflow = queue.length > 5 ? `\n(+${queue.length - 5} more items)` : "";
-
-  return `You are a dispatch strategist for an AI coding agent workflow.
-${projectCtx ? `\n${projectCtx}\n` : ""}${commitsSection}${outcomesSection}${orangeCatSection}
-The agent just finished a work session. Handoff summary:
-  done:   ${handoff.done || "(none)"}
-  next:   ${handoff.next || "(none)"}
-  health: ${handoff.health || "unknown"}
-  tests:  ${handoff.tests || "unknown"}
-  todos:  ${handoff.todos || "(none)"}
-
-The queue has ${queue.length} pending task${queue.length === 1 ? "" : "s"}:
-${queueList}${queueOverflow}
-
-Decide one of three actions:
-
-1. ACTION: QUEUE — fire queue item 1 verbatim. Prefer when the first queue item is contextually related to what was just done, OR when health is good and there is no strong continuity signal.
-
-2. ACTION: NEXTBEST — fire the canned next_best template (generic "verify health, fix typecheck, execute session next, find adjacent broken thing"). Only choose this when both queue and handoff.next are weak signals AND there's no specific direction emerging from commits/outcomes.
-
-3. ACTION: COMPOSED — you write a fresh prompt body that names exactly what the agent should do right now, drawing on the handoff's "next", the queue tail, the last commit, the outcome streak, AND the project mission (if present). The composed body must stay aligned with the mission while executing the highest-impact immediate step. Prefer this when handoff.next is specific (e.g. "fix login flow", "ship migration 0011") or when a queue item plus commit history together point at one clear move. The body should sound like a teammate's next-step note — concrete verbs, named files or features where possible, ≤2000 characters.
-
-Respond in this format (no extra text):
-
-ACTION: <QUEUE | NEXTBEST | COMPOSED>
-REASON: one sentence on why this action is right now
-PROMPT: <only when ACTION is COMPOSED — the full prompt body the agent will receive. Omit this line otherwise.>`;
-}
-
-// ── Groq call ─────────────────────────────────────────────────────────────
-
-async function callGroq(prompt: string): Promise<{ action: DispatchAction; reason: string; prompt?: string }> {
-  // maxTokens bumped from 100 → 1500 so the strategist has room for the
-  // COMPOSED body (≤2000 chars ≈ ~500 tokens, plus 50 for ACTION + REASON
-  // and a safety margin). Temperature stays low so the composer sticks to
-  // the named context rather than improvising.
-  const text = await callGroqText(prompt, { maxTokens: 1500, temperature: 0.2, timeoutMs: 15_000 });
-  return parseGroqResponse(text);
-}
-
-function parseGroqResponse(text: string): { action: DispatchAction; reason: string; prompt?: string } {
-  const lines = text.split("\n");
-
-  let action: DispatchAction = "queue";
-  let reason = "Continuing with queue order.";
-  let promptBody: string | undefined;
-  // Collecting the PROMPT: body across multiple lines (it can be a paragraph).
-  let inPrompt = false;
-  const promptLines: string[] = [];
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line && !inPrompt) continue;
-
-    const upper = line.toUpperCase();
-    if (upper.startsWith("ACTION:")) {
-      const val = upper.replace("ACTION:", "").trim();
-      if (val === "NEXTBEST") action = "nextbest";
-      else if (val === "COMPOSED") action = "composed";
-      else action = "queue";
-      inPrompt = false;
-      continue;
-    }
-    if (line.toLowerCase().startsWith("reason:")) {
-      reason = line.slice("reason:".length).trim();
-      inPrompt = false;
-      continue;
-    }
-    if (line.toLowerCase().startsWith("prompt:")) {
-      promptLines.push(line.slice("prompt:".length).trim());
-      inPrompt = true;
-      continue;
-    }
-    if (inPrompt) {
-      // Continuation of multi-line PROMPT body.
-      promptLines.push(rawLine);
-    }
-  }
-
-  if (promptLines.length > 0) {
-    promptBody = promptLines.join("\n").trim();
-  }
-
-  // Sanity: if Groq said COMPOSED but didn't actually emit a body, downgrade
-  // to NEXTBEST so the caller doesn't dispatch an empty custom prompt.
-  if (action === "composed" && (!promptBody || promptBody.length < 10)) {
-    action = "nextbest";
-    promptBody = undefined;
-  }
-
-  return { action, reason, prompt: promptBody };
-}
-
-// ── Route handler ──────────────────────────────────────────────────────────
+// ── Route handler ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
@@ -223,10 +88,8 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, DispatchBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { handoff, queue, blockerCount, noOpCount, projectName, projectKey, gitBranch, recentCommits, mission } = dataOrResp;
+  const { handoff, queue, blockerCount, noOpCount, projectName, projectKey } = dataOrResp;
 
-  // Recent outcomes for this project — feeds Groq and is surfaced in the reason.
-  // Safe-defaults: if the lookup fails, dispatch still proceeds.
   let recentOutcomes: RecentOutcome[] = [];
   if (projectKey) {
     recentOutcomes = await getRecentOutcomes(userId, projectKey, { limit: 5 }).catch(() => []);
@@ -234,17 +97,8 @@ export async function POST(req: NextRequest) {
   const streak = streakLine(recentOutcomes);
   const streakSuffix = streak ? `  [last 5: ${streak}]` : "";
 
-  // Auto-inject mode resolution (per-project override → user default):
-  //
-  // Pre-v0.7: a single user-level mode applied to every project; users
-  // dogfooding multi-project workflows asked for per-project pause/resume.
-  // Now each entities row carries an optional auto_inject_mode_override —
-  // when set, it wins; when null, fall back to the user's beacon_settings
-  // value. This is also how the "pause this project's autopilot" UI on
-  // ProjectCard does its work (it writes "off" to the override).
-  //
-  // Both the project override lookup and the user-settings lookup fail-safe
-  // to the default mode so a transient DB hiccup doesn't kill dispatch.
+  // Per-project override wins over user-level setting. Either lookup
+  // fail-safes to the default so a transient DB hiccup doesn't kill dispatch.
   const settings = await getBeaconSettings(userId).catch(() => null);
   const userMode = (settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE) as AutoInjectMode;
   let mode: AutoInjectMode = userMode;
@@ -254,7 +108,7 @@ export async function POST(req: NextRequest) {
   }
 
   const recordAndReturn = (result: DispatchResult) => {
-    const fingerprint = promptFingerprint(result.prompt);
+    const fingerprint = promptFingerprint(undefined);
     recordControlAuditEvent({
       userId,
       projectKey: projectKey ?? projectName ?? null,
@@ -275,33 +129,15 @@ export async function POST(req: NextRequest) {
       meta: {
         tests: handoff.tests,
         todos: handoff.todos,
-        hasMission: Boolean(mission?.trim()),
-        recentCommits: recentCommits?.slice(0, 5) ?? [],
         streak,
       },
     });
     return NextResponse.json(result satisfies DispatchResult);
   };
 
-  const gated = evaluateDispatchGates({
-    status: handoff.status,
-    blockerCount,
-    mode,
-    queueLength: queue.length,
-    streakSuffix,
-    noOpCount,
-  });
-  if (gated) return recordAndReturn(gated);
-
-  // mode === "strategist" — fall through to Groq composition.
-
-  // No queue items + strategist mode: still call Groq to compose from
-  // handoff + commits + outcomes. The strategist's value is highest
-  // exactly when the queue is empty and the user wants a smart nudge.
-  // (Previously this short-circuited to nextbest, which was the bug
-  // Cursor's audit named.)
-
-  // Hard health gate (duplicate of client-side check — defence in depth).
+  // Hard health gate — defence in depth. If health is critical or tests are
+  // failing, force the agent into recovery (next_best canned template) so
+  // it stays focused on fixing what's broken instead of switching concerns.
   const health = handoff.health.toLowerCase();
   const tests  = handoff.tests.toLowerCase();
   if (health.includes("critical") || tests.includes("fail")) {
@@ -312,50 +148,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Fetch the actor's commercial state from OrangeCat in parallel with
-  // anything else that might run before Groq. The fetcher caches 5min and
-  // races a 1.5s timeout, so this never delays the strategist by more than
-  // the OC API's quickest response. Returns null silently when no
-  // ORANGECAT_API_KEY is configured.
-  const orangeCatContext = await getOrangeCatContext()
-    .then(renderOrangeCatContext)
-    .catch(() => "");
-
-  // Groq composition. Even with an empty queue, the strategist composes
-  // from session next, recent commits, and outcome streak.
-  const prompt = buildPrompt(handoff, queue, projectName, gitBranch, recentCommits, recentOutcomes, mission, orangeCatContext);
-
-  try {
-    const { action, reason, prompt: composedPrompt } = await callGroq(prompt);
-    return recordAndReturn({
-      action,
-      reason: `${reason}${streakSuffix}`,
-      source: "groq",
-      ...(composedPrompt ? { prompt: composedPrompt } : {}),
-    });
-  } catch (e) {
-    // Groq unavailable, key invalid, or timeout — surface the actual cause so
-    // the user knows whether to top up credits / rotate the key / wait it out.
-    // Without this the UI just said "Groq unavailable" with no hint to action.
-    const raw = e instanceof Error ? e.message : String(e);
-    const hint = /\b401\b|invalid.api.key/i.test(raw) ? "key invalid"
-              : /\b429\b/.test(raw)                  ? "rate-limited"
-              : /\b5\d\d\b/.test(raw)                ? "Groq server error"
-              : /timeout|abort/i.test(raw)           ? "Groq timed out"
-              : raw;
-    console.error("[dispatch] groq fallback:", raw);
-    logDebug({
-      source: "api/control/dispatch",
-      level: "warn",
-      message: `Groq fallback (${hint}): ${raw}`,
-      meta: { userId, projectKey, hint, queueLen: queue.length },
-    });
-    return recordAndReturn({
-      action: queue.length > 0 ? "queue" : "nextbest",
-      reason: queue.length > 0
-        ? `Groq unavailable (${hint}) — using queue order.${streakSuffix}`
-        : `Groq unavailable (${hint}) — falling back to next_best.${streakSuffix}`,
-      source: "fallback",
-    });
-  }
+  // Mode + safety gates produce the actual decision. Always returns a
+  // DispatchResult now that strategist composition is gone.
+  const decision = evaluateDispatchGates({
+    status: handoff.status,
+    blockerCount,
+    mode,
+    queueLength: queue.length,
+    streakSuffix,
+    noOpCount,
+  });
+  // evaluateDispatchGates never returns null after the collapse — it owns
+  // the off/on decision completely. The non-null assertion is safe.
+  return recordAndReturn(decision!);
 }

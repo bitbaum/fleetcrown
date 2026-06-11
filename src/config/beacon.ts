@@ -25,15 +25,14 @@ export const TRANSCRIPTION_PROVIDERS: readonly { value: TranscriptionProvider; l
   { value: "local", label: "Local Whisper", note: "your machine's Whisper model — requires runtime, no Groq attempt" },
 ];
 
-// The five-level autopilot trust ladder. Each level adds one more thing
-// FleetCrown decides on your behalf — L1 (you decide everything) to L5 (full
-// AI-composed dispatch). Storage values keep legacy names ("off",
-// "queue_only", "next_best", "strategist") for migration safety; the UI
-// surfaces the new names (Manual, Queue, Beacon, Continuous, Mission) and
-// the new "beacon" value is the one being added 2026-05-31 to restore the
-// popup UX removed by commit 848da6c. Order in this array reflects the
-// trust ladder top-down (Manual → Mission); UI selector iterates this order.
-export const AUTO_INJECT_MODE_VALUES = ["off", "queue_only", "beacon", "next_best", "strategist"] as const;
+// Autopilot is binary. After the 2026-06-11 collapse (killing-the-bash-daemon
+// migration, Session 3), the five-tier ladder (off/queue_only/beacon/
+// next_best/strategist) is replaced by off|on. Most users only ever used "off"
+// or "fire-when-done"; the intermediate tiers were cognitive load without
+// proportionate value. Safety rails (status:working, blockers, no-op counter,
+// health gates) still apply at every level — being "on" doesn't override the
+// agent's "I'm not done" signal.
+export const AUTO_INJECT_MODE_VALUES = ["off", "on"] as const;
 export type AutoInjectMode = (typeof AUTO_INJECT_MODE_VALUES)[number];
 
 export const AUTO_INJECT_MODES: readonly {
@@ -43,30 +42,30 @@ export const AUTO_INJECT_MODES: readonly {
 }[] = [
   {
     value: "off",
-    label: "Manual",
-    description: "L1 · FleetCrown dispatches nothing. You type every prompt in /control and click Send. Total control; zero surprises.",
+    label: "Off",
+    description: "FleetCrown dispatches nothing. You type every prompt in /control and click Send.",
   },
   {
-    value: "queue_only",
-    label: "Queue",
-    description: "L2 · When an agent finishes, FleetCrown fires the next item from YOUR queue. Stops when queue is empty. Your plan, executed in order.",
-  },
-  {
-    value: "beacon",
-    label: "Beacon",
-    description: "L3 · When the agent finishes, FleetCrown prepares the next action and shows a handoff popup. If you are away, the countdown can auto-submit that prepared action.",
-  },
-  {
-    value: "next_best",
-    label: "Continuous",
-    description: "L4 · Drains your queue, then sends the canned next-best recovery/progress template without a popup. Useful for routine cleanup; less context-aware than Mission.",
-  },
-  {
-    value: "strategist",
-    label: "Mission",
-    description: "L5 · FleetCrown composes a prompt from the handoff, queue, project mission, recent commits, and outcomes, then dispatches it without asking. Highest autonomy; review results regularly.",
+    value: "on",
+    label: "On",
+    description: "When an agent finishes, FleetCrown fires the queue head — or, if the queue is empty, the canned next_best recovery template. Status:working, blockers, and health gates still apply.",
   },
 ];
+
+/** Legacy modes from before the 2026-06-11 collapse. Read-only; used only
+ *  by the one-time migration UPDATE and for tolerant parsing of old stored
+ *  values. Do not reference from runtime decision code. */
+export const LEGACY_AUTO_INJECT_MODE_VALUES = ["queue_only", "beacon", "next_best", "strategist"] as const;
+export type LegacyAutoInjectMode = (typeof LEGACY_AUTO_INJECT_MODE_VALUES)[number];
+
+/** Map any value (current or legacy) to the new 2-state space. Off stays off;
+ *  every other historical mode collapses to "on" because they all auto-fired
+ *  in some way. Use this when reading an old DB row or env var that hasn't
+ *  been migrated yet. */
+export function normalizeAutoInjectMode(raw: string | null | undefined): AutoInjectMode {
+  if (raw === "off") return "off";
+  return "on";
+}
 
 export const POPUP_MODE_VALUES = ["web", "disabled"] as const;
 export type PopupMode = (typeof POPUP_MODE_VALUES)[number];

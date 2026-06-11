@@ -14,13 +14,10 @@ import {
 } from "@/lib/control-states";
 
 // Single-line hint shown under the fleet chips when this mode is active.
-// Five-level trust ladder (2026-05-31): Manual / Queue / Beacon / Continuous / Mission.
-const getAutomationHint = (name: string): Record<AutoInjectMode, string> => ({
-  off: "Manual — agents stop when a task ends; you dispatch every next step.",
-  queue_only: "Queue — agents drain your written queue, then stop.",
-  beacon: "Beacon — popup with smart choices on every handoff; countdown auto-picks if you're away.",
-  next_best: "Continuous — agents auto-run the canned next-best step on every handoff.",
-  strategist: `Mission — ${name} composes context-aware prompts from project mission, goals, and history.`,
+// Binary autopilot since the 2026-06-11 collapse.
+const getAutomationHint = (_name: string): Record<AutoInjectMode, string> => ({
+  off: "Off — agents stop when a task ends; you dispatch every next step from /control.",
+  on:  "On — agents drain your queue, then auto-fire next_best when the queue is empty. Status:working, blockers, and health gates still apply.",
 });
 
 type Props = {
