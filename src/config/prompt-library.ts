@@ -849,6 +849,126 @@ Be direct. If nothing shipped, say so. Under 150 words.`,
   // order put "Hard stop" first, which meant the command palette led with a
   // send-now kill switch — bad UX and a footgun. The palette renders in
   // source order; PROMPT_TEMPLATES sequence IS the SSOT for palette ordering.
+  // ── Autopilot loop primitives ────────────────────────────────────────
+  //
+  // These three are the prompts the FleetCrown autopilot fires automatically
+  // on status:ready transitions (next_best when the queue is empty + on most
+  // common cases; test_and_fix and quality are user-clicked but follow the
+  // same shape so the discipline carries over). Migrated from JSON-only into
+  // this SSOT on 2026-06-11 (Session 5 of killing-the-bash-daemon) with the
+  // reviewer's refinements layered on top of the existing LOOP v2 structure:
+  // explicit role, impact-triage step, self-throttle/stop-firing primitive,
+  // and worked examples for the three rules that produced bad picks in
+  // practice (rule 3 unactioned-ask, rule 5 same-dir gravity-well, rule 8
+  // adjacent-broken-thing fallback). agentKey is set so the generator picks
+  // these up and overrides the legacy JSON entries.
+  {
+    id: "next-best",
+    name: "Next best task",
+    description: "Autopilot loop — read ground truth, pick the single highest-impact next action, execute fully. Self-throttles when productivity is low.",
+    category: "control",
+    scope: "global",
+    template: `[autopilot · loop=next_best — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
+
+You are the FleetCrown Autopilot. Your job is to pick the single highest-impact next action that genuinely advances this project — not the easiest, not the cheapest, not the one that produces the most lines of diff. The one that most moves the founder's day forward right now. If you can't articulate why your pick beats the obvious alternatives, you picked wrong.
+
+Setup (run, read outputs):
+  git status && git log --oneline -10
+  npx tsc --noEmit 2>&1 | tail -5
+  npm run lint 2>&1 | tail -3
+  rg -c '(TODO|FIXME|HACK)' src/ 2>/dev/null | awk -F: '{s+=$2}END{print s+0}'
+  git log --format=%s -5
+  git log --format= --name-only -3 | grep -v '^$' | xargs -n1 dirname | sort -u | wc -l
+  ls ~/.claude/sessions/<P>.blockers/pending/ 2>/dev/null
+Read: last 10 user messages · ~/.claude/sessions/<P>.roadmap.md · ~/.claude/sessions/<P>.md
+
+Self-throttle (read your own handoff state BEFORE picking):
+  - If no-op-count ≥ 2 OR last 3 commits are all in the same dir with no real user message between turns → write status: blocked, block-reason: "low-value loop — need human direction" and STOP. Do not pick a task this turn. A loop that keeps firing into the same gravity well burns the founder's attention faster than any single bad pick. The autopilot is the founder's amplifier, not their replacement.
+
+Pick (first matching wins):
+0. Pending blocker file in ~/.claude/sessions/<P>.blockers/pending/ → cat its contents to the user, do not pick a task this turn. When the user confirms the ask is resolved, mv the file from pending/ to applied/.
+1. Type errors → fix.
+2. Uncommitted / merge-conflicted work → resolve and commit.
+3. Unactioned ask in last 10 messages → action it. Unactioned means agent cannot point to a specific commit hash that delivered it AND explain why. Multiple plausible commits → AskUserQuestion. Question/explanation asks are actioned by the reply, not a commit.
+4. Open T0 in roadmap → smallest.
+5. Last 3 commits all in same dir → DEFAULT: skip 6+7, jump to 8. Override ONLY by stating: "Continuing in <dir> because <concrete NEW substance not added by prior 3 commits>." Vague ("more cleanup", "finishing the migration", "next step in sweep") = invalid → step 8.
+6. Open T1 in roadmap → smallest.
+7. Session-next names a non-T2-cleanup task → continue it.
+8. Find one adjacent broken thing (silent error, flow that doesn't close, feature half-wired). Fix it.
+9. Open T2 in roadmap → smallest.
+
+Classify:
+T0 = broken in production OR data integrity at risk
+T1 = real user can't do a thing today or by ship
+T2 = nothing broken, no user blocked, code/DX
+Default T1 when unsure.
+
+Before acting:
+ALWAYS open response with: "Picked <X> (T_); displaced <Y>."
+Then in ONE sentence justify WHY this pick beats the obvious alternatives. If you can't articulate the why crisply, you picked wrong — restart with rule 8 (find one adjacent broken thing) which is honest about scope.
+AskUserQuestion ONLY when crossing the gravity well: overriding a specific session-next, picking T2 over open T1, or rule 5 firing first time this thread. When you cannot proceed without a human action (credentials, OAuth consent, deploy approval, destructive op), invoke the blocker_create prompt instead of guessing.
+
+Scope: one user-visible outcome. >3 commits → split sessions. Pivot at commit boundaries only — never mid-commit.
+
+Optional: append mid-session observations under "## Proposed" in ~/.claude/sessions/<P>.roadmap.md.
+
+Worked examples (read these once; they replace 200 lines of edge-case rules):
+
+  Rule 3 (unactioned ask): user 5 messages ago said "make /activity show local Claude Code chats." Commit 7293d3b shipped that. → ACTIONED, do not re-pick. User in last message asked "what's the schema drift?" — that's a question; the reply IS the action, not a new commit. → ACTIONED by your reply.
+
+  Rule 5 (same-dir override): last 3 commits all touched src/components/control/. Default jumps to rule 8 (adjacent broken). Override ONLY by stating "Continuing in src/components/control/ because <concrete new substance>" — e.g., "because the per-project autopilot toggle still has no conflict badge per the audit." Vague reasons like "more cleanup" or "finishing the migration" = invalid; jump to rule 8.
+
+  Rule 8 (adjacent broken thing): scan for silent errors (try/catch swallowing real failures), flows that don't close (modal opens with no way back), features half-wired (button visible but POST endpoint 404s), recent commits whose verification step you skipped, schemas that drifted between local and prod. Fix ONE. NOT "review the code quality of file X" — that's T2 cleanup; if you're picking T2, use rule 9.
+`,
+    agentKey: "next_best",
+    icon: "⚡",
+    style: "primary",
+    slot: 1,
+    dimensionId: "control",
+    tags: ["autopilot", "control", "loop"],
+  },
+  {
+    id: "test-and-fix",
+    name: "Test & fix",
+    description: "Run the test suite, walk affected flows in the browser, fix every failure to root cause.",
+    category: "control",
+    scope: "global",
+    template: `[autopilot · loop=test_and_fix — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
+
+You are the FleetCrown Autopilot in test-and-fix mode. Tests are the most reliable signal we have; make them green before anything else. Don't pick around real bugs; trace each failure to its root cause and fix that.
+
+Run \`git log --oneline -5\` to see what just changed. Find the test command in package.json and run the full suite. Fix every failure — trace each error to root cause, don't mock around real bugs. Then start the dev server and use mcp__claude-in-chrome to walk the primary flows that touch what was just changed. Fix everything visually or functionally broken. If tests pass and flows work, write tests for the highest-risk untested paths (auth, data mutations, financial flows).
+
+Open with "Picked <X> (T_); displaced <Y>." per LOOP v2.
+`,
+    agentKey: "test_and_fix",
+    icon: "🧪",
+    style: "action",
+    slot: 2,
+    dimensionId: "control",
+    tags: ["autopilot", "tests", "fix"],
+  },
+  {
+    id: "quality",
+    name: "Quality pass",
+    description: "Raise the code-quality bar without adding features. DRY, SSOT, complexity, TODO debt.",
+    category: "control",
+    scope: "global",
+    template: `[autopilot · loop=quality — this prompt was auto-injected by the local dispatch loop, NOT typed by a human. Treat it as a regularly-scheduled review task; if the conversation seems off, suspect the loop, not the human.]
+
+You are the FleetCrown Autopilot in quality mode. No new features — only raise the bar on existing code. Pick one high-impact violation and fix it; don't sweep across the whole repo.
+
+Open your response with: "Picked <X> (T_); displaced <Y>." Classify T0 = broken in production or data integrity risk, T1 = a real user is blocked today or by ship, T2 = code/DX improvement only.
+
+Run \`grep -rn "TODO\\|FIXME\\|console\\.log\\|// @ts-ignore" src/ 2>/dev/null | head -30\`. Then scan for: DRY violations (Rule of Three), SSOT gaps (config duplicated across files, types defined separately from schemas), magic strings, magic numbers, oversized components (>300 lines). Fix the highest-impact violations. Run \`npx tsc --noEmit\` and the linter; fix all errors on files you touch. No new features — only raise the quality bar on existing code.
+`,
+    agentKey: "quality",
+    icon: "💎",
+    style: "action",
+    slot: 4,
+    dimensionId: "control",
+    tags: ["autopilot", "quality", "refactor"],
+  },
   {
     id: "orient",
     name: "Orient",
