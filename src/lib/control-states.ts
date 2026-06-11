@@ -330,6 +330,16 @@ export function deriveProjectStateKey(signals: {
   if (within(signals.readyAt, 60)) return "ready";
   if (within(signals.lockAt, 60)) return "working";
   if (signals.sessionStatus === "working") return "working";
+  // Session handoff says "ready" — the agent just finished a turn and
+  // wrote its handoff. Treat that the same as the (now retired) Stop-hook
+  // readyAt sentinel: it's the agent's own self-reported done signal.
+  // Before this branch was added (2026-06-11), removing the bash Stop hook
+  // in Session 1 of killing-the-bash-daemon meant readyAt stopped being
+  // written, so projects whose session said "ready" fell through to
+  // open_idle ("Awaiting input") even seconds after Fleet Runner pushed
+  // the fresh status. The /control card read like the daemon was offline
+  // when in fact it had just synced.
+  if (signals.sessionStatus === "ready") return "ready";
   if (signals.agentRunning) return "open_idle";
   if (signals.tabOpen) return "tab_open";
   return "not_running";
