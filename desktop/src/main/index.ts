@@ -17,6 +17,7 @@ import {
   formatTrayTooltip,
 } from './poller'
 import { startPusher, stopPusher, restartPusher, pushNow } from './pusher'
+import { dispatchAutopilot } from './dispatch'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
@@ -1134,13 +1135,32 @@ async function restoreFleetOnBoot(): Promise<void> {
 // Clicking the notification surfaces the main window so the user can act on
 // the handoff immediately. Health is encoded in the title so a glance tells
 // the user whether a run succeeded.
-function notifyOnIdle({ project, handoff }: { project: string; handoff: { done: string; next: string; health: string } }) {
+function notifyOnIdle({ project, handoff }: { project: string; handoff: import('@/lib/events').Handoff }) {
   // v0.6 — push immediately to the cloud so the web UI's SSE feed gets
   // the change within seconds, not after the 5-minute heartbeat. The
   // pushNow() helper coalesces back-to-back calls so a burst of worker.idle
   // events (multiple projects handoffing within the same second) only
   // produces a single round-trip.
   void pushNow().catch(() => { /* non-fatal; next heartbeat picks it up */ })
+
+  // Session 2 of killing-the-bash-daemon: Fleet Runner becomes the autopilot
+  // trigger. When the agent self-reports status:ready, ask the cloud what to
+  // do next; if it says queue/nextbest/composed, the resulting pending_command
+  // flows back through poller.ts (already wired) and lands as a typed prompt
+  // in the agent's zellij tab. This replaces the bash Stop hook entirely.
+  // Status / cooldown / mode gating all live in dispatch.ts and dispatch-gates
+  // .ts — this is just the wire.
+  if (handoff.status === 'ready') {
+    void dispatchAutopilot({ project, handoff })
+      .then((res) => {
+        if (res.skipped) {
+          console.log(`[autopilot] ${project} skipped: ${res.skipped}`)
+        } else {
+          console.log(`[autopilot] ${project} dispatched: action=${res.action} reason=${res.reason ?? '(none)'}`)
+        }
+      })
+      .catch((e) => console.warn(`[autopilot] ${project} dispatch error:`, (e as Error).message))
+  }
 
   if (!Notification.isSupported()) return
   const healthBadge = handoff.health === 'good' ? '✓'
