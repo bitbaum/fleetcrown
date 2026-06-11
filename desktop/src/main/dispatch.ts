@@ -124,6 +124,20 @@ export async function dispatchAutopilot(opts: {
       }
       const body = await resp.json() as { action?: string; reason?: string }
       lastFireByProject.set(project, now)
+      // dispatch is just the decision oracle — convert the verdict into the
+      // actual inject. The cloud /api/inject endpoint queues a
+      // pending_command, which Fleet Runner's own poller.ts then picks up
+      // and types into the zellij tab. The bash bridge used to do this in
+      // emit_or_inject_prompt; we do it inline here so the trigger and the
+      // inject live in the same TS module.
+      if (body.action === 'queue' && queue.length > 0) {
+        await postInject({ tab: project, customPrompt: queue[0], token })
+      } else if (body.action === 'nextbest') {
+        await postInject({ tab: project, promptKey: 'next_best', token })
+      }
+      // action === "off" or unknown → no inject. The dispatch decision was
+      // recorded in control_audit_events on the cloud side; nothing to do
+      // locally.
       return { action: body.action as DispatchOutcome['action'], reason: body.reason }
     } catch (e) {
       const msg = (e as Error).message
@@ -131,6 +145,29 @@ export async function dispatchAutopilot(opts: {
     }
   }
   return { skipped: 'unreachable' }
+}
+
+async function postInject(opts: { tab: string; customPrompt?: string; promptKey?: string; token: string }): Promise<void> {
+  try {
+    const resp = await fetch(`${BASE_URL}/api/inject`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${opts.token}`,
+      },
+      body: JSON.stringify({
+        tab: opts.tab,
+        ...(opts.customPrompt ? { customPrompt: opts.customPrompt } : {}),
+        ...(opts.promptKey ? { promptKey: opts.promptKey } : {}),
+      }),
+      signal: AbortSignal.timeout(DISPATCH_TIMEOUT_MS),
+    })
+    if (!resp.ok) {
+      console.warn(`[autopilot] inject POST returned ${resp.status} — pending_command may not have been created`)
+    }
+  } catch (e) {
+    console.warn(`[autopilot] inject POST failed: ${(e as Error).message}`)
+  }
 }
 
 async function fetchQueue(project: string, token: string): Promise<string[]> {
