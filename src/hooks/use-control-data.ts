@@ -223,63 +223,13 @@ export function useControlData(): ControlDataHook {
     return () => clearTimeout(id);
   }, [lastTabResultsAt]);
 
-  // Try the same-machine fast path first: when the user's home/ daemon is
-  // listening on localhost:3001, route inject directly there and skip
-  // Vercel + Postgres + daemon-polling (7 hops → 3). The fast path needs a
-  // resolved customPrompt; promptKey-only dispatches still go cloud-side
-  // where the key→prompt resolver lives.
-  //
-  // Failure modes that fall through to the cloud path:
-  //   - no daemon (connection refused / DNS / timeout)
-  //   - daemon responded {ok:false} — the reason already carries the
-  //     actionable detail; we re-throw it so the caller can render it
-  //     without a cloud round-trip
-  //   - dispatch carries only a promptKey (no resolved text) — local
-  //     daemon can't expand it without the cloud prompt registry
-  const tryLocalInject = async (tab: string, customPrompt: string): Promise<{ ok: true } | { ok: false; reason: string } | null> => {
-    if (typeof window === "undefined") return null;
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 600);
-      const r = await fetch("http://127.0.0.1:3001/api/inject", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project: tab, prompt: customPrompt }),
-        signal: ctrl.signal,
-      });
-      clearTimeout(timer);
-      if (!r.ok) return null;
-      const body = await r.json().catch(() => null);
-      if (!body || typeof body !== "object") return null;
-      if (body.ok === true) return { ok: true };
-      if (body.ok === false && typeof body.reason === "string") return { ok: false, reason: body.reason };
-      return null;
-    } catch {
-      // No local daemon (most common case for cloud-only users), or it timed
-      // out. Either way, cloud path takes over silently.
-      return null;
-    }
-  };
-
   const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued" }> => {
-    // Local fast path: only fires when we have resolved prompt text (no
-    // promptKey-only dispatch) AND no per-card adapter override beyond the
-    // default — the local daemon picks the running adapter by process scan.
-    if (customPrompt && !promptKey) {
-      const localResult = await tryLocalInject(tab, customPrompt);
-      if (localResult?.ok === true) {
-        setTimeout(refresh, REFRESH_AFTER_DISPATCH_MS);
-        return { mode: "direct" };
-      }
-      if (localResult?.ok === false) {
-        // The reason is the same actionable string the cloud path would
-        // eventually surface — throwing here saves the cloud round-trip
-        // when we already know exactly what went wrong.
-        throw new Error(localResult.reason);
-      }
-      // Fall through to cloud — local daemon unreachable or non-JSON reply.
-    }
-
+    // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
+    // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
+    // daemon (2026-06-11). Every inject now goes through the cloud
+    // /api/inject endpoint; Fleet Runner desktop polls /api/control/commands
+    // and types the resulting prompt into zellij. Same end-state, one
+    // transport instead of two, no bash anywhere.
     const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));

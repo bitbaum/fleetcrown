@@ -83,7 +83,13 @@ export async function GET() {
 
   const checks: DoctorCheck[] = [];
 
-  for (const unit of ["fleetcrown-app.service", "fleetcrown-beacon-window.service", "fleetcrown-daemon.service"]) {
+  // Session 4 of killing-the-bash-daemon: only the local Next.js prod wrapper
+  // remains as a FleetCrown systemd unit. Fleet Runner desktop is a regular
+  // Electron app the user launches from their tray menu — it has no
+  // systemd unit to probe (its process tree appears under app-fleet-
+  // runner@.service if the user enabled systemd integration, but that's
+  // an OS-level convenience, not a FleetCrown surface).
+  for (const unit of ["fleetcrown-app.service"]) {
     try {
       const [active, enabled] = await Promise.all([
         shell(`systemctl --user is-active ${unit}`).catch(() => "inactive"),
@@ -109,16 +115,25 @@ export async function GET() {
     legacyUnits ? legacyUnits.split("\n").slice(0, 3).join("; ") : "No active unit files listed.",
   ));
 
+  // Session 4 of killing-the-bash-daemon retired the bash bridge that the
+  // Stop hook used to exec. The hook is now expected to be a no-op (or
+  // absent) — Fleet Runner's embedded watcher (home/watcher.ts) detects the
+  // status:ready transition by filesystem mtime and triggers dispatch via
+  // its own TS module (desktop/src/main/dispatch.ts). A hook that still
+  // points at the deleted bridge is broken; flag it.
   const stopHook = `${homedir()}/.claude/hooks/stop.sh`;
-  const notificationHook = `${homedir()}/.claude/hooks/notification.sh`;
-  const hookTarget = ".local/share/fleetcrown-beacon/agent-hook-bridge.sh";
-  const stopOk = existsSync(stopHook) && readFileSync(stopHook, "utf8").includes(hookTarget);
-  const notificationOk = existsSync(notificationHook) && readFileSync(notificationHook, "utf8").includes(hookTarget);
+  const deadBridgeTarget = ".local/share/fleetcrown-beacon/agent-hook-bridge.sh";
+  const stopExists = existsSync(stopHook);
+  const stopReferencesDeadBridge = stopExists && readFileSync(stopHook, "utf8").includes(deadBridgeTarget);
   checks.push(check(
     "hooks",
-    "Claude hooks",
-    stopOk && notificationOk ? "pass" : "fail",
-    stopOk && notificationOk ? "stop and notification hooks target FleetCrown." : "One or more hooks do not target the FleetCrown bridge.",
+    "Claude Stop hook",
+    !stopReferencesDeadBridge ? "pass" : "fail",
+    !stopExists
+      ? "No stop.sh installed — Fleet Runner's filesystem watcher triggers dispatch instead."
+      : stopReferencesDeadBridge
+        ? "stop.sh still points at the retired bash bridge — rewrite to `exit 0` or remove the file entirely."
+        : "stop.sh is a no-op (correct post-migration state).",
   ));
 
   const token = readTokenFile();

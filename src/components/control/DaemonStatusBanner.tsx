@@ -6,7 +6,6 @@ import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "l
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
 import { getJson, postJson } from "@/lib/api/fetch";
-import { DaemonControls } from "./DaemonControls";
 import "@/components/desktop/types"; // declare global window.fleetRunner
 
 type DaemonState = "active" | "inactive" | "failed" | "unknown";
@@ -34,7 +33,6 @@ export function DaemonStatusBanner({
   onRefresh,
 }: Props) {
   const [dismissed, setDismissed] = useState(false);
-  const [unitState, setUnitState] = useState<DaemonState>("unknown");
   // Detect Fleet Runner so we can short-circuit the "Install Fleet Runner"
   // CTA and replace it with a one-click "Pair this app" button when the
   // user is already running inside the desktop shell.
@@ -42,17 +40,6 @@ export function DaemonStatusBanner({
   const [pairing, setPairing] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
   const [pairedTokenLabel, setPairedTokenLabel] = useState<string | null>(null);
-
-  // Probe systemd unit state on mount + after every successful control
-  // action. Decoupled from daemonOffline (which is "is the daemon pushing
-  // updates?") so the button labels reflect whether the unit is loaded but
-  // not pushing vs truly stopped. Local-only — cloud 403s the GET.
-  useEffect(() => {
-    if (!runtimeAvailable) return;
-    getJson<{ state: DaemonState }>("/api/system/daemon")
-      .then((r) => setUnitState(r.state))
-      .catch(() => setUnitState("unknown"));
-  }, [runtimeAvailable]);
 
   useEffect(() => {
     setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
@@ -100,9 +87,6 @@ export function DaemonStatusBanner({
     : null;
 
   const refreshAfterAction = () => {
-    getJson<{ state: DaemonState }>("/api/system/daemon")
-      .then((r) => setUnitState(r.state))
-      .catch(() => {});
     onRefresh?.();
   };
 
@@ -243,24 +227,18 @@ export function DaemonStatusBanner({
             <p className="text-text-secondary leading-relaxed">
               The helper on your computer stopped sending updates. All agent commands are safely queued until it reconnects.
             </p>
-            <DaemonControls
-              runtimeAvailable={runtimeAvailable}
-              currentState={unitState}
-              onAfter={refreshAfterAction}
-            />
-            {!runtimeAvailable && (
-              <div className="space-y-2 text-xs text-text-muted">
-                <p>
-                  You&apos;re on the cloud install — daemon control runs only from your local machine.
-                  Open {APP_NAME} at <code className="rounded bg-surface-overlay px-1">http://localhost:3000</code> to start/restart the helper.
-                </p>
-                <p>
-                  Token expired or migrated DB?{" "}
-                  <Link href="/settings" className="text-accent underline">Mint a fresh ck_* token</Link>{" "}
-                  and re-paste it into Fleet Runner / your CLI installer.
-                </p>
-              </div>
-            )}
+            <div className="space-y-2 text-xs text-text-muted">
+              <p>
+                Launch Fleet Runner from your tray / app menu to bring it back online. Closed it by accident?{" "}
+                <Link href="/download" className="text-accent underline">Re-install Fleet Runner</Link>
+                {" "}or check its log for the connection error.
+              </p>
+              <p>
+                Token expired or migrated DB?{" "}
+                <Link href="/settings" className="text-accent underline">Mint a fresh ck_* token</Link>{" "}
+                and re-paste it into Fleet Runner.
+              </p>
+            </div>
           </>
         )}
 
