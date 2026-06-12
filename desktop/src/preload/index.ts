@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 // `window.fleetRunner` — the IPC bridge from the web shell (Next.js app
-// loaded from fleetcrown.vercel.app) into Fleet Runner's main process.
+// loaded from fleetcrown.orangecat.ch) into Fleet Runner's main process.
 //
 // Every method must justify itself with a real local-only capability:
 // something the cloud literally cannot do because it requires reaching

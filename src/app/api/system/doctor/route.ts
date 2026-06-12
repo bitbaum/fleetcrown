@@ -153,7 +153,7 @@ export async function GET() {
     token && envToken === token ? "daemon.env matches fleet-runner-token." : "daemon.env and fleet-runner-token differ.",
   ));
 
-  const remoteBase = (env.FLEETCROWN_BASE_URL || "https://fleetcrown.vercel.app").replace(/\/$/, "");
+  const remoteBase = (env.FLEETCROWN_BASE_URL || "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
   if (token) {
     try {
       const res = await fetch(`${remoteBase}/api/beacon-settings`, {

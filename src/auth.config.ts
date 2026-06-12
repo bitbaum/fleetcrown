@@ -57,7 +57,7 @@ export const authConfig = {
 
         // On Vercel, the Edge Runtime sees the raw deployment URL (the internal
         // Vercel project is legacy-named "cockpit" pending rename, so URLs are
-        // cockpit-<hash>-<org>.vercel.app) not the custom fleetcrown.vercel.app
+        // cockpit-<hash>-<org>.vercel.app) not the custom fleetcrown.orangecat.ch
         // alias. x-forwarded-host carries the real host the user typed.
         const host =
           request.headers.get("x-forwarded-host") ?? request.nextUrl.host;

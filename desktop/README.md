@@ -7,7 +7,7 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 ## Current status
 
 - Packaged native app (AppImage + .deb produced via electron-builder; macOS/Windows builds wire up via `.github/workflows/desktop-release.yml`).
-- **Ships in web-shell mode by default**: the main window loads `https://fleetcrown.vercel.app` directly and the user gets the exact same React tree the browser serves, plus native bits (tray, OS notifications on agent idle, persistent NextAuth cookies). One UI, two surfaces.
+- **Ships in web-shell mode by default**: the main window loads `https://fleetcrown.orangecat.ch` directly and the user gets the exact same React tree the browser serves, plus native bits (tray, OS notifications on agent idle, persistent NextAuth cookies). One UI, two surfaces.
 - Native IPC remains available via the preload-injected `window.fleetRunner` bridge — the web app can detect Fleet Runner via the `FleetRunner/<version>` UA suffix and call into the local runtime where it makes sense.
 - Real `home/` stack integration in the main process: loads your projects config from agent-projects.conf, uses `decide()`, renders actual prompts via the orchestration layer (renderTaskForAdapter) on every dispatch.
 - Dispatch uses the *canonical* `injectIntoTab` (same code path as the daemon/worker): go-to-tab + focus poll guard (prevents typing into wrong pane) + write-chars + Enter + best-effort restore of previous tab.
@@ -34,7 +34,7 @@ FLEETCROWN_WEB_URL=local npm run dev
 
 ## Get the runnable app
 
-End users should grab a signed installer from the [download page](https://fleetcrown.vercel.app/download). For a local build from source:
+End users should grab a signed installer from the [download page](https://fleetcrown.orangecat.ch/download). For a local build from source:
 
 ```bash
 git clone https://github.com/maonakamoto/fleetcrown.git

@@ -7,7 +7,7 @@ The product thesis is simple: AI agents are becoming cheap execution capacity,
 but serious users still need a trustworthy command center. FleetCrown provides the
 state, queues, handoffs, guardrails, and business context around that capacity.
 
-Production: https://fleetcrown.vercel.app
+Production: https://fleetcrown.orangecat.ch
 
 ## What It Does
 
@@ -139,7 +139,7 @@ On a fresh database, visit `/setup` to create the first user.
 Agent dispatch from the hosted app needs a connected machine:
 
 ```bash
-curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
+curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
 ```
 
 The runtime requires Zellij and at least one supported CLI on `PATH`: `claude`,

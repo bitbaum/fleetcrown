@@ -24,7 +24,7 @@ import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 
 // v0.7.4 — bundled renderer removed; one UI surface only.
 //
-// Fleet Runner wraps fleetcrown.vercel.app in a BrowserWindow + adds native
+// Fleet Runner wraps fleetcrown.orangecat.ch in a BrowserWindow + adds native
 // integrations (tray, deep-link auth, IPC for Peek + auto-mint + local-dev
 // scan, auto-update, splash, persisted window bounds). There is no longer
 // a parallel local renderer — the cloud /control IS the UI.
@@ -32,7 +32,7 @@ import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 // Env overrides:
 //   - FLEETCROWN_WEB_URL=https://...  → load a preview/dev URL instead of
 //                                       the production cloud (for testing).
-//   - FLEETCROWN_WEB_URL unset/cloud  → fleetcrown.vercel.app (default).
+//   - FLEETCROWN_WEB_URL unset/cloud  → fleetcrown.orangecat.ch (default).
 //
 // On load failure (Vercel down, no wifi, OAuth callback to unreachable
 // host) the user sees a branded offline page with a retry button, NOT
@@ -317,7 +317,7 @@ function buildAppMenu(): Menu {
       defaultId: 1,
       cancelId: 1,
     }).then(({ response }) => {
-      if (response === 0) void shell.openExternal('https://fleetcrown.vercel.app')
+      if (response === 0) void shell.openExternal('https://fleetcrown.orangecat.ch')
     })
   }
 
@@ -403,14 +403,14 @@ function buildAppMenu(): Menu {
     {
       label: 'Help',
       submenu: [
-        { label: 'FleetCrown Website', click: openExternal('https://fleetcrown.vercel.app') },
-        { label: 'Quickstart Docs', click: openExternal('https://fleetcrown.vercel.app/docs/quickstart') },
+        { label: 'FleetCrown Website', click: openExternal('https://fleetcrown.orangecat.ch') },
+        { label: 'Quickstart Docs', click: openExternal('https://fleetcrown.orangecat.ch/docs/quickstart') },
         { label: 'Report an Issue', click: openExternal('https://github.com/maonakamoto/fleetcrown/issues/new') },
         { label: 'View Releases', click: openExternal('https://github.com/maonakamoto/fleetcrown-releases/releases') },
         { type: 'separator' },
-        { label: 'Privacy', click: openExternal('https://fleetcrown.vercel.app/privacy') },
-        { label: 'Terms', click: openExternal('https://fleetcrown.vercel.app/terms') },
-        { label: 'License', click: openExternal('https://fleetcrown.vercel.app/license') },
+        { label: 'Privacy', click: openExternal('https://fleetcrown.orangecat.ch/privacy') },
+        { label: 'Terms', click: openExternal('https://fleetcrown.orangecat.ch/terms') },
+        { label: 'License', click: openExternal('https://fleetcrown.orangecat.ch/license') },
         ...(isMac ? [] : [
           { type: 'separator' as const },
           { label: 'About Fleet Runner', click: showAbout },
@@ -829,7 +829,7 @@ app.whenReady().then(async () => {
     applicationName: 'Fleet Runner',
     applicationVersion: app.getVersion(),
     copyright: '© 2026 Mao Nakamoto · FleetCrown',
-    website: 'https://fleetcrown.vercel.app',
+    website: 'https://fleetcrown.orangecat.ch',
     credits: 'Bundled Zellij, deep-link auth, auto-update.\nPart of the FleetCrown agent-fleet platform.',
   })
 
@@ -889,7 +889,7 @@ app.whenReady().then(async () => {
 
   // Wire the command poller — the cable that closes the web → local Zellij
   // loop. Status updates flow to the tray tooltip and to any renderer window
-  // that wants to surface "connected to fleetcrown.vercel.app" in the UI.
+  // that wants to surface "connected to fleetcrown.orangecat.ch" in the UI.
   onPollerStatus((status) => {
     if (tray) tray.setToolTip(formatTrayTooltip(status))
     // Push to all renderer windows — web-shell mode means the in-window

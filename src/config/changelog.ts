@@ -39,7 +39,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Switch-agent commands now scan /proc and quit every running agent in the project directory before launching the replacement.",
     ],
     breaking: [],
-    notes: "Mostly a web UI + API release — deploys immediately on fleetcrown.vercel.app. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
+    notes: "Mostly a web UI + API release — deploys immediately on fleetcrown.orangecat.ch. Fleet Runner v0.8.0 picks up the improved remote switch_agent poller when you next update the desktop app; until then, cloud-queued switches still work on the existing runner.",
   },
   {
     version: "0.7.9",
@@ -142,7 +142,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
     date: "2026-06-06T12:51:05Z",
     highlights: [
       "Reverted the v0.7.0 'bundled-renderer-as-primary' boot flip.",
-      "Fleet Runner opens fleetcrown.vercel.app inside Electron again — the same UI you know from the browser.",
+      "Fleet Runner opens fleetcrown.orangecat.ch inside Electron again — the same UI you know from the browser.",
       "Updated download CTA on the marketing site to point at the latest release dynamically.",
     ],
     breaking: [],

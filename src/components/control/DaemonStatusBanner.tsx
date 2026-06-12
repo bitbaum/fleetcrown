@@ -217,7 +217,7 @@ export function DaemonStatusBanner({
                   and paste this in a terminal:
                 </p>
                 <pre className="ui-card-shell p-2 overflow-x-auto text-xs">
-                  <code>curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_xxxxxxxx</code>
+                  <code>curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_xxxxxxxx</code>
                 </pre>
               </div>
             </details>

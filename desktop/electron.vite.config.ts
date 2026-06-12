@@ -4,7 +4,7 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 // v0.7.4 — bundled renderer removed.
 //
 // Pre-0.7.4 the desktop app shipped TWO UI implementations:
-//   1. The Next.js app at fleetcrown.vercel.app (the real UI, all features)
+//   1. The Next.js app at fleetcrown.orangecat.ch (the real UI, all features)
 //   2. A 407-line bundled renderer in src/renderer/ that read agent-projects.conf
 //      and never reached feature parity with /control
 //

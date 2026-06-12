@@ -5,9 +5,9 @@
   "main": "./out/main/index.js",
   "author": {
     "name": "FleetCrown",
-    "email": "team@fleetcrown.vercel.app"
+    "email": "team@fleetcrown.orangecat.ch"
   },
-  "homepage": "https://fleetcrown.vercel.app",
+  "homepage": "https://fleetcrown.orangecat.ch",
   "scripts": {
     "generate:icons": "node scripts/generate-tray-icon.mjs",
     "bundle:zellij": "node scripts/download-zellij.mjs",

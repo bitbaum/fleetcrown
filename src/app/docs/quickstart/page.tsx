@@ -22,7 +22,7 @@ export default function QuickstartPage() {
           </p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Web</strong> (<Link href="/" className="ui-public-link">fleetcrown.vercel.app</Link>) — works in any browser. Best for monitoring fleets, reviewing handoffs, and dispatching when you&apos;re not at the agent&apos;s machine.
+              <strong>Web</strong> (<Link href="/" className="ui-public-link">fleetcrown.orangecat.ch</Link>) — works in any browser. Best for monitoring fleets, reviewing handoffs, and dispatching when you&apos;re not at the agent&apos;s machine.
             </li>
             <li>
               <strong>Desktop</strong> (<Link href="/download" className="ui-public-link">Fleet Runner</Link>) — required if you want agents to actually run on this machine. Same UI as the web app, plus the local runtime that drives terminals and the OS notifications when runs finish.

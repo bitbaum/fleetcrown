@@ -220,7 +220,7 @@ export const ROADMAP = {
         "Subscriptions as assets — FleetCrown's Money tab knows what the operator pays for; OrangeCat coordinates funding, lending, and shared-asset ownership so dragging subscriptions can be refinanced or sublet without leaving the platform.",
         "FleetCrown pricing on Lightning rails — FleetCrown's own revenue settles through OrangeCat. No Stripe in the path. Pseudonymous customers welcome.",
       ],
-      note: "The pieces exist in production today on both platforms (fleetcrown.vercel.app and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
+      note: "The pieces exist in production today on both platforms (fleetcrown.orangecat.ch and orangecat.ch). FleetCrown is a customer of OrangeCat (via typed stakeholder 'customer' edge in the shared graph). See the live projects 'OrangeCat' and 'FleetCrown' on orangecat.ch under Mao Nakamoto. The integration is engineering, not invention. See the Thoughts essay \"The Two Halves of the Individual Singularity\" for the full strategic argument.",
     },
     {
       marker: "ROBOTICS",
@@ -475,7 +475,7 @@ export const DESKTOP_DOWNLOAD = {
       body:
         "For CI runners, headless servers, or operators who prefer a pure CLI flow. Fleet Runner is the recommended path; the daemon remains available during the transition.",
       command:
-        "curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init",
+        "curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init",
     },
   },
 
@@ -547,7 +547,7 @@ export const ORANGECAT_INTEGRATION = {
   fleetCrown: {
     title: "FleetCrown",
     projectUrl: "https://www.orangecat.ch/projects/8130c927-114a-45b7-8cc2-99efd5224025",
-    site: "https://fleetcrown.vercel.app",
+    site: "https://fleetcrown.orangecat.ch",
   },
   wallet: {
     btc: "bc1q3hh4yklcmwtpnqmxyksw36yedg7zyfy6tzzqwz",

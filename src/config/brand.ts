@@ -36,7 +36,7 @@
 
 export const APP_NAME        = "FleetCrown";
 export const APP_SLUG        = "fleetcrown";
-export const APP_DOMAIN      = "fleetcrown.vercel.app";
+export const APP_DOMAIN      = "fleetcrown.orangecat.ch";
 export const APP_KICKER      = "Personal Systems";
 export const APP_DESCRIPTION = "Command your agents, projects, and personal systems from one workspace.";
 
