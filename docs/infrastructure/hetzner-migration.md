@@ -146,3 +146,12 @@ first resolvable request.
 3. Delete the Vercel projects / let the blocked team rot. fleetcrown.vercel.app
    etc. are gone regardless (Vercel-owned names).
 4. Final dumps live in /opt/backups/initial/ + /opt/backups/supabase/ — keep.
+
+## Push-to-deploy (added 2026-06-12, evening)
+
+`git push` on main deploys — the Vercel UX, self-hosted. A pre-push hook
+(installed by `scripts/hetzner/install-push-deploy.sh`, idempotent, all
+manifest repos + fleetcrown) backgrounds the standalone build + rsync +
+restart; logs in /tmp/push-deploy-<app>.log. The deploy builds the working
+tree being pushed from. Husky repos get the block in .husky/pre-push,
+plain repos in .git/hooks/pre-push.
