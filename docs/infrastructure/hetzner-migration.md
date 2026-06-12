@@ -1,61 +1,148 @@
-# Exit Vercel — everything on the Hetzner box (2026-06-12)
+# Exit Vercel/Supabase/Neon — everything on the Hetzner box
 
-Trigger: Vercel team `orangecat` was blocked for fair-use overage. All hosted
-prods (fleetcrown.vercel.app, www.orangecat.ch, revampit.vercel.app) served
-402 DEPLOYMENT_DISABLED and `vercel --prod` was rejected. Decision: self-host
-all three Next.js apps on the existing `bitbaum` box.
+2026-06-12: full exit completed. Trigger was the Vercel team block (all prods
+402 DEPLOYMENT_DISABLED); decision extended to leaving hosted Supabase and
+Neon entirely. Every real app and every database now lives on the `bitbaum`
+box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
+(see Decommission below).
 
-## Box layout (bitbaum · 167.233.22.31 · Ubuntu 26.04 · 4 GB)
+## Box layout (bitbaum · 167.233.22.31 · CX23 2vCPU/4GB + 4GB swap)
 
-| Service              | Port | Path                  | Domain                     |
-|----------------------|------|-----------------------|----------------------------|
-| fleetcrown-bridge    | 4001 | /opt/fleetcrown/bridge| bridge.orangecat.ch        |
-| fleetcrown-app       | 4002 | /opt/fleetcrown/app   | fleetcrown.orangecat.ch    |
-| orangecat-app        | 4003 | /opt/orangecat/app    | orangecat.ch, www          |
-| revampit-app         | 4004 | /opt/revampit/app     | revampit.orangecat.ch      |
-| Postgres 17          | 5432 | —                     | (fleetcrown DB lives here) |
-| Caddy (auto-TLS)     | 443  | /etc/caddy/Caddyfile  | all of the above           |
+| Service                  | Port | Domain                          | DB                    |
+|--------------------------|------|---------------------------------|-----------------------|
+| fleetcrown-bridge        | 4001 | bridge.orangecat.ch             | —                     |
+| fleetcrown-app           | 4002 | fleetcrown.orangecat.ch         | fleetcrown (PG17)     |
+| orangecat-app            | 4003 | orangecat.ch, www               | self-hosted Supabase  |
+| revampit-app             | 4004 | revampit.orangecat.ch           | revampit (PG17)       |
+| kivvi-app                | 4005 | kivvi.orangecat.ch              | kivvi                 |
+| datacat-web-app          | 4006 | datacat.orangecat.ch            | datacat               |
+| aoz-wohnen-app           | 4008 | aoz-wohnen.orangecat.ch         | aoz_wohnen            |
+| surf-your-life-app       | 4009 | surf-your-life.orangecat.ch     | surf_your_life        |
+| swiss-longevity-hub-app  | 4010 | slh.orangecat.ch                | swiss_longevity_hub   |
+| vitareba-app             | 4011 | vitareba.orangecat.ch           | vitareba              |
+| revamp-info-app          | 4012 | revamp-info.orangecat.ch        | revampit (shared)     |
+| petvity-app              | 4013 | petvity.orangecat.ch            | petvity               |
+| botsmann-app             | 4014 | botsmann.orangecat.ch (*)       | self-hosted Supabase  |
+| printcraft-app           | 4015 | printcraft.orangecat.ch         | Supabase, `printcraft` schema |
+| sbb-lost-found-app       | 4016 | sbb.orangecat.ch                | — (demo frontend)     |
+| reparaturbonus-zh-app    | 4017 | reparaturbonus.orangecat.ch     | reparaturbonus        |
+| Supabase stack (docker)  | 8000 | supabase.orangecat.ch           | own PG15 container    |
+| Postgres 17 (host)       | 5432 | —                               | all app DBs           |
+| redis-server             | 6379 | —                               | (idle, installed for datacat backend if ever needed) |
+| Caddy (auto-TLS)         | 443  | all of the above                |                       |
 
-Each app dir holds a Next standalone build + `.env` (chmod 600, box-owned,
-never overwritten by deploys) + `launch.sh`. systemd units run as `ubuntu`,
-Restart=on-failure.
+(*) botsmann.com has NO nameservers (domain lapsed?) — restore the domain at
+the registrar, then add `botsmann.com, www.botsmann.com` back to apps.conf
+and an A record wherever its DNS lands.
 
-## Deploys
+## SSOT tooling — scripts/hetzner/
 
-- **FleetCrown**: `bash scripts/deploy-hetzner.sh` (build + rsync + restart).
-- **OrangeCat**: build with `SELF_HOST=1` (enables `output: "standalone"` —
-  added 2026-06-12, Vercel-incompatible hence opt-in) and env from
-  `.env.selfhost.local` (filtered `vercel env pull`, gitignored), stage
-  `.next/static`+`public`+`content` into the standalone dir, rsync to
-  `/opt/orangecat/app/`, restart `orangecat-app`.
-- **Revampit**: same, already had standalone output. Env retargeted from
-  revampit.vercel.app → revampit.orangecat.ch during the cutover.
+- `apps.conf` — the manifest (name|port|domains|repo|app_dir|db). Single
+  source of truth for ports, domains, repos, DBs.
+- `sync-infra.sh [app…]` — generates launch.sh + systemd unit + Caddy vhost
+  (in /etc/caddy/apps.d/*.caddy) from the manifest. Idempotent.
+- `gen-env.sh <app>` — builds `<repo>/<app_dir>/.env.selfhost.local` from a
+  fresh `vercel env pull` (fallback ~/dev/vercel-env-backup), rewrites DB URL
+  to the box role, points AUTH_URL/site URLs at the new domain, adds
+  AUTH_TRUST_HOST.
+- `deploy.sh <app> [--env]` — builds (standalone, env sourced, build-time DB
+  over an SSH tunnel on 127.0.0.1:15432), stages static+public, rsyncs to
+  /opt/<app>/app, restarts, health-checks. `--env` force-uploads the env file
+  (box .env is otherwise never overwritten).
+- `verify.sh` — fleet-wide systemd + local + public-HTTPS sweep.
 
-DB story: FleetCrown's Postgres is local on the box (unchanged). OrangeCat
-uses hosted Supabase, revampit uses hosted Neon — only the app servers moved.
+The four pre-existing services (bridge, fleetcrown, orangecat, revampit) keep
+their handcrafted units and Caddyfile blocks; only orangecat's deploy remains
+manual (build with SELF_HOST=1 + env sourced, stage static/public/content,
+rsync, restart — same as deploy.sh does for manifest apps).
 
-## DNS (Infomaniak — manual, see cutover checklist)
+## Databases
 
-```
-fleetcrown  A  167.233.22.31   (new)
-revampit    A  167.233.22.31   (new)
-@           A  167.233.22.31   (was Vercel)
-www         A  167.233.22.31   (was Vercel — or CNAME to @)
-```
+- Host Postgres 17: one role per app (passwords in `~/.db-credentials` on the
+  box, chmod 600). pg_hba is per-role allowlisted — new app rules MUST be
+  inserted BEFORE the `reject` block (first match wins).
+- pgvector installed (revampit + surf_your_life use it).
+- revampit and revamp-info share the `revampit` DB (was one shared Neon DB).
+- Nightly dumps: /etc/cron.daily/pg-backup → /opt/backups/nightly/<date>/,
+  14-day retention. Initial migration dumps in /opt/backups/initial/.
 
-Caddy vhosts are already configured; certs issue automatically on first
-resolvable request (ACME needs the DNS records to exist).
+## Self-hosted Supabase (orangecat + botsmann + printcraft)
 
-## Loose ends after cutover
+- /opt/supabase/docker — upstream supabase/docker compose, pinned PG 15.8.
+  Running services: db, kong (127.0.0.1:8000), auth, rest, storage, imgproxy,
+  meta, studio. NOT running: realtime (orangecat polls; start it after a box
+  upgrade if push updates are wanted), functions, supavisor, logs stack.
+- Secrets in /opt/supabase/docker/.env. Fresh JWT secret (hosted project's
+  secret was never recoverable) → sessions died at cutover, bcrypt password
+  hashes survived. ANON/SERVICE keys are HS256 JWTs minted from the secret.
+- IMPORTANT: apps must use the **JWT** anon/service keys, not the
+  `sb_publishable_*`/`sb_secret_*` strings — Kong accepts both as apikey, but
+  PostgREST needs a real JWT in Authorization. App envs set *_PUBLISHABLE_KEY
+  to the anon JWT for compatibility with code that prefers it.
+- GoTrue: ENABLE_EMAIL_AUTOCONFIRM=true because no SMTP is configured yet.
+  Password-reset emails will NOT send until SMTP_* is set in the stack .env
+  (then disable autoconfirm).
+- printcraft lives in its own `printcraft` schema (its table names collide
+  with orangecat's). PGRST_DB_SCHEMAS includes it; its supabase-js clients
+  pass `db: { schema: 'printcraft' }`. Storage buckets are shared by bucket id
+  (orangecat: avatars/banners/documents/project-media/proofs; printcraft:
+  project-files).
+- All 25 orangecat + 10 printcraft storage objects migrated; stored URLs in
+  the DB rewritten from ohkueislstxomdjavyhs.supabase.co →
+  supabase.orangecat.ch.
 
-- GitHub OAuth app (client `Ov23liLqwon6cpjr94Fa`, shared box/Vercel) callback
-  must change to `https://fleetcrown.orangecat.ch/api/auth/callback/github`.
-  Email/password sign-in is unaffected.
-- Fleet Runner ≤ v0.6 loads the dead vercel.app domain — code now points to
-  fleetcrown.orangecat.ch; needs a v0.7 tag-and-mirror release.
-- revampit env carried a tunnel URL for MEDUSA_BACKEND_URL
-  (trycloudflare.com — ephemeral, was already dead on Vercel too).
-- Once stable: delete the Vercel projects (fleetcrown, orangecat, revampit)
-  or let the blocked team rot; nothing references *.vercel.app anymore.
-- fleetcrown.vercel.app and revampit.vercel.app are Vercel-owned names — they
-  are simply gone; no redirect is possible without Vercel.
+## App-level changes made for self-hosting
+
+- Drizzle apps swapped `@neondatabase/serverless`/neon-http → `pg` +
+  `drizzle-orm/node-postgres` (+ `serverExternalPackages: ["pg"]`).
+- aoz-housing: Prisma Neon adapter removed (plain PrismaClient).
+- kivvi already had a postgres-js fallback; `DB_SSL=disable` env opts out of
+  its hardcoded prod-SSL.
+- surf-your-life: `lib/domain/auth.ts` split (db-using verifyEmailToken →
+  `lib/domain/verify-email.ts`) so client components stop pulling pg.
+- swiss-longevity-hub: Auth.js split-config (`auth.config.ts` edge-safe for
+  middleware), Suspense around ResetPasswordForm, lazy Resend client.
+- vitareba/petvity: `@vercel/blob` → `lib/storage.ts` local-disk helper
+  (UPLOADS_DIR=/opt/<app>/uploads, Caddy serves /uploads/*). Vercel Blob was
+  never actually configured in prod — there were zero blobs to migrate.
+- revampit: already had a local-fs upload fallback; public/uploads is now a
+  symlink to /opt/revampit/uploads so deploys can't wipe it.
+- orangecat: Supabase URL validator relaxed (any https), new image
+  remotePattern for supabase.orangecat.ch, env carries PORT/HOSTNAME/NODE_ENV
+  (don't drop them when regenerating!).
+- botsmann: CSP connect-src includes supabase.orangecat.ch.
+
+## DNS (Infomaniak, orangecat.ch zone)
+
+A records → 167.233.22.31: @, www (CNAME), bridge, fleetcrown, revampit,
+supabase, kivvi, datacat, aoz-wohnen, surf-your-life, slh, vitareba,
+revamp-info, petvity, printcraft, sbb, reparaturbonus. Caddy issues certs on
+first resolvable request.
+
+## Known gaps / loose ends
+
+- **formular-erfassung**: Vercel project exists but no local repo and no
+  linked GitHub repo — source location unknown, not migrated.
+- **botsmann.com** domain has no NS records (lapsed?). App serves on
+  botsmann.orangecat.ch meanwhile. botsmann's MongoDB Atlas dependency is
+  retired per owner — Mongo-backed features are dead code.
+- **sbb-lost-found**: only the demo frontend is deployed (its backend
+  services were never deployed anywhere, incl. on Vercel).
+- **datacat**: deployed as full-stack Next app; the express `backend/` dir is
+  local-dev legacy.
+- **SMTP**: GoTrue + Auth.js reset-mail flows need an SMTP/Resend decision.
+- Ops scripts in revamp-info (audit-themes, set-confidence) still import the
+  Neon driver — convert to pg before running them again.
+- Box is CX23 (4GB); CX43 (16GB, 12.96€) was sold out at Falkenstein during
+  the migration — rescale when in stock ("Nur CPU und RAM" so downgrades stay
+  possible). Hetzner automatic backups should also be enabled (console →
+  Backups → Aktivieren).
+
+## Decommission (after 2026-06-26 if stable)
+
+1. Delete Neon projects (ep-wild-firefly, ep-holy-truth, ep-restless-dream,
+   ep-young-meadow, ep-frosty-mode).
+2. Delete/pause Supabase projects ohkueislstxomdjavyhs + ckpynkpsfnuqndplaapc.
+3. Delete the Vercel projects / let the blocked team rot. fleetcrown.vercel.app
+   etc. are gone regardless (Vercel-owned names).
+4. Final dumps live in /opt/backups/initial/ + /opt/backups/supabase/ — keep.
