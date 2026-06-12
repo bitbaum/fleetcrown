@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check, Activity } from "lucide-react";
+import Link from "next/link";
+import { Copy, Check, Activity, RotateCcw } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { ActivityItem } from "@/db/queries/prompt-history";
@@ -10,9 +11,15 @@ import { buildProjectActivityLedger } from "./project-activity-ledger";
 export function ProjectActivitySection({
   injections,
   git,
+  projectTab,
+  onReusePrompt,
 }: {
   injections: ActivityItem[];
   git: ProjectState["git"];
+  /** Project key for the full-history deep link into /activity. */
+  projectTab?: string;
+  /** Puts a past prompt back into the card's input for editing/re-dispatch. */
+  onReusePrompt?: (text: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -45,6 +52,15 @@ export function ProjectActivitySection({
         {(git?.todayCount ?? 0) > 0 && <span className="text-status-positive/80">+{git?.todayCount} commits</span>}
         <span className="ml-auto">{open ? "▴" : "▾"}</span>
       </button>
+      {open && projectTab && (
+        <Link
+          href={`/activity?project=${encodeURIComponent(projectTab)}`}
+          className="mt-2 inline-block ui-link-muted text-xs"
+          title="Full unified history — every prompt, run outcome, and digest for this project"
+        >
+          Full history →
+        </Link>
+      )}
       {open && (
         <div className="mt-3 space-y-4">
           {promptCount > 0 && (
@@ -77,6 +93,15 @@ export function ProjectActivitySection({
                       >
                         {preview}
                       </button>
+                      {canCopy && onReusePrompt && (
+                        <button
+                          onClick={() => onReusePrompt(fullText)}
+                          className="ui-icon-btn shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                          title="Reuse — put this prompt back in the input to edit and send again"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </button>
+                      )}
                       {canCopy && (
                         <button
                           onClick={() => copyPrompt(event.id, fullText)}

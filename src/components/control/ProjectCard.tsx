@@ -367,7 +367,12 @@ export function ProjectCard({
             automationStatusLabel={automationStatusLabel}
             queueBlockedReason={queueBlockedReason}
           />
-          <ProjectActivitySection injections={project.recentInjections} git={project.git} />
+          <ProjectActivitySection
+            injections={project.recentInjections}
+            git={project.git}
+            projectTab={project.tab}
+            onReusePrompt={setCustom}
+          />
         </>
       )}
     </div>

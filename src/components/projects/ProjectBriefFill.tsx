@@ -7,8 +7,9 @@
 // editors write to, so a wrong guess is one click from fixable.
 
 import { useState } from "react";
-import { GitBranch, Loader2, Sparkles } from "lucide-react";
+import { GitBranch, Loader2, Mic, Sparkles, Square } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
+import { useVoiceInput } from "@/hooks/use-voice-input";
 
 type AppliedFields = Record<string, string>;
 
@@ -27,6 +28,11 @@ export function ProjectBriefFill({
   const [busy, setBusy] = useState<"brief" | "enrich" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [appliedKeys, setAppliedKeys] = useState<string[] | null>(null);
+  const voice = useVoiceInput({
+    // Speaking is the fastest "no forms" path — append so users can mix
+    // dictation with typed/pasted notes before one AI fill pass.
+    onTranscript: (t) => setText((prev) => (prev ? `${prev.trimEnd()} ${t}` : t)),
+  });
 
   async function run(kind: "brief" | "enrich") {
     setBusy(kind);
@@ -100,10 +106,28 @@ export function ProjectBriefFill({
               {busy === "brief" ? <Loader2 className="ui-spinner-xs" /> : <Sparkles className="h-3.5 w-3.5" />}
               Fill profile
             </button>
-            <button onClick={() => { setOpen(false); setError(null); }} className="ui-btn-text-cancel">
+            {voice.isSupported && (
+              <button
+                onClick={() => (voice.status === "recording" ? voice.stop() : voice.start())}
+                disabled={busy !== null || voice.status === "transcribing"}
+                className="ui-btn-chip gap-1.5 px-3 py-1.5 text-xs"
+                title={voice.status === "recording" ? "Stop recording" : "Dictate — speak what this project should be"}
+              >
+                {voice.status === "transcribing" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : voice.status === "recording" ? (
+                  <Square className="h-3.5 w-3.5 text-status-negative" />
+                ) : (
+                  <Mic className="h-3.5 w-3.5 text-accent-text" />
+                )}
+                {voice.status === "recording" ? "Stop" : voice.status === "transcribing" ? "Transcribing…" : "Speak"}
+              </button>
+            )}
+            <button onClick={() => { setOpen(false); setError(null); voice.cancel(); }} className="ui-btn-text-cancel">
               Cancel
             </button>
           </div>
+          {voice.error && <p className="ui-error-xs">{voice.error}</p>}
         </div>
       )}
 
