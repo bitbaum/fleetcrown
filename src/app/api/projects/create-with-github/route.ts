@@ -14,10 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
 import { getSessionUserId } from "@/lib/session";
-import { db } from "@/db";
-import { accounts } from "@/db/schema";
+import { getGithubToken } from "@/lib/github-token";
 import { createProject } from "@/db/queries/projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templates";
@@ -127,14 +125,6 @@ async function seedTemplate(
     body: JSON.stringify({ sha: newCommitSha }),
   });
   return refRes.ok;
-}
-
-async function getGithubToken(userId: string): Promise<string | null> {
-  const row = await db.query.accounts.findFirst({
-    where: and(eq(accounts.userId, userId), eq(accounts.provider, "github")),
-    columns: { access_token: true },
-  });
-  return row?.access_token ?? null;
 }
 
 export async function POST(req: NextRequest) {

@@ -95,6 +95,21 @@ export async function patchProject(userId: string, id: string, data: PatchProjec
   return updated ?? null;
 }
 
+/** Minimal identity lookup for routes that only need to verify ownership and
+ *  grab the name/gitUrl (AI brief + repo enrichment). Null when the entity
+ *  isn't the user's project. */
+export async function getProjectCore(userId: string, id: string) {
+  const row = await db.query.entities.findFirst({
+    where: and(
+      eq(entities.id, id),
+      eq(entities.userId, userId),
+      eq(entities.type, ENTITY_TYPE.PROJECT),
+    ),
+    columns: { id: true, name: true, gitUrl: true },
+  });
+  return row ?? null;
+}
+
 /**
  * Resolve a project's autopilot override by projectKey (the slug daemons and
  * dispatch routes use). Returns null when there's no override OR when the

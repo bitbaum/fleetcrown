@@ -6,7 +6,9 @@ import type { ProjectData } from "./project-detail-types";
 import {
   ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, CHANNEL_CONFIG,
   SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
+  getProjectLinks,
 } from "./project-detail-types";
+import { ProjectBriefFill } from "./ProjectBriefFill";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, ProjectHistorySection, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
@@ -130,6 +132,16 @@ export function OverviewTab({
 
   return (
     <div className="space-y-5">
+      {/* AI intake first: free-form description (or the repo README) fills the
+          profile — the attribute form below stays as the manual fallback. */}
+      {!data.readonly && (
+        <ProjectBriefFill
+          projectId={projectId}
+          hasRepo={getProjectLinks(attrs, data.gitUrl).repo !== null}
+          onReload={onReload}
+        />
+      )}
+
       {ISSUE_ATTRS.some((k) => attrs[k]) && (
         <div className="space-y-2">
           {HEALTH_SIGNAL_CONFIG.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, cardLabel, cardBorder, cardBg, cardText, cardBody }) => (

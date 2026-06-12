@@ -12,22 +12,12 @@ import { z } from "zod";
 import { getSessionUserId } from "@/lib/session";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { createProject } from "@/db/queries/projects";
-import { db } from "@/db";
-import { accounts } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { getGithubToken } from "@/lib/github-token";
 import type { GitHubRepo } from "@/app/api/github/repos/route";
 
 const BulkBody = z.object({
   repoIds: z.array(z.number().int().positive()).min(1).max(100),
 });
-
-async function getGithubToken(userId: string): Promise<string | null> {
-  const row = await db.query.accounts.findFirst({
-    where: and(eq(accounts.userId, userId), eq(accounts.provider, "github")),
-    columns: { access_token: true },
-  });
-  return row?.access_token ?? null;
-}
 
 export async function POST(req: NextRequest) {
   const userId = await getSessionUserId();

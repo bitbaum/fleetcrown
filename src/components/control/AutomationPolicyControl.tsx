@@ -1,27 +1,20 @@
 "use client";
 
-import { Zap } from "lucide-react";
-import { AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
+import { Loader2, Pause, Play } from "lucide-react";
+import type { AutoInjectMode } from "@/config/beacon";
 import { cn } from "@/lib/utils";
 
 /**
- * Per-mode visual state. After the 2026-06-11 collapse autopilot is binary:
- * gray dot (off) or pulsing accent dot (on). Color + tooltip make the
- * dispatch behavior unmistakable at a glance — the user can tell from the
- * /control top bar whether the next status:ready is going to fire something
- * or sit idle.
+ * Fleet-wide play/pause. One button, media-player semantics: it shows the
+ * action a click will take. Paused fleet → accent "Build all" (play icon);
+ * building fleet → quiet "Pause all" with a pulsing dot as the live
+ * "development is happening" signal that the working counters below
+ * corroborate. Replaces the off/on <select> from the 2026-06-11 collapse —
+ * a binary mode deserves a single button, not a dropdown.
  */
-const MODE_STYLE: Record<AutoInjectMode, { dotClass: string; tooltip: string; pulse: boolean }> = {
-  off: {
-    dotClass: "bg-text-tertiary",
-    tooltip: "Autopilot off — FleetCrown dispatches nothing. You type every prompt in /control and click Send.",
-    pulse: false,
-  },
-  on: {
-    dotClass: "bg-accent-primary",
-    tooltip: "Autopilot on — when an agent finishes, FleetCrown fires the queue head (or the canned next_best template if the queue is empty). Status:working, blockers, and health gates still apply.",
-    pulse: true,
-  },
+const MODE_TOOLTIP: Record<AutoInjectMode, string> = {
+  off: "Fleet paused — FleetCrown dispatches nothing. Click to start building: agents drain each project's queue, then auto-fire next_best. Status:working, blockers, and health gates still apply.",
+  on: "Fleet building — when an agent finishes, FleetCrown fires the queue head (or next_best if the queue is empty). Click to pause all dispatching.",
 };
 
 export function AutomationPolicyControl({
@@ -33,27 +26,27 @@ export function AutomationPolicyControl({
   saving: boolean;
   onChange: (mode: AutoInjectMode) => void;
 }) {
-  const style = MODE_STYLE[mode];
+  const building = mode === "on";
   return (
-    <label
-      title={style.tooltip}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary"
+    <button
+      type="button"
+      aria-pressed={building}
+      title={MODE_TOOLTIP[mode]}
+      disabled={saving}
+      onClick={() => onChange(building ? "off" : "on")}
+      className={cn(building ? "ui-btn-secondary" : "ui-btn-primary", "gap-1.5 px-3 py-1.5 text-xs")}
     >
-      <Zap className="h-3.5 w-3.5 text-accent-text" aria-hidden="true" />
-      <span
-        aria-hidden="true"
-        className={cn("h-2 w-2 shrink-0 rounded-full", style.dotClass, style.pulse && "animate-pulse")}
-      />
-      <span className="hidden sm:inline">Autopilot</span>
-      <select
-        aria-label="Autopilot policy"
-        value={mode}
-        disabled={saving}
-        onChange={(event) => onChange(event.target.value as AutoInjectMode)}
-        className="bg-transparent font-medium text-text-primary outline-none disabled:opacity-60"
-      >
-        {AUTO_INJECT_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </label>
+      {saving ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+      ) : building ? (
+        <Pause className="h-3.5 w-3.5" aria-hidden="true" />
+      ) : (
+        <Play className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+      {building && (
+        <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary" />
+      )}
+      {building ? "Pause all" : "Build all"}
+    </button>
   );
 }

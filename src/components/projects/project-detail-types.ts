@@ -68,6 +68,7 @@ export type ProjectData = {
   name: string;
   type: string;
   description: string | null;
+  gitUrl: string | null;
   source: string | null;
   createdAt: string | null;
   readonly?: boolean;

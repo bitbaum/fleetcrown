@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
-import { db } from "@/db";
-import { accounts } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { getGithubToken } from "@/lib/github-token";
 
 export type GitHubRepo = {
   id: number;
@@ -16,14 +14,6 @@ export type GitHubRepo = {
   private: boolean;
   fork: boolean;
 };
-
-async function getGithubToken(userId: string): Promise<string | null> {
-  const row = await db.query.accounts.findFirst({
-    where: and(eq(accounts.userId, userId), eq(accounts.provider, "github")),
-    columns: { access_token: true },
-  });
-  return row?.access_token ?? null;
-}
 
 export async function GET() {
   const userId = await getSessionUserId();
