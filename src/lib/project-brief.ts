@@ -30,6 +30,16 @@ export const ExtractedProfileSchema = z.object({
   stack: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   status: z.string().trim().min(1).max(60).optional(),
   next_step: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  // Market lens — the "nerd out on your project" dimensions. Same storage
+  // (attributes table), so they're inline-editable like everything else.
+  problem: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  solution: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  current_alternatives: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  competitors: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  complements_substitutes: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  partnerships: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  potential_customers: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  expansion_ideas: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
 });
 
 export type ExtractedProfile = z.infer<typeof ExtractedProfileSchema>;
@@ -43,7 +53,16 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "stack": technologies used, comma-separated (max 200 chars)
 - "status": current state in 1-4 words, e.g. "Production", "MVP", "Idea" (max 40 chars)
 - "next_step": the owner's single most important next build/business action (max 300 chars) — never installation or usage instructions aimed at readers
-Omit any key the source text gives no basis for. NEVER invent facts that are not in the text. Write in the same language as the source text uses for prose (default English).`;
+- "problem": the concrete problem being solved, from the user's point of view (max 400 chars)
+- "solution": how this project solves that problem — the offered approach (max 400 chars)
+- "current_alternatives": how people solve this problem today without the project (max 400 chars)
+- "competitors": direct competitors, comma-separated, with a word on each if known (max 400 chars)
+- "complements_substitutes": products that complement it or could substitute for it (max 400 chars)
+- "partnerships": potential partnerships and synergies — including with the owner's other projects when the text mentions them (max 400 chars)
+- "potential_customers": customer segments worth pursuing beyond current ones (max 400 chars)
+- "expansion_ideas": plausible product expansions or adjacent offerings (max 400 chars)
+For the market-lens keys (problem … expansion_ideas) you may reason from the text plus common knowledge of the market, but stay concrete and grounded — no hype. For all other keys, NEVER invent facts that are not in the text.
+Omit any key you have no basis for. Write in the same language as the source text uses for prose (default English).`;
 
 /** Strip optional markdown fences and parse the model's JSON answer. */
 function parseModelJson(raw: string): unknown {
@@ -114,7 +133,11 @@ export async function applyProjectProfile(
     applied.description = profile.description;
   }
 
-  const attrKeys = ["mission", "vision", "customers", "stack", "status", "next_step"] as const;
+  const attrKeys = [
+    "mission", "vision", "customers", "stack", "status", "next_step",
+    "problem", "solution", "current_alternatives", "competitors",
+    "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
+  ] as const;
   for (const key of attrKeys) {
     const value = profile[key];
     if (!value) continue;

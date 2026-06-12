@@ -264,6 +264,18 @@ export function ProjectCard({
           currentOverride={project.autoInjectModeOverride}
           inheritedMode={automationMode}
         />
+        {/* What pressing play is FOR — the profile's next step, visible
+            without opening the profile. Play/pause means nothing if you
+            can't see what the fleet intends to do next. */}
+        {project.profile?.attrs?.["next_step"] && (
+          <p
+            className="mt-1.5 truncate text-xs text-text-tertiary"
+            title={project.profile.attrs["next_step"]}
+          >
+            <span className="font-medium text-text-secondary">Next:</span>{" "}
+            {project.profile.attrs["next_step"]}
+          </p>
+        )}
       </div>
 
       {profileOpen ? (

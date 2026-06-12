@@ -9,6 +9,7 @@ import {
   getProjectLinks,
 } from "./project-detail-types";
 import { ProjectBriefFill } from "./ProjectBriefFill";
+import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, ProjectHistorySection, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
@@ -158,6 +159,14 @@ export function OverviewTab({
       <NextStepSection
         attrs={attrs}
         projectId={projectId}
+        editable={!data.readonly}
+        onReload={onReload}
+      />
+
+      <BusinessPlanSection
+        attrs={attrs}
+        projectId={projectId}
+        projectName={data.name}
         editable={!data.readonly}
         onReload={onReload}
       />

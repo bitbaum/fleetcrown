@@ -80,6 +80,12 @@ export function DaemonStatusBanner({
     }
   }
 
+  // Progressive disclosure: the offline variant starts as a one-line status
+  // chip — "offline, commands queue" is all most visits need. The full
+  // recovery guidance expands on demand. The never-seen (setup) variant
+  // stays expanded: that's onboarding, not noise.
+  const [expanded, setExpanded] = useState(false);
+
   if (dismissed || (!daemonNeverSeen && !daemonOffline)) return null;
 
   const lastSeen = daemonLastPushedAt
@@ -89,6 +95,30 @@ export function DaemonStatusBanner({
   const refreshAfterAction = () => {
     onRefresh?.();
   };
+
+  if (!daemonNeverSeen && !expanded) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised/60 px-3 py-2 text-xs text-text-tertiary">
+        <WifiOff className="h-3.5 w-3.5 shrink-0 text-status-warning" />
+        <span className="min-w-0 truncate">
+          Local runtime offline{lastSeen ? ` · last seen ${lastSeen}` : ""} — commands queue until it reconnects.
+        </span>
+        <button
+          onClick={() => setExpanded(true)}
+          className="ml-auto shrink-0 text-accent hover:underline"
+        >
+          How to reconnect
+        </button>
+        <button
+          onClick={() => setDismissed(true)}
+          className="shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-primary"
+          aria-label="Dismiss"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="ui-callout-warning">

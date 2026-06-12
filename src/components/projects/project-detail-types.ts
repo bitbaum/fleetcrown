@@ -116,8 +116,15 @@ export type Tab = "overview" | "prompts" | "goals";
 export const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
 // Derived from HEALTH_SIGNAL_BASE — never list these manually again
 export const ISSUE_ATTRS = HEALTH_SIGNAL_BASE.map((s) => s.key);
+// Business-plan keys rendered by BusinessPlanSection (kept here, not imported
+// from the component, to avoid a config→component dependency)
+export const BUSINESS_ATTRS = [
+  "business_plan", "business_actions", "business_plan_updated_at",
+  "problem", "solution", "current_alternatives", "competitors",
+  "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
+];
 // Keys with dedicated rendering (not shown in generic grid)
-export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, "status", "maturity", "description", "owner", "next_step"];
+export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, ...BUSINESS_ATTRS, "status", "maturity", "description", "owner", "next_step"];
 
 /**
  * Resolve project quick-link attrs into ready-to-use href strings.
