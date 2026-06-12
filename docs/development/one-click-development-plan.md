@@ -6,6 +6,16 @@ Project profiles must hold the full static context (what the project should beco
 filled by AI from free-form text/voice, never by forms. Dynamic context (what happened,
 what's next) must be one coherent story, not five overlapping surfaces.
 
+> Status 2026-06-12: Phases 1, 2 and 4a DONE (commit 8db6028 + follow-up).
+> 2d ran via scripts/enrich-prod-profiles.ts against the Hetzner prod DB.
+> Phase 3 deliberately deferred — the explorer audit showed /activity already
+> consolidated /history + /digests; remaining overlap is naming, not
+> architecture. BLOCKER discovered during deploy: Vercel team `orangecat` is
+> blocked for fair-use overage — fleetcrown.vercel.app, orangecat.ch and
+> revampit.vercel.app all serve 402 DEPLOYMENT_DISABLED, and new deploys are
+> rejected. Only the account owner can resolve (pay/appeal) or we accelerate
+> the Hetzner migration.
+
 ## Phase 1 — Play/Pause UX (the wow)
 State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.auto_inject_mode_override`.
 

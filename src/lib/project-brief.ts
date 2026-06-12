@@ -42,7 +42,7 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "customers": who it serves / who pays (max 300 chars)
 - "stack": technologies used, comma-separated (max 200 chars)
 - "status": current state in 1-4 words, e.g. "Production", "MVP", "Idea" (max 40 chars)
-- "next_step": the single most important next action (max 300 chars)
+- "next_step": the owner's single most important next build/business action (max 300 chars) — never installation or usage instructions aimed at readers
 Omit any key the source text gives no basis for. NEVER invent facts that are not in the text. Write in the same language as the source text uses for prose (default English).`;
 
 /** Strip optional markdown fences and parse the model's JSON answer. */
@@ -72,12 +72,24 @@ function clampFields(value: unknown): unknown {
  */
 export async function extractProjectProfile(projectName: string, sourceText: string): Promise<ExtractedProfile> {
   const prompt = `Project name: ${projectName}\n\nSource text:\n${sourceText.slice(0, 12_000)}`;
-  const raw = await callGroqText(prompt, {
-    systemPrompt: SYSTEM_PROMPT,
-    maxTokens: 900,
-    temperature: 0.2,
-    timeoutMs: 25_000,
-  });
+  let raw = "";
+  // Groq free tier rate-limits in bursts; one bounded retry absorbs the
+  // common 429 without turning a user-facing request into a hang.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      raw = await callGroqText(prompt, {
+        systemPrompt: SYSTEM_PROMPT,
+        maxTokens: 900,
+        temperature: 0.2,
+        timeoutMs: 25_000,
+      });
+      break;
+    } catch (e) {
+      const is429 = e instanceof Error && e.message.includes("429");
+      if (!is429 || attempt >= 1) throw e;
+      await new Promise((r) => setTimeout(r, 20_000));
+    }
+  }
   const parsed = ExtractedProfileSchema.safeParse(clampFields(parseModelJson(raw)));
   if (!parsed.success) throw new Error(`model output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
   return parsed.data;
