@@ -22,6 +22,9 @@ config({ path: ".env.local" });
 config({ path: ".env.hetzner.local" });
 
 const APPLY = process.argv.includes("--apply");
+// Optional positional args narrow the run to specific project names
+// (e.g. retrying transient extraction failures).
+const ONLY = process.argv.slice(2).filter((a) => !a.startsWith("--")).map((a) => a.toLowerCase());
 const DEV_ROOT = join(homedir(), "dev");
 
 // entities.name (prod) → local repo dir under ~/dev. Identity-cased names
@@ -72,6 +75,7 @@ async function main() {
 
   let enriched = 0;
   for (const p of projects) {
+    if (ONLY.length && !ONLY.includes(p.name.toLowerCase())) continue;
     const dir = localDirFor(p.name);
     if (!dir) { console.log(`— ${p.name}: no local repo match, skipped`); continue; }
     const docs = repoDocs(dir);
