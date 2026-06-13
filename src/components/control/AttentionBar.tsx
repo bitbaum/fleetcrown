@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle, RotateCcw, X } from "lucide-react";
 import type { AttentionItem } from "./control-presenter";
 import type { FailedCommand } from "@/lib/control-types";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { timeAgo } from "@/lib/dates";
+import { postJson } from "@/lib/api/fetch";
 
 /** Group consecutive failures that match on (type, tab, error). Stops the
  *  "three identical error rows" stacking that happens when the user clicks
@@ -51,6 +52,23 @@ export function AttentionBar({
     setDismissed((prev) => {
       const next = new Set(prev).add(id);
       try { localStorage.setItem("control:dismissed-failures", JSON.stringify([...next])); } catch { /* */ }
+      return next;
+    });
+  };
+
+  // Re-enqueues the representative command verbatim; on success the whole
+  // group is dismissed (the retried command reports its own outcome).
+  const [retrying, setRetrying] = useState<Set<string>>(new Set());
+  const retry = async (group: FailureGroup) => {
+    const id = group.representative.id;
+    setRetrying((prev) => new Set(prev).add(id));
+    try {
+      const res = await postJson(`/api/control/commands/${id}/retry`, {});
+      if (res.ok) group.dismissIds.forEach(dismiss);
+    } catch { /* failure stays visible for another attempt */ }
+    setRetrying((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
       return next;
     });
   };
@@ -106,20 +124,31 @@ export function AttentionBar({
                 {` ${verb}: `}
                 <span className="text-text-secondary">{f.error}</span>
                 {group.count > 1 && (
-                  <span className="ml-2 inline-flex items-center rounded-full bg-status-negative/10 px-1.5 py-0.5 text-[10px] font-semibold text-status-negative">
+                  <span className="ml-2 inline-flex items-center rounded-full bg-status-negative/10 px-1.5 py-0.5 text-micro font-semibold text-status-negative">
                     ×{group.count}
                   </span>
                 )}
                 <span className="ml-2 text-text-muted">{timeAgo(new Date(f.executedAt).getTime())}</span>
               </span>
             </div>
-            <button
-              onClick={() => group.dismissIds.forEach(dismiss)}
-              className="shrink-0 text-text-muted hover:text-text-secondary transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => retry(group)}
+                disabled={retrying.has(f.id)}
+                className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
+                aria-label="Retry command"
+              >
+                <RotateCcw className="h-3 w-3" />
+                {retrying.has(f.id) ? "Retrying…" : "Retry"}
+              </button>
+              <button
+                onClick={() => group.dismissIds.forEach(dismiss)}
+                className="text-text-muted hover:text-text-secondary transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         );
       })}

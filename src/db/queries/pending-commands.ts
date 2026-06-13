@@ -44,6 +44,24 @@ export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchA
   return enqueuePendingCommand({ userId, type: "launch_agent", payload });
 }
 
+/** Re-enqueues a failed (or delivered-but-unverified) command verbatim.
+ *  Returns the new command id, or null when the source command doesn't
+ *  exist, belongs to another user, or never actually failed. */
+export async function retryFailedCommand(userId: string, id: string): Promise<string | null> {
+  const [row] = await db
+    .select({ type: pendingCommands.type, payload: pendingCommands.payload })
+    .from(pendingCommands)
+    .where(and(
+      eq(pendingCommands.id, id),
+      eq(pendingCommands.userId, userId),
+      isNotNull(pendingCommands.executedAt),
+      sql`((${pendingCommands.result}->>'ok') = 'false' OR (${pendingCommands.result}->>'verified') = 'false')`,
+    ))
+    .limit(1);
+  if (!row) return null;
+  return enqueuePendingCommand({ userId, type: row.type, payload: row.payload });
+}
+
 // Atomically claims the next unclaimed command for one or more already
 // authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
