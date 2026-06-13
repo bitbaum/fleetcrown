@@ -91,12 +91,12 @@ export type ProjectStateDefinition = {
 export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> = {
   offline: {
     label: "Offline",
-    description: "Daemon has not pushed state recently. We don't know what's actually happening on the agent host.",
+    description: "Fleet Runner has not pushed state recently. We don't know what's actually happening on your computer.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     counterCategory: "offline",
     problem: {
-      hint: "Daemon offline. Start Fleet Runner, or run `bash scripts/home-start.sh` in the project directory.",
+      hint: "Fleet Runner is not reporting. Launch it on your computer to restore live status.",
       ctaLabel: "Install Fleet Runner",
       ctaHref: "/download",
     },
@@ -234,34 +234,34 @@ export type DaemonStateDefinition = {
 export const DAEMON_STATE_DEFINITIONS: Record<DaemonStateKey, DaemonStateDefinition> = {
   setup_needed: {
     label: "Setup needed",
-    description: "No daemon push has ever reached the cloud. Install Fleet Runner (or the local bash daemon) to start pushing state.",
+    description: "This account has never received a state push from Fleet Runner. Install it to connect this computer.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: {
-      hint: "Install Fleet Runner desktop or run `bash scripts/home-start.sh` from your project directory.",
+      hint: "Install Fleet Runner desktop to connect this computer.",
       ctaLabel: "Install Fleet Runner",
       ctaHref: "/download",
     },
   },
   offline: {
-    label: "Daemon offline",
-    description: "Daemon was running but has stopped pushing state. The control surface is showing the last cached values and may be stale.",
+    label: "Fleet Runner offline",
+    description: "Fleet Runner stopped pushing state. The control surface is showing the last cached values and may be stale.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: {
-      hint: "Start the local daemon: `bash scripts/home-start.sh` (or relaunch Fleet Runner).",
+      hint: "Relaunch Fleet Runner on your computer.",
     },
   },
   state_unknown: {
     label: "Status uncertain",
-    description: "We have a connection but no usable state push has arrived yet. Wait a few seconds; if it persists, your local daemon may be crashing.",
+    description: "We have a connection but no usable state push has arrived yet. Wait a few seconds; if it persists, Fleet Runner may be crashing.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: null,
   },
   connected: {
     label: "Connected",
-    description: "Daemon pushed state within the freshness window — what you see is current.",
+    description: "Fleet Runner pushed state within the freshness window — what you see is current.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-positive",
     problem: null,

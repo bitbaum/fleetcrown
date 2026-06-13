@@ -208,7 +208,7 @@ export function useWhisperMic(onResult: (text: string) => void) {
             onResult(text);
             setError("");
           } else {
-            setError("Transcription took too long — daemon may be slow or offline. Try again, or upgrade for instant cloud transcription.");
+            setError("Transcription took too long — Fleet Runner may be slow or offline. Try again, or upgrade for instant cloud transcription.");
           }
           return;
         }

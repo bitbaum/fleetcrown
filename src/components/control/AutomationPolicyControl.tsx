@@ -13,8 +13,8 @@ import { cn } from "@/lib/utils";
  * a binary mode deserves a single button, not a dropdown.
  */
 const MODE_TOOLTIP: Record<AutoInjectMode, string> = {
-  off: "Fleet paused — FleetCrown dispatches nothing. Click to start building: agents drain each project's queue, then auto-fire next_best. Status:working, blockers, and health gates still apply.",
-  on: "Fleet building — when an agent finishes, FleetCrown fires the queue head (or next_best if the queue is empty). Click to pause all dispatching.",
+  off: "Fleet paused — FleetCrown dispatches nothing. Click to start building: agents work through each project's queue, then pick the next-best task automatically. Busy agents, blockers, and failing health checks still pause dispatch.",
+  on: "Fleet building — when an agent finishes, FleetCrown sends the next queued instruction (or picks the next-best task if the queue is empty). Click to pause all dispatching.",
 };
 
 export function AutomationPolicyControl({

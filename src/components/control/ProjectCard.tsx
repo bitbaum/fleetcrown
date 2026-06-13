@@ -150,7 +150,7 @@ export function ProjectCard({
         ? "Automatic continuation paused for this project."
         : queue.length > 0
           ? "Autopilot on: the next queued instruction will send when the agent waits."
-          : "Autopilot on: next_best will fire when the agent waits (queue is empty).";
+          : "Autopilot on: queue is empty, so FleetCrown picks the next-best task when the agent waits.";
 
   const {
     sending, justSent, custom, setCustom, customFocused, setCustomFocused,
@@ -341,7 +341,7 @@ export function ProjectCard({
             <div className="ui-card-section">
               <p className="text-sm text-text-secondary">
                 {daemonSyncStale
-                  ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or repair the daemon connection."
+                  ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or relaunch Fleet Runner."
                   : "Terminal tab is open, but FleetCrown is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
               </p>
             </div>

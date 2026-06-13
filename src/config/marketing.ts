@@ -36,7 +36,7 @@ export const LANDING_PRICING = [
       "Up to 5 active projects",
       "Fleet command center",
       "Agent injection & auto-continue",
-      "Remote access via daemon bridge",
+      "Remote access via Fleet Runner",
       "Goals, habits & life OS",
       "Prompt queue & voice input",
     ],

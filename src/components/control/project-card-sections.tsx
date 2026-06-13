@@ -146,7 +146,9 @@ export function ProjectCardHeader({
                 )}
                 <OutcomeStreak outcomes={project.recentOutcomes} />
               </div>
-              {evidenceLabel && (
+              {/* Suppress the subtitle when it would just repeat the badge
+                  with no timestamp to add ("Awaiting input / Awaiting input"). */}
+              {evidenceLabel && (evidenceLabel !== stateLabel || (evidenceAt && lastActiveLabel)) && (
                 <p
                   className="mt-0.5 text-xs text-text-muted"
                   title={evidenceKind === "historical" ? "Historical saved agent context; this is not live activity." : undefined}

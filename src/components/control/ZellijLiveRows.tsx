@@ -80,9 +80,13 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
                 </td>
                 <td className="py-0.5 max-w-md">
-                  <p className="line-clamp-1 text-xs text-text-secondary" title={row.activity}>
-                    {row.activity}
-                  </p>
+                  {row.activity ? (
+                    <p className="line-clamp-1 text-xs text-text-secondary" title={row.activity}>
+                      {row.activity}
+                    </p>
+                  ) : (
+                    <span className="text-xs text-text-muted">—</span>
+                  )}
                 </td>
                 <td className="py-0.5 text-right">
                   <div className="flex justify-end gap-0.5">
@@ -181,9 +185,11 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                 )}
               </div>
             </div>
-            <p className="mt-1 text-xs leading-snug text-text-secondary line-clamp-2">
-              {row.activity}
-            </p>
+            {row.activity && (
+              <p className="mt-1 text-xs leading-snug text-text-secondary line-clamp-2">
+                {row.activity}
+              </p>
+            )}
             {!row.registered && (
               <p className="mt-1 text-micro text-status-warning">Not linked to a tracked project</p>
             )}

@@ -23,3 +23,10 @@ fi
 
 echo "→ smoke: server detected at $BASE"
 npm run smoke
+# >>> fleetcrown push-deploy >>>
+# Pushing main deploys to the Hetzner box (background; see /tmp/push-deploy-fleetcrown.log)
+if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then
+  ( sleep 5 && env -u CI -u VERCEL bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh ) >> /tmp/push-deploy-fleetcrown.log 2>&1 & disown 2>/dev/null || true
+  echo "[push-deploy] fleetcrown: deploy started in background → /tmp/push-deploy-fleetcrown.log"
+fi
+# <<< fleetcrown push-deploy <<<

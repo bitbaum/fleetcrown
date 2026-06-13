@@ -113,10 +113,10 @@ export const ROADMAP = {
       summary: "Live in production. The system already coordinates real fleets across real projects.",
       bullets: [
         "Web command center coordinates fleets of AI agents across projects.",
-        "Per-project autonomy ladder: Manual → Queue → Beacon → Continuous → Mission.",
-        "Two local execution paths: the production daemon and the newer event-sourced home/ stack (Brain + Bridge + Worker).",
+        "One-button fleet autopilot: pause all, or build all — agents drain each project's queue, then pick the next-best task.",
+        "One local execution path: the Fleet Runner desktop app owns Zellij, agent launching, and state sync (the legacy bash daemon was retired by deletion).",
         "Reliable handoff system between agent sessions, with truthful card status surfaces.",
-        "Per-project pause / resume / direct-send semantics and a real autopilot intent ladder.",
+        "Per-project pause / resume / direct-send semantics with per-project autopilot overrides.",
         "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",
         "Native Fleet Runner desktop app — loads the same React tree the web serves (one UI, two surfaces) plus tray icon, OS notifications on agent idle, and an embedded Zellij watcher for fire-and-walk-away dispatch.",
         "Multi-OS release pipeline. One tag push produces signed macOS, Windows, and Linux installers from a shared CI matrix.",
@@ -132,7 +132,7 @@ export const ROADMAP = {
         "Auto-update via electron-builder's GitHub provider so users never download a stale binary.",
         "Native package channels where they exist — Homebrew tap for macOS, winget for Windows, .deb apt repo for Linux.",
         "Clean window.fleetRunner IPC bridge so the web React tree can detect 'I am running inside the desktop app' and surface desktop-only affordances coherently.",
-        "Daemon install path stays supported for headless servers, CI runners, and operators who prefer a pure CLI flow.",
+        "Headless CLI agent install path for servers, CI runners, and operators who prefer a pure terminal flow.",
       ],
       note: "Cursor, Claude Code, and Grok Build all converged on the same pattern — local client owns execution as a real application, not a service that polls a queue. Fleet Runner takes one extra step: the app and the web run the same React tree, so there is exactly one product surface to design and one codebase to keep at parity.",
     },
@@ -250,8 +250,8 @@ export const ROADMAP = {
         body: "Frontier subscriptions are often the best tool. But the infrastructure does not require them — the user points their fleet at whatever model serves their goals best.",
       },
       {
-        title: "Autonomy is a user-controlled dial.",
-        body: "Manual, Queue, Beacon, Continuous, Mission. Per project. Per moment. Never forced.",
+        title: "Autonomy is a user-controlled switch.",
+        body: "Pause all, or build all — with per-project overrides. Per project. Per moment. Never forced.",
       },
       {
         title: "Outbound connections only.",
@@ -462,7 +462,7 @@ export const DESKTOP_DOWNLOAD = {
   developer: {
     label: "For developers",
     description:
-      "Build the desktop app yourself, or run the headless terminal daemon instead.",
+      "Build the desktop app yourself, or run the headless CLI agent instead.",
     buildFromSource: {
       label: "Build the desktop app from source",
       body:
@@ -471,9 +471,9 @@ export const DESKTOP_DOWNLOAD = {
         "git clone https://github.com/maonakamoto/fleetcrown.git && cd fleetcrown/desktop && npm install && npm run dist:linux  # or dist:mac / dist:win",
     },
     legacyDaemon: {
-      label: "Headless terminal daemon",
+      label: "Headless CLI agent",
       body:
-        "For CI runners, headless servers, or operators who prefer a pure CLI flow. Fleet Runner is the recommended path; the daemon remains available during the transition.",
+        "For CI runners, headless servers, or operators who prefer a pure terminal flow. Fleet Runner is the recommended path; the CLI agent covers machines that can't run a desktop app.",
       command:
         "curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init",
     },
@@ -500,12 +500,12 @@ export const PRODUCT_SURFACES = [
     label: "Runner",
     title: "Execution stays on your machine.",
     body: "The local runner owns Zellij, git, agent launching, and handoff files. FleetCrown coordinates the work without turning your environment into a cloud sandbox.",
-    meta: "Desktop app · daemon fallback · agent tokens",
+    meta: "Desktop app · CLI agent fallback · agent tokens",
   },
   {
     label: "Beacon",
     title: "Human judgment appears at the right moments.",
-    body: "Queue, Beacon, Continuous, and Mission modes let each project ask for oversight only when the next decision actually needs you.",
+    body: "Fleet-wide play/pause with per-project queues and overrides — each project asks for oversight only when the next decision actually needs you.",
     meta: "Approvals · voice intent · remote command",
   },
 ] as const;

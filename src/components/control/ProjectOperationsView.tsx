@@ -33,9 +33,6 @@ export function ProjectOperationsView({
   selectedTab: string | null;
   onSelect: (tab: string) => void;
   cardProps: (project: ProjectState) => CardBaseProps;
-  onBootstrap: () => void;
-  onNewProject: () => void;
-  runtimeAvailable: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ProjectRailSort>("priority");
@@ -101,8 +98,12 @@ export function ProjectOperationsView({
       <aside className="ui-control-project-rail">
         <div className="border-b border-border-subtle px-4 pb-3 pt-4">
           <h2 className="text-sm font-semibold text-text-primary">Projects</h2>
+          {/* Vocabulary matches the row badges and the fleet chips: "awaiting
+              input" is the waiting bucket's label, and the idle bucket is
+              called idle — calling it "open" collided with the fleet chip's
+              "N tabs open" (a different denominator) on the same screen. */}
           <p className="mt-1 text-xs text-text-tertiary">
-            {workingCount} working · {readyCount} ready · {openIdleCount} open
+            {workingCount} working · {readyCount} awaiting input · {openIdleCount} idle
           </p>
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-2.5 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-text-muted" />

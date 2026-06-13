@@ -66,7 +66,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
-    throw new Error("No local daemon or Fleet Runner claimed the peek request within 45s.");
+    throw new Error("Fleet Runner did not claim the peek request within 45s — is it running?");
   };
 
   const fetchPeek = async () => {

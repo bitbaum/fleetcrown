@@ -48,7 +48,7 @@ export const AUTO_INJECT_MODES: readonly {
   {
     value: "on",
     label: "On",
-    description: "When an agent finishes, FleetCrown fires the queue head — or, if the queue is empty, the canned next_best recovery template. Status:working, blockers, and health gates still apply.",
+    description: "When an agent finishes, FleetCrown sends the next queued instruction — or, if the queue is empty, picks the next-best task. Busy agents, blockers, and failing health checks still pause dispatch.",
   },
 ];
 

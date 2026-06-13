@@ -18,7 +18,7 @@
 FC_STATE_KEYS='offline not_running tab_open open_idle working ready orchestration_ready closing completed'
 
 FC_LABEL_OFFLINE='Offline'
-FC_DESCRIPTION_OFFLINE='Daemon has not pushed state recently. We don'\''t know what'\''s actually happening on the agent host.'
+FC_DESCRIPTION_OFFLINE='Fleet Runner has not pushed state recently. We don'\''t know what'\''s actually happening on your computer.'
 FC_COUNTER_CATEGORY_OFFLINE='offline'
 
 FC_LABEL_NOT_RUNNING='Not running'

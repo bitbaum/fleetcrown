@@ -13,6 +13,41 @@ import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 import { haptic } from "@/lib/haptics";
 
+/** "Reuse recent prompts" chip row — rendered in both the running and idle
+ *  branches of IntentButtonPanel; extracted so the two stay identical.
+ *  Only shows with 2+ useful items to avoid a third competing list
+ *  (Sent / Reuse recent / Prompt library) crowding the card. */
+function RecentPromptChips({
+  prompts,
+  onPick,
+}: {
+  prompts: { customPrompt: string; count: number }[];
+  onPick: (text: string) => void;
+}) {
+  if (prompts.length < 2) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="ui-kicker">Reuse recent prompts</p>
+      <div className="flex flex-wrap gap-1.5">
+        {prompts.map((r) => {
+          const text = r.customPrompt.replace(/\s+/g, " ").trim();
+          return (
+            <button
+              key={r.customPrompt}
+              onClick={() => onPick(r.customPrompt)}
+              title={`Reuse this prompt: ${r.customPrompt}`}
+              className="ui-chip-truncate-label"
+            >
+              {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
+              {text.length > 60 ? text.slice(0, 60) + "…" : text}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function IntentButtonPanel({
   project,
   currentAdapter,
@@ -113,9 +148,9 @@ export function IntentButtonPanel({
     autoContinueEnabled,
     onToggleAutoContinue,
     statusLabel: !runtimeStateKnown
-      ? "Daemon offline: sends will queue until this computer reconnects."
+      ? "Fleet Runner offline: sends will queue until it reconnects."
       : daemonSyncStale
-      ? "Sync stale: sends queue on your computer until the daemon reconnects."
+      ? "Fleet Runner sync is stale: sends will queue until it reconnects."
       : automationStatusLabel
       ? automationStatusLabel
       : autoContinueEnabled
@@ -143,26 +178,7 @@ export function IntentButtonPanel({
         {queue.length > 0 && (
           <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
         )}
-      {/* Only show "Reuse recent" when there are multiple useful (non-meta) items.
-          This reduces the three competing lists feeling (Sent / Reuse recent / Prompt library)
-          that the user reported as crowding. */}
-      {recentPrompts.length > 1 && (
-        <div className="space-y-1.5">
-          <p className="ui-kicker">Reuse recent prompts</p>
-          <div className="flex flex-wrap gap-1.5">
-            {recentPrompts.map((r) => (
-              <button
-                key={r.customPrompt}
-                onClick={() => onCustomChange(r.customPrompt)}
-                title={`Reuse this prompt: ${r.customPrompt}`}
-                className="ui-chip-truncate-label"
-              >
-                {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 50 ? t.slice(0, 50) + "…" : t; })()}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+        <RecentPromptChips prompts={recentPrompts} onPick={onCustomChange} />
       </div>
     );
   }
@@ -190,7 +206,7 @@ export function IntentButtonPanel({
             disabled={sending !== null}
             title={queueBlockedReason
               ? `${queueBlockedReason}: Next best stays on recovery work and will not consume the queue. Use a queue row's send button to run that item now.`
-              : "Fires the next_best autopilot template — the agent re-reads ground truth (git, types, lint, TODOs, roadmap, session handoff), picks the single highest-impact task per LOOP v2 rules, and executes. Dispatches immediately, no preview. Self-throttles when productivity is low."}
+              : "The agent re-reads ground truth (git, types, lint, TODOs, roadmap, session handoff), picks the single highest-impact task, and executes. Dispatches immediately, no preview."}
             className="w-full rounded-xl border border-accent-primary/30 bg-accent-primary/[0.07] px-4 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-accent-primary/50 hover:bg-accent-primary/[0.12] disabled:opacity-50"
           >
             {sending === primary.id
@@ -260,27 +276,7 @@ export function IntentButtonPanel({
         </div>
       )}
 
-      {/* Only show "Reuse recent" when there are multiple useful (non-meta) items.
-          This reduces the three competing lists feeling (Sent / Reuse recent / Prompt library)
-          that the user reported as crowding. */}
-      {recentPrompts.length > 1 && (
-        <div className="space-y-1.5">
-          <p className="ui-kicker">Reuse recent prompts</p>
-          <div className="flex flex-wrap gap-1.5">
-            {recentPrompts.map((r) => (
-              <button
-                key={r.customPrompt}
-                onClick={() => onCustomChange(r.customPrompt)}
-                title={`Reuse this prompt: ${r.customPrompt}`}
-                className="ui-chip-truncate-label"
-              >
-                {r.count > 1 && <span className="mr-1.5">used {r.count}×</span>}
-                {(() => { const t = r.customPrompt.replace(/\s+/g, " ").trim(); return t.length > 60 ? t.slice(0, 60) + "…" : t; })()}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <RecentPromptChips prompts={recentPrompts} onPick={onCustomChange} />
 
       <ProjectPromptLibrary
         projectName={project.tab}

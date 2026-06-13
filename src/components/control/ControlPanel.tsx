@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Sparkles, Plus, Settings2 } from "lucide-react";
+import { Sparkles, Settings2 } from "lucide-react";
 import { DAEMON_OFFLINE_THRESHOLD_MS } from "@/lib/constants/daemon";
-import { timeAgo } from "@/lib/dates";
 import { postJson } from "@/lib/api/fetch";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
@@ -65,15 +64,8 @@ export function ControlPanel() {
     const label = switchableRegistry.find((e) => e.id === agentId)?.label ?? agentId;
     setQueuedNotice(`Opening install tab for ${label}...`);
     setTimeout(() => setQueuedNotice(null), 6000);
-    try {
-      await fetch("/api/agent/install-cli", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agent: agentId }),
-      });
-    } catch {
-      // Best effort — the daemon (if running) will still open the tab via the command queue.
-    }
+    // Best effort — Fleet Runner (if running) opens the tab via the command queue.
+    await postJson("/api/agent/install-cli", { agent: agentId }).catch(() => {});
   };
 
   const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
@@ -198,39 +190,10 @@ export function ControlPanel() {
     countdownSeconds: automationPolicy.countdownSeconds,
   });
 
-  // Fleet counts (running/ready/etc) intentionally live in ControlFleetStatus
-  // below — they were rendered here too with subtly different labels ("waiting"
-  // here, "ready" in the chip strip) for the same underlying value, which read
-  // as a math bug in user testing. Header keeps only the page freshness hint
-  // and the New-project affordance; the fleet status section owns counts.
-  const headerRight = (
-    <div className="flex items-center gap-2.5 text-sm text-text-tertiary">
-      {data ? (
-        <>
-          {(daemonNeverSeen || daemonOffline) && (
-            <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title="Daemon offline — see banner below" />
-          )}
-          {lastUpdated && <span title="Page state last refreshed">{timeAgo(lastUpdated)}</span>}
-        </>
-      ) : (
-        <div className="h-3 w-16 animate-pulse rounded bg-border-default" />
-      )}
-      <button
-        onClick={() => runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true)}
-        title={`New project using ${selectedDefinition?.label ?? selectedAgent} · ${model || selectedDefinition?.defaultModel || ""}`}
-        className="inline-flex min-h-11 lg:min-h-0 items-center gap-1 transition-colors hover:text-text-primary"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">New</span>
-      </button>
-    </div>
-  );
-
   const livePanelProps = {
     rows: liveTabRows,
     daemonNeverSeen,
     daemonSyncStale,
-    dashboard,
     refreshing,
     onRefresh: () => refresh(true),
     onFocusProject: setSelectedTab,
@@ -239,8 +202,11 @@ export function ControlPanel() {
     panelRef: livePanelRef,
   };
 
-  const livePanelDesktop = <ZellijLivePanel {...livePanelProps} />;
-  const livePanelMobile = <ZellijLivePanel {...livePanelProps} embedded />;
+  // One embedded instance for every breakpoint. This used to render twice
+  // (mobile embedded + desktop standalone, toggled via md:hidden), and the
+  // standalone variant repeated the <summary>'s "Workspaces · N open" header
+  // inside the panel — the page showed the same heading and count twice.
+  const livePanel = <ZellijLivePanel {...livePanelProps} embedded />;
 
   return (
     <div className="space-y-6">
@@ -320,15 +286,9 @@ export function ControlPanel() {
         refreshing={refreshing}
         onRefresh={() => refresh(true)}
         onAutomationChange={automationPolicy.updateMode}
+        onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
         projectOverrideCount={projectOverrideCount}
       />}
-
-      {headerRight && (
-        <section className="ui-control-operations-header">
-          <div />
-          {headerRight}
-        </section>
-      )}
 
       <AttentionBar items={attention} failedCommands={data?.failedCommands} onFocusProject={setSelectedTab} />
 
@@ -337,9 +297,6 @@ export function ControlPanel() {
         selectedTab={selectedTab}
         onSelect={setSelectedTab}
         cardProps={cardProps}
-        onBootstrap={() => setBootstrapOpen(true)}
-        onNewProject={() => setNewProjectOpen(true)}
-        runtimeAvailable={runtimeAvailable}
       />
 
       {/* Workspaces panel — collapsed-by-default on every breakpoint when the
@@ -358,11 +315,14 @@ export function ControlPanel() {
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
-            {daemonNeverSeen ? "offline" : daemonSyncStale ? `${liveTabRows.length} open · stale` : `${liveTabRows.length} open`}
+            {daemonNeverSeen
+              ? "offline"
+              : daemonSyncStale
+                ? `${liveTabRows.length} tab${liveTabRows.length === 1 ? "" : "s"} · sync stale`
+                : `${liveTabRows.length} tab${liveTabRows.length === 1 ? "" : "s"}`}
           </span>
         </summary>
-        <div className="ui-control-live-details-body md:hidden">{livePanelMobile}</div>
-        <div className="ui-control-live-details-body hidden md:block">{livePanelDesktop}</div>
+        <div className="ui-control-live-details-body">{livePanel}</div>
       </details>
 
       <details className="ui-control-launch-defaults">

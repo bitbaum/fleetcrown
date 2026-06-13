@@ -5,10 +5,8 @@ import Link from "next/link";
 import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
-import { getJson, postJson } from "@/lib/api/fetch";
+import { postJson } from "@/lib/api/fetch";
 import "@/components/desktop/types"; // declare global window.fleetRunner
-
-type DaemonState = "active" | "inactive" | "failed" | "unknown";
 
 type Props = {
   daemonNeverSeen: boolean;
@@ -18,9 +16,9 @@ type Props = {
   runtimeAvailable?: boolean;
   /** When true, the user already has at least one project. Drop the
    *  "Start a new project" pitch from the never-seen variant — they
-   *  already have one; they need the daemon. */
+   *  already have one; they need Fleet Runner. */
   hasProjects?: boolean;
-  /** Caller refreshes its data view after the daemon lifecycle changes. */
+  /** Caller refreshes its data view after the Fleet Runner connection changes. */
   onRefresh?: () => void;
 };
 
@@ -92,16 +90,12 @@ export function DaemonStatusBanner({
     ? timeAgo(new Date(daemonLastPushedAt).getTime())
     : null;
 
-  const refreshAfterAction = () => {
-    onRefresh?.();
-  };
-
   if (!daemonNeverSeen && !expanded) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised/60 px-3 py-2 text-xs text-text-tertiary">
         <WifiOff className="h-3.5 w-3.5 shrink-0 text-status-warning" />
         <span className="min-w-0 truncate">
-          Local runtime offline{lastSeen ? ` · last seen ${lastSeen}` : ""} — commands queue until it reconnects.
+          Fleet Runner offline{lastSeen ? ` · last seen ${lastSeen}` : ""} — commands queue until it reconnects.
         </span>
         <button
           onClick={() => setExpanded(true)}
@@ -133,7 +127,7 @@ export function DaemonStatusBanner({
       <div className="min-w-0 flex-1 space-y-2">
         <div>
           <span className="font-medium text-text-primary">
-            {daemonNeverSeen ? `Finish setup to dispatch agents` : "Local daemon offline"}
+            {daemonNeverSeen ? `Finish setup to dispatch agents` : "Fleet Runner offline"}
           </span>
           {!daemonNeverSeen && lastSeen && (
             <span className="ml-2 text-xs text-text-tertiary">last seen {lastSeen}</span>
@@ -182,7 +176,7 @@ export function DaemonStatusBanner({
                       Paired with this Fleet Runner
                     </div>
                     <p className="text-xs text-text-muted">
-                      Token <strong>{pairedTokenLabel}</strong> saved to the desktop. Daemon will appear online within ~30s.
+                      Token <strong>{pairedTokenLabel}</strong> saved to the desktop. Fleet Runner will appear online within ~30s.
                     </p>
                   </div>
                 ) : (
@@ -192,7 +186,7 @@ export function DaemonStatusBanner({
                       Pair this Fleet Runner
                     </div>
                     <p className="text-xs text-text-muted">
-                      You&apos;re already inside the desktop app. One click mints an agent token + hands it to the daemon
+                      You&apos;re already inside the desktop app. One click mints an agent token + hands it to Fleet Runner
                       — no manual copy-paste.
                     </p>
                     <button
@@ -255,35 +249,25 @@ export function DaemonStatusBanner({
         ) : (
           <>
             <p className="text-text-secondary leading-relaxed">
-              The helper on your computer stopped sending updates. All agent commands are safely queued until it reconnects.
+              Fleet Runner on your computer stopped sending updates. Agent commands queue safely until it reconnects.
             </p>
-            <div className="space-y-2 text-xs text-text-muted">
-              <p>
-                Launch Fleet Runner from your tray / app menu to bring it back online. Closed it by accident?{" "}
-                <Link href="/download" className="text-accent underline">Re-install Fleet Runner</Link>
-                {" "}or check its log for the connection error.
-              </p>
-              <p>
-                Token expired or migrated DB?{" "}
-                <Link href="/settings" className="text-accent underline">Mint a fresh ck_* token</Link>{" "}
-                and re-paste it into Fleet Runner.
-              </p>
-            </div>
+            <p className="text-xs text-text-muted">
+              Launch Fleet Runner from your tray / app menu. If it won&apos;t connect:{" "}
+              <Link href="/settings" className="text-accent underline">mint a fresh token</Link>{" "}
+              and paste it into Fleet Runner, or{" "}
+              <Link href="/download" className="text-accent underline">re-install</Link>.
+            </p>
           </>
         )}
 
-        {/* One-click agent CLI install — the vision the user asked for.
-            Suppressed when the daemon is offline on a cloud install: the
-            buttons POST to /api/agent/install-cli, which queues an installer
-            command for the daemon to pick up. With the daemon down and no
-            local daemon reachable from cloud, the buttons silently no-op and
-            their helper text ("When your Local Agent Helper is running…")
-            directly contradicts the banner just above. Keep them visible in
-            the never-seen (setup) flow and when running locally.
-            Also suppressed when inside Fleet Runner — MissingCLIsBanner
-            handles that case with the same buttons but only shows the ones
-            ACTUALLY missing (via the v0.6.0 getInstalledCLIs IPC), so the
-            full 5-button grid here would be both noisy and redundant. */}
+        {/* One-click agent CLI install. Suppressed when Fleet Runner is
+            offline on a cloud install: the buttons POST to
+            /api/agent/install-cli, which queues an installer command for
+            Fleet Runner to pick up — with it down the buttons silently no-op,
+            contradicting the banner just above. Kept in the never-seen
+            (setup) flow and when running locally. Also suppressed inside
+            Fleet Runner — MissingCLIsBanner handles that case and only shows
+            the CLIs ACTUALLY missing (v0.6.0 getInstalledCLIs IPC). */}
         {(daemonNeverSeen || runtimeAvailable) && !insideFleetRunner && (
           <div className="pt-2 border-t border-border-subtle">
             <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
@@ -291,17 +275,9 @@ export function DaemonStatusBanner({
               {["grok", "claude", "cursor", "gemini", "codex"].map((a) => (
                 <button
                   key={a}
-                  onClick={async () => {
-                    try {
-                      const res = await fetch("/api/agent/install-cli", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ agent: a }),
-                      });
-                      if (res.ok) {
-                        // Success — daemon will open the tab if connected
-                      }
-                    } catch {}
+                  onClick={() => {
+                    // Best effort — Fleet Runner opens the tab if connected.
+                    postJson("/api/agent/install-cli", { agent: a }).catch(() => {});
                   }}
                   className="ui-btn-secondary ui-btn-xs"
                 >
@@ -310,7 +286,7 @@ export function DaemonStatusBanner({
               ))}
             </div>
             <p className="text-micro text-text-muted mt-1">
-              When your Local Agent Helper is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
+              When Fleet Runner is running, these buttons open a dedicated “Install X” tab with the installer already pasted.
             </p>
           </div>
         )}

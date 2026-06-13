@@ -16,14 +16,6 @@ import {
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
-/**
- * Hard cap on how old a currentPrompt can be before we declare it stale.
- * Codex has no Stop hook (interactive TUI) so the /tmp/agent-current-prompt-<tab>
- * sentinel can linger forever after the agent finishes — without this gate the
- * UI shows "Codex working 61h" on a dead tab. 30 minutes is the longest a single
- * agent task should plausibly run; longer real work writes intermediate session
- * files so the mtime-based signal below fires first.
- */
 export type RuntimeSyncContext = {
   /** True when the cloud has never received a daemon runtime-state push. */
   stateUnknown?: boolean;
@@ -38,28 +30,15 @@ function staleSyncLabel(lastSyncedAt: string | null | undefined): string {
   return `Last sync ${timeAgo(new Date(lastSyncedAt).getTime())}`;
 }
 
-function staleEvidenceLabel(
-  display: ProjectDisplayState,
-  project: ProjectState,
-  lastSyncedAt: string | null | undefined,
-): string {
-  // 2026-06-08: harmonized to use display.stateLabel as the SSOT for state
-  // wording. Pre-fix this function emitted "Agent shell open", "Workspace
-  // tab open", "Idle" — three custom strings that drifted from the canonical
-  // labels rendered next to them in the badge. One state → one phrase,
-  // everywhere. The currentPrompt.label override stays because it's
-  // task-specific content, not state.
-  if (display.isRunning && project.currentPrompt?.label) {
-    return project.currentPrompt.label;
-  }
-  if (display.tone !== "offline") return display.stateLabel;
-  // Session mtime is rendered as evidenceAt; falling through to
-  // staleSyncLabel would put two unlabeled timestamps side by side.
-  if (project.session?.mtime) return "Not running";
-  return staleSyncLabel(lastSyncedAt);
-}
-
-/** Hard cap (seconds) before currentPrompt is treated as stale — see isCurrentPromptStale. */
+/**
+ * Hard cap (seconds) on how old a currentPrompt can be before we declare it
+ * stale — see isCurrentPromptStale. Codex has no Stop hook (interactive TUI)
+ * so the /tmp/agent-current-prompt-<tab> sentinel can linger forever after
+ * the agent finishes — without this gate the UI shows "Codex working 61h" on
+ * a dead tab. 30 minutes is the longest a single agent task should plausibly
+ * run; longer real work writes intermediate session files so the mtime-based
+ * signal fires first.
+ */
 const STALE_PROMPT_S = 30 * 60;
 
 /**
@@ -182,7 +161,8 @@ export type LiveTabRow = {
   stateKey: ProjectStateKey | null;
   stateLabel: ProjectDisplayState["stateLabel"] | "Open";
   stateTagClass: string;
-  activity: string;
+  /** Running prompt label, or null when the state badge already says it all. */
+  activity: string | null;
   isWorking: boolean;
   isWaiting: boolean;
   registered: boolean;
@@ -236,25 +216,22 @@ export function isProjectTabOpen(project: ProjectState, zellijTabs: string[]): b
 export function getTabActivityText(
   project: ProjectState | null,
   display: ProjectDisplayState | null,
-): string {
-  // Returns the short status string shown next to each project row.
+): string | null {
+  // Returns the short activity string shown next to each workspace row, or
+  // null when there is nothing to say beyond the state badge — every
+  // non-running row used to repeat the badge text ("Awaiting input |
+  // Awaiting input") which read as a rendering glitch.
+  //
   // Critical rule (2026-05-31): NEVER paste raw handoff content (the agent's
   // own done/next/status notes) into the default row text. These were leaking
   // into the UI as "Saved handoff: ..." prefixes that exposed internal agent
-  // bookkeeping to the user, including multi-paragraph dumps that wrecked the
-  // row layout. Activity text is for human-readable lifecycle states only;
-  // handoff content belongs in a per-project expand/tooltip, not the
-  // always-visible row.
-  //
-  // 2026-06-08: harmonized to use display.stateLabel as SSOT. Pre-fix
-  // emitted "Ready — pick the next task" / "Agent open · idle" / "Tab open
-  // · no agent process" / "Closed" — four custom strings that disagreed
-  // with the badge phrasing on the same row.
+  // bookkeeping to the user. Activity text is the running prompt's label
+  // only; handoff content belongs in a per-project expand/tooltip.
   if (!project) return "Tab open — not registered in fleet";
   if (display?.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
-  return display?.stateLabel ?? "Not running";
+  return null;
 }
 
 export function buildLiveTabRows(
@@ -264,43 +241,32 @@ export function buildLiveTabRows(
 ): LiveTabRow[] {
   const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
   return uniqueTabs
-    .map((tabName) => {
-      // 2026-05-31: skip zellij tabs that don't map to any registered project.
-      // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
-      // they opened manually that have nothing to do with the fleet. Their
-      // real zellij window already shows them; the FleetCrown UI is for fleet
-      // ops, not a generic tab list. To re-expose unregistered tabs later,
-      // gate this on a "show all tabs" toggle in the UI.
-      const project = findProjectForOpenTab(tabName, projects);
-      if (!project) return null;
-      return tabName;
-    })
-    .filter((t): t is string => t !== null)
-    .map((tabName) => {
-      const project = findProjectForOpenTab(tabName, projects);
-      const display = project ? getProjectDisplayState(project, uniqueTabs, nowS) : null;
-      const agentLabel = project?.activeAgents.length
+    // 2026-05-31: skip zellij tabs that don't map to any registered project.
+    // The user surfaced "Tab #1 Unlinked" as visible noise — scratch tabs
+    // they opened manually that have nothing to do with the fleet. Their
+    // real zellij window already shows them; the FleetCrown UI is for fleet
+    // ops, not a generic tab list. To re-expose unregistered tabs later,
+    // gate this on a "show all tabs" toggle in the UI.
+    .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
+    .filter((entry): entry is { tabName: string; project: ProjectState } => entry.project !== null)
+    .map(({ tabName, project }) => {
+      const display = getProjectDisplayState(project, uniqueTabs, nowS);
+      const agentLabel = project.activeAgents.length
         ? formatAgentRuntimeLabel(project, tabName)
-        : display?.isRunning
+        : display.isRunning
           ? "Agent"
           : inferAgentLabelFromTabName(tabName);
-      // SSOT alignment: previous code emitted "Open, idle" here, which was
-      // a third phrasing for the same conceptual state ("Tab open" /
-      // "Awaiting input"). Display.stateLabel already handles the
-      // idle-with-tab-open case as "Tab open" — use that directly.
-      const stateLabel: LiveTabRow["stateLabel"] = display?.stateLabel ?? "Open";
-      const stateTagClass = display?.stateTagClass ?? "ui-tag ui-tag-neutral";
       return {
         tabName,
         project,
         agentLabel: agentLabel || null,
-        stateKey: display?.stateKey ?? null,
-        stateLabel,
-        stateTagClass,
+        stateKey: display.stateKey,
+        stateLabel: display.stateLabel,
+        stateTagClass: display.stateTagClass,
         activity: getTabActivityText(project, display),
-        isWorking: display?.isRunning ?? false,
-        isWaiting: display?.isReady || display?.isOrchestrationReady || display?.tone === "session-open" || false,
-        registered: project != null,
+        isWorking: display.isRunning,
+        isWaiting: display.isReady || display.isOrchestrationReady || display.tone === "session-open",
+        registered: true,
       } satisfies LiveTabRow;
     })
     .sort((a, b) => {
@@ -535,7 +501,15 @@ export function buildProjectOperationsSnapshot(
       : project.session?.done?.trim()
         ? project.session.done.trim()
         : null;
-  const liveObserved = runtimeStateKnown && !syncStale && (display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen);
+  // States that assert a live observation on the agent host. When the daemon
+  // sync is stale these claims come from the last push and may no longer be
+  // true — the evidence line must say when they were observed, not pair the
+  // claim with an unrelated handoff-file timestamp (pre-fix: "Awaiting input
+  // 1w ago" — badge from a 34h-old push, timestamp from a week-old handoff,
+  // reading as "the agent sat at the prompt for a week").
+  const claimsLiveObservation =
+    display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen;
+  const liveObserved = runtimeStateKnown && !syncStale && claimsLiveObservation;
   const latestInjection = project.recentInjections[0];
   const latestInjectionAgeS = latestInjection?.dispatchedAt
     ? nowS - Math.floor(new Date(latestInjection.dispatchedAt).getTime() / 1000)
@@ -577,8 +551,8 @@ export function buildProjectOperationsSnapshot(
   // the row's timestamp column, so the prefix doesn't need to duplicate it.
   const evidenceLabel = !runtimeStateKnown
     ? "Live status unavailable"
-    : syncStale
-      ? staleEvidenceLabel(display, project, lastSyncedAt)
+    : syncStale && claimsLiveObservation
+      ? staleSyncLabel(lastSyncedAt)
       : liveObserved
         ? liveEvidenceLabel
         : handoffAt
@@ -590,7 +564,10 @@ export function buildProjectOperationsSnapshot(
     phase,
     display,
     evidenceLabel,
-    evidenceAt: liveObserved ? null : handoffAt,
+    // A stale live-claim's only honest timestamp is the sync time (already in
+    // the label) — attaching handoffAt here is what produced "Awaiting input
+    // 1w ago".
+    evidenceAt: liveObserved || (syncStale && claimsLiveObservation) ? null : handoffAt,
     evidenceKind: !runtimeStateKnown ? "unknown" : syncStale ? "historical" : liveObserved ? "live" : "historical",
     contextSummary,
     attentionReason: attention.score > 0 ? attention.reason : null,

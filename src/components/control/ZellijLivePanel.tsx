@@ -5,14 +5,13 @@ import { PanelsTopLeft, RefreshCw, Send, Terminal, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { FEEDBACK_SHORT_MS, REFRESH_AFTER_TAB_ACTION_MS } from "@/lib/constants/timings";
-import type { ControlDashboardState, LiveTabRow } from "./control-presenter";
+import type { LiveTabRow } from "./control-presenter";
 import { ZellijLiveRows } from "./ZellijLiveRows";
 
 export function ZellijLivePanel({
   rows,
   daemonNeverSeen,
   daemonSyncStale = false,
-  dashboard,
   refreshing,
   onRefresh,
   onFocusProject,
@@ -24,7 +23,6 @@ export function ZellijLivePanel({
   rows: LiveTabRow[];
   daemonNeverSeen: boolean;
   daemonSyncStale?: boolean;
-  dashboard: ControlDashboardState | null;
   refreshing: boolean;
   onRefresh: () => void;
   onFocusProject?: (tab: string) => void;
@@ -90,38 +88,40 @@ export function ZellijLivePanel({
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <PanelsTopLeft className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-            {/* When embedded inside the mobile <details> wrapper, the parent
-                <summary> already renders "Terminal workspaces" as its label —
-                suppressing the inner H2 here so the same heading doesn't
-                appear twice in the page (caught in browser dogfood
-                2026-05-31: 2 H2s "Terminal workspaces" surfaced in a
-                document.querySelectorAll scan). Desktop renders this panel
-                directly with no surrounding summary, so the H2 still appears. */}
-            {!embedded && <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>}
-            <span className="ui-tag ui-tag-neutral text-micro">
-              {daemonNeverSeen ? "offline" : daemonSyncStale ? `${rows.length} open · stale` : `${rows.length} open`}
-            </span>
+            {/* When embedded the parent <summary> already renders the
+                "Workspaces · N tabs" label — suppress the inner heading and
+                count so the same facts don't appear twice on the page. */}
+            {!embedded && (
+              <>
+                <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>
+                <span className="ui-tag ui-tag-neutral text-micro">
+                  {daemonNeverSeen
+                    ? "offline"
+                    : daemonSyncStale
+                      ? `${rows.length} tabs · sync stale`
+                      : `${rows.length} tabs`}
+                </span>
+              </>
+            )}
           </div>
           {!daemonNeverSeen && (
             <p className="mt-0.5 text-micro text-text-tertiary">
               {daemonSyncStale
-                ? "Showing last-known workspace state — local daemon sync is stale."
+                ? "Showing last-known workspace state — Fleet Runner sync is stale."
                 : "Open tabs come from Zellij. Working and awaiting input come from live agent/process signals."}
             </p>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {dashboard && !daemonNeverSeen && (
-            <span className="ui-micro-label text-text-muted text-micro">
-              {dashboard.runningCount} working · {dashboard.waitingCount} awaiting input
-            </span>
-          )}
-          {!daemonNeverSeen && (
+          {/* Repair queues a command for the local runtime to pick up — with
+              sync stale there is nothing listening, so offering "Restart
+              helper" would silently no-op. The offline banner owns recovery. */}
+          {!daemonNeverSeen && !daemonSyncStale && (
             <button
               type="button"
               onClick={repairHelper}
               className="ui-btn-ghost ui-btn-xs gap-1 text-micro"
-              title="Re-install / repair the local helper daemon"
+              title="Re-install / repair the local helper"
             >
               <Wrench className="h-3 w-3" />
               <span className="hidden sm:inline">Restart helper</span>
@@ -150,6 +150,8 @@ export function ZellijLivePanel({
             The cloud can&apos;t see your local Zellij tabs until something on your
             machine pushes state to it. Two ways to fix this (5 minutes):
           </p>
+          {/* Fleet Runner is the only local runtime — the bash daemon was
+              deleted 2026-06-11 (killing-the-bash-daemon, Session 4b). */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
             <a
               href="https://github.com/maonakamoto/fleetcrown-releases/releases/latest"
@@ -158,9 +160,6 @@ export function ZellijLivePanel({
               className="ui-btn-primary"
             >
               Download Fleet Runner (desktop app)
-            </a>
-            <a href="/docs/quickstart#daemon" className="ui-btn-ghost text-xs">
-              Or run the bash daemon →
             </a>
           </div>
           <p className="mt-3 text-xs text-text-tertiary">
