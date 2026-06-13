@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { postJson } from "@/lib/api/fetch";
 import { FEEDBACK_SHORT_MS, REFRESH_AFTER_TAB_ACTION_MS } from "@/lib/constants/timings";
 import type { LiveTabRow } from "./control-presenter";
+import { Modal } from "@/components/ui/modal";
 import { ZellijLiveRows } from "./ZellijLiveRows";
 
 export function ZellijLivePanel({
@@ -51,8 +52,13 @@ export function ZellijLivePanel({
     } catch { /* best effort */ }
   };
 
-  const closeTab = async (tabName: string) => {
-    if (!window.confirm(`Close the Zellij tab "${tabName}"?`)) return;
+  // Confirmation runs through <Modal>, never window.confirm — a native dialog
+  // blocks the whole renderer (frozen page for remote/automation sessions).
+  const [confirmCloseTab, setConfirmCloseTab] = useState<string | null>(null);
+  const closeTab = (tabName: string) => setConfirmCloseTab(tabName);
+
+  const reallyCloseTab = async (tabName: string) => {
+    setConfirmCloseTab(null);
     try {
       const res = await postJson("/api/control/close-tab", { tab: tabName });
       if (res.ok) setTimeout(onRefresh, REFRESH_AFTER_TAB_ACTION_MS);
@@ -224,6 +230,24 @@ export function ZellijLivePanel({
             onFocusProject={onFocusProject}
           />
         </>
+      )}
+
+      {confirmCloseTab !== null && (
+        <Modal onClose={() => setConfirmCloseTab(null)} size="sm">
+          <h3 className="text-sm font-semibold text-text-primary">Close workspace tab?</h3>
+          <p className="text-sm text-text-secondary">
+            This closes the Zellij tab <span className="font-medium text-text-primary">{confirmCloseTab}</span> on
+            your computer. Any agent running in it is stopped.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setConfirmCloseTab(null)} className="ui-btn-secondary">
+              Cancel
+            </button>
+            <button type="button" onClick={() => reallyCloseTab(confirmCloseTab)} className="ui-btn-danger">
+              Close tab
+            </button>
+          </div>
+        </Modal>
       )}
     </section>
   );
