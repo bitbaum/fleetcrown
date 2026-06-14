@@ -2,7 +2,7 @@
 # import-from-local.sh — scan local dev folders and import each as a FleetCrown project.
 #
 # Run from your laptop's terminal:
-#   curl -sS https://fleetcrown.vercel.app/import-from-local.sh \
+#   curl -sS https://fleetcrown.orangecat.ch/import-from-local.sh \
 #     | FC_TOKEN=ck_xxxxxxxxxxxx... bash
 #
 # Or save + run locally:
@@ -11,10 +11,10 @@
 #
 # Required:
 #   FC_TOKEN — your ck_* agent token. Mint one at
-#              https://fleetcrown.vercel.app/settings (Agent tokens section).
+#              https://fleetcrown.orangecat.ch/settings (Agent tokens section).
 #
 # Optional:
-#   FC_API   — override the API base URL (default: https://fleetcrown.vercel.app)
+#   FC_API   — override the API base URL (default: https://fleetcrown.orangecat.ch)
 #   FC_ROOTS — colon-separated dev folders to scan
 #              (default: $HOME/dev:$HOME/code:$HOME/Code:$HOME/Projects)
 #   FC_DEPTH — max subdirectory depth to scan for .git folders (default: 3)
@@ -42,7 +42,7 @@ for cmd in jq curl git find; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd is required" >&2; exit 1; }
 done
 
-API="${FC_API:-https://fleetcrown.vercel.app}"
+API="${FC_API:-https://fleetcrown.orangecat.ch}"
 ROOTS="${FC_ROOTS:-$HOME/dev:$HOME/code:$HOME/Code:$HOME/Projects}"
 DEPTH="${FC_DEPTH:-3}"
 
@@ -105,4 +105,4 @@ skipped="$(echo "$response" | jq '.skipped | length')"
 
 echo "✓ Imported $created project(s)$([[ $skipped -gt 0 ]] && echo "  ($skipped skipped — likely duplicates)")"
 echo
-echo "Open https://fleetcrown.vercel.app/control to see them."
+echo "Open https://fleetcrown.orangecat.ch/control to see them."
