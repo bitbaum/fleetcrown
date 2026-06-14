@@ -17,11 +17,11 @@ export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
 
 export type RuntimeSyncContext = {
-  /** True when the cloud has never received a daemon runtime-state push. */
+  /** True when the cloud has never received a runner runtime-state push. */
   stateUnknown?: boolean;
-  /** True when the last daemon push is older than the offline threshold. */
+  /** True when the last runner push is older than the offline threshold. */
   syncStale?: boolean;
-  /** ISO timestamp of the last successful runtime-state push from the local daemon. */
+  /** ISO timestamp of the last successful runtime-state push from the local runner. */
   lastSyncedAt?: string | null;
 };
 
@@ -359,7 +359,7 @@ export function getProjectDisplayState(
     };
   }
   // Track active work from a fresh current-prompt sentinel. Do not require
-  // agentRunning — cloud daemon may hold a FleetCrown-dispatched prompt while
+  // agentRunning — cloud runner may hold a FleetCrown-dispatched prompt while
   // /proc scan misses Cursor Agent or IDE-side Composer activity.
   const stale = isCurrentPromptStale(project, nowS);
   const currentPrompt = project.currentPrompt && !stale ? project.currentPrompt : null;
@@ -501,7 +501,7 @@ export function buildProjectOperationsSnapshot(
       : project.session?.done?.trim()
         ? project.session.done.trim()
         : null;
-  // States that assert a live observation on the agent host. When the daemon
+  // States that assert a live observation on the agent host. When the runner
   // sync is stale these claims come from the last push and may no longer be
   // true — the evidence line must say when they were observed, not pair the
   // claim with an unrelated handoff-file timestamp (pre-fix: "Awaiting input

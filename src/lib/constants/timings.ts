@@ -30,9 +30,9 @@ export const TOAST_MEDIUM_MS = 4000;
 export const TOAST_LONG_MS = 6000;
 
 /** Refresh /control state after a dispatch round-trip. The dispatch returned;
- *  give the daemon a beat to ack + reflect, then re-fetch so the UI shows
+ *  give the runner a beat to ack + reflect, then re-fetch so the UI shows
  *  the new state instead of the optimistic one. 500ms tuned against the
- *  bridge SSE fanout latency — slow enough to catch the daemon's state
+ *  bridge SSE fanout latency — slow enough to catch the runner's state
  *  push, fast enough to feel instant to the user. */
 export const REFRESH_AFTER_DISPATCH_MS = 500;
 

@@ -25,7 +25,7 @@
  */
 
 export const PROJECT_STATES = [
-  "offline",              // Daemon has not pushed state — we genuinely don't know.
+  "offline",              // Runner has not pushed state — we genuinely don't know.
   "not_running",          // No agent process and no tab — nothing exists for this project.
   "tab_open",             // Zellij tab open, no agent process detected in it.
   "open_idle",            // Agent process detected, no recent lifecycle signal — likely at prompt.
@@ -76,7 +76,7 @@ export type ProjectStateDefinition = {
  *                                    state where the agent is mid-turn.
  *   status-positive (green)        → "Good thing just happened" — handoff,
  *                                    orchestration complete, clean exit.
- *   status-warning (amber)         → "User must act" — daemon offline.
+ *   status-warning (amber)         → "User must act" — runner offline.
  *   border-default (muted gray)    → "Inert, nothing happening" — collapses
  *                                    the former gray/brown/border-strong mix
  *                                    into one honest non-color. open_idle +
@@ -189,7 +189,7 @@ export function projectStateDescription(key: ProjectStateKey): string {
 }
 
 /** Returns the actionable hint when the state itself signals a problem
- *  (e.g. "Offline" → "start the daemon"). UI components surface this as
+ *  (e.g. "Offline" → "start the runner"). UI components surface this as
  *  a tooltip + a one-click action chip. */
 export function projectStateProblem(
   key: ProjectStateKey,
@@ -206,24 +206,24 @@ export function projectStateCounterCategory(
   return STATE_DEFINITIONS[key].counterCategory;
 }
 
-/* ── Daemon-side states ──────────────────────────────────────────────────────
+/* ── Runner-side states ──────────────────────────────────────────────────────
  *
- * The daemon banner uses a different state space than the per-project badge —
- * a single user can have many project states at once but only ever one daemon
+ * The runner banner uses a different state space than the per-project badge —
+ * a single user can have many project states at once but only ever one runner
  * connectivity state. Same shape as the per-project SSOT so the banner gets
  * the same hover-tooltip + problem-CTA treatment automatically.
  */
 
-export const DAEMON_STATES = [
-  "setup_needed",   // The daemon has never been seen — first-run path.
-  "offline",        // Daemon was seen but the last push exceeded the offline threshold.
-  "state_unknown",  // We have a connection but the daemon hasn't pushed a valid state yet.
-  "connected",     // Healthy — daemon pushed within the freshness window.
+export const RUNNER_STATES = [
+  "setup_needed",   // The runner has never been seen — first-run path.
+  "offline",        // Runner was seen but the last push exceeded the offline threshold.
+  "state_unknown",  // We have a connection but the runner hasn't pushed a valid state yet.
+  "connected",     // Healthy — runner pushed within the freshness window.
 ] as const;
 
-export type DaemonStateKey = (typeof DAEMON_STATES)[number];
+export type RunnerStateKey = (typeof RUNNER_STATES)[number];
 
-export type DaemonStateDefinition = {
+export type RunnerStateDefinition = {
   label: string;
   description: string;
   dotClass: string;
@@ -231,7 +231,7 @@ export type DaemonStateDefinition = {
   problem: { hint: string; ctaLabel?: string; ctaHref?: string } | null;
 };
 
-export const DAEMON_STATE_DEFINITIONS: Record<DaemonStateKey, DaemonStateDefinition> = {
+export const RUNNER_STATE_DEFINITIONS: Record<RunnerStateKey, RunnerStateDefinition> = {
   setup_needed: {
     label: "Setup needed",
     description: "This account has never received a state push from Fleet Runner. Install it to connect this computer.",
@@ -268,31 +268,31 @@ export const DAEMON_STATE_DEFINITIONS: Record<DaemonStateKey, DaemonStateDefinit
   },
 };
 
-export function daemonStateLabel(key: DaemonStateKey): string {
-  return DAEMON_STATE_DEFINITIONS[key].label;
+export function runnerStateLabel(key: RunnerStateKey): string {
+  return RUNNER_STATE_DEFINITIONS[key].label;
 }
 
-export function daemonStateDescription(key: DaemonStateKey): string {
-  return DAEMON_STATE_DEFINITIONS[key].description;
+export function runnerStateDescription(key: RunnerStateKey): string {
+  return RUNNER_STATE_DEFINITIONS[key].description;
 }
 
-export function daemonStateDotClass(key: DaemonStateKey): string {
-  return DAEMON_STATE_DEFINITIONS[key].dotClass;
+export function runnerStateDotClass(key: RunnerStateKey): string {
+  return RUNNER_STATE_DEFINITIONS[key].dotClass;
 }
 
-export function daemonStateProblem(key: DaemonStateKey): DaemonStateDefinition["problem"] {
-  return DAEMON_STATE_DEFINITIONS[key].problem;
+export function runnerStateProblem(key: RunnerStateKey): RunnerStateDefinition["problem"] {
+  return RUNNER_STATE_DEFINITIONS[key].problem;
 }
 
-/** Derive the daemon's state from the same fields ControlFleetStatus.tsx
- *  already computes locally (daemonNeverSeen / daemonOffline / etc.). One
+/** Derive the runner's state from the same fields ControlFleetStatus.tsx
+ *  already computes locally (runnerNeverSeen / runnerOffline / etc.). One
  *  signal in, one key out — the components below stop hand-rolling label /
  *  dot / tone trees and read the SSOT instead. */
-export function deriveDaemonStateKey(signals: {
+export function deriveRunnerStateKey(signals: {
   neverSeen: boolean;
   offline: boolean;
   stateUnknown: boolean;
-}): DaemonStateKey {
+}): RunnerStateKey {
   if (signals.neverSeen) return "setup_needed";
   if (signals.offline) return "offline";
   if (signals.stateUnknown) return "state_unknown";
@@ -300,7 +300,7 @@ export function deriveDaemonStateKey(signals: {
 }
 
 /** Coarse derivation of a ProjectStateKey from the raw signal set the
- *  daemon and the API routes carry around — primarily for places that
+ *  runner and the API routes carry around — primarily for places that
  *  want to prepend the SSOT description to the agent prompt context but
  *  don't want to pull in the full presenter machinery.
  *
@@ -319,12 +319,12 @@ export function deriveProjectStateKey(signals: {
   lockAt?: number | null;
   closingAt?: number | null;
   closedAt?: number | null;
-  daemonOffline?: boolean;
+  runnerOffline?: boolean;
 }): ProjectStateKey {
   const now = Math.floor(Date.now() / 1000);
   const within = (t: number | null | undefined, windowS: number) =>
     typeof t === "number" && t > 0 && now - t < windowS;
-  if (signals.daemonOffline) return "offline";
+  if (signals.runnerOffline) return "offline";
   if (within(signals.closedAt, 60)) return "completed";
   if (within(signals.closingAt, 60)) return "closing";
   if (within(signals.readyAt, 60)) return "ready";
@@ -337,7 +337,7 @@ export function deriveProjectStateKey(signals: {
   // in Session 1 of killing-the-bash-daemon meant readyAt stopped being
   // written, so projects whose session said "ready" fell through to
   // open_idle ("Awaiting input") even seconds after Fleet Runner pushed
-  // the fresh status. The /control card read like the daemon was offline
+  // the fresh status. The /control card read like the runner was offline
   // when in fact it had just synced.
   if (signals.sessionStatus === "ready") return "ready";
   if (signals.agentRunning) return "open_idle";

@@ -5,7 +5,7 @@
 // (added in v0.6.0); falls back to rendering nothing on older builds.
 //
 // Each missing CLI gets an "Install Claude" / "Install Codex" / etc. button
-// that POSTs to /api/agent/install-cli, which the local daemon picks up and
+// that POSTs to /api/agent/install-cli, which the local runner picks up and
 // turns into a zellij tab with the installer command pre-typed. The user
 // approves the install in the terminal — never blind.
 
@@ -56,7 +56,7 @@ export function MissingCLIsBanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agent }),
       });
-      // Best effort: queue the install command for the daemon to pick up.
+      // Best effort: queue the install command for the runner to pick up.
       // The user sees it land in a zellij tab. We don't poll for completion
       // here — the next refresh of getInstalledCLIs will reflect success.
     } catch {

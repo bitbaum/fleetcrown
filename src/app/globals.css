@@ -1845,11 +1845,11 @@
   .ui-control-fleet-top {
     @apply flex flex-wrap items-start justify-between gap-3;
   }
-  .ui-control-fleet-daemon {
+  .ui-control-fleet-runner {
     @apply inline-flex flex-wrap items-center gap-1.5 text-xs sm:text-sm;
   }
-  .ui-control-fleet-daemon-ok { @apply text-status-positive; }
-  .ui-control-fleet-daemon-warn { @apply text-status-warning; }
+  .ui-control-fleet-runner-ok { @apply text-status-positive; }
+  .ui-control-fleet-runner-warn { @apply text-status-warning; }
   .ui-control-fleet-actions {
     @apply ml-auto flex items-center gap-2;
   }

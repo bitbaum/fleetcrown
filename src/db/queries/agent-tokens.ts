@@ -77,7 +77,7 @@ export async function getReusableEventStreamToken(
  *
  * Returns the number of rows deleted, for telemetry. Other label values
  * ("Fleet Runner (auto)", custom-named tokens) are NEVER touched —
- * removing them would break the daemon silently.
+ * removing them would break the runner silently.
  */
 export async function deleteStaleEventStreamTokens(
   olderThanMs: number = 30 * 24 * 60 * 60 * 1000,

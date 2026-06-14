@@ -3,7 +3,7 @@
  * Generate scripts/control-states.generated.sh from the TS SSOT in
  * src/lib/control-states.ts. The bash side sources the generated file and
  * uses the variables for user-visible state strings — so adding a state in
- * TS keeps the daemon, hooks, and UI talking about it with the same words.
+ * TS keeps the runner, hooks, and UI talking about it with the same words.
  *
  * Run: npx tsx scripts/generate-bash-state-vocab.ts
  * Wired into npm run build via the build:vocab step.
@@ -58,7 +58,7 @@ for (const key of PROJECT_STATES) {
   lines.push("");
 }
 
-// Sentinel function the daemon can call to fail loudly if the generated
+// Sentinel function the runner can call to fail loudly if the generated
 // file is out of date with the TS source. Compares the count of state
 // keys against an expected number a caller can pin if needed.
 lines.push(`# Returns 0 if the generated file looks structurally sane,`);

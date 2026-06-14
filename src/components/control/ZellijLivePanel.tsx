@@ -11,8 +11,8 @@ import { ZellijLiveRows } from "./ZellijLiveRows";
 
 export function ZellijLivePanel({
   rows,
-  daemonNeverSeen,
-  daemonSyncStale = false,
+  runnerNeverSeen,
+  runnerSyncStale = false,
   refreshing,
   onRefresh,
   onFocusProject,
@@ -22,8 +22,8 @@ export function ZellijLivePanel({
   embedded = false,
 }: {
   rows: LiveTabRow[];
-  daemonNeverSeen: boolean;
-  daemonSyncStale?: boolean;
+  runnerNeverSeen: boolean;
+  runnerSyncStale?: boolean;
   refreshing: boolean;
   onRefresh: () => void;
   onFocusProject?: (tab: string) => void;
@@ -101,18 +101,18 @@ export function ZellijLivePanel({
               <>
                 <h2 className="text-xs font-semibold text-text-primary">Terminal workspaces</h2>
                 <span className="ui-tag ui-tag-neutral text-micro">
-                  {daemonNeverSeen
+                  {runnerNeverSeen
                     ? "offline"
-                    : daemonSyncStale
+                    : runnerSyncStale
                       ? `${rows.length} tabs · sync stale`
                       : `${rows.length} tabs`}
                 </span>
               </>
             )}
           </div>
-          {!daemonNeverSeen && (
+          {!runnerNeverSeen && (
             <p className="mt-0.5 text-micro text-text-tertiary">
-              {daemonSyncStale
+              {runnerSyncStale
                 ? "Showing last-known workspace state — Fleet Runner sync is stale."
                 : "Open tabs come from Zellij. Working and awaiting input come from live agent/process signals."}
             </p>
@@ -122,7 +122,7 @@ export function ZellijLivePanel({
           {/* Repair queues a command for the local runtime to pick up — with
               sync stale there is nothing listening, so offering "Restart
               helper" would silently no-op. The offline banner owns recovery. */}
-          {!daemonNeverSeen && !daemonSyncStale && (
+          {!runnerNeverSeen && !runnerSyncStale && (
             <button
               type="button"
               onClick={repairHelper}
@@ -146,7 +146,7 @@ export function ZellijLivePanel({
         </div>
       </div>
 
-      {daemonNeverSeen ? (
+      {runnerNeverSeen ? (
         <div className="ui-control-live-empty">
           <div className="mb-2 text-text-tertiary">
             <Terminal className="mx-auto h-6 w-6" />
@@ -156,7 +156,7 @@ export function ZellijLivePanel({
             The cloud can&apos;t see your local Zellij tabs until something on your
             machine pushes state to it. Two ways to fix this (5 minutes):
           </p>
-          {/* Fleet Runner is the only local runtime — the bash daemon was
+          {/* Fleet Runner is the only local runtime — the bash runner was
               deleted 2026-06-11 (killing-the-bash-daemon, Session 4b). */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
             <a

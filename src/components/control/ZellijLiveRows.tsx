@@ -44,7 +44,7 @@ type Props = {
  * composer, empty states).
  *
  * The Peek button uses Fleet Runner IPC when available and otherwise falls
- * back to the daemon-backed pending_commands path, so it is useful from web
+ * back to the runner-backed pending_commands path, so it is useful from web
  * and mobile too.
  */
 export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocusProject }: Props) {

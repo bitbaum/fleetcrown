@@ -44,7 +44,7 @@ export function ProjectCard({
   isOnlyReady = false,
   runtimeAvailable = true,
   runtimeStateKnown = true,
-  daemonSyncStale = false,
+  runnerSyncStale = false,
   snapshot,
   automationMode = "on",
   countdownSeconds,
@@ -65,8 +65,8 @@ export function ProjectCard({
   isOnlyReady?: boolean;
   runtimeAvailable?: boolean;
   runtimeStateKnown?: boolean;
-  /** True when cloud view is showing last-known daemon state (sync >90s old). */
-  daemonSyncStale?: boolean;
+  /** True when cloud view is showing last-known runner state (sync >90s old). */
+  runnerSyncStale?: boolean;
   snapshot?: ProjectOperationsSnapshot;
   automationMode?: AutoInjectMode;
   countdownSeconds?: number;
@@ -340,7 +340,7 @@ export function ProjectCard({
           {display.tone === "idle" && display.tabOpen && !display.isRunning && (
             <div className="ui-card-section">
               <p className="text-sm text-text-secondary">
-                {daemonSyncStale
+                {runnerSyncStale
                   ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or relaunch Fleet Runner."
                   : "Terminal tab is open, but FleetCrown is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
               </p>
@@ -352,7 +352,7 @@ export function ProjectCard({
             currentAdapter={currentAdapter}
             runtimeAvailable={runtimeAvailable}
             runtimeStateKnown={runtimeStateKnown}
-            daemonSyncStale={daemonSyncStale}
+            runnerSyncStale={runnerSyncStale}
             isRunning={display.isRunning}
             autoContinueEnabled={automationMode === "off" ? false : autoContinueEnabled}
             sending={sending}

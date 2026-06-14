@@ -2,7 +2,7 @@ import { pgTable, uuid, text, timestamp, jsonb, index } from "drizzle-orm/pg-cor
 import { users } from "./users";
 
 // Commands queued by the cloud control plane for the local runtime node to execute.
-// The local daemon polls this table, claims rows, executes them via zellij, and marks them done.
+// The local runner polls this table, claims rows, executes them via zellij, and marks them done.
 export const pendingCommands = pgTable("pending_commands", {
   id:          uuid("id").primaryKey().defaultRandom(),
   userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -28,7 +28,7 @@ export type InjectPayload = {
   adapter?: string;
   /**
    * Model override for the dispatched agent (e.g. "opus", "flash", "gpt-5").
-   * The daemon's execute_inject auto-launch reads this when the target tab has
+   * The runner's execute_inject auto-launch reads this when the target tab has
    * no live agent and prefers it over the conf-file model. Matches the shape
    * already used by LaunchAgentPayload/SwitchAgentPayload — adding it here so
    * /api/inject can honor user_projects.modelPref end-to-end.
@@ -38,7 +38,7 @@ export type InjectPayload = {
   projectKey?: string;
   /**
    * Orchestration run id created on the cloud side at dispatch time. The local
-   * daemon writes /tmp/cockpit-run-<tab> with this value before injecting so
+   * runner writes /tmp/cockpit-run-<tab> with this value before injecting so
    * agent-hook-bridge.sh:handle_stop can call /api/orchestration/runs/<id>/finish
    * when the agent's session ends. Closes the outcome-tracking loop in cloud mode.
    */

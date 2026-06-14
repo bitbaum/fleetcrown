@@ -122,7 +122,7 @@ export function ProjectCardHeader({
                   </span>
                 )}
                 {/* When the state itself signals a problem (e.g. Offline →
-                    daemon needs starting), surface the remediation as a
+                    runner needs starting), surface the remediation as a
                     small action chip the user can click. Honest by
                     construction: only renders when STATE_DEFINITIONS says
                     this state HAS a fix the user should take. */}

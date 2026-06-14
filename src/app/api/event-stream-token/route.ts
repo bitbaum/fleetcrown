@@ -16,7 +16,7 @@
 //
 // Why mint a fresh token instead of always re-using a single one: each
 // browser session gets its own. Revoking a session (closing all tabs +
-// signing out elsewhere) doesn't accidentally kill the daemon's ck_*
+// signing out elsewhere) doesn't accidentally kill the runner's ck_*
 // token, and vice versa. Token surface stays per-purpose.
 
 import { NextResponse } from "next/server";

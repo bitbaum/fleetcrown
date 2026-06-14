@@ -123,7 +123,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Pusher and poller now signal token-invalid back to the auto-mint flow, so a dead token recovers without user intervention.",
     ],
     breaking: [],
-    notes: "Fixes a real bug where a revoked token would lock the user permanently offline — auto-mint's 'if existing token, bail' guard kept reusing the dead one. Now the daemon deletes bad tokens on 401, and the next /control load mints a fresh one from the signed-in browser session.",
+    notes: "Fixes a real bug where a revoked token would lock the user permanently offline — auto-mint's 'if existing token, bail' guard kept reusing the dead one. Now the runner deletes bad tokens on 401, and the next /control load mints a fresh one from the signed-in browser session.",
   },
   {
     version: "0.7.2",
@@ -171,7 +171,7 @@ export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
       "Real-time updates via Postgres LISTEN/NOTIFY + SSE bridge — replaces the v0.5 30-second polling.",
       "Sub-second latency from DB row change → browser UI update.",
       "Bridge server runs on bridge.orangecat.ch (Hetzner CX22), reachable from desktop + web + mobile.",
-      "Daemon pusher is event-driven (worker.idle from session.md changes) instead of pure heartbeat.",
+      "Runner pusher is event-driven (worker.idle from session.md changes) instead of pure heartbeat.",
     ],
     breaking: [],
     notes: "The architectural foundation for everything that came after. Pre-v0.6, /control polled /api/control every 30s and the daemon-offline indicator was always lying about staleness. v0.6 inverts the dataflow: clients subscribe to an SSE stream, the bridge LISTENs on Postgres NOTIFY events, every row change fans out to connected clients within milliseconds.",

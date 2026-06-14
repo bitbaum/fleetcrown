@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unknown agent: ${agent}` }, { status: 400 });
   }
 
-  // Enqueue for the daemon to handle (it will open a tab + inject the installer)
+  // Enqueue for the runner to handle (it will open a tab + inject the installer)
   const commandId = await enqueuePendingCommand({
     userId,
     type: "install_cli",

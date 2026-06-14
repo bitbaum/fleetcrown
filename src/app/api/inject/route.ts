@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
   const projectId: string | null = dbMatch.entityProjectId ?? null;
 
   // Honor the project's per-row agent preference when the caller didn't pin one.
-  // Without this the daemon defaults to "claude" for every project regardless
+  // Without this the runner defaults to "claude" for every project regardless
   // of agent_pref, so a Gemini project gets a Claude launch and a Cursor
   // project gets Claude too. The DB column is text, so validate it's still a
   // supported adapter before trusting it.
@@ -105,10 +105,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Model override from user_projects.modelPref. The daemon's execute_inject
+  // Model override from user_projects.modelPref. The runner's execute_inject
   // auto-launch reads payload.model and prefers it over the conf-file model,
   // so a project pinned to "opus" launches Claude with the opus model and a
-  // Codex project pinned to "gpt-5" gets gpt-5 instead of the daemon's
+  // Codex project pinned to "gpt-5" gets gpt-5 instead of the runner's
   // hardcoded gpt-5.4 default. Caller-supplied model (none yet, but kept for
   // future explicit dispatch) is not in this route's schema — pure DB read.
   const eventModel = dbMatch.modelPref?.trim() || undefined;
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       promptLabel = customPrompt.slice(0, 40);
     } else if (promptKey) {
       // Prompt key without local session context — send the key as the label,
-      // the local daemon will resolve the full prompt text when it executes.
+      // the local runner will resolve the full prompt text when it executes.
       prompt = promptKey;
       promptLabel = promptKey;
     } else {
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
   const nowS = Math.floor(Date.now() / 1000);
 
   // Build the Zellij injection function — executor calls it only when ZELLIJ_SESSION_NAME
-  // is present in this process (dev server inside Zellij). Otherwise it queues for the daemon.
+  // is present in this process (dev server inside Zellij). Otherwise it queues for the runner.
   const injectFn = isRuntimeAvailable()
     ? async () => {
         const { injectIntoTab } = await import("@/lib/zellij");
@@ -341,7 +341,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Prompt history records the user's request in both modes. A queued remote
-  // request is not active work until the daemon actually injects it and pushes
+  // request is not active work until the runner actually injects it and pushes
   // fresh runtime state back to the control plane.
   insertPromptHistory(userId, {
     projectId,
@@ -404,7 +404,7 @@ export async function POST(req: NextRequest) {
     event: "inject_request",
     source: "api/inject",
     action: result.mode === "queued" ? "queued" : "injected",
-    reason: result.mode === "queued" ? "Queued for local daemon" : "Injected into local runtime",
+    reason: result.mode === "queued" ? "Queued for local runner" : "Injected into local runtime",
     promptHash: fingerprint.promptHash,
     promptPreview: fingerprint.promptPreview,
     commandId: result.mode === "queued" ? (result as { commandId: string }).commandId : null,

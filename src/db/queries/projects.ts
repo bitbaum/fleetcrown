@@ -111,7 +111,7 @@ export async function getProjectCore(userId: string, id: string) {
 }
 
 /**
- * Resolve a project's autopilot override by projectKey (the slug daemons and
+ * Resolve a project's autopilot override by projectKey (the slug runners and
  * dispatch routes use). Returns null when there's no override OR when the
  * stored value isn't a known AutoInjectMode (defensive — the column has no
  * CHECK constraint so unknown values must be tolerated). Project lookup is

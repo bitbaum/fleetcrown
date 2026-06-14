@@ -5,7 +5,7 @@
 // After, the user can `git clone` it on any machine — no Fleet Runner needed.
 //
 // Companion to BootstrapModal which does the full local stack scaffold but
-// only works when the local daemon is running.
+// only works when the local runner is running.
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";

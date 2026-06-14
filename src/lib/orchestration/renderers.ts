@@ -46,7 +46,7 @@ function renderIntentBody(request: OrchestrationTaskRequest): string {
   // Autopilot intents (next_best / test_and_fix / quality) read their body
   // from prompt-library.ts as the SSOT — same source the /control palette
   // UI and (formerly) the bash bridge used. Session 5 of killing-the-bash-
-  // daemon (2026-06-11) added the role line + self-throttle primitive +
+  // runner (2026-06-11) added the role line + self-throttle primitive +
   // worked examples to those bodies; without this lookup, autopilot fires
   // through Fleet Runner's /api/inject would still get the old generic
   // body (caught live when an autopilot fire delivered the pre-Session-5

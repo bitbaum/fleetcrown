@@ -77,7 +77,7 @@ export function IntentButtonPanel({
   onCustomFocusChange,
   runtimeAvailable = true,
   runtimeStateKnown = true,
-  daemonSyncStale = false,
+  runnerSyncStale = false,
   automationStatusLabel,
 }: {
   project: ProjectState;
@@ -116,9 +116,9 @@ export function IntentButtonPanel({
   /** False on the cloud app — gates buttons whose endpoints require a
    *  local zellij/CLI runtime and would 503 silently otherwise. */
   runtimeAvailable?: boolean;
-  /** False when cached daemon-driven runtime fields cannot be trusted. */
+  /** False when cached runner-driven runtime fields cannot be trusted. */
   runtimeStateKnown?: boolean;
-  daemonSyncStale?: boolean;
+  runnerSyncStale?: boolean;
   automationStatusLabel?: string;
 }) {
   const [showMore, setShowMore] = useState(false);
@@ -149,7 +149,7 @@ export function IntentButtonPanel({
     onToggleAutoContinue,
     statusLabel: !runtimeStateKnown
       ? "Fleet Runner offline: sends will queue until it reconnects."
-      : daemonSyncStale
+      : runnerSyncStale
       ? "Fleet Runner sync is stale: sends will queue until it reconnects."
       : automationStatusLabel
       ? automationStatusLabel

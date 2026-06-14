@@ -9,10 +9,10 @@ import { postJson } from "@/lib/api/fetch";
 import "@/components/desktop/types"; // declare global window.fleetRunner
 
 type Props = {
-  daemonNeverSeen: boolean;
-  daemonOffline: boolean;
-  daemonLastPushedAt: string | null;
-  /** True on local installs only. Cloud renders DaemonControls disabled. */
+  runnerNeverSeen: boolean;
+  runnerOffline: boolean;
+  runnerLastPushedAt: string | null;
+  /** True on local installs only. Cloud renders runner controls disabled. */
   runtimeAvailable?: boolean;
   /** When true, the user already has at least one project. Drop the
    *  "Start a new project" pitch from the never-seen variant — they
@@ -22,10 +22,10 @@ type Props = {
   onRefresh?: () => void;
 };
 
-export function DaemonStatusBanner({
-  daemonNeverSeen,
-  daemonOffline,
-  daemonLastPushedAt,
+export function RunnerStatusBanner({
+  runnerNeverSeen,
+  runnerOffline,
+  runnerLastPushedAt,
   runtimeAvailable = false,
   hasProjects = false,
   onRefresh,
@@ -84,13 +84,13 @@ export function DaemonStatusBanner({
   // stays expanded: that's onboarding, not noise.
   const [expanded, setExpanded] = useState(false);
 
-  if (dismissed || (!daemonNeverSeen && !daemonOffline)) return null;
+  if (dismissed || (!runnerNeverSeen && !runnerOffline)) return null;
 
-  const lastSeen = daemonLastPushedAt
-    ? timeAgo(new Date(daemonLastPushedAt).getTime())
+  const lastSeen = runnerLastPushedAt
+    ? timeAgo(new Date(runnerLastPushedAt).getTime())
     : null;
 
-  if (!daemonNeverSeen && !expanded) {
+  if (!runnerNeverSeen && !expanded) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised/60 px-3 py-2 text-xs text-text-tertiary">
         <WifiOff className="h-3.5 w-3.5 shrink-0 text-status-warning" />
@@ -117,7 +117,7 @@ export function DaemonStatusBanner({
   return (
     <div className="ui-callout-warning">
       <div className="mt-0.5 shrink-0 text-status-warning">
-        {daemonNeverSeen ? (
+        {runnerNeverSeen ? (
           <Radio className="h-4 w-4" />
         ) : (
           <WifiOff className="h-4 w-4" />
@@ -127,14 +127,14 @@ export function DaemonStatusBanner({
       <div className="min-w-0 flex-1 space-y-2">
         <div>
           <span className="font-medium text-text-primary">
-            {daemonNeverSeen ? `Finish setup to dispatch agents` : "Fleet Runner offline"}
+            {runnerNeverSeen ? `Finish setup to dispatch agents` : "Fleet Runner offline"}
           </span>
-          {!daemonNeverSeen && lastSeen && (
+          {!runnerNeverSeen && lastSeen && (
             <span className="ml-2 text-xs text-text-tertiary">last seen {lastSeen}</span>
           )}
         </div>
 
-        {daemonNeverSeen ? (
+        {runnerNeverSeen ? (
           <>
             <p className="text-text-secondary leading-relaxed">
               {hasProjects
@@ -166,7 +166,7 @@ export function DaemonStatusBanner({
               {/* Path B branches on whether we're already inside Fleet Runner.
                   When yes: replace the "download" CTA with a one-click pair
                   button (the user already has the app, they just need the
-                  daemon's auth glue to land). When no: keep the download
+                  runner's auth glue to land). When no: keep the download
                   card so new users know to install for local dispatch. */}
               {insideFleetRunner ? (
                 pairedTokenLabel ? (
@@ -268,7 +268,7 @@ export function DaemonStatusBanner({
             (setup) flow and when running locally. Also suppressed inside
             Fleet Runner — MissingCLIsBanner handles that case and only shows
             the CLIs ACTUALLY missing (v0.6.0 getInstalledCLIs IPC). */}
-        {(daemonNeverSeen || runtimeAvailable) && !insideFleetRunner && (
+        {(runnerNeverSeen || runtimeAvailable) && !insideFleetRunner && (
           <div className="pt-2 border-t border-border-subtle">
             <p className="text-xs text-text-muted mb-1.5">Missing an agent CLI? Click to open a dedicated terminal tab with the installer:</p>
             <div className="flex flex-wrap gap-2">

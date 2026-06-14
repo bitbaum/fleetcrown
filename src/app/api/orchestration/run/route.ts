@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // status:working gate removed 2026-06-11 (Session 5b of killing-the-bash-
-  // daemon). Original 2026-05-31 rationale: "even with status:working set,
-  // the daemon kept getting fresh inject commands" — but the bash daemon
+  // runner). Original 2026-05-31 rationale: "even with status:working set,
+  // the runner kept getting fresh inject commands" — but the bash runner
   // that motivated this defence-in-depth is gone (Sessions 1-4). The only
   // entry path that still routes through here is manual user clicks on
   // /control intent buttons; gating those was a false positive. A human
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
     const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
     const prompt = renderTaskForAdapter(request);
-    // Create an orchestration_runs row for trackable intents so the local daemon
+    // Create an orchestration_runs row for trackable intents so the local runner
     // can write /tmp/cockpit-run-<tab> and agent-hook-bridge.sh can close out the
     // outcome when the agent session ends. Lifecycle intents (hard_stop /
     // close_session) end sessions and don't produce work outcomes — skip tracking.
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
           projectId: request.projectId ?? null,
           adapter: request.adapter,
           intent: request.intent,
-          // The daemon has not executed this command yet. Runtime state will
+          // The runner has not executed this command yet. Runtime state will
           // show active work only after a successful local injection.
           state: "waiting",
           projectKey: request.projectKey,
@@ -129,11 +129,11 @@ export async function POST(req: NextRequest) {
       promptKey: request.intent,
       promptLabel: intent.name,
       adapter: request.adapter,
-      // Forward caller-supplied model so the daemon's auto-launch (501a6e7)
-      // honors it. When absent, the daemon's _conf_model_for_tab fallback
+      // Forward caller-supplied model so the runner's auto-launch (501a6e7)
+      // honors it. When absent, the runner's _conf_model_for_tab fallback
       // (9a3bd61) reads agent-projects.conf, which is synced from
       // user_projects.modelPref on a 5-minute cycle. No DB lookup needed
-      // here — the daemon already covers the implicit-pref path.
+      // here — the runner already covers the implicit-pref path.
       model: request.model,
       projectId: request.projectId ?? null,
       projectKey: request.projectKey,

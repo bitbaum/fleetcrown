@@ -4,9 +4,9 @@
  * Single source of truth for: what prompts exist, their names/descriptions/
  * categories, and how they surface in the UI (style, slot, icon, sendNow).
  *
- * For prompts that ALSO need to be dispatchable by the autopilot daemon
+ * For prompts that ALSO need to be dispatchable by the autopilot runner
  * (the ones the agent-hook-bridge.sh script reads to know what to inject),
- * set `agentKey` to the snake_case identifier the daemon expects. The
+ * set `agentKey` to the snake_case identifier the runner expects. The
  * template body lives both here AND in ~/.config/agent-prompts.json — that
  * JSON file is now a build artifact, generated from this TS source via
  * `npm run generate:agent-prompts`. Edit ONLY this file when adding/changing
@@ -55,7 +55,7 @@ export type PromptTemplate = {
   suggestedSchedule?: string; // cron expr, e.g. "0 9 * * 1"
   tags?: string[];
   featured?: boolean; // show in Quick Access row
-  /** Snake_case key the daemon dispatches by. When set, this prompt is also
+  /** Snake_case key the runner dispatches by. When set, this prompt is also
    *  exposed via /api/prompts/agent and the autopilot can fire it. */
   agentKey?: string;
   /** Emoji shown in chips and DimensionSection rows. */
@@ -839,9 +839,9 @@ Be direct. If nothing shipped, say so. Under 150 words.`,
 
   // ─── Control (loop primitives) ─────────────────────────────────────────────
   // These six were JSON-only until 2026-05-31 — meaning they were dispatchable
-  // by the autopilot daemon but invisible to the /prompts library page and
+  // by the autopilot runner but invisible to the /prompts library page and
   // ProjectPromptLibrary modal. Now they live in the unified SSOT with
-  // agentKey set, so they appear everywhere AND the daemon can still fire
+  // agentKey set, so they appear everywhere AND the runner can still fire
   // them via the same snake_case key it always used.
   //
   // Order intent (2026-06-03): safe / read-only / diagnostic primitives FIRST,

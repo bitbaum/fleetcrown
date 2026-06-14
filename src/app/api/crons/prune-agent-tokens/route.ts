@@ -16,7 +16,7 @@ import { requireCronAuth } from "@/lib/cron-auth";
  *
  * Why only event-stream tokens: other labels (e.g. "Fleet Runner (auto)",
  * user-named tokens from Settings) represent persistent integrations.
- * Deleting them would silently break the daemon. The pruner stays narrow
+ * Deleting them would silently break the runner. The pruner stays narrow
  * by label so future token kinds with different retention policies don't
  * accidentally fall under this scythe.
  *

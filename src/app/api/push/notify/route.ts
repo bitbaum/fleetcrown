@@ -19,11 +19,11 @@ const NotifyBody = z.object({
 });
 
 /**
- * POST — daemon-auth (Bearer) endpoint that fans a Web Push notification to
+ * POST — runner-auth (Bearer) endpoint that fans a Web Push notification to
  * every subscription belonging to the calling user. Fire-and-forget from the
  * Stop hook; the response is informational. Failed-410 endpoints are GC'd.
  *
- * Returns 503 when VAPID env vars are missing so the daemon log can surface
+ * Returns 503 when VAPID env vars are missing so the runner log can surface
  * the misconfiguration — the autopilot path (Stage 2) still works without
  * push; this endpoint is additive.
  */

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   // 500 that the UI didn't surface — silent no-op for the user. Returning
   // a clear 503 lets the caller (and any future caller) react properly.
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({ ok: false, reason: "runtime_offline", error: "Clear context requires the local daemon" }, { status: 503 });
+    return NextResponse.json({ ok: false, reason: "runtime_offline", error: "Clear context requires the local runner" }, { status: 503 });
   }
 
   const dataOrResp = await readJsonBody(req, ClearBody);

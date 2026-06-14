@@ -12,7 +12,7 @@ import { Drawer } from "@/components/ui/modal";
 // injection, which users have already accepted as the cost of remote dispatch.
 //
 // Uses the fastest available runtime: Fleet Runner IPC when the desktop bridge
-// exists, otherwise a pending_commands round-trip that the local daemon drains.
+// exists, otherwise a pending_commands round-trip that the local runner drains.
 //
 // Auto-refresh is opt-in: a re-peek every N seconds is useful for watching
 // long-running agents, but stays off by default so we don't disrupt the user
@@ -154,7 +154,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
             <p className="mt-2 text-text-tertiary">{error}</p>
             <p className="mt-4 text-xs text-text-muted">
               Common reasons: the tab is no longer open in Zellij, Zellij is not running on
-              your machine, or neither Fleet Runner nor the local daemon is online.
+              your machine, or neither Fleet Runner nor the local runner is online.
             </p>
           </div>
         ) : content === null ? (

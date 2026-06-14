@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getBearerUserId } from "@/lib/daemon-auth";
+import { getBearerUserId } from "@/lib/runner-auth";
 import { upsertLocalUserProject } from "@/db/queries/user-projects";
 import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 

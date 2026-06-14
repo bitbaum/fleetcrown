@@ -9,7 +9,7 @@ import { hasValidUsername, isOnboardingComplete, suggestUsername } from "@/lib/o
 import { healReturningUserOnboarding } from "@/lib/onboarding-heal";
 import { countActiveProjects } from "@/db/queries/user-projects";
 
-async function getDaemonConnectionStatus(userId: string) {
+async function getRunnerConnectionStatus(userId: string) {
   const [snapshot, states] = await Promise.all([
     getRuntimeSnapshot(userId).catch(() => null),
     getProjectStatesByUserId(userId).catch(() => []),
@@ -36,11 +36,11 @@ export async function GET() {
 
   user = await healReturningUserOnboarding(user);
 
-  const [teamInvitee, daemon, projectCount] = await Promise.all([
+  const [teamInvitee, runner, projectCount] = await Promise.all([
     isTeamInvitee(userId),
     isRuntimeAvailable()
       ? Promise.resolve({ connected: true, live: true, lastPushedAt: new Date().toISOString() })
-      : getDaemonConnectionStatus(userId),
+      : getRunnerConnectionStatus(userId),
     countActiveProjects(userId),
   ]);
 
@@ -53,9 +53,9 @@ export async function GET() {
     isTeamInvitee: teamInvitee,
     isReturningUser: projectCount > 0,
     runtimeAvailable: isRuntimeAvailable(),
-    daemonConnected: daemon.connected,
-    daemonLive: daemon.live,
-    daemonLastPushedAt: daemon.lastPushedAt,
+    runnerConnected: runner.connected,
+    runnerLive: runner.live,
+    runnerLastPushedAt: runner.lastPushedAt,
     /** Client should call session.update() when true so middleware JWT catches up. */
     needsSessionRefresh: complete,
   });

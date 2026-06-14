@@ -66,14 +66,14 @@ export async function retryFailedCommand(userId: string, id: string): Promise<st
 // authorized user IDs. API bearer routes must pass only the token owner's ID.
 // FOR UPDATE SKIP LOCKED prevents two concurrent pollers from claiming the same row.
 //
-// 10s (was 90s) because the multi-poller race (daemon + Fleet Runner) means a
+// 10s (was 90s) because the multi-poller race (runner + Fleet Runner) means a
 // row can be claimed by one runtime, validation-rejected, and left orphaned —
 // the other runtime should pick it up almost immediately. 10s mirrors the
 // upper bound on a Fleet Runner round-trip from claim to bail. Until Phase B's
 // ?types= filter lands, this is the user-facing "voice didn't fire" mitigation.
 const STALE_CLAIM_SECONDS = 10;
 
-/** Commands claimed but never finished (daemon crash/restart) become claimable again. */
+/** Commands claimed but never finished (runner crash/restart) become claimable again. */
 export async function reclaimStalePendingCommands(userIds: string[]): Promise<number> {
   if (userIds.length === 0) return 0;
   const userFilter = userIds.length === 1
@@ -142,7 +142,7 @@ export async function getPendingCommandsForUser(userId: string) {
 // Returns commands the user should know about: executed-and-failed (ok=false)
 // PLUS executed-but-unverified inject commands (ok=true, verified=false — the
 // keystrokes landed but the agent didn't react within the post-flight window).
-// Limited to the last 10 minutes so a long-running daemon doesn't keep
+// Limited to the last 10 minutes so a long-running runner doesn't keep
 // surfacing stale errors after the user has moved on.
 export async function getRecentFailedCommands(userIds: string[]): Promise<FailedCommand[]> {
   if (userIds.length === 0) return [];

@@ -48,10 +48,10 @@ export function GitHubStatus() {
         <FetchErrorState message="Couldn't load GitHub status" detail={error ?? data?.error} onRetry={refetch} />
       ) : data?.runtimeOnly ? (
         // Cloud mode — github-status.sh shells out to the `gh` CLI from the
-        // app server, which Vercel can't do. The daemon being connected
-        // doesn't fix this; it would need a daemon-pushed CI snapshot, which
+        // app server, which Vercel can't do. The runner being connected
+        // doesn't fix this; it would need a runner-pushed CI snapshot, which
         // doesn't exist yet. Be honest about the constraint instead of
-        // implying "connect the daemon and it'll work".
+        // implying "connect the runner and it'll work".
         <EmptyState>
           CI status is collected by the <code>gh</code> CLI on the same machine that runs the {APP_NAME} web server.
           Open this page on your local {APP_NAME} (<code>http://localhost:3000/projects</code>) to see it.

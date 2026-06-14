@@ -114,7 +114,7 @@ export const ROADMAP = {
       bullets: [
         "Web command center coordinates fleets of AI agents across projects.",
         "One-button fleet autopilot: pause all, or build all — agents drain each project's queue, then pick the next-best task.",
-        "One local execution path: the Fleet Runner desktop app owns Zellij, agent launching, and state sync (the legacy bash daemon was retired by deletion).",
+        "One local execution path: the Fleet Runner desktop app owns Zellij, agent launching, and state sync (the legacy bash runner was retired by deletion).",
         "Reliable handoff system between agent sessions, with truthful card status surfaces.",
         "Per-project pause / resume / direct-send semantics with per-project autopilot overrides.",
         "Multi-user SaaS foundation — GitHub OAuth, organizations, team invites, agent tokens.",

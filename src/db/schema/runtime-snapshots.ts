@@ -2,7 +2,7 @@ import { pgTable, uuid, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { users } from "./users";
 
 /**
- * One row per zellij pane the daemon observed in the last heartbeat. Used by
+ * One row per zellij pane the runner observed in the last heartbeat. Used by
  * Fleet Runner cold-start to regenerate a KDL layout that respawns each agent
  * in the correct tab + cwd, so the user never types `claude` after a restart.
  *
@@ -21,7 +21,7 @@ export type PaneRecord = {
   sessionName?: string;
 };
 
-/** Latest Zellij tab list pushed by the local daemon (cloud control plane). */
+/** Latest Zellij tab list pushed by the local runner (cloud control plane). */
 export const runtimeSnapshots = pgTable("runtime_snapshots", {
   userId: uuid("user_id")
     .primaryKey()

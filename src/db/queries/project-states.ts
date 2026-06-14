@@ -181,7 +181,7 @@ type RuntimeFields = Pick<
     "currentPromptStartedAt" | "readyAt" | "lockAt" | "closingAt" | "closedAt"
 >;
 
-/** Accepts runtime presence/lifecycle data only from the newest daemon observation. */
+/** Accepts runtime presence/lifecycle data only from the newest runner observation. */
 export async function persistProjectRuntimeIfNewer(
   patch: Pick<NewProjectState, "userId" | "projectKey" | "tabName"> &
     Partial<Pick<NewProjectState, "projectId"> & RuntimeFields> & { runtimeObservedAt: Date },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { markCommandExecuted } from "@/db/queries/pending-commands";
 import { getApiUserId } from "@/lib/session";
 
-// Daemon calls this to mark a command as executed.
+// Runner calls this to mark a command as executed.
 // PATCH /api/control/commands/:id  body: { ok: boolean, error?: string }
 export async function PATCH(
   req: NextRequest,

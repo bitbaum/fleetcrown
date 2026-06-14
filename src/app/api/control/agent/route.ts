@@ -21,7 +21,7 @@ type SwitchTabResult = {
   dir?: string;
   command?: string;
   // "queued" is the cloud-mode outcome: a switch_agent pending_command was
-  // enqueued for the local daemon to execute. Local mode still uses
+  // enqueued for the local runner to execute. Local mode still uses
   // restarted/skipped/failed from the inline execSync path.
   status: "restarted" | "skipped" | "failed" | "queued";
   reason?: string;
@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
       if (!isRuntimeAvailable()) {
         // Cloud mode: instead of returning "skipped" and silently doing
         // nothing, queue a switch_agent command per project. The local
-        // daemon's execute_switch_agent (hardened in 0ccb43d/9a3bd61)
+        // runner's execute_switch_agent (hardened in 0ccb43d/9a3bd61)
         // handles tab-not-open as a no-op via its quit signal path, so
-        // queueing for every registered project is safe. Daemon also
+        // queueing for every registered project is safe. Runner also
         // falls back to conf model if model is empty (9a3bd61).
         tabResults = await Promise.all(
           allProjects.map(async ({ tab, dir }): Promise<SwitchTabResult> => {

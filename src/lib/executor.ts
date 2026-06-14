@@ -2,7 +2,7 @@
  * Typed command executor — the boundary between "what to do" and "how to do it."
  *
  * Local runtime:  commands fire directly into zellij via injectIntoTab().
- * Remote (Vercel): commands write to pending_commands in Neon; the local daemon picks them up.
+ * Remote (Vercel): commands write to pending_commands in Neon; the local runner picks them up.
  *
  * Callers express intent once. The executor routes to the correct mechanism.
  */
@@ -29,7 +29,7 @@ export async function executeInject(
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
   // Direct injection requires both filesystem access AND a Zellij session in this process.
-  // The production standalone server runs outside Zellij; the local daemon (which IS inside
+  // The production standalone server runs outside Zellij; the local runner (which IS inside
   // a Zellij pane) picks up queued commands and injects with the correct session context.
   if (isRuntimeAvailable() && !!process.env.ZELLIJ_SESSION_NAME) {
     try {

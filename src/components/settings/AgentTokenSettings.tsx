@@ -27,7 +27,7 @@ export function AgentTokenSettings() {
   const [tokens, setTokens] = useState<TokenMeta[]>([]);
   const [revealed, setRevealed] = useState<NewToken | null>(null);
   // "auto-pair" state — when the React tree runs inside Fleet Runner,
-  // we hand any newly-minted token straight to the desktop daemon over
+  // we hand any newly-minted token straight to the desktop runner over
   // IPC. The UI replaces the "Open in Fleet Runner" deep-link button
   // with a confirmation chip so the user knows it already paired.
   const [insideFleetRunner, setInsideFleetRunner] = useState(false);
@@ -61,7 +61,7 @@ export function AgentTokenSettings() {
       setTokens((prev) => [...prev, { id: data.id, label: data.label, lastUsedAt: null, createdAt: data.createdAt, prefix: data.prefix }]);
       setLabel("");
       // If we're inside Fleet Runner, hand the new token straight to the
-      // desktop daemon over IPC. The user gets paired in one click instead
+      // desktop runner over IPC. The user gets paired in one click instead
       // of the 3-step "copy → close → paste" deep-link dance.
       // Every method on FleetRunnerBridge is typed optional (older shipped
       // desktop builds may lack newer methods), so check before invoking.
@@ -107,7 +107,7 @@ export function AgentTokenSettings() {
     <section className="ui-settings-section">
       <h2 className="font-medium text-text-primary">Agent Tokens</h2>
       <p className="text-sm text-text-tertiary">
-        Preferred: install the native <a href="/download" className="underline">Fleet Runner desktop app</a> (the authoritative local runtime). Legacy daemon installer below for transition / headless.
+        Preferred: install the native <a href="/download" className="underline">Fleet Runner desktop app</a> (the authoritative local runtime). Legacy runner installer below for transition / headless.
       </p>
       <div className="flex items-center gap-2">
         <code className="flex-1 break-all rounded-lg bg-surface-raised px-3 py-2 font-mono text-xs text-text-secondary">
@@ -169,7 +169,7 @@ export function AgentTokenSettings() {
           {insideFleetRunner && autoPaired?.tokenId === revealed.id ? (
             <div className="self-start inline-flex items-center gap-1.5 rounded-md bg-status-positive-subtle px-3 py-1.5 text-xs text-status-positive">
               <Cpu className="h-3.5 w-3.5" />
-              <span>Paired with this Fleet Runner — daemon connecting now.</span>
+              <span>Paired with this Fleet Runner — runner connecting now.</span>
             </div>
           ) : insideFleetRunner ? (
             <div className="space-y-1 self-start">

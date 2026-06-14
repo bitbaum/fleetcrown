@@ -70,7 +70,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
     isRuntimeAvailable() ? Promise.resolve([] as DbProjectState[]) : getProjectStatesByUserId(userId).catch((e): DbProjectState[] => { console.error("[control/slowData] projectStates failed:", e); return []; }),
     isRuntimeAvailable() ? Promise.resolve(null) : getRuntimeSnapshot(userId).catch((e) => { console.error("[control/slowData] runtimeSnapshot failed:", e); return null; }),
   ]);
-  // Locally: live Zellij query. On cloud: daemon-pushed openTabs (full session list),
+  // Locally: live Zellij query. On cloud: runner-pushed openTabs (full session list),
   // falling back to per-project tabOpen flags from project_states.
   const zellijTabs = isRuntimeAvailable()
     ? zellijTabsLocal
@@ -146,12 +146,12 @@ export async function GET() {
   // a hand-typed array, which silently drifted every time we added an agent
   // to lib/agent-registry until someone happened to grep for it.
   const agentIds = listAgentRegistry().map((entry) => entry.id);
-  const daemonAvailability: AgentAvailabilityOverride | undefined = runtimeAvailable
+  const runnerAvailability: AgentAvailabilityOverride | undefined = runtimeAvailable
     ? undefined
     : installedAgents.length === 0
       ? Object.fromEntries(agentIds.map((agent) => [agent, true])) as AgentAvailabilityOverride
       : Object.fromEntries(agentIds.map((agent) => [agent, installedAgents.includes(agent)])) as AgentAvailabilityOverride;
-  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, daemonAvailability);
+  const agentRegistry: AgentCatalog = buildSwitchableAgentCatalog(preferences.models, agentConfig.agent, runnerAvailability);
   // Detect any known agent running in a project dir — not just the configured default
   const agentProcesses = getAgentProcesses(agentRegistry.agents);
   const projectKeys = projects.map((p) => p.tab);
@@ -266,7 +266,7 @@ export async function GET() {
 
     const projectAgentId = agentPref ?? agentConfig.agent;
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
-    // On Vercel (no /proc access) fall back to daemon-pushed DB state so the control
+    // On Vercel (no /proc access) fall back to runner-pushed DB state so the control
     // panel reflects live agent activity on the home machine.
     const agentRunning = runtimeAvailable
       ? projectProcesses.length > 0
@@ -279,7 +279,7 @@ export async function GET() {
       : projectAgent?.capabilities.sessionLifecycleSignals ?? false;
 
     // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
-    // show stale tasks after reboot). On Vercel, daemon keeps DB current so use DB.
+    // show stale tasks after reboot). On Vercel, runner keeps DB current so use DB.
     const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
       ? promptHint
       : (dbState?.currentPromptKey && dbState?.currentPromptLabel && dbState?.currentPromptStartedAt)
@@ -291,7 +291,7 @@ export async function GET() {
           }
         : null;
     // Agents without lifecycle callbacks can leave inject sentinels that outlive
-    // the work on local runtime. Cloud daemon already applies stale cleanup.
+    // the work on local runtime. Cloud runner already applies stale cleanup.
     const currentPrompt: CurrentPrompt | null = runtimeAvailable
       ? (sessionLifecycleSignals || rawCurrentPrompt?.source === "runner" ? rawCurrentPrompt : null)
       : rawCurrentPrompt;
@@ -394,7 +394,7 @@ export async function GET() {
       zellijTabs,
       recentActivity: recentActivity ?? [],
       runtimeAvailable: isRuntimeAvailable(),
-      daemonLastPushedAt: !isRuntimeAvailable()
+      runnerLastPushedAt: !isRuntimeAvailable()
         ? (() => {
             let maxAt: Date | null = runtimeSnapshotUpdatedAt;
             for (const s of dbStatesArr) {

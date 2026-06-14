@@ -130,8 +130,8 @@ export async function getTokenMetrics(userId: string) {
   return { total, byLabel };
 }
 
-/** Daemon last-seen — how recently the pusher heartbeated. */
-export async function getDaemonMetrics(userId: string) {
+/** Runner last-seen — how recently the pusher heartbeated. */
+export async function getRunnerMetrics(userId: string) {
   const rows = await db
     .select({ lastObserved: max(runtimeSnapshots.observedAt) })
     .from(runtimeSnapshots)

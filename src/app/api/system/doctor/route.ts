@@ -34,8 +34,11 @@ function readTokenFile(): string {
   return readFileSync(path, "utf8").trim();
 }
 
-function readDaemonEnv(): Record<string, string> {
-  const path = `${homedir()}/.config/fleetcrown/daemon.env`;
+function readRunnerEnv(): Record<string, string> {
+  // Fleet Runner writes runner.env; older installs wrote daemon.env. Prefer the
+  // current name, fall back to the legacy file so existing machines keep working.
+  const dir = `${homedir()}/.config/fleetcrown`;
+  const path = existsSync(`${dir}/runner.env`) ? `${dir}/runner.env` : `${dir}/daemon.env`;
   if (!existsSync(path)) return {};
   const out: Record<string, string> = {};
   for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
@@ -137,7 +140,7 @@ export async function GET() {
   ));
 
   const token = readTokenFile();
-  const env = readDaemonEnv();
+  const env = readRunnerEnv();
   const envToken = env.FLEETCROWN_DAEMON_TOKEN ?? "";
   const localToken = token ? await validateAgentToken(token) : null;
   checks.push(check(
@@ -148,7 +151,7 @@ export async function GET() {
   ));
   checks.push(check(
     "token-env",
-    "Daemon env token",
+    "Runner env token",
     token && envToken === token ? "pass" : "warn",
     token && envToken === token ? "daemon.env matches fleet-runner-token." : "daemon.env and fleet-runner-token differ.",
   ));

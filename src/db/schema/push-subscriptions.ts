@@ -3,7 +3,7 @@ import { users } from "./users";
 
 /**
  * Web Push subscriptions — one row per (user × device-browser). The Stop hook
- * fans out an autopilot notification to every row matching the daemon's user
+ * fans out an autopilot notification to every row matching the runner's user
  * so the user gets an ambient signal on whichever device they're near (phone
  * after PWA install, desktop browser, both).
  *

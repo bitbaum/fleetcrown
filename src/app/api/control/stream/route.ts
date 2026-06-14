@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 const KEEPALIVE_MS = 15_000;
 
 // Map DB state rows to the FastProjectState shape the SSE client expects.
-// Used on Vercel where /proc and /tmp are unavailable — daemon keeps DB current.
+// Used on Vercel where /proc and /tmp are unavailable — runner keeps DB current.
 function dbToFastState(
   confProjects: Array<{ tab: string; ownerUserId: string }>,
   dbRows: DbProjectState[]
@@ -193,7 +193,7 @@ export async function GET() {
         tick().catch((err) => console.error("[control/stream] tick failed:", err)).finally(() => { tickRunning = false; });
       };
 
-      // Event-driven: daemon HTTP push → emitStateChanged → wake this stream immediately.
+      // Event-driven: runner HTTP push → emitStateChanged → wake this stream immediately.
       const onStateChanged = () => scheduledTick();
       sseBus.on(`state:${userId}`, onStateChanged);
 

@@ -219,7 +219,7 @@ export async function appendProjectDevLogByEntityProjectId(
 
 /**
  * Returns all distinct userIds that have registered projects.
- * Used by the daemon when claiming pending commands — the daemon services all
+ * Used by the runner when claiming pending commands — the runner services all
  * local projects regardless of which DB user row owns them, so we must drain
  * commands for every userId rather than just the isDefault one.
  */

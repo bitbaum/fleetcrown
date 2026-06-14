@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Sparkles, Settings2 } from "lucide-react";
-import { DAEMON_OFFLINE_THRESHOLD_MS } from "@/lib/constants/daemon";
+import { RUNNER_OFFLINE_THRESHOLD_MS } from "@/lib/constants/runner";
 import { postJson } from "@/lib/api/fetch";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
@@ -11,7 +11,7 @@ import { useCreateProject } from "@/hooks/use-create-project";
 import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows } from "./control-presenter";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
-import { DaemonStatusBanner } from "./DaemonStatusBanner";
+import { RunnerStatusBanner } from "./RunnerStatusBanner";
 import { APP_NAME } from "@/config/brand";
 import {
   ActivityLogPanel,
@@ -34,7 +34,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable, daemonLastPushedAt,
+    runtimeAvailable, runnerLastPushedAt,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -58,7 +58,7 @@ export function ControlPanel() {
   const nowS = Math.floor(Date.now() / 1000);
 
   // Trigger the hosted one-click installer flow for a specific agent CLI.
-  // Re-uses the same primitive as the DaemonStatusBanner "Install X" buttons.
+  // Re-uses the same primitive as the RunnerStatusBanner "Install X" buttons.
   // Shows the existing queuedNotice toast so the user sees immediate feedback.
   const requestAgentInstall = async (agentId: string) => {
     const label = switchableRegistry.find((e) => e.id === agentId)?.label ?? agentId;
@@ -81,16 +81,16 @@ export function ControlPanel() {
     newName, setNewName, newDir, setNewDir, newGitUrl, setNewGitUrl,
     creatingProject, createError, createAndLaunch,
   } = useCreateProject({ openLaunchModal, refresh });
-  const daemonAgoMs = lastUpdated && daemonLastPushedAt ? lastUpdated - new Date(daemonLastPushedAt).getTime() : null;
-  const daemonOffline = !runtimeAvailable && daemonAgoMs !== null && daemonAgoMs > DAEMON_OFFLINE_THRESHOLD_MS;
-  const daemonNeverSeen = !runtimeAvailable && daemonLastPushedAt === null;
-  // Only hide cached runtime when the daemon has never connected. When offline
+  const runnerAgoMs = lastUpdated && runnerLastPushedAt ? lastUpdated - new Date(runnerLastPushedAt).getTime() : null;
+  const runnerOffline = !runtimeAvailable && runnerAgoMs !== null && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS;
+  const runnerNeverSeen = !runtimeAvailable && runnerLastPushedAt === null;
+  // Only hide cached runtime when the runner has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.
-  const runtimeStateKnown = !daemonNeverSeen;
-  const daemonSyncStale = daemonOffline && daemonLastPushedAt !== null;
+  const runtimeStateKnown = !runnerNeverSeen;
+  const runnerSyncStale = runnerOffline && runnerLastPushedAt !== null;
   const runtimeSyncCtx = {
-    syncStale: daemonSyncStale,
-    lastSyncedAt: daemonLastPushedAt,
+    syncStale: runnerSyncStale,
+    lastSyncedAt: runnerLastPushedAt,
   };
   const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown) : null;
   const dashboard = pageState?.dashboard ?? null;
@@ -185,15 +185,15 @@ export function ControlPanel() {
     openLaunchModal,
     runtimeAvailable,
     runtimeStateKnown,
-    daemonSyncStale,
+    runnerSyncStale,
     automationMode: automationPolicy.mode,
     countdownSeconds: automationPolicy.countdownSeconds,
   });
 
   const livePanelProps = {
     rows: liveTabRows,
-    daemonNeverSeen,
-    daemonSyncStale,
+    runnerNeverSeen,
+    runnerSyncStale,
     refreshing,
     onRefresh: () => refresh(true),
     onFocusProject: setSelectedTab,
@@ -210,7 +210,7 @@ export function ControlPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Hierarchy rewrite 2026-05-31: when the daemon is offline or never seen,
+      {/* Hierarchy rewrite 2026-05-31: when the runner is offline or never seen,
           the banner with Start/Restart buttons OWNS the top viewport — it's
           the only actionable thing on the page until the user reconnects.
           When healthy, the banner self-hides and FleetStatus is the first thing
@@ -218,18 +218,18 @@ export function ControlPanel() {
           work, queued instructions, and saved context by project" section
           header: that subtitle taught the user nothing they couldn't infer
           from the table itself. */}
-      {/* Suppress the daemon banner during the zero-project empty state —
+      {/* Suppress the runner banner during the zero-project empty state —
           EmptyStateWelcome below already pitches "Start a project" / "Install
           Fleet Runner" with the full card grid, and rendering both led to
           the same two CTAs appearing twice on the same screen. The banner
-          still fires for users with projects but no daemon (legit warning:
-          they can't dispatch) and for daemon-was-online-now-offline (legit
+          still fires for users with projects but no runner (legit warning:
+          they can't dispatch) and for runner-was-online-now-offline (legit
           troubleshooting). */}
-      {!(data && data.projects.length === 0 && daemonNeverSeen && !daemonOffline) && (
-        <DaemonStatusBanner
-          daemonNeverSeen={daemonNeverSeen}
-          daemonOffline={daemonOffline}
-          daemonLastPushedAt={daemonLastPushedAt}
+      {!(data && data.projects.length === 0 && runnerNeverSeen && !runnerOffline) && (
+        <RunnerStatusBanner
+          runnerNeverSeen={runnerNeverSeen}
+          runnerOffline={runnerOffline}
+          runnerLastPushedAt={runnerLastPushedAt}
           runtimeAvailable={runtimeAvailable}
           hasProjects={(data?.projects.length ?? 0) > 0}
           onRefresh={() => refresh(true)}
@@ -257,7 +257,7 @@ export function ControlPanel() {
           <LocalDevSuggestions />
           <EmptyStateWelcome
             onAddManual={() => setNewProjectOpen(true)}
-            // Bootstrap requires the local Fleet Runner daemon (writes to ~/dev,
+            // Bootstrap requires the local Fleet Runner runner (writes to ~/dev,
             // shells out to `gh repo create`); hide the CTA when runtime isn't
             // available so we don't 503 the user on click.
             onBootstrap={runtimeAvailable ? () => setBootstrapOpen(true) : undefined}
@@ -265,7 +265,7 @@ export function ControlPanel() {
         </>
       )}
 
-      {/* ControlFleetStatus shows daemon health + working/ready/open counters
+      {/* ControlFleetStatus shows runner health + working/ready/open counters
           + autopilot pill. When the user has 0 projects, all counters are 0
           and the panel reads as noise stacked under the empty-state welcome
           ("Setup needed · Autopilot Manual · 0 working · 0 ready · 0 open
@@ -276,10 +276,10 @@ export function ControlPanel() {
         dashboard={dashboard}
         attentionCount={attention.length}
         failedCount={failedCount}
-        daemonNeverSeen={daemonNeverSeen}
-        daemonOffline={daemonOffline}
-        daemonStateUnknown={daemonNeverSeen}
-        daemonLastPushedAt={daemonLastPushedAt}
+        runnerNeverSeen={runnerNeverSeen}
+        runnerOffline={runnerOffline}
+        runnerStateUnknown={runnerNeverSeen}
+        runnerLastPushedAt={runnerLastPushedAt}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
         automationSaving={automationPolicy.saving}
@@ -300,24 +300,24 @@ export function ControlPanel() {
       />
 
       {/* Workspaces panel — collapsed-by-default on every breakpoint when the
-          daemon is offline or never-seen. The Projects grid above already
+          runner is offline or never-seen. The Projects grid above already
           shows every registered project's last-known state; in offline mode
           this panel duplicates the same fact in a different layout (caught in
           dogfood: Projects list + Terminal workspaces both rendering FleetCrown
-          with identical status read as broken). When the daemon is live the
+          with identical status read as broken). When the runner is live the
           panel auto-opens on desktop so the quick send-to-any-tab affordance
           stays one click away. */}
       <details
         ref={liveDetailsRef}
         className="ui-control-live-details"
-        open={!daemonNeverSeen && !daemonOffline}
+        open={!runnerNeverSeen && !runnerOffline}
       >
         <summary className="ui-control-live-details-summary">
           <span>Workspaces</span>
           <span className="ui-tag ui-tag-neutral text-micro">
-            {daemonNeverSeen
+            {runnerNeverSeen
               ? "offline"
-              : daemonSyncStale
+              : runnerSyncStale
                 ? `${liveTabRows.length} tab${liveTabRows.length === 1 ? "" : "s"} · sync stale`
                 : `${liveTabRows.length} tab${liveTabRows.length === 1 ? "" : "s"}`}
           </span>

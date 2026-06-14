@@ -1,15 +1,15 @@
 /**
  * Generate ~/.config/agent-prompts.json from src/config/prompt-library.ts.
  *
- * The daemon (scripts/agent-hook-bridge.sh and friends) reads the JSON file
+ * The runner (scripts/agent-hook-bridge.sh and friends) reads the JSON file
  * directly from disk via `get_prompt`. The TS PROMPT_TEMPLATES file is the
- * SSOT — this script is the build bridge that keeps the daemon working
+ * SSOT — this script is the build bridge that keeps the runner working
  * while we incrementally migrate prompts out of legacy JSON.
  *
  * Behavior:
  *   - Reads existing JSON (if present) — entries NOT covered by TS agentKey
  *     are preserved verbatim. This means legacy prompts that haven't been
- *     migrated to TS yet still work; the daemon doesn't lose them.
+ *     migrated to TS yet still work; the runner doesn't lose them.
  *   - TS entries with agentKey set are transformed to AgentPrompt shape and
  *     either added or replace the matching JSON entry.
  *   - Writes the merged set back to ~/.config/agent-prompts.json with a

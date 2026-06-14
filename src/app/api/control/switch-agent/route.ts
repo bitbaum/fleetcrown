@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Unknown agent: ${toAgent}` }, { status: 400 });
   }
 
-  // Cloud mode: enqueue for the local daemon to execute.
+  // Cloud mode: enqueue for the local runner to execute.
   if (!isRuntimeAvailable()) {
     const userId = await getSessionUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

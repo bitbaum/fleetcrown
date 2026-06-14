@@ -42,7 +42,7 @@ export const authConfig = {
 
       if (!auth?.user) {
         // Bearer-authenticated requests (ck_* agent tokens preferred; legacy
-        // daemon env token honored only when explicitly opted in). Individual
+        // runner env token honored only when explicitly opted in). Individual
         // routes enforce the real auth check via getApiUserId/getBearerUserId.
         const authHeader = request.headers.get("authorization") ?? "";
         if (authHeader.startsWith("Bearer ck_")) return true;

@@ -8,8 +8,8 @@ import type { ControlDashboardState } from "./control-presenter";
 import type { AutoInjectMode } from "@/config/beacon";
 import { AutomationPolicyControl } from "./AutomationPolicyControl";
 import {
-  DAEMON_STATE_DEFINITIONS,
-  deriveDaemonStateKey,
+  RUNNER_STATE_DEFINITIONS,
+  deriveRunnerStateKey,
 } from "@/lib/control-states";
 
 // Single-line hint shown under the fleet chips when this mode is active.
@@ -24,10 +24,10 @@ type Props = {
   dashboard: ControlDashboardState | null;
   attentionCount: number;
   failedCount: number;
-  daemonNeverSeen: boolean;
-  daemonOffline: boolean;
-  daemonStateUnknown: boolean;
-  daemonLastPushedAt: string | null;
+  runnerNeverSeen: boolean;
+  runnerOffline: boolean;
+  runnerStateUnknown: boolean;
+  runnerLastPushedAt: string | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
   automationSaving: boolean;
@@ -45,10 +45,10 @@ export function ControlFleetStatus({
   dashboard,
   attentionCount,
   failedCount,
-  daemonNeverSeen,
-  daemonOffline,
-  daemonStateUnknown,
-  daemonLastPushedAt,
+  runnerNeverSeen,
+  runnerOffline,
+  runnerStateUnknown,
+  runnerLastPushedAt,
   lastUpdated,
   automationMode,
   automationSaving,
@@ -70,35 +70,35 @@ export function ControlFleetStatus({
   const working = dashboard?.runningCount ?? 0;
   const openTabs = dashboard?.openTabCount ?? 0;
 
-  // SSOT: label/description/problem-CTA all come from DAEMON_STATE_DEFINITIONS
+  // SSOT: label/description/problem-CTA all come from RUNNER_STATE_DEFINITIONS
   // (lib/control-states.ts). Hand-rolled label trees that drifted between this
-  // component and DaemonStatusBanner are gone — both read the same source.
-  const daemonStateKey = deriveDaemonStateKey({
-    neverSeen: daemonNeverSeen,
-    offline: daemonOffline,
-    stateUnknown: daemonStateUnknown,
+  // component and RunnerStatusBanner are gone — both read the same source.
+  const runnerStateKey = deriveRunnerStateKey({
+    neverSeen: runnerNeverSeen,
+    offline: runnerOffline,
+    stateUnknown: runnerStateUnknown,
   });
-  const daemonDef = DAEMON_STATE_DEFINITIONS[daemonStateKey];
+  const runnerDef = RUNNER_STATE_DEFINITIONS[runnerStateKey];
 
-  const daemonDetail = !daemonNeverSeen && daemonLastPushedAt
-    ? `sync ${timeAgo(new Date(daemonLastPushedAt).getTime())}`
+  const runnerDetail = !runnerNeverSeen && runnerLastPushedAt
+    ? `sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
     : lastUpdated
       ? `page ${timeAgo(lastUpdated)}`
       : null;
 
-  const DaemonIcon = daemonStateKey === "setup_needed" || daemonStateKey === "offline" ? WifiOff : Radio;
-  const daemonTone = daemonStateKey === "connected"
-    ? "ui-control-fleet-daemon-ok"
-    : "ui-control-fleet-daemon-warn";
+  const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
+  const runnerTone = runnerStateKey === "connected"
+    ? "ui-control-fleet-runner-ok"
+    : "ui-control-fleet-runner-warn";
 
   // Counts come from the last Fleet Runner push. When it's offline or its
   // state is uncertain, those numbers are stale — rendered as live, the user
   // assumes "1 working" means an agent is actively making progress right now.
   // Fade + a stale tooltip so the chips read as cached observations.
-  const isStale = daemonOffline || daemonStateUnknown;
+  const isStale = runnerOffline || runnerStateUnknown;
   const staleClass = isStale ? "opacity-60" : "";
-  const staleTitle = isStale && daemonLastPushedAt
-    ? `From last sync (${timeAgo(new Date(daemonLastPushedAt).getTime())}) — may be out of date`
+  const staleTitle = isStale && runnerLastPushedAt
+    ? `From last sync (${timeAgo(new Date(runnerLastPushedAt).getTime())}) — may be out of date`
     : isStale
       ? "Cached value — Fleet Runner hasn't pushed fresh state"
       : undefined;
@@ -107,31 +107,31 @@ export function ControlFleetStatus({
     <section className="ui-control-fleet">
       <div className="ui-control-fleet-top">
         <div
-          className={cn("ui-control-fleet-daemon", daemonTone)}
-          title={daemonDef.description}
+          className={cn("ui-control-fleet-runner", runnerTone)}
+          title={runnerDef.description}
         >
-          <DaemonIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="font-medium">{daemonDef.label}</span>
-          {daemonDetail && <span className="text-text-muted">· {daemonDetail}</span>}
-          {/* When the daemon state itself signals a problem with a fix
+          <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="font-medium">{runnerDef.label}</span>
+          {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
+          {/* When the runner state itself signals a problem with a fix
               we know (setup_needed → install Fleet Runner), surface the
               CTA as a small action chip next to the label. Hover gives
               the longer how-to hint. */}
-          {daemonDef.problem && (
-            daemonDef.problem.ctaHref ? (
+          {runnerDef.problem && (
+            runnerDef.problem.ctaHref ? (
               <Link
-                href={daemonDef.problem.ctaHref}
+                href={runnerDef.problem.ctaHref}
                 className="ui-tag ui-tag-warning gap-1"
-                title={daemonDef.problem.hint}
+                title={runnerDef.problem.hint}
               >
-                {daemonDef.problem.ctaLabel ?? "Fix"}
+                {runnerDef.problem.ctaLabel ?? "Fix"}
               </Link>
             ) : (
               <span
                 className="ui-tag ui-tag-warning gap-1"
-                title={daemonDef.problem.hint}
+                title={runnerDef.problem.hint}
               >
-                {daemonDef.problem.ctaLabel ?? "Action needed"}
+                {runnerDef.problem.ctaLabel ?? "Action needed"}
               </span>
             )
           )}

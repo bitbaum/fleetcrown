@@ -5,7 +5,7 @@
 // FleetCrown row spun up. They clone the repo to their machine afterward.
 //
 // Companion to /api/project/bootstrap which does the full local-stack
-// scaffold (folder + git init + agent launch) but requires the local daemon.
+// scaffold (folder + git init + agent launch) but requires the local runner.
 //
 // Auth: session cookie (same as /api/projects). We pull the user's GitHub
 // OAuth access_token from the accounts table — created automatically when

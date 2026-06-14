@@ -27,7 +27,7 @@ export interface ControlDataHook {
   lastTabResults: TabResult[];
   lastTabResultsAt: number | null;
   runtimeAvailable: boolean;
-  daemonLastPushedAt: string | null;
+  runnerLastPushedAt: string | null;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
@@ -226,7 +226,7 @@ export function useControlData(): ControlDataHook {
   const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued" }> => {
     // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
     // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
-    // daemon (2026-06-11). Every inject now goes through the cloud
+    // runner (2026-06-11). Every inject now goes through the cloud
     // /api/inject endpoint; Fleet Runner desktop polls /api/control/commands
     // and types the resulting prompt into zellij. Same end-state, one
     // transport instead of two, no bash anywhere.
@@ -327,7 +327,7 @@ export function useControlData(): ControlDataHook {
     switchableRegistry, activeDefinition, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
     runtimeAvailable: data?.runtimeAvailable ?? true,
-    daemonLastPushedAt: data?.daemonLastPushedAt ?? null,
+    runnerLastPushedAt: data?.runnerLastPushedAt ?? null,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,
     handleAgentSelect, handleModelChange, setError,

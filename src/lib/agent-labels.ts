@@ -3,7 +3,7 @@
 // imported from client components AND from the server-side registry.
 //
 // Why this exists separately from agent-registry.ts: that file imports
-// fs/child_process for daemon-side stuff (scanning processes, locating
+// fs/child_process for runner-side stuff (scanning processes, locating
 // CLIs, etc.) which Turbopack will not bundle for a browser/edge
 // context. control-presenter.ts is imported by ControlPanel ("use client"),
 // so any client-reachable agent-label lookup must come from here, not

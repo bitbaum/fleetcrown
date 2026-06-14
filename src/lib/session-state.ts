@@ -83,7 +83,7 @@ export function isAwaitingUser(session: SessionState | null | undefined): boolea
  *   active  → agent is mid-turn (status: working). Loop is implicitly alive.
  *   paused  → agent is blocked on the user; the loop should NOT fire (and
  *             the patched autopilot-needs-fire guard ensures it doesn't).
- *   unknown → no session.md ever pushed (new project, daemon never seen).
+ *   unknown → no session.md ever pushed (new project, runner never seen).
  */
 export type LoopState = "firing" | "active" | "paused" | "unknown";
 

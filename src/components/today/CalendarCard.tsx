@@ -39,7 +39,7 @@ export function CalendarCard() {
         <FetchErrorState message="Couldn't load calendar" detail={error ?? data?.error} onRetry={refetch} />
       ) : data?.runtimeOnly ? (
         // Cloud mode — `gog calendar list` runs from the app server, not the
-        // daemon. Vercel can't shell out to it; connecting the daemon won't
+        // runner. Vercel can't shell out to it; connecting the runner won't
         // help. Tell the user where the data actually lives so they don't
         // waste time re-pairing.
         <EmptyState>

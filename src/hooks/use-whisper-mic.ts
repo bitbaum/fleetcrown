@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 // Hard upper bound on how stale a transcription can be by the time it lands.
 // Past this, the user has visibly moved on and a late inject would be a
 // surprise — drop the result with a "took too long" message rather than fire.
-// 45s mirrors the longest acceptable voice round-trip (record → daemon →
+// 45s mirrors the longest acceptable voice round-trip (record → runner →
 // Whisper → result) before the average user assumes failure and retries.
 const TRANSCRIPTION_MAX_STALENESS_MS = 45_000;
 

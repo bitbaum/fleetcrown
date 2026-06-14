@@ -60,7 +60,7 @@ function tsOrNull(epochS: number | null | undefined): Date | null {
 // Bearer-authenticated (env token or ck_* agent token).
 // Pushes local agent runtime state into the DB so the cloud control plane can read it.
 //
-// All rows are scoped to the authenticated user — the daemon services one user at
+// All rows are scoped to the authenticated user — the runner services one user at
 // a time and may only mutate its own runtime state. Previous versions resolved
 // ownership by global project-name lookup, which silently merged state across
 // tenants when two users had a project with the same name.

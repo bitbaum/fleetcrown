@@ -9,7 +9,7 @@ export default function ControlPage() {
   return (
     <PullToRefresh>
       {/* Subtitle dropped 2026-05-31 — "Live agent state, project readiness,
-          and next actions" was meaningless preamble taking space the daemon-
+          and next actions" was meaningless preamble taking space the runner-
           status banner needs. Title alone is enough; the chip strip + banner
           below tell the user what's actually happening. */}
       <PageLayout title="Control">

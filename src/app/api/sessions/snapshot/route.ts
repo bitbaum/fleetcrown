@@ -12,7 +12,7 @@
 //     authenticated page (today, people, money…) and polls every 30s, so
 //     it must stay tiny.
 //   - This endpoint is read-only and DB-only — no shell-outs, no git, no
-//     daemon dependency. Cheap to call frequently.
+//     runner dependency. Cheap to call frequently.
 
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
@@ -24,7 +24,7 @@ export type SessionSnapshotItem = {
   name: string;
   gitUrl: string | null;
   /** Last persisted state from project_states, or null if the project has
-   *  never been touched by a daemon. */
+   *  never been touched by a runner. */
   state: {
     /** Coarse phase derived from project_states. */
     phase: "working" | "ready" | "open_idle" | "closed" | "offline" | "unknown";
@@ -74,7 +74,7 @@ export async function GET() {
   ]);
 
   // Index project_states by project_key for O(1) lookup. project_key matches
-  // the tab name OR the project entity name (the daemon writes whichever
+  // the tab name OR the project entity name (the runner writes whichever
   // it sees first; both are fine as join keys here).
   const stateByKey = new Map<string, (typeof states)[number]>();
   for (const s of states) {
@@ -83,7 +83,7 @@ export async function GET() {
 
   const items: SessionSnapshotItem[] = projects.map((p) => {
     // Try project_states by name (lowercased) — that's the most common
-    // join the daemon writes.
+    // join the runner writes.
     const s = stateByKey.get(p.name.toLowerCase());
     return {
       id: p.id,

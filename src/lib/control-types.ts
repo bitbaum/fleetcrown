@@ -141,6 +141,6 @@ export type ControlData = {
   zellijTabs: string[];
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
-  daemonLastPushedAt: string | null;
+  runnerLastPushedAt: string | null;
   failedCommands: FailedCommand[];
 };

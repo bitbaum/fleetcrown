@@ -13,8 +13,8 @@ type Props = {
 };
 
 type OnboardingStatus = {
-  daemonConnected: boolean;
-  daemonLastPushedAt: string | null;
+  runnerConnected: boolean;
+  runnerLastPushedAt: string | null;
 };
 
 export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
@@ -69,7 +69,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
     ? `curl -fsSL ${APP_URL}/api/agent/install | node - init --token ${token} --base-url ${APP_URL}`
     : null;
 
-  const connected = status?.daemonConnected ?? false;
+  const connected = status?.runnerConnected ?? false;
 
   return (
     <div className="space-y-4">
@@ -176,7 +176,7 @@ export function ConnectMachineStep({ saving, onComplete, onSkip }: Props) {
         <div className="ui-auth-status-banner">
           <Wifi className="h-4 w-4 shrink-0 text-status-positive" />
           Machine connected
-          {status?.daemonLastPushedAt && (
+          {status?.runnerLastPushedAt && (
             <span className="ui-auth-status-meta">· syncing</span>
           )}
         </div>

@@ -88,7 +88,7 @@ export async function GET(
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
   // Runtime state belongs to the project owner — fetch under their userId so org
-  // peers viewing a shared project see the same row the owner's daemon writes.
+  // peers viewing a shared project see the same row the owner's runner writes.
   const runtimeState = await getProjectStateByProjectId(ownerId, id).catch(() => null);
   const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
   const readonly = ownerId !== userId;

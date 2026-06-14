@@ -94,9 +94,9 @@ function runTests(): void {
       "BeaconSettings must seed from DEFAULT_AUTO_INJECT_MODE — never an inline literal");
   });
 
-  check("Inject route accepts daemon bearer token", () => {
+  check("Inject route accepts runner bearer token", () => {
     const route = readFileSync("src/app/api/inject/route.ts", "utf8");
-    assert(/getApiUserId/.test(route), "/api/inject must use getApiUserId for daemon auth");
+    assert(/getApiUserId/.test(route), "/api/inject must use getApiUserId for runner auth");
     assert(!/getSessionUserId/.test(route), "/api/inject must not require browser session only");
   });
 

@@ -24,7 +24,7 @@ import {
   getRunMetrics,
   getErrorLogMetrics,
   getTokenMetrics,
-  getDaemonMetrics,
+  getRunnerMetrics,
   getProjectMetrics,
 } from "@/db/queries/metrics";
 
@@ -32,12 +32,12 @@ export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [dispatch, runs, errors, tokens, daemon, projects] = await Promise.all([
+  const [dispatch, runs, errors, tokens, runner, projects] = await Promise.all([
     getDispatchMetrics(userId),
     getRunMetrics(userId),
     getErrorLogMetrics(userId),
     getTokenMetrics(userId),
-    getDaemonMetrics(userId),
+    getRunnerMetrics(userId),
     getProjectMetrics(userId),
   ]);
 
@@ -49,7 +49,7 @@ export async function GET() {
       runs,
       errors,
       tokens,
-      daemon,
+      runner,
       projects,
     },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate, private" } },

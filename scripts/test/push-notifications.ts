@@ -32,7 +32,7 @@ function runTests(): void {
     assert(existsSync("src/app/api/push/subscribe/route.ts"), "subscribe route must exist");
     assert(existsSync("src/app/api/push/notify/route.ts"), "notify route must exist");
     const notify = readFileSync("src/app/api/push/notify/route.ts", "utf8");
-    assert(/getApiUserId/.test(notify), "notify must accept daemon bearer auth");
+    assert(/getApiUserId/.test(notify), "notify must accept runner bearer auth");
     assert(/focus=/.test(notify), "notify payload must deep-link to /control?focus=");
   });
 

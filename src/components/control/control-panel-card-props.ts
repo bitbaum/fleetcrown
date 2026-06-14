@@ -20,7 +20,7 @@ type Deps = {
   openLaunchModal: (project: ProjectState) => void;
   runtimeAvailable: boolean;
   runtimeStateKnown: boolean;
-  daemonSyncStale: boolean;
+  runnerSyncStale: boolean;
   automationMode: AutoInjectMode;
   countdownSeconds: number | undefined;
 };
@@ -55,7 +55,7 @@ export function buildCardProps(deps: Deps) {
       try {
         const { mode } = await deps.inject(tab, promptKey, customPrompt);
         if (mode === "queued") {
-          deps.setQueuedNotice(`Command queued — local daemon will execute it for ${tab}`);
+          deps.setQueuedNotice(`Command queued — local runner will execute it for ${tab}`);
           setTimeout(() => deps.setQueuedNotice(null), TOAST_LONG_MS);
         }
       } catch (err) {
@@ -84,7 +84,7 @@ export function buildCardProps(deps: Deps) {
     onLaunch: () => deps.openLaunchModal(project),
     runtimeAvailable: deps.runtimeAvailable,
     runtimeStateKnown: deps.runtimeStateKnown,
-    daemonSyncStale: deps.daemonSyncStale,
+    runnerSyncStale: deps.runnerSyncStale,
     automationMode: deps.automationMode,
     countdownSeconds: deps.countdownSeconds,
   });

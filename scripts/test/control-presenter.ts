@@ -124,7 +124,7 @@ function runTests(): void {
     assert(inferAgentLabelFromTabName("scratch") === null, "expected no inferred agent");
   });
 
-  check("unknown daemon state suppresses cached working and ready signals", () => {
+  check("unknown runner state suppresses cached working and ready signals", () => {
     const nowS = 1_700_000_000;
     const project = stubProject({
       tab: "Disconnected",
@@ -217,7 +217,7 @@ function runTests(): void {
   });
 
   check("direct-terminal observation is surfaced as Working", () => {
-    // Daemon-side path for prompts the user typed directly into Claude (no
+    // Runner-side path for prompts the user typed directly into Claude (no
     // FleetCrown dispatch sentinel). fleetcrown-daemon.sh sets currentPrompt.key to
     // "direct_terminal" with startedAt = the transcript's mtime when the tab is
     // open, no other prompt is tracked, and the agent has not just signaled

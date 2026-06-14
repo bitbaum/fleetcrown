@@ -7,7 +7,7 @@ import { authConfig } from "@/auth.config";
 // What this activates:
 //   • Unauthenticated users → redirect to /sign-in with callbackUrl
 //   • Authenticated + onboarding incomplete → redirect to /onboarding
-//   • Daemon bearer-token requests → pass through to individual routes
+//   • Runner bearer-token requests → pass through to individual routes
 //
 // The matcher intentionally excludes public routes so they stay accessible
 // without a session. Protected pages that need a userId also call
@@ -38,7 +38,7 @@ export const config = {
      *   api/agent/daemon           – serves the gzipped daemon-scripts tarball for the
      *                                CLI's install step (same pre-auth rationale as /install)
      *   api/health, api/setup      – infrastructure endpoints (pre-auth)
-     *   api/crons, api/system      – GET excluded for daemon/monitoring; write methods enforce auth in-handler
+     *   api/crons, api/system      – GET excluded for runner/monitoring; write methods enforce auth in-handler
      *   api/invitations/           – token-scoped invitation routes (GET validate, POST accept);
      *                                trailing slash keeps GET /api/invitations (list) protected
      *   api/stripe/webhook         – Stripe webhook; verifies its own Stripe-Signature header

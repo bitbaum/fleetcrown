@@ -18,13 +18,13 @@ function legacyDaemonTokenEnabled(): boolean {
  * APP_ALLOW_LEGACY_DAEMON_TOKEN=1 (or COCKPIT_ALLOW_LEGACY_DAEMON_TOKEN=1) is
  * set — it always maps to the "default" user and is not multi-tenant safe.
  */
-export function isDaemonRequest(req: NextRequest): boolean {
+export function isRunnerRequest(req: NextRequest): boolean {
   if (!legacyDaemonTokenEnabled()) return false;
   return extractBearer(req) === envAlias("DAEMON_TOKEN");
 }
 
 /** Looks up the default user's ID for daemon-authenticated requests. */
-export async function getDaemonUserId(): Promise<string | null> {
+export async function getRunnerUserId(): Promise<string | null> {
   const user = await getDefaultUser();
   return user?.id ?? null;
 }
@@ -44,7 +44,7 @@ export async function getBearerUserId(req: NextRequest): Promise<string | null> 
   }
 
   if (legacyDaemonTokenEnabled() && bearer === envAlias("DAEMON_TOKEN")) {
-    return getDaemonUserId();
+    return getRunnerUserId();
   }
 
   return null;

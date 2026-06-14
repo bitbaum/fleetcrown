@@ -107,7 +107,7 @@ async function spawnDetachedAndWait(sessionName: string, layoutPath: string): Pr
   const child = spawn(zellijBin, ["--session", sessionName, "--layout", layoutPath], {
     detached: true,
     stdio: "ignore",
-    // Don't inherit a controlling TTY — this is a daemon-spawned session.
+    // Don't inherit a controlling TTY — this is a runner-spawned session.
     env: { ...process.env, ZELLIJ_SESSION_NAME: undefined as unknown as string },
   });
   child.unref();

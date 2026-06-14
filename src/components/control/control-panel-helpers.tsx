@@ -232,7 +232,7 @@ export function BrainConfigPanel({
           ))}
           {lastTabResults.some((r) => r.status === "queued") && (
             <span className="ml-1 text-text-muted">
-              · daemon picks up within ~25s
+              · runner picks up within ~25s
             </span>
           )}
         </div>
