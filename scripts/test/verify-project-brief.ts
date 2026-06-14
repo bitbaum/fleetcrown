@@ -30,7 +30,7 @@ You sign in, register projects, press one play button and all your projects get
 built by AI agents without supervision; the same button pauses everything.
 It serves builders running many projects at once. Built with Next.js 16,
 TypeScript, Tailwind 4, Drizzle, Postgres 17. Currently in production at
-fleetcrown.vercel.app. Next step: make project profiles self-filling from
+fleetcrown.orangecat.ch. Next step: make project profiles self-filling from
 free-form text and repos so the fleet always has full context.`;
 
   const profile = await extractProjectProfile(project.name, brief);
