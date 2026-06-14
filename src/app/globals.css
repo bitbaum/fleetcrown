@@ -606,6 +606,18 @@
   .ui-public-release-date {
     @apply text-sm text-white/45;
   }
+  .ui-public-release-divider {
+    @apply border-b border-white/10;
+  }
+  .ui-public-release-tag {
+    @apply font-mono text-white/35;
+  }
+  .ui-public-release-footer {
+    @apply mt-16 border-t border-white/10 pt-8 text-sm text-white/45;
+  }
+  .ui-public-release-code {
+    @apply font-mono text-white/70;
+  }
   .ui-public-release-notes {
     @apply mb-4 text-sm leading-relaxed text-white/70;
   }
@@ -650,6 +662,18 @@
   }
   .ui-public-footer {
     @apply mt-16 text-xs tracking-[0.04em] text-text-muted;
+  }
+  .ui-public-footer-grid {
+    @apply mb-8 grid grid-cols-2 gap-8 border-t border-white/10 pt-8 sm:grid-cols-3 sm:gap-12;
+  }
+  .ui-public-footer-heading {
+    @apply mb-1 text-micro font-semibold uppercase tracking-caps text-white/40;
+  }
+  .ui-public-footer-bottom {
+    @apply flex flex-wrap items-center justify-between gap-4 text-xs text-white/40;
+  }
+  .ui-public-prose-divider {
+    @apply mb-10 space-y-4 border-t border-white/10 pt-4;
   }
   .ui-icon-btn {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 items-center justify-center;

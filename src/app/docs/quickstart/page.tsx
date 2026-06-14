@@ -134,7 +134,7 @@ export default function QuickstartPage() {
           </p>
         </section>
 
-        <section className="space-y-4 mb-10 pt-4 border-t border-white/10">
+        <section className="ui-public-prose-divider">
           <h2 className="ui-public-prose-h2">Need help?</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>

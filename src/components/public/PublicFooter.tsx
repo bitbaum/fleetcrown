@@ -41,10 +41,10 @@ const FOOTER_GROUPS = [
 export function PublicFooter() {
   return (
     <footer className="ui-public-footer mx-auto max-w-6xl px-6 pb-12">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 sm:gap-12 mb-8 pt-8 border-t border-white/10">
+      <div className="ui-public-footer-grid">
         {FOOTER_GROUPS.map((group) => (
           <div key={group.heading} className="flex flex-col gap-2">
-            <div className="text-micro uppercase tracking-caps font-semibold text-white/40 mb-1">
+            <div className="ui-public-footer-heading">
               {group.heading}
             </div>
             {group.links.map((link) =>
@@ -67,7 +67,7 @@ export function PublicFooter() {
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-white/40">
+      <div className="ui-public-footer-bottom">
         <div>© {new Date().getFullYear()} FleetCrown · Mao Nakamoto</div>
         <Link href="/releases" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}

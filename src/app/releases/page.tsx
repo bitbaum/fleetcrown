@@ -49,7 +49,7 @@ export default function ReleasesPage() {
         <div className="space-y-12">
           {FLEET_RUNNER_RELEASES.map((release, idx) => (
             <article key={release.tag} className="ui-public-release-entry">
-              <header className="mb-4 flex flex-wrap items-baseline justify-between gap-3 border-b border-white/10 pb-3">
+              <header className="ui-public-release-divider mb-4 flex flex-wrap items-baseline justify-between gap-3 pb-3">
                 <div className="flex items-baseline gap-3">
                   <span className="ui-public-release-version">v{release.version}</span>
                   {idx === 0 && (
@@ -98,13 +98,13 @@ export default function ReleasesPage() {
                 >
                   Binaries on GitHub →
                 </a>
-                <span className="font-mono text-white/35">{release.tag}</span>
+                <span className="ui-public-release-tag">{release.tag}</span>
               </div>
             </article>
           ))}
         </div>
 
-        <footer className="mt-16 border-t border-white/10 pt-8 text-sm text-white/45">
+        <footer className="ui-public-release-footer">
           <p>
             Older releases (pre-v0.4.4) are available on{" "}
             <a
@@ -118,7 +118,7 @@ export default function ReleasesPage() {
             . Release notes here are curated for clarity; the GitHub release pages contain the
             raw commit history. The desktop app auto-updates on launch when a newer version is
             available, except for .deb installs on Linux which require a manual{" "}
-            <code className="font-mono text-white/70">sudo dpkg -i</code> (Linux package
+            <code className="ui-public-release-code">sudo dpkg -i</code> (Linux package
             policy — Electron can&apos;t escalate sudo from userspace).
           </p>
         </footer>
