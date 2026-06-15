@@ -5,6 +5,7 @@ import { emptyToUndefined } from "@/lib/validation";
 import { createUserProject, ensureUserProjectEntityLinks, countActiveProjects } from "@/db/queries/user-projects";
 import { getUserById } from "@/db/queries/users";
 import { getProjectLimit } from "@/lib/plan";
+import { normalizeProjectName } from "@/lib/project-name";
 
 const CreateBody = z.object({
   name: z.string().trim().min(1).max(120),
@@ -44,8 +45,12 @@ export async function POST(req: NextRequest) {
 
   const dataOrResp = await readJsonBody(req, CreateBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
+  // Canonical lowercase-slug name (SSOT) so the registry stays consistent
+  // across deployments instead of drifting Title-case vs slug.
+  const name = normalizeProjectName(dataOrResp.name);
+  if (!name) return NextResponse.json({ error: "Project name must contain letters or numbers." }, { status: 400 });
   try {
-    const project = await createUserProject({ userId, ...dataOrResp });
+    const project = await createUserProject({ userId, ...dataOrResp, name });
     return NextResponse.json(project, { status: 201 });
   } catch (e: unknown) {
     if (e && typeof e === "object" && "code" in e && e.code === "23505") {
