@@ -56,3 +56,34 @@ State (tab list, which agents are running) is pushed **on change only**
 5. **Verify** — restart runner, confirm /control flips online in <2s.
 6. **Cutover** — drop the heartbeat `setInterval` in the runner and the
    heartbeat branch in the web online check. Presence is purely connection-based.
+
+## Infra requirement: do NOT compress the bridge SSE (Caddy)
+
+Disconnect detection depends on the proxy noticing the client socket died and
+closing the upstream so the bridge's `req.on("close")` fires. **HTTP compression
+buffers the SSE stream**, so the proxy never attempts the write that would reveal
+the dead client — a crashed runner then shows "online" indefinitely.
+
+The bridge's Caddy block (`bridge.orangecat.ch`, hand-managed in
+`/etc/caddy/Caddyfile` on the box) must therefore NOT have `encode`:
+
+```caddy
+bridge.orangecat.ch {
+  # No `encode` — compression buffers SSE and breaks client-disconnect detection.
+  reverse_proxy 127.0.0.1:4001 {
+    flush_interval -1   # flush each frame immediately
+  }
+}
+```
+
+Verified 2026-06-15: with `encode` present, disconnect took >5 min (never fired);
+removed, disconnect flips presence in <3s while connect stays ~instant. The same
+applies to any other SSE endpoint (e.g. the web `/control` stream on
+`fleetcrown.orangecat.ch`) if its disconnect cleanup ever needs to be prompt.
+
+## Verified behaviour (2026-06-15)
+
+| Transition | Latency | (old heartbeat) |
+|------------|---------|-----------------|
+| runner launch → online | ~10s (runner boot) | up to instant-but-then-stale |
+| runner quit/crash → offline | <3s | ~480s |
