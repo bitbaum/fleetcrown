@@ -70,6 +70,13 @@ const nextConfig: NextConfig = {
     // isn't published to npm yet and the repo is private). Without explicit
     // tracing, Vercel would tree-shake the file out of the deployment bundle.
     "/api/agent/install": ["./packages/agent/bin/**"],
+    // Markdown content read at runtime via process.cwd()/content (e.g. the
+    // /whitepaper page). Tracing it INTO the standalone build makes it
+    // deterministically present at .next/standalone/content/, instead of
+    // relying on the postbuild deploy-local.sh copy — which raced with the
+    // standalone recreate and intermittently left /whitepaper 500-ing
+    // (ENOENT content/whitepaper.md), repeatedly failing the pre-push smoke.
+    "/whitepaper": ["./content/**"],
     // /api/agent/daemon's bash + python bundle entries are gone — Session 4 of
     // killing-the-bash-daemon (2026-06-11) deleted the source files and the
     // route now returns 410 Gone pointing at /download for Fleet Runner.
