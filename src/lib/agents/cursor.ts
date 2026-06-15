@@ -8,6 +8,15 @@
  *   2. Fallback: check if the resolved PATH entry lives under .cursor/
  *      or .local/bin/ where Cursor's official installer drops it.
  *
+ * processMatchers carries BOTH binary names Cursor has shipped: the legacy
+ * `agent` (still symlinked in ~/.local/bin) and the current `cursor-agent`
+ * (the real binary name as of mid-2026). A running `cursor-agent` process
+ * was previously invisible to the /proc scan, so a project with Cursor live
+ * read "Tab open" instead of "Awaiting input". `cursor-agent` is a unique
+ * name (unlike bare `agent`, which collides with grok's ~/.grok/bin/agent),
+ * so the generic basename matcher in control-fast-state handles it safely;
+ * only the legacy `agent` needs the cursor-path disambiguation there.
+ *
  * No persistent config we read; model is selected at launch via Cursor's
  * own UI inside the CLI, not via FleetCrown's dropdown.
  */
@@ -20,7 +29,7 @@ import type { AgentAdapter, AgentAvailability, AgentRuntimeConfig } from "./type
 export const cursorAdapter: AgentAdapter = {
   id: "cursor",
   label: "Cursor",
-  processMatchers: ["agent"],
+  processMatchers: ["agent", "cursor-agent"],
   defaultModel: "auto",
   modelSuggestions: ["auto", "composer-1", "gpt-5.4", "claude-sonnet-4"],
   switchable: true,
@@ -33,7 +42,15 @@ export const cursorAdapter: AgentAdapter = {
   },
 
   detectAvailable(): AgentAvailability {
-    if (!commandExistsInPath("agent")) {
+    // Prefer the current `cursor-agent` binary; fall back to the legacy `agent`
+    // name. A machine that only has `cursor-agent` (no `agent` symlink) used to
+    // report Cursor as "not installed" purely because of the rename.
+    const bin = commandExistsInPath("cursor-agent")
+      ? "cursor-agent"
+      : commandExistsInPath("agent")
+        ? "agent"
+        : null;
+    if (!bin) {
       return {
         available: false,
         availabilityReason: "Cursor Agent CLI is not installed. Run: curl https://cursor.com/install -fsS | bash",
@@ -41,7 +58,7 @@ export const cursorAdapter: AgentAdapter = {
     }
 
     try {
-      const version = execSync("agent --version 2>&1", { encoding: "utf-8", timeout: 3000 }).trim();
+      const version = execSync(`${bin} --version 2>&1`, { encoding: "utf-8", timeout: 3000 }).trim();
       if (/\d{4}\.\d{2}\.\d{2}/.test(version)) {
         return { available: true };
       }
@@ -52,8 +69,7 @@ export const cursorAdapter: AgentAdapter = {
     const pathValue = process.env.PATH ?? "";
     for (const dir of pathValue.split(":")) {
       if (!dir) continue;
-      const candidate = `${dir}/agent`;
-      if (candidate.includes(".local/bin/agent") || candidate.includes(".cursor")) {
+      if (`${dir}/${bin}`.includes(".local/bin/") || dir.includes(".cursor")) {
         return { available: true };
       }
     }
