@@ -7,13 +7,21 @@
 // unwatched fleet costs nothing.
 //
 // zellij has no PTY stream — dump-screen (a full screen snapshot) is the only
-// clean handle, so this is screen-state streaming, not a byte stream. Perfect
-// for watching. See docs/architecture/embedded-terminal.md.
+// clean handle, so this is screen-state streaming, not a byte stream.
+//
+// IMPORTANT zellij limitation: there is no "read a non-focused pane" primitive,
+// so every dump-screen does a brief focus-dance (switch to the tab, dump,
+// restore). That means each frame momentarily flips the user's local zellij
+// focus. Fine when watching from a phone (user is away from the machine);
+// noticeable when working at the machine. So the rate is deliberately modest —
+// this is "smart frequent snapshots", not flicker-free streaming. True live
+// (no focus flash, real colors, interactive) needs a PTY stream, which is the
+// deferred WebSocket path. See docs/architecture/embedded-terminal.md.
 
 import { createHash } from 'node:crypto'
 import { peekTab as peekZellijTab } from '@/lib/zellij'
 
-const POLL_MS = 250          // 4 Hz — smooth enough to watch, cheap to diff
+const POLL_MS = 1000         // 1 Hz — focus-dance once/sec; higher feels live but flashes the user's terminal
 const MAX_FRAME = 256_000    // matches the cloud route's cap
 
 type Stream = { timer: NodeJS.Timeout; seq: number; lastHash: string; inFlight: boolean }
