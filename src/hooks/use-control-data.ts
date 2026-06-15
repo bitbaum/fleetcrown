@@ -28,6 +28,9 @@ export interface ControlDataHook {
   lastTabResultsAt: number | null;
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
+  /** Connection-based presence (bridge SSE). null = no event yet → fall back
+   *  to heartbeat age. true/false = authoritative live signal. */
+  runnerConnected: boolean | null;
   refresh: (manual?: boolean) => Promise<void>;
   inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
@@ -50,6 +53,11 @@ export function useControlData(): ControlDataHook {
   const [agentDirty, setAgentDirty] = useState(false);
   const [lastTabResults, setLastTabResults] = useState<TabResult[]>([]);
   const [lastTabResultsAt, setLastTabResultsAt] = useState<number | null>(null);
+  // Connection-based presence: live "is the runner connected to the bridge"
+  // signal pushed on every /control/stream event. null until first event (so
+  // the heartbeat-age fallback still governs the badge pre-rollout).
+  // See docs/architecture/connection-presence.md.
+  const [runnerConnected, setRunnerConnected] = useState<boolean | null>(null);
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -197,8 +205,9 @@ export function useControlData(): ControlDataHook {
       es = new EventSource("/api/control/stream");
       es.addEventListener("projects-update", (e: MessageEvent) => {
         try {
-          const payload = JSON.parse(e.data) as { projects: FastProjectState[] };
+          const payload = JSON.parse(e.data) as { projects: FastProjectState[]; runnerConnected?: boolean };
           mergeProjectPatches(payload.projects);
+          if (typeof payload.runnerConnected === "boolean") setRunnerConnected(payload.runnerConnected);
         } catch { /* ignore malformed events */ }
       });
       es.onerror = () => {
@@ -328,6 +337,7 @@ export function useControlData(): ControlDataHook {
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
     runtimeAvailable: data?.runtimeAvailable ?? true,
     runnerLastPushedAt: data?.runnerLastPushedAt ?? null,
+    runnerConnected,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,
     handleAgentSelect, handleModelChange, setError,

@@ -115,6 +115,11 @@ export function startBridgeSubscriber(
     // from the network, server logs are within our trust boundary.
     const sseUrl = new URL(baseUrl)
     sseUrl.searchParams.set('token', token)
+    // Tag this as the runner connection so the bridge counts it toward
+    // connection-based presence ("Fleet Runner online"). Browser /control tabs
+    // open the same bridge without this flag and must NOT flip the badge.
+    // See docs/architecture/connection-presence.md.
+    sseUrl.searchParams.set('client', 'runner')
 
     const req = requestFn(
       {

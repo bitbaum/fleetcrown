@@ -14,6 +14,7 @@ import { URL } from "url";
 import { validateToken } from "./auth.js";
 import { ListenLoop } from "./listen.js";
 import * as subs from "./subscriptions.js";
+import * as presence from "./presence.js";
 import type { ChangeEvent, Subscription } from "./types.js";
 
 const PORT = parseInt(process.env.PORT ?? "4001", 10);
@@ -107,11 +108,25 @@ async function handleSse(req: IncomingMessage, res: ServerResponse): Promise<voi
     heartbeat,
   };
   subs.add(sub);
-  console.log(`[sse] +${sub.userId.slice(0, 8)} (replay since=${sinceId}, conns=${subs.stats().connections})`);
+
+  // Connection-based presence: only the runner (client=runner) counts toward
+  // "is the Fleet Runner online" — a browser tab on /control must not flip the
+  // badge. See docs/architecture/connection-presence.md. Best-effort: a failed
+  // presence write never breaks the SSE stream itself.
+  const isRunner = url.searchParams.get("client") === "runner";
+  if (isRunner) {
+    void presence.markConnect(pool, auth.userId).catch((err) =>
+      console.warn(`[presence] markConnect failed: ${(err as Error).message}`));
+  }
+  console.log(`[sse] +${sub.userId.slice(0, 8)}${isRunner ? " (runner)" : ""} (replay since=${sinceId}, conns=${subs.stats().connections})`);
 
   req.on("close", () => {
     subs.remove(sub);
-    console.log(`[sse] -${sub.userId.slice(0, 8)} (conns=${subs.stats().connections})`);
+    if (isRunner) {
+      void presence.markDisconnect(pool, auth.userId).catch((err) =>
+        console.warn(`[presence] markDisconnect failed: ${(err as Error).message}`));
+    }
+    console.log(`[sse] -${sub.userId.slice(0, 8)}${isRunner ? " (runner)" : ""} (conns=${subs.stats().connections})`);
   });
 }
 
@@ -161,6 +176,11 @@ server.listen(PORT, () => {
   console.log(`[bridge] listening on http://localhost:${PORT}`);
   console.log(`[bridge] SSE endpoint: /sse?token=ck_*`);
   console.log(`[bridge] health: /healthz`);
+  // This fresh process holds zero connections, so clear any presence rows a
+  // previous (possibly crashed) bridge left as connected before clients
+  // reconnect and re-register. See docs/architecture/connection-presence.md.
+  void presence.resetAll(pool).catch((err) =>
+    console.warn(`[presence] boot resetAll failed: ${(err as Error).message}`));
 });
 
 // Fire-and-forget — start() runs forever (or until stop()).

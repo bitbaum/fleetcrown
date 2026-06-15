@@ -1,5 +1,6 @@
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectStatesByUserIds } from "@/db/queries/project-states";
+import { getRunnerConnected } from "@/db/queries/runner-presence";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
@@ -109,6 +110,7 @@ export async function GET() {
   };
 
   let lastSent: FastProjectState[] = [];
+  let lastRunnerConnected: boolean | null = null;
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
   const scanProjects = () => {
@@ -143,6 +145,10 @@ export async function GET() {
         const current = isRuntimeAvailable()
           ? scanProjects()
           : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
+        // Connection-based presence rides every stream event so the online
+        // badge flips in <1s (the bridge pg_notify's this channel on
+        // connect/disconnect). See docs/architecture/connection-presence.md.
+        const runnerConnected = await getRunnerConnected(userId).catch(() => lastRunnerConnected ?? false);
 
         const agentsKey = (a: string[]) => [...a].sort().join(",");
         const changed = current.filter((proj, i) => {
@@ -162,9 +168,12 @@ export async function GET() {
           );
         });
 
-        if (changed.length > 0) {
+        // Push when projects changed OR presence flipped — a pure
+        // connect/disconnect must still update the badge.
+        if (changed.length > 0 || runnerConnected !== lastRunnerConnected) {
           lastSent = current;
-          send(sseEvent("projects-update", { projects: current }));
+          lastRunnerConnected = runnerConnected;
+          send(sseEvent("projects-update", { projects: current, runnerConnected }));
           if (keepaliveTimer) { clearTimeout(keepaliveTimer); keepaliveTimer = null; }
           scheduleKeepalive();
         }
@@ -182,7 +191,8 @@ export async function GET() {
         ? scanProjects()
         : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
       lastSent = initialProjects;
-      send(sseEvent("projects-update", { projects: lastSent }));
+      lastRunnerConnected = await getRunnerConnected(userId).catch(() => false);
+      send(sseEvent("projects-update", { projects: lastSent, runnerConnected: lastRunnerConnected }));
       scheduleKeepalive();
 
       // Guard against concurrent ticks — events can fire faster than a tick completes.

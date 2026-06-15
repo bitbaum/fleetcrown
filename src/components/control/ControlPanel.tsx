@@ -34,7 +34,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable, runnerLastPushedAt,
+    runtimeAvailable, runnerLastPushedAt, runnerConnected,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -82,8 +82,17 @@ export function ControlPanel() {
     creatingProject, createError, createAndLaunch,
   } = useCreateProject({ openLaunchModal, refresh });
   const runnerAgoMs = lastUpdated && runnerLastPushedAt ? lastUpdated - new Date(runnerLastPushedAt).getTime() : null;
-  const runnerOffline = !runtimeAvailable && runnerAgoMs !== null && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS;
-  const runnerNeverSeen = !runtimeAvailable && runnerLastPushedAt === null;
+  // Presence is connection-based: an open runner↔bridge SSE connection
+  // (runnerConnected === true) means online, full stop — the badge flips in
+  // <1s without waiting on the heartbeat. ADDITIVE ROLLOUT: we do NOT treat
+  // connected===false as authoritative offline yet, because a pre-rollout
+  // runner (no client=runner tag) reports false while heartbeating fine —
+  // so offline still requires a stale heartbeat. At cutover (once every runner
+  // tags itself) this drops to `runnerConnected === false`.
+  // See docs/architecture/connection-presence.md.
+  const runnerOffline = !runtimeAvailable && runnerConnected !== true
+    && runnerAgoMs !== null && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS;
+  const runnerNeverSeen = !runtimeAvailable && runnerConnected !== true && runnerLastPushedAt === null;
   // Only hide cached runtime when the runner has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.
   const runtimeStateKnown = !runnerNeverSeen;
