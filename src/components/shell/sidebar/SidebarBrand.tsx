@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { APP_HOME_HREF } from "@/config/shell";
 import { BrandMark } from "../BrandMark";
+import { BrandVersion } from "../BrandVersion";
 
 export function SidebarBrand({
   collapsed,
@@ -33,6 +34,9 @@ export function SidebarBrand({
           {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </div>
+      {/* Version stamp under the logo — hidden when the rail is collapsed to a
+          mark-only strip. Click → changelog (/releases). */}
+      {!collapsed && <BrandVersion />}
     </div>
   );
 }

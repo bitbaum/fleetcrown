@@ -1,7 +1,33 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+// Build-time version stamp — baked into the client bundle as NEXT_PUBLIC_* so
+// the UI can show "which build is this" under the logo (and a changelog link).
+// SHA is the precise build identity; the package version is the marketing
+// semver. Computed once at build; on the box the push-deploy hook builds
+// locally then rsyncs, so the SHA reflects the deployed commit. The desktop
+// (Fleet Runner) version is read separately at runtime from the User-Agent
+// (`FleetRunner/<ver>`, set in desktop/src/main/index.ts).
+function buildSha(): string {
+  if (process.env.FLEETCROWN_BUILD_SHA) return process.env.FLEETCROWN_BUILD_SHA;
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return "dev";
+  }
+}
+const PKG_VERSION = (() => {
+  try { return (JSON.parse(readFileSync("./package.json", "utf8")) as { version: string }).version; }
+  catch { return "0.0.0"; }
+})();
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: {
+    NEXT_PUBLIC_APP_VERSION: PKG_VERSION,
+    NEXT_PUBLIC_BUILD_SHA: buildSha(),
+  },
   async headers() {
     return [
       {
