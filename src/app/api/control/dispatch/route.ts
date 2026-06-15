@@ -30,6 +30,7 @@ import { DEFAULT_AUTO_INJECT_MODE } from "@/lib/constants/control";
 import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
+import { getProjectState } from "@/db/queries/project-states";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -134,6 +135,26 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(result satisfies DispatchResult);
   };
+
+  // No-agent gate (highest precedence). If the latest pushed runtime state
+  // says no agent process is running in the target tab, autopilot must NOT
+  // inject — the prompt would land in the bare shell and run as a garbage
+  // command (observed on Kivvi 2026-06-15: "Work on the project… : command
+  // not found", "[autopilot · loop=test_and_fix …]: Syntaxfehler"). The runner
+  // pushes agentRunning to project_states from its /proc scan and sets it
+  // explicitly false when the tab has no live agent. Null/absent (e.g. the
+  // local server, which tracks /proc live by other means) → undetermined →
+  // gate skipped. The user must Launch an agent first; autopilot then drives it.
+  if (projectKey) {
+    const runtimeRow = await getProjectState(userId, projectKey).catch(() => null);
+    if (runtimeRow?.agentRunning === false) {
+      return recordAndReturn({
+        action: "off",
+        reason: "No agent process running in the tab — autopilot will not inject into a bare shell. Launch an agent first.",
+        source: "status_gate",
+      });
+    }
+  }
 
   // Hard health gate — defence in depth. If health is critical or tests are
   // failing, force the agent into recovery (next_best canned template) so

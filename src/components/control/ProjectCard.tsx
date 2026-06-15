@@ -328,22 +328,26 @@ export function ProjectCard({
           )}
           {showPreviousRunPanel && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} nowMs={nowS * 1000} />}
 
-          {display.tone === "idle" && !display.tabOpen && runtimeStateKnown && onLaunch && (
+          {/* Idle with no agent running — offer to launch one, whether or not a
+              terminal tab is already open. Previously the launch button was
+              gated on !display.tabOpen, so a "tab open, no agent" project (the
+              common case after an agent exits) got a dead-end text message and
+              NO way to start an agent — and any prompt sent landed in the bare
+              shell. The launch path (/api/agent/launch) is the same regardless
+              of tab state. */}
+          {display.tone === "idle" && !display.isRunning && runtimeStateKnown && onLaunch && (
             <div className="ui-card-section flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-text-secondary">No agent is currently running for this project.</p>
+              <p className="text-sm text-text-secondary">
+                {display.tabOpen
+                  ? runnerSyncStale
+                    ? "Terminal tab is open, but live status is stale — launch an agent or relaunch Fleet Runner."
+                    : "Terminal tab is open, but no agent is running in it. Launch one to start work."
+                  : "No agent is currently running for this project."}
+              </p>
               <button onClick={onLaunch} className="ui-btn-primary shrink-0 gap-1.5">
                 <Play className="h-3.5 w-3.5" />
                 Launch agent
               </button>
-            </div>
-          )}
-          {display.tone === "idle" && display.tabOpen && !display.isRunning && (
-            <div className="ui-card-section">
-              <p className="text-sm text-text-secondary">
-                {runnerSyncStale
-                  ? "Terminal tab is open on your computer, but live status is stale. Check the tab locally or relaunch Fleet Runner."
-                  : "Terminal tab is open, but FleetCrown is not tracking an active prompt. The agent may be idle, or status has not synced yet."}
-              </p>
             </div>
           )}
 
