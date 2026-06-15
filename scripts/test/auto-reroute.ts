@@ -11,8 +11,11 @@
  */
 import {
   decideAutoReroute,
+  decideHeadlessReroute,
   shouldShowManualCapacityBanner,
+  MAX_AUTO_REROUTES_PER_WINDOW,
   type AutoRerouteInput,
+  type HeadlessRerouteInput,
 } from "@/lib/auto-reroute";
 
 function assert(condition: boolean, message: string): void {
@@ -103,6 +106,52 @@ function runTests(): void {
   check("manual banner surfaces under autopilot only when exhausted", () => {
     assert(shouldShowManualCapacityBanner(true, "all-tried"), "on + all-tried → surface");
     assert(shouldShowManualCapacityBanner(true, "no-fallback"), "on + no-fallback → surface");
+  });
+
+  // ── Headless (server/beacon) reroute ────────────────────────────────────
+  const headlessBase: HeadlessRerouteInput = {
+    capacityIssue: true,
+    automationOn: true,
+    nextAgent: "cursor",
+    hasDir: true,
+    hasPendingSwitch: false,
+    recentSwitchCount: 0,
+    maxSwitchesPerWindow: MAX_AUTO_REROUTES_PER_WINDOW,
+  };
+
+  check("headless: capacity + autopilot + dir + headroom → reroute", () => {
+    const d = decideHeadlessReroute(headlessBase);
+    assert(d.reroute && d.toAgent === "cursor", "expected headless reroute to cursor");
+  });
+
+  check("headless: autopilot off → skip", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, automationOn: false });
+    assert(!d.reroute && d.reason === "autopilot-off", "expected autopilot-off");
+  });
+
+  check("headless: no installed fallback → skip", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, nextAgent: null });
+    assert(!d.reroute && d.reason === "no-fallback", "expected no-fallback");
+  });
+
+  check("headless: cloud-only project (no dir) → skip", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, hasDir: false });
+    assert(!d.reroute && d.reason === "no-dir", "expected no-dir");
+  });
+
+  check("headless: a switch already unclaimed → don't pile on", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, hasPendingSwitch: true });
+    assert(!d.reroute && d.reason === "switch-pending", "expected switch-pending");
+  });
+
+  check("headless: window cap reached → stop (no infinite cascade)", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW });
+    assert(!d.reroute && d.reason === "window-exhausted", "expected window-exhausted");
+  });
+
+  check("headless: one hop below the cap still reroutes", () => {
+    const d = decideHeadlessReroute({ ...headlessBase, recentSwitchCount: MAX_AUTO_REROUTES_PER_WINDOW - 1 });
+    assert(d.reroute, "expected reroute just under the cap");
   });
 
   console.log(`\n${passed}/${passed} auto-reroute tests passed`);

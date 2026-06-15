@@ -19,6 +19,10 @@ import { isAgentId, looksLikeAgentCapacityIssue, resolveNextAvailableAgent, type
 import { DEFAULT_BEACON_COUNTDOWN_S, DEFAULT_POPUP_MODE } from "@/lib/constants/control";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { getProjectAutopilotOverride } from "@/db/queries/projects";
+import { getUserProjects } from "@/db/queries/user-projects";
+import { enqueueSwitchAgentCommand, recentSwitchAgentStats } from "@/db/queries/pending-commands";
+import { decideHeadlessReroute, MAX_AUTO_REROUTES_PER_WINDOW } from "@/lib/auto-reroute";
 import {
   createBeaconSession,
   getBeaconSession as getBeaconSessionFromDb,
@@ -27,6 +31,49 @@ import {
   purgeOldBeaconSessions,
   type BeaconSession,
 } from "@/db/queries/beacon-sessions";
+
+/**
+ * Headless auto-reroute: when an agent's session ends on a capacity wall and
+ * the project's autopilot is on, queue a switch to the next installed agent —
+ * no browser needed (the /control path only fires while the page is open).
+ * Mirrors decideAutoReroute; loop safety is a DB guard (cap per window + skip
+ * while a switch is still unclaimed) since there's no client ref to lean on.
+ * Best-effort: never blocks or fails beacon creation.
+ */
+async function maybeAutoRerouteOnCapacity(
+  userId: string,
+  projectName: string,
+  fromAgent: string | null,
+  nextAgent: string | null,
+): Promise<void> {
+  const [override, settings, projects, guard] = await Promise.all([
+    getProjectAutopilotOverride(userId, projectName),
+    getBeaconSettings(userId),
+    getUserProjects(userId),
+    recentSwitchAgentStats(userId, projectName),
+  ]);
+  const mode = override ?? settings.auto_inject_mode;
+  const project = projects.find((p) => p.name === projectName);
+
+  const decision = decideHeadlessReroute({
+    capacityIssue: true,
+    automationOn: mode === "on",
+    nextAgent,
+    hasDir: !!project?.dirPath,
+    hasPendingSwitch: guard.pending > 0,
+    recentSwitchCount: guard.windowCount,
+    maxSwitchesPerWindow: MAX_AUTO_REROUTES_PER_WINDOW,
+  });
+  if (!decision.reroute) return;
+
+  await enqueueSwitchAgentCommand(userId, {
+    tab: project!.name,
+    dir: project!.dirPath!,
+    toAgent: decision.toAgent,
+    fromAgent: fromAgent ?? undefined,
+  });
+  console.log(`[beacon] auto-reroute queued: ${projectName} ${fromAgent ?? "?"}→${decision.toAgent}`);
+}
 
 // Re-export the type so callers that imported BeaconSession from this
 // module continue to work without touching their imports.
@@ -95,6 +142,7 @@ export async function POST(req: NextRequest) {
 
   const currentAgent: Agent | null = isAgentId(dataOrResp.currentAgent) ? dataOrResp.currentAgent : "claude";
   const nextAgent = resolveNextAvailableAgent(dataOrResp.currentAgent ?? "claude");
+  const capacityIssue = looksLikeAgentCapacityIssue(dataOrResp.sessionContent);
 
   const id = await createBeaconSession({
     userId,
@@ -102,10 +150,19 @@ export async function POST(req: NextRequest) {
     sessionContent: dataOrResp.sessionContent,
     currentAgent,
     nextAgent,
-    capacityIssue: looksLikeAgentCapacityIssue(dataOrResp.sessionContent),
+    capacityIssue,
     countdownSeconds,
     popupMode,
   });
+
+  // Headless reroute on a capacity wall — best-effort, never blocks the beacon.
+  if (capacityIssue && nextAgent) {
+    try {
+      await maybeAutoRerouteOnCapacity(userId, dataOrResp.project, currentAgent, nextAgent);
+    } catch (e) {
+      console.error("[beacon] auto-reroute failed:", e);
+    }
+  }
 
   return NextResponse.json({ id });
 }
