@@ -132,8 +132,8 @@ export function ProjectCard({
 
   const nowS = Math.floor(Date.now() / 1000);
   const display = dismissed
-    ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown)
-    : snapshot?.display ?? getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
+    ? getProjectDisplayState(project, zellijTabs, nowS, true, runtimeStateKnown, runnerSyncStale)
+    : snapshot?.display ?? getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, runnerSyncStale);
   const isReadyNow = display.isReady || display.isOrchestrationReady;
   useProjectLifecycleSync(project.tab, isReadyNow);
   // After the 2026-06-11 collapse autopilot is binary. "on" continues when

@@ -258,6 +258,7 @@ export function buildLiveTabRows(
   zellijTabs: string[],
   projects: ProjectState[],
   nowS: number,
+  syncStale = false,
 ): LiveTabRow[] {
   const uniqueTabs = [...new Set(zellijTabs.map((t) => t.trim()).filter(Boolean))];
   return uniqueTabs
@@ -270,7 +271,7 @@ export function buildLiveTabRows(
     .map((tabName) => ({ tabName, project: findProjectForOpenTab(tabName, projects) }))
     .filter((entry): entry is { tabName: string; project: ProjectState } => entry.project !== null)
     .map(({ tabName, project }) => {
-      const display = getProjectDisplayState(project, uniqueTabs, nowS);
+      const display = getProjectDisplayState(project, uniqueTabs, nowS, false, true, syncStale);
       const agentLabel = project.activeAgents.length
         ? formatAgentRuntimeLabel(project, tabName)
         : display.isRunning
@@ -357,6 +358,7 @@ export function getProjectDisplayState(
   nowS: number,
   dismissed = false,
   runtimeStateKnown = true,
+  syncStale = false,
 ): ProjectDisplayState {
   if (!runtimeStateKnown) {
     return {
@@ -478,6 +480,36 @@ export function getProjectDisplayState(
       ? "tab_open"
       : TONE_TO_STATE_KEY[tone];
 
+  // Runner sync is stale (cloud path, last push older than the offline
+  // threshold): every runtime flag above was derived from that stale push and
+  // can no longer be asserted as live. Collapse to the honest "offline" state —
+  // no "Working" badge, no ticking running-banner, and not counted as working /
+  // awaiting / idle — so the board stops claiming an agent is busy when the
+  // runner may have died hours ago. `tabOpen` is preserved so the evidence
+  // subtitle (buildProjectOperationsSnapshot) can still say "Last sync <ago>".
+  // Never fires on the local runtime: runtimeAvailable ⇒ runnerSyncStale is
+  // always false, so getProjectDisplayState is called with syncStale = false.
+  if (syncStale) {
+    return {
+      isClosed: false,
+      isClosing: false,
+      isReady: false,
+      isOrchestrationReady: false,
+      isBeaconActive: false,
+      isRunning: false,
+      isAgentWorking: false,
+      isSessionOpen: false,
+      isActive: false,
+      showRunningBanner: false,
+      showLatestOrchestration: false,
+      tabOpen,
+      tone: "offline",
+      stateKey: "offline",
+      stateLabel: STATE_DEFINITIONS.offline.label,
+      stateTagClass: STATE_DEFINITIONS.offline.tagClass,
+    };
+  }
+
   return {
     isClosed,
     isClosing,
@@ -506,7 +538,7 @@ export function buildProjectOperationsSnapshot(
   syncCtx: RuntimeSyncContext = {},
 ): ProjectOperationsSnapshot {
   const { syncStale = false, lastSyncedAt = null } = syncCtx;
-  const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown);
+  const display = getProjectDisplayState(project, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
   // Phase IS stateKey now — the SSOT enum is the only enum. Operations
   // snapshot just exposes the same key under the legacy `phase` field for
   // callers mid-migration. Once those callers move, this whole block
@@ -601,9 +633,10 @@ export function buildProjectOperationsSnapshots(
   runtimeStateKnown = true,
   syncCtx: RuntimeSyncContext = {},
 ): ProjectOperationsSnapshot[] {
+  const { syncStale = false } = syncCtx;
   return projects
     .map((project) => buildProjectOperationsSnapshot(project, zellijTabs, nowS, runtimeStateKnown, syncCtx))
-    .sort((a, b) => compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown));
+    .sort((a, b) => compareProjects(a.project, b.project, zellijTabs, nowS, runtimeStateKnown, syncStale));
 }
 
 function compareProjects(
@@ -612,9 +645,10 @@ function compareProjects(
   zellijTabs: string[],
   nowS: number,
   runtimeStateKnown: boolean,
+  syncStale = false,
 ): number {
-  const aState = getProjectDisplayState(a, zellijTabs, nowS, false, runtimeStateKnown);
-  const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown);
+  const aState = getProjectDisplayState(a, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
+  const bState = getProjectDisplayState(b, zellijTabs, nowS, false, runtimeStateKnown, syncStale);
 
   const rank = (state: ProjectDisplayState): number => {
     if (state.isReady || state.isOrchestrationReady) return 0;
@@ -637,21 +671,27 @@ export function buildControlPageState(
   data: ControlData,
   nowS: number,
   runtimeStateKnown = true,
+  syncStale = false,
 ): ControlPageState {
-  const runningCount = data.projects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
-    return state.isRunning;
-  }).length;
-  const waitingCount = data.projects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
-    return state.isReady || state.isOrchestrationReady || (state.isSessionOpen && !state.isRunning);
-  }).length;
+  // Bucket every project by the SAME counterCategory the rail
+  // (ProjectOperationsView) reads off each row's stateKey, so the header chips
+  // and the rail counts come from one SSOT and can never disagree. Previously
+  // the header's third number was openTabCount — every project with a zellij
+  // tab open, a SUPERSET that double-counted the working/awaiting projects —
+  // while the rail showed the mutually-exclusive idle bucket: the same screen
+  // had "open" meaning two different numbers. Now both read working/waiting/
+  // idle off counterCategory. syncStale collapses stale projects to the
+  // "offline" category, so they drop out of all three live counts.
+  const categories = data.projects.map((project) =>
+    STATE_DEFINITIONS[
+      getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown, syncStale).stateKey
+    ].counterCategory,
+  );
+  const runningCount = categories.filter((c) => c === "working").length;
+  const waitingCount = categories.filter((c) => c === "waiting").length;
+  const idleCount = categories.filter((c) => c === "idle").length;
   const openTabCount = data.projects.filter((project) => isProjectTabOpen(project, data.zellijTabs)).length;
   const controlProjectCount = data.inventory.controlProjectCount ?? 0;
-  const idleCount = data.projects.filter((project) => {
-    const state = getProjectDisplayState(project, data.zellijTabs, nowS, false, runtimeStateKnown);
-    return !state.isActive;
-  }).length;
   const commitsToday = data.projects.reduce((sum, p) => sum + (p.git?.todayCount ?? 0), 0);
 
   const attention = data.projects

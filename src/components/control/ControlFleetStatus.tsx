@@ -58,17 +58,20 @@ export function ControlFleetStatus({
   onNewProject,
   projectOverrideCount = 0,
 }: Props) {
-  // Vocabulary reconciled with ProjectOperationsView's rail counts
-  // 2026-05-31: header now shows "X working · Y ready · Z open" matching the
-  // rail exactly, with an optional "X need you" attention chip in front when
-  // failed commands or attention items are present. Was: "X need you · Y
-  // working · Z open" — different denominators (needsYou conflated waiting +
-  // failed + attention) and different verbs from the rail's working/ready/open
-  // triad. Same fact in two places now reads the same way.
+  // Vocabulary AND arithmetic reconciled with ProjectOperationsView's rail.
+  // The triad is "X working · Y awaiting input · Z idle" — three
+  // mutually-exclusive buckets, every project in exactly one, all sourced from
+  // buildControlPageState's counterCategory tally (the same SSOT the rail
+  // reads). The third chip used to be openTabCount ("Z tabs open"), a SUPERSET
+  // that re-counted the working/awaiting projects whose tabs were also open —
+  // so "1 working · … · 1 tabs open" described the SAME project twice and
+  // disagreed with the rail's "0 idle". Now header and rail show identical
+  // numbers. An optional "X need you" attention chip leads when there are
+  // failed commands or attention items.
   const attention = attentionCount + failedCount; // truly user-blocking
   const ready = dashboard?.waitingCount ?? 0;     // agent done, awaiting next step
   const working = dashboard?.runningCount ?? 0;
-  const openTabs = dashboard?.openTabCount ?? 0;
+  const idle = dashboard?.idleCount ?? 0;         // inert: not_running / tab_open / closing / completed
 
   // SSOT: label/description/problem-CTA all come from RUNNER_STATE_DEFINITIONS
   // (lib/control-states.ts). Hand-rolled label trees that drifted between this
@@ -180,9 +183,12 @@ export function ControlFleetStatus({
           {ready} awaiting input
         </span>
         <span className={cn("ui-control-fleet-chip", staleClass)} title={staleTitle}>
-          {openTabs} tab{openTabs === 1 ? "" : "s"} open
+          {idle} idle
         </span>
-        {attention === 0 && working === 0 && ready === 0 && openTabs === 0 && (
+        {/* "All clear" only when nothing needs you and nothing is live — and
+            never while stale, when 0/0/0 means "the runner stopped reporting",
+            not "the fleet is calm". */}
+        {!isStale && attention === 0 && working === 0 && ready === 0 && idle === 0 && (
           <span className={cn("ui-control-fleet-chip ui-control-fleet-chip-clear", staleClass)} title={staleTitle}>
             All clear
           </span>

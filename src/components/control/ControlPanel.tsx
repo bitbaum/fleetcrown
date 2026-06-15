@@ -92,12 +92,12 @@ export function ControlPanel() {
     syncStale: runnerSyncStale,
     lastSyncedAt: runnerLastPushedAt,
   };
-  const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown) : null;
+  const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown, runnerSyncStale) : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
   const liveTabRows = useMemo(
-    () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS) : []),
-    [data, nowS],
+    () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS, runnerSyncStale) : []),
+    [data, nowS, runnerSyncStale],
   );
   const snapshots = data
     ? buildProjectOperationsSnapshots(data.projects, data.zellijTabs, nowS, runtimeStateKnown, runtimeSyncCtx)
