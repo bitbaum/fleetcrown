@@ -1,5 +1,6 @@
 import {
   ACTIVE_WINDOW_S,
+  AGENT_ABSENT_GRACE_S,
   CLOSED_WINDOW_S,
   CLOSING_WINDOW_S,
   READY_WINDOW_S,
@@ -61,6 +62,25 @@ export function isCurrentPromptStale(project: ProjectState, nowS: number): boole
   // not clear the live "Working" badge (was causing false "Open, idle").
   if (sessionStatus === "working") {
     return nowS - startedAt > STALE_PROMPT_S;
+  }
+
+  // No live agent process for a LOCALLY dispatched prompt → the agent exited
+  // or never launched, so the "Working" badge is a false positive. A sentinel
+  // with source "inject" is only ever written by the local /api/inject and
+  // /api/control/tab-inject routes (cloud skips the /tmp write), which means a
+  // real /proc scan backs `agentRunning` here — it is authoritative. We wait
+  // out AGENT_ABSENT_GRACE_S first so a freshly-dispatched prompt isn't killed
+  // before its agent has had time to appear in /proc. Sentinels held by the
+  // cloud runner (source "runner") are intentionally exempt: there is no local
+  // /proc scan to trust, and the runner clears its own sentinel. This is the
+  // fix for the stale "Working 20m" on an idle shell where a queued/never-
+  // delivered dispatch left an "inject" sentinel with no agent behind it.
+  if (
+    project.currentPrompt.source === "inject" &&
+    !project.agentRunning &&
+    nowS - startedAt > AGENT_ABSENT_GRACE_S
+  ) {
+    return true;
   }
 
   // SessionState.mtime is used for Date display elsewhere and remains milliseconds;

@@ -27,6 +27,14 @@ export const PROMPT_RUNNING_WINDOW_S = 14400; // 4 hours
 // Intentionally much larger than the UI display windows so DB state can survive a banner dismiss.
 export const SENTINEL_VALIDITY_S = 86400; // 24 hours
 
+// Grace window after a locally-dispatched prompt before we trust the /proc scan
+// to declare "no agent is running". Covers the latency between writing the
+// current-prompt sentinel and the agent process actually appearing in /proc
+// (a shell launching `claude`/`codex`/etc. takes a couple seconds). Past this,
+// a locally-written ("inject") sentinel with no matching agent process means
+// the agent exited or never launched — the prompt is stale, not "Working".
+export const AGENT_ABSENT_GRACE_S = 20; // 20s — agent boot/exec latency cushion
+
 /** Returns true when a unix-seconds timestamp is non-null and falls within the given window. */
 export function withinWindow(ts: number | null, nowS: number, windowS: number): boolean {
   return ts !== null && nowS - ts < windowS;
