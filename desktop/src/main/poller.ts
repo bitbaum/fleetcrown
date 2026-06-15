@@ -260,6 +260,17 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
  * `zellij list-sessions` shellout.
  */
 async function ensureSessionForCommand(): Promise<void> {
+  // If ANY zellij session is already live, we're done — inject/launch resolve
+  // the target tab across all sessions (injectIntoTab → findSessionForTab), so
+  // they drive the user's own session (e.g. their interactive one) without
+  // needing the runner's dedicated 'fleet' session. Only bootstrap 'fleet' when
+  // zellij is entirely down (the "rebooted, nothing running" self-heal path).
+  //
+  // Forcing a 'fleet' fresh-spawn on every command was a real bug: on a box
+  // where headless 'fleet' won't spawn, the spawn-wait failed and injects never
+  // landed even though the user had a perfectly good live session. The comment
+  // above always intended "a zellij session", not "the fleet session".
+  if (getZellijSessionsSync().length > 0) return
   await ensureZellijReady(DEFAULT_SESSION_NAME, [], { mode: 'fresh-spawn' })
 }
 
