@@ -7,15 +7,31 @@ export function CapacityIssueBanner({
   currentAgentId,
   nextAgentId,
   switching,
+  auto,
+  exhausted,
   onSwitch,
   onDismiss,
 }: {
   currentAgentId: string;
   nextAgentId: string;
   switching?: boolean;
+  /** Autopilot is handling the switch itself — render a status note, no buttons. */
+  auto?: boolean;
+  /** Every installed fallback was auto-tried this episode — a human is needed. */
+  exhausted?: boolean;
   onSwitch: () => void;
   onDismiss?: () => void;
 }) {
+  if (auto) {
+    return (
+      <div className="mx-4 mb-3 rounded-xl border border-status-warning/40 bg-status-warning/[0.06] px-4 py-3 sm:mx-5 md:mx-6">
+        <p className="flex items-center gap-2 text-sm font-medium text-text-primary">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-status-warning" />
+          {agentLabel(currentAgentId)} hit a capacity limit — autopilot is switching to {agentLabel(nextAgentId)}…
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mx-4 mb-3 rounded-xl border border-status-warning/40 bg-status-warning/[0.06] px-4 py-3 sm:mx-5 md:mx-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -24,7 +40,9 @@ export function CapacityIssueBanner({
             {agentLabel(currentAgentId)} hit a capacity limit
           </p>
           <p className="text-xs text-text-secondary">
-            Switch to {agentLabel(nextAgentId)} and keep going — no terminal commands needed.
+            {exhausted
+              ? `Autopilot tried every installed agent and all hit limits. Switch to ${agentLabel(nextAgentId)} to retry, or wait for capacity to recover.`
+              : `Switch to ${agentLabel(nextAgentId)} and keep going — no terminal commands needed.`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
