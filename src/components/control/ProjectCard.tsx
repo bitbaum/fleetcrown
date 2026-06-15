@@ -326,7 +326,7 @@ export function ProjectCard({
               <SessionSummary session={project.session} isClosed={false} />
             </div>
           )}
-          {showPreviousRunPanel && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} />}
+          {showPreviousRunPanel && latestOrchRun && <LatestOrchestrationPanel run={latestOrchRun} nowMs={nowS * 1000} />}
 
           {display.tone === "idle" && !display.tabOpen && runtimeStateKnown && onLaunch && (
             <div className="ui-card-section flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

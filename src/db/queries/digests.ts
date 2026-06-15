@@ -291,10 +291,25 @@ function buildProjectsList(
     .sort((a, b) => b.activity - a.activity || a.label.localeCompare(b.label));
 }
 
-function buildStats(prompts: PromptRow[], runs: RunRow[]): ProjectDigest["stats"] {
+function buildStats(
+  prompts: PromptRow[],
+  runs: RunRow[],
+  promptCounts: ActivityRows["promptCounts"],
+  runCounts: ActivityRows["runCounts"],
+  projectKey: string | null,
+): ProjectDigest["stats"] {
+  // promptsSent / runsStarted come from real count(*) aggregates (scoped to the
+  // active project, or summed across all projects when "all" is selected) — NOT
+  // the raw `prompts`/`runs` arrays, which are capped at MAX_RAW_ROWS_PER_QUERY
+  // (200). A busy window showed "200 prompts" when the true count was higher
+  // (e.g. 277 over 30 days). The per-outcome breakdown still reads the capped
+  // sample: it needs per-row outcome data and runs rarely exceed 200/window.
+  const sumScoped = (counts: ActivityRows["promptCounts"] | ActivityRows["runCounts"]) =>
+    counts.reduce((sum, r) => (projectKey && r.projectKey !== projectKey ? sum : sum + r.n), 0);
+  void prompts; // retained for signature symmetry / future per-row stats
   return {
-    promptsSent: prompts.length,
-    runsStarted: runs.length,
+    promptsSent: sumScoped(promptCounts),
+    runsStarted: sumScoped(runCounts),
     runsFinished: runs.filter((r) => r.finishedAt).length,
     success: runs.filter((r) => r.outcome === "success").length,
     partial: runs.filter((r) => r.outcome === "partial").length,
@@ -402,7 +417,7 @@ export async function getProjectDigest(
 
   const projects = buildProjectsList(rows.projectRows, rows.promptCounts, rows.runCounts, rows.localChatCounts);
   const projectStatuses = buildProjectStatuses(rows.runs, projects);
-  const stats = buildStats(rows.prompts, rows.runs);
+  const stats = buildStats(rows.prompts, rows.runs, rows.promptCounts, rows.runCounts, projectKey);
   const compacted = buildCompacted(rows.prompts, rows.runs);
 
   const timeline = [

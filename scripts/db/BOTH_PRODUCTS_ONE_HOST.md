@@ -75,7 +75,7 @@ Sequence so you never have both products half-migrated:
    - `cd ~/dev/fleetcrown && SOURCE_DATABASE_URL=<neon-url> scripts/db/dump-from-neon.sh`
    - `TARGET_DATABASE_URL=<hetzner-fc-url> DUMP_FILE=neon-dump-*.sql scripts/db/restore-to-target.sh`
    - Vercel: `vercel env rm DATABASE_URL production && vercel env add DATABASE_URL production` (paste FC URL) → `vercel --prod --yes`
-   - Smoke: `curl https://fleetcrown.vercel.app/api/health`, browse `/control`.
+   - Smoke: `curl https://fleetcrown.orangecat.ch/api/health`, browse `/control`.
 3. **OrangeCat second** (still on Supabase, lower urgency):
    - `cd ~/dev/orangecat && SOURCE_DATABASE_URL=<supabase-direct-url> ../fleetcrown/scripts/db/dump-from-supabase.sh`
    - `TARGET_DATABASE_URL=<hetzner-oc-url> DUMP_FILE=supabase-dump-*.sql ../fleetcrown/scripts/db/restore-to-target.sh`

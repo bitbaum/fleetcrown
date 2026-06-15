@@ -95,7 +95,7 @@ case "${1:-help}" in
     chmod 600 "$auth_header"
     printf 'Authorization: Bearer %s\n' "$TOKEN" > "$auth_header"
     trap 'rm -f "$auth_header"' EXIT
-    curl -s -X POST "https://fleetcrown.vercel.app/api/agent/install-cli" \
+    curl -s -X POST "https://fleetcrown.orangecat.ch/api/agent/install-cli" \
       -H "@$auth_header" \
       -H "Content-Type: application/json" \
       -d "{\"agent\":\"$agent\"}" | jq .

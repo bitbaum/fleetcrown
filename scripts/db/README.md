@@ -93,8 +93,8 @@ vercel --prod --yes
 ### Step 5 — smoke
 
 ```bash
-curl -s https://fleetcrown.vercel.app/api/health    # → 200
-curl -s -o /dev/null -w "%{http_code}\n" https://fleetcrown.vercel.app/  # → 200
+curl -s https://fleetcrown.orangecat.ch/api/health    # → 200
+curl -s -o /dev/null -w "%{http_code}\n" https://fleetcrown.orangecat.ch/  # → 200
 ```
 
 Browse `/control`, `/settings`, `/system` — should load without "Something went wrong."

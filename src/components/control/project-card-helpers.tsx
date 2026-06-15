@@ -142,8 +142,28 @@ const RUN_STATE_TAG: Record<string, string> = {
   running: "ui-tag ui-tag-warning",
 };
 
-export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectState["latestOrchestrationRun"]> }) {
-  const stateClass = RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral";
+// A run row left in "running" with no terminal write (agent crashed / killed
+// before the finish hook fired) used to render here as a live-looking
+// "running" warning tag for up to an hour. This panel is the "previous"
+// (finished) run — a genuinely-live run shows in the project header instead —
+// so a "running" row older than this cap is treated as interrupted.
+const STALE_RUNNING_MS = 30 * 60 * 1000;
+
+export function LatestOrchestrationPanel({
+  run,
+  nowMs,
+}: {
+  run: NonNullable<ProjectState["latestOrchestrationRun"]>;
+  /** Current time in ms, passed from the parent so this render stays pure. */
+  nowMs: number;
+}) {
+  const startedMs = run.startedAt ? Date.parse(run.startedAt) : 0;
+  const staleRunning =
+    run.state === "running" && startedMs > 0 && nowMs - startedMs > STALE_RUNNING_MS;
+  const displayState = staleRunning ? "interrupted" : run.state;
+  const stateClass = staleRunning
+    ? "ui-tag ui-tag-neutral"
+    : RUN_STATE_TAG[run.state] ?? "ui-tag ui-tag-neutral";
   const [expanded, setExpanded] = useState(false);
   const hasSummary = Boolean(run.summary?.done || run.summary?.next);
   const fallbackText = run.payload?.resultText?.trim() ?? "";
@@ -164,7 +184,7 @@ export function LatestOrchestrationPanel({ run }: { run: NonNullable<ProjectStat
           Previous automated run
         </span>
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
-        <span className={stateClass}>{run.state}</span>
+        <span className={stateClass}>{displayState}</span>
       </div>
 
       {summaryNext && (

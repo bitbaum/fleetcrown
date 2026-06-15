@@ -37,8 +37,8 @@
     "desktop:preview": "cd desktop && npm run preview",
     "db:dump": "bash scripts/db/dump.sh",
     "db:restore": "bash scripts/db/restore.sh",
-    "wait:vercel": "bash scripts/wait-for-vercel.sh",
-    "ship": "git push origin main && bash scripts/wait-for-vercel.sh",
+    "deploy": "bash scripts/deploy-hetzner.sh",
+    "ship": "git push origin main",
     "prepare": "husky"
   },
   "dependencies": {

@@ -111,10 +111,10 @@ vercel --prod --yes
 ## 8. Smoke test
 
 ```bash
-curl -s https://fleetcrown.vercel.app/api/health
+curl -s https://fleetcrown.orangecat.ch/api/health
 # expect: {"ok":true,"runtime":false,"version":null}
 
-curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fleetcrown.vercel.app/api/control/runtime-state \
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://fleetcrown.orangecat.ch/api/control/runtime-state \
   -H "Authorization: Bearer ock_..."  # an agent token
 # expect: 401 (no body) or 200 (with body)
 ```

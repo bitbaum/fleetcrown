@@ -91,9 +91,14 @@ export function ProjectAutopilotToggle({
     saveOverride(target === inheritedMode ? null : target);
   }
 
+  // "Auto" / "Paused" describe the autopilot POLICY, not live work — the
+  // pulsing accent dot used to fire here on every autopilot-on project (the
+  // default), making idle projects with no agent look like they were actively
+  // building. The pulse now belongs solely to the genuine `working` state
+  // badge; this control is a static policy chip.
   const tooltip = building
-    ? `Autopilot building this project${overridden ? " (project override)" : ` (following global: on)`}. Click to pause just this project.`
-    : `This project is paused${overridden ? " (project override)" : ` (following global: off)`}. Click to build it.`;
+    ? `Autopilot is on for this project${overridden ? " (project override)" : ` (following global: on)`}. It may dispatch the next task when an agent goes idle. Click to pause just this project.`
+    : `Autopilot is paused for this project${overridden ? " (project override)" : ` (following global: off)`}. Click to turn it on.`;
 
   return (
     <div className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs">
@@ -112,10 +117,7 @@ export function ProjectAutopilotToggle({
         ) : (
           <Play className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
         )}
-        {building && (
-          <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent-primary" />
-        )}
-        <span className="font-medium text-text-primary">{building ? "Building" : "Paused"}</span>
+        <span className="font-medium text-text-primary">{building ? "Auto" : "Paused"}</span>
       </button>
       {overridden && (
         <button

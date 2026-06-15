@@ -1,10 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- FleetCrown brand mark (spiral) — must stay visually identical to the SVG in BrandMark.tsx -->
+  <!-- FleetCrown brand mark (spiral). Same geometry as BrandMark.tsx, but
+       scaled to fill ~62% of the frame at full contrast so it stays legible at
+       16px favicon size. The prior version drew the mark at ~23% of the canvas
+       with 0.7/0.95 opacity, so it vanished to an empty dark square in a
+       browser tab ("no icon"). The spiral SHAPE is unchanged; only its scale
+       and opacity differ from the on-screen BrandMark, which has UI contrast
+       the favicon lacks. -->
   <rect width="512" height="512" rx="96" fill="#0a0a0a"/>
-  <g transform="translate(116 116) scale(11.6667)" fill="none" stroke="#ededed" stroke-linecap="round" stroke-linejoin="round">
+  <g transform="translate(-160 -96) scale(32)" fill="none" stroke="#ededed" stroke-linecap="round" stroke-linejoin="round">
     <!-- inner half of the spiral (brighter): r=2 → r=4 -->
-    <path d="M 12 14 A 2 2 0 0 1 12 10 A 4 4 0 0 0 12 16" stroke="#ededed" stroke-width="1.6" opacity="0.95"/>
+    <path d="M 12 14 A 2 2 0 0 1 12 10 A 4 4 0 0 0 12 16" stroke-width="1.7" opacity="1"/>
     <!-- outer half of the spiral (softer): r=6 -->
-    <path d="M 12 16 A 6 6 0 0 1 12 6" stroke="#ededed" stroke-width="1.6" opacity="0.7"/>
+    <path d="M 12 16 A 6 6 0 0 1 12 6" stroke-width="1.7" opacity="0.82"/>
   </g>
 </svg>
