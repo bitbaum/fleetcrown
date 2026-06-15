@@ -31,6 +31,9 @@ import { evaluateDispatchGates } from "@/lib/orchestration/dispatch-gates";
 import type { AutoInjectMode } from "@/config/beacon";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { getProjectState } from "@/db/queries/project-states";
+import { isRuntimeAvailable } from "@/lib/runtime";
+import { getUserProjects } from "@/db/queries/user-projects";
+import { resolveRunningAgentsInDir } from "@/lib/agent-process-scan";
 
 // Compact display: ✓ for success, ✗ for error/hang/timeout, ~ for partial, ✕ for user_abort.
 const OUTCOME_GLYPH: Record<RecentOutcome["outcome"], string> = {
@@ -136,18 +139,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result satisfies DispatchResult);
   };
 
-  // No-agent gate (highest precedence). If the latest pushed runtime state
-  // says no agent process is running in the target tab, autopilot must NOT
-  // inject — the prompt would land in the bare shell and run as a garbage
-  // command (observed on Kivvi 2026-06-15: "Work on the project… : command
-  // not found", "[autopilot · loop=test_and_fix …]: Syntaxfehler"). The runner
-  // pushes agentRunning to project_states from its /proc scan and sets it
-  // explicitly false when the tab has no live agent. Null/absent (e.g. the
-  // local server, which tracks /proc live by other means) → undetermined →
-  // gate skipped. The user must Launch an agent first; autopilot then drives it.
+  // No-agent gate (highest precedence). Never auto-inject into a tab with no
+  // live agent — the prompt would land in the bare shell and run as a stray
+  // command (Kivvi 2026-06-15: "Work on the project… : command not found").
+  // Use the FRESHEST signal available per runtime, NOT the persisted
+  // project_states.agentRunning, which is only written on inject and can be
+  // hours stale — trusting it wrongly blocked autopilot for a project whose
+  // agent IS running (Kivvi again, same day: stale agent_running=false from
+  // the morning suppressed every next_best while claude was live).
+  //   - Local (isRuntimeAvailable): a live /proc scan of the project dir.
+  //   - Cloud: the runner-pushed agentRunning (the freshest signal there).
+  //   - Undetermined (dir unknown / no pushed row) → skip; don't block.
   if (projectKey) {
-    const runtimeRow = await getProjectState(userId, projectKey).catch(() => null);
-    if (runtimeRow?.agentRunning === false) {
+    let agentPresent: boolean | undefined;
+    if (isRuntimeAvailable()) {
+      const dir = (await getUserProjects(userId).catch(() => []))
+        .find((p) => p.name.toLowerCase() === projectKey.toLowerCase())?.dirPath;
+      if (dir) agentPresent = resolveRunningAgentsInDir(dir).length > 0;
+    } else {
+      const runtimeRow = await getProjectState(userId, projectKey).catch(() => null);
+      if (runtimeRow) agentPresent = runtimeRow.agentRunning ?? undefined;
+    }
+    if (agentPresent === false) {
       return recordAndReturn({
         action: "off",
         reason: "No agent process running in the tab — autopilot will not inject into a bare shell. Launch an agent first.",
