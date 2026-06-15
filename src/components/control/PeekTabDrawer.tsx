@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, RefreshCw, X } from "lucide-react";
 import { Drawer } from "@/components/ui/modal";
+import { TerminalView } from "./TerminalView";
 
 // Live snapshot of a Zellij tab's visible scrollback, rendered as a static
 // terminal frame in a drawer. Pre-v0.7.2 the user could see tab names + state
@@ -24,8 +25,21 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
+  // Live mode (P1): stream the pane via xterm instead of one-shot snapshots.
+  // Default on; snapshot stays as the fallback when no runner is streaming.
+  // See docs/architecture/embedded-terminal.md.
+  const [live, setLive] = useState(true);
   const preRef = useRef<HTMLPreElement>(null);
   const requestSeq = useRef(0);
+
+  // P2-lite: send a single line into the pane via the existing inject path.
+  const sendLine = async (text: string) => {
+    await fetch("/api/control/tab-inject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tab, prompt: text }),
+    });
+  };
 
   const applyContent = (nextContent: string) => {
     setContent(nextContent);
@@ -96,9 +110,10 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   };
 
   useEffect(() => {
+    if (live) return; // live mode streams via TerminalView; no snapshot round-trip
     void fetchPeek();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  }, [tab, live]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -117,30 +132,44 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-text-primary">{tab}</h2>
             <p className="text-micro text-text-tertiary">
-              {lastFetchedAt
-                ? `Snapshot captured ${new Date(lastFetchedAt).toLocaleTimeString()}${autoRefresh ? " · auto-refresh on" : ""}`
-                : "Capturing screen…"}
+              {live
+                ? "Live terminal"
+                : lastFetchedAt
+                  ? `Snapshot captured ${new Date(lastFetchedAt).toLocaleTimeString()}${autoRefresh ? " · auto-refresh on" : ""}`
+                  : "Capturing screen…"}
             </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setAutoRefresh((v) => !v)}
-            className={autoRefresh ? "ui-btn-primary ui-btn-xs" : "ui-btn-ghost ui-btn-xs"}
-            title={autoRefresh ? "Stop auto-refresh" : "Re-peek every 3s"}
+            onClick={() => setLive((v) => !v)}
+            className={live ? "ui-btn-primary ui-btn-xs" : "ui-btn-ghost ui-btn-xs"}
+            title={live ? "Switch to one-shot snapshot" : "Switch to live stream"}
           >
-            {autoRefresh ? "Auto-refresh on" : "Auto-refresh"}
+            {live ? "Live" : "Snapshot"}
           </button>
-          <button
-            type="button"
-            onClick={() => { void fetchPeek(); }}
-            disabled={loading}
-            className="ui-btn-ghost ui-btn-xs"
-            title="Re-capture"
-          >
-            <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
-          </button>
+          {!live && (
+            <>
+              <button
+                type="button"
+                onClick={() => setAutoRefresh((v) => !v)}
+                className={autoRefresh ? "ui-btn-primary ui-btn-xs" : "ui-btn-ghost ui-btn-xs"}
+                title={autoRefresh ? "Stop auto-refresh" : "Re-peek every 3s"}
+              >
+                {autoRefresh ? "Auto-refresh on" : "Auto-refresh"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { void fetchPeek(); }}
+                disabled={loading}
+                className="ui-btn-ghost ui-btn-xs"
+                title="Re-capture"
+              >
+                <RefreshCw className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />
+              </button>
+            </>
+          )}
           <button type="button" onClick={onClose} className="ui-btn-ghost ui-btn-xs" title="Close">
             <X className="h-3.5 w-3.5" />
           </button>
@@ -148,7 +177,11 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
       </header>
 
       <div className="ui-control-terminal-surface">
-        {error ? (
+        {live ? (
+          <div className="p-3">
+            <TerminalView tab={tab} onSend={sendLine} />
+          </div>
+        ) : error ? (
           <div className="p-6 text-sm text-text-secondary">
             <p className="font-medium text-status-warning">Couldn&apos;t peek this tab</p>
             <p className="mt-2 text-text-tertiary">{error}</p>

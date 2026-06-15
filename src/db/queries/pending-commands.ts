@@ -44,6 +44,12 @@ export async function enqueueLaunchAgentCommand(userId: string, payload: LaunchA
   return enqueuePendingCommand({ userId, type: "launch_agent", payload });
 }
 
+/** Live terminal: tell the runner to start/stop streaming a tab's screen.
+ *  See docs/architecture/embedded-terminal.md. */
+export async function enqueuePeekCommand(userId: string, type: "peek_start" | "peek_stop", payload: TabPayload): Promise<string> {
+  return enqueuePendingCommand({ userId, type, payload });
+}
+
 /** Re-enqueues a failed (or delivered-but-unverified) command verbatim.
  *  Returns the new command id, or null when the source command doesn't
  *  exist, belongs to another user, or never actually failed. */

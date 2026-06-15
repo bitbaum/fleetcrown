@@ -30,6 +30,7 @@ import { zellijExecutableForShell } from '@/lib/terminals/zellij'
 import { APP_URL } from '@/config/brand'
 import { APP_SLUG } from '@/config/brand'
 import { launchAgentInTab } from '@/lib/agent-runtime'
+import { startPeek, stopPeek } from './peek-streamer'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
 import { startBridgeSubscriber } from './bridge-subscriber'
@@ -429,6 +430,18 @@ async function handleCommand(
         console.log(`[poller] handled ${command.type} command ${command.id}`)
         updateStatus({ commandsHandled: currentStatus.commandsHandled + 1 })
         return
+      }
+      case 'peek_start': {
+        // Live terminal: start streaming this tab's screen to the cloud until a
+        // peek_stop (last viewer left). See docs/architecture/embedded-terminal.md.
+        startPeek(base, token, validation.command.payload.tab)
+        ok = true
+        break
+      }
+      case 'peek_stop': {
+        stopPeek(validation.command.payload.tab)
+        ok = true
+        break
       }
     }
   } catch (e) {

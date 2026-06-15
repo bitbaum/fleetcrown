@@ -7,6 +7,10 @@ export const PENDING_COMMAND_TYPES = [
   "auto_continue",
   "install_cli",
   "peek_tab",
+  // Live terminal (docs/architecture/embedded-terminal.md): start/stop a
+  // dump-screen poll loop for a tab and stream changed frames to the cloud.
+  "peek_start",
+  "peek_stop",
   "transcribe",
   "repair_helper",
 ] as const;
@@ -22,6 +26,8 @@ export const FLEET_RUNNER_COMMAND_TYPES = [
   "auto_continue",
   "install_cli",
   "peek_tab",
+  "peek_start",
+  "peek_stop",
 ] as const satisfies readonly PendingCommandType[];
 
 export type FleetRunnerCommandType = (typeof FLEET_RUNNER_COMMAND_TYPES)[number];

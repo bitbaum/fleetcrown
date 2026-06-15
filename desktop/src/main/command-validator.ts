@@ -92,6 +92,13 @@ export interface PeekTabCommand {
   }
 }
 
+export interface PeekStreamCommand {
+  type: 'peek_start' | 'peek_stop'
+  payload: {
+    tab: string
+  }
+}
+
 /** Every command type the desktop is allowed to execute today. Adding a
  *  new type means: extend this union + write a guard + handle it in poller. */
 export type ValidatedCommand =
@@ -102,6 +109,7 @@ export type ValidatedCommand =
   | AutoContinueCommand
   | InstallCliCommand
   | PeekTabCommand
+  | PeekStreamCommand
 
 export type ValidationResult =
   | { ok: true; command: ValidatedCommand }
@@ -148,6 +156,9 @@ export function validateCommand(raw: unknown): ValidationResult {
       return validateInstallCli(payload)
     case 'peek_tab':
       return validatePeekTab(payload)
+    case 'peek_start':
+    case 'peek_stop':
+      return validatePeekStream(type, payload)
   }
 }
 
@@ -157,6 +168,14 @@ function validatePeekTab(payload: Record<string, unknown>): ValidationResult {
     return { ok: false, error: "peek_tab payload missing required string 'tab'" }
   }
   return { ok: true, command: { type: 'peek_tab', payload: { tab } } }
+}
+
+function validatePeekStream(type: 'peek_start' | 'peek_stop', payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: `${type} payload missing required string 'tab'` }
+  }
+  return { ok: true, command: { type, payload: { tab } } }
 }
 
 function validateInject(payload: Record<string, unknown>): ValidationResult {
