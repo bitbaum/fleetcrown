@@ -272,10 +272,19 @@ export function buildLiveTabRows(
     .filter((entry): entry is { tabName: string; project: ProjectState } => entry.project !== null)
     .map(({ tabName, project }) => {
       const display = getProjectDisplayState(project, uniqueTabs, nowS, false, true, syncStale);
+      // When a prompt is running but the /proc scan hasn't caught the agent
+      // process yet (the brief launch window), prefer the dispatched adapter
+      // ("Claude", "Cursor", …) over a bare generic "Agent" — but only when
+      // it's a real adapter, not the "unknown" placeholder a raw tab-inject
+      // writes (which would render a worse "Unknown").
+      const dispatched = project.currentPrompt?.adapter;
+      const dispatchedLabel = dispatched && dispatched !== "unknown"
+        ? labelForProcessOrAdapter(dispatched)
+        : null;
       const agentLabel = project.activeAgents.length
         ? formatAgentRuntimeLabel(project, tabName)
         : display.isRunning
-          ? "Agent"
+          ? (dispatchedLabel ?? "Agent")
           : inferAgentLabelFromTabName(tabName);
       return {
         tabName,

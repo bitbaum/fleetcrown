@@ -48,8 +48,18 @@ export function ProjectActivitySection({
       >
         <Activity className="h-3.5 w-3.5" />
         <span className="font-medium">Activity</span>
-        {promptCount > 0 && <span className="text-text-muted/60">{promptCount} sent</span>}
-        {(git?.todayCount ?? 0) > 0 && <span className="text-status-positive/80">+{git?.todayCount} commits</span>}
+        {/* promptCount is the last-24h dispatches for this project, capped at
+            5 (see /api/control activityByProject). Bare "N sent" read as a
+            lifetime total; "5+" when capped + the window in the tooltip keep it
+            honest without bloating the chip. "+N commits" stays today-scoped. */}
+        {promptCount > 0 && (
+          <span className="text-text-muted/60" title="Prompts dispatched in the last 24h (up to 5 shown)">
+            {promptCount >= 5 ? "5+" : promptCount} sent
+          </span>
+        )}
+        {(git?.todayCount ?? 0) > 0 && (
+          <span className="text-status-positive/80" title="Commits today">+{git?.todayCount} commits</span>
+        )}
         <span className="ml-auto">{open ? "▴" : "▾"}</span>
       </button>
       {open && projectTab && (
