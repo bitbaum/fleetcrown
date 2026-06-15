@@ -44,16 +44,21 @@ src/
 ├── hooks/         → useFetch, useCreateMutation, useInlineEdit
 └── lib/           → constants, dates, tools, utils, api/* wrappers
 
-home/              → Local-first agent orchestration stack — runs on the user's
-                     machine (not Vercel). Three small Node processes tailing one
-                     append-only JSONL event log: server.ts (Brain — HTTP +
-                     state projection), watcher.ts (Bridge — emits worker.idle
-                     when ~/.claude/sessions/*.md changes), worker.ts (Consumer
-                     — injects bridge.dispatch into zellij, sends Ctrl+C on
-                     bridge.cancel). UI at http://localhost:3001. Run with
-                     `bash scripts/home-start.sh`; test with `npm run test:home`
-                     (inline tests, no framework, also runs on pre-push).
-                     Full docs: home/README.md.
+home/              → Local-first agent orchestration library — runs on the
+                     user's machine (not Vercel). Pure pieces that tail one
+                     append-only JSONL event log: watcher.ts (Bridge — emits
+                     worker.idle when ~/.claude/sessions/*.md changes),
+                     worker.ts (Consumer — injects bridge.dispatch into zellij,
+                     sends Ctrl+C on bridge.cancel), plus decide/render/state.
+                     The standalone Brain (home/server.ts, port 3001) and its
+                     scripts/home-start.sh launcher were RETIRED in a3f470d:
+                     Fleet Runner desktop is now the sole local executor and
+                     embeds these pieces via startWatcher(). Every dispatch goes
+                     cloud /api/inject → pending_command → Fleet Runner polls and
+                     types into zellij. To iterate on a single piece, run it
+                     directly (`npx tsx home/worker.ts --start`); test the whole
+                     library with `npm run test:home` (inline tests, no
+                     framework, also runs on pre-push). Full docs: home/README.md.
 ```
 
 ## Key Conventions
@@ -200,7 +205,8 @@ npm run smoke        # Curl every page route on localhost:3000 and assert 2xx/3x
 npm run test:home    # Run all eight home/ inline self-test suites (~14s)
 npx drizzle-kit push # Push schema changes to Postgres
 npx tsx scripts/seed.ts  # Re-seed database from knowledge.sqlite + contacts
-bash scripts/home-start.sh  # Boot the local home/ Brain+Bridge+Worker stack
+npx tsx home/worker.ts --start  # Run a single home/ piece for iteration
+                                # (Fleet Runner desktop is the real executor)
 ```
 
 A husky pre-commit hook runs `tsc --noEmit` and `eslint src/` automatically.
