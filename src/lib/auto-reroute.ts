@@ -62,6 +62,54 @@ export function decideAutoReroute(input: AutoRerouteInput): AutoRerouteDecision 
   return { reroute: true, toAgent: input.suggestedFallback };
 }
 
+// ── Headless (server-side) reroute ──────────────────────────────────────────
+// The /control path above only fires while a browser has the page open. The
+// beacon path runs server-side when an agent's session ends, so it can reroute
+// with no one watching — the real fleet-operation win. It can't lean on a
+// React ref for loop tracking, so loop safety comes from a DB guard instead:
+// a cap on auto-switches per project per time window (one full fallback cycle,
+// then stop) plus "don't pile on while a switch is still unclaimed."
+
+/** Max auto-switches enqueued per project per window. AGENT_FALLBACK_ORDER has
+ *  5 agents, so ≤4 hops covers one full cycle from any start; after that we
+ *  stop rather than cycle back to an already-exhausted agent. */
+export const MAX_AUTO_REROUTES_PER_WINDOW = 4;
+
+export type HeadlessRerouteSkipReason =
+  | "no-capacity-issue"
+  | "autopilot-off"
+  | "no-fallback"        // resolveNextAvailableAgent found no installed alternative
+  | "no-dir"             // project has no local dir to switch inside of
+  | "switch-pending"     // an unclaimed switch is already queued for this project
+  | "window-exhausted";  // hit the per-window cap → surface, don't churn
+
+export type HeadlessRerouteDecision =
+  | { reroute: true; toAgent: string }
+  | { reroute: false; reason: HeadlessRerouteSkipReason };
+
+export type HeadlessRerouteInput = {
+  capacityIssue: boolean;
+  automationOn: boolean;
+  nextAgent: string | null;
+  hasDir: boolean;
+  hasPendingSwitch: boolean;
+  recentSwitchCount: number;
+  maxSwitchesPerWindow: number;
+};
+
+/** Server-side counterpart of decideAutoReroute. Pure for the same reason. */
+export function decideHeadlessReroute(input: HeadlessRerouteInput): HeadlessRerouteDecision {
+  if (!input.capacityIssue) return { reroute: false, reason: "no-capacity-issue" };
+  if (!input.automationOn) return { reroute: false, reason: "autopilot-off" };
+  if (!input.nextAgent) return { reroute: false, reason: "no-fallback" };
+  if (!input.hasDir) return { reroute: false, reason: "no-dir" };
+  if (input.hasPendingSwitch) return { reroute: false, reason: "switch-pending" };
+  if (input.recentSwitchCount >= input.maxSwitchesPerWindow) {
+    return { reroute: false, reason: "window-exhausted" };
+  }
+  return { reroute: true, toAgent: input.nextAgent };
+}
+
 /**
  * Whether the human-facing capacity banner should still be shown.
  * Autopilot handles it silently UNLESS it can't (exhausted fallbacks / no
