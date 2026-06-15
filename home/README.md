@@ -1,51 +1,52 @@
-# `home/` — local Brain + Bridge + Worker
+# `home/` — local Bridge + Worker (embedded in Fleet Runner)
 
-The new system runs as three small Node processes on the user's machine,
-all tailing the same append-only JSONL event log:
+These pure pieces tail one append-only JSONL event log on the user's machine.
+The standalone Brain (`server.ts`) that once served state over HTTP on :3001
+was retired in `a3f470d` — Fleet Runner desktop now embeds the watcher and
+owns execution. State projection (`state.ts`) is still computed from the same
+log; it's just consumed in-process instead of served. What runs locally:
 
 ```
 ~/.${APP_SLUG}/events.jsonl     ←  every event ever, version-stamped, one per line
 
-  ┌─────────────┐    ┌───────────┐    ┌──────────────┐
-  │  watcher.ts │    │ server.ts │    │  worker.ts   │
-  │   (Bridge)  │    │  (Brain)  │    │  (Consumer)  │
-  ├─────────────┤    ├───────────┤    ├──────────────┤
-  │ session.md  │    │ tails log │    │ tails log    │
-  │ changes     │    │ projects  │    │ filters for  │
-  │ → worker.   │    │  state    │    │ bridge.      │
-  │   idle      │    │ serves    │    │   dispatch   │
-  │   events    │    │  /api/*   │    │ → injects    │
-  └─────────────┘    │ runs      │    │   via zellij │
-                     │  decide() │    │ → worker.    │
-                     └───────────┘    │   started    │
-                                      └──────────────┘
+  ┌─────────────┐                     ┌──────────────┐
+  │  watcher.ts │                     │  worker.ts   │
+  │   (Bridge)  │                     │  (Consumer)  │
+  ├─────────────┤                     ├──────────────┤
+  │ session.md  │                     │ tails log    │
+  │ changes     │                     │ filters for  │
+  │ → worker.   │                     │ bridge.      │
+  │   idle      │                     │   dispatch   │
+  │   events    │                     │ → injects    │
+  └─────────────┘                     │   via zellij │
+                                      │ → worker.    │
+   state.ts folds the log into        │   started    │
+   per-project state, consumed        └──────────────┘
+   in-process by Fleet Runner
+   (formerly served by server.ts on :3001).
 ```
 
 ## Run
 
-One command starts all three processes, tags each line of output with its
-source, and shuts them down together on Ctrl-C:
+> **The executor is Fleet Runner desktop.** The standalone Brain
+> (`home/server.ts`, port 3001) and its one-command `scripts/home-start.sh`
+> launcher were retired in `a3f470d`. In production every dispatch goes
+> cloud `/api/inject` → `pending_command` → Fleet Runner polls and types into
+> zellij. The pieces below stay individually runnable only for iterating on
+> one of them in isolation — there is no longer a combined launcher.
+
+Run a single piece in its own terminal while you iterate on it. Each requires
+an explicit `--start` flag — naked invocations print a usage banner and exit 0
+so accidental `| tail -N` pipes don't leave orphaned watchers behind:
 
 ```bash
-bash scripts/home-start.sh
-# UI at http://localhost:3001
-# Logs merged into /tmp/<APP_SLUG>-home.log — tail -f to see all three.
-```
-
-Or run them individually in separate terminals (useful when iterating on
-one process at a time). All three require an explicit `--start` flag —
-naked invocations print a usage banner and exit 0 so accidental
-`| tail -N` pipes don't leave orphaned watchers behind:
-
-```bash
-npx tsx home/server.ts  --start   # Brain — http://localhost:3001
 npx tsx home/watcher.ts --start   # Bridge — emits worker.idle when sessions change
 npx tsx home/worker.ts  --start   # Consumer — injects bridge.dispatch into zellij
 npx tsx home/worker.ts  --self-test   # Inline tests, no I/O
 ```
 
-Override the Brain port with `APP_HOME_PORT=3801`. Override the watcher
-sessions dir with `APP_SESSIONS_DIR=/tmp/test-sessions` (for testing).
+Override the watcher sessions dir with `APP_SESSIONS_DIR=/tmp/test-sessions`
+(for testing).
 
 ## Smoke test — append a worker.started event manually
 
@@ -57,48 +58,42 @@ cat <<EOF >> ~/.$SLUG/events.jsonl
 {"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"worker.started","project":"Demo","adapter":"claude","intent":"next_best"}
 EOF
 
-# UI at http://localhost:3001 shows a Demo project with a green next_best pill.
+# A running `worker.ts --start` picks the event up on its next tail read.
 ```
 
-## Smoke test — dispatch via the API
+## Smoke test — dispatch to the worker
 
-The four autonomy modes gate auto-execution differently:
-
-| Mode      | Threshold | Use case                                                |
-|-----------|-----------|---------------------------------------------------------|
-| `manual`  | 0 (none)  | Human clicked Dispatch — fires on receipt               |
-| `confirm` | ∞ (never) | Show the proposal so the human can review               |
-| `auto`    | 0.55      | Autonomous scheduler (cron, queue drain), moderate gate |
-| `sleep`   | 0.75      | Autonomous while-away, high-confidence gate             |
-
-A fresh project has `confidence = 0.5`, so only `manual` fires immediately.
-Use `confirm` to see the proposed action without firing:
+The HTTP `/api/dispatch` and `/api/cancel` endpoints lived on the retired Brain
+(`home/server.ts`). The worker now consumes events straight from the JSONL log,
+so a local smoke test appends a `bridge.dispatch` event the same way the
+`worker.started` example above does. With `npx tsx home/worker.ts --start`
+running and a `Demo` zellij tab open:
 
 ```bash
-# Fire now (human-initiated).
-curl -s -X POST http://localhost:3001/api/dispatch \
-  -H 'Content-Type: application/json' \
-  -d '{"project":"Demo","autonomy":"manual","queueHead":"run the smoke test"}'
+SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
 
-# See what the brain would do, without firing.
-curl -s -X POST http://localhost:3001/api/dispatch \
-  -H 'Content-Type: application/json' \
-  -d '{"project":"Demo","autonomy":"confirm"}'
+# Fire now: the worker injects "run the smoke test" into the Demo zellij tab
+# and appends its own worker.started event.
+cat <<EOF >> ~/.$SLUG/events.jsonl
+{"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"bridge.dispatch","project":"Demo","adapter":"claude","intent":"next_best","queueHead":"run the smoke test"}
+EOF
 ```
 
-When fired, `worker.ts` injects "run the smoke test" into the `Demo`
-zellij tab and appends a `worker.started` event. The UI reflects it on
-the next 2s poll.
+In production this event is written by the cloud `/api/inject` handler that
+Fleet Runner polls — the local append above just exercises the same consumer.
+Autonomy gating (the `manual` / `confirm` / `auto` / `sleep` thresholds) now
+lives in `home/decide.ts` and runs upstream of the event, not in this hop.
 
 ## Smoke test — cancel an in-flight run
 
 ```bash
-# Sends Ctrl+C to the project's zellij tab via the worker, and tags the
-# eventual worker.finished's outcome as user_abort in recentOutcomes
-# (the bash stop hook can only infer success/partial/error/hang).
-curl -s -X POST http://localhost:3001/api/cancel \
-  -H 'Content-Type: application/json' \
-  -d '{"project":"Demo","reason":"changed my mind"}'
+SLUG=$(grep '^export const APP_SLUG' src/config/brand.ts | cut -d'"' -f2)
+
+# Sends Ctrl+C to the project's zellij tab. runId must match the live run's
+# worker.started; the eventual worker.finished is tagged user_abort.
+cat <<EOF >> ~/.$SLUG/events.jsonl
+{"v":1,"id":"$(uuidgen)","ts":"$(date -Iseconds)","kind":"bridge.cancel","project":"Demo","runId":"<live-run-id>","reason":"changed my mind"}
+EOF
 ```
 
 ## Files
@@ -111,7 +106,8 @@ curl -s -X POST http://localhost:3001/api/cancel \
 | `render.ts`   | Thin adapter over `@/lib/orchestration` to render full dispatch prompts.         |
 | `decide.ts`   | Pure decision function: `(state, queueHead, autonomy) → action + confidence`.    |
 | `projects.ts` | Reads `~/.config/agent-projects.conf` — the tab→path[→adapter] SSOT.            |
-| `server.ts`   | HTTP server — `/control` HTML + `/api/state` + `/api/health` + `POST /api/dispatch` + `POST /api/cancel` + `POST /api/events`. |
+| `state.ts`    | Pure event projection — folds the JSONL log into current per-project state. (Was served over HTTP by the retired `server.ts`; now consumed by Fleet Runner.) |
+| `log.ts`      | JSONL tailer — the replay path the worker uses to rebuild state on boot.          |
 | `watcher.ts`  | M3 Bridge. Watches `~/.claude/sessions/*.md`, emits `worker.idle`. Filters to registered projects only. |
 | `worker.ts`   | M8 Consumer. Acts on `bridge.dispatch` (inject) and `bridge.cancel` (Ctrl+C), emits `worker.started` / `worker.crashed`. |
 
@@ -147,10 +143,11 @@ Each suite prints its own `N/M passed` footer; `npm run test:home`
 aggregates them into a total. Counts grow as regression cases are
 added — don't hardcode them anywhere.
 
-`server.ts` is currently exercised only by `npm run smoke` (boots the dev
-server and curls every route) — its HTTP route handlers are tightly bound
-to req/res streams, so unit-testing them in isolation would require
-mocking infrastructure not worth the cost yet.
+`state.ts`, `decide.ts`, `render.ts`, `projects.ts`, `log.ts`, `emit.ts`,
+`watcher.ts`, and `worker.ts` each ship inline self-tests aggregated by
+`npm run test:home`. The HTTP serving that `server.ts` used to do is gone;
+Fleet Runner's own runtime (`desktop/`) now owns that surface and is tested
+there.
 
 ## What's not here yet
 
