@@ -26,6 +26,7 @@
     "test:onboarding": "npx tsx scripts/test/onboarding.ts",
     "test:onboarding-heal": "npx tsx scripts/test/onboarding-heal.ts",
     "test:db-url": "npx tsx scripts/test/db-url.ts",
+    "test:brand-sync": "npx tsx scripts/test/brand-sync.ts",
     "test:orchestration-summary": "npx tsx scripts/test/orchestration-summary.ts",
     "test:dispatch-gates": "npx tsx scripts/test/dispatch-gates.ts",
     "test:prompt-history": "npx tsx scripts/test/prompt-history.ts",
