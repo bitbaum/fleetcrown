@@ -28,10 +28,18 @@ export async function executeInject(
   userId: string,
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
-  // Direct injection requires both filesystem access AND a Zellij session in this process.
-  // The production standalone server runs outside Zellij; the local runner (which IS inside
-  // a Zellij pane) picks up queued commands and injects with the correct session context.
-  if (isRuntimeAvailable() && !!process.env.ZELLIJ_SESSION_NAME) {
+  // Direct injection requires a local runtime (zellij + agents on this machine).
+  // It does NOT require this process to live inside a Zellij pane: the terminal
+  // adapter resolves the hosting session via findSessionForTab and qualifies
+  // every command with `--session <name>`, so injectIntoTab works from any
+  // local process (systemd service, CLI, etc.). The old ZELLIJ_SESSION_NAME
+  // guard predated that adapter and forced queuing for the runner even when
+  // direct injection would succeed — which silently broke project-card sends
+  // on the systemd standalone server (RUNTIME_AVAILABLE=true, no pane env).
+  // /api/control/tab-inject already gates on isRuntimeAvailable() alone; this
+  // keeps the two inject paths consistent (one SSOT for "inject into a tab").
+  // On Vercel isRuntimeAvailable() is false, so remote still queues for the runner.
+  if (isRuntimeAvailable()) {
     try {
       await injectFn();
       return { ok: true, mode: "direct" };

@@ -170,25 +170,18 @@ export function IntentButtonPanel({
     })
     .slice(0, isRunning ? 3 : 5);
 
-  // Running: interrupt input + auto-continue toggle (below, not adjacent) + queue + recent prompts
-  if (isRunning) {
-    return (
-      <div className="ui-card-section space-y-3">
-        <PromptInput {...inputProps} placeholder="Send interrupt…" />
-        {queue.length > 0 && (
-          <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
-        )}
-        <RecentPromptChips prompts={recentPrompts} onPick={onCustomChange} />
-      </div>
-    );
-  }
-
-  // All other states: custom input, then action area, then recent prompts
+  // Unified layout for every state (running + idle). Per the user's 2026-06-15
+  // decision, a running card keeps full parity with an idle one — Prompt
+  // library + intent chips stay available while an agent works — so the card
+  // no longer visually collapses into an interrupt-only stub mid-run (which
+  // read as "the card is broken / where did my prompt library go?"). Only the
+  // composer placeholder changes: while running, a send interrupts the
+  // in-flight agent rather than starting fresh work.
   const [primary] = PRIMARY_INTENTS; // next_best is always first
 
   return (
     <div className="space-y-3 ui-card-section">
-      <PromptInput {...inputProps} placeholder="What should the agent work on? e.g. summarize this repo" />
+      <PromptInput {...inputProps} placeholder={isRunning ? "Send interrupt…" : "What should the agent work on? e.g. summarize this repo"} />
       {queue.length > 0 && (
         <QueueList queue={queue} blockedReason={queueBlockedReason} onSend={onSendFromQueue} onRemove={onRemoveFromQueue} onReorder={onReorderInQueue} onEdit={onEditInQueue} onMerge={onMergeQueue} merging={merging} onMergeItems={onMergeItemsInQueue} />
       )}
