@@ -45,6 +45,6 @@ export const config = {
      *   import-from-local\.sh      – public bash one-liner users curl-pipe into their terminal
      *                                to scan ~/dev and POST detected repos to /api/projects/import-from-local
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|mission|philosophy|investors|roadmap|u/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
+    "/((?!_next/static|_next/image|favicon\\.ico|icon\\.svg|manifest\\.json|opengraph-image|twitter-image|robots\\.txt|sitemap\\.xml|sign-in|sign-up|forgot-password|reset-password|verify-email|setup|invite|download|whitepaper|thoughts|mission|philosophy|investors|roadmap|releases|u/|beacon|import-from-local\\.sh|api/auth|api/agent/install|api/agent/daemon|api/health|api/setup|api/crons|api/system|api/beacon|api/invitations/|api/stripe/webhook).+)",
   ],
 };
