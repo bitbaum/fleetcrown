@@ -217,11 +217,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         clientId: process.env.TWITTER_CLIENT_ID,
         clientSecret: process.env.TWITTER_CLIENT_SECRET,
         allowDangerousEmailAccountLinking: true,
-        // Login-only: request just the identity scopes and skip offline.access
-        // (we never refresh X tokens — X is used purely to authenticate, not to
-        // act on the user's behalf). X OAuth2 returns no email, so the user row
-        // is created with a null email (the users.email column is nullable).
-        authorization: { params: { scope: "users.read tweet.read" } },
+        // Login-only scopes (no offline.access — we never refresh X tokens, and
+        // requesting it also triggered an x.com authorize redirect loop on the
+        // pay-per-use project). X OAuth2 returns no email, so the user row is
+        // created with a null email (the users.email column is nullable).
+        //
+        // MUST be a STRING here, matching the provider default's type. Passing
+        // `{ params: {...} }` (an object) trips a known @auth/core 0.41.2 merge
+        // bug (see node_modules/@auth/core/lib/utils/providers.js:14 "TODO:
+        // Support if properties have different types") — the string-vs-object
+        // mismatch corrupts the sibling token/userinfo endpoints, sending the
+        // callback into the OIDC-discovery branch where it crashes on
+        // `new URL(provider.issuer)` (issuer is undefined) → "Invalid URL".
+        authorization: "https://x.com/i/oauth2/authorize?scope=users.read tweet.read",
       }),
     ] : []),
     Credentials({
