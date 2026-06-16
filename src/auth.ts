@@ -188,9 +188,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // JWT strategy required for Credentials provider to work alongside DB adapter
   session: { strategy: "jwt" },
   providers: [
+    // Conditionally mounted (like Google/X) so a missing key pair cleanly
+    // drops the provider instead of mounting it with empty-string creds that
+    // fail opaquely on use. env.ts also flags a half-set pair loudly at boot.
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID ?? "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
       // Scopes:
       //   read:user + user:email — sign-in identity (Auth.js defaults)
@@ -206,6 +210,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // scope automatically — users must sign out + sign back in to re-mint.
       authorization: { params: { scope: "read:user user:email repo" } },
     }),
+    ] : []),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
       Google({
         clientId: process.env.GOOGLE_CLIENT_ID,

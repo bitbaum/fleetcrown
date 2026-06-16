@@ -1,6 +1,19 @@
 import { Resend } from "resend";
 import { ROUTES } from "@/config/auth";
 import { APP_NAME, APP_EMAIL_FROM, APP_TAGLINE } from "@/config/brand";
+import { logDebug } from "@/db/queries/debug-logs";
+
+// Record every send outcome to debug_logs so "did the reset/verify email
+// actually go out?" is answerable. No body/PII logged — just recipient,
+// subject, the Resend id, and any error. Fire-and-forget (never blocks send).
+function logSend(to: string, subject: string, id: string | null, error: string | null): void {
+  void logDebug({
+    source: "email",
+    level: error ? "error" : "info",
+    message: `${error ? "failed" : "sent"}: ${subject}`,
+    meta: { to, subject, id, error },
+  }).catch(() => {});
+}
 
 // Lazy — Resend throws at construction if key is empty string, which breaks next build
 let _resend: Resend | null = null;
@@ -20,11 +33,16 @@ export function sendEmailFire(to: string, subject: string, html: string, text: s
   if (!process.env.RESEND_API_KEY) {
     console.log("[email] no RESEND_API_KEY — skipping send");
     console.log(`  To: ${to}\n  Subject: ${subject}\n  Text: ${text}`);
+    logSend(to, subject, null, "no RESEND_API_KEY — skipped");
     return;
   }
-  getResend().emails.send({ from: FROM, to, subject, html, text }).catch((err) => {
-    console.error("[email] send error:", err);
-  });
+  getResend()
+    .emails.send({ from: FROM, to, subject, html, text })
+    .then((res) => logSend(to, subject, res.data?.id ?? null, res.error?.message ?? null))
+    .catch((err) => {
+      console.error("[email] send error:", err);
+      logSend(to, subject, null, (err as Error)?.message ?? "send threw");
+    });
 }
 
 // Awaitable version for flows that need to know the email was accepted
@@ -33,7 +51,8 @@ export async function sendEmail(to: string, subject: string, html: string, text:
     console.log("[email] no RESEND_API_KEY — skipping send");
     return;
   }
-  const { error } = await getResend().emails.send({ from: FROM, to, subject, html, text });
+  const { data, error } = await getResend().emails.send({ from: FROM, to, subject, html, text });
+  logSend(to, subject, data?.id ?? null, error?.message ?? null);
   if (error) throw new Error(`Resend error: ${error.message}`);
 }
 

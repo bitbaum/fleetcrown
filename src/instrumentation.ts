@@ -3,6 +3,26 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
+  // Boot-time env sanity check — converts silent config rot (missing /
+  // whitespace-corrupted secrets, half-set provider pairs) into a loud signal
+  // in the logs + /api/health. Never throws (a crash-loop is its own outage).
+  try {
+    const { checkEnv } = await import("@/lib/env");
+    const issues = checkEnv();
+    if (issues.length) {
+      for (const i of issues) console.error(`[env] ${i.level}: ${i.key} — ${i.msg}`);
+      const { logDebug } = await import("@/db/queries/debug-logs");
+      await logDebug({
+        source: "instrumentation/env",
+        level: issues.some((i) => i.level !== "warn") ? "error" : "warn",
+        message: `env check found ${issues.length} issue(s) at boot`,
+        meta: { issues },
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn("[instrumentation] env check failed:", e);
+  }
+
   const { setupNotifyTrigger } = await import("@/db/setup-notify-trigger");
   await setupNotifyTrigger().catch((e) => console.warn("[instrumentation] trigger setup failed:", e));
 

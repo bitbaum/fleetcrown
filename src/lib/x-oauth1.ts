@@ -97,8 +97,18 @@ export async function accessToken(
 
 type TicketData = { xId: string; handle: string };
 
+// Never sign/verify with an empty or whitespace-corrupted key. A blank
+// AUTH_SECRET would make tickets forgeable with a known (empty) key; a
+// trailing "\n" (the recurring env-corruption bug) would make valid tickets
+// silently fail to verify. Fail loud instead.
+function ticketSecret(): string {
+  const secret = (process.env.AUTH_SECRET ?? "").trim();
+  if (!secret) throw new Error("AUTH_SECRET is required to sign X login tickets");
+  return secret;
+}
+
 export function mintTicket(data: TicketData): string {
-  const secret = process.env.AUTH_SECRET ?? "";
+  const secret = ticketSecret();
   const payload = Buffer.from(JSON.stringify({ ...data, exp: Math.floor(Date.now() / 1000) + 120 })).toString("base64url");
   const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${sig}`;
@@ -106,7 +116,7 @@ export function mintTicket(data: TicketData): string {
 
 export function verifyTicket(ticket: string): TicketData | null {
   try {
-    const secret = process.env.AUTH_SECRET ?? "";
+    const secret = ticketSecret();
     const [payload, sig] = ticket.split(".");
     if (!payload || !sig) return null;
     const expected = crypto.createHmac("sha256", secret).update(payload).digest("base64url");

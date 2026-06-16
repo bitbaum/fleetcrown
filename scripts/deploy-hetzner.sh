@@ -37,7 +37,24 @@ echo "→ restart fleetcrown-app on box"
 ssh "$HOST" "chown -R ubuntu:ubuntu $APP_DIR \
   && systemctl restart fleetcrown-app \
   && sleep 3 \
-  && systemctl is-active fleetcrown-app \
-  && curl -s -o /dev/null -w 'box app HTTP %{http_code}\n' http://127.0.0.1:4002/sign-in"
+  && systemctl is-active fleetcrown-app >/dev/null"
 
-echo "✓ deployed $(cd "$PROJECT_DIR" && git rev-parse --short HEAD) to Hetzner"
+# Post-deploy verification — fails the deploy LOUDLY (set -e) instead of
+# shipping a silently-broken auth/email config. Catches the X-saga failure
+# mode: a provider silently un-mounting when its env keys go missing.
+echo "→ post-deploy verification"
+ssh "$HOST" 'set -e
+  base=http://127.0.0.1:4002
+  code=$(curl -s -o /dev/null -w "%{http_code}" "$base/sign-in")
+  echo "  /sign-in: $code"; [ "$code" = 200 ] || { echo "  ✗ sign-in not 200"; exit 1; }
+  # /api/health returns 503 when env.ts finds a fatal/error config issue
+  hcode=$(curl -s -o /dev/null -w "%{http_code}" "$base/api/health")
+  echo "  /api/health: $hcode"; [ "$hcode" = 200 ] || { echo "  ✗ env health degraded — see debug_logs source=instrumentation/env"; exit 1; }
+  # Expected auth providers must actually be mounted (not just env-gated in the UI)
+  prov=$(curl -s "$base/api/auth/providers")
+  for p in github google x-1a email-password; do
+    echo "$prov" | grep -q "\"$p\"" || { echo "  ✗ auth provider missing: $p"; exit 1; }
+  done
+  echo "  ✓ providers mounted: github google x-1a email-password"'
+
+echo "✓ deployed $(cd "$PROJECT_DIR" && git rev-parse --short HEAD) to Hetzner — verified"
