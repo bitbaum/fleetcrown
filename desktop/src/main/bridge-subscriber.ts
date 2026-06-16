@@ -71,6 +71,15 @@ function resolveBridgeUrl(): string {
   return override.length > 0 ? override : BRIDGE_URL
 }
 
+// The bridge emits a `: ping` heartbeat every 25s (bridge/src/server.ts). If no
+// bytes at all (data OR ping) arrive within this window, the socket is half-dead
+// — laptop sleep, Wi-Fi flap, or a proxy idle-drop where no FIN/RST reaches us.
+// We tear it down and reconnect rather than sit on a dead connection forever
+// (the bug that left the runner "connected" in its own mind while the bridge had
+// already marked it offline). 60s ≈ 2.4 missed pings: tolerates one slow tick,
+// still recovers fast.
+const SSE_IDLE_TIMEOUT_MS = 60_000
+
 /**
  * Start an SSE subscription. Idempotent semantics live in the caller (the
  * poller). The returned `stop` aborts the current request and prevents any
@@ -121,7 +130,19 @@ export function startBridgeSubscriber(
     // See docs/architecture/connection-presence.md.
     sseUrl.searchParams.set('client', 'runner')
 
-    const req = requestFn(
+    // One connection attempt schedules at most one reconnect. Destroying a
+    // half-dead socket can fire both 'timeout' and 'error'/'end'; without this
+    // guard each would spawn its own reconnect and we'd leak overlapping sockets.
+    let settled = false
+    let req: ReturnType<typeof httpsRequest> | null = null
+    const fail = (reason: string | null) => {
+      if (settled) return
+      settled = true
+      if (req && !req.destroyed) req.destroy()
+      scheduleReconnect(reason)
+    }
+
+    req = requestFn(
       {
         method: 'GET',
         hostname: sseUrl.hostname,
@@ -150,7 +171,7 @@ export function startBridgeSubscriber(
         }
         if (res.statusCode !== 200) {
           res.resume()
-          scheduleReconnect(`HTTP ${res.statusCode}`)
+          fail(`HTTP ${res.statusCode}`)
           return
         }
 
@@ -169,17 +190,26 @@ export function startBridgeSubscriber(
             handleFrame(frame)
           }
         })
-        res.on('end', () => {
-          scheduleReconnect('connection closed by server')
-        })
-        res.on('error', (err) => {
-          scheduleReconnect(err.message)
-        })
+        res.on('end', () => fail('connection closed by server'))
+        res.on('error', (err) => fail(err.message))
       },
     )
 
-    req.on('error', (err) => {
-      scheduleReconnect(err.message)
+    req.on('error', (err) => fail(err.message))
+
+    // Heartbeat watchdog — the core self-heal. Node resets this socket timer on
+    // every byte received (real data OR the bridge's 25s ping), so it only fires
+    // when the stream has gone genuinely silent. On fire we destroy + reconnect,
+    // instead of trusting a 'close'/'error' event that a half-dead socket never
+    // emits. This is what turns "offline forever" into "offline for <SSE_IDLE
+    // _TIMEOUT_MS + backoff>".
+    req.setTimeout(SSE_IDLE_TIMEOUT_MS, () => {
+      fail('idle timeout — no heartbeat from bridge')
+    })
+    // OS-level keepalive: probe a dead peer between heartbeats so a vanished
+    // network is detected even faster than the idle timeout.
+    req.on('socket', (socket) => {
+      socket.setKeepAlive(true, 15_000)
     })
 
     req.end()

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Tray, Menu, nativeImage, Notification, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Tray, Menu, nativeImage, Notification, session, shell, powerMonitor } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { join } from 'path'
@@ -935,6 +935,22 @@ app.whenReady().then(async () => {
   trayTickHandle = setInterval(() => {
     if (tray) tray.setToolTip(formatTrayTooltip(getPollerStatus()))
   }, 5_000)
+
+  // Self-heal on wake. Laptop sleep / lid-close silently kills the bridge SSE
+  // socket — the #1 cause of a runner that shows "offline" while its process is
+  // still alive. The OS hands us 'resume'/'unlock-screen' on wake, so we force
+  // the poller (and the bridge subscriber it owns) to reconnect right away
+  // instead of waiting out the idle-timeout watchdog. Watchdog + wake-recovery
+  // together are what make "Fleet Runner online" reliable across sleep cycles.
+  powerMonitor.on('resume', () => {
+    console.log('[desktop] system resumed — forcing poller + bridge reconnect')
+    restartPoller()
+    restartPusher()
+  })
+  powerMonitor.on('unlock-screen', () => {
+    console.log('[desktop] screen unlocked — refreshing poller + bridge')
+    restartPoller()
+  })
 
   // Auto-update — read latest-<platform>.yml from the canonical public
   // release host (maonakamoto/fleetcrown-releases). We override the feed URL

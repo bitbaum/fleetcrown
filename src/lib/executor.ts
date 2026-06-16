@@ -9,11 +9,16 @@
 
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { getRunnerConnected } from "@/db/queries/runner-presence";
 import type { InjectPayload } from "@/db/schema/pending-commands";
 
 export type ExecuteResult =
   | { ok: true;  mode: "direct" }
-  | { ok: true;  mode: "queued"; commandId: string }
+  // `runnerConnected` tells the caller whether a live Fleet Runner exists to
+  // drain this queued command. false = it will sit in pending_commands until a
+  // runner reconnects. Callers MUST surface that so a dispatch to an offline
+  // runner is never a silent success (the "queued into the void" bug).
+  | { ok: true;  mode: "queued"; commandId: string; runnerConnected: boolean }
   | { ok: false; mode: "direct" | "queued"; error: string };
 
 /**
@@ -49,8 +54,12 @@ export async function executeInject(
   }
 
   try {
+    // Check presence BEFORE enqueue so we can tell the caller whether anything
+    // is actually listening. We still enqueue when offline (so the work runs
+    // once a runner reconnects), but we never report it as a clean success.
+    const runnerConnected = await getRunnerConnected(userId);
     const commandId = await enqueueInjectCommand(userId, payload);
-    return { ok: true, mode: "queued", commandId };
+    return { ok: true, mode: "queued", commandId, runnerConnected };
   } catch (err) {
     return { ok: false, mode: "queued", error: err instanceof Error ? err.message : String(err) };
   }

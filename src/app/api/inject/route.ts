@@ -404,7 +404,12 @@ export async function POST(req: NextRequest) {
     event: "inject_request",
     source: "api/inject",
     action: result.mode === "queued" ? "queued" : "injected",
-    reason: result.mode === "queued" ? "Queued for local runner" : "Injected into local runtime",
+    reason:
+      result.mode === "queued"
+        ? ((result as { runnerConnected?: boolean }).runnerConnected === false
+            ? "Queued — Fleet Runner OFFLINE (runs on reconnect)"
+            : "Queued for local runner")
+        : "Injected into local runtime",
     promptHash: fingerprint.promptHash,
     promptPreview: fingerprint.promptPreview,
     commandId: result.mode === "queued" ? (result as { commandId: string }).commandId : null,
@@ -417,11 +422,25 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  const queuedOffline =
+    result.mode === "queued" &&
+    (result as { runnerConnected?: boolean }).runnerConnected === false;
+
   return NextResponse.json({
     ok: true,
     tab: effectiveTab,
     mode: result.mode,
-    ...(result.mode === "queued" && { commandId: (result as { commandId: string }).commandId }),
+    ...(result.mode === "queued" && {
+      commandId: (result as { commandId: string }).commandId,
+      runnerConnected: (result as { runnerConnected?: boolean }).runnerConnected ?? null,
+    }),
+    // Fail loud, not silent: a dispatch that queued with no live runner says so,
+    // so the UI can warn instead of pretending it's running.
+    ...(queuedOffline && {
+      warning: "runner-offline",
+      message:
+        "Fleet Runner is offline — this command is queued and will run as soon as it reconnects.",
+    }),
     ...(runId && { runId }),
   });
 }
