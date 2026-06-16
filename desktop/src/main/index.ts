@@ -57,6 +57,18 @@ function resourcePath(name: string): string {
 const APP_ICON_PATH  = resourcePath('icon.png')
 const TRAY_ICON_PATH = resourcePath('tray-icon.png')
 
+// OAuth identity-provider hosts whose authorize/login pages must stay INSIDE
+// the desktop window (see setWindowOpenHandler). The whole flow — our
+// /api/auth/signin/<provider> → the provider's authorize page → our
+// /api/auth/callback/<provider> — has to run in one cookie jar; the pkce/state
+// cookie set at signin is read back at callback. If a provider's authorize
+// page escapes to the system browser, the callback lands cookie-less and
+// sign-in dies with "pkceCodeVerifier value could not be parsed". Previously
+// only github.com was whitelisted, which silently broke X and Google sign-in
+// on desktop. Subdomains (api.twitter.com, mobile.twitter.com) match via the
+// endsWith check below.
+const OAUTH_PROVIDER_HOSTS = ['github.com', 'accounts.google.com', 'x.com', 'twitter.com']
+
 // Bundled-binary directory. desktop/scripts/download-zellij.mjs drops a
 // platform-appropriate `zellij` here at prebuild time and electron-builder
 // packs the whole `resources/` tree into the installer. Prepending this to
@@ -474,12 +486,19 @@ function createWindow(): void {
   })
 
   // Keep OAuth redirects in the same window instead of spawning a popup
-  // Electron can't follow. GitHub's authorize page opens cleanly that way;
-  // rejecting it would otherwise break sign-in inside the desktop app.
+  // Electron can't follow. The provider authorize pages open via window.open;
+  // rejecting them without re-loading in-window would break sign-in inside the
+  // desktop app. See OAUTH_PROVIDER_HOSTS for why every configured provider
+  // (not just GitHub) must be kept in-window.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    // Auth flows (GitHub OAuth, NextAuth callback) stay in the main window.
-    const isAuthFlow = /\/(api\/)?auth\/|github\.com\/login\/oauth\//i.test(url)
-    if (isAuthFlow) {
+    // Our own NextAuth routes (/auth/, /api/auth/) plus every configured OAuth
+    // provider's authorize/login host stay in the main window so the pkce/state
+    // cookie survives the round-trip. Everything else opens externally.
+    let host = ''
+    try { host = new URL(url).hostname.toLowerCase() } catch { /* non-URL target */ }
+    const isOurAuthRoute = /\/(api\/)?auth\//i.test(url)
+    const isProviderHost = OAUTH_PROVIDER_HOSTS.some((h) => host === h || host.endsWith(`.${h}`))
+    if (isOurAuthRoute || isProviderHost) {
       mainWindow?.loadURL(url).catch(() => {})
       return { action: 'deny' }
     }
