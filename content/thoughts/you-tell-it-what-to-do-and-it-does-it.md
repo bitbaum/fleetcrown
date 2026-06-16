@@ -24,6 +24,8 @@ Nothing here requires you to take anything on faith. The promise sounds like sci
 
 That is the whole product. Everything below is just *how*.
 
+Or, put another way: **most AI companies built something you talk to. We built something that gets things done — and keeps going when you walk away.**
+
 ## Part 1 — The big idea
 
 ### 🟢 In plain words
@@ -79,6 +81,20 @@ At the center is a simple cycle that repeats over and over:
 
 That is it. That loop, run relentlessly, is what makes "until it is done" real. The intelligence is in step 4 (honest checking) and step 6 (knowing what is yours to decide). Anyone can do steps 1 through 3. Doing 4 and 6 *well* is the entire ballgame.
 
+```mermaid
+flowchart TD
+  G[Goal] --> P[Plan into tasks]
+  P --> D[Dispatch to a worker: AI, robot, or human]
+  D --> V{Verified done?}
+  V -->|no| R[Revise and retry]
+  R --> D
+  V -->|needs your call| E[Escalate to you]
+  E --> D
+  V -->|yes| Q{Goal met?}
+  Q -->|no| P
+  Q -->|yes| F[Done, with evidence]
+```
+
 **🔧 Under the hood**
 
 In FleetCrown this is a real pipeline, not a metaphor. An intent enters through the `/api/inject` route. If a local runtime is present, it is typed straight into a live session; if not, it is written to a `pending_commands` queue and a desktop **Fleet Runner** claims it by long-polling `/api/control/commands`, using Postgres [`SELECT ... FOR UPDATE SKIP LOCKED`](https://www.postgresql.org/docs/current/sql-select.html) so two runners never grab the same job. Every dispatch carries a `runId`; the local orchestration library (`home/`) tails a single append-only event log (`~/.fleetcrown/events.jsonl`) through `watcher.ts` (emits `worker.idle` when a session changes), `worker.ts` (acts on `bridge.dispatch` / `bridge.cancel`), and a pure `decide.ts` brain. The append-only log is the single source of truth, which is what makes crash-recovery and idempotent replay possible: on reboot the worker rebuilds which `runId`s already started and refuses to double-fire.
@@ -121,7 +137,7 @@ If "done" cannot be defined and checked, the engine will not pretend. That hones
 
 **🔧 Under the hood**
 
-Today FleetCrown reads completion from the worker's structured handoff — `status: ready`, a `tests: N pass · M fail` line, a `health` flag — and records the outcome of every run (`success`, `partial`, `error`, `hang`, `user_abort`, `timeout`) in `orchestration_runs`. That is real, and it is enough to drive the autonomy loop. But let us be precise about the frontier: a *fully independent* verifier — a second model or sensor, prompted to disprove success rather than confirm it — is the direction, not a finished feature. The research it draws on is concrete: self-reflection that turns failures into corrective context ([Reflexion, Shinn et al., 2023](https://arxiv.org/abs/2303.11366)), and sampling multiple independent attempts to take a majority verdict ([Self-Consistency, Wang et al., 2022](https://arxiv.org/abs/2203.11171)). The principle stands: the more irreversible the action, the stronger and more independent the proof required before it commits.
+Today FleetCrown reads completion from the worker's structured handoff — `status: ready`, a `tests: N pass · M fail` line, a `health` flag — and records the outcome of every run (`success`, `partial`, `error`, `hang`, `user_abort`, `timeout`) in `orchestration_runs`. That is real, and it is enough to drive the autonomy loop. But let us be precise about the frontier: a *fully independent* verifier — a second model or sensor, prompted to disprove success rather than confirm it — is the direction, not a finished feature. This is the single hardest thing to build in the whole system, and it is the real moat: anyone can wrap a model to *do* the work, but almost no one can independently *prove* the work was done right. The research it draws on is concrete: self-reflection that turns failures into corrective context ([Reflexion, Shinn et al., 2023](https://arxiv.org/abs/2303.11366)), and sampling multiple independent attempts to take a majority verdict ([Self-Consistency, Wang et al., 2022](https://arxiv.org/abs/2203.11171)). The principle stands: the more irreversible the action, the stronger and more independent the proof required before it commits.
 
 ### Layer 4 — Memory (so it never starts cold)
 
@@ -139,7 +155,7 @@ State is persisted as the single source of truth across the loop. The `home/` li
 
 Now the most important part, and the part people underestimate.
 
-The scary version of this technology is "an autonomous thing that spends my money and touches my life without asking." Nobody sane wants that. So the real product is not the autonomy — **it is the control.** You set the rules: how much it can spend before asking, what it must never do without you, what it is allowed to decide on its own. The engine operates *inside those lines*, and the instant a task would cross one, it stops and brings the decision to you. You can watch everything it is doing, in one place. You can pause it. You can see exactly why it did what it did.
+The scary version of this technology is "an autonomous thing that spends my money and touches my life without asking." Nobody sane wants that. So the real product is not the autonomy — **it is the control.** You set the rules in plain terms — *never spend more than $500 without asking me*, *escalate any physical action before it starts*, *never touch production without a clean test run* — covering how much it can spend before asking, what it must never do without you, and what it may decide on its own. The engine operates *inside those lines*, and the instant a task would cross one, it stops and brings the decision to you. You can watch everything it is doing, in one place. You can pause it. You can see exactly why it did what it did.
 
 Think of it as the difference between a self-driving car with no steering wheel and one where you are the captain — you see everything, you set the boundaries, and you take the wheel for the turns that matter. **We are building the captain's chair, not the runaway car.**
 
@@ -191,9 +207,9 @@ Each example below is ordered from *safest and possible today* to *most ambitiou
 
 **🟢 You say:** "Build the pool" (and go on vacation). Or, at the frontier: a factory where machines assemble more machines.
 
-**What happens:** Because the engine coordinates any kind of worker, a physical project is the same shape as a software one — just with robotic and human workers instead of AI ones. It sequences the trades, schedules the crews and machines, tracks progress against the plan, and stops at the approval points *you set before you left.* The pool gets built because the budget, design, and decision points were locked in advance — not because anything was left to chance.
+**What happens:** A physical project is the same shape as a software one — just with robotic and human workers. The engine sequences the trades, schedules crews and machines, tracks progress, and stops at the approval points *you locked in before you left.* The pool gets built because the budget, design, and decision points were fixed in advance — nothing was left to chance.
 
-**🔧 Under the hood:** Same loop; workers are construction robots and human contractors behind the uniform worker interface; "done" is verified by inspection and sensor evidence; irreversibility keeps autonomy thresholds low and approval gates frequent. "Robots building robots" is simply this loop where the workers are fabrication and assembly machines and the deliverable is itself a machine. It is the same architecture, pointed at metal instead of code.
+**🔧 Under the hood:** Same loop, physical workers behind the same interface; "done" is verified by inspection and sensor evidence; high irreversibility keeps autonomy low and approval gates frequent. "Robots building robots" is just this loop where the workers are fabrication machines and the deliverable is itself a machine — the same architecture, pointed at metal instead of code.
 
 ## Part 5 — One of the products coming soon: a marketplace of robots
 
@@ -239,7 +255,7 @@ A capability layer with no way to pay people is just unpaid labor. A payment lay
 
 This is where it gets concrete — and where it is important to separate what runs today from what is being built.
 
-**What OrangeCat already does.** OrangeCat is a Bitcoin-native economic platform. Money moves through a three-tier wallet resolution — [Nostr Wallet Connect (NIP-47)](https://github.com/nostr-protocol/nips/blob/master/47.md) first, then a [Lightning](https://github.com/lightning/bolts) address via [LNURL-pay](https://github.com/lnurl/luds), then on-chain Bitcoin via a [BIP21](https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki) URI. Every payment attempt is a row in a `payment_intents` ledger (`buyer_id`, `seller_id`, the `entity` being paid for, `amount_btc`, and a status that runs `created → invoice_ready → paid`). Payment is *verified*, not assumed: a Lightning payment is confirmed by looking up the invoice on the wallet relay, and an on-chain payment is confirmed by polling [mempool.space](https://mempool.space) for confirmations.
+**What OrangeCat already does.** Start with what a machine economy actually requires — not a brand, but a property: settlement that is *programmable, permissionless, and always-on.* Value has to move the moment work is verified, with no business hours, no borders, and no human needed in the middle to release it. Today the best available implementation of that property is the [Lightning Network](https://github.com/lightning/bolts) on top of Bitcoin, and that is what OrangeCat is built on. Money moves through a three-tier wallet resolution — [Nostr Wallet Connect (NIP-47)](https://github.com/nostr-protocol/nips/blob/master/47.md) first, then a Lightning address via [LNURL-pay](https://github.com/lnurl/luds), then on-chain via a [BIP21](https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki) URI. Every payment attempt is a row in a `payment_intents` ledger (`buyer_id`, `seller_id`, the `entity` being paid for, `amount_btc`, and a status that runs `created → invoice_ready → paid`). Payment is *verified*, not assumed: a Lightning payment is confirmed by looking up the invoice on the wallet relay, and an on-chain payment is confirmed by polling [mempool.space](https://mempool.space) for confirmations.
 
 **Identity is built for this exact problem.** OrangeCat models participants as `actors`, which decouples a payable identity from a human login — an actor can be a person, a group, or (by design) an AI agent, and every entity is owned by an actor rather than a raw user. That is the data model you need for "pay the human, pay the robot's owner, pay for the AI" to even be expressible. Wallets are attached per actor (and groups get shared `group_wallets` with a `required_signatures` field for multi-party control). The relationship between the two products is itself a typed edge: OrangeCat's `stakeholder_relationships` table carries a `customer` relation, and FleetCrown is registered as a customer of OrangeCat — the integration is in the schema, not the slide deck.
 
@@ -261,6 +277,14 @@ But that raises the obvious question: if fewer and fewer activities can earn mon
 
 - **Conditional flows — money with strings.** Payment, reward, wages, loans, investment. Value moves *because* something is expected back: work done, a return, repayment. This is the economy of jobs. As jobs shrink, this kind of flow shrinks with them.
 - **Unconditional flows — money with no strings.** Giving. Donation. The plain human desire to help another person, with nothing expected in return. No contract, no repayment, no terms.
+
+```mermaid
+flowchart LR
+  W[Work done] --> C[Conditional: wage, reward, loan, investment]
+  H[Desire to help] --> U[Unconditional: gift, donation]
+  C --> P[Value moves with strings attached]
+  U --> N[Value moves with no strings]
+```
 
 Think of money as *energy* — stored capacity to make things happen. Conditional flows are energy transferred under a contract. Unconditional flows are energy given freely. And here is the thesis: **the further AI and robotics progress, the more the second kind matters.** When there are fewer and fewer things a human needs to be paid to do, the humans are still here. They still need to eat. They still deserve to enjoy their lives. The energy still has to reach them — but increasingly it reaches them through giving and shared abundance, not through wages for toil that no longer needs doing.
 
