@@ -4,7 +4,7 @@
 # ~/.local/share/fleetcrown/ by the hosted installer.
 #
 # Recommended: symlink as "fc" (or keep "cpit" during transition):
-#   ln -s /home/g/dev/cockpit/scripts/fleet ~/bin/fc
+#   ln -s /home/g/dev/fleetcrown/scripts/fleet ~/bin/fc
 #
 # Examples:
 #   fc daemon start
@@ -153,7 +153,7 @@ case "${1:-help}" in
     echo "  fc pause / resume        # Low-power mode"
     echo ""
     echo "Setup (recommended):"
-    echo "  ln -s /home/g/dev/cockpit/scripts/fleet ~/bin/fc"
+    echo "  ln -s /home/g/dev/fleetcrown/scripts/fleet ~/bin/fc"
     echo ""
     echo "Then just use: fc daemon start"
     ;;

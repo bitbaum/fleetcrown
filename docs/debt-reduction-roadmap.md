@@ -87,9 +87,9 @@ Why:
 Targets:
 
 - direct prompt semantics embedded in Beacon file-reading logic in
-  [scripts/beacon.py](/home/g/dev/cockpit/scripts/beacon.py)
+  [scripts/beacon.py](/home/g/dev/fleetcrown/scripts/beacon.py)
 - any remaining Claude-only prompt meaning outside
-  [src/lib/orchestration/intents.ts](/home/g/dev/cockpit/src/lib/orchestration/intents.ts)
+  [src/lib/orchestration/intents.ts](/home/g/dev/fleetcrown/src/lib/orchestration/intents.ts)
 
 Action:
 
@@ -104,9 +104,9 @@ Why:
 Targets:
 
 - direct ready/closing/closed interpretation in
-  [src/app/api/control/route.ts](/home/g/dev/cockpit/src/app/api/control/route.ts)
+  [src/app/api/control/route.ts](/home/g/dev/fleetcrown/src/app/api/control/route.ts)
 - direct prompt/run semantics in
-  [src/app/api/inject/route.ts](/home/g/dev/cockpit/src/app/api/inject/route.ts)
+  [src/app/api/inject/route.ts](/home/g/dev/fleetcrown/src/app/api/inject/route.ts)
 
 Action:
 
@@ -121,9 +121,9 @@ Why:
 Targets:
 
 - browser countdown in
-  [src/components/control/project-card-helpers.tsx](/home/g/dev/cockpit/src/components/control/project-card-helpers.tsx)
+  [src/components/control/project-card-helpers.tsx](/home/g/dev/fleetcrown/src/components/control/project-card-helpers.tsx)
 - Beacon countdown logic in
-  [scripts/beacon.py](/home/g/dev/cockpit/scripts/beacon.py)
+  [scripts/beacon.py](/home/g/dev/fleetcrown/scripts/beacon.py)
 
 Action:
 
@@ -137,10 +137,10 @@ These concepts exist more than once and should be unified.
 
 Current split:
 
-- prompt config in [src/lib/agent-config.ts](/home/g/dev/cockpit/src/lib/agent-config.ts)
-- orchestration intents in [src/lib/orchestration/intents.ts](/home/g/dev/cockpit/src/lib/orchestration/intents.ts)
-- control button labels/groups in [src/config/control-intents.ts](/home/g/dev/cockpit/src/config/control-intents.ts)
-- Beacon prompt metadata loading in [scripts/beacon.py](/home/g/dev/cockpit/scripts/beacon.py)
+- prompt config in [src/lib/agent-config.ts](/home/g/dev/fleetcrown/src/lib/agent-config.ts)
+- orchestration intents in [src/lib/orchestration/intents.ts](/home/g/dev/fleetcrown/src/lib/orchestration/intents.ts)
+- control button labels/groups in [src/config/control-intents.ts](/home/g/dev/fleetcrown/src/config/control-intents.ts)
+- Beacon prompt metadata loading in [scripts/beacon.py](/home/g/dev/fleetcrown/scripts/beacon.py)
 
 Problem:
 
@@ -156,10 +156,10 @@ Merge target:
 
 Current split:
 
-- fast-state reading in [src/lib/control-fast-state.ts](/home/g/dev/cockpit/src/lib/control-fast-state.ts)
-- slower control aggregation in [src/app/api/control/route.ts](/home/g/dev/cockpit/src/app/api/control/route.ts)
+- fast-state reading in [src/lib/control-fast-state.ts](/home/g/dev/fleetcrown/src/lib/control-fast-state.ts)
+- slower control aggregation in [src/app/api/control/route.ts](/home/g/dev/fleetcrown/src/app/api/control/route.ts)
 - orchestration run persistence in
-  [src/db/queries/orchestration-runs.ts](/home/g/dev/cockpit/src/db/queries/orchestration-runs.ts)
+  [src/db/queries/orchestration-runs.ts](/home/g/dev/fleetcrown/src/db/queries/orchestration-runs.ts)
 
 Problem:
 
@@ -181,9 +181,9 @@ Current split:
 
 Targets:
 
-- [src/lib/agent-config.ts](/home/g/dev/cockpit/src/lib/agent-config.ts)
-- [src/app/api/control/route.ts](/home/g/dev/cockpit/src/app/api/control/route.ts)
-- [src/app/api/inject/route.ts](/home/g/dev/cockpit/src/app/api/inject/route.ts)
+- [src/lib/agent-config.ts](/home/g/dev/fleetcrown/src/lib/agent-config.ts)
+- [src/app/api/control/route.ts](/home/g/dev/fleetcrown/src/app/api/control/route.ts)
+- [src/app/api/inject/route.ts](/home/g/dev/fleetcrown/src/app/api/inject/route.ts)
 
 Merge target:
 
@@ -216,9 +216,9 @@ Target role:
 
 Keep building on:
 
-- [src/lib/orchestration/contract.ts](/home/g/dev/cockpit/src/lib/orchestration/contract.ts)
-- [src/lib/orchestration/adapters.ts](/home/g/dev/cockpit/src/lib/orchestration/adapters.ts)
-- [src/lib/orchestration/runners/openclaw.ts](/home/g/dev/cockpit/src/lib/orchestration/runners/openclaw.ts)
+- [src/lib/orchestration/contract.ts](/home/g/dev/fleetcrown/src/lib/orchestration/contract.ts)
+- [src/lib/orchestration/adapters.ts](/home/g/dev/fleetcrown/src/lib/orchestration/adapters.ts)
+- [src/lib/orchestration/runners/openclaw.ts](/home/g/dev/fleetcrown/src/lib/orchestration/runners/openclaw.ts)
 
 Needed:
 
@@ -234,9 +234,9 @@ Keep:
 
 Current locations:
 
-- [src/lib/control-fast-state.ts](/home/g/dev/cockpit/src/lib/control-fast-state.ts)
-- [src/app/api/sessions/route.ts](/home/g/dev/cockpit/src/app/api/sessions/route.ts)
-- [src/lib/agent-config.ts](/home/g/dev/cockpit/src/lib/agent-config.ts)
+- [src/lib/control-fast-state.ts](/home/g/dev/fleetcrown/src/lib/control-fast-state.ts)
+- [src/app/api/sessions/route.ts](/home/g/dev/fleetcrown/src/app/api/sessions/route.ts)
+- [src/lib/agent-config.ts](/home/g/dev/fleetcrown/src/lib/agent-config.ts)
 
 Needed:
 
@@ -300,8 +300,8 @@ Implement:
 
 Files to center:
 
-- [src/lib/orchestration/contract.ts](/home/g/dev/cockpit/src/lib/orchestration/contract.ts)
-- [src/lib/orchestration/intents.ts](/home/g/dev/cockpit/src/lib/orchestration/intents.ts)
+- [src/lib/orchestration/contract.ts](/home/g/dev/fleetcrown/src/lib/orchestration/contract.ts)
+- [src/lib/orchestration/intents.ts](/home/g/dev/fleetcrown/src/lib/orchestration/intents.ts)
 
 ### Priority 2: Introduce event log and derived state
 
@@ -379,11 +379,11 @@ Result:
 
 ### Highest-risk files
 
-- [src/app/api/control/route.ts](/home/g/dev/cockpit/src/app/api/control/route.ts)
-- [src/app/api/inject/route.ts](/home/g/dev/cockpit/src/app/api/inject/route.ts)
-- [src/lib/agent-config.ts](/home/g/dev/cockpit/src/lib/agent-config.ts)
-- [src/lib/control-fast-state.ts](/home/g/dev/cockpit/src/lib/control-fast-state.ts)
-- [scripts/beacon.py](/home/g/dev/cockpit/scripts/beacon.py)
+- [src/app/api/control/route.ts](/home/g/dev/fleetcrown/src/app/api/control/route.ts)
+- [src/app/api/inject/route.ts](/home/g/dev/fleetcrown/src/app/api/inject/route.ts)
+- [src/lib/agent-config.ts](/home/g/dev/fleetcrown/src/lib/agent-config.ts)
+- [src/lib/control-fast-state.ts](/home/g/dev/fleetcrown/src/lib/control-fast-state.ts)
+- [scripts/beacon.py](/home/g/dev/fleetcrown/scripts/beacon.py)
 
 Reason:
 
@@ -394,11 +394,11 @@ Reason:
 Implemented:
 
 - `dotfiles` stop and notification hooks now delegate to
-  [scripts/agent-hook-bridge.sh](/home/g/dev/cockpit/scripts/agent-hook-bridge.sh)
+  [scripts/agent-hook-bridge.sh](/home/g/dev/fleetcrown/scripts/agent-hook-bridge.sh)
 - shared runtime hook utilities now live in
-  [scripts/agent-hook-lib.sh](/home/g/dev/cockpit/scripts/agent-hook-lib.sh)
+  [scripts/agent-hook-lib.sh](/home/g/dev/fleetcrown/scripts/agent-hook-lib.sh)
 - `dotfiles` Beacon now delegates to
-  [scripts/beacon.py](/home/g/dev/cockpit/scripts/beacon.py)
+  [scripts/beacon.py](/home/g/dev/fleetcrown/scripts/beacon.py)
 
 Still a shim:
 
@@ -408,9 +408,9 @@ Still a shim:
 
 ### Good foundation files
 
-- [src/lib/orchestration/contract.ts](/home/g/dev/cockpit/src/lib/orchestration/contract.ts)
-- [src/lib/orchestration/intents.ts](/home/g/dev/cockpit/src/lib/orchestration/intents.ts)
-- [src/db/schema/orchestration-runs.ts](/home/g/dev/cockpit/src/db/schema/orchestration-runs.ts)
+- [src/lib/orchestration/contract.ts](/home/g/dev/fleetcrown/src/lib/orchestration/contract.ts)
+- [src/lib/orchestration/intents.ts](/home/g/dev/fleetcrown/src/lib/orchestration/intents.ts)
+- [src/db/schema/orchestration-runs.ts](/home/g/dev/fleetcrown/src/db/schema/orchestration-runs.ts)
 
 Reason:
 

@@ -204,7 +204,7 @@ The bitbaum README says "shared infrastructure, many products." The infra stack 
 - **Per-app Neon** across a studio multiplies cost and complexity
 - Still two URLs, still metered egress beyond allowance
 
-**Verdict:** Reasonable for **one flagship SaaS** with bursty traffic. Poor fit for **George + twelve repos + always-on daemon**. You are paying rent on every sapling instead of one yard.
+**Verdict:** Reasonable for **one flagship SaaS** with bursty traffic. Poor fit for **a solo founder + twelve repos + always-on daemon**. You are paying rent on every sapling instead of one yard.
 
 ---
 

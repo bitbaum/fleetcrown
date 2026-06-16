@@ -3,13 +3,13 @@ services:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cockpit
-      POSTGRES_USER: cockpit
+      POSTGRES_DB: fleetcrown
+      POSTGRES_USER: fleetcrown
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cockpit"]
+      test: ["CMD-SHELL", "pg_isready -U fleetcrown"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -20,7 +20,7 @@ services:
     volumes:
       - .:/app
     environment:
-      DATABASE_URL: postgresql://cockpit:${POSTGRES_PASSWORD:-changeme}@db:5432/cockpit
+      DATABASE_URL: postgresql://fleetcrown:${POSTGRES_PASSWORD:-changeme}@db:5432/fleetcrown
     command: sh -c "npm ci --prefer-offline && npx drizzle-kit push"
     depends_on:
       db:
@@ -32,7 +32,7 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://cockpit:${POSTGRES_PASSWORD:-changeme}@db:5432/cockpit
+      DATABASE_URL: postgresql://fleetcrown:${POSTGRES_PASSWORD:-changeme}@db:5432/fleetcrown
       AUTH_SECRET: ${AUTH_SECRET}
       LOCAL_AUTH_PASSWORD: ${LOCAL_AUTH_PASSWORD:-}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
