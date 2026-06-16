@@ -2,7 +2,7 @@
 # install-hetzner-crons.sh — install the scheduled-job timers on the Hetzner box.
 #
 # The box (fleetcrown.orangecat.ch, systemd fleetcrown-app on 127.0.0.1:4002)
-# runs the four /api/crons/* janitors via systemd timers. Schedules are in UTC
+# runs the /api/crons/* janitors + email canary via systemd timers. Schedules are in UTC
 # (the box is Etc/UTC).
 #
 # Idempotent — safe to re-run after a box rebuild or schedule change.
@@ -41,7 +41,7 @@ Type=oneshot
 ExecStart=/opt/fleetcrown/fc-cron.sh %i
 SVC
 
-declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [send-digest-emails]="07:00" )
+declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [send-digest-emails]="07:00" )
 for name in "${!SCHED[@]}"; do
   cat > "/etc/systemd/system/fc-cron@${name}.timer" <<TIMER
 [Unit]
@@ -58,7 +58,7 @@ TIMER
 done
 
 systemctl daemon-reload
-for name in prune-debug-logs nudge-idle prune-agent-tokens send-digest-emails; do
+for name in prune-debug-logs nudge-idle prune-agent-tokens email-canary send-digest-emails; do
   systemctl enable --now "fc-cron@${name}.timer" >/dev/null 2>&1
 done
 

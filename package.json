@@ -30,6 +30,7 @@
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",
     "test:activity-ssot": "node scripts/activity-ssot-check.mjs",
     "test:digest": "npx tsx scripts/test/digest.ts",
+    "test:auth": "npx tsx scripts/test/auth.ts",
     "generate:agent-prompts": "npx tsx scripts/generate-agent-prompts.ts",
     "ingest:history": "npx tsx scripts/ingest-claude-code-history.ts",
     "desktop:dev": "cd desktop && npm run dev",
