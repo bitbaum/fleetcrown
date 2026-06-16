@@ -3,7 +3,7 @@
 **Last updated:** 2026-06-02
 **Status:** TEMPLATE — review with counsel before publishing.
 
-These Terms of Service ("Terms") govern your access to and use of FleetCrown (the "Service"), operated by Georgy Butaev (pending incorporation of a successor corporate entity, herein "we," "us," "our"). By accessing or using the Service, you agree to be bound by these Terms.
+These Terms of Service ("Terms") govern your access to and use of FleetCrown (the "Service"), operated by Mao Nakamoto (pending incorporation of a successor corporate entity, herein "we," "us," "our"). By accessing or using the Service, you agree to be bound by these Terms.
 
 If you do not agree, do not use the Service.
 
@@ -111,9 +111,9 @@ We may update these Terms from time to time. Material changes will be notified b
 
 ## 18. Contact
 
-**Georgy Butaev** (pending NewCo formation)
+**Mao Nakamoto** (pending NewCo formation)
 [ADDRESS]
-georgy.butaev@revamp-it.ch
+mao@orangecat.ch
 
 ---
 

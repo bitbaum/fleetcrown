@@ -266,7 +266,7 @@ In priority order:
 ## 11. Important external context
 
 The repo's `CLAUDE.md` files (project and user-global at `~/.claude/CLAUDE.md`) are the ground rules. Read them. Highlights:
-- **Mao Nakamoto is a pseudonym.** Never use real name or "Gosha" in code/commits/messages.
+- **Mao Nakamoto is a pseudonym.** Never use the founder's real name in code/commits/messages.
 - **Exact action steps for the user.** Full URL + numbered steps + UI branches + verification. No vague directives.
 - **Design tokens are SSOT.** Four-layer system in `globals.css`; no arbitrary hex / sizes in JSX.
 - **First-principles, not analogy.** Don't say "X does it this way." Say "the constraint is Y, so we do Z."

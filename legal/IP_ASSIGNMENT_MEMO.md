@@ -1,6 +1,6 @@
 # Pre-Incorporation IP Assignment Memorandum
 
-**Author:** Georgy Butaev
+**Author:** Mao Nakamoto
 **Date of memo:** 2026-06-02
 **Subject:** Intent to assign all intellectual property created on the FleetCrown and OrangeCat projects (FleetCrown is the first paying customer of OrangeCat; the FleetCrown repository directory is historically named "cockpit") to a to-be-formed corporate entity.
 
@@ -8,7 +8,7 @@
 
 ## 1. Declaration
 
-I, Georgy Butaev (the "Founder"), residing in Switzerland, sole author and copyright holder of the software, designs, documentation, content, brand assets, and other materials (collectively, the "Work Product") created in connection with the projects currently known as:
+I, Mao Nakamoto (the "Founder"), residing in Switzerland, sole author and copyright holder of the software, designs, documentation, content, brand assets, and other materials (collectively, the "Work Product") created in connection with the projects currently known as:
 
 - **FleetCrown** — repository at `github.com/maonakamoto/cockpit` (private; "cockpit" is the legacy repository directory name preserved for git history and in-flight daemon paths under `~/.config/cockpit`. The product is FleetCrown.)
 - **OrangeCat** — repository at `github.com/maonakamoto/orangecat`
@@ -60,7 +60,7 @@ This memorandum shall be construed under the laws of the Canton of Zurich, Switz
 ---
 
 **Signed:** ______________________________
-Georgy Butaev
+Mao Nakamoto
 
 **Date:** 2026-06-02
 
