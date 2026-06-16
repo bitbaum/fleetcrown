@@ -1,16 +1,11 @@
 import Link from "next/link";
 import { NAV } from "@/config/navigation";
 
-const COMMIT_SHA = (
-  process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA ??
-  process.env.VERCEL_GIT_COMMIT_SHA ??
-  ""
-).slice(0, 7);
+// Build stamp baked in at compile time (next.config.ts) — same source as the
+// sidebar version pill. SHA reflects the deployed commit on the box.
+const COMMIT_SHA = (process.env.NEXT_PUBLIC_BUILD_SHA ?? "").slice(0, 7);
 
-const ENV_LABEL =
-  process.env.NEXT_PUBLIC_VERCEL_ENV ??
-  process.env.VERCEL_ENV ??
-  (process.env.NODE_ENV === "production" ? "prod" : "local");
+const ENV_LABEL = process.env.NODE_ENV === "production" ? "prod" : "local";
 
 /**
  * Micro footer — desktop only (mobile uses MobileNav). Ambient signals: the

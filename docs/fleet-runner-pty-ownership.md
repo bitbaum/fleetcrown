@@ -146,7 +146,7 @@ Each phase is ship-on-green: the entire test suite, smoke tests, and home/ self-
 
 - **Not** a deferred polish item. Every day it's not shipped, new users hit the zellij wall.
 - **Parallel-shippable** with `desktop-4` / `-5` / `-6`. The packaging and installer work is unrelated to the execution mode.
-- **A prerequisite** for cloud-hosted Fleet Runner instances (`desktop-7+` territory) — you can't run a zellij multiplexer in a Vercel function, but you can run a node-pty.
+- **A prerequisite** for cloud-hosted Fleet Runner instances (`desktop-7+` territory) — you can't run a zellij multiplexer in a stateless serverless function, but you can run a node-pty.
 
 Suggested designation: **`desktop-7-pty-ownership`**, started in parallel with `desktop-4`, blocking nothing.
 

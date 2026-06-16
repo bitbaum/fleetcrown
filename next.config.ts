@@ -41,9 +41,9 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingExcludes: {
     "/api/agent/launch": ["./next.config.ts"],
-    // CRITICAL — without this glob every serverless function deployed to
-    // Vercel exceeded the 250 MB unzipped limit and the whole deploy
-    // failed silently. The desktop/ subtree is the Electron app + its
+    // CRITICAL — without this glob the standalone build's per-route bundles
+    // ballooned (the tracer copies traced deps into each), wasting disk and
+    // build time. The desktop/ subtree is the Electron app + its
     // node_modules + bundled Zellij (~35 MB) + AppImage build artifacts.
     // It has NOTHING to do with the web app, but Next.js's output:
     // "standalone" tracer was copying the whole tree into every function
@@ -52,10 +52,10 @@ const nextConfig: NextConfig = {
     // every route bundle.
     "*": [
       "./desktop/**",
-      // The v0.6 event bridge is its own Node service that runs on Oracle
-      // (or wherever we host Postgres) — not on Vercel. Excluding the
-      // directory keeps its node_modules out of every serverless function
-      // bundle. Same lesson as desktop/.
+      // The v0.6 event bridge is its own Node service that runs on the box
+      // (alongside Postgres) — not part of the web app bundle. Excluding the
+      // directory keeps its node_modules out of every route bundle. Same
+      // lesson as desktop/.
       "./bridge/**",
       // AppImage extraction artifacts (e.g., from `./Fleet-Runner-*.AppImage
       // --appimage-extract`) drop a `squashfs-root/` tree containing the
@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // Serves the @fleetcrown/agent CLI script to new customers (the package
     // isn't published to npm yet and the repo is private). Without explicit
-    // tracing, Vercel would tree-shake the file out of the deployment bundle.
+    // tracing, the standalone tracer would drop the file from the build.
     "/api/agent/install": ["./packages/agent/bin/**"],
     // Markdown content read at runtime via process.cwd()/content (e.g. the
     // /whitepaper page). Tracing it INTO the standalone build makes it

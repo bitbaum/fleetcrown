@@ -2,7 +2,7 @@
  * Typed command executor — the boundary between "what to do" and "how to do it."
  *
  * Local runtime:  commands fire directly into zellij via injectIntoTab().
- * Remote (Vercel): commands write to pending_commands in Neon; the local runner picks them up.
+ * Remote (cloud host): commands write to pending_commands in Postgres; the local runner picks them up.
  *
  * Callers express intent once. The executor routes to the correct mechanism.
  */
@@ -20,7 +20,7 @@ export type ExecuteResult =
  * Execute a prompt injection.
  *
  * Local:  calls `injectFn` immediately (avoids importing child_process at module level
- *         so the route stays importable on Vercel even though injectIntoTab calls execSync).
+ *         so the route stays importable on the cloud host even though injectIntoTab calls execSync).
  * Remote: writes to pending_commands and returns the queued command ID.
  */
 export async function executeInject(
@@ -38,7 +38,7 @@ export async function executeInject(
   // on the systemd standalone server (RUNTIME_AVAILABLE=true, no pane env).
   // /api/control/tab-inject already gates on isRuntimeAvailable() alone; this
   // keeps the two inject paths consistent (one SSOT for "inject into a tab").
-  // On Vercel isRuntimeAvailable() is false, so remote still queues for the runner.
+  // On the cloud host isRuntimeAvailable() is false, so remote still queues for the runner.
   if (isRuntimeAvailable()) {
     try {
       await injectFn();

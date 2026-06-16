@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Make `git push` deploy — the Vercel UX on our own box.
+# Make `git push` deploy — push-to-deploy on our own box.
 #
 # Installs a pre-push hook into every repo in apps.conf (plus fleetcrown
 # itself) that backgrounds the existing deploy pipeline (build standalone →
@@ -53,18 +53,24 @@ EOF
 apps=("$@")
 if [ ${#apps[@]} -eq 0 ]; then
   mapfile -t apps < <(app_names)
-  apps+=(fleetcrown)
+  apps+=(fleetcrown revampit)
 fi
 
 for app in "${apps[@]}"; do
   if [ "$app" = "fleetcrown" ]; then
     install_hook /home/g/dev/fleetcrown \
-      "env -u CI -u VERCEL bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh" \
+      "env -u CI bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh" \
       fleetcrown
+    continue
+  fi
+  if [ "$app" = "revampit" ]; then
+    install_hook /home/g/dev/revampit \
+      "env -u CI bash /home/g/dev/revampit/scripts/selfhost-deploy-revampit.sh" \
+      revampit
     continue
   fi
   app_lookup "$app" || continue
   install_hook "$REPO" \
-    "env -u CI -u VERCEL bash $HERE/deploy.sh $NAME" \
+    "env -u CI bash $HERE/deploy.sh $NAME" \
     "$NAME"
 done

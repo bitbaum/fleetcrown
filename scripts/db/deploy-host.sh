@@ -9,7 +9,8 @@
 # After deploy:
 #   DATABASE_URL=postgresql://studio:PASS@HOST:5432/cockpit
 #   DATABASE_POOL_URL=postgresql://studio:PASS@HOST:6432/cockpit
-# Open :5432/:6432 to Vercel IPs only, or use Cloudflare Tunnel (recommended).
+# The app connects over localhost on the same box, so keep :5432/:6432 bound
+# to localhost only. Open the firewall (or use a tunnel) only for remote access.
 
 set -euo pipefail
 
@@ -31,5 +32,5 @@ chmod +x "$HOST_DIR/init/"*.sh 2>/dev/null || true
 docker compose -f "$HOST_DIR/docker-compose.yml" --env-file "$HOST_DIR/.env" up -d
 
 echo ""
-echo "Postgres host is up (localhost-only ports bound — open firewall or tunnel for Vercel)."
-echo "Next: DATABASE_URL on Vercel → push schema with npm run migrate"
+echo "Postgres host is up (localhost-only ports bound — open firewall or tunnel for remote access)."
+echo "Next: set DATABASE_URL in the app .env → push schema with npm run migrate"

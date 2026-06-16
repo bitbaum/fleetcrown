@@ -557,7 +557,7 @@ Report: green / amber / red per area.`,
     id: "commit-push-deploy",
     name: "Commit → Push → Deploy → Verify",
     featured: true,
-    description: "Stage all changes, write commit message, push to GitHub, monitor Vercel deployment, run smoke tests",
+    description: "Stage all changes, write commit message, push to GitHub, monitor the deployment, run smoke tests",
     category: "devops",
     scope: "project",
     template: `Run the full commit → push → deploy → verify cycle for {{project_name}}.
@@ -568,18 +568,18 @@ Steps:
 3. Stage relevant files (not .env, not secrets)
 4. Write a clear commit message (conventional commits: feat/fix/chore/refactor)
 5. Commit and push to origin/main
-6. If Vercel is connected, monitor deployment until Ready or Failed
+6. If a deployment pipeline is connected, monitor it until Ready or Failed
 7. If Failed: read error logs, identify root cause, report
 8. If Ready: hit the production URL and verify the main flow works
 
 Report: ✓ deployed at <url> or ✗ failed: <reason>`,
-    tags: ["git", "deploy", "ci", "vercel"],
+    tags: ["git", "deploy", "ci"],
   },
   {
     id: "project-status",
     name: "Project Status Report",
     featured: true,
-    description: "Full health check: git status, CI, Vercel, broken features, next action",
+    description: "Full health check: git status, CI, deployment, broken features, next action",
     category: "devops",
     scope: "project",
     template: `Generate a full status report for {{project_name}}.
@@ -587,7 +587,7 @@ Report: ✓ deployed at <url> or ✗ failed: <reason>`,
 Check:
 1. **Git**: last commit, any uncommitted changes, branch status
 2. **CI**: GitHub Actions status (passing/failing)
-3. **Deployment**: Vercel status, last deploy date
+3. **Deployment**: deploy status, last deploy date
 4. **Known issues**: broken features, open bugs from ${APP_NAME} knowledge graph
 5. **Next action**: single most important thing to do right now
 
@@ -1063,7 +1063,7 @@ For each step, name (a) what is unclear, (b) what is missing, (c) what is broken
     description: "When the agent hits a gate it cannot pass (credentials, OAuth consent, deploy approval), create a structured blocker file that surfaces to the user next loop iteration.",
     category: "control",
     scope: "global",
-    template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a Vercel deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
+    template: `You hit something that needs a human action you cannot take yourself (credentials you cannot enter, an OAuth consent only the owner can give, a deploy that needs manual trigger, a destructive op that needs explicit approval, a missing env var that only the user can set). Raise a blocker so the next loop iteration surfaces it concretely instead of you spinning or guessing.
 
 Write a file to ~/.claude/sessions/<P>.blockers/pending/$(date -u +%Y%m%d-%H%M%S)-<short-kebab-slug>.md with this structure:
 

@@ -4,9 +4,9 @@
 // schema (no auth, no rate-limit per row) because the alternative is
 // flying blind on production crashes.
 //
-// The matching server-side digest lives in Vercel runtime logs under the
-// same value, so once we have the digest from the client we can pull the
-// full stack via `vercel logs <url> | grep <digest>`.
+// The matching server-side digest is persisted to the debug_logs table under
+// the same value, so once we have the digest from the client we can pull the
+// full stack from the DB (the host's logs are unreliable from our env).
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

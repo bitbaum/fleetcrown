@@ -45,7 +45,7 @@ src/
 └── lib/           → constants, dates, tools, utils, api/* wrappers
 
 home/              → Local-first agent orchestration library — runs on the
-                     user's machine (not Vercel). Pure pieces that tail one
+                     user's machine (not the hosted box). Pure pieces that tail one
                      append-only JSONL event log: watcher.ts (Bridge — emits
                      worker.idle when ~/.claude/sessions/*.md changes),
                      worker.ts (Consumer — injects bridge.dispatch into zellij,

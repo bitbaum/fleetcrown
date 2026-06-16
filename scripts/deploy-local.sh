@@ -7,16 +7,15 @@
 # Legacy cockpit-app service name is supported as a fallback for transitional installs.
 #
 # Skips silently in CI or on machines where the service is not installed, so
-# running `npm run build` on Vercel / GitHub Actions stays clean.
+# running `npm run build` in GitHub Actions stays clean.
 
 set -euo pipefail
 
-# Vercel and other hosted CI builds must not run the local standalone-copy
-# + systemd restart path — Vercel ships its own runtime + has no systemd, so
-# any failure here surfaces as a misleading "Command npm run build exited
-# with 1". Skip cleanly when a known hosted-CI marker is set.
-if [ -n "${VERCEL:-}" ] || [ -n "${CI:-}" ]; then
-  echo "→ deploy: hosted CI detected (VERCEL/CI set) — skipping local standalone+systemd path"
+# Hosted CI (GitHub Actions) must not run the local standalone-copy + systemd
+# restart path — there's no systemd there, so any failure surfaces as a
+# misleading "Command npm run build exited with 1". Skip cleanly when CI is set.
+if [ -n "${CI:-}" ]; then
+  echo "→ deploy: CI detected — skipping local standalone+systemd path"
   exit 0
 fi
 

@@ -1,13 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
- * SSOT auth gate for Vercel-Cron-targeted API routes.
+ * SSOT auth gate for cron-targeted API routes.
  *
  * Behavior:
- *   - Production (VERCEL=1) + CRON_SECRET unset → 503 (fail-closed; never
- *     leave a janitor publicly callable because someone forgot the env var).
+ *   - Production (NODE_ENV=production) + CRON_SECRET unset → 503 (fail-closed;
+ *     never leave a janitor publicly callable because someone forgot the env
+ *     var). The box runs the production build, so this gate is live there.
  *   - CRON_SECRET set → require Authorization: Bearer ${CRON_SECRET}, else 401.
- *   - Local dev (VERCEL unset + CRON_SECRET unset) → allow, so devs can curl
+ *   - Local dev (not production + CRON_SECRET unset) → allow, so devs can curl
  *     a cron endpoint directly without env setup.
  *
  * Returns a NextResponse on failure (caller should `return` it) or `null`
@@ -20,14 +21,13 @@ import { type NextRequest, NextResponse } from "next/server";
  *     // ... do the work
  *   }
  *
- * Note on Vercel build validation: CRON_SECRET must contain no leading or
- * trailing whitespace (HTTP header values reject it). When setting via the
- * CLI, use `printf %s "$value" | vercel env add CRON_SECRET production`
- * instead of `echo` (which appends a newline).
+ * Note on secret hygiene: CRON_SECRET must contain no leading or
+ * trailing whitespace (HTTP header values reject it). When setting it,
+ * use `printf %s "$value"` rather than `echo` (which appends a newline).
  */
 export function requireCronAuth(req: NextRequest): NextResponse | null {
   const expected = process.env.CRON_SECRET;
-  const isProd = !!process.env.VERCEL;
+  const isProd = process.env.NODE_ENV === "production";
 
   if (isProd && !expected) {
     return NextResponse.json(

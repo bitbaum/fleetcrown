@@ -3,9 +3,9 @@
  *
  * Long-polls the FleetCrown control plane for commands queued by the web
  * (`pending_commands` rows from `executeInject`'s remote branch) and executes
- * them locally via the same `injectIntoTab` primitive the bash daemon uses.
+ * them locally via the same `injectIntoTab` primitive the runner uses.
  * This is the cable that closes the loop: a user dispatches from any browser
- * or phone, the row lands in Neon, this poller drains it in <1s, the prompt
+ * or phone, the row lands in Postgres, this poller drains it in <1s, the prompt
  * fires into the user's Zellij pane.
  *
  * Protocol (already proven by scripts/fleetcrown-daemon.sh):
@@ -188,7 +188,7 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
     try {
       // Use wait=0 short polling. The production long-poll/SSE path is the
       // right architecture eventually, but dogfood showed it can leave desktop
-      // commands claimed without visible progress under Vercel/bridge edge
+      // commands claimed without visible progress under cloud/bridge edge
       // conditions. A 2s deterministic poll is cheap and makes phone/web
       // control reliable today.
       const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(FLEET_RUNNER_COMMAND_TYPES_PARAM)}`, {

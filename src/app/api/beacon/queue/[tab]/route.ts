@@ -5,7 +5,7 @@ import { consumeProjectPrompt, getProjectState, replaceProjectPromptQueue } from
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 
 // Queue storage as of migration 0010: project_states.prompt_queue is the
-// source of truth — persists across browsers and Vercel cold starts.
+// source of truth — persists across browsers and serverless cold starts.
 // /tmp/agent-queue-<tab> remains a local-runtime transport mirror for shell
 // hooks. Mutations are applied to DB first and mirrored only after success.
 

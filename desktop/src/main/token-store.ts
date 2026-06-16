@@ -20,7 +20,7 @@
  *
  * The trim-on-load is load-bearing: users paste tokens from the web UI's
  * clipboard helper, which sometimes appends a trailing newline. Without
- * the trim, `Authorization: Bearer ck_…\n` is sent and Vercel's request
+ * the trim, `Authorization: Bearer ck_…\n` is sent and the cloud's request
  * parser silently rejects it as malformed.
  */
 

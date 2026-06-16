@@ -32,7 +32,7 @@ export const RUNNER_HEARTBEAT_MS = 5 * 60_000;
  * "offline". Computed from the heartbeat cadence: 1.5× the interval gives
  * the runner room for one missed heartbeat (network blip, brief sleep)
  * before we declare it offline. The +30s grace is for clock skew between
- * desktop and Vercel — without it, a perfectly healthy runner flickered
+ * desktop and the cloud host — without it, a perfectly healthy runner flickered
  * "offline" for a second every 5 minutes as the next push raced the
  * threshold.
  *
@@ -44,8 +44,8 @@ export const RUNNER_OFFLINE_THRESHOLD_MS = Math.round(RUNNER_HEARTBEAT_MS * 1.5)
 /**
  * Long-poll wait window the desktop poller asks /api/control/commands for.
  * The API caps any client-supplied `wait` at this value (see commands/route.ts)
- * so a misbehaving client can't pin a Vercel function for longer than this.
- * 25s is short enough to stay under Vercel's 60s function timeout with margin
+ * so a misbehaving client can't pin a server request for longer than this.
+ * 25s is short enough to stay under a typical 60s request timeout with margin
  * for the response handshake, long enough that 99% of the time the next
  * polling cycle starts with a real command rather than an empty drain.
  */

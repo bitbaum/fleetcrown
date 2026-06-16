@@ -73,7 +73,7 @@ async function handleSse(req: IncomingMessage, res: ServerResponse): Promise<voi
   }
 
   // Standard SSE headers. CORS open — the bridge sits on a different
-  // origin than the Vercel app and the desktop app. Auth is the real gate.
+  // origin than the web app and the desktop app. Auth is the real gate.
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache, no-store, must-revalidate",

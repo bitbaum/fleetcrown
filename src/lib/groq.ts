@@ -43,7 +43,7 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
 
 /**
  * Transcribe audio via Groq's Whisper API.
- * Used as the cloud fallback when local Whisper is unavailable (Vercel/remote).
+ * Used as the cloud fallback when local Whisper is unavailable (cloud host/remote).
  * Returns the transcribed text. Throws on failure.
  */
 export async function callGroqTranscribe(audio: Blob, mimeType = "audio/webm"): Promise<string> {

@@ -9,7 +9,7 @@
  *
  * This function pushes the whole probe into a SINGLE bash invocation that
  * forks one background per dir and waits on them in parallel inside the
- * same shell. Vercel/Next.js sees one child process; total wall-clock is
+ * same shell. Next.js sees one child process; total wall-clock is
  * dominated by the slowest `git log` not the sum of them.
  *
  * Lives in lib/ so non-route consumers (cron heatmap, /projects page

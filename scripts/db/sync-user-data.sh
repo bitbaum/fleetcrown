@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copy user-owned rows from one Postgres database to another, rewriting user_id.
-# Vendor-neutral — works for local→Neon, Neon→Hetzner, etc.
+# Vendor-neutral — works for local→remote, box→box, etc.
 #
 # Usage:
 #   SOURCE_DATABASE_URL=... TARGET_DATABASE_URL=... TARGET_USER_ID=<uuid> \
@@ -12,17 +12,16 @@
 #   SOURCE_USER_ID       Source user_id to rewrite (default: dev seed UUID)
 #   TARGET_USER_ID       Target user_id in destination. REQUIRED.
 #
-# Legacy aliases (still accepted):
-#   LOCAL_DATABASE_URL, NEON_DATABASE_URL / NEON_DATABASE_URL_DIRECT, NEON_USER_ID
+# Legacy aliases (still accepted): LOCAL_DATABASE_URL, LOCAL_USER_ID
 #
 # Prerequisites: psql + pg_dump in PATH.
 
 set -euo pipefail
 
 SOURCE_URL="${SOURCE_DATABASE_URL:-${LOCAL_DATABASE_URL:-postgresql://cockpit:cockpit_local@127.0.0.1:5432/cockpit}}"
-TARGET_URL="${TARGET_DATABASE_URL:-${NEON_DATABASE_URL:-${NEON_DATABASE_URL_DIRECT:-}}}"
+TARGET_URL="${TARGET_DATABASE_URL:-}"
 SOURCE_USER_ID="${SOURCE_USER_ID:-${LOCAL_USER_ID:-00000000-0000-0000-0000-000000000001}}"
-TARGET_USER_ID="${TARGET_USER_ID:-${NEON_USER_ID:-}}"
+TARGET_USER_ID="${TARGET_USER_ID:-}"
 
 if [ -z "$TARGET_URL" ]; then
   echo "ERROR: set TARGET_DATABASE_URL before running." >&2

@@ -1,9 +1,16 @@
 # Both products, one Postgres host
 
-A single Hetzner box hosts both FleetCrown and OrangeCat's Postgres
-databases as separate `DATABASE` rows inside the same Postgres instance.
-This doc layers on top of `SETUP_HETZNER.md` — the box itself is the
-same; only the role + database setup differs.
+A single Hetzner box (the `bitbaum` box, `167.233.22.31`) hosts both
+FleetCrown and OrangeCat's Postgres databases as separate `DATABASE` rows
+inside the same Postgres instance. This is the current production setup. This
+doc layers on top of `SETUP_HETZNER.md` — the box itself is the same; only the
+role + database setup differs.
+
+> Note: OrangeCat's *application* data lives in the self-hosted Supabase stack
+> at `supabase.orangecat.ch` (its own PG15 container) for auth/storage/RLS.
+> The "orangecat" database on the host Postgres below is the pattern for any
+> plain-Postgres app you colocate; see `docs/infrastructure/hetzner-migration.md`
+> for which app uses which.
 
 ## Why one box, two databases
 
@@ -59,44 +66,45 @@ hostssl all all ::/0      reject
 ## Connection URLs
 
 ```
-# FleetCrown / Vercel `cockpit` project DATABASE_URL
+# FleetCrown app DATABASE_URL
 postgresql://fleetcrown:CHANGE_ME_FLEETCROWN@<host>:5432/fleetcrown?sslmode=require
 
-# OrangeCat / Vercel `orangecat` project DATABASE_URL
+# OrangeCat app DATABASE_URL
 postgresql://orangecat:CHANGE_ME_ORANGECAT@<host>:5432/orangecat?sslmode=require
 ```
 
-## Migrate both — order of operations
+Each app reads its `DATABASE_URL` from its env on the box. When the app and
+Postgres share the box (current setup), use the localhost/private host instead
+of the public IP and you can drop the public firewall rules in SETUP_HETZNER §4.
 
-Sequence so you never have both products half-migrated:
+## Colocating another app on the box
 
-1. **Provision box** (SETUP_HETZNER.md sections 1, 2, 4, 5; this doc's role-setup section).
-2. **FleetCrown first** (it's already broken — quickest restore = quickest user value):
-   - `cd ~/dev/fleetcrown && SOURCE_DATABASE_URL=<neon-url> scripts/db/dump-from-neon.sh`
-   - `TARGET_DATABASE_URL=<hetzner-fc-url> DUMP_FILE=neon-dump-*.sql scripts/db/restore-to-target.sh`
-   - Vercel: `vercel env rm DATABASE_URL production && vercel env add DATABASE_URL production` (paste FC URL) → `vercel --prod --yes`
-   - Smoke: `curl https://fleetcrown.orangecat.ch/api/health`, browse `/control`.
-3. **OrangeCat second** (still on Supabase, lower urgency):
-   - `cd ~/dev/orangecat && SOURCE_DATABASE_URL=<supabase-direct-url> ../fleetcrown/scripts/db/dump-from-supabase.sh`
-   - `TARGET_DATABASE_URL=<hetzner-oc-url> DUMP_FILE=supabase-dump-*.sql ../fleetcrown/scripts/db/restore-to-target.sh`
-   - Vercel `orangecat` project: env swap → redeploy.
-   - Smoke: browse `orangecat.ch`.
-4. **Wait 24h** of clean operation on both, then pause Neon + Supabase projects.
+To stand up another plain-Postgres app's database on the shared instance:
 
-## Auth — what stays where
+1. **Add a role + database** (this doc's role-setup section) — one role per app,
+   each owning only its own DB.
+2. **Add its pg_hba rule** ABOVE the `reject` block (first match wins; see above).
+3. **Load its data** — `pg_dump` the source, then restore into the new DB:
+   ```bash
+   DATABASE_URL=<source-url> scripts/db/dump.sh app.sql.gz
+   TARGET_DATABASE_URL=<host-url> DUMP_FILE=app.sql scripts/db/restore-to-target.sh
+   ```
+   `restore-to-target.sh` verifies row counts against the manifest and halts on
+   mismatch.
+4. **Point the app at `DATABASE_URL`** in its env on the box, then redeploy
+   (`scripts/deploy-hetzner.sh` for FleetCrown; per-app deploy script otherwise).
 
-| Product | Auth system | After migration |
+> Historical note: FleetCrown migrated off Neon and OrangeCat off managed
+> Supabase onto this box on 2026-06-12. That one-time migration (and the now
+> self-hosted Supabase stack that serves OrangeCat's auth/storage) is recorded
+> in `docs/infrastructure/hetzner-migration.md`.
+
+## Auth — what runs where
+
+| Product | Auth system | Notes |
 |---|---|---|
-| FleetCrown | Auth.js v5 with GitHub OAuth | session tables in `public` — moves with the dump, just works |
-| OrangeCat | Supabase Auth (gotrue) | **stays on Supabase Auth** by default. Cheaper to keep using Supabase's free auth tier than to self-host gotrue. |
-
-If OrangeCat keeps using Supabase Auth, you keep the Supabase project alive
-just for `auth.*` calls. Cost: $0 up to 50k MAU. Total monthly cost for
-both products' infrastructure: ~€4.50.
-
-To fully self-host OrangeCat auth, set `FULL_DUMP=1` on the Supabase dump
-script and stand up your own gotrue alongside Postgres — that's a bigger
-project for another day.
+| FleetCrown | Auth.js v5 with GitHub OAuth | session tables in `public` on the `fleetcrown` host DB |
+| OrangeCat | Supabase Auth (gotrue) | runs in the **self-hosted Supabase stack** at `supabase.orangecat.ch` (own PG15 container) — not a managed Supabase project |
 
 ## Backups
 
@@ -114,17 +122,18 @@ endpoint. The mirror is your "earthquake destroyed the datacenter" insurance.
 
 ## Connection pooling
 
-Vercel functions are short-lived → many short-lived connections. At low scale
-this is fine (Postgres handles ~100-200 connections per default config). If
-you start seeing `FATAL: sorry, too many clients already`, install PgBouncer
-in transaction-pooling mode:
+A long-running self-hosted Next.js server holds a stable connection pool, so at
+this scale pooling is rarely the bottleneck (Postgres handles ~100-200
+connections per default config). If a connection-heavy workload starts seeing
+`FATAL: sorry, too many clients already`, install PgBouncer in
+transaction-pooling mode:
 
 ```bash
 apt install -y pgbouncer
 # /etc/pgbouncer/pgbouncer.ini — pool_mode=transaction, max_client_conn=1000
 ```
 
-Then point Vercel `DATABASE_POOL_URL` at PgBouncer (port 6432) and leave
+Then point the app's `DATABASE_POOL_URL` at PgBouncer (port 6432) and leave
 `DATABASE_URL` on direct (port 5432) for migrations.
 
 ## When to split the box

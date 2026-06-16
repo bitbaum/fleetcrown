@@ -10,11 +10,14 @@ what's next) must be one coherent story, not five overlapping surfaces.
 > 2d ran via scripts/enrich-prod-profiles.ts against the Hetzner prod DB.
 > Phase 3 deliberately deferred — the explorer audit showed /activity already
 > consolidated /history + /digests; remaining overlap is naming, not
-> architecture. BLOCKER discovered during deploy: Vercel team `orangecat` is
-> blocked for fair-use overage — fleetcrown.vercel.app, orangecat.ch and
-> revampit.vercel.app all serve 402 DEPLOYMENT_DISABLED, and new deploys are
-> rejected. Only the account owner can resolve (pay/appeal) or we accelerate
-> the Hetzner migration.
+> architecture. BLOCKER discovered during deploy (2026-06-12): the Vercel team
+> `orangecat` was blocked for fair-use overage — the then-current
+> `fleetcrown.vercel.app` / `revampit.vercel.app` and orangecat.ch all served
+> 402 DEPLOYMENT_DISABLED, and new deploys were rejected.
+> RESOLVED: this triggered the full exit off Vercel — FleetCrown and OrangeCat
+> are now self-hosted on the Hetzner `bitbaum` box (Caddy + systemd), serving
+> at fleetcrown.orangecat.ch / orangecat.ch. Deploys go via
+> `scripts/deploy-hetzner.sh`.
 
 ## Phase 1 — Play/Pause UX (the wow)
 State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.auto_inject_mode_override`.
@@ -51,7 +54,7 @@ State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.au
 ## Verification
 - [ ] tsc + eslint (pre-commit), npm run smoke
 - [ ] Browser-verify /control play/pause + describe-it flow (login butaeff@gmail.com)
-- [ ] Push, monitor Vercel deploy to Ready.
+- [ ] Push, deploy to the Hetzner box (`scripts/deploy-hetzner.sh`) and confirm the app restarts healthy.
 
 Out of scope (explicitly): voice module unification across projects, OrangeCat financing
 hooks, robot/physical-world orchestration — vision recorded in the Thoughts post instead.

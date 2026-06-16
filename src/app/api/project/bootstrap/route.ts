@@ -25,7 +25,7 @@ const BootstrapBody = z.object({
   }).optional(),
   monetization: z.string().max(300).optional(),
   launchStrategy: z.string().max(300).optional(),
-  db: z.enum(["neon", "none"]).default("neon"),
+  db: z.enum(["postgres", "none"]).default("none"),
   visibility: z.enum(["private", "public"]).default("private"),
   githubUser: z.string().max(80).optional(),
 });
@@ -90,23 +90,12 @@ export async function POST(req: NextRequest) {
     steps.push({ step: "Git init", ok: false, detail: String(err) });
   }
 
-  // ── 4. Create Neon DB (optional) ─────────────────────────────────────────
-  let dbUrl = "";
-  if (db === "neon") {
-    try {
-      const { stdout } = await execAsync(
-        `neon projects create --name ${JSON.stringify(repoSlug)} --output json`,
-        { timeout: 45_000 },
-      );
-      const neonData = JSON.parse(stdout.trim());
-      // neon CLI returns project + connection_uris array
-      const uri = neonData.connection_uris?.[0]?.connection_uri ?? "";
-      dbUrl = uri;
-      steps.push({ step: "Create Neon DB", ok: true, detail: dbUrl ? "Connected" : "Created (get URL from Neon console)" });
-    } catch (err) {
-      steps.push({ step: "Create Neon DB", ok: false, detail: String(err).slice(0, 200) });
-    }
-  }
+  // ── 4. Database (self-hosted) ─────────────────────────────────────────────
+  // We self-host Postgres on the box — there's no per-project managed DB to
+  // auto-provision. When the developer wants a DB, they create one on the
+  // self-hosted Postgres (a new database or schema) and set DATABASE_URL. The
+  // brief below tells the agent to do that; nothing to shell out to here.
+  const dbUrl = "";
 
   // ── 5. Register project in ${APP_NAME} DB ────────────────────────────────
   try {
@@ -140,8 +129,10 @@ export async function POST(req: NextRequest) {
     `   \`\`\``,
     `2. Follow ${APP_NAME}'s engineering standards (CLAUDE.md if present, or use: Drizzle ORM, server components, semantic design tokens, no \`any\`).`,
     `3. Build the core MVP — ship something playable within this session.`,
-    `4. Set up Vercel: \`vercel --yes\` — get a live URL.`,
-    dbUrl ? `5. Add DATABASE_URL to \`.env.local\` and \`vercel env add DATABASE_URL\`.` : `5. Create a Neon/Supabase database and add DATABASE_URL.`,
+    db === "postgres"
+      ? `4. Create a Postgres database on the self-hosted box (a new DB or schema on the shared Postgres) and set DATABASE_URL in \`.env.local\`.`
+      : `4. If you need a database, create one on the self-hosted Postgres and set DATABASE_URL in \`.env.local\`.`,
+    `5. Deploy via the self-hosted flow (build → rsync → restart on the box); there is no Vercel.`,
     `6. Commit after each milestone. Keep a session summary.`,
     ``,
     `Start immediately. No questions needed — use your judgment on implementation details.`,

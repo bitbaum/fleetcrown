@@ -5,13 +5,13 @@ import { users } from "./users";
 // JSON file per session to /tmp/<APP_SLUG>-beacon/<id>.json and poll the
 // directory every 150ms for SSE pushes. That worked but had three real
 // drawbacks worth fixing:
-//   - /tmp isn't durable; a Vercel function instance restart loses pending
+//   - /tmp isn't durable; a server process restart loses pending
 //     popups silently (rare in practice but the "lost popup" symptom is bad)
 //   - Filesystem polling on every SSE tick is the kind of work the NOTIFY
 //     event bus was added to obsolete (see drizzle/0022_notify_triggers.sql)
-//   - Cross-instance reads are impossible — a popup written by one Vercel
-//     pod is invisible to another. We never hit this because there's a
-//     single user / single pod path, but it's a latent landmine
+//   - Cross-instance reads are impossible — a popup written by one server
+//     process is invisible to another. We never hit this because there's a
+//     single user / single process path, but it's a latent landmine
 //
 // This table is the L3 product feature (beacon as the rung between Manual
 // and Continuous in the autopilot ladder) given a proper backing store.

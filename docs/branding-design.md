@@ -16,10 +16,10 @@ FleetCrown is locked as the product name. The criteria below were used to evalua
 - **Shell**: `scripts/_brand.sh`
   - Same three core values + `_brand_env` (for legacy COCKPIT_* / FLEETCROWN_* transition) and `_brand_tmp`.
   - Sourced by daemons, installers, hooks, beacon, etc.
-- **Vercel**: `vercel.json` `alias` + DNS at registrar.
+- **Domain / TLS**: Caddy vhost on the Hetzner box + DNS at the registrar (Infomaniak, `orangecat.ch` zone).
 - **Everything else** (manifest, layouts, components, OG images, desktop) must import from the above or use the generated `ui-*` / CSS custom properties. No other source of truth for the name or core positioning strings.
 
-Rebrand process (one sentence): edit the two SSOT files + vercel alias + registrar DNS. Then audit with `npm run check:design`, `grep` for the old name, update desktop assets, and test the installers + public surfaces.
+Rebrand process (one sentence): edit the two SSOT files + Caddy vhost domain + registrar DNS. Then audit with `npm run check:design`, `grep` for the old name, update desktop assets, and test the installers + public surfaces.
 
 ## Name Selection Criteria (first principles)
 
@@ -79,7 +79,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 - **High-flier esthetics & code (this review)**: Added CSS-only `fleet-live-pulse` animation (restrained breathing opacity) applied to running fleet indicators for a "command center is alive" feel without JS or excess. Subtle hover lift on metric cards and BrandMark mark for responsive command esthetics. Made AUTOMATION_HINT dynamic via getAutomationHint(APP_NAME) for SSOT. All changes preserve 4-layer discipline and were verified with audits.
 - **Local storage / daemon keys / legacy**: Many "cockpit" strings are intentional during the long transition (localStorage keys, systemd units, `/tmp/cockpit-*` sentinels, env var fallbacks in `_brand_env`). Do not "clean" them without updating the migration logic and testing real user machines. New code should prefer `APP_SLUG` / `_brand_tmp`.
 - **Tokens in JS contexts**: Currently design tokens live only in CSS (correct for 95% of the app). When we need numeric/color values in TypeScript (Recharts, canvas, Satori alternatives, status calculations, etc.) we will add `src/lib/tokens.ts` (or equivalent) that re-exports the *names* and lets runtime resolve from CSS vars or a small synced object. Do not duplicate raw OKLCH values in TS.
-- **Domain strategy**: Current production is `fleetcrown.vercel.app` (with alias). A clean short .com (or .app) remains the long-term goal for credibility, email, and typing. Name evaluations must treat domain + social handle availability as a first-class constraint, not an afterthought. Update `brand.ts` `APP_DOMAIN` + vercel alias + registrar when we move.
+- **Domain strategy**: Current production is `fleetcrown.orangecat.ch` (self-hosted on Hetzner, Caddy in front). A clean short .com (or .app) remains the long-term goal for credibility, email, and typing. Name evaluations must treat domain + social handle availability as a first-class constraint, not an afterthought. Update `brand.ts` `APP_DOMAIN` + the Caddy vhost domain + registrar when we move.
 - **Marketing content**: All public copy lives in `src/config/marketing-content.ts` (and pulls positioning from brand.ts). This is the place for hero, differentiation, mission, investors thesis, roadmap, etc. Components and pages stay presentation-only.
 - **PWA / manifest / icons**: `public/manifest.json` + layout metadata + `public/icon.svg` are the current surface. They were updated to reference the unified control-window mark. Future work: provide PNG fallbacks at common sizes for broader compatibility, and a proper maskable icon variant.
 - **Desktop app icons**: The Electron side still has placeholder comments ("in production add a real png/icns"). When shipping signed builds, the desktop/ build must produce branded .icns / .ico from the same mark.
@@ -176,7 +176,7 @@ In 2026, user floated .com-available variants leaning on "shade/shady" + fleet: 
 - Rebrand cost: High (SSOT in brand.ts + _brand.sh, 100s of references in code/docs/desktop/marketing/OG images/legal, daemons, installers, user mental models). Would require rewriting hero ("Run your fleet"), mission, "control layer" language.
 - Visual/BrandMark fit: Current mark is a visible "control window" (rect + bars like a dashboard/terminal). "Shade" suggests dark/hidden, clashing with the explicit "command center" visual and "nothing hidden" principle.
 
-**Verdict:** Rejected. The .com availability is tempting (current prod is fleetcrown.vercel.app), but names actively undermine core value prop (visibility + trust + sovereign control) and invite negative real-world baggage from sanctioned shipping. "Shadyfleet" worse than "shadefleet" due to stronger "untrustworthy" slang. "Piracyfleet" even more toxic (theft/illegal).
+**Verdict:** Rejected. The .com availability is tempting (current prod is fleetcrown.orangecat.ch), but names actively undermine core value prop (visibility + trust + sovereign control) and invite negative real-world baggage from sanctioned shipping. "Shadyfleet" worse than "shadefleet" due to stronger "untrustworthy" slang. "Piracyfleet" even more toxic (theft/illegal).
 
 **FleetCrown remains the name** because it positions the *product* as the authoritative command layer ("crown") over a fleet of execution. Keeps fleet language, serious durable infrastructure tone, supports robotics vision ("same control patterns").
 

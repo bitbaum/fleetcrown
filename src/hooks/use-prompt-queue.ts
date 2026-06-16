@@ -77,7 +77,7 @@ export function usePromptQueue(tab: string, initialQueue?: string[], initialRevi
 
   // Initial load: skip the HTTP GET when the streamed control state already
   // provided a queue + revision. Only the local /proc-backed runtime omits
-  // those (the DB-projected stream path on Vercel always includes them).
+  // those (the DB-projected stream path on the cloud host always includes them).
   useEffect(() => {
     if (initialQueue !== undefined && initialRevision !== undefined) {
       serverQueueRef.current = initialQueue;

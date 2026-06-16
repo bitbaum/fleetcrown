@@ -42,20 +42,8 @@ function runTests(): void {
       {
         DATABASE_POOL_URL: "postgres://pool",
         DATABASE_URL: "postgres://direct",
-        NEON_DATABASE_URL: "postgres://legacy-pool",
       },
       () => assert(getDatabasePoolUrl() === "postgres://pool", "expected pool"),
-    );
-  });
-
-  check("pool falls back to legacy NEON_DATABASE_URL", () => {
-    withEnv(
-      {
-        DATABASE_POOL_URL: undefined,
-        DATABASE_URL: "postgres://direct",
-        NEON_DATABASE_URL: "postgres://legacy-pool",
-      },
-      () => assert(getDatabasePoolUrl() === "postgres://legacy-pool", "expected legacy pool"),
     );
   });
 
@@ -64,7 +52,6 @@ function runTests(): void {
       {
         DATABASE_POOL_URL: undefined,
         DATABASE_URL: "postgres://local",
-        NEON_DATABASE_URL: undefined,
       },
       () => assert(getDatabasePoolUrl() === "postgres://local", "expected local"),
     );
@@ -74,7 +61,6 @@ function runTests(): void {
     withEnv(
       {
         DATABASE_URL: "postgres://direct",
-        NEON_DATABASE_URL_DIRECT: "postgres://legacy-direct",
       },
       () => assert(getDatabaseDirectUrl() === "postgres://direct", "expected direct"),
     );
@@ -84,9 +70,7 @@ function runTests(): void {
     withEnv(
       {
         DATABASE_URL: undefined,
-        NEON_DATABASE_URL_DIRECT: undefined,
         DATABASE_POOL_URL: "postgres://pool-only",
-        NEON_DATABASE_URL: "postgres://pool-only",
       },
       () => assert(getDatabaseDirectUrl() === undefined, "direct must stay undefined"),
     );

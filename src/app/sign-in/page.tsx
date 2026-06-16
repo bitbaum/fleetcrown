@@ -9,7 +9,7 @@ export default function SignInPage() {
   const googleEnabled  = Boolean(process.env.GOOGLE_CLIENT_ID  && process.env.GOOGLE_CLIENT_SECRET);
   const twitterEnabled = Boolean(process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET);
   // Two gates, both required: a configured password AND an explicit opt-in
-  // flag. Vercel prod keeps LOCAL_AUTH_PASSWORD set for legacy reasons, but
+  // flag. The hosted prod keeps LOCAL_AUTH_PASSWORD set for legacy reasons, but
   // ENABLE_OWNER_KEY is unset there, so the tab stays hidden. Local installs
   // (cockpit-app systemd, dev) set both. See auth.ts for the matching runtime
   // refusal — the UI gate alone wouldn't stop a direct POST.

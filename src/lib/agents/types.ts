@@ -14,7 +14,7 @@
  *
  * Why this matters strategically: FleetCrown's value isn't owning the model
  * — it's owning the COORDINATION LAYER where any model plugs in. Linear,
- * Cursor, Vercel each lock you into one vendor; the adapter pattern is how
+ * Cursor, and similar tools each lock you into one vendor; the adapter pattern is how
  * we stay vendor-neutral as agents proliferate.
  *
  * The interface is intentionally minimal. Anything that's the SAME across

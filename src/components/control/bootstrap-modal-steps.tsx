@@ -116,8 +116,8 @@ export function ReviewStep({
 }: {
   brief: Brief;
   setBrief: React.Dispatch<React.SetStateAction<Brief>>;
-  db: "neon" | "none";
-  setDb: (v: "neon" | "none") => void;
+  db: "postgres" | "none";
+  setDb: (v: "postgres" | "none") => void;
   visibility: "private" | "public";
   setVisibility: (v: "private" | "public") => void;
   createError: string;
@@ -173,7 +173,7 @@ export function ReviewStep({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <p className="ui-kicker">Database</p>
-            <ToggleGroup options={["neon", "none"] as const} value={db} onChange={setDb} labelFn={(opt) => opt === "neon" ? "Neon Postgres" : "None"} />
+            <ToggleGroup options={["postgres", "none"] as const} value={db} onChange={setDb} labelFn={(opt) => opt === "postgres" ? "Postgres (self-hosted)" : "None"} />
           </div>
           <div className="space-y-1.5">
             <p className="ui-kicker">Visibility</p>
@@ -202,7 +202,7 @@ export function CreatingStep({ name }: { name: string }) {
       <Loader2 className="h-8 w-8 animate-spin text-accent-text" />
       <div className="text-center">
         <p className="font-medium text-text-primary">{name}</p>
-        <p className="mt-1 text-sm text-text-tertiary">GitHub repo · git init · Neon database · {APP_NAME} registration</p>
+        <p className="mt-1 text-sm text-text-tertiary">GitHub repo · git init · {APP_NAME} registration</p>
       </div>
     </div>
   );

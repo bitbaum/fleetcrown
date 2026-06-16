@@ -19,7 +19,7 @@ export const metadata = { title: "System" };
 export default async function SystemPage() {
   const userId = await requirePageUserId();
   // listCronJobsForUser is the only direct DB await on this route. When it
-  // throws (cloud Neon DB connectivity blip, table not provisioned on a
+  // throws (DB connectivity blip, table not provisioned on a
   // fresh branch, etc.) the entire page crashes into the global error
   // boundary — caught live on fleetcrown.orangecat.ch/system showing
   // "Something went wrong" with the Server Components render error.

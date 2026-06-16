@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
  * In-memory sliding-window rate limiter.
  *
  * Works correctly for the local server deployment (single process, long-lived).
- * On Vercel serverless, each cold-start resets the window — still limits
+ * On serverless, each cold-start resets the window — still limits
  * rapid-fire attacks within a warm function lifetime.
  */
 const store = new Map<string, number[]>();

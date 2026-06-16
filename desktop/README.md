@@ -16,8 +16,8 @@ See `docs/desktop-app.md` (at repo root) for the full plan, stack decision, arch
 ### Overriding the shell URL
 
 ```bash
-# Point the desktop at a preview deployment
-FLEETCROWN_WEB_URL=https://fleetcrown-git-mybranch.vercel.app ./Fleet Runner-0.1.0.AppImage
+# Point the desktop at the hosted production app (default)
+FLEETCROWN_WEB_URL=https://fleetcrown.orangecat.ch ./Fleet Runner-0.1.0.AppImage
 
 # Or against a local dev server
 FLEETCROWN_WEB_URL=http://localhost:3000 ./Fleet Runner-0.1.0.AppImage

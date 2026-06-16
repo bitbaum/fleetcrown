@@ -48,5 +48,6 @@ jobs:
       # `next build` is intentionally NOT here — the App-Router pages do
       # DB queries during static pre-render, so a real Postgres would
       # need to be set up + migrated + seeded before the build can run.
-      # Vercel does that on deploy, so this CI focuses on type/lint and
-      # leaves build verification to Vercel.
+      # The Hetzner deploy step (scripts/deploy-hetzner.sh) builds against
+      # the live box DB, so this CI focuses on type/lint and leaves build
+      # verification to that deploy.

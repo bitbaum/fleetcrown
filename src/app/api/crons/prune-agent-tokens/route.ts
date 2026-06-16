@@ -4,7 +4,7 @@ import { deleteStaleEventStreamTokens } from "@/db/queries/agent-tokens";
 import { requireCronAuth } from "@/lib/cron-auth";
 
 /**
- * Vercel Cron Job target — fires daily (see vercel.json crons).
+ * Cron job target — fires daily (see scripts/install-hetzner-crons.sh).
  *
  * Deletes event-stream agent tokens that haven't been touched in 30 days.
  * These tokens are minted per browser session via /api/event-stream-token

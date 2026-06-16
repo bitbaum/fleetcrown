@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const KEEPALIVE_MS = 15_000;
 
 // Map DB state rows to the FastProjectState shape the SSE client expects.
-// Used on Vercel where /proc and /tmp are unavailable — runner keeps DB current.
+// Used on the cloud host where /proc and /tmp are unavailable — runner keeps DB current.
 function dbToFastState(
   confProjects: Array<{ tab: string; ownerUserId: string }>,
   dbRows: DbProjectState[]
@@ -214,7 +214,7 @@ export async function GET() {
       };
       sseBus.on("sentinel-changed", onSentinelChanged);
 
-      // Vercel-only: Postgres LISTEN/NOTIFY for sub-second state propagation.
+      // Cloud host only: Postgres LISTEN/NOTIFY for sub-second state propagation.
       // Must use a direct URL — poolers do not support persistent LISTEN.
       let pgListener: ReturnType<typeof postgres> | null = null;
       const directDatabaseUrl = getDatabaseDirectUrl();

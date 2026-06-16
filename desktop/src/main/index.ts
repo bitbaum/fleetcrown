@@ -34,7 +34,7 @@ import { loadToken, saveToken, clearToken, tokenDir } from './token-store'
 //                                       the production cloud (for testing).
 //   - FLEETCROWN_WEB_URL unset/cloud  → fleetcrown.orangecat.ch (default).
 //
-// On load failure (Vercel down, no wifi, OAuth callback to unreachable
+// On load failure (host down, no wifi, OAuth callback to unreachable
 // host) the user sees a branded offline page with a retry button, NOT
 // a half-working stub UI. The principle: be honest about cloud
 // dependency — Slack, Linear, Notion all do the same.
@@ -193,7 +193,7 @@ function splashHtml(): string {
 }
 
 // Branded offline page. Replaces the previous bare data-URL fallback so a
-// transient network blip or Vercel outage doesn't dump the user in an
+// transient network blip or hosting hiccup doesn't dump the user in an
 // unstyled error. The retry button reloads via IPC (handled below) — the
 // user does not need to relaunch the app to recover.
 function offlineHtml(targetUrl: string): string {
@@ -215,13 +215,13 @@ function offlineHtml(targetUrl: string): string {
 </style></head><body>
 <h1>Can't reach FleetCrown</h1>
 <p>The cloud surface didn't respond. This is usually a transient network
-issue or a Vercel hiccup. Your local agents and Zellij tabs are running
+or hosting issue. Your local agents and Zellij tabs are running
 regardless — only the /control UI is offline.</p>
 <div class="target">${targetUrl}</div>
 <button onclick="window.location.assign('${targetUrl}')">Try again</button>
 <div class="hint">If this persists, check your connection. Closing and
 reopening Fleet Runner is safe — no local data depends on the web app
-being up; the daemon keeps pushing state so /control catches up
+being up; the runner keeps pushing state so /control catches up
 instantly once it comes back.</div>
 </body></html>`
 }
@@ -489,7 +489,7 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // Catch load failures (Vercel down, no wifi, OAuth callback to unreachable
+  // Catch load failures (host down, no wifi, OAuth callback to unreachable
   // host). did-fail-load fires for every aborted/failed navigation; filter
   // out the ones we trigger ourselves and the ABORTED code that's normal
   // during fast successive loadURL calls. On real failure we show a branded

@@ -26,7 +26,7 @@ over Server-Sent Events. The piece that lets v0.6 replace polling with push.
                                                   ↑
                                                   │ INSERT/UPDATE/DELETE
                                          ┌────────┴──────────┐
-                                         │   Vercel API      │
+                                         │   Hosted API      │
                                          │   /api/control,   │
                                          │   /api/control/   │
                                          │   runtime-state,  │
@@ -111,9 +111,10 @@ sudo systemctl enable --now fleetcrown-bridge
 sudo journalctl -u fleetcrown-bridge -f
 ```
 
-Then reverse-proxy 443 → 4001 via nginx/caddy with a TLS cert. Point Vercel
-env `FLEETCROWN_BRIDGE_URL` at `https://your-host/sse` and the web client
-will subscribe instead of polling.
+Then reverse-proxy 443 → 4001 via Caddy with a TLS cert (this is how the
+`bitbaum` box runs it today, as `fleetcrown-bridge.service` behind
+`bridge.orangecat.ch`). Point the web app's `FLEETCROWN_BRIDGE_URL` env at
+`https://your-host/sse` and the web client will subscribe instead of polling.
 
 ## Connection limits
 

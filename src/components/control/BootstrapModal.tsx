@@ -26,7 +26,7 @@ export function BootstrapModal({
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState("");
   const [brief, setBrief] = useState<Brief>(BRIEF_DEFAULTS);
-  const [db, setDb] = useState<"neon" | "none">("neon");
+  const [db, setDb] = useState<"postgres" | "none">("none");
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");

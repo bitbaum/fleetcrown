@@ -283,7 +283,7 @@ export async function POST(req: NextRequest) {
   );
 
   if (!result.ok) {
-    // Per pattern_vercel_log_fallback: journalctl on Vercel is unreliable.
+    // The host's logs are unreliable from our env, so we persist to the DB.
     // Capture failures in debug_logs so post-incident forensics can answer
     // "what actually broke" without depending on log retention.
     logDebug({

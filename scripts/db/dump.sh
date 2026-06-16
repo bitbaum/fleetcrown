@@ -16,7 +16,7 @@ if [ -z "${DATABASE_URL:-}" ] && [ -f "$ROOT/.env.local" ]; then
   set +a
 fi
 
-URL="${DATABASE_URL:-${NEON_DATABASE_URL_DIRECT:-}}"
+URL="${DATABASE_URL:-}"
 if [ -z "$URL" ]; then
   echo "ERROR: set DATABASE_URL (direct connection) before running." >&2
   exit 2

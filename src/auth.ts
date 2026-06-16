@@ -85,8 +85,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  // Persist Auth.js error events to the database — Vercel runtime logs aren't
-  // reliably reachable from the CLI in this environment, and an auth failure that
+  // Persist Auth.js error events to the database — the host's runtime logs
+  // aren't reliably reachable from this environment, and an auth failure that
   // can't be diagnosed is functionally a P0. Low write volume in steady state
   // (only fires on actual errors).
   logger: {
@@ -181,9 +181,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     },
   },
-  // Allow localhost and any host when AUTH_TRUST_HOST=true (local production server).
-  // Vercel sets VERCEL=1 which Auth.js already trusts automatically.
-  trustHost: process.env.AUTH_TRUST_HOST === "true" || process.env.VERCEL === "1",
+  // Allow localhost and any host when AUTH_TRUST_HOST=true. Set on the box and
+  // for the local production server; Caddy terminates TLS in front of the app.
+  trustHost: process.env.AUTH_TRUST_HOST === "true",
   // JWT strategy required for Credentials provider to work alongside DB adapter
   session: { strategy: "jwt" },
   providers: [

@@ -15,7 +15,7 @@ import path from "node:path";
  * Designed to be piped: curl -fsSL ${APP_URL}/api/agent/install | node - init --token ck_…
  *
  * next.config.ts includes packages/agent/bin/** in this route's
- * outputFileTracingIncludes so the file lands in the Vercel deployment
+ * outputFileTracingIncludes so the file lands in the standalone build
  * bundle (it would otherwise be tree-shaken out as not imported).
  */
 export async function GET() {

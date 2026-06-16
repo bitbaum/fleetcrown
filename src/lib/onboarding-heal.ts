@@ -44,7 +44,7 @@ export async function healReturningUserOnboarding(user: UserRow): Promise<UserRo
     return updated ?? user;
   } catch (e) {
     // Stderr (not logDebug) — the DB may be the very thing that's failing,
-    // and a logDebug insert would just compound the error path. Vercel
+    // and a logDebug insert would just compound the error path. The host
     // captures stderr, so the signal survives.
     console.error("[onboarding-heal] heal failed; returning un-healed user:", (e as Error)?.message);
     return user;

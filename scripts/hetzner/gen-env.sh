@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Build <repo>/<app_dir>/.env.selfhost.local for an app from its Vercel env
-# (fresh `vercel env pull` if the repo is linked, else ~/dev/vercel-env-backup).
-# Sanitizes Vercel-isms, rewrites DB URL to the box-local Postgres, points
-# auth/site URLs at the new domain, adds AUTH_TRUST_HOST for proxied Auth.js.
+# Build <repo>/<app_dir>/.env.selfhost.local for an app from its captured
+# env backup ($ENV_BACKUP_DIR, default ~/dev/vercel-env-backup — the dir name
+# is just where the one-time env snapshots were captured). Strips host-runner
+# vars, rewrites DB URL to the box-local Postgres, points auth/site URLs at the
+# new domain, adds AUTH_TRUST_HOST for proxied Auth.js.
 # Usage: gen-env.sh <app>
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 app_lookup "${1:?usage: gen-env.sh <app>}"
@@ -11,16 +12,11 @@ SRC_DIR="$REPO/$APP_DIR"
 OUT="$SRC_DIR/.env.selfhost.local"
 DOMAIN="${DOMAINS%%,*}"
 
-# Source env: fresh pull beats stale backup
+# Source env: the captured per-app backup file.
 RAW=$(mktemp); trap 'rm -f "$RAW"' EXIT
-if [ -d "$REPO/.vercel" ] || vercel link --yes --project "$NAME" --scope orangecat --cwd "$REPO" >/dev/null 2>&1; then
-  vercel env pull "$RAW" --environment=production --yes --cwd "$REPO" >/dev/null 2>&1 || true
-fi
-if [ ! -s "$RAW" ]; then
-  BACKUP="$HOME/dev/vercel-env-backup/$NAME.env"
-  [ -f "$BACKUP" ] && cp "$BACKUP" "$RAW"
-fi
-[ -s "$RAW" ] || { echo "WARN: no Vercel env found for $NAME — writing minimal env"; : > "$RAW"; }
+BACKUP="${ENV_BACKUP_DIR:-$HOME/dev/vercel-env-backup}/$NAME.env"
+[ -f "$BACKUP" ] && cp "$BACKUP" "$RAW"
+[ -s "$RAW" ] || { echo "WARN: no env backup found for $NAME at $BACKUP — writing minimal env"; : > "$RAW"; }
 
 DB_URL=""
 if [ "$DB" != "-" ]; then

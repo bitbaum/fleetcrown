@@ -174,9 +174,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# vercel
-.vercel
 `;
 
 const NEXTJS_README = `# {{NAME}}
@@ -217,7 +214,7 @@ Edit \`src/app/page.tsx\` to make it yours. Tailwind classes work out of the box
 
 - Add a database: \`npm install drizzle-orm postgres\` + see [Drizzle docs](https://orm.drizzle.team)
 - Add auth: \`npm install next-auth@beta\` + see [Auth.js docs](https://authjs.dev)
-- Deploy to Vercel: \`npx vercel\`
+- Deploy: self-host behind a reverse proxy (build, then run \`next start\` on your server)
 
 ## Need help?
 

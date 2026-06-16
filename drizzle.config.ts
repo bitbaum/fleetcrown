@@ -11,7 +11,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    // Direct URL only — poolers (Neon, PgBouncer) do not support DDL reliably.
+    // Direct URL only — connection poolers (e.g. PgBouncer) do not support DDL reliably.
     url,
   },
 });

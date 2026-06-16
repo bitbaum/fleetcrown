@@ -11,7 +11,7 @@ export const NOTIFY_FN_NAME = `${_slug}_notify_project_state`;
 export const NOTIFY_CHANNEL = `${_slug}_state`;
 
 // Installs a Postgres NOTIFY trigger on project_states (idempotent — safe to run on every boot).
-// Must use a direct connection — poolers (Neon, PgBouncer transaction mode) break DDL + NOTIFY.
+// Must use a direct connection — poolers (PgBouncer transaction mode) break DDL + NOTIFY.
 export async function setupNotifyTrigger(): Promise<void> {
   const url = getDatabaseDirectUrl();
   if (!url) return;

@@ -43,7 +43,7 @@ pricing logic, expansion loops, and defensibility.
 ## Architecture At A Glance
 
 ```text
-Hosted control plane (Vercel / Next.js)
+Hosted control plane (self-hosted Next.js on Hetzner, Caddy in front)
   Auth, database, UI, team state, command queue, runtime snapshots
 
 Local runtime (user machine)
@@ -73,8 +73,8 @@ Key design rules:
   installs
 - **Tailwind CSS 4** with a tokenized dark-first design system
 - **Zellij + local daemon** for terminal runtime control
-- **Vercel** production deploys and cron jobs
-- **Husky + GitHub Actions** for type, lint, audit, and deploy checks
+- **Self-hosted on Hetzner** (`bitbaum` box, Caddy + systemd) — production deploys via `scripts/deploy-hetzner.sh` (build → rsync → restart); cron jobs run on the box
+- **Husky + GitHub Actions** for type, lint, and audit checks
 
 ## Repository Map
 
@@ -110,8 +110,8 @@ Every change should preserve:
 
 CI runs type/lint/design/self-test checks on pushes and pull requests. A
 scheduled audit workflow fails on high or critical dependency vulnerabilities.
-Vercel deploy status is surfaced back into GitHub when deployment secrets are
-configured.
+Production deploys to the Hetzner box run via `scripts/deploy-hetzner.sh`
+(build → rsync → restart `fleetcrown-app`).
 
 ## Local Development
 

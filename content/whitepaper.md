@@ -97,12 +97,12 @@ FleetCrown is a local application by design. It needs to be on the same machine 
 
 The daemon bridge is the solution.
 
-When the FleetCrown server runs on Vercel (or any remote host), injections are written to a `pending_commands` table in the database rather than executed immediately. A local daemon script polls the cloud control plane over HTTPS, claims pending commands, executes them using the same injection primitives, and marks them done.
+When the FleetCrown server runs on a remote host (today: self-hosted on a Hetzner box), injections are written to a `pending_commands` table in the database rather than executed immediately. A local daemon script polls the cloud control plane over HTTPS, claims pending commands, executes them using the same injection primitives, and marks them done.
 
 The same daemon pushes runtime state — agent processes, `/tmp` sentinel files, session health — to the cloud every 2 seconds, so the remote UI stays live.
 
 ```
-Phone → Vercel → pending_commands → Daemon → Zellij → Agent
+Phone → Cloud control plane → pending_commands → Daemon → Zellij → Agent
 ```
 
 No open ports. No SSH tunnels. No VPN. The local machine makes outbound HTTPS requests only.

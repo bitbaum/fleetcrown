@@ -53,7 +53,7 @@ We do **not** sell your personal information. We do **not** use your content to 
 
 We share information only as described below:
 
-- **Service providers** acting on our behalf: hosting (Vercel, Oracle Cloud, Neon), AI inference (Anthropic, OpenAI), authentication (GitHub OAuth), email (transactional providers), error monitoring, analytics. Each is bound by contractual or legal data-protection obligations.
+- **Service providers** acting on our behalf: hosting (Hetzner, where we self-host our application servers and PostgreSQL database), AI inference (Anthropic, OpenAI), authentication (GitHub OAuth), email (transactional providers), error monitoring, analytics. Each is bound by contractual or legal data-protection obligations.
 - **Legal requirements:** when required by law, court order, or other legal process; or when necessary to protect the rights, property, or safety of our users, ourselves, or others.
 - **Business transfers:** in connection with a merger, acquisition, financing, or sale of assets, your information may be transferred. We will notify users of any such transfer that materially affects their rights.
 

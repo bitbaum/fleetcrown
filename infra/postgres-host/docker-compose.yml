@@ -1,9 +1,14 @@
-# Self-hosted Postgres for Cockpit + studio apps (Oracle Always Free / Hetzner VPS).
+# Self-hosted Postgres for FleetCrown + studio apps (Hetzner VPS).
 # Run on a VM with: docker compose up -d
+#
+# Note: FleetCrown production runs Postgres 17 directly on the Hetzner host
+# (not this container) — see docs/infrastructure/hetzner-migration.md. This
+# compose file remains a portable way to stand up Postgres + PgBouncer on any
+# fresh VM (the dump/restore target in docs/infrastructure/postgres-portability.md).
 #
 # Expose:
 #   :5432 direct  → DATABASE_URL (migrations, LISTEN/NOTIFY)
-#   :6432 pool    → DATABASE_POOL_URL (Vercel / serverless)
+#   :6432 pool    → DATABASE_POOL_URL (pooled runtime queries)
 #
 # See docs/infrastructure/postgres-portability.md
 

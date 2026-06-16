@@ -266,7 +266,7 @@ export async function GET() {
 
     const projectAgentId = agentPref ?? agentConfig.agent;
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
-    // On Vercel (no /proc access) fall back to runner-pushed DB state so the control
+    // On the cloud host (no /proc access) fall back to runner-pushed DB state so the control
     // panel reflects live agent activity on the home machine.
     const agentRunning = runtimeAvailable
       ? projectProcesses.length > 0
@@ -279,7 +279,7 @@ export async function GET() {
       : projectAgent?.capabilities.sessionLifecycleSignals ?? false;
 
     // currentPrompt: on local machine, /tmp file is authoritative (DB fallback would
-    // show stale tasks after reboot). On Vercel, runner keeps DB current so use DB.
+    // show stale tasks after reboot). On the cloud host, runner keeps DB current so use DB.
     const rawCurrentPrompt: CurrentPrompt | null = runtimeAvailable
       ? promptHint
       : (dbState?.currentPromptKey && dbState?.currentPromptLabel && dbState?.currentPromptStartedAt)
@@ -410,7 +410,7 @@ export async function GET() {
       // edge) + 5s freshness. Multi-tab users + rapid SWR refetches now
       // serve from the local HTTP cache instead of re-running this route's
       // full query chain on every navigation. Critical for keeping egress
-      // bounded on caps like Neon free tier.
+      // bounded for safety on self-hosted Postgres.
       headers: { "Cache-Control": "private, max-age=5" },
     },
   );

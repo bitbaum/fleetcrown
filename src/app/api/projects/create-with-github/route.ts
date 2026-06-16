@@ -22,7 +22,7 @@ import { TEMPLATES, renderTemplate, type TemplateId } from "@/lib/project-templa
 
 // GitHub create-repo + multi-call template seed (branches/main → blobs in
 // parallel → tree → commit → patch ref) can run 5-15s end-to-end under
-// normal latency. Vercel's default 10s ceiling tripped a 502 mid-flight
+// normal latency. A short default request ceiling tripped a 502 mid-flight
 // during dogfood 2026-06-05 — repo was never created, no error surfaced.
 // Match ai-brief's pattern (which faces similar third-party-API tail
 // latency). 60s is a comfortable margin without inviting hung functions.

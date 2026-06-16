@@ -1,6 +1,8 @@
 # Hetzner CX22 — FleetCrown Postgres host setup
 
-A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nuremberg/Ashburn/Hillsboro/Singapore) is more than enough headroom for FleetCrown's traffic and has no egress fees inside the EU. This runbook gets you from "open Hetzner Cloud account" to "Vercel pointed at the new DB" in ~30 min.
+A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nuremberg/Ashburn/Hillsboro/Singapore) is more than enough headroom for FleetCrown's traffic and has no egress fees inside the EU. This runbook gets you from "open Hetzner Cloud account" to "the app pointed at the new DB" in ~30 min.
+
+> This is FleetCrown's current production database setup — Postgres 17 self-hosted on the Hetzner `bitbaum` box. The app and DB both live on the box; deploys go through `scripts/deploy-hetzner.sh`.
 
 ## 0. Prereqs
 
@@ -12,7 +14,7 @@ A ~€4.5/mo Hetzner CX22 (2 vCPU, 4 GB RAM, 40 GB SSD, Helsinki/Falkenstein/Nur
 
 Console → New project → "FleetCrown DB" → New server:
 
-- Location: closest to your Vercel region (typically Falkenstein for EU, or Ashburn for US East)
+- Location: closest to your users (typically Falkenstein for EU, or Ashburn for US East)
 - Image: Ubuntu 24.04
 - Type: CX22 (or larger if you expect growth — CX32 doubles RAM for ~€8)
 - Networking: default IPv4 + IPv6
@@ -47,15 +49,17 @@ CREATE DATABASE fleetcrown OWNER fleetcrown;
 SQL
 ```
 
-Replace `CHANGE_ME_BEFORE_USE` with a strong random password — use it once below and forget it (store in Vercel env, not in any local file).
+Replace `CHANGE_ME_BEFORE_USE` with a strong random password — use it once below and forget it (store in the app's env on the box, e.g. `~/.db-credentials`, chmod 600 — not in any repo file).
 
-## 4. Open Postgres to Vercel (firewall + listen address)
+## 4. Open Postgres to the app (firewall + listen address)
+
+> If the app runs on the same box as Postgres (the current `bitbaum` setup), keep Postgres bound to `localhost`/the private interface and skip the public `0.0.0.0/0` rule below — the firewall section is only for the case where the app connects from a different host.
 
 ```bash
 # Listen on all interfaces (Postgres defaults to localhost only)
 sed -i "s/^#listen_addresses.*/listen_addresses = '*'/" /etc/postgresql/17/main/postgresql.conf
 
-# Require SSL for incoming connections (Vercel speaks SSL by default)
+# Require SSL for incoming connections
 sed -i "s/^#ssl = on/ssl = on/" /etc/postgresql/17/main/postgresql.conf
 
 # pg_hba: allow the fleetcrown user from anywhere over SSL with password
@@ -72,7 +76,7 @@ ufw allow 5432/tcp
 ufw --force enable
 ```
 
-**Security note**: opening 5432 to 0.0.0.0/0 means anyone on the internet can attempt password auth. For prod, replace `0.0.0.0/0` with Vercel's egress IP ranges (or use Hetzner's cloud firewall to allowlist Vercel's subnet). Until then, ensure the password is genuinely random and `fail2ban` is active.
+**Security note**: opening 5432 to 0.0.0.0/0 means anyone on the internet can attempt password auth. Prefer NOT to expose Postgres publicly — keep the app on the same box (current setup) so Postgres only listens locally. If you must reach it from another host, allowlist that host's IP via Hetzner's cloud firewall instead of `0.0.0.0/0`, ensure the password is genuinely random, and keep `fail2ban` active.
 
 ## 5. Verify from your laptop
 
@@ -85,27 +89,26 @@ Should print Postgres 17.x.
 ## 6. Restore the dump
 
 ```bash
-# Locally — assumes you ran scripts/db/dump-from-neon.sh first
+# Locally — assumes you produced a dump with scripts/db/dump.sh first
 TARGET_DATABASE_URL="postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require" \
-DUMP_FILE="neon-dump-<timestamp>.sql" \
+DUMP_FILE="fleetcrown-<timestamp>.sql" \
 scripts/db/restore-to-target.sh
 ```
 
-The script verifies row counts against the manifest. If anything mismatches, it halts before you flip Vercel.
+The script verifies row counts against the manifest. If anything mismatches, it halts before you point the app at the new DB.
 
-## 7. Flip Vercel
+## 7. Point the app at the new DB
+
+Set `DATABASE_URL` (and `DATABASE_POOL_URL` if you run PgBouncer) in the app's
+env on the box — for the `bitbaum` setup these live in the app's `.env` /
+`~/.db-credentials` (chmod 600), never in the repo:
 
 ```bash
-vercel env rm DATABASE_URL production
-vercel env add DATABASE_URL production
-# paste: postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require
+DATABASE_URL="postgresql://fleetcrown:CHANGE_ME_BEFORE_USE@<server-ip>:5432/fleetcrown?sslmode=require"
+# DATABASE_POOL_URL=... only if PgBouncer (port 6432) is in front
 
-# Also DATABASE_POOL_URL if you have it (PgBouncer URL — same content for now,
-# Vercel doesn't pool by default).
-vercel env rm DATABASE_POOL_URL production || true
-vercel env add DATABASE_POOL_URL production
-
-vercel --prod --yes
+# Then rebuild + restart the app:
+scripts/deploy-hetzner.sh
 ```
 
 ## 8. Smoke test
@@ -127,10 +130,12 @@ Browse `/control`, `/settings`, `/system` — should load without "Something wen
 - `pg_dump fleetcrown | gzip > /backups/fleetcrown-$(date +%F).sql.gz` daily via cron
 - Snapshot the Hetzner volume via their UI before major schema migrations
 
-## Decommissioning Neon
+## Decommissioning the old host
 
-After 24h of clean operation on Hetzner, you can:
-- Pause the Neon project (free tier doesn't charge for paused projects)
-- Or delete it entirely if you'd rather not keep the old data around
+If you migrated from a previous database host, after 24h of clean operation on
+the new box you can tear the old one down. Keep one full `pg_dump` of the old
+source in cold storage for at least 30 days before deleting it — recovering
+from a botched migration is much harder without it.
 
-Either way, keep one full `pg_dump` of Neon in cold storage for at least 30 days before deleting the source — recovering from a botched migration is much harder without it.
+(FleetCrown's own one-time migration off Neon completed 2026-06-12 and is
+already decommissioned; see `docs/infrastructure/hetzner-migration.md`.)

@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # install-hetzner-crons.sh — install the scheduled-job timers on the Hetzner box.
 #
-# Replaces the old vercel.json `crons` block (dead since the Vercel exit). The
-# box (fleetcrown.orangecat.ch, systemd fleetcrown-app on 127.0.0.1:4002) runs
-# the same four /api/crons/* janitors via systemd timers. Schedules are in UTC
-# to match the original Vercel cron behavior (the box is Etc/UTC).
+# The box (fleetcrown.orangecat.ch, systemd fleetcrown-app on 127.0.0.1:4002)
+# runs the four /api/crons/* janitors via systemd timers. Schedules are in UTC
+# (the box is Etc/UTC).
 #
 # Idempotent — safe to re-run after a box rebuild or schedule change.
 #

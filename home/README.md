@@ -153,6 +153,6 @@ there.
 
 - **Persistence beyond the log**: state is in-memory. Restart replays.
   This is by design — the log is the only durable thing.
-- **Cutover from `/api/control/dispatch`**: the existing Vercel route still
+- **Cutover from `/api/control/dispatch`**: the existing hosted API route still
   exists. Once this loop is exercised against real agents, M9 retires it
   and the daemon stops shipping pending_commands rows.

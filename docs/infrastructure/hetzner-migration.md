@@ -52,9 +52,9 @@ and an A record wherever its DNS lands.
 - `verify.sh` — fleet-wide systemd + local + public-HTTPS sweep.
 
 The four pre-existing services (bridge, fleetcrown, orangecat, revampit) keep
-their handcrafted units and Caddyfile blocks; only orangecat's deploy remains
-manual (build with SELF_HOST=1 + env sourced, stage static/public/content,
-rsync, restart — same as deploy.sh does for manifest apps).
+their handcrafted units and Caddyfile blocks; revampit push-deploy is wired
+via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
+`install-push-deploy.sh revampit`).
 
 ## Databases
 

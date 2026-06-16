@@ -1,11 +1,11 @@
-// Vercel cron — sends opt-in activity digests via email.
+// Cron target — sends opt-in activity digests via email.
 //
 // Runs daily. Each tick walks every notification_preferences row with
 // cadence != "none", checks whether the user is due (24h / 7d / 30d cutoffs),
 // generates a Groq-summarized digest, and sends the email through Resend.
 // Idempotent per user via lastDigestSentAt.
 //
-// Auth: requireCronAuth — Vercel cron sends Authorization: Bearer ${CRON_SECRET}
+// Auth: requireCronAuth — the cron caller sends Authorization: Bearer ${CRON_SECRET}
 // automatically. Local dev with no CRON_SECRET is permitted (see cron-auth.ts).
 
 import { type NextRequest, NextResponse } from "next/server";

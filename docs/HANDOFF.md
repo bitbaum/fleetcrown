@@ -4,23 +4,30 @@
 
 Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (broken bundled-renderer disaster) to v0.7.5 (clean Electron web-shell + adapter architecture + observability + migration ledger). Audience is the next agent or contributor.
 
+> **Infra update (2026-06-12):** FleetCrown left Vercel entirely. The web app and
+> Postgres are now **self-hosted on the Hetzner `bitbaum` box** (Caddy + systemd),
+> serving at `https://fleetcrown.orangecat.ch`; deploys run via
+> `scripts/deploy-hetzner.sh` (build → rsync → restart `fleetcrown-app`). The
+> references to Vercel below have been updated to this reality, but read
+> `docs/infrastructure/hetzner-migration.md` for the authoritative current layout.
+
 ---
 
 ## 1. The product in one paragraph
 
-FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.vercel.app` (GitHub OAuth), registers their projects, and dispatches prompts to agents (Claude, Codex, Grok, Gemini, Cursor) running locally in Zellij terminals on their machine. The cloud is the **coordination layer**; agents and terminals are pluggable adapters; the daemon (poller + pusher + watcher) runs on the user's machine to close the loop. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Mao Nakamoto**, pre-revenue, one paying user (himself, dogfooding).
+FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents (Claude, Codex, Grok, Gemini, Cursor) running locally in Zellij terminals on their machine. The cloud is the **coordination layer**; agents and terminals are pluggable adapters; the daemon (poller + pusher + watcher) runs on the user's machine to close the loop. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Mao Nakamoto**, pre-revenue, one paying user (himself, dogfooding).
 
 ## 2. The lay of the land
 
 | Surface | URL / path | Status |
 |---|---|---|
-| Cloud web app | `https://fleetcrown.vercel.app` | Production, Vercel free tier, Postgres 17 on Hetzner CX22 |
+| Cloud web app | `https://fleetcrown.orangecat.ch` | Production, self-hosted on Hetzner (Caddy + systemd), Postgres 17 on the same box |
 | SSE bridge | `https://bridge.orangecat.ch` | Production, same Hetzner CX22 (€5/mo total) |
 | DB | `postgresql://fleetcrown@postgresqlbridge.orangecat.ch:5432/fleetcrown` | Postgres 17.10, 10 MB used, 39 tables, all healthy |
 | Desktop app | `Fleet Runner` (Electron 33) | v0.7.5 latest, ships as .deb / .dmg / .exe / AppImage |
 | Releases | `https://github.com/maonakamoto/fleetcrown-releases/releases` | Mirror of build artifacts |
 | Source repo | `https://github.com/maonakamoto/fleetcrown` | Public |
-| /releases page | `https://fleetcrown.vercel.app/releases` | Public changelog (SSOT: `src/config/changelog.ts`) |
+| /releases page | `https://fleetcrown.orangecat.ch/releases` | Public changelog (SSOT: `src/config/changelog.ts`) |
 
 ## 3. Architecture in one diagram
 
@@ -31,13 +38,13 @@ FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across
 └─────────────────────────────────────────────────────────────────┘
         ↑ depended on by ↑
 ┌─────────────────────────────┐  ┌──────────────────────────────┐
-│ src/  (Next.js — Vercel)    │  │ desktop/src/main/  (Electron) │
+│ src/  (Next.js — Hetzner)   │  │ desktop/src/main/  (Electron) │
 │   Pages + /api/* routes     │  │   poller / pusher / watcher  │
 │   Adapters:                 │  │   IPC bridge (window.fleetRunner) │
 │   • lib/agents/<id>.ts      │  │   Adapters re-use src/lib/{agents,terminals} │
 │   • lib/terminals/<id>.ts   │  └──────────────────────────────┘
 │   • lib/git-state.ts        │            ↑ wraps ↑
-│   • Drizzle schemas         │     fleetcrown.vercel.app inside Electron
+│   • Drizzle schemas         │     fleetcrown.orangecat.ch inside Electron
 └─────────────────────────────┘
         ↓ NOTIFY pg_notify ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -101,7 +108,7 @@ Users switch agents without typing quit commands in Zellij:
 
 ### What's deferred
 
-A `TransportAdapter` (Hetzner SSE bridge → Cloudflare Durable Objects → WebSocket → ...) and a `StorageAdapter` (Postgres → SQLite local-first → ...) are the next two ports if the user demand pulls us there. **Don't build them speculatively.** Today the Hetzner+Vercel stack handles a 1-user workload trivially.
+A `TransportAdapter` (Hetzner SSE bridge → Cloudflare Durable Objects → WebSocket → ...) and a `StorageAdapter` (Postgres → SQLite local-first → ...) are the next two ports if the user demand pulls us there. **Don't build them speculatively.** Today the self-hosted Hetzner stack handles a 1-user workload trivially.
 
 ## 5. The dispatch flow end-to-end
 
@@ -139,7 +146,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 ## 6. Status by area, as of 2026-06-07 17:00 UTC
 
 ### Production
-- ✅ **All systems green**. Vercel deploy current (Ready). Hetzner DB 10 MB, 2/100 conns. Bridge SSE running.
+- ✅ **All systems green**. App deployed on the Hetzner box (`fleetcrown-app` healthy). Hetzner DB 10 MB, 2/100 conns. Bridge SSE running.
 - ✅ Latest desktop: **v0.7.5**. Auto-update with explicit fallback banner on .deb.
 
 ### What was just done (this session)
@@ -166,10 +173,10 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 |---|---|
 | **`useControlData` split into 3 hooks** (#56) | The hook is 325 lines doing 4 jobs. Audit said split into `useControlData` (snapshot), `useAgentConfigDraft` (form), `useControlMutations` (dispatch fns). Real refactor; many consumers; no integration test harness to prove safe. Worth a focused day. |
 | **`ProjectState` schema derivation** | The control-types ProjectState is a wire format that composes the DB row + computed fields. Audit suggested deriving from `DbProjectState` via Pick + extra fields. Risk: many UI components consume the current shape; touching it has wide blast radius. Worth careful diff. |
-| **Self-hosted apt repo at `apt.fleetcrown.com`** (#48) | The user has hit this. v0.7.5 banner covers the symptom; the durable answer is a proper apt repo with GPG signing. 1-2 day project (key gen + Packages.gz pipeline + Vercel static hosting + docs). |
+| **Self-hosted apt repo at `apt.fleetcrown.com`** (#48) | The user has hit this. v0.7.5 banner covers the symptom; the durable answer is a proper apt repo with GPG signing. 1-2 day project (key gen + Packages.gz pipeline + static hosting on the box behind Caddy + docs). |
 | **Publish to Flathub** (#47) | Backlog; only relevant when Linux user count is meaningful. |
 | **First-launch wizard polish** (#61) | `/onboarding` + `EmptyStateWelcome` + `MissingCLIsBanner` already cover the major beats; a unified "agents detected ✓ terminal detected ✓ first project ✓" celebration screen would be nice but not blocking. |
-| **OrangeCat off Supabase** (#16) | Sprint 2026-06-11. Sibling product migration; not a FleetCrown task. |
+| **OrangeCat off managed Supabase** (#16) | Done 2026-06-12 — OrangeCat now runs on the self-hosted Supabase stack at `supabase.orangecat.ch` on the Hetzner box. Sibling product; not a FleetCrown task. |
 
 ### What's broken / known footguns
 - **Auto-update on .deb is silently broken at the OS level.** electron-updater downloads but can't apply (sudo needed). v0.7.5's UpdateBanner is the user-facing fix. The durable fix is task #48 (apt repo).
@@ -181,7 +188,7 @@ Browser /control re-fetches → UI updates within ~200ms of the DB write
 
 ### The bet
 Solo founder + AI assistant building two products under the (planned) `bitbaum AG` holding:
-- **OrangeCat** — economic layer (BTC payments, escrow, transactions between humans). Currently on Supabase; migrating to Hetzner Postgres in sprint 2026-06-11.
+- **OrangeCat** — economic layer (BTC payments, escrow, transactions between humans). Runs on the self-hosted Supabase stack (`supabase.orangecat.ch`) on the Hetzner box since the 2026-06-12 exit off managed Supabase.
 - **FleetCrown** — agent-fleet coordination (this product). Customer of OrangeCat.
 
 The thesis: builders who run multiple agents in parallel need a single coordination surface. Owning that surface — not the models, not the terminals — is the position.
@@ -199,7 +206,7 @@ v0.7.0 contained the **Phase C bundled-renderer-as-primary** flip — a prematur
 - **CRDT sync for offline writes**. No multi-user concurrent editing problem.
 - **Native iOS/Android apps**. PWA install + push notifications cover the mobile story for now.
 - **Self-hosted DB / multi-tenant deployments**. Premature at 1 user. Architecture supports it (every query is user-scoped) but no productization yet.
-- **Kubernetes / microservices**. Hetzner CX22 + Vercel functions handles 10k users. Discord ran on Postgres for years.
+- **Kubernetes / microservices**. A single Hetzner box handles 10k users. Discord ran on Postgres for years.
 
 ## 8. How to ship a desktop release (the muscle memory)
 
@@ -233,7 +240,7 @@ The mirror script is the bridge between `maonakamoto/fleetcrown` (where CI build
 
 1. `npm run dev` — local Next.js at `:3000`.
 2. The user's daemon runs as `systemd --user` unit `fleetcrown-app` (NOT a fresh `next dev` process). See `pattern_local_prod_systemd` in agent memory — this is a footgun.
-3. Fleet Runner desktop wraps `fleetcrown.vercel.app` by default. Set `FLEETCROWN_WEB_URL=http://localhost:3000` for local dogfood.
+3. Fleet Runner desktop wraps `fleetcrown.orangecat.ch` by default. Set `FLEETCROWN_WEB_URL=http://localhost:3000` for local dogfood.
 4. Hit `/api/metrics` to see what the cloud knows about the user's recent activity.
 5. Hit `/releases` to see the public changelog you've been writing.
 
@@ -246,7 +253,7 @@ In priority order:
 2. **Build task #48 — the apt repo.** The user has been bitten by .deb auto-update twice. The v0.7.5 banner is a stopgap. The real fix:
    - Generate a GPG signing key (one-time, store private key in GitHub Secrets)
    - Build `Packages.gz` + `Release` + `InRelease` from .deb files per release
-   - Host at `https://fleetcrown.vercel.app/apt/` (Vercel static or a `/api/apt/[...path]` route)
+   - Host at `https://fleetcrown.orangecat.ch/apt/` (static files served by Caddy, or a `/api/apt/[...path]` route)
    - User installs once with `curl ... | sudo tee /etc/apt/sources.list.d/fleetcrown.list`
    - Future updates: `sudo apt upgrade fleet-runner`. No more silent failures.
 

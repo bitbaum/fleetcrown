@@ -85,4 +85,4 @@ Pricing should follow value captured, not token volume alone.
 - Runtime snapshots and per-project operational state
 - Life OS domains: Today, Goals, People, Habits, Events, Money, Prompts
 - Public thoughts and whitepaper surfaces for narrative and market education
-- CI, audit, smoke, and Vercel deployment checks
+- CI, audit, smoke, and Hetzner deployment checks

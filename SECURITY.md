@@ -6,7 +6,7 @@ machine. Security work should preserve that boundary.
 
 ## Supported Surface
 
-- Production app: `https://fleetcrown.vercel.app`
+- Production app: `https://fleetcrown.orangecat.ch` (self-hosted on the Hetzner `bitbaum` box, Caddy in front)
 - Default branch: `main`
 - Runtime bridge: per-user `ck_*` agent tokens
 - Database: PostgreSQL through direct and pooled URLs

@@ -7,7 +7,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 
 // Route-level error boundary for /system. Without this, a single server-
 // component throw (e.g. MemorySummaryCard's getEntityStats failing on a
-// Neon connectivity blip) crashed the entire route into the generic
+// DB connectivity blip) crashed the entire route into the generic
 // "Something went wrong" global boundary with no retry context. Now the
 // shell + title + retry button still render, and the user gets actionable
 // copy instead of a black-box server error.

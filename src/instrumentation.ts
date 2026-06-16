@@ -16,8 +16,8 @@ export async function register() {
 // boundary telemetry — but with the FULL error.message + stack that prod
 // builds strip from the client. Lands the row in debug_logs keyed by the
 // same digest the client logs, so server + client records correlate. The
-// vercel logs CLI is unreliable from our local env (see memory:
-// pattern_vercel_log_fallback); this is the durable substitute.
+// host's logs are unreliable from our env, so we persist to the DB; this is
+// the durable substitute.
 export async function onRequestError(
   error: unknown,
   request: { path: string; method: string },

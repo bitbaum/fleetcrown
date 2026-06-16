@@ -15,8 +15,8 @@
 // Why query param instead of Authorization header: EventSource (the
 // browser API for SSE) does not let JavaScript set custom request
 // headers. The token-in-URL is the established workaround used by every
-// SSE auth pattern in the wild (GitHub Actions logs, Vercel logs,
-// Datadog live tail, etc.). Mitigated by: HTTPS-only deploy and
+// SSE auth pattern in the wild (GitHub Actions logs, Datadog live tail,
+// etc.). Mitigated by: HTTPS-only deploy and
 // stripping query strings from access logs.
 
 import type { Pool } from "pg";

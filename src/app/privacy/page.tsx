@@ -77,16 +77,16 @@ export default function PrivacyPage() {
           <h2 className="ui-public-prose-h2">Third parties we rely on</h2>
           <ul className="list-disc pl-6 space-y-2">
             <li>
-              <strong>Vercel</strong> — hosts the web application. Sees request
-              metadata as any host would. <a href="https://vercel.com/legal/privacy-policy" className="ui-public-link" target="_blank" rel="noopener noreferrer">Vercel privacy policy</a>.
+              <strong>Hetzner</strong> — provides the server that hosts the web
+              application. Sees request metadata as any host would. <a href="https://www.hetzner.com/legal/privacy-policy" className="ui-public-link" target="_blank" rel="noopener noreferrer">Hetzner privacy policy</a>.
             </li>
             <li>
               <strong>GitHub</strong> — handles sign-in via OAuth. Sees the
               fact that you authenticated to FleetCrown. <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" className="ui-public-link" target="_blank" rel="noopener noreferrer">GitHub privacy statement</a>.
             </li>
             <li>
-              <strong>Neon / Postgres</strong> — managed database hosting. Stores
-              your records.
+              <strong>Postgres</strong> — self-hosted database on our own server.
+              Stores your records.
             </li>
           </ul>
           <p>

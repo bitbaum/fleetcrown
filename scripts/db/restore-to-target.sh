@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Restore a Neon dump (from scripts/db/dump-from-neon.sh) into a target
+# Restore a plain-SQL dump (with a row-count manifest) into a target
 # Postgres 17 host. Verifies row counts against the manifest so silent
 # drops don't make it to "go live."
 #
 # Usage:
 #   TARGET_DATABASE_URL="postgresql://..." \
-#   DUMP_FILE="neon-dump-20260604-103000.sql" \
-#   MANIFEST_FILE="neon-dump-20260604-103000.manifest.txt" \
+#   DUMP_FILE="dump-20260604-103000.sql" \
+#   MANIFEST_FILE="dump-20260604-103000.manifest.txt" \
 #   scripts/db/restore-to-target.sh
 #
 # Pre-flight:
@@ -15,7 +15,7 @@
 #   - network reachable to the target host
 #
 # Post-restore: prints a row-count comparison vs the source manifest.
-# Mismatches halt the script before you flip Vercel env DATABASE_URL.
+# Mismatches halt the script before you point the app at the new DATABASE_URL.
 
 set -euo pipefail
 
@@ -95,7 +95,7 @@ else
   done < "${MANIFEST_FILE}"
   rm -f "${TMP}"
   if [[ "$MISMATCHES" -gt 0 ]]; then
-    echo "error: ${MISMATCHES} table(s) have mismatched row counts. Do NOT flip Vercel env yet." >&2
+    echo "error: ${MISMATCHES} table(s) have mismatched row counts. Do NOT point the app at this DB yet." >&2
     exit 1
   fi
   echo "    all row counts match"
@@ -105,8 +105,7 @@ echo
 echo "==> done"
 echo
 echo "Next steps:"
-echo "  1. vercel env rm DATABASE_URL production  (or add a new one)"
-echo "  2. vercel env add DATABASE_URL production  → paste new URL"
-echo "  3. vercel --prod --yes  → fresh deploy"
-echo "  4. curl https://fleetcrown.orangecat.ch/api/health → expect 200 with runtime info"
-echo "  5. dogfood /control, /settings, /system in the browser"
+echo "  1. point the app .env DATABASE_URL at the restored DB"
+echo "  2. redeploy: bash scripts/deploy-hetzner.sh (build → rsync → systemctl restart)"
+echo "  3. curl https://fleetcrown.orangecat.ch/api/health → expect 200 with runtime info"
+echo "  4. dogfood /control, /settings, /system in the browser"

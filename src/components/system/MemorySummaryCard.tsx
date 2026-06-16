@@ -16,12 +16,12 @@ export async function MemorySummaryCard() {
   }
   // Match the defensive shape of sibling RecentFailuresCard
   // (`getRecentDebugLogs(10).catch(() => [])`). Without this, any
-  // Neon-side error in getEntityStats propagated past Suspense into
+  // DB-side error in getEntityStats propagated past Suspense into
   // the route boundary and took the whole /system page down — the
   // most likely cause of the "Something went wrong" black-box screen
   // ee6df43 caught. Render a degraded card explaining what's missing
   // instead of breaking the route. console.error keeps the postmortem
-  // signal even when Vercel logs are unreliable.
+  // signal even when the host's logs are unreliable.
   let stats: Awaited<ReturnType<typeof getEntityStats>> | null = null;
   try {
     stats = await getEntityStats(userId);

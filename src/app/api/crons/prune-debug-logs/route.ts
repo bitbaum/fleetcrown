@@ -3,7 +3,7 @@ import { logDebug, pruneDebugLogs } from "@/db/queries/debug-logs";
 import { requireCronAuth } from "@/lib/cron-auth";
 
 /**
- * Vercel Cron Job target — fires daily at 03:00 UTC (see vercel.json crons).
+ * Cron job target — fires daily at 03:00 UTC (see scripts/install-hetzner-crons.sh).
  *
  * Deletes debug_logs rows older than:
  *   - 30 days for level=info|warn (most rows; not useful long-term)

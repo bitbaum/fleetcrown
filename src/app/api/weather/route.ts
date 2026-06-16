@@ -50,7 +50,7 @@ function describeCode(code: number | undefined): string {
 }
 
 /**
- * Vercel-safe weather fetch — direct HTTP to open-meteo so the WeatherCard
+ * Cloud-safe weather fetch — direct HTTP to open-meteo so the WeatherCard
  * shows real data on the deployed site instead of "Unavailable". Returns the
  * same line-formatted string weather.sh produces locally so parseWeather()
  * in WeatherCard doesn't care which source rendered it.
@@ -99,7 +99,7 @@ export async function GET() {
 
   const geo = await geocodeCity(city);
 
-  // Vercel / any environment without local shell tools: fetch open-meteo
+  // Cloud host / any environment without local shell tools: fetch open-meteo
   // directly. Previously bailed to `{weather: null}` and the WeatherCard
   // showed "Unavailable" forever.
   if (!isRuntimeAvailable()) {

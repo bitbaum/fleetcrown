@@ -32,9 +32,9 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 3. **Agent token** — Settings → Agent tokens → Generate.
 4. **Connect your machine:**
    ```bash
-   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --base-url https://fleetcrown.vercel.app
+   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
    # or after generating a token:
-   curl -fsSL https://fleetcrown.vercel.app/api/agent/install | node - init --token ck_... --base-url https://fleetcrown.vercel.app
+   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_... --base-url https://fleetcrown.orangecat.ch
    ```
    Config is written to `~/.config/fleetcrown/daemon.env` (legacy: `~/.config/cockpit/daemon.env`).
 5. **Install and start the daemon (recommended — systemd user service):**
@@ -75,7 +75,7 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 
 | Component | Runs where | Responsibility |
 |-----------|------------|----------------|
-| **Web app** | Cloud (Vercel) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates, beacon popup UI |
+| **Web app** | Hosted (self-hosted on the Hetzner box) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates, beacon popup UI |
 | **Daemon** | Your machine (`fleetcrown-daemon.service`) | Polls command queue, injects into Zellij, pushes runtime snapshots, autopilot watchdog |
 | **Beacon** | Your machine (hooks + optional Chromium window) | On agent **stop**: opens `/beacon/live` popup, waits for user/countdown choice, injects via same API path as Control |
 | **`home/` stack** | Your machine (`:3001`, experimental) | Local JSONL event loop — separate from production path; see `home/README.md` |
@@ -125,13 +125,13 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Stripe billing | `STRIPE_*` |
 | Cron Telegram delivery | `TELEGRAM_CHAT_ID` (optional; jobs save without it) |
 | Private zone PIN | `PRIVATE_ZONE_PIN_HASH` |
-| Vercel cron janitors | `CRON_SECRET` |
+| Scheduled cron janitors (run on the box) | `CRON_SECRET` |
 | Web Push (agent-ready notifications) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` |
 
 ## Architecture sketch
 
 ```
- Browser (fleetcrown.vercel.app or localhost:3000)
+ Browser (fleetcrown.orangecat.ch or localhost:3000)
    │  auth, DB, UI, command queue, dispatch gates
    ▼
  PostgreSQL (pending_commands, runtime_snapshots, beacon_sessions, …)

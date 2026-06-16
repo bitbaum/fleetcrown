@@ -55,10 +55,9 @@ export const authConfig = {
         ) === "1";
         if (legacyAllowed && daemonToken && authHeader === `Bearer ${daemonToken}`) return true;
 
-        // On Vercel, the Edge Runtime sees the raw deployment URL (the internal
-        // Vercel project is legacy-named "cockpit" pending rename, so URLs are
-        // cockpit-<hash>-<org>.vercel.app) not the custom fleetcrown.orangecat.ch
-        // alias. x-forwarded-host carries the real host the user typed.
+        // The app runs behind Caddy on a single known host
+        // (fleetcrown.orangecat.ch). x-forwarded-host carries the real host the
+        // user typed, which we prefer over the internal request host.
         const host =
           request.headers.get("x-forwarded-host") ?? request.nextUrl.host;
         const proto =

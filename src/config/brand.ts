@@ -1,7 +1,7 @@
 // Single source of truth for the product brand on the TypeScript side.
 // scripts/_brand.sh mirrors APP_NAME / APP_SLUG / APP_DOMAIN for shell.
 // To rebrand the entire product, edit this file + scripts/_brand.sh + the
-// vercel.json alias + DNS at the registrar — that's it.
+// Caddy host config on the box + DNS at the registrar — that's it.
 //
 // Conventions:
 //   APP_NAME     Display string. Appears in <title>, sidebar, marketing.
@@ -58,8 +58,7 @@ export const BRIDGE_DOMAIN = "bridge.orangecat.ch";
 export const BRIDGE_URL    = `https://${BRIDGE_DOMAIN}/sse`;
 
 // Email "From" address. Kept separate from APP_DOMAIN because the email host
-// is usually a different domain than the app host (vercel.app is hostable but
-// not a deliverable email domain). Override via EMAIL_FROM env var.
+// is usually a different domain than the app host. Override via EMAIL_FROM env var.
 export const APP_EMAIL_FROM = `${APP_NAME} <noreply@${APP_SLUG}.app>`;
 export const APP_TAGLINE    = "your life operating system";
 
