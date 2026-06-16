@@ -157,7 +157,7 @@ function FormInner({
                 {twitterEnabled && (
                   <AuthSecondaryButton
                     type="button"
-                    onClick={() => handleOAuth("twitter")}
+                    onClick={() => { setOauthLoading("twitter"); window.location.href = "/api/x-login/start"; }}
                     disabled={oauthLoading !== null}
                     className="ui-auth-secondary-btn-strong gap-2.5"
                   >

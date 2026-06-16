@@ -40,6 +40,12 @@ export const authConfig = {
       // complex lookahead patterns at compile time.
       if (pathname.startsWith("/api/invitations/")) return true;
 
+      // "Sign in with X" (OAuth 1.0a) endpoints + the completion page must be
+      // reachable while unauthenticated — they ARE the sign-in. See
+      // src/app/api/x-login/* and src/app/x-login/complete.
+      if (pathname.startsWith("/api/x-login/")) return true;
+      if (pathname.startsWith("/x-login/")) return true;
+
       if (!auth?.user) {
         // Bearer-authenticated requests (ck_* agent tokens preferred; legacy
         // runner env token honored only when explicitly opted in). Individual

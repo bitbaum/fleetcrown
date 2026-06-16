@@ -15,6 +15,8 @@ import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 import { logDebug } from "@/db/queries/debug-logs";
 import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboarding-heal";
 import { isValidUuid } from "@/lib/utils";
+import { verifyTicket } from "@/lib/x-oauth1";
+import { findOrCreateTwitterUser } from "@/db/queries/oauth-x";
 
 /**
  * Auth.js wraps every authorize()→null return in a generic CredentialsSignin
@@ -25,7 +27,7 @@ import { isValidUuid } from "@/lib/utils";
  * brute-force vs forgotten-password vs missing-account at a glance.
  */
 function logAuthReject(
-  provider: "local" | "email-password" | "user-password",
+  provider: "local" | "email-password" | "user-password" | "x-1a",
   reason: "missing-input" | "user-not-found" | "no-password-hash" | "wrong-password",
   identifier?: string | null,
 ): null {
@@ -45,7 +47,7 @@ function logAuthReject(
  * Without this, reject events float alone and the pair correlation is lost.
  */
 function logAuthAccept(
-  provider: "local" | "email-password" | "user-password",
+  provider: "local" | "email-password" | "user-password" | "x-1a",
   identifier: string | null | undefined,
   userId: string,
 ): void {
@@ -314,6 +316,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!ok) return logAuthReject("user-password", "wrong-password", userId);
         logAuthAccept("user-password", userId, user.id);
         return { id: user.id, email: user.email ?? "", name: user.name ?? "" };
+      },
+    }),
+    // "Sign in with X" via OAuth 1.0a. The custom flow in src/app/api/x-login/*
+    // completes the 1.0a dance and sets a signed `x1_ticket` httpOnly cookie;
+    // this provider verifies it and resolves the user. X OAuth2 is unusable on
+    // this account (Pay-Per-Use 503s the authorize endpoint), so login uses the
+    // still-free 1.0a path. The ticket — not raw credentials — is the secret, so
+    // a direct POST to this provider without a valid cookie is rejected.
+    Credentials({
+      id: "x-1a",
+      name: "X",
+      credentials: {},
+      async authorize(_credentials, request) {
+        const cookieHeader = request?.headers?.get("cookie") ?? "";
+        const match = cookieHeader.match(/(?:^|;\s*)x1_ticket=([^;]+)/);
+        if (!match) return logAuthReject("x-1a", "missing-input");
+        const data = verifyTicket(decodeURIComponent(match[1]));
+        if (!data) return logAuthReject("x-1a", "wrong-password");
+        const user = await findOrCreateTwitterUser(data.xId, data.handle);
+        logAuthAccept("x-1a", data.handle, user.id);
+        return { id: user.id, email: user.email ?? "", name: user.name ?? data.handle };
       },
     }),
   ],

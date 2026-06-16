@@ -7,7 +7,10 @@ import { SignInForm } from "@/components/auth/SignInForm";
 export default function SignInPage() {
   const githubEnabled  = Boolean(process.env.GITHUB_CLIENT_ID  && process.env.GITHUB_CLIENT_SECRET);
   const googleEnabled  = Boolean(process.env.GOOGLE_CLIENT_ID  && process.env.GOOGLE_CLIENT_SECRET);
-  const twitterEnabled = Boolean(process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET);
+  // X login uses the OAuth 1.0a flow (src/app/api/x-login/*) gated on the X1
+  // consumer keys — X's OAuth 2.0 authorize endpoint 503s on this Pay-Per-Use
+  // account, so the 2.0 client id/secret are no longer the gate.
+  const twitterEnabled = Boolean(process.env.X1_CONSUMER_KEY && process.env.X1_CONSUMER_SECRET);
   // Two gates, both required: a configured password AND an explicit opt-in
   // flag. The hosted prod keeps LOCAL_AUTH_PASSWORD set for legacy reasons, but
   // ENABLE_OWNER_KEY is unset there, so the tab stays hidden. Local installs
