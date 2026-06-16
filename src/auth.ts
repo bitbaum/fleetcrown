@@ -217,6 +217,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         clientId: process.env.TWITTER_CLIENT_ID,
         clientSecret: process.env.TWITTER_CLIENT_SECRET,
         allowDangerousEmailAccountLinking: true,
+        // Login-only: request just the identity scopes and skip offline.access
+        // (we never refresh X tokens — X is used purely to authenticate, not to
+        // act on the user's behalf). X OAuth2 returns no email, so the user row
+        // is created with a null email (the users.email column is nullable).
+        authorization: { params: { scope: "users.read tweet.read" } },
       }),
     ] : []),
     Credentials({
