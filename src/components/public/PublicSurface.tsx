@@ -20,7 +20,11 @@ export function PublicSurface({
   showNav?: boolean;
 }) {
   return (
-    <div className="ui-public-surface">
+    // `dark` pins this subtree to the dark token set regardless of the global
+    // theme (next-themes follows system pref). The public + auth surfaces are
+    // always-dark by design (x.ai look) — without this they render light-on-
+    // light on a light-preference browser. The app shell keeps its own theme.
+    <div className="dark ui-public-surface">
       <div aria-hidden className="ui-public-backdrop" />
       <nav className="ui-public-nav">
         <div className="flex items-center gap-8">
