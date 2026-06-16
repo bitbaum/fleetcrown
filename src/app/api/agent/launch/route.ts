@@ -7,6 +7,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
 import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
+import { stateFile } from "@/lib/agent-config";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -76,6 +77,22 @@ async function recordLaunchedState(
   agent: string,
   label: string,
 ): Promise<void> {
+  // The authoritative local Control path (readFastState) reads the running
+  // prompt from this /tmp sentinel, not the DB — so without it a freshly
+  // launched agent shows no "Working" badge even though it just started. Mirror
+  // exactly what /api/inject writes (source "inject" → /proc-backed, so
+  // isCurrentPromptStale clears it the moment the agent process exits).
+  try {
+    const nowS = Math.floor(Date.now() / 1000);
+    fs.writeFileSync(stateFile.prompt(tab), JSON.stringify({
+      key: "launch",
+      label: label.slice(0, 120),
+      startedAt: nowS,
+      source: "inject",
+      adapter: agent,
+    }));
+  } catch { /* best effort — /tmp may be unwritable */ }
+
   try {
     const now = new Date();
     await persistProjectRuntimeIfNewer({
