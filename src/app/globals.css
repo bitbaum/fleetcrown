@@ -621,6 +621,73 @@
   .ui-public-release-notes {
     @apply mb-4 text-sm leading-relaxed text-white/70;
   }
+  /* ── Changelog, modeled on x.ai/build/changelog ───────────────────────────
+     Flat, near-black, hairline-divided. No cards: each release is a date +
+     version meta row, a display-font title, then a flat list of changes.
+     White-opacity tints are the sanctioned pattern for the always-dark public
+     surface (see CLAUDE.md). */
+  .ui-changelog-page {
+    @apply mx-auto max-w-3xl px-6 pb-32 pt-20;
+  }
+  .ui-changelog-eyebrow {
+    @apply text-micro font-medium uppercase tracking-[0.18em] text-white/40;
+  }
+  .ui-changelog-title {
+    @apply mt-3 text-4xl font-medium tracking-tight text-white sm:text-5xl;
+    font-family: var(--font-heading);
+  }
+  .ui-changelog-lede {
+    @apply mt-5 max-w-xl text-base leading-relaxed text-white/55;
+  }
+  .ui-changelog-feed {
+    @apply mt-20;
+  }
+  .ui-changelog-entry {
+    @apply border-t border-white/[0.08] py-14 first:border-t-0 first:pt-0;
+  }
+  .ui-changelog-meta {
+    @apply flex flex-wrap items-center gap-x-3 gap-y-1;
+  }
+  .ui-changelog-date {
+    @apply text-micro font-medium uppercase tracking-[0.16em] text-white/40;
+  }
+  .ui-changelog-version {
+    @apply font-mono text-micro uppercase text-white/40;
+  }
+  .ui-changelog-current {
+    @apply rounded-full border border-white/15 px-2 py-0.5 text-nano font-medium uppercase tracking-[0.12em] text-white/75;
+  }
+  .ui-changelog-entry-title {
+    @apply mt-3 text-2xl font-medium tracking-tight text-white;
+    font-family: var(--font-heading);
+  }
+  .ui-changelog-notes {
+    @apply mt-3 max-w-2xl text-sm leading-relaxed text-white/55;
+  }
+  .ui-changelog-list {
+    @apply mt-7 space-y-3.5;
+  }
+  .ui-changelog-item {
+    @apply flex gap-3.5 text-base leading-relaxed text-white/80;
+  }
+  .ui-changelog-bullet {
+    @apply mt-[0.6rem] h-1 w-1 shrink-0 rounded-full bg-white/25;
+  }
+  .ui-changelog-breaking-label {
+    @apply mb-3 mt-9 text-micro font-medium uppercase tracking-[0.16em] text-status-warning;
+  }
+  .ui-changelog-breaking .ui-changelog-bullet {
+    @apply bg-status-warning/60;
+  }
+  .ui-changelog-foot {
+    @apply mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm;
+  }
+  .ui-changelog-link {
+    @apply text-white/45 underline-offset-4 transition-colors hover:text-white;
+  }
+  .ui-changelog-tag {
+    @apply font-mono text-nano uppercase tracking-[0.1em] text-white/30;
+  }
   .ui-public-release-section-heading {
     @apply mb-2 mt-4 text-micro uppercase tracking-caps text-white/40;
   }
