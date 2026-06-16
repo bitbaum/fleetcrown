@@ -47,7 +47,7 @@ export const SUBSCRIPTION_META: Record<string, SubscriptionMeta> = {
   "Google Cloud Platform": {
     verifyUrl: "https://console.cloud.google.com/billing",
     cancelUrl: "https://console.cloud.google.com/billing",
-    alternatives: ["Vercel Free (already using)", "Fly.io Free tier", "Railway Free tier"],
+    alternatives: ["Hetzner (already using)", "Fly.io Free tier", "Railway Free tier"],
     essential: false,
   },
   "SoundCloud Go+": {

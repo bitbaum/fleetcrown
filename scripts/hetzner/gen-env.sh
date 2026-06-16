@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Build <repo>/<app_dir>/.env.selfhost.local for an app from its captured
-# env backup ($ENV_BACKUP_DIR, default ~/dev/vercel-env-backup — the dir name
-# is just where the one-time env snapshots were captured). Strips host-runner
-# vars, rewrites DB URL to the box-local Postgres, points auth/site URLs at the
-# new domain, adds AUTH_TRUST_HOST for proxied Auth.js.
+# env backup ($ENV_BACKUP_DIR, default ~/dev/env-backup — where the one-time
+# env snapshots were captured). Strips host-runner vars, rewrites DB URL to the
+# box-local Postgres, points auth/site URLs at the new domain, adds
+# AUTH_TRUST_HOST for proxied Auth.js.
 # Usage: gen-env.sh <app>
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 app_lookup "${1:?usage: gen-env.sh <app>}"
@@ -14,7 +14,7 @@ DOMAIN="${DOMAINS%%,*}"
 
 # Source env: the captured per-app backup file.
 RAW=$(mktemp); trap 'rm -f "$RAW"' EXIT
-BACKUP="${ENV_BACKUP_DIR:-$HOME/dev/vercel-env-backup}/$NAME.env"
+BACKUP="${ENV_BACKUP_DIR:-$HOME/dev/env-backup}/$NAME.env"
 [ -f "$BACKUP" ] && cp "$BACKUP" "$RAW"
 [ -s "$RAW" ] || { echo "WARN: no env backup found for $NAME at $BACKUP — writing minimal env"; : > "$RAW"; }
 
