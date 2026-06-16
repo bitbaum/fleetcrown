@@ -2,7 +2,6 @@ import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { ROUTES } from "@/config/auth";
 import Google from "next-auth/providers/google";
-import Twitter from "next-auth/providers/twitter";
 import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { sql } from "drizzle-orm";
@@ -214,26 +213,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         allowDangerousEmailAccountLinking: true,
       }),
     ] : []),
-    ...(process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET ? [
-      Twitter({
-        clientId: process.env.TWITTER_CLIENT_ID,
-        clientSecret: process.env.TWITTER_CLIENT_SECRET,
-        allowDangerousEmailAccountLinking: true,
-        // Login-only scopes (no offline.access — we never refresh X tokens, and
-        // requesting it also triggered an x.com authorize redirect loop on the
-        // pay-per-use project). X OAuth2 returns no email, so the user row is
-        // created with a null email (the users.email column is nullable).
-        //
-        // MUST be a STRING here, matching the provider default's type. Passing
-        // `{ params: {...} }` (an object) trips a known @auth/core 0.41.2 merge
-        // bug (see node_modules/@auth/core/lib/utils/providers.js:14 "TODO:
-        // Support if properties have different types") — the string-vs-object
-        // mismatch corrupts the sibling token/userinfo endpoints, sending the
-        // callback into the OIDC-discovery branch where it crashes on
-        // `new URL(provider.issuer)` (issuer is undefined) → "Invalid URL".
-        authorization: "https://x.com/i/oauth2/authorize?scope=users.read tweet.read",
-      }),
-    ] : []),
+    // X / Twitter login uses OAuth 1.0a (see the "x-1a" Credentials provider
+    // below + src/app/api/x-login/*). The OAuth 2.0 Twitter provider was
+    // removed because X's /i/oauth2/authorize 503s for Pay-Per-Use accounts.
     Credentials({
       id: "local",
       name: "Local access",
