@@ -1,13 +1,30 @@
 # Cross-Product Identity Bridge — "Login with OrangeCat" + Project/Changelog Sync
 
 **Status:** Design / not yet built.
-**Last updated:** 2026-06-16
+**Last updated:** 2026-06-16 (reconciled with both agent tabs — corrected spine)
 **Scope:** FleetCrown ↔ OrangeCat. Touches both repos.
+**Companion spec:** `docs/architecture/PLATFORM_AND_COLLABORATION.md` (OrangeCat
+repo — the platform/serving side: publish bus, embed routes, OIDC provider internals).
 
 This is the spec for unifying identity across FleetCrown (capability layer) and
 OrangeCat (identity + economy + public-presence layer), and for syncing projects
 and changelogs between them. It is grounded in the real schema/auth of both
 codebases as of 2026-06-16.
+
+> **Corrected spine (2026-06-16, both tabs aligned).** Four refinements supersede
+> the first draft of this doc:
+> 1. **Publish-bus, not shared event bus.** FleetCrown keeps a *private* event spine;
+>    a config-driven *promote* step pushes only publish-worthy events to OrangeCat's
+>    `timeline_events` (which is OC's public publish bus, not a general FC event log).
+> 2. **Async, best-effort, idempotent publish.** The promote step never blocks the
+>    user action and never double-posts or silently vanishes — it is async +
+>    idempotent (`dedupe_key`) + reconcilable (backfill).
+> 3. **Map teams, don't migrate them.** FleetCrown orgs/teams stay auth-critical and
+>    FleetCrown-owned; OrangeCat *maps* to them (FC members → OC actors via OIDC `sub`),
+>    it does not absorb them.
+> 4. **Embed OC widgets, don't share a UI package.** The stacks diverge (Auth.js/Next
+>    vs Supabase/Next); OrangeCat *serves* embeddable widget routes that FleetCrown
+>    *mounts*, rather than shipping a shared npm component library.
 
 ---
 
@@ -144,13 +161,52 @@ exact redirect-uri matching.
 OrangeCat projects deliberately have **no** github/folder/external-id field. FleetCrown owns the
 technical record; OrangeCat owns the public listing; the cross-id joins them.
 
-### Changelog → wall
+### Changelog → wall (publish bus, not a shared event log)
 
-FleetCrown emits release / `orchestration_runs` "shipped" events → OrangeCat `timeline_events`
-on the user's profile (via API now; via `webhook_endpoints` for the reverse delivery/confirmation).
-This is the "building in public funds itself" loop: agents ship → changelog posts → followers back it.
+FleetCrown keeps its **own private event spine** (release / `orchestration_runs` "shipped"
+events live in FleetCrown, full-fidelity). A **config-driven promote step** decides which
+event types are publish-worthy and projects only those onto OrangeCat `timeline_events` —
+OrangeCat's `timeline_events` is a **public publish bus**, *not* FleetCrown's general event log.
+Keep the two seams distinct: the private spine is the SSOT for what happened; the publish bus is
+the curated public projection.
+
+- **Promote policy is config, not per-call-site.** Which FC event types reach the wall lives in
+  one place (`src/config/*`), not hardcoded at each emit. (OC mirrors this: its promote policy is
+  also config-driven, per the OC-side companion doc.)
+- **Async, best-effort, idempotent, reconcilable.** The promote never blocks the user action.
+  Each promoted event carries a `dedupe_key` so a retry/race neither double-posts nor vanishes;
+  a periodic backfill reconciles anything a transient failure dropped (same backfill pattern OC
+  already runs for embeddings). "Best-effort" must *not* mean "silently lossy."
+- Delivery: OC API now; `webhook_endpoints` for reverse delivery/confirmation.
+
+This is the "building in public funds itself" loop: agents ship → curated changelog posts →
+followers back it.
+
+### Teams: map, don't migrate
+
+FleetCrown orgs/teams stay **FleetCrown-owned and auth-critical** (they gate access to control,
+projects, dispatch). OrangeCat does **not** absorb them into OC groups. Instead OC *maps* to them:
+each FC org member resolves to an OC actor via the OIDC `sub`, so OC can attribute published
+projects/changelogs to the right person without owning the team graph. This mapping is therefore
+gated on the identity keystone (Part A) — same build-order dependency as everything else.
 
 ---
+
+### Surfacing OC content in FleetCrown: embed, don't rebuild, don't share a package
+
+When FleetCrown needs to *show* OrangeCat content (wallet balance, public profile, wall, funding
+widget), the rule from §0 — "don't build social/wall/messaging in FleetCrown" — resolves to
+**embed an OrangeCat-served widget route**, not import a shared UI component and not re-implement it.
+
+- **Why not a shared npm UI package:** the stacks diverge (FleetCrown = Auth.js + its own design
+  system; OrangeCat = Supabase + its own). A shared component lib couples two build pipelines and
+  two token systems. Embedding keeps each product's UI owned by its own repo.
+- **OrangeCat serves the embed; OrangeCat owns its security.** Per the OC-side companion doc, embed
+  routes are protected with **origin-pinned `postMessage`** (only `fleetcrown.orangecat.ch`),
+  **`frame-ancestors` CSP** on the embed routes, and a **short-lived scoped token** passed over
+  `postMessage` — never the full session/cookie.
+- FleetCrown's job is just to mount the iframe/embed and hand it the scoped token from the Part A
+  capability grant.
 
 ## Part D — Build order (do NOT reorder)
 
@@ -165,7 +221,11 @@ This is the "building in public funds itself" loop: agents ship → changelog po
 
 ## Non-goals
 
-- No social/wall/messaging built inside FleetCrown — all OrangeCat.
+- No social/wall/messaging built inside FleetCrown — all OrangeCat (embed its widget routes).
+- No shared UI npm package between the two products — stacks diverge; embed instead.
+- No FleetCrown event log living on OrangeCat — FC keeps a private spine; only a config-driven,
+  idempotent promote step reaches OC's publish bus.
+- No OrangeCat ownership of FleetCrown teams — OC maps to them via OIDC `sub`, never migrates them.
 - No silent auto-creation of public accounts or published projects.
 - No email-only identity matching.
 
