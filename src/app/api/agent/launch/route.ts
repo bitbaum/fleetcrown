@@ -6,6 +6,7 @@ import { listAgentRegistry } from "@/lib/agent-registry";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
 import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
+import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -57,6 +58,44 @@ function scheduleInjectAfterLaunch(tab: string, dir: string, prompt: string): vo
   setTimeout(tryInject, 3000);
 }
 
+/**
+ * Record the state transition the launch just caused, so the dashboard reflects
+ * reality immediately instead of waiting for the next runtime observation to
+ * re-discover the new tab. Without this, a freshly launched (and actively
+ * working) agent shows a gray dot + "Awaiting input", and downstream features
+ * that read "is a tab live" (switch-agent, auto-continue) silently no-op.
+ *
+ * This writes the *display-state* mirror only — never the prompt-queue transport
+ * (which would double-deliver against scheduleInjectAfterLaunch). The write is
+ * guarded by runtimeObservedAt, so the next genuine observation supersedes it,
+ * and isCurrentPromptStale's absent-agent grace self-heals if the launch failed.
+ */
+async function recordLaunchedState(
+  userId: string,
+  tab: string,
+  agent: string,
+  label: string,
+): Promise<void> {
+  try {
+    const now = new Date();
+    await persistProjectRuntimeIfNewer({
+      userId,
+      projectKey: tab,
+      tabName: tab,
+      agentRunning: true,
+      tabOpen: true,
+      activeAgents: [agent],
+      currentPromptKey: "launch",
+      currentPromptLabel: label.slice(0, 120),
+      currentPromptStartedAt: now,
+      readyAt: null,
+      closingAt: null,
+      closedAt: null,
+      runtimeObservedAt: now,
+    });
+  } catch { /* best effort — never fail the launch on a state-mirror write */ }
+}
+
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -84,8 +123,10 @@ export async function POST(req: NextRequest) {
 
   try {
     launchAgentInTab(tab, dir, exactEntry.id, model);
-    if (initialPrompt?.trim()) {
-      scheduleInjectAfterLaunch(tab, dir, initialPrompt.trim());
+    const promptText = initialPrompt?.trim();
+    await recordLaunchedState(userId, tab, exactEntry.id, promptText || `Starting ${exactEntry.label}…`);
+    if (promptText) {
+      scheduleInjectAfterLaunch(tab, dir, promptText);
     }
     return NextResponse.json({ ok: true, tab, agent: exactEntry.id });
   } catch (err) {

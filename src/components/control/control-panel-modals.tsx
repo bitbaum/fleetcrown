@@ -3,8 +3,16 @@
 import { Plus, X, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import type { ControlData } from "@/lib/control-types";
+import { PROMPT_TEMPLATES } from "@/config/prompt-library";
 
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
+
+// Prompts offered in the launch modal's "start from a library prompt" picker:
+// project-scoped templates (they operate on a single repo, which is exactly
+// what a launch targets), most useful ones first.
+const LAUNCH_PROMPT_OPTIONS = PROMPT_TEMPLATES
+  .filter((t) => t.scope === "project")
+  .sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)));
 
 export function NewProjectModal({
   name,
@@ -82,12 +90,10 @@ export function LaunchTabModal({
   dir,
   agents,
   selectedAgentId,
-  selectedModel,
   initialPrompt,
   launching,
   error,
   onAgentChange,
-  onModelChange,
   onInitialPromptChange,
   onLaunch,
   onClose,
@@ -96,18 +102,15 @@ export function LaunchTabModal({
   dir: string;
   agents: AgentEntry[];
   selectedAgentId: string;
-  selectedModel: string;
   initialPrompt: string;
   launching: boolean;
   error: string;
   onAgentChange: (agentId: string) => void;
-  onModelChange: (value: string) => void;
   onInitialPromptChange: (value: string) => void;
   onLaunch: () => void;
   onClose: () => void;
 }) {
   const selected = agents.find((agent) => agent.id === selectedAgentId) ?? agents[0] ?? null;
-  const supportsModel = !!selected && selected.modelSuggestions.length > 0;
   const hasPrompt = initialPrompt.trim().length > 0;
 
   return (
@@ -142,42 +145,26 @@ export function LaunchTabModal({
           <p className="text-sm text-status-warning">{selected.availabilityReason ?? `${selected.label} is unavailable on this machine.`}</p>
         )}
 
-        {selected && supportsModel && (
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-text-tertiary uppercase tracking-caps">
-              Model <span className="font-normal normal-case text-text-muted">— optional, defaults to {selected.defaultModel}</span>
-            </label>
-            <input
-              list={`launch-model-options-${selected.id}`}
-              value={selectedModel}
-              onChange={(e) => onModelChange(e.target.value)}
-              className="ui-input w-full"
-              placeholder={selected.defaultModel}
-            />
-            <datalist id={`launch-model-options-${selected.id}`}>
-              {selected.modelSuggestions.map((option) => (
-                <option key={option} value={option} />
-              ))}
-            </datalist>
-            <div className="flex flex-wrap gap-1.5">
-              {selected.modelSuggestions.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => onModelChange(option)}
-                  className={selectedModel === option ? "ui-chip-toggle-compact-active" : "ui-chip-toggle-compact"}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-text-tertiary uppercase tracking-caps">
             Initial task <span className="font-normal normal-case text-text-muted">— optional</span>
           </label>
+          <select
+            value=""
+            onChange={(e) => {
+              const picked = LAUNCH_PROMPT_OPTIONS.find((t) => t.id === e.target.value);
+              if (picked) onInitialPromptChange(picked.template.replaceAll("{{project_name}}", tab));
+            }}
+            className="ui-input ui-input-compact w-full"
+            aria-label="Start from a library prompt"
+          >
+            <option value="">Start from a library prompt…</option>
+            {LAUNCH_PROMPT_OPTIONS.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.icon ? `${t.icon} ` : ""}{t.name}
+              </option>
+            ))}
+          </select>
           <textarea
             value={initialPrompt}
             onChange={(e) => onInitialPromptChange(e.target.value)}

@@ -71,7 +71,7 @@ export function ControlPanel() {
   const launchableAgents = (data?.agentRegistry.agents ?? []).filter((entry) => entry.capabilities.tabSwitching);
 
   const {
-    launchTarget, launchAgentId, launchModel, launchInitialPrompt, launchingProject, launchError,
+    launchTarget, launchAgentId, launchInitialPrompt, launchingProject, launchError,
     setLaunchTarget, setLaunchAgentId, setLaunchModel, setLaunchInitialPrompt,
     openLaunchModal, confirmLaunch,
   } = useLaunchModal({ launchableAgents, selectedAgent, setError, launchProject });
@@ -401,7 +401,6 @@ export function ControlPanel() {
           dir={launchTarget.dir}
           agents={launchableAgents}
           selectedAgentId={launchAgentId}
-          selectedModel={launchModel}
           initialPrompt={launchInitialPrompt}
           launching={launchingProject}
           error={launchError}
@@ -410,7 +409,6 @@ export function ControlPanel() {
             setLaunchAgentId(agentId);
             setLaunchModel(agent?.defaultModel ?? "");
           }}
-          onModelChange={setLaunchModel}
           onInitialPromptChange={setLaunchInitialPrompt}
           onLaunch={confirmLaunch}
           onClose={() => setLaunchTarget(null)}
