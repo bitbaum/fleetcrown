@@ -144,6 +144,9 @@ export function LaunchTabModal({
 
         {selected && supportsModel && (
           <div className="space-y-2">
+            <label className="text-xs font-medium text-text-tertiary uppercase tracking-caps">
+              Model <span className="font-normal normal-case text-text-muted">— optional, defaults to {selected.defaultModel}</span>
+            </label>
             <input
               list={`launch-model-options-${selected.id}`}
               value={selectedModel}
@@ -189,7 +192,7 @@ export function LaunchTabModal({
       <div className="flex gap-2 pt-1">
         <button
           onClick={onLaunch}
-          disabled={launching || !selected || !selected.available || (supportsModel && !selectedModel.trim())}
+          disabled={launching || !selected || !selected.available}
           className="ui-btn-primary flex-1 gap-1.5"
         >
           {launching ? <Loader2 className="ui-spinner-sm" /> : <Plus className="h-3.5 w-3.5" />}

@@ -3,8 +3,8 @@
  *
  * The single write-side counterpart to log.ts (which reads). Used by:
  *   - home/watcher.ts when an agent stop-hook signals worker.idle
- *   - home/server.ts:/api/events for manual testing
- *   - future M6 dispatch path (brain → bridge.dispatch → log → worker)
+ *   - home/worker.ts when it emits worker.started / worker.crashed
+ *   - the cloud /api/inject dispatch path (bridge.dispatch → log → worker)
  *
  * Writes are append-only. We never rewrite or truncate the log here — the
  * worst case a corrupted line can do is fail to parse on the read side,

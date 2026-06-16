@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState } from "./control-presenter";
@@ -94,6 +93,20 @@ export function ControlFleetStatus({
     ? "ui-control-fleet-runner-ok"
     : "ui-control-fleet-runner-warn";
 
+  // Compact status word for this header card. The full headline + the
+  // "commands queue until it reconnects" explanation + the remediation CTA
+  // all live in RunnerStatusBanner (the single prominent alert). Here we only
+  // need a glanceable indicator — dot + word + sync timestamp — so the offline
+  // story isn't told three times across the page. runnerDef.description still
+  // rides along as the hover tooltip for the curious.
+  const RUNNER_COMPACT_LABEL: Record<typeof runnerStateKey, string> = {
+    setup_needed: "Setup needed",
+    offline: "Offline",
+    state_unknown: "Status uncertain",
+    connected: "Connected",
+  };
+  const compactLabel = RUNNER_COMPACT_LABEL[runnerStateKey];
+
   // Counts come from the last Fleet Runner push. When it's offline or its
   // state is uncertain, those numbers are stale — rendered as live, the user
   // assumes "1 working" means an agent is actively making progress right now.
@@ -109,35 +122,17 @@ export function ControlFleetStatus({
   return (
     <section className="ui-control-fleet">
       <div className="ui-control-fleet-top">
+        {/* Compact status indicator only. The prominent offline explanation +
+            remediation lives once, in RunnerStatusBanner — this header must not
+            repeat the headline, the "commands queue" sentence, or a second
+            "Action needed" nudge. */}
         <div
           className={cn("ui-control-fleet-runner", runnerTone)}
           title={runnerDef.description}
         >
           <RunnerIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="font-medium">{runnerDef.label}</span>
+          <span className="font-medium">{compactLabel}</span>
           {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
-          {/* When the runner state itself signals a problem with a fix
-              we know (setup_needed → install Fleet Runner), surface the
-              CTA as a small action chip next to the label. Hover gives
-              the longer how-to hint. */}
-          {runnerDef.problem && (
-            runnerDef.problem.ctaHref ? (
-              <Link
-                href={runnerDef.problem.ctaHref}
-                className="ui-tag ui-tag-warning gap-1"
-                title={runnerDef.problem.hint}
-              >
-                {runnerDef.problem.ctaLabel ?? "Fix"}
-              </Link>
-            ) : (
-              <span
-                className="ui-tag ui-tag-warning gap-1"
-                title={runnerDef.problem.hint}
-              >
-                {runnerDef.problem.ctaLabel ?? "Action needed"}
-              </span>
-            )
-          )}
         </div>
         <div className="ui-control-fleet-actions">
           <AutomationPolicyControl

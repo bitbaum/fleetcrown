@@ -147,10 +147,13 @@ export function IntentButtonPanel({
     onEnqueue: handleEnqueue,
     autoContinueEnabled,
     onToggleAutoContinue,
+    // Short inline hint only — the full offline explanation + how-to-reconnect
+    // lives once in RunnerStatusBanner. Here we just flag that this composer's
+    // sends will queue, without re-stating the banner's sentence.
     statusLabel: !runtimeStateKnown
-      ? "Fleet Runner offline: sends will queue until it reconnects."
+      ? "Fleet Runner offline — sends queue."
       : runnerSyncStale
-      ? "Fleet Runner sync is stale: sends will queue until it reconnects."
+      ? "Fleet Runner sync stale — sends queue."
       : automationStatusLabel
       ? automationStatusLabel
       : autoContinueEnabled

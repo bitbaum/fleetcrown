@@ -2,13 +2,15 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-06-09
-last_modified_summary: Clarify beacon vs daemon vs web app roles; fix install script names; document autopilot gate alignment and per-project mode resolution.
+last_modified_date: 2026-06-16
+last_modified_summary: Retire the bash daemon onboarding path (killed 2026-06-11). Fleet Runner desktop is now the sole local executor; removed install commands for deleted scripts.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
 
-This document is the SSOT for onboarding and support — keep it aligned with `DaemonStatusBanner`, the hosted agent installer, and `isRuntimeAvailable()`.
+This document is the SSOT for onboarding and support — keep it aligned with the runtime presence banner, the `/download` page, and `isRuntimeAvailable()`.
+
+> **The local executor is Fleet Runner desktop** (Electron app, signed installer per platform). The old bash daemon (`fleetcrown-daemon.sh` + the Python beacon stack) was retired on 2026-06-11 — see `content/thoughts/killing-the-bash-daemon.md`. There is no bash, no Python beacon, and no `fleetcrown-daemon.service` anymore. Wherever this doc says "daemon" historically, the current equivalent is Fleet Runner.
 
 ## Quick start for new users
 
@@ -17,11 +19,11 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
 | 1. Sign in (GitHub OAuth or email) | Browser | No |
 | 2. Onboarding — username, optional first project, connect machine | Browser | No (runtime step skippable) |
 | 3. Use goals, projects metadata, prompts library, settings | Browser | No |
-| 4. Dispatch agents from Control | Browser + **local setup** | Yes — onboarding step 3 or Settings |
+| 4. Dispatch agents from Control | Browser + **Fleet Runner** | Yes — download from `/download` |
 
 ### Local setup (agent dispatch only)
 
-1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; FleetCrown injects prompts into tabs.
+1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; Fleet Runner injects prompts into tabs. (Bundled with Fleet Runner.)
 2. **At least one agent CLI** on `$PATH` — not all of them:
    - Claude Code (`claude`)
    - Cursor Agent (`agent` — [install](https://cursor.com/docs/cli))
@@ -30,57 +32,34 @@ This document is the SSOT for onboarding and support — keep it aligned with `D
    - Grok CLI (`grok` — [x.ai/cli](https://x.ai/cli))
    - openclaw
 3. **Agent token** — Settings → Agent tokens → Generate.
-4. **Connect your machine:**
-   ```bash
-   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --base-url https://fleetcrown.orangecat.ch
-   # or after generating a token:
-   curl -fsSL https://fleetcrown.orangecat.ch/api/agent/install | node - init --token ck_... --base-url https://fleetcrown.orangecat.ch
-   ```
-   Config is written to `~/.config/fleetcrown/daemon.env` (legacy: `~/.config/cockpit/daemon.env`).
-5. **Install and start the daemon (recommended — systemd user service):**
-   ```bash
-   bash scripts/install-fleetcrown-daemon.sh
-   # after code changes:
-   bash scripts/install-fleetcrown-daemon.sh --restart
-   ```
-   Also install beacon hooks and the pre-warmed popup window:
-   ```bash
-   bash scripts/install-beacon.sh
-   bash scripts/install-fleetcrown-beacon-window.sh
-   ```
-   The service uses `Restart=always`, a singleton file lock (one instance only), push-loop self-healing, and automatic reclaim of stale queued commands after daemon crashes.
+4. **Download and connect Fleet Runner:**
+   - Get the signed installer for your platform from [`/download`](https://fleetcrown.orangecat.ch/download).
+   - Launch it and paste your agent token (or sign in) to bind this machine to your account.
+   - Config is written to `~/.config/fleetcrown/daemon.env` (legacy path: `~/.config/cockpit/daemon.env`).
 
-Until the daemon connects, Control **queues** dispatches and runs them when the daemon pings in.
+Until Fleet Runner connects, Control **queues** dispatches and runs them when the runner long-polls in.
 
-### Daemon reliability (2026-05-30)
+### Reliability
 
-| Mechanism | What it fixes |
+Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts`) and owns execution end-to-end:
+
+| Mechanism | What it does |
 |-----------|----------------|
-| **systemd `Restart=always`** | Daemon comes back after crash, OOM, or self-heal exit |
-| **Singleton flock lock** | No duplicate daemons fighting over Zellij / queue |
-| **Push-loop supervisor** | Background state pusher restarts if its subshell dies |
-| **Push failure budget** | After 30 consecutive failed runtime pushes, daemon exits cleanly so systemd restarts it |
-| **Stale command reclaim** | Commands claimed but never finished (mid-restart) become pending again after 90s |
-| **Autopilot Stop hook** | On agent stop, loads `~/.config/cockpit/daemon.env` so dispatch hits production (not localhost) with your daemon token; autopilot runs before any other stop-hook step |
-| **Autopilot watchdog** | Daemon push loop fires next_best when (a) fresh `agent-ready-<tab>` exists, or (b) session handoff has `status: ready` within 120s — covers Cursor/Codex without Stop hooks |
-| **Inject via daemon queue** | Autopilot queues `/api/inject` with bearer token; daemon executes Zellij inject reliably (direct hook inject was failing silently) |
-| **`install-fleetcrown-daemon.sh --restart`** | Stop service, kill orphans, sync beacon hooks, start fresh — use after pulling daemon changes |
-| **Per-project autopilot override** | `GET /api/beacon-settings?project=<tab>` returns `effective_mode` (project override → user default) for stop-hook gating |
-| **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by stop hook, notification hook, and daemon |
+| **Long-poll claim** | Runner claims pending commands via `SELECT … FOR UPDATE SKIP LOCKED` so two runners never grab the same job |
+| **Idempotent replay** | On restart the worker replays the JSONL log to rebuild which `runId`s already started; it refuses to double-fire |
+| **Append-only event log** | `~/.fleetcrown/events.jsonl` is the single source of truth for crash recovery |
+| **Connection-based presence** | Runner online/offline is the live bridge SSE connection, not a heartbeat (see `runner_presence`) |
+| **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by the runner's autopilot path |
 
-**Logs:** `journalctl --user -u fleetcrown-daemon -f`  
-**Status:** `systemctl --user status fleetcrown-daemon`
-
-## Component roles (beacon vs daemon vs web app)
+## Component roles (Fleet Runner vs web app)
 
 | Component | Runs where | Responsibility |
 |-----------|------------|----------------|
-| **Web app** | Hosted (self-hosted on the Hetzner box) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates, beacon popup UI |
-| **Daemon** | Your machine (`fleetcrown-daemon.service`) | Polls command queue, injects into Zellij, pushes runtime snapshots, autopilot watchdog |
-| **Beacon** | Your machine (hooks + optional Chromium window) | On agent **stop**: opens `/beacon/live` popup, waits for user/countdown choice, injects via same API path as Control |
-| **`home/` stack** | Your machine (`:3001`, experimental) | Local JSONL event loop — separate from production path; see `home/README.md` |
+| **Web app** | Hosted (self-hosted on the Hetzner box) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates |
+| **Fleet Runner** | Your machine (Electron desktop app) | Long-polls the command queue, injects into Zellij, pushes runtime snapshots, embeds the `home/` watcher + worker, autopilot |
+| **`home/` library** | Embedded inside Fleet Runner | Local JSONL event loop (`watcher.ts`, `worker.ts`, `decide.ts`, `state.ts`); see `home/README.md` |
 
-**Production control flow:** Browser → API → Postgres queue → daemon → Zellij → agent CLI. Beacon is a *local launcher* for the popup UI, not a second control plane.
+**Production control flow:** Browser → API → Postgres queue → Fleet Runner → Zellij → agent CLI.
 
 ## Workflow matrix
 
@@ -97,24 +76,23 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 | Schedule prompt job (Prompts → Schedule) | Stored in Postgres per user; **execution** still needs local openclaw |
 | Private zone (People, Money, Habits, Events) | PIN enforced server-side when `PRIVATE_ZONE_PIN_HASH` is set |
 
-### Requires local runtime (`RUNTIME_AVAILABLE=true` + daemon)
+### Requires local runtime (`RUNTIME_AVAILABLE=true` + Fleet Runner)
 
 | Workflow | Local dependency |
 |----------|------------------|
-| Agent dispatch (Control) | Daemon + Zellij + agent CLI |
-| Live Zellij tab list on Control (cloud) | Daemon pushes `openTabs` → `runtime_snapshots` table |
-| Claude orchestration (cloud queues; daemon injects) | Same |
+| Agent dispatch (Control) | Fleet Runner + Zellij + agent CLI |
+| Live Zellij tab list on Control (cloud) | Fleet Runner pushes `openTabs` → `runtime_snapshots` table |
+| Claude orchestration (cloud queues; runner injects) | Same |
 | Codex / Gemini / OpenClaw orchestration | Local runtime only (503 in cloud) |
 | Bootstrap with AI, AI brief | Local `claude` CLI |
 | Git sync / commit from Control | Local git |
 | Calendar (Today) | Local `gog` |
 | GitHub CI on Projects | Local `gh` |
 | System stats (mem/disk/uptime) | Local shell |
-| Beacon window show/hide | xdotool + local Chromium service |
-| Voice transcription (default) | Daemon + ffmpeg + Whisper; or Groq in cloud |
+| Voice transcription (default) | Fleet Runner + ffmpeg + Whisper; or Groq in cloud |
 | Run cron job now | Local openclaw |
-| Auto-continue pause from web (cloud) | Queued `auto_continue` command → daemon writes `/tmp` sentinel |
-| Push notifications (agent ready) | Browser subscribe + VAPID on server; Stop hook calls `/api/push/notify` |
+| Auto-continue pause from web (cloud) | Queued `auto_continue` command → runner writes `/tmp` sentinel |
+| Push notifications (agent ready) | Browser subscribe + VAPID on server; `/api/push/notify` |
 
 ### Environment-gated (optional features)
 
@@ -134,14 +112,11 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
  Browser (fleetcrown.orangecat.ch or localhost:3000)
    │  auth, DB, UI, command queue, dispatch gates
    ▼
- PostgreSQL (pending_commands, runtime_snapshots, beacon_sessions, …)
+ PostgreSQL (pending_commands, runtime_snapshots, runner_presence, …)
    ▲
-   │  poll + push runtime state
- Local daemon (fleetcrown-daemon.sh)
+   │  long-poll claim (SKIP LOCKED) + push runtime state
+ Fleet Runner desktop  (embeds home/ watcher + worker)
    │  inject → Zellij tabs → agent CLIs
-   ▲
-   │  stop hook → beacon.py → /beacon/live popup → choice → /api/inject
- Agent Stop hooks (agent-hook-bridge.sh)
    ▼
  Your projects on disk
 ```
@@ -151,5 +126,5 @@ Until the daemon connects, Control **queues** dispatches and runs them when the 
 - `CLAUDE.md` — engineering conventions
 - `docs/infrastructure/postgres-portability.md` — vendor-neutral DB env vars, dump/restore, future Oracle/Hetzner migration
 - [The Database Kill Switch](/thoughts/the-database-kill-switch-neon-oracle-and-the-studio-stack) — postmortem, egress, Neon vs Oracle vs Hetzner
-- `home/README.md` — experimental local Brain+Bridge+Worker stack (`:3001`), separate from SaaS default path
+- `home/README.md` — the local Bridge + Worker library embedded in Fleet Runner (the standalone Brain on `:3001` was retired)
 - `docs/debt-reduction-roadmap.md` — orchestration consolidation plan

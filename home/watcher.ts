@@ -4,16 +4,14 @@
  *
  * Watches ~/.claude/sessions/<TAB>.md for changes. When an agent writes
  * its end-of-session handoff (done/next/tests/todos/health), this process
- * emits a `worker.idle` event into the JSONL event log so the Brain learns
- * about the run without modifying the agent's stop-hook scripts.
+ * emits a `worker.idle` event into the JSONL event log so the orchestrator
+ * learns about the run without modifying the agent's stop hooks.
  *
- * This is deliberately observer-only:
- *   - existing scripts/fleetcrown-daemon.sh + scripts/agent-hook-bridge.sh
- *     keep running unchanged
- *   - existing /tmp/agent-* sentinels keep being written
- *   - the new Brain just gets a parallel view via the JSONL log
- *
- * M4 starts phasing out the legacy paths once this proves stable.
+ * This is deliberately observer-only — it never injects or mutates a session,
+ * it only derives a `worker.idle` signal from session-file changes. Fleet
+ * Runner embeds this watcher; the worker (worker.ts) acts on the events.
+ * (The original bash daemon + agent-hook-bridge.sh it once ran alongside
+ * were retired on 2026-06-11 — see content/thoughts/killing-the-bash-daemon.md.)
  *
  * Run:    npx tsx home/watcher.ts
  * Verify: edit any ~/.claude/sessions/*.md (or wait for a real agent to
