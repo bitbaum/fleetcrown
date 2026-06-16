@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { PublicSurface } from "@/components/public/PublicSurface";
-import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE } from "@/config/changelog";
 
 export const metadata = {
@@ -21,7 +19,11 @@ function formatDate(iso: string): string {
 
 export default function ReleasesPage() {
   return (
-    <PublicSurface right={<PublicHeaderActions />}>
+    <div className="ui-changelog-root">
+      <nav className="ui-changelog-nav">
+        <Link href="/" className="ui-changelog-brand">FleetCrown</Link>
+        <Link href="/sign-in" className="ui-changelog-nav-link">Sign in →</Link>
+      </nav>
       <div className="ui-changelog-page">
         <header>
           <div className="ui-changelog-eyebrow">Changelog</div>
@@ -101,6 +103,6 @@ export default function ReleasesPage() {
           ))}
         </div>
       </div>
-    </PublicSurface>
+    </div>
   );
 }

@@ -626,8 +626,23 @@
      version meta row, a display-font title, then a flat list of changes.
      White-opacity tints are the sanctioned pattern for the always-dark public
      surface (see CLAUDE.md). */
+  /* Standalone dark page (x.ai/build/changelog is on near-black, not the light
+     marketing surface). Own minimal nav so the whole page reads dark. */
+  .ui-changelog-root {
+    @apply min-h-screen bg-black text-white;
+  }
+  .ui-changelog-nav {
+    @apply mx-auto flex max-w-3xl items-center justify-between px-6 pt-8 pb-2;
+  }
+  .ui-changelog-brand {
+    @apply text-base font-medium tracking-tight text-white;
+    font-family: var(--font-heading);
+  }
+  .ui-changelog-nav-link {
+    @apply text-sm text-white/50 transition-colors hover:text-white;
+  }
   .ui-changelog-page {
-    @apply mx-auto max-w-3xl px-6 pb-32 pt-20;
+    @apply mx-auto max-w-3xl px-6 pb-32 pt-12;
   }
   .ui-changelog-eyebrow {
     @apply text-micro font-medium uppercase tracking-[0.18em] text-white/40;
