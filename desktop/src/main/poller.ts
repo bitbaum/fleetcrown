@@ -446,21 +446,27 @@ async function handleCommand(
         const { tab, dir, agent, model, initialPrompt } = validation.command.payload
         assertKnownLaunchAgent(agent)
         const prompt = initialPrompt?.trim()
+        // Own the agent's PTY (no zellij → can't hang on a detached session).
+        // If the PTY spawn throws, fall back to zellij so launch never dead-ends.
+        let usedPty = false
         if (RUNNER_PTY_ENABLED) {
-          // Own the agent's PTY (no zellij). Inject the initial prompt once the
-          // agent is actually up rather than on a blind timer.
-          await launchAgentPty(tab, dir, agent as AgentOption, model)
-          clearHandoffSentinel(tab)
+          try {
+            await launchAgentPty(tab, dir, agent as AgentOption, model)
+            usedPty = true
+          } catch (e) {
+            console.warn('[poller] PTY launch failed — falling back to zellij:', (e as Error).message)
+          }
+        }
+        clearHandoffSentinel(tab)
+        if (usedPty) {
+          // Inject the initial prompt once the agent is actually up, not on a blind timer.
           if (prompt) {
-            waitForPtyReady(tab).then((ready) => {
-              setTimeout(() => {
-                try { injectPty(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after PTY launch failed:', (e as Error).message) }
-              }, ready ? 1500 : 0)
-            })
+            void waitForPtyReady(tab).then((ready) => setTimeout(() => {
+              try { injectPty(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after PTY launch failed:', (e as Error).message) }
+            }, ready ? 1500 : 0))
           }
         } else {
           launchAgentInTab(tab, dir, agent as AgentOption, model)
-          clearHandoffSentinel(tab)
           if (prompt) {
             setTimeout(() => {
               try { injectIntoTab(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after launch failed:', (e as Error).message) }
@@ -480,28 +486,37 @@ async function handleCommand(
         // instead of puppeting a (possibly detached → hanging) zellij tab.
         const usePty = RUNNER_PTY_ENABLED || isPtyBacked(tab)
         if (usePty) {
-          const alreadyRunning = isPtyBacked(tab)
+          const ptyAlready = isPtyBacked(tab)
           let launched = false
-          if (!alreadyRunning) {
-            await launchAgentPty(tab, dir, agent as AgentOption, model)
-            clearHandoffSentinel(tab)
-            launched = true
-            // Wait for the agent to show life, then settle before pasting.
-            if (await waitForPtyReady(tab, 15000)) await asleep(1800)
+          let ptyOk = ptyAlready
+          if (!ptyAlready) {
+            try {
+              await launchAgentPty(tab, dir, agent as AgentOption, model)
+              clearHandoffSentinel(tab)
+              launched = true
+              ptyOk = true
+              // Wait for the agent to show life, then settle before pasting.
+              if (await waitForPtyReady(tab, 15000)) await asleep(1800)
+            } catch (e) {
+              console.warn('[poller] PTY dispatch launch failed — falling back to zellij:', (e as Error).message)
+            }
           }
-          const baseline = readMtimeMs(sessionFilePath(tab))
-          injectPty(tab, prompt)
-          verified = await waitForSessionFileBump(tab, baseline, 8000)
-          if (!verified && launched) {
-            await asleep(2500)
-            const retryBaseline = readMtimeMs(sessionFilePath(tab))
+          if (ptyOk) {
+            const baseline = readMtimeMs(sessionFilePath(tab))
             injectPty(tab, prompt)
-            verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
+            verified = await waitForSessionFileBump(tab, baseline, 8000)
+            if (!verified && launched) {
+              await asleep(2500)
+              const retryBaseline = readMtimeMs(sessionFilePath(tab))
+              injectPty(tab, prompt)
+              verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
+            }
+            ok = true
+            text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
+            if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
+            break
           }
-          ok = true
-          text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
-          if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
-          break
+          // PTY launch failed → fall through to the zellij path below.
         }
         const alreadyRunning = resolveRunningAgentsInDir(dir).length > 0
         let launched = false

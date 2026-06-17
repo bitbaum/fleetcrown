@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.3",
+    tag: "fleet-runner-v0.8.3",
+    date: "2026-06-17T21:30:00Z",
+    highlights: [
+      "Agents now run in a terminal Fleet Runner owns by default — no more dispatch/launch timeouts when your Zellij session isn't attached (the recurring \"spawnSync /bin/sh ETIMEDOUT\").",
+      "If an owned-terminal launch ever fails, it falls back to Zellij automatically, so launching can't dead-end.",
+      "Watch any agent live from the web app in full color with scrollback.",
+    ],
+    breaking: [],
+    notes: "Makes the owned-PTY execution from 0.8.2 the default (set FLEETCROWN_RUNNER_PTY=false to force Zellij). This removes the structural cause of the launch timeouts: launching no longer depends on an attached Zellij client.",
+  },
+  {
     version: "0.8.2",
     tag: "fleet-runner-v0.8.2",
     date: "2026-06-17T20:45:00Z",
