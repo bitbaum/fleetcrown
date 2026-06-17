@@ -39,12 +39,19 @@ async function postFrame(
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ tab, seq, frame, append }),
-  }).catch(() => { /* transient — drop this delta; the stream self-heals */ })
+  }).then((r) => { if (!r.ok) console.log(`[peek] ${tab}: frame POST → ${r.status}`) })
+    .catch((e) => { console.log(`[peek] ${tab}: frame POST error ${(e as Error).message}`) })
 }
 
 export function startPeek(base: string, token: string, tab: string): void {
-  if (streams.has(key(tab))) return // already streaming this tab
-  if (isPtyBacked(tab)) startPtyStream(base, token, tab)
+  if (streams.has(key(tab))) { console.log(`[peek] ${tab}: already streaming`); return }
+  const pty = isPtyBacked(tab)
+  console.log(`[peek] start ${tab}: ${pty ? 'PTY' : 'zellij'} (wsid=${runnerWorkspaceId(tab)})`)
+  // DIAGNOSTIC (v0.8.4): surface the chosen branch as a visible frame so it can
+  // be read from the browser viewer without terminal access. Append-mode so it
+  // shows in either path; the PTY initial frame (or zellij snapshot) follows.
+  void postFrame(base, token, tab, 0, `\r\n[peek-debug] tab=${tab} → ${pty ? 'PTY (owned)' : 'ZELLIJ (no owned PTY found)'} \r\n`, true)
+  if (pty) startPtyStream(base, token, tab)
   else startZellijStream(base, token, tab)
 }
 
@@ -71,6 +78,10 @@ function startPtyStream(base: string, token: string, tab: string): void {
     enqueue(e.data, true)
   })
   replaying = false
+  console.log(`[peek] ${tab}: PTY initial buffer = ${initial.length} bytes`)
+  // DIAGNOSTIC (v0.8.4): visible buffer size so a blank view can be told apart
+  // from "agent produced no output yet".
+  enqueue(`[peek-debug] PTY initial buffer = ${initial.length} bytes\r\n`, true)
   if (initial) enqueue(initial.length > MAX_FRAME ? initial.slice(initial.length - MAX_FRAME) : initial, true)
   streams.set(key(tab), { stop: unsub })
 }
