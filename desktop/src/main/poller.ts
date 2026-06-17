@@ -33,6 +33,7 @@ import { launchAgentInTab } from '@/lib/agent-runtime'
 import { startPeek, stopPeek } from './peek-streamer'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
+import { findMatchingTab } from '@/lib/tab-match'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
@@ -563,9 +564,7 @@ function tabNamesForSession(session: string): string[] {
 
 function findSessionForTab(tab: string): string | null {
   for (const session of getZellijSessionsSync()) {
-    if (tabNamesForSession(session).some((candidate) => candidate.toLowerCase() === tab.toLowerCase())) {
-      return session
-    }
+    if (findMatchingTab(tab, tabNamesForSession(session))) return session
   }
   return null
 }
@@ -579,7 +578,7 @@ function firstZellijSession(): string {
 function focusWorkspaceTab(tab: string): void {
   const session = findSessionForTab(tab)
   if (!session) throw new Error(`tab not found: ${tab}`)
-  const liveTab = tabNamesForSession(session).find((candidate) => candidate.toLowerCase() === tab.toLowerCase()) ?? tab
+  const liveTab = findMatchingTab(tab, tabNamesForSession(session)) ?? tab
   execSync(`${zellijExecutableForShell()} --session ${shellEscape(session)} action go-to-tab-name ${shellEscape(liveTab)}`, { stdio: 'ignore', timeout: 3000 })
   waitForFocusedTab(session, liveTab)
 }

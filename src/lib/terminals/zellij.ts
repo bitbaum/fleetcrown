@@ -26,6 +26,7 @@ import { exec, execSync, execFileSync } from "child_process";
 import { promisify } from "util";
 import { APP_SLUG } from "@/config/brand";
 import { stripAnsi } from "@/lib/ansi";
+import { findMatchingTab } from "@/lib/tab-match";
 import type { TerminalAdapter } from "./types";
 
 const TYPING_FILE_PREFIX = `${APP_SLUG}-typing-`;
@@ -106,10 +107,7 @@ function getTabsForSessionSync(session: string): string[] {
 function findSessionForTab(tab: string): string | null {
   const sessions = getZellijSessionsSync();
   for (const s of sessions) {
-    const tabs = getTabsForSessionSync(s);
-    if (tabs.some((t) => t.toLowerCase() === tab.toLowerCase())) {
-      return s;
-    }
+    if (findMatchingTab(tab, getTabsForSessionSync(s))) return s;
   }
   return null;
 }
@@ -171,8 +169,7 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000, session: string | null =
  *  actually knows. */
 function resolveLiveTabName(session: string | null, tab: string): string | null {
   const candidates = session ? getTabsForSessionSync(session) : [];
-  const target = tab.toLowerCase();
-  return candidates.find((candidate) => candidate.toLowerCase() === target) ?? null;
+  return findMatchingTab(tab, candidates);
 }
 
 /** Higher-order helper: switch focus to `tab`, run `fn`, restore original.
@@ -248,8 +245,9 @@ export const zellijAdapter: TerminalAdapter = {
 
   focusTab(tab: string): void {
     const session = findSessionForTab(tab);
-    execSync(zellijCmd(session, "go-to-tab-name", shellEscape(tab)));
-    if (!waitForTabFocus(tab, 1000, session)) {
+    const liveTab = resolveLiveTabName(session, tab) ?? tab;
+    execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)));
+    if (!waitForTabFocus(liveTab, 1000, session)) {
       throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
     }
   },

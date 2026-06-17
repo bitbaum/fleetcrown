@@ -1,5 +1,6 @@
 import { execSync, spawnSync } from "child_process";
 import { buildAgentOptionLaunchCommand, type AgentOption } from "@/lib/agent-registry";
+import { findMatchingTab } from "@/lib/tab-match";
 
 const DEFAULT_SESSION_NAME = "fleet";
 
@@ -33,7 +34,7 @@ function findSessionForTab(tab: string): string | null {
       const out = zellijExec(
         `ZELLIJ_SESSION_NAME='${escapeTabValue(envSession)}' zellij action query-tab-names 2>/dev/null || true`,
       );
-      if (out.split("\n").some((line) => line.trim().toLowerCase() === tab.toLowerCase())) {
+      if (findMatchingTab(tab, out.split("\n").map((l) => l.trim()).filter(Boolean))) {
         return envSession;
       }
     } catch { /* fall through to full scan */ }
@@ -51,7 +52,7 @@ function findSessionForTab(tab: string): string | null {
         const out = zellijExec(
           `ZELLIJ_SESSION_NAME='${escapeTabValue(session)}' zellij action query-tab-names 2>/dev/null || true`,
         );
-        if (out.split("\n").some((line) => line.trim().toLowerCase() === tab.toLowerCase())) {
+        if (findMatchingTab(tab, out.split("\n").map((l) => l.trim()).filter(Boolean))) {
           return session;
         }
       } catch { /* try next */ }
@@ -94,7 +95,9 @@ function pickPrimarySession(sessions: string[]): string | null {
 
 function ensureTabExists(tab: string, session: string): void {
   const open = getOpenZellijTabs(session);
-  if (!open.some((t) => t.toLowerCase() === tab.toLowerCase())) {
+  // Reuse a fuzzily-matching tab (e.g. existing "revamp-it" for "revampit")
+  // instead of creating a near-duplicate; only create when nothing matches.
+  if (!findMatchingTab(tab, open)) {
     zellijExec(
       `ZELLIJ_SESSION_NAME='${escapeTabValue(session)}' zellij action new-tab --name '${escapeTabValue(tab)}'`,
     );
@@ -108,8 +111,7 @@ function restartTab(tab: string, command: string, session: string): void {
   // when our input case (e.g., DB-stored "fleetcrown") differs from zellij's
   // stored case ("FleetCrown"). Falls back to the input if no live tab matches.
   const liveTabs = getOpenZellijTabs(session);
-  const target = tab.toLowerCase();
-  const liveTab = liveTabs.find((t) => t.toLowerCase() === target) ?? tab;
+  const liveTab = findMatchingTab(tab, liveTabs) ?? tab;
   zellijExec(`${env} zellij action go-to-tab-name '${escapeTabValue(liveTab)}'`);
   execSync("sleep 0.2");
   zellijExec(`${env} zellij action write 3`);
@@ -179,7 +181,21 @@ export function launchAgentInTab(tab: string, dir: string, agent: AgentOption, m
     throw new Error("No Zellij session found and auto-spawn failed — install zellij or check $PATH.");
   }
 
-  ensureTabExists(tab, session);
-  const command = buildAgentOptionLaunchCommand({ agent, model }, dir);
-  restartTab(tab, command, session);
+  try {
+    ensureTabExists(tab, session);
+    const command = buildAgentOptionLaunchCommand({ agent, model }, dir);
+    restartTab(tab, command, session);
+  } catch (e) {
+    // A zellij `action` against a session with no attached client blocks until
+    // ZELLIJ_TIMEOUT_MS and throws a cryptic "spawnSync /bin/sh ETIMEDOUT".
+    // Turn that into the exact next step instead of a dead end.
+    const msg = (e as Error).message ?? "";
+    if (/ETIMEDOUT|timed out|timeout/i.test(msg)) {
+      throw new Error(
+        `Zellij didn't respond while launching "${agent}" in session "${session}" — it's likely detached. ` +
+        `Attach it (zellij attach ${session}) so FleetCrown can drive it, then retry.`,
+      );
+    }
+    throw e;
+  }
 }

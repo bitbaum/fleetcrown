@@ -86,6 +86,34 @@ export async function retryFailedCommand(userId: string, id: string): Promise<st
 // ?types= filter lands, this is the user-facing "voice didn't fire" mitigation.
 const STALE_CLAIM_SECONDS = 10;
 
+// Commands queued while the runner was offline go stale fast: executing a
+// days-old "inject into tab X" / "launch agent in Y" against a Zellij that has
+// since changed just fails noisily and clutters Control. Purge unclaimed,
+// unexecuted commands older than this before claiming, so the runner never
+// drains an outdated backlog on reconnect. Generous enough that a healthy
+// runner (drains in seconds) never trips it.
+const STALE_COMMAND_MAX_AGE_MINUTES = 20;
+
+/** Delete the offline backlog: unclaimed + unexecuted commands older than the
+ *  staleness cutoff. The original dispatch is still recorded in
+ *  control_audit_events, so nothing auditable is lost. Returns the count. */
+export async function purgeStalePendingCommands(userIds: string[]): Promise<number> {
+  if (userIds.length === 0) return 0;
+  const userFilter = userIds.length === 1
+    ? eq(pendingCommands.userId, userIds[0])
+    : inArray(pendingCommands.userId, userIds);
+  const deleted = await db
+    .delete(pendingCommands)
+    .where(and(
+      userFilter,
+      isNull(pendingCommands.claimedAt),
+      isNull(pendingCommands.executedAt),
+      sql`${pendingCommands.createdAt} < NOW() - INTERVAL '1 minute' * ${STALE_COMMAND_MAX_AGE_MINUTES}`,
+    ))
+    .returning({ id: pendingCommands.id });
+  return deleted.length;
+}
+
 /** Commands claimed but never finished (runner crash/restart) become claimable again. */
 export async function reclaimStalePendingCommands(userIds: string[]): Promise<number> {
   if (userIds.length === 0) return 0;
@@ -107,6 +135,7 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
 
 export async function claimNextPendingCommand(userIds: string[], types?: string[]) {
   if (userIds.length === 0) return null;
+  await purgeStalePendingCommands(userIds);
   await reclaimStalePendingCommands(userIds);
   const userFilter = userIds.length === 1
     ? eq(pendingCommands.userId, userIds[0])
