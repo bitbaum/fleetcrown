@@ -7,12 +7,12 @@ import { cn } from "@/lib/utils";
 import { usePrivateZone } from "@/hooks/use-private-zone";
 import { ROUTES } from "@/config/auth";
 import { NAV } from "@/config/navigation";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
-// The dark-mode toggle used to live here. Moved its sole home to
-// Settings → Appearance (AppearanceSettings.tsx) — theme is set-once-and-
-// forget, not worth a full-width sidebar slot. The sidebar should hold
-// frequent navigation + presence affordances (private-zone lock, sign-out),
-// not preference toggles.
+// The Light/Dark/Auto switch lives here (compact, icon-only) AND in Settings →
+// Appearance — both render the shared <ThemeToggle/> (SSOT). It was sidebar-
+// less for a while, but users couldn't find theme at all; a small icon row is
+// worth the slot. Hidden when the sidebar is collapsed (no room).
 
 export function SidebarFooter({
   collapsed,
@@ -25,6 +25,7 @@ export function SidebarFooter({
 
   return (
     <div className="ui-sidebar-section space-y-1 border-t border-border-subtle">
+      {!collapsed && <ThemeToggle className="mb-1" />}
       <button
         type="button"
         onClick={onToggleCollapsed}

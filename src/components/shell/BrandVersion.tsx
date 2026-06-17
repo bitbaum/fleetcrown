@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
+import { CURRENT_RELEASE } from "@/config/changelog";
 
 // Build identity baked in at compile time (see next.config.ts). SHA is the
-// precise "which build is this"; the semver is the marketing version.
+// precise "which build is this"; CURRENT_RELEASE.version is the SSOT product
+// version (same one the public footer shows), so the stamp reads as a real
+// version, not just a git hash.
 const SHA = process.env.NEXT_PUBLIC_BUILD_SHA ?? "dev";
-const VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0";
+const VERSION = CURRENT_RELEASE.version;
 
 /**
  * Version stamp shown under the sidebar logo. Clicking it opens the changelog
@@ -35,10 +38,10 @@ export function BrandVersion() {
     () => null,
   );
 
-  const label = desktopVersion ? `Fleet Runner ${desktopVersion} · ${SHA}` : `build ${SHA}`;
+  const label = desktopVersion ? `Fleet Runner v${desktopVersion}` : `v${VERSION}`;
   const tooltip = desktopVersion
-    ? `Fleet Runner ${desktopVersion} (desktop) · web build ${SHA} · v${VERSION} — view changelog`
-    : `Web build ${SHA} · v${VERSION} — view changelog`;
+    ? `Fleet Runner v${desktopVersion} (desktop) · web v${VERSION} · build ${SHA} — view changelog`
+    : `FleetCrown v${VERSION} · build ${SHA} — view changelog`;
 
   return (
     <Link

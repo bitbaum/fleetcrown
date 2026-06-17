@@ -661,7 +661,7 @@
     @apply mt-20;
   }
   .ui-changelog-entry {
-    @apply border-t border-white/[0.08] py-14 first:border-t-0 first:pt-0;
+    @apply border-t border-white/[0.12] py-14 first:border-t-0 first:pt-0;
   }
   .ui-changelog-meta {
     @apply flex flex-wrap items-center gap-x-3 gap-y-1;
@@ -913,12 +913,26 @@
     font-size: clamp(3.25rem, 8.5vw, 5.75rem);
     line-height: 0.92;
     letter-spacing: -0.035em;
+    animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   .ui-public-hero-lede {
     @apply mx-auto mt-8 max-w-2xl text-2xl leading-tight tracking-tight text-text-secondary;
+    animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
   }
   .ui-public-hero-sublede {
     @apply mx-auto mt-6 max-w-xl text-lg text-text-tertiary;
+    animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
+  }
+  /* x.ai/SpaceX-style entrance: a short, eased rise+fade. Staggered down the
+     hero fold. Disabled under reduced-motion. */
+  @keyframes ui-public-rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-public-hero-title,
+    .ui-public-hero-lede,
+    .ui-public-hero-sublede { animation: none; }
   }
   .ui-public-display-lg {
     @apply font-semibold text-text-primary;
@@ -967,7 +981,7 @@
     @apply text-text-secondary;
   }
   .ui-public-band {
-    @apply border-t border-border-subtle bg-surface-page;
+    @apply border-t border-border-default bg-surface-page;
   }
   .ui-public-surface-card {
     @apply flex min-h-[320px] flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
@@ -1072,7 +1086,7 @@
     @apply border-white bg-white text-black shadow-sm;
   }
   .ui-public-download-platform-idle {
-    @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white hover:-translate-y-px;
+    @apply border-white/20 hover:border-white/40 text-white/70 hover:text-white transition-all hover:scale-[1.04] active:scale-95;
   }
   .ui-public-download-command {
     @apply mb-10 rounded-2xl border border-white/10 bg-white/5 p-4 text-left;
@@ -1149,10 +1163,10 @@
     @apply mb-3 grid gap-3 md:grid-cols-2;
   }
   .ui-public-download-compare-card {
-    @apply rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-left;
+    @apply rounded-2xl border border-white/12 bg-white/[0.06] p-6 text-left;
   }
   .ui-public-download-compare-card-emphasis {
-    @apply border-white/25 bg-white/[0.06];
+    @apply border-white/30 bg-white/[0.10];
   }
   .ui-public-download-compare-label {
     @apply text-sm font-medium text-white;
@@ -1393,6 +1407,18 @@
   .ui-term-divider-v::after { @apply inset-y-0 left-1/2 w-px -translate-x-1/2; }
   .ui-term-divider-h::after { @apply inset-x-0 top-1/2 h-px -translate-y-1/2; }
   .ui-term-divider:hover::after { @apply bg-border-interactive; }
+
+  /* Light / Dark / Auto switch — shared by the sidebar footer (icon-only) and
+     Settings → Appearance (with labels). Segmented control on a subtle track. */
+  .ui-theme-toggle {
+    @apply flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-base p-1;
+  }
+  .ui-theme-toggle-btn {
+    @apply flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary;
+  }
+  .ui-theme-toggle-btn-active {
+    @apply bg-surface-raised text-text-primary shadow-panel;
+  }
 
   /* Auth surface — same token system as ui-public-* so the marketing and
      auth surfaces flip together when the user changes theme. Kept as a
