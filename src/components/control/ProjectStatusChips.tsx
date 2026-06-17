@@ -14,7 +14,7 @@ import {
   resolveDisplayedAgentId,
 } from "@/lib/agent-resolution";
 import { deriveLoopState } from "@/lib/session-state";
-import { FEEDBACK_MEDIUM_MS, TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
+import { TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
 
 /** Below this count, a no-op turn could be coincidence (queue drained between
  *  user turns). At or above, it's a pattern worth surfacing. The autopilot-
@@ -75,7 +75,6 @@ export function ProjectStatusChips({
   const working = isAgentWorking ?? Boolean(project.currentPrompt);
   const [gitHelpOpen, setGitHelpOpen] = useState(false);
   const [agentPopoverOpen, setAgentPopoverOpen] = useState(false);
-  const [workspaceState, setWorkspaceState] = useState<"idle" | "loading" | "done">("idle");
   const [commitState, setCommitState] = useState<"idle" | "committing" | "done" | "error">("idle");
   const [commitResult, setCommitResult] = useState<{ sha?: string; error?: string } | null>(null);
   const runtimeLabel = runtimeStateKnown ? formatAgentRuntimeLabel(project, project.liveTab) : "";
@@ -103,21 +102,15 @@ export function ProjectStatusChips({
   const showLoopSpiral =
     !showAwaitingUser && loop.state === "firing" && (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
 
-  const focusWorkspace = async (event: React.MouseEvent) => {
+  // Open the project's agent in a FleetCrown-OWNED PTY (the embedded terminal),
+  // not a zellij tab. No session/tab-name focus dance — the workspace is keyed
+  // by a stable id and rendered in xterm. Replaces the old focus-tab call.
+  const openWorkspace = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (workspaceState === "loading") return;
-    setWorkspaceState("loading");
-    try {
-      const res = await postJson("/api/control/focus-tab", { tab: workspaceTab });
-      if (res.ok) {
-        setWorkspaceState("done");
-        setTimeout(() => setWorkspaceState("idle"), FEEDBACK_MEDIUM_MS);
-      } else {
-        setWorkspaceState("idle");
-      }
-    } catch {
-      setWorkspaceState("idle");
-    }
+    if (!project.dir) return;
+    const params = new URLSearchParams({ project: project.tab, dir: project.dir });
+    if (effectiveAgentId) params.set("agent", effectiveAgentId);
+    window.open(`/control/workspace?${params.toString()}`, "_blank", "noopener");
   };
 
   const quickCommit = async (event: React.MouseEvent) => {
@@ -248,20 +241,17 @@ export function ProjectStatusChips({
         </span>
       )}
 
-      {(tabOpen || !compact) && clickableWorkspace && tabOpen && (
+      {clickableWorkspace && (
         <button
           type="button"
-          onClick={focusWorkspace}
-          disabled={workspaceState === "loading"}
-          title={workspaceState === "done"
-            ? "Zellij tab switched — switch to your terminal window to see it"
-            : `Switch to the ${workspaceTab} tab in Zellij. You'll need to focus your terminal window.`}
+          onClick={openWorkspace}
+          title={`Open ${workspaceTab} in an embedded terminal (FleetCrown-owned, no zellij needed).`}
           className={compact
-            ? cn("transition-colors", workspaceState === "done" ? "text-status-positive" : "text-status-positive/70 hover:text-status-positive")
-            : cn(statusChipClass("positive", true), workspaceState === "done" && "border-status-positive/50 bg-status-positive/15")}
+            ? cn("transition-colors", "text-status-positive/70 hover:text-status-positive")
+            : statusChipClass("positive", true)}
         >
           {!compact && <Terminal className="h-3.5 w-3.5" />}
-          {workspaceState === "done" ? "Tab switched ✓" : "Open workspace"}
+          Open workspace
         </button>
       )}
 

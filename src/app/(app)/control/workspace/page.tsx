@@ -24,18 +24,22 @@ export default function WorkspaceTerminalPage() {
     const params = new URLSearchParams(window.location.search);
     const projectKey = params.get("project") ?? "scratch";
     const cwd = params.get("dir") ?? "/home/g/dev/fleetcrown";
-    const command = params.get("cmd") ?? "bash";
-    const args = params.getAll("arg");
+    const agent = params.get("agent");
+    const model = params.get("model") ?? undefined;
+    // With ?agent=, the server resolves the launch command; otherwise a raw cmd
+    // (defaults to a bash shell so the page is verifiable with no agent set up).
+    const command = agent ? undefined : (params.get("cmd") ?? "bash");
+    const args = agent ? undefined : params.getAll("arg");
 
     (async () => {
       try {
         const res = await fetch("/api/workspaces", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectKey, cwd, command, args }),
+          body: JSON.stringify({ projectKey, cwd, command, args, agent, model }),
         });
         const data = await res.json();
-        setMeta({ project: projectKey, cmd: [command, ...args].join(" "), dir: cwd });
+        setMeta({ project: projectKey, cmd: agent ?? [command, ...(args ?? [])].join(" "), dir: cwd });
         if (!res.ok) {
           setStatus("error");
           setError(data?.error ?? `provision failed (${res.status})`);
