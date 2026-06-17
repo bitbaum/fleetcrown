@@ -4,8 +4,8 @@
  * buffer to a late (reconnecting) subscriber. No framework — run with:
  *   npx tsx scripts/test/executor.ts
  */
-import { LocalPtyExecutor } from "../../src/lib/executor/local-pty";
-import type { AgentEvent } from "../../src/lib/executor/types";
+import { LocalPtyExecutor } from "../../src/lib/agent-execution/local-pty";
+import type { AgentEvent } from "../../src/lib/agent-execution/types";
 
 let failures = 0;
 function check(name: string, cond: boolean) {
