@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import { APP_NAME } from "@/config/brand";
 import { postJson } from "@/lib/api/fetch";
 import "@/components/desktop/types"; // declare global window.fleetRunner
+import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
 type Props = {
   runnerNeverSeen: boolean;
@@ -33,15 +34,11 @@ export function RunnerStatusBanner({
   const [dismissed, setDismissed] = useState(false);
   // Detect Fleet Runner so we can short-circuit the "Install Fleet Runner"
   // CTA and replace it with a one-click "Pair this app" button when the
-  // user is already running inside the desktop shell.
-  const [insideFleetRunner, setInsideFleetRunner] = useState(false);
+  // user is already running inside the desktop shell. (SSOT hook.)
+  const insideFleetRunner = useInsideFleetRunner();
   const [pairing, setPairing] = useState(false);
   const [pairError, setPairError] = useState<string | null>(null);
   const [pairedTokenLabel, setPairedTokenLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
-  }, []);
 
   /** Mint a fresh agent token + hand it to the in-app Fleet Runner over IPC.
    *  One click instead of: open /settings, fill label, click "Open in Fleet

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { CURRENT_RELEASE } from "@/config/changelog";
+import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
 // PublicFooter — links to legal pages and support surfaces on every
 // unauthenticated marketing page. Rendered by PublicSurface so individual
@@ -39,6 +42,10 @@ const FOOTER_GROUPS = [
 ] as const;
 
 export function PublicFooter() {
+  // Inside the desktop app, the "Download" link is circular — strip it (the
+  // rest of the footer stays useful: sign in, docs, legal, source).
+  const insideRunner = useInsideFleetRunner();
+
   return (
     <footer className="ui-public-footer mx-auto max-w-6xl px-6 pb-12">
       <div className="ui-public-footer-grid">
@@ -47,7 +54,9 @@ export function PublicFooter() {
             <div className="ui-public-footer-heading">
               {group.heading}
             </div>
-            {group.links.map((link) =>
+            {group.links
+              .filter((link) => !(insideRunner && link.href === "/download"))
+              .map((link) =>
               "external" in link && link.external ? (
                 <a
                   key={link.label}

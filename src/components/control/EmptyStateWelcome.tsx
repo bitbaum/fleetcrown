@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 import Link from "next/link";
 import { GitBranch, Plus, Monitor, Terminal, Sparkles } from "lucide-react";
 import type { ComponentType, ReactNode } from "react";
@@ -51,20 +51,8 @@ export function EmptyStateWelcome({
   onBootstrap?: () => void;
 }) {
   // Users already inside Fleet Runner shouldn't see "Install Fleet Runner" —
-  // they have it. Detect via the IPC bridge the desktop preload exposes.
-  // (window.fleetRunner is undefined in the cloud browser.)
-  //
-  // useEffect is required here even though it looks like a setState-in-effect
-  // anti-pattern. During Next.js RSC pre-render, useState's lazy initializer
-  // runs on the server where window is undefined; the state is then locked
-  // in via the RSC payload during hydration, so a lazy initializer cannot
-  // observe the browser at all. The post-hydration effect is the React-
-  // sanctioned way to read browser-only globals without a hydration mismatch.
-  const [insideFleetRunner, setInsideFleetRunner] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- see above
-    setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
-  }, []);
+  // they have it. SSOT detection lives in useInsideFleetRunner.
+  const insideFleetRunner = useInsideFleetRunner();
 
   return (
     <section className="ui-card-shell-raised p-6 md:p-8">

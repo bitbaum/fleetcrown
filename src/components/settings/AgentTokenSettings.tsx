@@ -9,6 +9,7 @@ import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
 // canonical SSOT for the IPC bridge). Importing the side-effects of that
 // module pulls in the declare-global so we can use window.fleetRunner here.
 import "@/components/desktop/types";
+import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
 type TokenMeta = {
   id: string;
@@ -30,7 +31,7 @@ export function AgentTokenSettings() {
   // we hand any newly-minted token straight to the desktop runner over
   // IPC. The UI replaces the "Open in Fleet Runner" deep-link button
   // with a confirmation chip so the user knows it already paired.
-  const [insideFleetRunner, setInsideFleetRunner] = useState(false);
+  const insideFleetRunner = useInsideFleetRunner();
   const [autoPaired, setAutoPaired] = useState<{ tokenId: string } | null>(null);
   const [autoPairError, setAutoPairError] = useState<string | null>(null);
 
@@ -39,9 +40,6 @@ export function AgentTokenSettings() {
       .then((r) => r.json())
       .then((d: { tokens?: TokenMeta[] }) => setTokens(d.tokens ?? []))
       .catch(() => {});
-    // Detect Fleet Runner once on mount — the preload script injects this
-    // synchronously before the React tree renders.
-    setInsideFleetRunner(typeof window !== "undefined" && !!window.fleetRunner);
   }, []);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);

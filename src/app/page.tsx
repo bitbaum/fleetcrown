@@ -14,9 +14,14 @@ import {
   MARKETING_POSITIONING,
 } from "@/config/brand";
 import { ROUTES } from "@/config/auth";
+import { isFleetRunnerRequest } from "@/lib/fleet-runner";
 
 export default async function LandingPage() {
   if ((await getUserCount()) === 0) redirect("/setup");
+
+  // Inside the desktop app the visitor already has the runner — pitching them
+  // a download is circular. Drop every "Download Fleet Runner" CTA in that case.
+  const insideRunner = await isFleetRunnerRequest();
 
   const session = await auth();
   // Onboarding is an unfinished flow — keep the redirect so the user finishes it.
@@ -57,9 +62,11 @@ export default async function LandingPage() {
             <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
               {signedIn ? "Open FleetCrown" : "Start building"}
             </Link>
-            <Link href="/download" className="ui-public-cta-ghost">
-              Download runner
-            </Link>
+            {!insideRunner && (
+              <Link href="/download" className="ui-public-cta-ghost">
+                Download runner
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -161,7 +168,11 @@ export default async function LandingPage() {
               <div className="ui-public-prose-strong">Install the local runner</div>
               <div className="ui-public-prose-muted mt-2">
                 A native application on your machines that actually executes agents in your terminal environment (Zellij, Claude, Grok, Codex, etc.).
-                <a href="/download" className="ui-public-link ml-1">Download →</a>
+                {insideRunner ? (
+                  <span className="ml-1 text-text-tertiary">You&apos;re running it now.</span>
+                ) : (
+                  <a href="/download" className="ui-public-link ml-1">Download →</a>
+                )}
               </div>
             </div>
           </div>
@@ -182,7 +193,7 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      <DesktopDownload />
+      {!insideRunner && <DesktopDownload />}
 
       <div className="py-24">
         <div className="mx-auto max-w-6xl px-6">
@@ -192,7 +203,9 @@ export default async function LandingPage() {
           </div>
 
           <div className="mt-14 grid gap-4 md:grid-cols-3">
-            {START_PATHS.map((path) => (
+            {START_PATHS
+              .filter((path) => !(insideRunner && path.href === "/download"))
+              .map((path) => (
               <section key={path.title} className="ui-public-start-card">
                 <h3 className="ui-public-start-card-title">{path.title}</h3>
                 <p className="ui-public-start-card-body">{path.body}</p>

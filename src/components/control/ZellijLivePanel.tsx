@@ -8,6 +8,7 @@ import { FEEDBACK_SHORT_MS, REFRESH_AFTER_TAB_ACTION_MS } from "@/lib/constants/
 import type { LiveTabRow } from "./control-presenter";
 import { Modal } from "@/components/ui/modal";
 import { ZellijLiveRows } from "./ZellijLiveRows";
+import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
 
 export function ZellijLivePanel({
   rows,
@@ -35,6 +36,7 @@ export function ZellijLivePanel({
   /** Strip outer chrome when nested inside a parent shell (mobile details). */
   embedded?: boolean;
 }) {
+  const insideRunner = useInsideFleetRunner();
   const [targetTab, setTargetTab] = useState("");
 
   useEffect(() => {
@@ -154,23 +156,34 @@ export function ZellijLivePanel({
           <p className="font-medium text-text-secondary">No live workspace data — yet</p>
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-text-tertiary">
             The cloud can&apos;t see your local Zellij tabs until something on your
-            machine pushes state to it. Two ways to fix this (5 minutes):
+            machine pushes state to it.
           </p>
           {/* Fleet Runner is the only local runtime — the bash runner was
-              deleted 2026-06-11 (killing-the-bash-daemon, Session 4b). */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
-            <a
-              href="https://github.com/maonakamoto/fleetcrown-releases/releases/latest"
-              target="_blank"
-              rel="noreferrer"
-              className="ui-btn-primary"
-            >
-              Download Fleet Runner (desktop app)
-            </a>
-          </div>
-          <p className="mt-3 text-xs text-text-tertiary">
-            Fleet Runner auto-mints a token from your signed-in session — install, launch, your workspaces appear here within 30s.
-          </p>
+              deleted 2026-06-11 (killing-the-bash-daemon, Session 4b). Inside
+              the desktop app there's nothing to download: the user just needs
+              to pair (banner above), so don't show a circular download link. */}
+          {insideRunner ? (
+            <p className="mt-3 text-xs text-text-tertiary">
+              You&apos;re running Fleet Runner — pair it from the banner above (or
+              Settings → Agent tokens) and your workspaces appear here within 30s.
+            </p>
+          ) : (
+            <>
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+                <a
+                  href="https://github.com/maonakamoto/fleetcrown-releases/releases/latest"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ui-btn-primary"
+                >
+                  Download Fleet Runner (desktop app)
+                </a>
+              </div>
+              <p className="mt-3 text-xs text-text-tertiary">
+                Fleet Runner auto-mints a token from your signed-in session — install, launch, your workspaces appear here within 30s.
+              </p>
+            </>
+          )}
         </div>
       ) : rows.length === 0 ? (
         <div className="ui-control-live-empty">
