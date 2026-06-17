@@ -35,7 +35,7 @@ import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type 
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
-import { loadToken, clearToken } from './token-store'
+import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
 import { FLEET_RUNNER_COMMAND_TYPES_PARAM } from '@/lib/pending-command-contract'
 
@@ -203,8 +203,15 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
         // leaving them permanently offline. Pre-fix: poller stopped but the
         // bad token persisted, and auto-mint's "if (existing) return" guard
         // kept it stuck. The same fix landed in pusher.ts.
-        console.warn(`[poller] token rejected (${resp.status}); clearing stale token + stopping`)
-        clearToken()
+        // Never delete the SHARED token from a dev/preview instance — a 401
+        // there means "wrong server", not "dead credential", and would log out
+        // the user's real production runner. See isDevBaseOverride.
+        if (isDevBaseOverride()) {
+          console.warn(`[poller] token rejected (${resp.status}) against dev override ${base}; NOT clearing the shared production token`)
+        } else {
+          console.warn(`[poller] token rejected (${resp.status}); clearing stale token + stopping`)
+          clearToken()
+        }
         updateStatus({
           state: 'error',
           lastError: `Token rejected (${resp.status}). Reload the app — auto-mint will issue a fresh token from your signed-in session.`,

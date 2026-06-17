@@ -35,7 +35,7 @@ import { parseProjectsConf, resolveEffectiveTab } from '@/lib/agent-config'
 import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
 import { listAgentRegistry } from '@/lib/agent-registry'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
-import { loadToken, clearToken } from './token-store'
+import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
@@ -105,8 +105,14 @@ async function pushOnce(): Promise<void> {
       // so FleetRunnerAutoMint can mint a fresh one next time /control loads
       // (its bail check is "if (existing) return", which used to keep the
       // user stuck with a permanently-rejected token).
-      console.warn('[pusher] runtime-state token rejected; clearing stale token + stopping pusher')
-      clearToken()
+      // Dev/preview instances must not delete the SHARED token on 401 — that
+      // would log out the production runner sharing this file. See poller.ts.
+      if (isDevBaseOverride()) {
+        console.warn(`[pusher] runtime-state token rejected against dev override ${BASE_URL}; NOT clearing the shared production token`)
+      } else {
+        console.warn('[pusher] runtime-state token rejected; clearing stale token + stopping pusher')
+        clearToken()
+      }
       stopPusher()
       return
     }

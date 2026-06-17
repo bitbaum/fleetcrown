@@ -64,6 +64,18 @@ export function saveToken(token: string): { ok: true } | { ok: false; error: str
   }
 }
 
+/** True when a non-default control-plane URL is in effect (FLEETCROWN_WEB_URL
+ *  set — dev, preview, or a localhost build). The token file is SHARED across
+ *  every Fleet Runner instance on this machine, including the user's real
+ *  production app. A 401 from a dev/preview server only means "this token isn't
+ *  valid against THIS server" — it says nothing about the real server. So a
+ *  dev/test instance must NEVER clearToken() on 401, or it silently logs out
+ *  the production runner that shares this file. The default-URL (production)
+ *  build still clears, so its auto-mint recovery path is unchanged. */
+export function isDevBaseOverride(): boolean {
+  return !!(process.env.FLEETCROWN_WEB_URL || '').trim()
+}
+
 /** Delete the saved token. No-ops when the file is already absent, so it's
  *  safe to call from "Disconnect this Fleet Runner" buttons without
  *  guarding for state. */
