@@ -8,7 +8,7 @@
  */
 
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { enqueueInjectCommand, enqueueDispatchCommand } from "@/db/queries/pending-commands";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
 import type { InjectPayload } from "@/db/schema/pending-commands";
 
@@ -29,7 +29,13 @@ export type ExecuteResult =
  * Remote: writes to pending_commands and returns the queued command ID.
  */
 export async function executeInject(
-  payload: InjectPayload,
+  payload: InjectPayload & {
+    /** Local project dir. When present on the remote path, we enqueue a
+     *  `dispatch` command (ensure tab + launch agent if none + inject) instead
+     *  of a bare `inject` — so the prompt lands even when no agent is running
+     *  yet. Without a dir we can't launch, so fall back to `inject`. */
+    dir?: string | null;
+  },
   userId: string,
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
@@ -58,7 +64,19 @@ export async function executeInject(
     // is actually listening. We still enqueue when offline (so the work runs
     // once a runner reconnects), but we never report it as a clean success.
     const runnerConnected = await getRunnerConnected(userId);
-    const commandId = await enqueueInjectCommand(userId, payload);
+    const commandId = payload.dir
+      ? await enqueueDispatchCommand(userId, {
+          tab: payload.tab,
+          dir: payload.dir,
+          agent: payload.adapter ?? "claude",
+          prompt: payload.prompt,
+          model: payload.model,
+          promptKey: payload.promptKey,
+          promptLabel: payload.promptLabel,
+          projectKey: payload.projectKey,
+          runId: payload.runId,
+        })
+      : await enqueueInjectCommand(userId, payload);
     return { ok: true, mode: "queued", commandId, runnerConnected };
   } catch (err) {
     return { ok: false, mode: "queued", error: err instanceof Error ? err.message : String(err) };

@@ -347,6 +347,23 @@ async function ackCommand(
   }
 }
 
+/** Non-blocking delay. The module's other `sleep()` is execSync-based and
+ *  would freeze the event loop (and the bridge SSE) — never use it inside the
+ *  async command handlers. */
+const asleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+/** Poll /proc until an agent process is running in `dir` (or timeout). Used by
+ *  `dispatch` so we only paste the prompt once the freshly-launched agent CLI
+ *  is actually up, not into the bare login shell. */
+async function waitForAgentInDir(dir: string, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (resolveRunningAgentsInDir(dir).length > 0) return true
+    await asleep(500)
+  }
+  return false
+}
+
 async function handleCommand(
   base: string,
   token: string,
@@ -356,6 +373,7 @@ async function handleCommand(
   let error: string | undefined
   let verified: boolean | undefined
   let warning: string | undefined
+  let text: string | undefined
 
   // Idempotency dedup. If the PATCH ack timed out on a previous run, the
   // server will hand us the same command again. Without this, the prompt
@@ -383,7 +401,7 @@ async function handleCommand(
     // the "I rebooted and nothing's running" path so the user doesn't have
     // to open a terminal first.
     const t = validation.command.type
-    if (t === 'inject' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
+    if (t === 'inject' || t === 'dispatch' || t === 'launch_agent' || t === 'switch_agent' || t === 'focus_tab' || t === 'close_tab' || t === 'install_cli') {
       await ensureSessionForCommand()
     }
     switch (validation.command.type) {
@@ -421,6 +439,41 @@ async function handleCommand(
           }, 2500)
         }
         ok = true
+        break
+      }
+      case 'dispatch': {
+        // The reliable product loop, done where we have ground truth (the
+        // local machine): ensure the tab + agent, then inject — and VERIFY,
+        // so the cloud/UI learns the real outcome instead of a fake ok.
+        const { tab, dir, agent, model, prompt } = validation.command.payload
+        assertKnownLaunchAgent(agent)
+        const alreadyRunning = resolveRunningAgentsInDir(dir).length > 0
+        let launched = false
+        if (!alreadyRunning) {
+          launchAgentInTab(tab, dir, agent as AgentOption, model)
+          clearHandoffSentinel(tab)
+          launched = true
+          // Wait for the agent process to actually come up before pasting —
+          // otherwise the prompt lands in a bare login shell. Then settle so
+          // the CLI has finished drawing its prompt and accepts paste+enter.
+          if (await waitForAgentInDir(dir, 15000)) await asleep(1800)
+        } else {
+          focusWorkspaceTab(tab)
+        }
+        const baseline = readMtimeMs(sessionFilePath(tab))
+        injectIntoTab(tab, prompt)
+        verified = await waitForSessionFileBump(tab, baseline, 8000)
+        if (!verified && launched) {
+          // A freshly-launched agent may still be finishing its boot banner —
+          // one retry covers the common race without spamming a live agent.
+          await asleep(2500)
+          const retryBaseline = readMtimeMs(sessionFilePath(tab))
+          injectIntoTab(tab, prompt)
+          verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
+        }
+        ok = true
+        text = launched ? `launched ${agent} + injected` : `injected to running ${agent}`
+        if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
         break
       }
       case 'switch_agent': {
@@ -474,7 +527,7 @@ async function handleCommand(
     try { fs.writeFileSync(sentinel, '1', 'utf-8') } catch { /* tmpdir unwritable — fall back to "best effort" */ }
   }
 
-  await ackCommand(base, token, command, { ok, error, verified, warning })
+  await ackCommand(base, token, command, { ok, error, verified, warning, text })
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)

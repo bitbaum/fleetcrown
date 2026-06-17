@@ -1,5 +1,11 @@
 export const PENDING_COMMAND_TYPES = [
   "inject",
+  // Atomic "make it happen" command: ensure the project's zellij tab exists,
+  // launch the agent there if one isn't already running, then inject the
+  // prompt — verified, in one runner-side step. This is the reliable product
+  // loop (explicit user dispatch); `inject` alone assumes an agent is already
+  // up, which silently no-ops when it isn't.
+  "dispatch",
   "focus_tab",
   "close_tab",
   "launch_agent",
@@ -19,6 +25,7 @@ export type PendingCommandType = (typeof PENDING_COMMAND_TYPES)[number];
 
 export const FLEET_RUNNER_COMMAND_TYPES = [
   "inject",
+  "dispatch",
   "focus_tab",
   "close_tab",
   "launch_agent",

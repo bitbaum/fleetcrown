@@ -242,6 +242,10 @@ export function useControlData(): ControlDataHook {
     const res = await postJson("/api/inject", { tab, promptKey, customPrompt, adapter: data?.agentConfig.agent ?? selectedAgent });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
     const body = await res.json().catch(() => ({}));
+    // Don't let an offline runner read as success — say it out loud.
+    if (body.warning === "runner-offline") {
+      setError(body.message ?? "Fleet Runner is offline — queued; it will run when the runner reconnects.");
+    }
     setTimeout(refresh, REFRESH_AFTER_DISPATCH_MS);
     return { mode: body.mode === "queued" ? "queued" : "direct" };
   };
@@ -277,6 +281,10 @@ export function useControlData(): ControlDataHook {
       queue,
     });
     if (!res.ok) await throwApiError(res, `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    if (body.warning === "runner-offline") {
+      setError(body.message ?? "Fleet Runner is offline — queued; it will run when the runner reconnects.");
+    }
     await refresh(true);
   };
 

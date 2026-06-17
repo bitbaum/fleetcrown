@@ -24,7 +24,8 @@ import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orc
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
-import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
+import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
@@ -123,23 +124,31 @@ export async function POST(req: NextRequest) {
         // Non-fatal — dispatch still proceeds without outcome tracking.
       }
     }
-    const commandId = await enqueueInjectCommand(userId, {
+    // Enqueue a `dispatch` (not bare `inject`): the runner ensures the tab,
+    // launches the agent if none is running, then injects — so "Next best" on
+    // an idle project actually starts work instead of typing into the void.
+    // Model is forwarded so the runner's auto-launch honors it; when absent the
+    // runner's _conf_model_for_tab fallback reads agent-projects.conf.
+    const runnerConnected = await getRunnerConnected(userId);
+    const commandId = await enqueueDispatchCommand(userId, {
       tab: request.projectKey,
+      dir: request.projectPath,
+      agent: request.adapter,
       prompt,
       promptKey: request.intent,
       promptLabel: intent.name,
-      adapter: request.adapter,
-      // Forward caller-supplied model so the runner's auto-launch (501a6e7)
-      // honors it. When absent, the runner's _conf_model_for_tab fallback
-      // (9a3bd61) reads agent-projects.conf, which is synced from
-      // user_projects.modelPref on a 5-minute cycle. No DB lookup needed
-      // here — the runner already covers the implicit-pref path.
       model: request.model,
-      projectId: request.projectId ?? null,
       projectKey: request.projectKey,
       runId: cloudRunId ?? undefined,
     });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, runId: cloudRunId });
+    return NextResponse.json({
+      ok: true, queued: true, mode: "queued", commandId, runId: cloudRunId, runnerConnected,
+      // Fail loud, not silent — a dispatch with no live runner says so.
+      ...(runnerConnected === false && {
+        warning: "runner-offline",
+        message: "Fleet Runner is offline — queued; it will run as soon as the runner reconnects.",
+      }),
+    });
   }
   const request: OrchestrationTaskRequest = dataOrResp as OrchestrationTaskRequest;
   const adapter = getAdapterDefinition(request.adapter as AdapterId);

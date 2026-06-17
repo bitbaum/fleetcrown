@@ -102,15 +102,29 @@ export function ProjectStatusChips({
   const showLoopSpiral =
     !showAwaitingUser && loop.state === "firing" && (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
 
-  // Open the project's agent in a FleetCrown-OWNED PTY (the embedded terminal),
-  // not a zellij tab. No session/tab-name focus dance — the workspace is keyed
-  // by a stable id and rendered in xterm. Replaces the old focus-tab call.
-  const openWorkspace = (event: React.MouseEvent) => {
+  // "Focus terminal" brings the project's terminal to the front ON THE USER'S
+  // MACHINE via the runner. The old embedded-PTY route (/control/workspace)
+  // spawned the shell on whatever server serves the app — i.e. the cloud box,
+  // which has neither the repo nor the agent CLI, so it exited instantly. We
+  // focus the local zellij tab instead; if no agent is running there yet, we
+  // launch it first so there's a terminal to focus.
+  const [wsState, setWsState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const openWorkspace = async (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!project.dir) return;
-    const params = new URLSearchParams({ project: project.tab, dir: project.dir });
-    if (effectiveAgentId) params.set("agent", effectiveAgentId);
-    window.open(`/control/workspace?${params.toString()}`, "_blank", "noopener");
+    if (wsState === "working") return;
+    setWsState("working");
+    try {
+      if (!project.agentRunning && project.dir && effectiveAgentId) {
+        await postJson("/api/agent/launch", { tab: project.tab, dir: project.dir, agent: effectiveAgentId });
+      } else {
+        await postJson("/api/control/focus-tab", { tab: workspaceTab });
+      }
+      setWsState("done");
+      setTimeout(() => setWsState("idle"), TOAST_MEDIUM_MS);
+    } catch {
+      setWsState("error");
+      setTimeout(() => setWsState("idle"), TOAST_MEDIUM_MS);
+    }
   };
 
   const quickCommit = async (event: React.MouseEvent) => {
@@ -245,13 +259,14 @@ export function ProjectStatusChips({
         <button
           type="button"
           onClick={openWorkspace}
-          title={`Open ${workspaceTab} in an embedded terminal (FleetCrown-owned, no zellij needed).`}
+          disabled={wsState === "working"}
+          title={`Bring ${workspaceTab}'s terminal to the front on your machine (launches the agent there if it isn't running). Requires Fleet Runner online.`}
           className={compact
-            ? cn("transition-colors", "text-status-positive/70 hover:text-status-positive")
+            ? cn("transition-colors", "text-status-positive/70 hover:text-status-positive disabled:opacity-60")
             : statusChipClass("positive", true)}
         >
-          {!compact && <Terminal className="h-3.5 w-3.5" />}
-          Open workspace
+          {!compact && (wsState === "working" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Terminal className="h-3.5 w-3.5" />)}
+          {wsState === "done" ? "Focused ✓" : wsState === "error" ? "Failed" : "Focus terminal"}
         </button>
       )}
 

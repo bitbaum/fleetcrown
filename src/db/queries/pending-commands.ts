@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pendingCommands, type NewPendingCommand, type InjectPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload } from "@/db/schema/pending-commands";
+import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 
@@ -20,6 +20,13 @@ export async function enqueueInjectCommand(
   payload: InjectPayload,
 ): Promise<string> {
   return enqueuePendingCommand({ userId, type: "inject", payload });
+}
+
+export async function enqueueDispatchCommand(
+  userId: string,
+  payload: DispatchPayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "dispatch", payload });
 }
 
 export async function enqueueSwitchAgentCommand(

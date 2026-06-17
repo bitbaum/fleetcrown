@@ -59,6 +59,21 @@ export interface LaunchAgentCommand {
   }
 }
 
+export interface DispatchCommand {
+  type: 'dispatch'
+  payload: {
+    tab: string
+    dir: string
+    agent: string
+    prompt: string
+    model?: string
+    promptKey?: string
+    promptLabel?: string
+    projectKey?: string
+    runId?: string
+  }
+}
+
 export interface SwitchAgentCommand {
   type: 'switch_agent'
   payload: {
@@ -103,6 +118,7 @@ export interface PeekStreamCommand {
  *  new type means: extend this union + write a guard + handle it in poller. */
 export type ValidatedCommand =
   | InjectCommand
+  | DispatchCommand
   | TabCommand
   | LaunchAgentCommand
   | SwitchAgentCommand
@@ -143,6 +159,8 @@ export function validateCommand(raw: unknown): ValidationResult {
   switch (type) {
     case 'inject':
       return validateInject(payload)
+    case 'dispatch':
+      return validateDispatch(payload)
     case 'focus_tab':
     case 'close_tab':
       return validateTab(type, payload)
@@ -211,6 +229,48 @@ function validateInject(payload: Record<string, unknown>): ValidationResult {
         adapter: payload.adapter as string | undefined,
         model: payload.model as string | undefined,
         projectId: (payload.projectId ?? null) as string | null,
+        projectKey: payload.projectKey as string | undefined,
+        runId: payload.runId as string | undefined,
+      },
+    },
+  }
+}
+
+function validateDispatch(payload: Record<string, unknown>): ValidationResult {
+  const tab = payload.tab
+  const dir = payload.dir
+  const agent = payload.agent
+  const prompt = payload.prompt
+  if (typeof tab !== 'string' || tab.trim().length === 0) {
+    return { ok: false, error: "dispatch payload missing required string 'tab'" }
+  }
+  if (typeof dir !== 'string' || dir.trim().length === 0) {
+    return { ok: false, error: "dispatch payload missing required string 'dir'" }
+  }
+  if (typeof agent !== 'string' || agent.trim().length === 0) {
+    return { ok: false, error: "dispatch payload missing required string 'agent'" }
+  }
+  if (typeof prompt !== 'string' || prompt.length === 0) {
+    return { ok: false, error: "dispatch payload missing required string 'prompt'" }
+  }
+  for (const field of ['model', 'promptKey', 'promptLabel', 'projectKey', 'runId'] as const) {
+    const v = payload[field]
+    if (v !== undefined && typeof v !== 'string') {
+      return { ok: false, error: `dispatch payload field '${field}' must be a string if present` }
+    }
+  }
+  return {
+    ok: true,
+    command: {
+      type: 'dispatch',
+      payload: {
+        tab,
+        dir,
+        agent,
+        prompt,
+        model: payload.model as string | undefined,
+        promptKey: payload.promptKey as string | undefined,
+        promptLabel: payload.promptLabel as string | undefined,
         projectKey: payload.projectKey as string | undefined,
         runId: payload.runId as string | undefined,
       },

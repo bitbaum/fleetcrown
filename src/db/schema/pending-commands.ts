@@ -67,3 +67,21 @@ export type LaunchAgentPayload = {
   model?: string;
   initialPrompt?: string;
 };
+
+/**
+ * The reliable product loop in one command: ensure the project's zellij tab,
+ * launch `agent` there if none is running, then inject `prompt` — verified,
+ * runner-side. Unlike InjectPayload (which assumes a live agent and silently
+ * no-ops into a bare shell when there isn't one), `dispatch` always lands.
+ */
+export type DispatchPayload = {
+  tab: string;
+  dir: string;
+  agent: string;
+  prompt: string;
+  model?: string;
+  promptKey?: string;
+  promptLabel?: string;
+  projectKey?: string;
+  runId?: string;
+};
