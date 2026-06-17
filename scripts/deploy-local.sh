@@ -37,6 +37,21 @@ cp -r "$PROJECT_DIR/public"        "$STANDALONE/public"
 cp -r "$PROJECT_DIR/content"       "$STANDALONE/content"
 echo "→ deploy: runtime assets copied to standalone"
 
+# ── node-pty native binary ────────────────────────────────────────────────────
+# node-pty (the LocalPtyExecutor that backs FleetCrown-owned agent PTYs) loads
+# its compiled .node binary dynamically, so Next's file tracer copies the JS
+# (lib/, package.json) into standalone but NOT build/Release/pty.node — the
+# server then 500s with "Failed to load native module: pty.node". Copy the whole
+# build dir alongside it. Same lesson as the assets above. See
+# docs/architecture/agent-execution-platform.md.
+NODE_PTY_SRC="$PROJECT_DIR/node_modules/node-pty/build"
+NODE_PTY_DEST="$STANDALONE/node_modules/node-pty/build"
+if [ -d "$NODE_PTY_SRC" ] && [ -d "$STANDALONE/node_modules/node-pty" ]; then
+  rm -rf "$NODE_PTY_DEST"
+  cp -r "$NODE_PTY_SRC" "$NODE_PTY_DEST"
+  echo "→ deploy: node-pty native binary copied to standalone"
+fi
+
 # ── Restart systemd service (local machine only) ──────────────────────────────
 # Prefer the canonical fleetcrown-app service; fall back to legacy cockpit-app
 # for machines still running the pre-rename install.
