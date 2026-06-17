@@ -41,8 +41,14 @@ import {
   injectPty,
   terminatePty,
   waitForPtyReady,
+  peekPtyBuffer,
 } from './pty-runtime'
+import { pushNow } from './pusher'
 import { startBridgeSubscriber } from './bridge-subscriber'
+
+/** Commands that change the open-tab / agent set → trigger an immediate
+ *  runtime-state push so the UI reflects them in ~1s, not at the next heartbeat. */
+const PUSH_AFTER = new Set(['launch_agent', 'dispatch', 'switch_agent', 'close_tab'])
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 import { ensureZellijReady } from '@/lib/zellij-bootstrap'
@@ -246,6 +252,14 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       if (data.command) {
         console.log(`[poller] claimed ${data.command.type} command ${data.command.id}`)
         await handleCommand(base, token, data.command)
+        // State-changing commands alter the open-tab / agent set. Push the new
+        // runtime state immediately (coalesced) so the dashboard + /terminal "My
+        // machine" reflect it in ~1s, instead of waiting up to RUNNER_HEARTBEAT_MS
+        // (5 min) for the next heartbeat. This is why a freshly-launched agent
+        // didn't appear until much later.
+        if (PUSH_AFTER.has(data.command.type)) {
+          void pushNow().catch(() => { /* next heartbeat picks it up */ })
+        }
       } else if (!wakeRequested) {
         await new Promise<void>((r) => setTimeout(r, COMMAND_POLL_IDLE_MS))
       }
@@ -574,7 +588,10 @@ async function handleCommand(
       }
       case 'peek_tab': {
         const { tab } = validation.command.payload
-        const content = peekZellijTab(tab)
+        // Owned PTY → its in-memory buffer (non-blocking). Only fall back to the
+        // synchronous zellij dump-screen for genuinely zellij-hosted tabs.
+        const ptyBuf = peekPtyBuffer(tab)
+        const content = ptyBuf ?? peekZellijTab(tab)
         ok = true
         await ackCommand(base, token, command, { ok, text: content })
         console.log(`[poller] handled ${command.type} command ${command.id}`)

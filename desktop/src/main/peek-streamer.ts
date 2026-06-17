@@ -1,25 +1,24 @@
-// Live-terminal frame streamer (runner side) — dual mode.
+// Live-terminal frame streamer (runner side) — PTY-only, non-blocking.
 //
-// On peek_start the runner streams a tab to the cloud (/api/control/peek-frame
-// → SSE viewer); on peek_stop it tears down. Streaming runs only while a viewer
-// is watching (the cloud ref-counts viewers), so an unwatched fleet costs nothing.
+// On peek_start the runner streams a tab's owned-PTY output to the cloud
+// (/api/control/peek-frame → SSE viewer); on peek_stop it tears down. Streaming
+// runs only while a viewer is watching (the cloud ref-counts viewers), so an
+// unwatched fleet costs nothing.
 //
-//   • PTY-backed tab (FleetCrown owns the agent's PTY): a TRUE byte stream. We
-//     subscribe to the executor's output and POST each delta with append=true;
-//     the viewer xterm.write()s it. Full fidelity, real colors, scrollback, no
-//     focus-dance. This is the destination the comment below used to call "the
-//     deferred WebSocket path".
-//   • zellij tab (legacy): no PTY handle, so we poll dump-screen (a full screen
-//     snapshot) at POLL_MS and POST changed frames (append=false → viewer
-//     resets+writes). Each dump-screen does a brief focus-dance, so the rate is
-//     deliberately modest. See docs/architecture/embedded-terminal.md.
+// CRITICAL: peek must NEVER block the Node event loop. The runner's poller, the
+// command acks, and every PTY all share one event loop. The old zellij path
+// polled `dump-screen` via SYNCHRONOUS execSync (a focus-dance) on a 1s timer;
+// on a detached/slow zellij session each call blocked the loop for seconds,
+// starving the ack fetch until its 5s timeout fired → the command was never
+// marked done → re-served forever → the whole runner wedged (every dispatch
+// silently queued). That is removed. We stream ONLY owned PTYs, via
+// executor.subscribe (pure in-memory, async) — the product direction anyway
+// (agents run in FleetCrown-owned PTYs since v0.8.3). A tab with no owned PTY
+// gets one informational frame and no polling loop.
 
-import { createHash } from 'node:crypto'
-import { peekTab as peekZellijTab } from '@/lib/zellij'
 import { executor } from '@/lib/agent-execution'
 import { isPtyBacked, runnerWorkspaceId } from './pty-runtime'
 
-const POLL_MS = 1000         // zellij snapshot rate — focus-dance once/sec
 const MAX_FRAME = 256_000    // matches the cloud route's cap
 
 type Stream = { stop: () => void }
@@ -44,8 +43,16 @@ async function postFrame(
 
 export function startPeek(base: string, token: string, tab: string): void {
   if (streams.has(key(tab))) return // already streaming this tab
-  if (isPtyBacked(tab)) startPtyStream(base, token, tab)
-  else startZellijStream(base, token, tab)
+  if (isPtyBacked(tab)) {
+    startPtyStream(base, token, tab)
+  } else {
+    // No owned PTY for this tab. Do NOT run a synchronous zellij dump-screen
+    // peek — it blocks the event loop and wedges the poller (see header). Send
+    // one async info frame and register a no-op stream so repeated peek_starts
+    // don't pile up. peek_start still acks instantly.
+    void postFrame(base, token, tab, 0, `\r\n\x1b[2m[no live agent in "${tab}" — launch one from Control to watch it here]\x1b[0m\r\n`, true)
+    streams.set(key(tab), { stop: () => {} })
+  }
 }
 
 /** True byte stream from the owned PTY. Replays the retained buffer as one
@@ -60,9 +67,9 @@ function startPtyStream(base: string, token: string, tab: string): void {
     const n = seq++
     chain = chain.then(() => postFrame(base, token, tab, n, frame, append))
   }
-  // executor.subscribe replays the buffer synchronously first; coalesce that
-  // into ONE initial frame (keep the tail if it exceeds the cap), then stream
-  // live output deltas individually.
+  // executor.subscribe replays the buffer synchronously first (pure in-memory,
+  // no I/O); coalesce that into ONE initial frame (keep the tail if it exceeds
+  // the cap), then stream live output deltas individually.
   let initial = ''
   let replaying = true
   const unsub = executor.subscribe(id, 0, (e) => {
@@ -73,29 +80,6 @@ function startPtyStream(base: string, token: string, tab: string): void {
   replaying = false
   if (initial) enqueue(initial.length > MAX_FRAME ? initial.slice(initial.length - MAX_FRAME) : initial, true)
   streams.set(key(tab), { stop: unsub })
-}
-
-/** Legacy zellij snapshot poll — full dump-screen frames, dedup by hash. */
-function startZellijStream(base: string, token: string, tab: string): void {
-  let seq = 0
-  let lastHash = ''
-  let inFlight = false
-  const tick = async (): Promise<void> => {
-    if (inFlight) return // don't pile up if the network or dump-screen is slow
-    let frame: string
-    try { frame = peekZellijTab(tab) } catch { return } // tab gone / zellij busy
-    if (frame.length > MAX_FRAME) frame = frame.slice(0, MAX_FRAME)
-    const hash = createHash('sha1').update(frame).digest('hex')
-    if (hash === lastHash) return // unchanged — don't send
-    lastHash = hash
-    inFlight = true
-    try { await postFrame(base, token, tab, seq++, frame, false) } finally { inFlight = false }
-  }
-  const timer = setInterval(tick, POLL_MS)
-  streams.set(key(tab), { stop: () => clearInterval(timer) })
-  // Defer the first snapshot so peek_start can ack before a zellij focus-dance
-  // (execSync with timeout) runs on the poller thread.
-  setImmediate(() => void tick())
 }
 
 export function stopPeek(tab: string): void {

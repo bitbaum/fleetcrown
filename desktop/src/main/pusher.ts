@@ -105,6 +105,11 @@ async function pushOnce(): Promise<void> {
         panes,
         observedAt: Date.now(),
       }),
+      // Bound the push. Without this, a single hung runtime-state request never
+      // resolves → pushOnce never returns → the heartbeat silently dies and the
+      // dashboard freezes on stale state (agents stop appearing). Same lesson as
+      // the command ack: every runner→cloud fetch must be time-boxed.
+      signal: AbortSignal.timeout(12_000),
     })
     if (resp.status === 401 || resp.status === 403) {
       // Token is dead — the server doesn't recognize it. Delete the file

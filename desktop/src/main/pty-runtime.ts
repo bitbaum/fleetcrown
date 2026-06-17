@@ -41,6 +41,22 @@ export function isPtyBacked(tab: string): boolean {
   return !!handle && handle.status !== "exited";
 }
 
+/**
+ * The owned PTY's retained output as a single string, or null if no owned PTY.
+ * Pure in-memory (executor.subscribe replays the ring buffer synchronously),
+ * so it never blocks the event loop — unlike a zellij dump-screen. Used by the
+ * one-shot peek so it shows the agent, not an empty/blocking zellij snapshot.
+ */
+export function peekPtyBuffer(tab: string): string | null {
+  if (!isPtyBacked(tab)) return null;
+  let buf = "";
+  const unsub = executor.subscribe(runnerWorkspaceId(tab), 0, (e) => {
+    if (e.kind === "output" && e.data) buf += e.data;
+  });
+  unsub();
+  return buf;
+}
+
 /** Provision (or re-attach to) the agent's PTY. Idempotent per tab. */
 export async function launchAgentPty(
   tab: string,

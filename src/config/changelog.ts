@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.6",
+    tag: "fleet-runner-v0.8.6",
+    date: "2026-06-18T00:00:00Z",
+    highlights: [
+      "Autopilot is reliable now: the runner no longer freezes after a terminal peek, so dispatched and next-best prompts keep flowing instead of silently queueing forever.",
+      "Newly launched agents appear in the dashboard and the live terminal within a second, instead of after a 5-minute heartbeat.",
+      "The status heartbeat can no longer get stuck on a slow request, so the dashboard stops showing stale state.",
+    ],
+    breaking: [],
+    notes: "Reliability release for the autopilot loop. Three root causes of the 'nothing works' freeze: (1) the live-terminal peek ran a synchronous zellij dump-screen that blocked the runner's single event loop and starved command acks → every command was re-served forever; fixed by streaming only owned PTYs (async, in-memory). (2) the status push had no request timeout → one hung request killed the heartbeat. (3) runtime state was only pushed every 5 min → launched agents took minutes to appear; now pushed immediately after each command.",
+  },
+  {
     version: "0.8.3",
     tag: "fleet-runner-v0.8.3",
     date: "2026-06-17T21:30:00Z",
