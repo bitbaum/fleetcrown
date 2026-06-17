@@ -9,6 +9,7 @@ import {
   Calendar,
   Repeat2,
   Terminal,
+  SquareTerminal,
   BookOpen,
   Settings,
   Brain,
@@ -39,6 +40,7 @@ export type NavItem = {
 
 export const NAV = {
   today:      { id: "today",    label: "Today",    description: "Daily overview & action queue",     href: "/today",      icon: Sun,          active: true,  mobile: true  },
+  terminal:   { id: "terminal", label: "Terminal", description: "Local shells — multi-tab & panes",   href: "/terminal",   icon: SquareTerminal, active: true, mobile: false },
   control:    { id: "control",  label: "Control",  description: "Dispatch agents across projects",   href: "/control",    icon: Terminal,     active: true,  mobile: true  },
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: true  },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
@@ -83,7 +85,7 @@ export const SIDEBAR_SECTIONS: SidebarSection[] = [
     // project state, prompt library, audit log, system health, and the
     // Thoughts essays the user authors and publishes from inside the app.
     label: "Work",
-    items: [NAV.today, NAV.control, NAV.projects, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
+    items: [NAV.today, NAV.terminal, NAV.control, NAV.projects, NAV.prompts, NAV.activity, NAV.system, NAV.thoughts],
   },
   {
     id: "private",

@@ -1,3 +1,4 @@
+import { homedir } from "node:os";
 import { NextRequest, NextResponse } from "next/server";
 import { z, readJsonBody } from "@/lib/api/route-helpers";
 import { executor } from "@/lib/agent-execution";
@@ -10,7 +11,9 @@ export const runtime = "nodejs";
 
 const ProvisionBody = z.object({
   projectKey: z.string().trim().min(1).max(120),
-  cwd: z.string().trim().min(1).max(500),
+  // Optional: a plain terminal opens in the user's home dir when omitted, so
+  // the client (which can't know the server's $HOME) doesn't have to guess.
+  cwd: z.string().trim().min(1).max(500).optional(),
   // Provide EITHER a raw command (e.g. "bash") OR an agent id (e.g. "claude").
   // With `agent`, we reuse the exact registry launch command the zellij path
   // uses (sources rc, cds, runs the agent CLI) inside the owned PTY's shell, so
@@ -32,13 +35,16 @@ export async function POST(req: NextRequest) {
   const data = await readJsonBody(req, ProvisionBody);
   if (data instanceof NextResponse) return data;
 
+  // Plain terminals omit cwd → open in $HOME. Agent launches always pass one.
+  const cwd = data.cwd ?? homedir();
+
   let command = data.command;
   let args = data.args;
   if (data.agent) {
     if (!isAgentId(data.agent)) {
       return NextResponse.json({ error: `Unknown agent: ${data.agent}` }, { status: 400 });
     }
-    const launchCommand = buildAgentOptionLaunchCommand({ agent: data.agent, model: data.model }, data.cwd);
+    const launchCommand = buildAgentOptionLaunchCommand({ agent: data.agent, model: data.model }, cwd);
     // Login + interactive (-lic), NOT plain -c: the agent CLIs live on PATH only
     // after the profile/nvm chain loads (claude is in ~/.nvm/.../bin), and the
     // launch command's own `source ~/.bashrc` clobbers PATH non-interactively.
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
   const id = workspaceIdFor(userId, data.projectKey);
   const handle = await executor.provision({
     id,
-    cwd: data.cwd,
+    cwd,
     command,
     args,
     cols: data.cols,
