@@ -40,7 +40,9 @@ export function TerminalView({ tab, onSend }: { tab: string; onSend?: (text: str
         disableStdin: true,
         fontFamily: "var(--font-mono), ui-monospace, monospace",
         fontSize: 12,
-        scrollback: 0, // we stream full-screen snapshots, not a byte log
+        // Raw-PTY streams (append mode) are a byte log → keep scrollback so the
+        // viewer can scroll back. Harmless for snapshot mode (which reset()s).
+        scrollback: 5000,
         theme: { background: "#000000" },
       });
       const fit = new FitAddon();
@@ -55,10 +57,15 @@ export function TerminalView({ tab, onSend }: { tab: string; onSend?: (text: str
       es.addEventListener("ready", () => setConnected(true));
       es.addEventListener("frame", (e: MessageEvent) => {
         try {
-          const { frame } = JSON.parse(e.data) as { frame: string };
-          // Each frame is a full screen → clear then write (snapshot repaint).
-          term.reset();
-          term.write(frame);
+          const { frame, append } = JSON.parse(e.data) as { frame: string; append?: boolean };
+          // Raw-PTY byte delta → append to the buffer (a true byte stream).
+          // zellij snapshot → clear then write (full-screen repaint).
+          if (append) {
+            term.write(frame);
+          } else {
+            term.reset();
+            term.write(frame);
+          }
         } catch { /* ignore malformed frame */ }
       });
       es.onerror = () => setConnected(false);

@@ -16,9 +16,12 @@ import { emitPeekFrame } from "@/lib/sse-bus";
 const Body = z.object({
   tab:   z.string().trim().min(1).max(120),
   seq:   z.number().int().nonnegative(),
-  // A full dump-screen snapshot (ANSI preserved). Capped to keep one frame
-  // well under typical body limits even with color escapes + wide terminals.
+  // A zellij dump-screen snapshot OR a raw-PTY byte delta (when append=true).
+  // Capped to keep one frame well under typical body limits even with color
+  // escapes + wide terminals.
   frame: z.string().max(256_000),
+  // true → raw-PTY byte delta (viewer appends); absent → snapshot (viewer resets).
+  append: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -28,7 +31,7 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { tab, seq, frame } = dataOrResp;
-  emitPeekFrame(userId, tab, { seq, frame, at: Date.now() });
+  const { tab, seq, frame, append } = dataOrResp;
+  emitPeekFrame(userId, tab, { seq, frame, at: Date.now(), append });
   return NextResponse.json({ ok: true });
 }

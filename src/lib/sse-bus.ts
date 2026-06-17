@@ -19,7 +19,10 @@ export function emitStateChanged(userId: string) {
 // emits it here; the /api/control/peek-stream SSE for the same (user, tab)
 // forwards it to the viewer. In-process only — fine on a single box instance;
 // frames are too big/frequent for the Postgres-NOTIFY bridge.
-export type PeekFrame = { seq: number; frame: string; at: number };
+// `append: true` marks a raw-PTY byte delta (the viewer xterm.write()s it onto
+// the existing buffer). Absent/false = a full zellij dump-screen snapshot (the
+// viewer reset()s then writes). One channel, two producers.
+export type PeekFrame = { seq: number; frame: string; at: number; append?: boolean };
 
 export function peekChannel(userId: string, tab: string): string {
   return `peek:${userId}:${tab.toLowerCase()}`;
