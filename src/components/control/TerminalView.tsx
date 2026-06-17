@@ -12,7 +12,7 @@ import "@xterm/xterm/css/xterm.css";
  * `onSend` is provided a gated single-line input forwards text to the agent
  * via the existing inject path.
  */
-export function TerminalView({ tab, onSend }: { tab: string; onSend?: (text: string) => Promise<void> }) {
+export function TerminalView({ tab, onSend, fill }: { tab: string; onSend?: (text: string) => Promise<void>; fill?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -86,7 +86,7 @@ export function TerminalView({ tab, onSend }: { tab: string; onSend?: (text: str
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
       <div className="flex items-center justify-between">
         <span className="ui-micro-label">{connected ? "live" : "connecting…"}</span>
         {onSend && (
@@ -95,7 +95,7 @@ export function TerminalView({ tab, onSend }: { tab: string; onSend?: (text: str
           </button>
         )}
       </div>
-      <div ref={hostRef} className="h-72 w-full overflow-hidden rounded-md bg-black" />
+      <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
       {onSend && sendOpen && (
         <div className="flex items-center gap-2">
           <input
