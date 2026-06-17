@@ -584,6 +584,9 @@ async function handleCommand(
       case 'peek_start': {
         // Live terminal: start streaming this tab's screen to the cloud until a
         // peek_stop (last viewer left). See docs/architecture/embedded-terminal.md.
+        // Stop first so a stream started before a PTY launch (zellij fallback)
+        // upgrades to the owned-PTY byte stream once the agent is up.
+        stopPeek(validation.command.payload.tab)
         startPeek(base, token, validation.command.payload.tab)
         ok = true
         break

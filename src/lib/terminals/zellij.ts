@@ -158,7 +158,7 @@ function waitForTabFocus(tab: string, maxWaitMs = 1000, session: string | null =
       // confirmation 100% of dispatches when the cases drifted.
       if (active.toLowerCase() === target) return true;
     } catch { /* dump-layout unavailable or parse failed — fall through */ }
-    execSync("sleep 0.05");
+    execSync("sleep 0.05", { timeout: 1000 });
   }
   return false;
 }
@@ -206,7 +206,7 @@ function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
   const session = findSessionForTab(tab);
   const liveTab = resolveLiveTabName(session, tab) ?? tab;
   const originalTab = getCurrentTab(session);
-  execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)));
+  execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)), { timeout: 2000 });
   if (!waitForTabFocus(liveTab, 1000, session)) {
     throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
   }
@@ -214,7 +214,7 @@ function withFocusedTab<T>(tab: string, fn: (session: string | null) => T): T {
     return fn(session);
   } finally {
     if (originalTab && originalTab.toLowerCase() !== liveTab.toLowerCase()) {
-      try { execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab))); } catch { /* best effort */ }
+      try { execSync(zellijCmd(session, "go-to-tab-name", shellEscape(originalTab)), { timeout: 2000 }); } catch { /* best effort */ }
     }
   }
 }
@@ -246,7 +246,7 @@ export const zellijAdapter: TerminalAdapter = {
   focusTab(tab: string): void {
     const session = findSessionForTab(tab);
     const liveTab = resolveLiveTabName(session, tab) ?? tab;
-    execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)));
+    execSync(zellijCmd(session, "go-to-tab-name", shellEscape(liveTab)), { timeout: 2000 });
     if (!waitForTabFocus(liveTab, 1000, session)) {
       throw new Error(buildFocusError(tab, session, getZellijSessionsSync()));
     }
@@ -254,15 +254,15 @@ export const zellijAdapter: TerminalAdapter = {
 
   injectText(tab: string, text: string): void {
     withFocusedTab(tab, (session) => {
-      execSync(zellijCmd(session, "write-chars", "--", shellEscape(text)));
-      execSync("sleep 0.1");
-      execSync(zellijCmd(session, "write", "13"));
+      execSync(zellijCmd(session, "write-chars", "--", shellEscape(text)), { timeout: 2000 });
+      execSync("sleep 0.1", { timeout: 1000 });
+      execSync(zellijCmd(session, "write", "13"), { timeout: 2000 });
     });
   },
 
   sendRawKey(tab: string, keyCode: number): void {
     withFocusedTab(tab, (session) => {
-      execSync(zellijCmd(session, "write", String(keyCode)));
+      execSync(zellijCmd(session, "write", String(keyCode)), { timeout: 2000 });
     });
   },
 
@@ -272,10 +272,10 @@ export const zellijAdapter: TerminalAdapter = {
     let dumpErr: Error | null = null;
     withFocusedTab(tab, (session) => {
       try {
-        execSync(zellijCmd(session, "dump-screen", shellEscape(tmpFile)));
+        execSync(zellijCmd(session, "dump-screen", shellEscape(tmpFile)), { timeout: 2000 });
         // Brief wait — dump-screen returns before the file is fully flushed
         // on some zellij builds. 60ms covers the observed window.
-        execSync("sleep 0.06");
+        execSync("sleep 0.06", { timeout: 1000 });
         content = stripAnsi(fs.readFileSync(tmpFile, "utf8"));
       } catch (e) {
         dumpErr = e as Error;

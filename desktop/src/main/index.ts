@@ -6,6 +6,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startWatcher } from '@home/watcher'
 import { peekTab as peekZellijTab } from '@/lib/zellij'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
+import { execSync } from 'child_process'
 import { homedir } from 'os'
 import { APP_URL } from '@/config/brand'
 import {
@@ -796,10 +797,33 @@ app.on('open-url', (event, url) => {
 // Linux/Windows: only one Fleet Runner should run. A second invocation (from
 // a fleetcrown:// click after the app is already up) triggers second-instance
 // with the new argv; we scan it for the deep-link URL and surface the window.
+/** Kill other main runner processes. Singleton lock files can be cleared while
+ *  an old instance is still alive (e.g. manual rm ~/.config/fleet-runner/Singleton*),
+ *  leaving two pollers racing for commands — the loser often lacks the PTY state
+ *  for peek streams and hangs on zellij instead. */
+function terminateStaleRunnerInstances(): void {
+  const myPid = process.pid
+  try {
+    const out = execSync('pgrep -f "fleet-runner-bin --no-sandbox" || true', { encoding: 'utf8' })
+    for (const line of out.trim().split('\n')) {
+      const pid = Number.parseInt(line.trim(), 10)
+      if (!pid || pid === myPid) continue
+      try {
+        const cmd = execSync(`ps -p ${pid} -o args=`, { encoding: 'utf8' }).trim()
+        if (cmd.includes('--type=')) continue // child process, not the main app
+        console.log(`[desktop] terminating stale runner instance pid=${pid}`)
+        process.kill(pid, 'SIGTERM')
+      } catch { /* process vanished */ }
+    }
+  } catch { /* pgrep unavailable */ }
+}
+
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
+  process.exit(0)
 } else {
+  terminateStaleRunnerInstances()
   app.on('second-instance', (_event, argv) => {
     const url = argv.find((a) => a.startsWith('fleetcrown://'))
     if (url) handleDeepLinkUrl(url)

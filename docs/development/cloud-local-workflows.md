@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-06-16
-last_modified_summary: Retire the bash daemon onboarding path (killed 2026-06-11). Fleet Runner desktop is now the sole local executor; removed install commands for deleted scripts.
+last_modified_date: 2026-06-17
+last_modified_summary: Document /terminal "My machine" live view (runner-owned PTY stream) and v0.8.5 peek reliability fixes.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -93,6 +93,20 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | Run cron job now | Local openclaw |
 | Auto-continue pause from web (cloud) | Queued `auto_continue` command → runner writes `/tmp` sentinel |
 | Push notifications (agent ready) | Browser subscribe + VAPID on server; `/api/push/notify` |
+| **Terminal → My machine** (live agent view) | Fleet Runner owns the agent PTY (v0.8.3+); `/terminal` streams it via peek_start → peek-frame → SSE. Requires Fleet Runner v0.8.5+ for reliable peek (no zellij hang on detached sessions). |
+
+### Terminal page (`/terminal`)
+
+Two sources behind one view (toggle **This server** | **My machine**):
+
+| Source | Substrate | When to use |
+|--------|-----------|-------------|
+| **This server** | node-pty shells on the FleetCrown host | Hosted app default — shells run on the box |
+| **My machine** | Fleet Runner-owned agent PTYs on your laptop | Live view of agents you dispatched from Control; same xterm stream as Focus terminal |
+
+**My machine** lists open tabs from the runner heartbeat (`/api/control/open-tabs`) and streams the selected tab via `/api/control/peek-stream` (viewer ref-count → `peek_start` / `peek_stop` on the runner). Owned-PTY agents get a true byte stream; legacy zellij tabs fall back to dump-screen snapshots.
+
+**Runner version:** v0.8.3+ launches agents in owned PTYs by default. v0.8.5+ fixes live peek (non-blocking `peek_start`, stale dual-instance cleanup, zellij `execSync` timeouts).
 
 ### Environment-gated (optional features)
 
