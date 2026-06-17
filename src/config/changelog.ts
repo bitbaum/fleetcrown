@@ -29,6 +29,20 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.1",
+    tag: "fleet-runner-v0.8.1",
+    date: "2026-06-17T18:00:00Z",
+    highlights: [
+      "Reliable dispatch: a single verified command ensures the project's Zellij tab, launches the agent if none is running, injects the prompt, and confirms the agent picked it up — instead of silently typing into a closed or wrong tab.",
+      "Fuzzy tab matching: project keys now resolve to the tab names you actually use, so \"revampit\" finds your \"revamp-it\" tab (case + hyphens + spaces no longer matter).",
+      "Detached-session launches now fail with a clear \"zellij attach <session>\" instruction instead of a cryptic spawn timeout; stale commands queued while the runner was offline are purged instead of failing noisily on reconnect.",
+      "Self-healing bridge connection so the runner stops getting stuck \"offline\", and an honest offline state when a dispatch can't reach your machine.",
+      "Auto-update enabled: future Fleet Runner fixes download in place — no more manual reinstalls.",
+    ],
+    breaking: [],
+    notes: "The reliability release for the dispatch loop (Control → your local Zellij). Pairs with the web app's new Terminal tab, real Activity timeline, sidebar Light/Dark/Auto switch, and the dark-first Geist redesign deployed on fleetcrown.orangecat.ch.",
+  },
+  {
     version: "0.8.0",
     tag: "fleet-runner-v0.8.0",
     date: "2026-06-08T00:00:00Z",
