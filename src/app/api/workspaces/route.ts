@@ -39,8 +39,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unknown agent: ${data.agent}` }, { status: 400 });
     }
     const launchCommand = buildAgentOptionLaunchCommand({ agent: data.agent, model: data.model }, data.cwd);
+    // Login + interactive (-lic), NOT plain -c: the agent CLIs live on PATH only
+    // after the profile/nvm chain loads (claude is in ~/.nvm/.../bin), and the
+    // launch command's own `source ~/.bashrc` clobbers PATH non-interactively.
+    // A login-interactive shell matches what a zellij pane gives the agent.
     command = "bash";
-    args = ["-c", launchCommand];
+    args = ["-lic", launchCommand];
   }
   if (!command) {
     return NextResponse.json({ error: "Provide a command or an agent" }, { status: 400 });
