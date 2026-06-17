@@ -24,6 +24,11 @@ const PKG_VERSION = (() => {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // node-pty is a native addon (compiled .node) — it must stay external, never
+  // bundled by Turbopack/webpack, and only runs in the Node runtime. It backs
+  // the LocalPtyExecutor (FleetCrown-owned agent PTYs). See
+  // docs/architecture/agent-execution-platform.md.
+  serverExternalPackages: ["node-pty"],
   env: {
     NEXT_PUBLIC_APP_VERSION: PKG_VERSION,
     NEXT_PUBLIC_BUILD_SHA: buildSha(),
