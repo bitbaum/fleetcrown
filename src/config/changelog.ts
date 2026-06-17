@@ -29,6 +29,18 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.2",
+    tag: "fleet-runner-v0.8.2",
+    date: "2026-06-17T20:45:00Z",
+    highlights: [
+      "Fleet Runner can now run each agent in a terminal it owns directly, instead of driving your Zellij by name — which is what made dispatch into some projects time out when the session wasn't attached.",
+      "Watch any owned-terminal agent live from the web app, in full color with scrollback (a true byte stream, not a once-a-second screenshot).",
+      "Opt-in for now: set FLEETCROWN_RUNNER_PTY=true to switch a project's agents to owned terminals; everything else keeps using Zellij until you flip it.",
+    ],
+    breaking: [],
+    notes: "First step of moving agent execution off Zellij name-puppeting onto FleetCrown-owned PTYs (docs/architecture/agent-execution-platform.md). Ships node-pty in the runner (load-verified in the packaged build) but stays behind a flag so this release behaves exactly like 0.8.1 until you opt a project in.",
+  },
+  {
     version: "0.8.1",
     tag: "fleet-runner-v0.8.1",
     date: "2026-06-17T18:00:00Z",
