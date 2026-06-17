@@ -36,6 +36,7 @@ import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
 import { listAgentRegistry } from '@/lib/agent-registry'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
+import { listPtyTabs } from './pty-runtime'
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
@@ -73,6 +74,11 @@ async function pushOnce(): Promise<void> {
     // No Zellij running, tab query failed — push anyway with an empty list
     // so the daemon presence signal still gets through.
   }
+  // Tabs backed by a FleetCrown-owned PTY aren't zellij tabs, so merge them in
+  // (deduped) — otherwise a PTY-run project reads as "no tab open" in the UI.
+  try {
+    openTabs = [...new Set([...openTabs, ...listPtyTabs()])]
+  } catch { /* executor not ready — ignore */ }
   try {
     installedAgents = listAgentRegistry()
       .filter((entry) => entry.available)

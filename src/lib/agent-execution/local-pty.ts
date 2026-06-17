@@ -117,6 +117,13 @@ export class LocalPtyExecutor implements Executor {
     if (state.idleTimer) clearTimeout(state.idleTimer);
     try { state.pty?.kill(); } catch { /* already dead */ }
     state.pty = null;
+    // Mark exited synchronously. pty.onExit may not fire for a beat, and a
+    // re-provision of the same id (e.g. switching agents) must spawn fresh —
+    // provision() returns the existing handle unless its status is "exited".
+    if (state.handle.status !== "exited") {
+      state.handle = { ...state.handle, status: "exited" };
+      this.emit(state, { kind: "status", status: "exited" });
+    }
   }
 
   // --- internals ---

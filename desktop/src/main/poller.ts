@@ -34,6 +34,14 @@ import { startPeek, stopPeek } from './peek-streamer'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
 import { findMatchingTab } from '@/lib/tab-match'
+import {
+  RUNNER_PTY_ENABLED,
+  isPtyBacked,
+  launchAgentPty,
+  injectPty,
+  terminatePty,
+  waitForPtyReady,
+} from './pty-runtime'
 import { startBridgeSubscriber } from './bridge-subscriber'
 import { validateCommand } from './command-validator'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
@@ -409,7 +417,10 @@ async function handleCommand(
       case 'inject': {
         const { tab, prompt } = validation.command.payload
         const baseline = readMtimeMs(sessionFilePath(tab))
-        injectIntoTab(tab, prompt)
+        // PTY-first: drive the owned PTY's stdin when this tab has a live one,
+        // else fall back to zellij. Verification below is file-based either way.
+        if (isPtyBacked(tab)) injectPty(tab, prompt)
+        else injectIntoTab(tab, prompt)
         ok = true
         // Post-flight verification — best effort, doesn't block the ack on
         // failure (we still report ok:true because the keystrokes landed).
@@ -425,19 +436,36 @@ async function handleCommand(
         break
       }
       case 'close_tab': {
-        closeTab(validation.command.payload.tab)
+        const { tab } = validation.command.payload
+        if (isPtyBacked(tab)) await terminatePty(tab)
+        else closeTab(tab)
         ok = true
         break
       }
       case 'launch_agent': {
         const { tab, dir, agent, model, initialPrompt } = validation.command.payload
         assertKnownLaunchAgent(agent)
-        launchAgentInTab(tab, dir, agent as AgentOption, model)
-        clearHandoffSentinel(tab)
-        if (initialPrompt?.trim()) {
-          setTimeout(() => {
-            try { injectIntoTab(tab, initialPrompt.trim()) } catch (e) { console.warn('[poller] initial prompt after launch failed:', (e as Error).message) }
-          }, 2500)
+        const prompt = initialPrompt?.trim()
+        if (RUNNER_PTY_ENABLED) {
+          // Own the agent's PTY (no zellij). Inject the initial prompt once the
+          // agent is actually up rather than on a blind timer.
+          await launchAgentPty(tab, dir, agent as AgentOption, model)
+          clearHandoffSentinel(tab)
+          if (prompt) {
+            waitForPtyReady(tab).then((ready) => {
+              setTimeout(() => {
+                try { injectPty(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after PTY launch failed:', (e as Error).message) }
+              }, ready ? 1500 : 0)
+            })
+          }
+        } else {
+          launchAgentInTab(tab, dir, agent as AgentOption, model)
+          clearHandoffSentinel(tab)
+          if (prompt) {
+            setTimeout(() => {
+              try { injectIntoTab(tab, prompt) } catch (e) { console.warn('[poller] initial prompt after launch failed:', (e as Error).message) }
+            }, 2500)
+          }
         }
         ok = true
         break
@@ -448,6 +476,33 @@ async function handleCommand(
         // so the cloud/UI learns the real outcome instead of a fake ok.
         const { tab, dir, agent, model, prompt } = validation.command.payload
         assertKnownLaunchAgent(agent)
+        // PTY path when enabled (or already PTY-backed): own the agent's PTY
+        // instead of puppeting a (possibly detached → hanging) zellij tab.
+        const usePty = RUNNER_PTY_ENABLED || isPtyBacked(tab)
+        if (usePty) {
+          const alreadyRunning = isPtyBacked(tab)
+          let launched = false
+          if (!alreadyRunning) {
+            await launchAgentPty(tab, dir, agent as AgentOption, model)
+            clearHandoffSentinel(tab)
+            launched = true
+            // Wait for the agent to show life, then settle before pasting.
+            if (await waitForPtyReady(tab, 15000)) await asleep(1800)
+          }
+          const baseline = readMtimeMs(sessionFilePath(tab))
+          injectPty(tab, prompt)
+          verified = await waitForSessionFileBump(tab, baseline, 8000)
+          if (!verified && launched) {
+            await asleep(2500)
+            const retryBaseline = readMtimeMs(sessionFilePath(tab))
+            injectPty(tab, prompt)
+            verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
+          }
+          ok = true
+          text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
+          if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
+          break
+        }
         const alreadyRunning = resolveRunningAgentsInDir(dir).length > 0
         let launched = false
         if (!alreadyRunning) {
@@ -480,7 +535,15 @@ async function handleCommand(
       case 'switch_agent': {
         const { tab, dir, toAgent, fromAgent, model } = validation.command.payload
         assertKnownLaunchAgent(toAgent)
-        switchAgent(tab, dir, toAgent as AgentOption, fromAgent, model)
+        if (RUNNER_PTY_ENABLED || isPtyBacked(tab)) {
+          // Switching = replacing the owned process: terminate, settle, respawn.
+          await terminatePty(tab)
+          await asleep(400)
+          await launchAgentPty(tab, dir, toAgent as AgentOption, model)
+          clearHandoffSentinel(tab)
+        } else {
+          switchAgent(tab, dir, toAgent as AgentOption, fromAgent, model)
+        }
         ok = true
         break
       }

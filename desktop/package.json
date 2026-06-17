@@ -1,6 +1,6 @@
 {
   "name": "fleet-runner",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "description": "Fleet Runner — the local authoritative desktop application for the FleetCrown AI agent fleet platform.",
   "main": "./out/main/index.js",
   "author": {
@@ -32,6 +32,9 @@
     "files": [
       "out/**/*",
       "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-pty/**"
     ],
     "extraResources": [
       {
@@ -78,7 +81,8 @@
   },
   "dependencies": {
     "@sentry/electron": "^7.13.0",
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",

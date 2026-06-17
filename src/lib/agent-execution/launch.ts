@@ -25,11 +25,18 @@ export interface ProvisionAgentArgs {
   model?: string;
   cols?: number;
   rows?: number;
+  /**
+   * Explicit workspace id. Defaults to `workspaceIdFor(userId, projectKey)`.
+   * The Fleet Runner passes its own (it has no server userId locally) so the
+   * same helper provisions on both the server and the runner — same shell, same
+   * launch command, only the id scheme differs.
+   */
+  workspaceId?: string;
 }
 
 /**
  * Provision (or re-attach to) a FleetCrown-owned PTY running the given agent.
- * Idempotent per (user, projectKey): a live workspace is returned, never respawned.
+ * Idempotent per workspace id: a live workspace is returned, never respawned.
  */
 export async function provisionAgentWorkspace(
   userId: string,
@@ -41,7 +48,7 @@ export async function provisionAgentWorkspace(
   // launch command's own `source ~/.bashrc` clobbers PATH non-interactively.
   // A login-interactive shell matches what a zellij pane gives the agent.
   return executor.provision({
-    id: workspaceIdFor(userId, args.projectKey),
+    id: args.workspaceId ?? workspaceIdFor(userId, args.projectKey),
     cwd: args.dir,
     command: "bash",
     args: ["-lic", launchCommand],
