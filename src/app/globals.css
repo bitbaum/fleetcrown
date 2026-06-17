@@ -134,9 +134,12 @@
   --chart-4: oklch(0.35 0 0);
   --chart-5: oklch(0.26 0 0);
   --radius: 0.5rem;
-  --font-sans: var(--font-space-grotesk);
-  --font-heading: var(--font-space-display);
-  --font-mono: var(--font-ibm-plex-mono);
+  /* Geist + Geist Mono — the x.ai / grok / modern-product grotesk. Wired in
+     src/app/layout.tsx via the `geist` package (--font-geist-*). SSOT: change
+     the typeface here and in layout.tsx only. */
+  --font-sans: var(--font-geist-sans);
+  --font-heading: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
   --text-micro: 0.625rem; /* 10px — compact widget/metadata text */
   --text-nano: 0.5rem;    /* 8px — micro heatmap labels, tightest readable size */
   --modal-max-height: 85vh;  /* standard tall-modal cap */
@@ -1278,6 +1281,119 @@
   .ui-brand-mark-default {
     @apply h-11 w-11;
   }
+  /* The spiral glyph itself. Inline <svg> stroked with currentColor so it
+     inherits text color + theme. The animated variant slowly rotates and
+     carries a soft glow — the "trippy, fall-into-infinity" treatment for the
+     in-app mark only. Icons (favicon/tray/compact) stay static + crisp. */
+  .ui-brand-spiral {
+    color: var(--text-primary);
+  }
+  .ui-brand-spiral-animated {
+    animation: ui-brand-spiral-spin 28s linear infinite;
+    filter: drop-shadow(0 0 4px color-mix(in oklch, var(--text-primary) 30%, transparent));
+    transform-origin: 50% 50%;
+  }
+  @keyframes ui-brand-spiral-spin {
+    to { transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-brand-spiral-animated { animation: none; }
+  }
+
+  /* ── Terminal (multi-tab + split panes) ─────────────────────────────────
+     x.ai-minimal: near-black surfaces, hairline borders, tracked mono labels,
+     restrained accents. Panes are absolutely positioned from the layout tree
+     (see lib/terminal-layout.ts) so they never remount across splits. */
+  .ui-term-shell {
+    @apply flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border-subtle bg-surface-page;
+  }
+  .ui-term-tabbar {
+    @apply flex items-center gap-1 overflow-x-auto border-b border-border-subtle bg-surface-base px-2 py-1.5;
+  }
+  .ui-term-tab {
+    @apply flex shrink-0 cursor-default items-center gap-2 rounded-md border border-transparent px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:bg-surface-raised;
+    font-family: var(--font-mono);
+  }
+  .ui-term-tab-active {
+    @apply border-border-default bg-surface-raised text-text-primary;
+  }
+  .ui-term-tab-label {
+    @apply whitespace-nowrap tracking-tight;
+  }
+  .ui-term-tab-input {
+    @apply w-28 rounded bg-transparent text-xs text-text-primary outline-none;
+    font-family: var(--font-mono);
+  }
+  .ui-term-tab-close {
+    @apply rounded p-0.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-text-primary group-hover:opacity-100;
+  }
+  .ui-term-tab-active .ui-term-tab-close { @apply opacity-60; }
+  .ui-term-newtab {
+    @apply shrink-0 rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-term-stage {
+    @apply relative min-h-0 flex-1;
+  }
+  .ui-term-canvas {
+    @apply absolute inset-0;
+  }
+  .ui-term-slot {
+    @apply absolute p-[3px];
+  }
+  .ui-term-pane {
+    @apply flex h-full w-full flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface-page transition-colors;
+  }
+  .ui-term-pane-active {
+    @apply border-border-interactive;
+    box-shadow: 0 0 0 1px var(--border-interactive);
+  }
+  .ui-term-pane-head {
+    @apply flex items-center gap-2 border-b border-border-subtle bg-surface-base px-2.5 py-1;
+  }
+  .ui-term-dot { @apply h-1.5 w-1.5 shrink-0 rounded-full; }
+  .ui-term-pane-label {
+    @apply text-micro font-medium tracking-wide text-text-secondary;
+    font-family: var(--font-mono);
+  }
+  .ui-term-pane-state {
+    @apply text-nano uppercase tracking-caps text-text-muted;
+  }
+  .ui-term-pane-actions {
+    @apply ml-auto flex items-center gap-0.5;
+  }
+  .ui-term-icon-btn {
+    @apply rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-term-icon-btn-danger { @apply hover:text-status-negative; }
+  .ui-term-pane-body {
+    @apply min-h-0 flex-1 overflow-hidden bg-surface-page p-1.5;
+  }
+  .ui-term-pane-loading {
+    @apply flex h-full items-center justify-center gap-2 text-xs text-text-tertiary;
+  }
+  .ui-term-pane-error {
+    @apply flex h-full items-center justify-center px-4 text-center text-xs text-status-negative;
+  }
+  .ui-term-empty {
+    @apply flex h-full flex-col items-center justify-center gap-4 text-sm text-text-tertiary;
+  }
+  .ui-term-divider {
+    @apply absolute z-10;
+  }
+  .ui-term-divider-v {
+    @apply -ml-1 w-2 cursor-col-resize;
+  }
+  .ui-term-divider-h {
+    @apply -mt-1 h-2 cursor-row-resize;
+  }
+  .ui-term-divider::after {
+    content: "";
+    @apply absolute bg-transparent transition-colors;
+  }
+  .ui-term-divider-v::after { @apply inset-y-0 left-1/2 w-px -translate-x-1/2; }
+  .ui-term-divider-h::after { @apply inset-x-0 top-1/2 h-px -translate-y-1/2; }
+  .ui-term-divider:hover::after { @apply bg-border-interactive; }
+
   /* Auth surface — same token system as ui-public-* so the marketing and
      auth surfaces flip together when the user changes theme. Kept as a
      separate namespace so they can diverge if the auth UX ever does. */

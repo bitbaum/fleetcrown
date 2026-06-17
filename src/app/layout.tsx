@@ -1,25 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/shell/ThemeProvider";
 import { APP_DESCRIPTION, APP_NAME, APP_URL } from "@/config/brand";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-});
-
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: "--font-ibm-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
-
-const spaceGroteskDisplay = Space_Grotesk({
-  variable: "--font-space-display",
-  subsets: ["latin"],
-});
+// Geist (Vercel's technical grotesk) + Geist Mono — the x.ai / grok / modern
+// product typeface. Self-hosted by the `geist` package; exposes the CSS vars
+// --font-geist-sans / --font-geist-mono which globals.css maps to
+// --font-sans / --font-mono (SSOT).
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
@@ -75,7 +65,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${spaceGroteskDisplay.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="h-full" suppressHydrationWarning>

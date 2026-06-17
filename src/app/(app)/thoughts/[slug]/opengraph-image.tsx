@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getThought } from "@/lib/thoughts-content";
 import { APP_NAME } from "@/config/brand";
+import { BRAND_MARK, spiralPathD } from "@/config/brand-mark";
 
 // Per-essay OG image: dark 1200×630 canvas with a small brand stamp top-left,
 // the essay title large, summary as 2-line clamp, and a footer row showing
@@ -65,14 +66,17 @@ export default async function EssayOGImage({
           fontFamily: "sans-serif",
         }}
       >
-        {/* Brand stamp — control window (synced with BrandMark.tsx + icon.svg) */}
+        {/* Brand stamp — dense spiral coil from the SSOT (src/config/brand-mark.ts) */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <svg width="40" height="40" viewBox="0 0 512 512">
-            <rect width="512" height="512" rx="96" fill="#0a0a0a" />
-            <g transform="translate(116 116) scale(11.6667)" fill="none" stroke="#ededed" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M 12 14 A 2 2 0 0 1 12 10 A 4 4 0 0 0 12 16" stroke="#ededed" strokeWidth="1.3" opacity="0.95" />
-              <path d="M 12 16 A 6 6 0 0 1 12 6" stroke="#ededed" strokeWidth="1.3" opacity="0.7" />
-            </g>
+          <svg width="40" height="40" viewBox={`0 0 ${BRAND_MARK.viewBox} ${BRAND_MARK.viewBox}`}>
+            <path
+              d={spiralPathD()}
+              fill="none"
+              stroke="#ededed"
+              strokeWidth={BRAND_MARK.strokeWidth}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}>{APP_NAME}</span>
           <span style={{ fontSize: 20, color: "#52525b", marginLeft: 4 }}>· Essay</span>

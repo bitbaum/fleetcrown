@@ -1,45 +1,39 @@
 import { APP_KICKER, APP_NAME } from "@/config/brand";
+import { BRAND_MARK, spiralPathD } from "@/config/brand-mark";
 
 export function BrandMark({
   compact = false,
   showWordmark = true,
+  /** Animate the spiral (slow rotation + glow). Default on for the full mark,
+   *  off when compact — tiny rotating glyphs read as noise, not brand. */
+  animated,
 }: {
   compact?: boolean;
   showWordmark?: boolean;
+  animated?: boolean;
 }) {
   const markSize = compact ? "ui-brand-mark-compact" : "ui-brand-mark-default";
+  const spin = animated ?? !compact;
 
   return (
     <div className="flex items-center gap-3">
       <div className={`ui-brand-mark ${markSize} transition-transform hover:scale-[1.02] active:scale-[0.985]`} aria-hidden>
+        {/* Dense Archimedean coil — geometry from the SSOT (src/config/brand-mark.ts).
+            Stroked with currentColor so it themes; the same path drives the
+            favicon, tray icon, app icon, and OG images. */}
         <svg
           width={compact ? 22 : 24}
           height={compact ? 22 : 24}
-          viewBox="0 0 24 24"
+          viewBox={`0 0 ${BRAND_MARK.viewBox} ${BRAND_MARK.viewBox}`}
           fill="none"
-          className="text-text-primary"
+          className={`ui-brand-spiral ${spin ? "ui-brand-spiral-animated" : ""}`}
         >
-          {/* Spiral mark — three alternating semicircles of growing radius
-              (2 → 4 → 6) tracing 1.5 turns outward from center. Two paths so
-              the inner arc reads bolder than the outer one (depth trick
-              inherited from the previous control-window mark). MUST stay
-              pixel-identical with public/icon.svg and every
-              opengraph-image.tsx — see comments there. */}
           <path
-            d="M 12 14 A 2 2 0 0 1 12 10 A 4 4 0 0 0 12 16"
+            d={spiralPathD()}
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth={BRAND_MARK.strokeWidth}
             strokeLinecap="round"
             strokeLinejoin="round"
-            opacity="0.95"
-          />
-          <path
-            d="M 12 16 A 6 6 0 0 1 12 6"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity="0.7"
           />
         </svg>
       </div>

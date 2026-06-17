@@ -7,7 +7,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
+      // Dark-first brand (x.ai / grok / SpaceX language). Users who haven't
+      // explicitly picked a theme get dark instead of following the OS — the
+      // Settings → Appearance toggle (incl. System) still overrides per-user.
+      defaultTheme="dark"
       enableSystem={true}
       storageKey={`${APP_SLUG}-theme`}
     >
