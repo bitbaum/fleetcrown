@@ -91,9 +91,12 @@ export async function ActivityView({
         </Card>
       ) : (
         <>
-          <DigestPanel window={digest.window} project={digest.projectKey} />
+          {/* Facts first: counts, then the raw time-ordered events. The AI
+              narrative is an optional summary at the bottom — handy, but never
+              the source of truth (the user reported it read as vague filler). */}
           <StatsLine stats={digest.stats} />
           <EventStream items={digest.timeline} density={density} />
+          <DigestPanel window={digest.window} project={digest.projectKey} />
         </>
       )}
     </div>

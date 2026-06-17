@@ -18,12 +18,15 @@ export function EventStream({
       <div>
         <h2 className="text-sm font-semibold text-text-primary">Events</h2>
         <p className="mt-1 text-xs text-text-tertiary">
-          Raw, time-sorted. Prompts you dispatched and runs that finished.
+          Every prompt dispatched and run recorded, newest first — what the agent did, what&apos;s next, and how long it took.
         </p>
       </div>
       <ul className="space-y-1">
         {items.map((item) => {
-          const showBody = item.body && (density === "detailed" || item.status === "negative");
+          // Always show the body when there is one — the whole point of the
+          // page is seeing what actually happened, not just that it happened.
+          // Density only controls how much of a long body we clamp.
+          const showBody = !!item.body;
           return (
             <li
               key={item.id}
@@ -47,6 +50,11 @@ export function EventStream({
                   >
                     {item.title}
                   </span>
+                  {item.detail && (
+                    <span className="ml-auto shrink-0 font-mono text-micro text-text-muted tabular-nums">
+                      {item.detail}
+                    </span>
+                  )}
                 </div>
                 {showBody && (
                   <p

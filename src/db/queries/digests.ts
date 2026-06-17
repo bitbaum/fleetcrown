@@ -87,7 +87,23 @@ export type DigestTimelineItem = {
   body: string;
   status: EventStatus;
   kind: "prompt" | "run" | "local_chat";
+  /** Short right-aligned fact (e.g. a run's duration). Optional. */
+  detail?: string;
 };
+
+/** Human duration between two timestamps, e.g. "2m 14s" / "830ms" / "1h 3m". */
+function formatDuration(startMs: number, endMs: number): string | undefined {
+  const ms = endMs - startMs;
+  if (!Number.isFinite(ms) || ms < 0) return undefined;
+  if (ms < 1000) return `${ms}ms`;
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m < 60) return rem ? `${m}m ${rem}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
 
 export type ProjectStatus = {
   key: string;
@@ -345,15 +361,31 @@ function buildLocalChatTimeline(rows: LocalChatRow[]): DigestTimelineItem[] {
 }
 
 function buildRunTimeline(runs: RunRow[]): DigestTimelineItem[] {
-  return runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((run) => ({
-    id: `run:${run.id}`,
-    occurredAt: (run.finishedAt ?? run.startedAt).toISOString(),
-    projectKey: run.projectKey,
-    title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)} · ${run.outcome ?? run.state}`,
-    body: run.summary?.done || run.summary?.next || run.payload?.resultText || run.payload?.error || "",
-    status: runStatus(run),
-    kind: "run",
-  }));
+  return runs.slice(0, MAX_RUN_SAMPLES_FOR_TIMELINE).map((run) => {
+    // Show what the agent actually did AND what's next — the two facts that
+    // make the timeline useful — plus the error when it failed.
+    const done = run.summary?.done?.trim();
+    const next = run.summary?.next?.trim();
+    const err = run.payload?.error?.trim();
+    const parts: string[] = [];
+    if (done) parts.push(done);
+    if (next) parts.push(`Next: ${next}`);
+    if (!parts.length && run.payload?.resultText) parts.push(run.payload.resultText);
+    if (err) parts.push(`Error: ${err}`);
+    const detail = run.finishedAt
+      ? formatDuration(run.startedAt.getTime(), run.finishedAt.getTime())
+      : "running";
+    return {
+      id: `run:${run.id}`,
+      occurredAt: (run.finishedAt ?? run.startedAt).toISOString(),
+      projectKey: run.projectKey,
+      title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)} · ${run.outcome ?? run.state}`,
+      body: parts.join(" — "),
+      status: runStatus(run),
+      kind: "run" as const,
+      detail,
+    };
+  });
 }
 
 function buildProjectStatuses(runs: RunRow[], projects: DigestProjectOption[]): ProjectStatus[] {
