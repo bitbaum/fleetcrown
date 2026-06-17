@@ -518,7 +518,15 @@ async function handleCommand(
     }
   } catch (e) {
     ok = false
-    error = (e as Error).message
+    const raw = (e as Error).message ?? ''
+    // A zellij `action` against a detached session blocks until our hard timeout
+    // and surfaces as a cryptic "spawnSync /bin/sh ETIMEDOUT". Translate any such
+    // timeout that escaped the per-command handlers into an actionable message so
+    // the UI never shows the raw spawn error. (launchAgentInTab already does this
+    // for its own path; this is the catch-all for focus/inject/close helpers.)
+    error = /ETIMEDOUT|timed out|timeout/i.test(raw)
+      ? `Zellij didn't respond while handling "${command.type}" — the target session is likely detached. Attach it (zellij attach <session>) so Fleet Runner can drive it, then retry.`
+      : raw
   }
 
   // Drop the dedup sentinel on success so a re-served command (PATCH ack

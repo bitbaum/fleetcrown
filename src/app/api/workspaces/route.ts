@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z, readJsonBody } from "@/lib/api/route-helpers";
 import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
-import { buildAgentOptionLaunchCommand, isAgentId } from "@/lib/agent-registry";
+import { provisionAgentWorkspace } from "@/lib/agent-execution/launch";
+import { isAgentId } from "@/lib/agent-registry";
 import { getApiUserId } from "@/lib/session";
 
 // node-pty (the LocalPtyExecutor) only runs in the Node runtime.
@@ -38,30 +39,31 @@ export async function POST(req: NextRequest) {
   // Plain terminals omit cwd → open in $HOME. Agent launches always pass one.
   const cwd = data.cwd ?? homedir();
 
-  let command = data.command;
-  let args = data.args;
+  // Agent launch → reuse the SSOT provision helper (shared with /api/agent/launch).
   if (data.agent) {
     if (!isAgentId(data.agent)) {
       return NextResponse.json({ error: `Unknown agent: ${data.agent}` }, { status: 400 });
     }
-    const launchCommand = buildAgentOptionLaunchCommand({ agent: data.agent, model: data.model }, cwd);
-    // Login + interactive (-lic), NOT plain -c: the agent CLIs live on PATH only
-    // after the profile/nvm chain loads (claude is in ~/.nvm/.../bin), and the
-    // launch command's own `source ~/.bashrc` clobbers PATH non-interactively.
-    // A login-interactive shell matches what a zellij pane gives the agent.
-    command = "bash";
-    args = ["-lic", launchCommand];
-  }
-  if (!command) {
-    return NextResponse.json({ error: "Provide a command or an agent" }, { status: 400 });
+    const handle = await provisionAgentWorkspace(userId, {
+      projectKey: data.projectKey,
+      dir: cwd,
+      agent: data.agent,
+      model: data.model,
+      cols: data.cols,
+      rows: data.rows,
+    });
+    return NextResponse.json({ ok: true, workspace: handle });
   }
 
-  const id = workspaceIdFor(userId, data.projectKey);
+  // Plain shell (or explicit command) → provision directly.
+  if (!data.command) {
+    return NextResponse.json({ error: "Provide a command or an agent" }, { status: 400 });
+  }
   const handle = await executor.provision({
-    id,
+    id: workspaceIdFor(userId, data.projectKey),
     cwd,
-    command,
-    args,
+    command: data.command,
+    args: data.args,
     cols: data.cols,
     rows: data.rows,
   });

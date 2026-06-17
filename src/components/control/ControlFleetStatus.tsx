@@ -15,8 +15,8 @@ import {
 // Binary autopilot since the 2026-06-11 collapse. Plain language only — no
 // internal template names (next_best) or handoff-field jargon (status:working).
 const AUTOMATION_HINTS: Record<AutoInjectMode, string> = {
-  off: "Off — agents stop when a task ends; you dispatch every next step yourself.",
-  on:  "On — agents work through each project's queue, then pick the next-best task automatically. Busy agents, blockers, and failing health checks still pause dispatch.",
+  off: "Autopilot off — agents stop when a task ends; you dispatch every next step yourself.",
+  on:  "Autopilot on — agents work through each project's queue, then pick the next-best task automatically. Busy agents, blockers, and failing health checks still pause dispatch.",
 };
 
 type Props = {
@@ -135,6 +135,9 @@ export function ControlFleetStatus({
           {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
         </div>
         <div className="ui-control-fleet-actions">
+          {/* Name the control so the fleet-wide play/pause reads as "Autopilot"
+              — the one place that word now means the auto-inject engine. */}
+          <span className="ui-micro-label hidden text-text-tertiary sm:inline">Autopilot</span>
           <AutomationPolicyControl
             mode={automationMode}
             saving={automationSaving}

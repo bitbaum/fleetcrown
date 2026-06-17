@@ -4,6 +4,8 @@ import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type Orchestr
 import { getApiUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { executor } from "@/lib/agent-execution";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun } from "@/db/queries/orchestration-runs";
@@ -93,6 +95,15 @@ export async function POST(req: NextRequest) {
   const projectPath: string | null = dbMatch.dirPath ?? null;
   const projectId: string | null = dbMatch.entityProjectId ?? null;
 
+  // Is this project backed by a live FleetCrown-owned PTY (server-side launch)?
+  // The executor registry is the SSOT — a live handle means we drive the agent's
+  // stdin directly and bypass every zellij concept (tab resolution, focus-dance,
+  // the zsh user-typing hook). No live workspace → fall back to the legacy zellij
+  // path unchanged (cloud mode never has one; injectFn is null there).
+  const ptyWorkspaceId = workspaceIdFor(userId, canonical);
+  const ptyHandle = isRuntimeAvailable() ? executor.get(ptyWorkspaceId) : null;
+  const ptyBacked = !!ptyHandle && ptyHandle.status !== "exited";
+
   // Honor the project's per-row agent preference when the caller didn't pin one.
   // Without this the runner defaults to "claude" for every project regardless
   // of agent_pref, so a Gemini project gets a Claude launch and a Cursor
@@ -126,14 +137,18 @@ export async function POST(req: NextRequest) {
         getZellijTabs: (await import("@/lib/zellij")).getZellijTabs,
       }));
 
-    const activeTabs = await getZellijTabs();
-    if (activeTabs.length > 0) {
-      effectiveTab = resolveEffectiveTab(canonical, activeTabs);
-      if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
-        return NextResponse.json(
-          { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
-          { status: 422 },
-        );
+    // PTY-backed agents have no zellij tab — effectiveTab stays canonical and we
+    // skip the "is the tab open in zellij" gate entirely.
+    if (!ptyBacked) {
+      const activeTabs = await getZellijTabs();
+      if (activeTabs.length > 0) {
+        effectiveTab = resolveEffectiveTab(canonical, activeTabs);
+        if (effectiveTab === canonical && !activeTabs.some((t) => t.toLowerCase() === canonical.toLowerCase())) {
+          return NextResponse.json(
+            { error: `Tab "${canonical}" is not open in Zellij. Open it and try again.` },
+            { status: 422 },
+          );
+        }
       }
     }
 
@@ -185,14 +200,19 @@ export async function POST(req: NextRequest) {
   const resolvedProjectPath = projectPath ?? canonical;
   const nowS = Math.floor(Date.now() / 1000);
 
-  // Build the Zellij injection function — executor calls it only when ZELLIJ_SESSION_NAME
-  // is present in this process (dev server inside Zellij). Otherwise it queues for the runner.
-  const injectFn = isRuntimeAvailable()
-    ? async () => {
-        const { injectIntoTab } = await import("@/lib/zellij");
-        injectIntoTab(effectiveTab, prompt);
-      }
-    : null;
+  // Build the local injection function. PTY-backed agents are driven directly via
+  // the executor (write to the owned PTY's stdin); otherwise fall back to the
+  // legacy zellij path. Null in cloud mode → executeInject queues for the runner.
+  const injectFn = !isRuntimeAvailable()
+    ? null
+    : ptyBacked
+      ? async () => {
+          executor.write(ptyWorkspaceId, prompt.endsWith("\r") ? prompt : `${prompt}\r`);
+        }
+      : async () => {
+          const { injectIntoTab } = await import("@/lib/zellij");
+          injectIntoTab(effectiveTab, prompt);
+        };
 
   const trackableIntent = eventIntent !== "hard_stop" && eventIntent !== "close_session";
   if (!runId && trackableIntent && !isRuntimeAvailable()) {
@@ -220,9 +240,10 @@ export async function POST(req: NextRequest) {
 
   // If the user is actively at the ZSH prompt in this tab, skip injection to
   // avoid garbling whatever they're typing.  Requires the fleetcrown-typing hooks
-  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh).
+  // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh). This is a zellij-only
+  // concept — a FleetCrown-owned PTY has no human at its prompt, so skip it.
   // Side effects (beacon cancel, /tmp state) run only after this gate passes.
-  if (isRuntimeAvailable()) {
+  if (isRuntimeAvailable() && !ptyBacked) {
     const { isUserTypingInTab } = await import("@/lib/zellij");
     if (isUserTypingInTab(effectiveTab)) {
       const fingerprint = promptFingerprint(prompt);

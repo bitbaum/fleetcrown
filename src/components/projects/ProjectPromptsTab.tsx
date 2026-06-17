@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertTriangle, Bot, ChevronDown, ChevronUp, Loader2, Plus, ToggleLeft, ToggleRight, X, Zap } from "lucide-react";
 import { createCronJob, patchCronJob } from "@/lib/api/crons";
+import { SCHEDULED_JOB_LABEL, SCHEDULED_JOBS_LABEL } from "@/lib/crons-shared";
 import type { LinkedJob, ProjectData } from "./project-detail-types";
 import { NAV } from "@/config/navigation";
 
@@ -95,7 +96,7 @@ function NewJobForm({
         onClick={() => setOpen(true)}
         className="ui-btn-add-success"
       >
-        <Plus className="h-3.5 w-3.5" /> New autopilot job for this project
+        <Plus className="h-3.5 w-3.5" /> New scheduled job for this project
       </button>
     );
   }
@@ -103,7 +104,7 @@ function NewJobForm({
   return (
     <div className="rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <div className="ui-micro-label text-status-positive/70">New Autopilot Job</div>
+        <div className="ui-micro-label text-status-positive/70">New {SCHEDULED_JOB_LABEL}</div>
         <button onClick={() => setOpen(false)} className="text-text-muted hover:text-text-secondary"><X className="h-3.5 w-3.5" /></button>
       </div>
       <input placeholder="Job name" value={name} onChange={(e) => setName(e.target.value)}
@@ -143,11 +144,11 @@ export function PromptsTab({
     <div className="space-y-4">
       <div className="flex items-center gap-2 ui-micro-label font-medium">
         <Bot className="h-3.5 w-3.5" />
-        Autopilot Jobs {jobs.length > 0 && <span className="text-text-tertiary normal-case">({jobs.length})</span>}
+        {SCHEDULED_JOBS_LABEL} {jobs.length > 0 && <span className="text-text-tertiary normal-case">({jobs.length})</span>}
       </div>
 
       {jobs.length === 0 ? (
-        <p className="text-xs text-text-secondary">No autopilot jobs linked to this project yet.</p>
+        <p className="text-xs text-text-secondary">No scheduled jobs linked to this project yet.</p>
       ) : (
         <div className="space-y-2">
           {jobs.map((job) => (

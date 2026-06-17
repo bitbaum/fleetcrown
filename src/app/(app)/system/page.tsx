@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { SystemStats } from "@/components/system/SystemStats";
-import { AutopilotCard } from "@/components/system/AutopilotCard";
+import { ScheduledJobsCard } from "@/components/system/ScheduledJobsCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { RecentFailuresCard } from "@/components/system/RecentFailuresCard";
 import { FleetDoctorCard } from "@/components/system/FleetDoctorCard";
@@ -24,7 +24,7 @@ export default async function SystemPage() {
   // boundary — caught live on fleetcrown.orangecat.ch/system showing
   // "Something went wrong" with the Server Components render error.
   // Defensive: fall back to an empty list so the rest of the page renders
-  // (AutopilotCard handles empty initialJobs cleanly). The error is
+  // (ScheduledJobsCard handles empty initialJobs cleanly). The error is
   // captured in console so postmortem still works.
   let jobs: Awaited<ReturnType<typeof listCronJobsForUser>> = [];
   try {
@@ -35,11 +35,11 @@ export default async function SystemPage() {
 
   return (
     <PullToRefresh>
-      <PageLayout title="System" subtitle="Infrastructure health and Ivy autopilot">
+      <PageLayout title="System" subtitle="Infrastructure health and scheduled jobs">
         <SystemStats />
         <FleetDoctorCard />
         <GlobalAutoContinueCard />
-        <AutopilotCard initialJobs={jobs} />
+        <ScheduledJobsCard initialJobs={jobs} />
         <Suspense fallback={<CardSkeleton />}>
           <MemorySummaryCard />
         </Suspense>

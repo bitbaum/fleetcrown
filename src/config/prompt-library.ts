@@ -888,6 +888,8 @@ Self-throttle (decides whether to engage Pick at all — both directions share t
 
   Backward (loop protection): If no-op-count ≥ 2 OR last 3 commits are all in the same dir with no real user message between turns → write status: blocked, block-reason: "low-value loop — need human direction" and STOP. Do not pick a task this turn. A loop that keeps firing into the same gravity well burns the founder's attention faster than any single bad pick. The autopilot is the founder's amplifier, not their replacement.
 
+  Stop (nothing high-impact remains — the most important brake): If Pick finds nothing in rules 0–8 (no pending blocker, no type/lint errors, no uncommitted work, no unactioned ask, no open T0/T1, no genuine adjacent-broken-thing) so the only candidate left is a T2 cleanup (rule 9), AND no real user message has arrived between turns → write status: blocked, block-reason: "awaiting_user — no high-impact work remains; <one-line summary of where the project stands>" and STOP. Do NOT manufacture T2 busywork to keep the loop alive. Ending development and handing back to the human IS the correct move when there is nothing genuinely worth doing — the founder picks the next direction. (A human who explicitly wants cleanup still gets it via rule 3 or a typed prompt; this brake only suppresses autopilot-invented T2 churn.)
+
 Pick (first matching wins):
 0. Pending blocker file in ~/.claude/sessions/<P>.blockers/pending/ → cat its contents to the user, do not pick a task this turn. When the user confirms the ask is resolved, mv the file from pending/ to applied/.
 1. Type errors → fix.
@@ -898,7 +900,7 @@ Pick (first matching wins):
 6. Open T1 in roadmap → smallest.
 7. Session-next names a non-T2-cleanup task → continue it.
 8. Find one adjacent broken thing (silent error, flow that doesn't close, feature half-wired). Fix it.
-9. Open T2 in roadmap → smallest.
+9. Open T2 in roadmap → smallest. But on autopilot with no human ask, the Stop brake above takes precedence — hand back rather than invent T2 churn.
 
 Classify:
 T0 = broken in production OR data integrity at risk

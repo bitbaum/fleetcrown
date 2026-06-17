@@ -45,7 +45,7 @@ export const NAV = {
   projects:   { id: "projects", label: "Projects", description: "Repo health & project context",     href: "/projects",   icon: FolderKanban, active: true,  mobile: true  },
   prompts:    { id: "prompts",  label: "Prompts",  description: "Agent prompt library & scheduler",  href: "/prompts",    icon: Zap,          active: true,  mobile: false },
   activity:   { id: "activity", label: "Activity", description: "Project status and event timeline",  href: "/activity", icon: Newspaper,    active: true,  mobile: false },
-  system:     { id: "system",   label: "System",   description: "Runtime health & autopilot jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },
+  system:     { id: "system",   label: "System",   description: "Runtime health & scheduled jobs",   href: "/system",     icon: Server,       active: true,  mobile: false },
 
   memory:     { id: "memory",   label: "Memory",   description: "Knowledge graph & entity activity", href: "/memory",     icon: Brain,        active: true,  mobile: false },
   thoughts:   { id: "thoughts", label: "Thoughts", description: "Essays on architecture & systems",  href: "/thoughts",   icon: BookOpen,     active: true,  mobile: false },

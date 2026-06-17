@@ -6,7 +6,7 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDistanceToNow } from "date-fns";
 import type { CronJob } from "@/lib/crons-shared";
-import { humanCronSchedule } from "@/lib/crons-shared";
+import { humanCronSchedule, SCHEDULED_JOBS_LABEL } from "@/lib/crons-shared";
 import { patchCronJob } from "@/lib/api/crons";
 import { JobDetail } from "./JobDetail";
 
@@ -84,7 +84,7 @@ function JobRow({
   );
 }
 
-export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
+export function ScheduledJobsCard({ initialJobs }: { initialJobs: CronJob[] }) {
   const [jobs, setJobs] = useState(initialJobs);
   const [selected, setSelected] = useState<CronJob | null>(null);
 
@@ -134,7 +134,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
       <Card>
         <CardHeader
           icon={Bot}
-          title="Autopilot"
+          title={SCHEDULED_JOBS_LABEL}
           right={
             <div className="flex items-center gap-2 text-xs">
               {okCount > 0 && (
@@ -154,7 +154,7 @@ export function AutopilotCard({ initialJobs }: { initialJobs: CronJob[] }) {
         />
 
         {jobs.length === 0 ? (
-          <EmptyState>No autopilot jobs configured</EmptyState>
+          <EmptyState>No scheduled jobs configured</EmptyState>
         ) : (
         <div className="space-y-4">
           {/* Project-scoped job groups */}

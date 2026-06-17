@@ -92,13 +92,13 @@ export function BeaconSettings() {
       ) : (
         <div className="space-y-8">
 
-          {/* ─── Subgroup: Auto-inject behavior ─── */}
+          {/* ─── Subgroup: Autopilot behavior ─── */}
           <div className="space-y-5">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Auto-inject</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">Autopilot</h3>
 
-            {/* ── Auto-inject mode ── */}
+            {/* ── Autopilot mode ── */}
             <div className="space-y-2">
-              <label className="ui-kicker">Auto-inject mode</label>
+              <label className="ui-kicker">Autopilot mode</label>
               <div className="grid grid-cols-2 gap-2">
                 {AUTO_INJECT_MODES.map((m) => (
                   <button
@@ -118,7 +118,7 @@ export function BeaconSettings() {
                 ))}
               </div>
               <p className="text-xs text-text-muted">
-                Decides what gets injected when a session ends and the queue/handoff combine to suggest a next move. Strategist is the default and uses Groq; switch to Queue only if you want strictly explicit prompts, or Off to dispatch every prompt by hand.
+                When an agent finishes a task, autopilot sends the next queued instruction — or, if the queue is empty, picks the next-best task automatically. It pauses on its own for busy agents, pending blockers, and failing health checks. Set it Off to dispatch every prompt by hand.
               </p>
             </div>
 

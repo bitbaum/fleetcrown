@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+/**
+ * User-facing display name for scheduled cron jobs. Internally these remain
+ * "cron jobs" (table cron_jobs, /api/crons) — the UI calls them "Scheduled Jobs"
+ * so the word "Autopilot" belongs to ONE thing only: the auto-inject engine (the
+ * fleet Build all/Pause all toggle). SSOT for every heading/label that names this
+ * feature. Prose sentences use the lowercase noun "scheduled job(s)".
+ */
+export const SCHEDULED_JOBS_LABEL = "Scheduled Jobs";
+export const SCHEDULED_JOB_LABEL = "Scheduled Job";
+
 export const CreateCronBody = z.object({
   name: z.string().trim().min(1, "name is required"),
   scheduleExpr: z.string().trim().min(1, "scheduleExpr is required"),
