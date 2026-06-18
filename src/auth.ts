@@ -16,6 +16,11 @@ import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboa
 import { isValidUuid } from "@/lib/utils";
 import { verifyTicket } from "@/lib/x-oauth1";
 import { findOrCreateTwitterUser } from "@/db/queries/oauth-x";
+import { getEnabledAuthProviders } from "@/lib/auth-providers";
+
+// Enabled-provider predicates, shared with the sign-in page (src/app/sign-in)
+// so a rendered button can never drift from the mounted provider.
+const enabledProviders = getEnabledAuthProviders();
 
 /**
  * Auth.js wraps every authorize()→null return in a generic CredentialsSignin
@@ -191,10 +196,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Conditionally mounted (like Google/X) so a missing key pair cleanly
     // drops the provider instead of mounting it with empty-string creds that
     // fail opaquely on use. env.ts also flags a half-set pair loudly at boot.
-    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? [
+    ...(enabledProviders.github ? [
     GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
       // Scopes:
       //   read:user + user:email — sign-in identity (Auth.js defaults)
@@ -211,10 +216,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: { params: { scope: "read:user user:email repo" } },
     }),
     ] : []),
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
+    ...(enabledProviders.google ? [
       Google({
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         allowDangerousEmailAccountLinking: true,
       }),
     ] : []),
