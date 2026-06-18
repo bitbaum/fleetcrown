@@ -30,6 +30,8 @@ import { entities, beaconSettings, orchestrationRuns, pendingCommands } from "@/
 import { logDebug } from "@/db/queries/debug-logs";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { PROMPT_TEMPLATES } from "@/config/prompt-library";
+import { getProjectContext } from "@/db/queries/project-context";
+import { renderProjectContextBlock } from "@/lib/orchestration";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 
 // Module-load: resolve the next-best template once. Throw on import if it's
@@ -153,8 +155,16 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // Eligible — queue the nudge.
-        const renderedPrompt = TEMPLATE.template.replace(/\{\{project_name\}\}/g, proj.name);
+        // Eligible — queue the nudge. Prepend the project's roadmap (brief +
+        // active goals) so the autonomous nudge aims at the goals, same as the
+        // dispatch path (renderTaskForAdapter). Same SSOT block, same source.
+        const contextBlock = renderProjectContextBlock(
+          (await getProjectContext(userId, proj.name)) ?? undefined,
+        );
+        const renderedPrompt = [
+          contextBlock,
+          TEMPLATE.template.replace(/\{\{project_name\}\}/g, proj.name),
+        ].filter(Boolean).join("\n\n");
         await db.insert(pendingCommands).values({
           userId,
           type: "inject",

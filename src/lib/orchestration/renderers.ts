@@ -144,15 +144,30 @@ function renderQueueBlock(queue?: string[]): string | null {
   ].filter(Boolean).join("\n");
 }
 
+/** The project's brief + active goals (the roadmap). Placed FIRST in the prompt
+ *  so the agent reads what the project is trying to achieve before it decides
+ *  the highest-impact next step. Null when the project has no context yet. */
+export function renderProjectContextBlock(projectContext?: string): string | null {
+  if (!projectContext || !projectContext.trim()) return null;
+  return [
+    `Project context & goals (what this project is trying to achieve):`,
+    projectContext.trim(),
+    `Favor the next step that most advances these goals.`,
+  ].join("\n");
+}
+
 export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter: AdapterId = request.adapter): string {
   const intent = getOrchestrationIntent(request.intent);
   const queueBlock = renderQueueBlock(request.queue);
+  const contextBlock = renderProjectContextBlock(request.projectContext);
 
   // Claude adapter: CLAUDE.md is always loaded in the session and already contains
   // execution rules and project context. Emit only the intent body — no redundant
   // header or rules. buildPromptWithSession appends the session file + update instruction.
   if (adapter === "claude") {
-    const sections: string[] = [renderIntentBody(request)];
+    const sections: string[] = [];
+    if (contextBlock) sections.push(contextBlock);
+    sections.push(renderIntentBody(request));
     if (queueBlock) sections.push(queueBlock);
     // For "custom" intent the body IS customInstructions — don't append it again
     if (request.intent !== "custom" && request.customInstructions?.trim()) {
@@ -164,6 +179,7 @@ export function renderTaskForAdapter(request: OrchestrationTaskRequest, adapter:
   const sections = [
     `Intent: ${intent.name}`,
     `Project: ${request.projectKey}`,
+    ...(contextBlock ? [contextBlock] : []),
     renderIntentBody(request),
     renderSharedExecutionRules(),
   ];

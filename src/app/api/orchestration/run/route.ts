@@ -24,6 +24,7 @@ import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orc
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
+import { getProjectContext } from "@/db/queries/project-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
@@ -93,6 +94,8 @@ export async function POST(req: NextRequest) {
       );
     }
     const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
+    // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
+    request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;
     const prompt = renderTaskForAdapter(request);
     // Create an orchestration_runs row for trackable intents so the local runner
     // can write /tmp/cockpit-run-<tab> and agent-hook-bridge.sh can close out the
@@ -193,6 +196,8 @@ export async function POST(req: NextRequest) {
     if (restored?.applied) writePromptQueueMirror(effectiveKey, restored.queue);
   };
 
+  // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
+  request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;
   // Log every dispatch regardless of adapter — foundation for reuse suggestions and analytics
   const resolvedPromptBody = renderTaskForAdapter(request);
   insertPromptHistory(userId, {

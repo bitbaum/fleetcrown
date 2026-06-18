@@ -79,6 +79,11 @@ export type OrchestrationTaskRequest = {
    *  candidates. Model-agnostic: the same context lands in every
    *  adapter's prompt body via renderTaskForAdapter. */
   queue?: string[];
+  /** The project's brief + active goals (the roadmap), from getProjectContext.
+   *  Surfaced to the agent so it judges "highest-impact next step" against the
+   *  actual goals instead of picking generic work. Model-agnostic — lands in
+   *  every adapter's prompt body via renderTaskForAdapter. */
+  projectContext?: string;
 };
 
 // `status` is the agent's self-reported lifecycle state for this handoff:
