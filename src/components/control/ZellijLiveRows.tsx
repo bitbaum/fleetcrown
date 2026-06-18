@@ -59,9 +59,9 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
         <table className="ui-control-live-table text-xs">
           <thead>
             <tr>
-              <th>Tab</th>
-              <th>Agent</th>
-              <th>State</th>
+              <th className="w-40">Tab</th>
+              <th className="w-20">Agent</th>
+              <th className="w-32">State</th>
               <th>Activity</th>
               <th className="w-28 text-right">Actions</th>
             </tr>
@@ -70,18 +70,18 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
             {rows.map((row) => (
               <tr key={row.tabName} className={cn(isHighlighted(row.tabName) && "ui-control-live-row-highlight")}>
                 <td className="py-0.5">
-                  <span className="font-medium text-text-primary">{row.tabName}</span>
+                  <span className="truncate font-medium text-text-primary" title={row.tabName}>{row.tabName}</span>
                   {!row.registered && (
                     <span className="ml-1.5 ui-tag ui-tag-warning text-micro">Unlinked</span>
                   )}
                 </td>
-                <td className="py-0.5 text-text-secondary">{row.agentLabel ?? "—"}</td>
-                <td className="py-0.5">
+                <td className="py-0.5 whitespace-nowrap text-text-secondary">{row.agentLabel ?? "—"}</td>
+                <td className="py-0.5 whitespace-nowrap">
                   <span className={row.stateTagClass} title={rowStateMeta(row).description}>{row.stateLabel}</span>
                 </td>
-                <td className="py-0.5 max-w-md">
+                <td className="py-0.5">
                   {row.activity ? (
-                    <p className="line-clamp-1 text-xs text-text-secondary" title={row.activity}>
+                    <p className="truncate text-xs text-text-secondary" title={row.activity}>
                       {row.activity}
                     </p>
                   ) : (

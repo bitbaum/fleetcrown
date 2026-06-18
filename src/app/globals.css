@@ -2248,7 +2248,7 @@
     /* Esthetics polish: rounded-xl for softer command input, subtle focus ring for high-flier keyboard control feel */
   }
   .ui-control-live-table {
-    @apply w-full min-w-[40rem] border-separate border-spacing-0 text-sm;
+    @apply w-full min-w-[40rem] table-fixed border-separate border-spacing-0 text-sm;
   }
   .ui-control-live-table th {
     @apply border-b border-border-subtle pb-2 text-left text-micro font-semibold uppercase tracking-[0.12em] text-text-tertiary;
