@@ -58,8 +58,9 @@ export function LokiWorkspace() {
   }, [conversations, selectedProjects]);
 
   const createConversation = async (): Promise<string | null> => {
+    // Title is omitted — the create route defaults it (SSOT), and the first
+    // message auto-titles the thread server-side.
     const res = await postJson("/api/conversations", {
-      title: "New conversation",
       projectKeys: selectedProjects,
     });
     if (!res.ok) {
@@ -119,6 +120,11 @@ export function LokiWorkspace() {
       if (!res.ok) await throwApiError(res, "Message failed.");
       const { message } = (await res.json()) as { message: LokiMessage };
       setMessages((prev) => [...prev, message]);
+      // Sync the list so the server's auto-title (first message) and recency
+      // ordering appear live, not only after a reload.
+      void getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
+        .then((d) => setConversations(d.conversations))
+        .catch(() => { /* keep the existing list on a transient failure */ });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Message failed.");
     } finally {
