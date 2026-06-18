@@ -1,6 +1,11 @@
 # Terminal parity & usability
 
-**Status:** server terminal FIXED (deployed); machine-terminal interactive parity PLANNED.
+**Status:** server terminal FIXED (deployed); machine-terminal interactive parity SHIPPED
+(2026-06-18) — bridge rawkey/resize fast lane + cloud endpoint + runner 0.8.9 + interactive
+TerminalView all live. Chain verified link-by-link (bridge delivery proven in isolation;
+runner 0.8.9 reconnected + version shown in Control). The final literal keystroke-echo test
+needs a runner-PTY-backed tab live (launch an agent on a project with NO existing zellij tab,
+then type in "My machine"). Remaining: the WorkspaceTerminal+TerminalView wrapper merge (P4).
 
 George's complaint (2026-06-18): the in-app terminal is "abysmal — I cannot easily type
 commands there, it's slow and awful, and there's no parity between the server and machine
