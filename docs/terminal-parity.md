@@ -51,6 +51,31 @@ input channel** to the runner's `executor.write` (the primitive `injectPty` alre
    - reuse the bridge `NOTIFY`/`sseBus` plumbing (`desktop/src/main/bridge-subscriber.ts`,
      `src/lib/sse-bus.ts`) for a non-durable raw-key fast lane, or
    - a dedicated runner ingress SSE/long-poll for keystrokes.
+
+   **DECISION + FINDING (2026-06-18, after scoping `bridge-subscriber.ts`):** the bridge today
+   is a *notification* bus — it carries only `{table, op, k:id}` change events; the runner then
+   long-polls `/api/control/commands` for the body (atomic FOR UPDATE SKIP LOCKED claim). So
+   "reuse NOTIFY" is NOT free for keystrokes: keys carry a payload, and the bridge frame carries
+   no payload. The chosen path is to **extend the bridge protocol with a non-durable `rawkey`
+   event type** that carries `{workspaceId, bytes}` straight through Postgres `NOTIFY` → SSE →
+   runner (no DB row, no claim, fire-and-forget — dropped keys are acceptable for a fast lane;
+   a lost char is re-typed, unlike a lost command). This keeps ONE transport (the bridge) rather
+   than standing up a second ingress.
+
+   **Blast radius — THREE deployables (sequence to de-risk the runner):**
+   1. **Bridge** (`bridge/src/server.ts`): add the `rawkey` publish path + SSE event type. Deploy
+      + verify in isolation (it's additive; existing change events untouched).
+   2. **Cloud** (`POST /api/control/tab-inject-raw`, resize action): publish rawkey/resize to the
+      bridge. Deploy; verify the endpoint emits.
+   3. **Runner** (`bridge-subscriber.ts` → handle `rawkey`/`resize` → `executor.write` / PTY
+      resize): **LAST + most carefully** — the runner is green (v0.8.8, 0 crashes) and drives the
+      whole autopilot. A bad release regresses everything. Keep the rawkey handler strictly
+      additive next to `onCommandPending`; gate behind a feature check; smoke the autopilot loop
+      after the release before flipping the UI.
+   4. **UI**: flip `TerminalView` interactive (`disableStdin:false`, `onData` → raw-key endpoint).
+
+   Because step 3 touches the autopilot-critical runner, this phase wants its own focused session
+   with the autopilot watched across the release — NOT a tail-end add to an unrelated session.
 3. **Resize channel** to the runner PTY (mirror the server's `resize` action).
 4. **Flip the machine xterm interactive** (`disableStdin:false`, wire `onData` to the raw-key
    endpoint).
