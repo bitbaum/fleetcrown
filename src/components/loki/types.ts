@@ -33,3 +33,7 @@ export type LokiAgent = {
 
 /** A composer model-picker selection. Empty object = "Auto" (project default). */
 export type ModelChoice = { agent?: string; model?: string };
+
+/** A text file attached in the composer — its content is folded into the
+ *  dispatched prompt (no upload; the agent reads it inline). */
+export type Attachment = { name: string; content: string };

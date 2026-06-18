@@ -2476,6 +2476,13 @@
   .ui-loki-composer-select {
     @apply h-8 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary;
   }
+  /* Staged file attachment, shown above the composer until sent. */
+  .ui-loki-attach-chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary;
+  }
+  .ui-loki-attach-remove {
+    @apply text-text-tertiary transition-colors hover:text-text-primary;
+  }
 
   /* Project multi-select (right pane). */
   .ui-loki-project {

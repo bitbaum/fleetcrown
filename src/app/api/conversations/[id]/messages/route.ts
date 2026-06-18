@@ -28,6 +28,7 @@ import { resolveCommand } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askIvy } from "@/lib/ivy-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
+import { MAX_ATTACHMENTS, MAX_ATTACHMENT_CHARS, renderAttachments } from "@/lib/loki/attachments";
 
 const Body = z.object({
   text: z.string().trim().min(1).max(4000),
@@ -37,6 +38,16 @@ const Body = z.object({
   // "Auto" option). agent is validated against dispatchable adapters below.
   agent: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   model: z.string().trim().min(1).max(60).optional(),
+  // Composer file attachments — text content folded into the dispatched prompt.
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(200),
+        content: z.string().max(MAX_ATTACHMENT_CHARS),
+      }),
+    )
+    .max(MAX_ATTACHMENTS)
+    .optional(),
 });
 
 export async function POST(
@@ -52,14 +63,23 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text, selectedProjects, agent, model } = dataOrResp;
+  const { text, selectedProjects, agent, model, attachments } = dataOrResp;
+
+  // Attachment text is appended to the dispatched/asked prompt AFTER resolution,
+  // so the resolver classifies on the user's words — not a dumped file.
+  const attachmentSuffix = renderAttachments(attachments);
+  const attachmentNote =
+    attachments && attachments.length > 0
+      ? `\n\n[Attached: ${attachments.map((a) => a.name).join(", ")}]`
+      : "";
 
   // Ownership gate — message writes are only allowed on the caller's own thread.
   const existing = await getConversationWithMessages(userId, conversationId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // 1. Persist the user turn.
-  await addMessage(conversationId, { role: "user", content: text });
+  // 1. Persist the user turn. The note (filenames only) keeps the transcript
+  //    honest about what was sent without dumping file bodies into the bubble.
+  await addMessage(conversationId, { role: "user", content: text + attachmentNote });
 
   // Auto-title: the first user turn names a still-untitled thread. `existing`
   // was loaded BEFORE this write, so an empty history means this is turn one.
@@ -90,7 +110,9 @@ export async function POST(
     const inject = await injectPrompt(
       {
         tab: resolution.projectKey,
-        customPrompt: resolution.prompt,
+        // Attachment bodies ride along with the dispatched prompt (not the
+        // displayed bubble, which stays the user's command).
+        customPrompt: resolution.prompt + attachmentSuffix,
         adapter: agent as AdapterId | undefined,
         model,
       },
@@ -136,8 +158,9 @@ export async function POST(
       meta: { needsProject: true, intentId: resolution.intentId },
     });
   } else {
-    // 3b. Chat — answer via Ivy.
-    const ivy = await askIvy(resolution.prompt);
+    // 3b. Chat — answer via Ivy (attachments included so a question can be
+    //     about the attached file).
+    const ivy = await askIvy(resolution.prompt + attachmentSuffix);
     const reply =
       (typeof ivy.body.text === "string" && ivy.body.text) ||
       (typeof ivy.body.error === "string" ? ivy.body.error : "Ivy is unavailable right now.");
