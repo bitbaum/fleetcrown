@@ -6,7 +6,7 @@ import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
 import { ProjectFilter } from "./ProjectFilter";
-import type { ConversationSummary, LokiMessage, LokiProject } from "./types";
+import type { ConversationSummary, LokiMessage, LokiProject, ModelChoice } from "./types";
 
 /**
  * Client orchestrator for the Loki 3-pane surface. Owns selection state and
@@ -90,7 +90,7 @@ export function LokiWorkspace() {
     }
   };
 
-  const send = async (text: string) => {
+  const send = async (text: string, choice: ModelChoice = {}) => {
     setError(null);
     setSending(true);
     // Ensure a thread exists; a fresh page send creates one implicitly.
@@ -116,6 +116,9 @@ export function LokiWorkspace() {
       const res = await postJson(`/api/conversations/${convoId}/messages`, {
         text,
         selectedProjects,
+        // Model picker — omitted keys mean "Auto" (project default).
+        ...(choice.agent ? { agent: choice.agent } : {}),
+        ...(choice.model ? { model: choice.model } : {}),
       });
       if (!res.ok) await throwApiError(res, "Message failed.");
       const { message } = (await res.json()) as { message: LokiMessage };
@@ -158,7 +161,7 @@ export function LokiWorkspace() {
           <Transcript messages={messages} sending={sending} />
         </div>
         {error && <p className="ui-error">{error}</p>}
-        <Composer disabled={false} sending={sending} onSend={(t) => void send(t)} />
+        <Composer disabled={false} sending={sending} onSend={(t, choice) => void send(t, choice)} />
       </section>
 
       {/* RIGHT — project multi-select (hidden below lg to keep the transcript usable) */}

@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Send, Mic, MicOff, Loader2 } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
+import { getJson } from "@/lib/api/fetch";
+import type { LokiAgent, ModelChoice } from "./types";
 
-// TODO (Loki Phase 3): file attach + model picker live here per
-// docs/loki-command-surface.md §4. Mic (voice → text) is wired below, reusing
+// TODO (Loki Phase 3): file attach lives here per docs/loki-command-surface.md
+// §4. Mic (voice → text) and the model picker are wired below; the mic reuses
 // the same useVoiceInput hook the Cmd-K palette uses (SSOT).
+
+/** "Auto" = use the project's default agent/model. Non-empty values encode a
+ *  pinned choice as "<agentId>::<model>". */
+const AUTO = "";
+const SEP = "::";
 
 export function Composer({
   disabled,
@@ -15,9 +22,11 @@ export function Composer({
 }: {
   disabled: boolean;
   sending: boolean;
-  onSend: (text: string) => void;
+  onSend: (text: string, choice: ModelChoice) => void;
 }) {
   const [text, setText] = useState("");
+  const [agents, setAgents] = useState<LokiAgent[]>([]);
+  const [choiceKey, setChoiceKey] = useState<string>(AUTO);
 
   // Voice → text. The transcript appends to whatever is already typed so
   // dictation composes with typing instead of clobbering it.
@@ -25,10 +34,24 @@ export function Composer({
     onTranscript: (t) => setText((prev) => (prev ? `${prev} ${t}` : t)),
   });
 
+  // Dispatchable agents + their models for the picker. Best-effort: if it
+  // fails, the picker simply stays "Auto"-only and dispatch uses project defaults.
+  useEffect(() => {
+    getJson<{ agents: LokiAgent[] }>("/api/agents")
+      .then((d) => setAgents(d.agents))
+      .catch(() => { /* keep Auto-only */ });
+  }, []);
+
+  const parseChoice = (key: string): ModelChoice => {
+    if (key === AUTO) return {};
+    const [agent, model] = key.split(SEP);
+    return { agent, model: model || undefined };
+  };
+
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
-    onSend(trimmed);
+    onSend(trimmed, parseChoice(choiceKey));
     setText("");
   };
 
@@ -52,6 +75,29 @@ export function Composer({
           }
         }}
       />
+      {/* Model picker — pins the agent/model for the next dispatch; "Auto" uses
+          the project's own default. Hidden until agents load so it never shows
+          an empty control. */}
+      {agents.length > 0 && (
+        <select
+          className="ui-loki-composer-select"
+          value={choiceKey}
+          disabled={disabled}
+          onChange={(e) => setChoiceKey(e.target.value)}
+          aria-label="Model for this dispatch"
+          title="Model for this dispatch"
+        >
+          <option value={AUTO}>Auto</option>
+          {agents.map((a) => {
+            const models = a.modelSuggestions.length > 0 ? a.modelSuggestions : [a.defaultModel];
+            return models.map((m) => (
+              <option key={`${a.id}${SEP}${m}`} value={`${a.id}${SEP}${m}`}>
+                {a.label} · {m}
+              </option>
+            ));
+          })}
+        </select>
+      )}
       {voice.isSupported && (
         <button
           type="button"

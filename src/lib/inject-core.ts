@@ -30,6 +30,9 @@ export type InjectParams = {
   promptKey?: string;
   customPrompt?: string;
   adapter?: ResolvedAdapter;
+  /** Per-dispatch model override (e.g. Loki's composer model picker). Wins over
+   *  the project's stored modelPref; the runner reads it on auto-launch. */
+  model?: string;
   runId?: string;
 };
 
@@ -104,13 +107,12 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     }
   }
 
-  // Model override from user_projects.modelPref. The runner's execute_inject
-  // auto-launch reads payload.model and prefers it over the conf-file model,
-  // so a project pinned to "opus" launches Claude with the opus model and a
-  // Codex project pinned to "gpt-5" gets gpt-5 instead of the runner's
-  // hardcoded gpt-5.4 default. Caller-supplied model (none yet, but kept for
-  // future explicit dispatch) is not in this route's schema — pure DB read.
-  const eventModel = dbMatch.modelPref?.trim() || undefined;
+  // Model override: a caller-supplied model (Loki's composer model picker) wins
+  // over the project's stored modelPref. The runner's execute_inject auto-launch
+  // reads payload.model and prefers it over the conf-file model, so a project
+  // pinned to "opus" launches Claude with opus and a one-off dispatch pinned to
+  // "gpt-5" gets gpt-5 instead of the runner's hardcoded gpt-5.4 default.
+  const eventModel = params.model?.trim() || dbMatch.modelPref?.trim() || undefined;
 
   let prompt: string;
   let promptLabel = "Custom";

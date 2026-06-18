@@ -27,10 +27,16 @@ import {
 import { resolveCommand } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askIvy } from "@/lib/ivy-core";
+import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 
 const Body = z.object({
   text: z.string().trim().min(1).max(4000),
   selectedProjects: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
+  // Composer model picker: pin a one-off agent + model for this dispatch.
+  // Both optional — omitted means "use the project's default" (the picker's
+  // "Auto" option). agent is validated against dispatchable adapters below.
+  agent: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
+  model: z.string().trim().min(1).max(60).optional(),
 });
 
 export async function POST(
@@ -46,7 +52,7 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text, selectedProjects } = dataOrResp;
+  const { text, selectedProjects, agent, model } = dataOrResp;
 
   // Ownership gate — message writes are only allowed on the caller's own thread.
   const existing = await getConversationWithMessages(userId, conversationId);
@@ -78,9 +84,16 @@ export async function POST(
   let assistant;
 
   if (resolution.kind === "command" && resolution.projectKey) {
-    // 3a. Dispatch — fire-and-forget into the project's session.
+    // 3a. Dispatch — fire-and-forget into the project's session. A composer
+    //     model-picker selection (agent/model) overrides the project default;
+    //     "Auto" sends neither, so the project's stored prefs apply.
     const inject = await injectPrompt(
-      { tab: resolution.projectKey, customPrompt: resolution.prompt },
+      {
+        tab: resolution.projectKey,
+        customPrompt: resolution.prompt,
+        adapter: agent as AdapterId | undefined,
+        model,
+      },
       userId,
     );
     const ok = inject.status < 400;
@@ -101,6 +114,10 @@ export async function POST(
         // "runner-offline" when queued with no live runner — surfaced so the
         // transcript can warn the work is waiting, not running.
         warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
+        // Only set when the operator pinned a non-default agent/model, so the
+        // footer can show "on Codex · gpt-5"; Auto leaves these null.
+        agent: agent ?? null,
+        model: model ?? null,
       },
     });
     // Keep the thread tagged with the project it now talks to.

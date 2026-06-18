@@ -21,3 +21,15 @@ export type LokiProject = {
   name: string;
   topGoal?: { title: string; progress: number | null } | null;
 };
+
+/** GET /api/agents row — a dispatchable agent and the models it can run, for
+ *  the composer model picker. */
+export type LokiAgent = {
+  id: string;
+  label: string;
+  defaultModel: string;
+  modelSuggestions: string[];
+};
+
+/** A composer model-picker selection. Empty object = "Auto" (project default). */
+export type ModelChoice = { agent?: string; model?: string };

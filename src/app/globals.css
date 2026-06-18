@@ -2471,6 +2471,11 @@
   .ui-loki-composer-input {
     @apply max-h-40 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none;
   }
+  /* Inline model picker — low-profile so "Auto" reads as a quiet default and
+     doesn't compete with the input for attention (cognitive-load north star). */
+  .ui-loki-composer-select {
+    @apply h-8 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary;
+  }
 
   /* Project multi-select (right pane). */
   .ui-loki-project {

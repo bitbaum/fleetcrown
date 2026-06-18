@@ -31,10 +31,15 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
         : meta.mode === "direct"
           ? "Running now"
           : "Dispatched";
+  // Only present when the operator pinned a non-default model in the composer.
+  const agent = typeof meta.agent === "string" ? meta.agent : null;
+  const model = typeof meta.model === "string" ? meta.model : null;
+  const pinned = agent ? `${agent}${model ? ` · ${model}` : ""}` : null;
   return (
     <div className="ui-loki-dispatch-foot">
       <span className={warn ? "ui-dot-warning" : "ui-dot-positive"} />
       <span>{status}</span>
+      {pinned && <span className="text-text-tertiary">on {pinned}</span>}
       {projectKey && (
         <Link href={`/control?focus=${encodeURIComponent(projectKey)}`} className="ui-link-subtle">
           Open in Control →
