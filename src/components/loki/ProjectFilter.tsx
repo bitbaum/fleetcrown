@@ -33,10 +33,20 @@ export function ProjectFilter({
                   onClick={() => onToggle(p.name)}
                   className={`ui-loki-project ${isOn ? "ui-loki-project-active" : ""}`}
                 >
-                  <span className="flex h-4 w-4 items-center justify-center">
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center">
                     {isOn && <Check className="h-4 w-4" />}
                   </span>
-                  <span className="truncate">{p.name}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{p.name}</span>
+                    {/* What this project is aiming at — lets the operator pick a
+                        dispatch target by goal, not just name. */}
+                    {p.topGoal && (
+                      <span className="ui-loki-project-goal" title={p.topGoal.title}>
+                        {p.topGoal.title}
+                        {typeof p.topGoal.progress === "number" ? ` · ${p.topGoal.progress}%` : ""}
+                      </span>
+                    )}
+                  </span>
                 </button>
               );
             })}

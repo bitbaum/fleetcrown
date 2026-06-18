@@ -2479,6 +2479,10 @@
   .ui-loki-project-active {
     @apply border-accent-primary/30 bg-accent-muted text-text-primary;
   }
+  /* The active goal each project is aiming at, shown under its name. */
+  .ui-loki-project-goal {
+    @apply mt-0.5 block truncate text-xs text-text-tertiary;
+  }
 }
 
 /* ─── Sidebar portal tooltip (outside @layer to avoid Tailwind 4 keyframe issue) ── */

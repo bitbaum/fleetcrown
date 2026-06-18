@@ -13,8 +13,11 @@ export type LokiMessage = Omit<ConversationMessage, "createdAt" | "meta"> & {
   meta: Record<string, unknown> | null;
 };
 
-/** GET /api/user-projects row (subset Loki needs). */
+/** GET /api/user-projects row (subset Loki needs). topGoal is the project's
+ *  current active goal — what the fleet is aiming at — shown in the panel so
+ *  the operator can aim a dispatch at a glance. */
 export type LokiProject = {
   id: string;
   name: string;
+  topGoal?: { title: string; progress: number | null } | null;
 };

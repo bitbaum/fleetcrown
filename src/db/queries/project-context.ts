@@ -56,3 +56,33 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
 
   return lines.length > 0 ? lines.join("\n") : null;
 }
+
+/** The single goal a project is currently aiming at, for at-a-glance UI. */
+export type TopGoal = { title: string; progress: number | null };
+
+/**
+ * The top active goal per project entity, for the operator to see what each
+ * project is aiming at while scanning (e.g. the Loki project panel) — the same
+ * roadmap the autopilot reads via getProjectContext, surfaced visually.
+ *
+ * Keyed by entity id (userProjects.entityProjectId), so callers join by the
+ * project's linked entity. One batch query over the user's active goals (no
+ * N+1); "top" = most recently updated, matching getProjectContext's ordering.
+ */
+export async function getTopActiveGoalByProject(userId: string): Promise<Map<string, TopGoal>> {
+  const rows = await db
+    .select({ entityId: goals.entityId, title: goals.title, progress: goals.progress })
+    .from(goals)
+    .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE)))
+    .orderBy(desc(goals.updatedAt));
+
+  const byEntity = new Map<string, TopGoal>();
+  for (const r of rows) {
+    // First row per entity wins (rows are newest-first), so each project keeps
+    // its most recently touched active goal.
+    if (r.entityId && !byEntity.has(r.entityId)) {
+      byEntity.set(r.entityId, { title: r.title, progress: r.progress ?? null });
+    }
+  }
+  return byEntity;
+}

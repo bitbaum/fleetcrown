@@ -3,6 +3,7 @@ import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { emptyToUndefined } from "@/lib/validation";
 import { createUserProject, ensureUserProjectEntityLinks, countActiveProjects } from "@/db/queries/user-projects";
+import { getTopActiveGoalByProject } from "@/db/queries/project-context";
 import { getUserById } from "@/db/queries/users";
 import { getProjectLimit } from "@/lib/plan";
 import { normalizeProjectName } from "@/lib/project-name";
@@ -19,7 +20,14 @@ export async function GET() {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const projects = await ensureUserProjectEntityLinks(userId);
-  return NextResponse.json(projects);
+  // Attach the goal each project is currently aiming at (the roadmap the
+  // autopilot reads) so surfaces like the Loki panel can show it at a glance.
+  const goalByEntity = await getTopActiveGoalByProject(userId);
+  const withGoals = projects.map((p) => ({
+    ...p,
+    topGoal: p.entityProjectId ? goalByEntity.get(p.entityProjectId) ?? null : null,
+  }));
+  return NextResponse.json(withGoals);
 }
 
 export async function POST(req: NextRequest) {

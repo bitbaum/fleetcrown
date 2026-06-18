@@ -34,7 +34,7 @@ export function LokiWorkspace() {
       .finally(() => setConvosLoading(false));
 
     getJson<LokiProject[]>("/api/user-projects")
-      .then((d) => setProjects(d.map((p) => ({ id: p.id, name: p.name }))))
+      .then((d) => setProjects(d.map((p) => ({ id: p.id, name: p.name, topGoal: p.topGoal ?? null }))))
       .catch(() => setError("Could not load projects."))
       .finally(() => setProjectsLoading(false));
   }, []);
