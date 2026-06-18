@@ -52,7 +52,30 @@ export function WorkspaceTerminal({
         body: JSON.stringify(body),
       }).catch(() => { /* transient — the stream stays the source of truth */ });
 
-    const inputDisposable = term.onData((data) => post({ action: "input", data }));
+    // Serialize keystrokes. Previously every term.onData fired its own
+    // concurrent fetch, so under fast typing the POSTs raced and the PTY
+    // received bytes OUT OF ORDER — typing "echo" could render as "ehco".
+    // Buffer input and drain it through a single in-flight POST chain: order
+    // is preserved and bursts coalesce into fewer requests (lower latency).
+    let inputBuffer = "";
+    let flushing = false;
+    const flushInput = async () => {
+      if (flushing) return;
+      flushing = true;
+      try {
+        while (inputBuffer) {
+          const data = inputBuffer;
+          inputBuffer = "";
+          await post({ action: "input", data });
+        }
+      } finally {
+        flushing = false;
+      }
+    };
+    const inputDisposable = term.onData((data) => {
+      inputBuffer += data;
+      void flushInput();
+    });
 
     const syncSize = () => {
       try { fit.fit(); } catch { /* container not laid out yet */ }
