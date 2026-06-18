@@ -17,7 +17,11 @@ type PaletteEntry =
   | { kind: "prompt-template"; key: string; label: string; sub: string; icon: null;   href: string }
   | { kind: "nav";             key: string; label: string; sub: string; icon: null;   href: string }
   | { kind: "project";         key: string; label: string; sub: string; icon: null;   href: string }
-  | { kind: "switch-agent";   key: string; label: string; sub: string; icon: null;   href: string };
+  | { kind: "switch-agent";   key: string; label: string; sub: string; icon: null;   href: string }
+  // Composer (Loki Phase 1): run a natural-language command, and the project
+  // picker shown when the command is project-ambiguous ("ask when ambiguous").
+  | { kind: "run-command";    key: string; label: string; sub: string; icon: null;   href: null }
+  | { kind: "pick-project";   key: string; label: string; sub: string; icon: null;   href: null; projectName: string };
 
 const SWITCHABLE_AGENT_IDS = ["claude", "cursor", "codex", "gemini", "grok"] as const satisfies readonly AnyAgentId[];
 
@@ -35,6 +39,11 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const [recent, setRecent] = useState<string[]>([]);
+  // Composer state (Loki Phase 1): busy = resolving/dispatching; pending = a
+  // command whose project we still need to ask for; note = inline status/error.
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<{ prompt: string } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   // Global Escape: closes the palette regardless of where focus is. The
   // input's own onKeyDown already handles Escape when focused, but that
@@ -65,6 +74,72 @@ export function CommandPalette() {
   }, []);
   const voice = useVoiceInput({ onTranscript });
 
+  // Active project names — the candidate set the resolver matches against.
+  const projectNames = useMemo(
+    () => (projects ?? []).filter((p) => p.isActive !== false && p.name).map((p) => p.name),
+    [projects],
+  );
+
+  // Fire-and-forget the resolved instruction into the project's agent session
+  // (George's call: dispatch goes to the existing session, not a new one).
+  const dispatchInject = useCallback(async (projectKey: string, prompt: string) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/inject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tab: projectKey, customPrompt: prompt }),
+      });
+      if (!res.ok) {
+        const b = (await res.json().catch(() => ({}))) as { error?: string };
+        setNote(b.error ?? `Dispatch failed (HTTP ${res.status})`);
+        return;
+      }
+      setPending(null);
+      setQuery("");
+      setOpen(false);
+    } catch {
+      setNote("Dispatch failed — check the runner is connected.");
+    } finally {
+      setBusy(false);
+    }
+  }, [setOpen]);
+
+  // Resolve NL → { project, prompt }. If the project is ambiguous, switch to a
+  // project picker instead of guessing ("ask when ambiguous").
+  const resolveAndRun = useCallback(async (text: string) => {
+    if (!text.trim()) return;
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await fetch("/api/command/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, projects: projectNames }),
+      });
+      const r = (await res.json().catch(() => ({}))) as {
+        projectKey?: string | null; prompt?: string; needsProject?: boolean; error?: string;
+      };
+      if (!res.ok) {
+        setNote(r.error ?? "Couldn't understand that command.");
+        return;
+      }
+      const prompt = r.prompt?.trim() || text.trim();
+      if (r.needsProject || !r.projectKey) {
+        setPending({ prompt });
+        setQuery("");
+        setHighlight(0);
+        return;
+      }
+      await dispatchInject(r.projectKey, prompt);
+    } catch {
+      setNote("Couldn't reach the resolver.");
+    } finally {
+      setBusy(false);
+    }
+  }, [projectNames, dispatchInject]);
+
   // Hydrate recent on first open so the order survives across sessions.
   useEffect(() => {
     if (!open) return;
@@ -84,6 +159,9 @@ export function CommandPalette() {
     if (open) {
       setQuery(""); // eslint-disable-line react-hooks/set-state-in-effect
       setHighlight(0);
+      setPending(null);
+      setNote(null);
+      setBusy(false);
       // Defer focus to after the modal mounts so the keystroke that opened
       // us doesn't immediately type into the input.
       const t = window.setTimeout(() => inputRef.current?.focus(), 30);
@@ -147,8 +225,23 @@ export function CommandPalette() {
     return [...projectEntries, ...switchEntries, ...nav, ...agent, ...templates];
   }, [agentPrompts, projects]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<PaletteEntry[]>(() => {
     const q = query.trim().toLowerCase();
+    // Project-picker mode: command resolved but project ambiguous — pick one.
+    if (pending) {
+      return projectNames
+        .filter((name) => !q || name.toLowerCase().includes(q))
+        .map<PaletteEntry>((name) => ({
+          kind: "pick-project", key: `pick:${name}`, label: name,
+          sub: "Run the command here", icon: null, href: null, projectName: name,
+        }))
+        .slice(0, 60);
+    }
+    // A free-text query is a candidate command — offer it as the top action,
+    // above any matching navigate/prompt entries.
+    const runRow: PaletteEntry[] = query.trim()
+      ? [{ kind: "run-command", key: "__run__", label: `Run: ${query.trim()}`, sub: "Resolve in natural language & dispatch", icon: null, href: null }]
+      : [];
     if (!q) {
       // Default ordering: recents (in order) → nav → agent → templates.
       const byKey = new Map(entries.map((e) => [e.key, e]));
@@ -156,16 +249,20 @@ export function CommandPalette() {
       const remaining = entries.filter((e) => !recent.includes(e.key));
       return [...recentEntries, ...remaining].slice(0, 60);
     }
-    return entries
+    const matches = entries
       .filter((e) => e.label.toLowerCase().includes(q) || e.sub.toLowerCase().includes(q) || e.key.toLowerCase().includes(q))
-      .slice(0, 60);
-  }, [entries, query, recent]);
+      .slice(0, 59);
+    return [...runRow, ...matches];
+  }, [entries, query, recent, pending, projectNames]);
 
   // Clamp the highlight at render time — avoids setState-in-effect when the
   // filtered range shrinks beneath the stored cursor.
   const safeHighlight = filtered.length === 0 ? 0 : Math.min(highlight, filtered.length - 1);
 
   const onSelect = (entry: PaletteEntry) => {
+    if (entry.kind === "run-command") { void resolveAndRun(query); return; }
+    if (entry.kind === "pick-project") { if (pending) void dispatchInject(entry.projectName, pending.prompt); return; }
+    if (!entry.href) return;
     pushRecent(entry.key, setRecent);
     setOpen(false);
     router.push(entry.href);
@@ -184,7 +281,8 @@ export function CommandPalette() {
       if (entry) onSelect(entry);
     } else if (e.key === "Escape") {
       e.preventDefault();
-      setOpen(false);
+      // Back out of the project picker first, rather than closing the palette.
+      if (pending) { setPending(null); setNote(null); } else setOpen(false);
     }
   };
 
@@ -217,11 +315,15 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={voice.status === "recording" ? "Listening…" : "Search projects, switch agent, prompts…"}
+            placeholder={
+              voice.status === "recording" ? "Listening…"
+              : pending ? "Pick a project (type to filter)…"
+              : "Type a command (e.g. “code review for kivvi”) or search…"
+            }
             className="ui-palette-input"
             spellCheck={false}
             autoComplete="off"
-            disabled={voice.status === "transcribing"}
+            disabled={voice.status === "transcribing" || busy}
           />
           {voice.isSupported && (
             <button
@@ -245,6 +347,14 @@ export function CommandPalette() {
         {voice.error && (
           <div className="ui-palette-voice-error">{voice.error}</div>
         )}
+        {(busy || note || pending) && (
+          <div className="ui-palette-voice-error">
+            {busy ? (<><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Working…</>)
+              : note ? note
+              : pending ? `Pick a project to run: “${pending.prompt}”`
+              : null}
+          </div>
+        )}
         <ul className="ui-palette-list" role="listbox">
           {filtered.length === 0 ? (
             <li className="ui-palette-empty">No matches</li>
@@ -264,6 +374,8 @@ export function CommandPalette() {
                   {entry.kind === "nav"             && <FolderOpen   className="h-3.5 w-3.5" />}
                   {entry.kind === "project"         && <FolderKanban className="h-3.5 w-3.5" />}
                   {entry.kind === "switch-agent"   && <Repeat2       className="h-3.5 w-3.5" />}
+                  {entry.kind === "run-command"     && <Zap          className="h-3.5 w-3.5" />}
+                  {entry.kind === "pick-project"    && <FolderKanban className="h-3.5 w-3.5" />}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm text-text-primary">{entry.label}</span>
