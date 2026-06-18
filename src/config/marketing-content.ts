@@ -491,6 +491,12 @@ export type DesktopDownloadPlatform = (typeof DESKTOP_DOWNLOAD.platforms)[number
 
 export const PRODUCT_SURFACES = [
   {
+    label: "Loki",
+    title: "Say what you want. It runs.",
+    body: "One conversational composer turns plain language into action — “code review for kivvi” dispatches it into that project; a question gets answered. The system picks the project and the path, so you hold less in your head.",
+    meta: "Natural language · auto-routing · voice",
+  },
+  {
     label: "Control",
     title: "See the whole fleet at once.",
     body: "Every project, active agent, queue item, and handoff sits in one operating view instead of disappearing into terminal tabs.",

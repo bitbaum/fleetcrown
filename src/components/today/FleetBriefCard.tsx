@@ -98,7 +98,7 @@ export async function FleetBriefCard({ userId }: { userId: string }) {
         right={
           <Link
             href="/activity"
-            className="text-xs text-text-tertiary hover:text-text-secondary inline-flex items-center gap-0.5"
+            className="ui-link-subtle gap-0.5"
           >
             See timeline
             <ArrowRight className="h-3 w-3" />

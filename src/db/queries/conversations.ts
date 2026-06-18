@@ -13,6 +13,21 @@ import {
   type ConversationMessage,
 } from "@/db/schema/conversations";
 
+/** The placeholder title a fresh conversation is created with — auto-titling
+ *  replaces it once the first user turn arrives. SSOT for both the create path
+ *  and the "should I auto-title?" check. */
+export const DEFAULT_CONVERSATION_TITLE = "New conversation";
+
+/** Derive a clean one-line title from the first user message: collapse all
+ *  whitespace to single spaces, trim, cap at ~60 chars (append "…" if cut).
+ *  Returns null if there's no usable text so callers keep the placeholder. */
+export function deriveConversationTitle(text: string): string | null {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (!cleaned) return null;
+  const MAX = 60;
+  return cleaned.length > MAX ? `${cleaned.slice(0, MAX).trimEnd()}…` : cleaned;
+}
+
 /** List a user's conversations, newest-updated first. Optional projectKeys
  *  filter keeps only threads tagged with at least one of the given keys
  *  (overlap). Selects only the columns the left-pane list renders. */
@@ -97,6 +112,31 @@ export async function addMessage(
     .set({ updatedAt: new Date() })
     .where(eq(conversations.id, conversationId));
   return row;
+}
+
+/** Rename a conversation. User-scoped; returns the updated row or null if the
+ *  conversation isn't theirs. Used for auto-titling the first turn. */
+export async function updateConversationTitle(
+  userId: string,
+  id: string,
+  title: string,
+): Promise<Conversation | null> {
+  const [row] = await db
+    .update(conversations)
+    .set({ title, updatedAt: new Date() })
+    .where(and(eq(conversations.id, id), eq(conversations.userId, userId)))
+    .returning();
+  return row ?? null;
+}
+
+/** Delete a conversation the user owns (its messages cascade away with it).
+ *  Returns true if a row was deleted, false if it wasn't theirs / didn't exist. */
+export async function deleteConversation(userId: string, id: string): Promise<boolean> {
+  const deleted = await db
+    .delete(conversations)
+    .where(and(eq(conversations.id, id), eq(conversations.userId, userId)))
+    .returning({ id: conversations.id });
+  return deleted.length > 0;
 }
 
 /** Replace a conversation's project tags. User-scoped; returns the updated

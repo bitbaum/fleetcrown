@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { MessageSquare } from "lucide-react";
 import type { LokiMessage } from "./types";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
@@ -24,6 +25,21 @@ export function Transcript({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, sending]);
+
+  // Empty transcript — fresh thread (or none selected) with nothing in flight.
+  if (messages.length === 0 && !sending) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <div className="ui-empty-block ui-empty-block-md">
+          <MessageSquare className="ui-empty-icon" />
+          <p className="ui-empty-title">Nothing here yet</p>
+          <p className="ui-empty-helper">
+            Ask anything, or dispatch a command like &ldquo;code review for kivvi&rdquo;.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto py-2">

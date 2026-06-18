@@ -20,6 +20,9 @@ import {
   getConversationWithMessages,
   addMessage,
   updateConversationProjects,
+  updateConversationTitle,
+  deriveConversationTitle,
+  DEFAULT_CONVERSATION_TITLE,
 } from "@/db/queries/conversations";
 import { resolveCommand } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
@@ -51,6 +54,17 @@ export async function POST(
 
   // 1. Persist the user turn.
   await addMessage(conversationId, { role: "user", content: text });
+
+  // Auto-title: the first user turn names a still-untitled thread. `existing`
+  // was loaded BEFORE this write, so an empty history means this is turn one.
+  const currentTitle = existing.conversation.title.trim();
+  if (
+    existing.messages.length === 0 &&
+    (currentTitle === "" || currentTitle === DEFAULT_CONVERSATION_TITLE)
+  ) {
+    const title = deriveConversationTitle(text);
+    if (title) await updateConversationTitle(userId, conversationId, title);
+  }
 
   // 2. Resolve against the user's project registry. Selection (right pane) wins
   //    over a name in the text — explicit choice beats inference.

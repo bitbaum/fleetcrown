@@ -1,10 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { listConversations, createConversation } from "@/db/queries/conversations";
+import {
+  listConversations,
+  createConversation,
+  DEFAULT_CONVERSATION_TITLE,
+} from "@/db/queries/conversations";
 
 const CreateBody = z.object({
-  title: z.string().trim().min(1).max(200),
+  // Title is optional — a fresh thread starts with the placeholder and is
+  // auto-titled from its first message (see messages route).
+  title: z.string().trim().min(1).max(200).default(DEFAULT_CONVERSATION_TITLE),
   projectKeys: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
 });
 

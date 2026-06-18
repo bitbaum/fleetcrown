@@ -83,7 +83,7 @@ export default async function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-4 md:grid-cols-3">
+          <div className="mt-14 grid gap-4 sm:grid-cols-2">
             {PRODUCT_SURFACES.map((surface) => (
               <section key={surface.label} className="ui-public-surface-card">
                 <div className="ui-public-surface-card-label">{surface.label}</div>

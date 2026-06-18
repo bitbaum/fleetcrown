@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
+import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
@@ -73,6 +73,22 @@ export function LokiWorkspace() {
     return conversation.id;
   };
 
+  const deleteConversation = async (id: string) => {
+    setError(null);
+    const res = await deleteJson(`/api/conversations/${id}`);
+    if (!res.ok) {
+      await throwApiError(res, "Could not delete conversation.").catch((e: Error) =>
+        setError(e.message),
+      );
+      return;
+    }
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (activeId === id) {
+      setActiveId(null);
+      setMessages([]);
+    }
+  };
+
   const send = async (text: string) => {
     setError(null);
     setSending(true);
@@ -126,6 +142,7 @@ export function LokiWorkspace() {
           loading={convosLoading}
           onSelect={setActiveId}
           onNew={() => void createConversation()}
+          onDelete={(id) => void deleteConversation(id)}
         />
       </aside>
 

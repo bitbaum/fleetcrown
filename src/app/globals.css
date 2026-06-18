@@ -2429,6 +2429,21 @@
   .ui-loki-convo-title { @apply truncate font-medium; }
   .ui-loki-convo-meta  { @apply mt-0.5 truncate text-xs text-text-tertiary; }
 
+  /* Conversation row wrapper — holds the select button + a delete action that
+     stays out of the way until the row is hovered or focused within. */
+  .ui-loki-convo-row {
+    @apply group/convo relative;
+  }
+  /* Trash action pinned to the row's right edge. Hidden by default; revealed on
+     row hover or keyboard focus so it never crowds the title yet stays reachable.
+     The confirm state turns destructive to signal "click again to delete". */
+  .ui-loki-convo-delete {
+    @apply absolute right-1 top-1/2 inline-flex min-h-11 min-w-11 sm:min-h-8 sm:min-w-8 -translate-y-1/2 items-center justify-center rounded p-1.5 text-text-muted opacity-0 transition-all hover:bg-surface-overlay hover:text-status-negative focus-visible:opacity-100 group-hover/convo:opacity-100;
+  }
+  .ui-loki-convo-delete-armed {
+    @apply opacity-100 text-status-negative bg-status-negative-subtle;
+  }
+
   /* Message bubbles (center pane). */
   .ui-loki-bubble {
     @apply max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words;
