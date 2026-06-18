@@ -62,7 +62,7 @@ export function LocalMachineView() {
         ))}
       </div>
       <div className="min-h-0 flex-1">
-        {active && <TerminalView key={active} tab={active} onSend={send} fill />}
+        {active && <TerminalView key={active} tab={active} onSend={send} fill interactive />}
       </div>
     </div>
   );

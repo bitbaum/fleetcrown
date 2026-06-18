@@ -12,7 +12,7 @@ import "@xterm/xterm/css/xterm.css";
  * `onSend` is provided a gated single-line input forwards text to the agent
  * via the existing inject path.
  */
-export function TerminalView({ tab, onSend, fill }: { tab: string; onSend?: (text: string) => Promise<void>; fill?: boolean }) {
+export function TerminalView({ tab, onSend, fill, interactive }: { tab: string; onSend?: (text: string) => Promise<void>; fill?: boolean; interactive?: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [connected, setConnected] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -36,8 +36,10 @@ export function TerminalView({ tab, onSend, fill }: { tab: string; onSend?: (tex
       if (disposed) return;
       const term = new Terminal({
         convertEol: true,
-        cursorBlink: false,
-        disableStdin: true,
+        cursorBlink: !!interactive,
+        // Interactive mode captures keystrokes (onData); read-only peeks keep
+        // stdin disabled so the view never swallows page input.
+        disableStdin: !interactive,
         fontFamily: "var(--font-mono), ui-monospace, monospace",
         fontSize: 12,
         // Raw-PTY streams (append mode) are a byte log → keep scrollback so the
@@ -49,9 +51,48 @@ export function TerminalView({ tab, onSend, fill }: { tab: string; onSend?: (tex
       term.loadAddon(fit);
       term.open(host);
       try { fit.fit(); } catch { /* host not laid out yet */ }
-      const onResize = () => { try { fit.fit(); } catch { /* ignore */ } };
-      window.addEventListener("resize", onResize);
-      cleanupTerm = () => { window.removeEventListener("resize", onResize); term.dispose(); };
+
+      // Interactive input/resize → the raw fast-lane endpoint (cloud→bridge→runner
+      // PTY). Keystrokes are buffered through a single in-flight POST chain so
+      // bytes never race out of order (the bug the server terminal had). Resize
+      // mirrors the server terminal. Verbatim bytes — no CR/prompt semantics.
+      const postRaw = (body: unknown) =>
+        fetch("/api/control/tab-inject-raw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }).catch(() => { /* transient — a dropped key is re-typed */ });
+
+      let inputBuffer = "";
+      let flushing = false;
+      const flushInput = async () => {
+        if (flushing) return;
+        flushing = true;
+        try {
+          while (inputBuffer) {
+            const data = inputBuffer;
+            inputBuffer = "";
+            await postRaw({ kind: "key", tab, data });
+          }
+        } finally {
+          flushing = false;
+        }
+      };
+      const inputDisposable = interactive
+        ? term.onData((data) => { inputBuffer += data; void flushInput(); })
+        : null;
+
+      const syncResize = () => {
+        try { fit.fit(); } catch { /* ignore */ }
+        if (interactive) void postRaw({ kind: "resize", tab, cols: term.cols, rows: term.rows });
+      };
+      window.addEventListener("resize", syncResize);
+      if (interactive) syncResize(); // tell the PTY our initial size
+      cleanupTerm = () => {
+        window.removeEventListener("resize", syncResize);
+        inputDisposable?.dispose();
+        term.dispose();
+      };
 
       es = new EventSource(`/api/control/peek-stream?tab=${encodeURIComponent(tab)}`);
       es.addEventListener("ready", () => setConnected(true));
@@ -76,7 +117,7 @@ export function TerminalView({ tab, onSend, fill }: { tab: string; onSend?: (tex
       es?.close();
       cleanupTerm();
     };
-  }, [tab]);
+  }, [tab, interactive]);
 
   const send = async () => {
     const text = line.trim();
