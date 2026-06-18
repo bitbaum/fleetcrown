@@ -7,7 +7,7 @@
 // outgrow this — say tens of thousands of concurrent connections — we
 // add a Redis pubsub layer between the bridge instances. Premature today.
 
-import type { Subscription, ChangeEvent } from "./types.js";
+import type { Subscription, ChangeEvent, FastLaneEvent } from "./types.js";
 
 const subscribers = new Map<string, Set<Subscription>>();
 
@@ -46,6 +46,23 @@ export function fanout(event: ChangeEvent, eventId: number): void {
     } catch {
       // Connection died between NOTIFY receipt and write. Drop it; the
       // 'close' handler that fires on the request will remove() it too.
+      remove(sub);
+    }
+  }
+}
+
+/** Write a fast-lane event (rawkey/resize) to every connection owned by
+ *  event.u. Distinct SSE event name (the `kind`) and NO `id:` line — so it is
+ *  never written to the replay buffer and a reconnect never re-delivers a stale
+ *  keystroke. Fire-and-forget: a dropped key is re-typed, unlike a lost command. */
+export function fanoutRaw(event: FastLaneEvent): void {
+  const set = subscribers.get(event.u);
+  if (!set || set.size === 0) return;
+  const frame = `event: ${event.kind}\ndata: ${JSON.stringify(event)}\n\n`;
+  for (const sub of Array.from(set)) {
+    try {
+      sub.res.write(frame);
+    } catch {
       remove(sub);
     }
   }

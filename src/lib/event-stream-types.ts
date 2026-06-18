@@ -57,3 +57,49 @@ export function isKnownTable(t: string): t is NotifiedTable {
     t === TABLE_BEACON_SETTINGS
   );
 }
+
+// ── Fast-lane (non-durable) events ──────────────────────────────────────────
+//
+// Terminal interactivity needs cloud→runner transport for raw keystrokes and
+// resizes. These must NOT be durable: a per-key `pending_commands` row is
+// catastrophic, and a replayed keystroke on reconnect is wrong. So they ride
+// the SAME `fc:state` NOTIFY channel as ChangeEvents but are discriminated by a
+// `kind` field, and the bridge fans them out via a distinct SSE event name with
+// NO id — so they bypass the durable row path AND the Last-Event-ID replay
+// buffer. Keys are short to respect Postgres's 8KB NOTIFY payload limit.
+//
+// The channel name is the contract between the DB publisher (bridge-publish.ts),
+// the bridge consumer (bridge/src/listen.ts CHANNEL), and the runner. Keep them
+// in sync.
+export const BRIDGE_NOTIFY_CHANNEL = "fc:state";
+
+/** A raw terminal keystroke (verbatim bytes) bound for the runner's PTY. */
+export interface RawKeyEvent {
+  kind: "rawkey";
+  /** Owning user UUID — the bridge's fan-out routing key. */
+  u: string;
+  /** Project tab; the runner maps it to its PTY via runnerWorkspaceId(tab). */
+  tab: string;
+  /** Raw bytes to write to the PTY, verbatim (no CR/prompt semantics). */
+  b: string;
+}
+
+/** A terminal resize bound for the runner's PTY. */
+export interface ResizeEvent {
+  kind: "resize";
+  u: string;
+  tab: string;
+  /** Columns. */
+  c: number;
+  /** Rows. */
+  r: number;
+}
+
+export type FastLaneEvent = RawKeyEvent | ResizeEvent;
+
+/** True for fast-lane events (carry a `kind`); ChangeEvents never do. */
+export function isFastLaneEvent(e: unknown): e is FastLaneEvent {
+  if (!e || typeof e !== "object") return false;
+  const k = (e as { kind?: unknown }).kind;
+  return k === "rawkey" || k === "resize";
+}

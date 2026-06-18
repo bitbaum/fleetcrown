@@ -167,7 +167,14 @@ const server = createServer(async (req, res) => {
 
 // ── Wire LISTEN → fanout ──────────────────────────────────────────────────
 
-const listenLoop = new ListenLoop(DATABASE_URL, (event: ChangeEvent) => {
+const listenLoop = new ListenLoop(DATABASE_URL, (event) => {
+  // Fast-lane events (rawkey/resize) are non-durable: fan them out immediately
+  // with NO id so they never enter the replay buffer (a replayed keystroke on
+  // reconnect would be wrong). Everything else is a durable change event.
+  if ("kind" in event) {
+    subs.fanoutRaw(event);
+    return;
+  }
   const id = logEvent(event);
   subs.fanout(event, id);
 });

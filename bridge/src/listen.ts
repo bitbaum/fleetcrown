@@ -9,13 +9,13 @@
 // process should recover.
 
 import { Client } from "pg";
-import type { ChangeEvent } from "./types.js";
+import type { ChangeEvent, FastLaneEvent } from "./types.js";
 
 const CHANNEL = "fc:state";
 const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 30_000;
 
-type Listener = (event: ChangeEvent) => void;
+type Listener = (event: ChangeEvent | FastLaneEvent) => void;
 
 export class ListenLoop {
   private client: Client | null = null;
@@ -67,7 +67,15 @@ export class ListenLoop {
         if (msg.channel !== CHANNEL) return;
         if (!msg.payload) return;
         try {
-          const event = JSON.parse(msg.payload) as ChangeEvent;
+          const parsed = JSON.parse(msg.payload) as Record<string, unknown>;
+          // Fast-lane (non-durable) events carry a `kind` and no SQL op — route
+          // them straight through; the server fans them out without buffering.
+          if (parsed.kind === "rawkey" || parsed.kind === "resize") {
+            if (typeof parsed.u !== "string" || typeof parsed.tab !== "string") return;
+            this.onEvent(parsed as unknown as FastLaneEvent);
+            return;
+          }
+          const event = parsed as unknown as ChangeEvent;
           if (!event.t || !event.u || !event.op) return; // malformed; skip
           this.onEvent(event);
         } catch (err) {

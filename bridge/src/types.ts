@@ -15,6 +15,31 @@ export interface ChangeEvent {
   ts: number;
 }
 
+// ── Fast-lane (non-durable) events ──────────────────────────────────────────
+// Mirror of src/lib/event-stream-types.ts (kept in sync at the IPC boundary —
+// this package ships separately on Hetzner). Raw keystrokes / resizes ride the
+// same fc:state NOTIFY channel, discriminated by `kind`, but are fanned out via
+// a distinct SSE event name with NO id so they bypass the replay buffer.
+export interface RawKeyEvent {
+  kind: "rawkey";
+  /** Owning user UUID — fan-out routing key. */
+  u: string;
+  /** Project tab; the runner maps it to its PTY. */
+  tab: string;
+  /** Raw bytes to write to the PTY, verbatim. */
+  b: string;
+}
+
+export interface ResizeEvent {
+  kind: "resize";
+  u: string;
+  tab: string;
+  c: number;
+  r: number;
+}
+
+export type FastLaneEvent = RawKeyEvent | ResizeEvent;
+
 /** An active SSE connection from a browser, desktop, or phone. */
 export interface Subscription {
   /** UUID of the authenticated user. */
