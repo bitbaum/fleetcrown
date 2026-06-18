@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Mic, MicOff, Loader2 } from "lucide-react";
+import { useVoiceInput } from "@/hooks/use-voice-input";
 
-// TODO (Loki Phase 3): mic (voice → transcribe), file attach, and model picker
-// live here per docs/loki-command-surface.md §4. Out of scope for the MVP —
-// left unstubbed so no broken affordance ships.
+// TODO (Loki Phase 3): file attach + model picker live here per
+// docs/loki-command-surface.md §4. Mic (voice → text) is wired below, reusing
+// the same useVoiceInput hook the Cmd-K palette uses (SSOT).
 
 export function Composer({
   disabled,
@@ -17,6 +18,12 @@ export function Composer({
   onSend: (text: string) => void;
 }) {
   const [text, setText] = useState("");
+
+  // Voice → text. The transcript appends to whatever is already typed so
+  // dictation composes with typing instead of clobbering it.
+  const voice = useVoiceInput({
+    onTranscript: (t) => setText((prev) => (prev ? `${prev} ${t}` : t)),
+  });
 
   const submit = () => {
     const trimmed = text.trim();
@@ -31,8 +38,12 @@ export function Composer({
         className="ui-loki-composer-input"
         rows={1}
         value={text}
-        disabled={disabled}
-        placeholder="Type a command (e.g. 'code review for kivvi') or ask a question…"
+        disabled={disabled || voice.status === "transcribing"}
+        placeholder={
+          voice.status === "recording"
+            ? "Listening…"
+            : "Type a command (e.g. 'code review for kivvi') or ask a question…"
+        }
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
@@ -41,6 +52,24 @@ export function Composer({
           }
         }}
       />
+      {voice.isSupported && (
+        <button
+          type="button"
+          className="ui-btn-icon p-2"
+          disabled={disabled || voice.status === "transcribing"}
+          onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
+          aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
+          title={voice.status === "recording" ? "Stop" : "Voice (mic)"}
+        >
+          {voice.status === "transcribing" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : voice.status === "recording" ? (
+            <MicOff className="h-4 w-4" />
+          ) : (
+            <Mic className="h-4 w-4" />
+          )}
+        </button>
+      )}
       <button
         type="button"
         className="ui-btn-icon-accent p-2"
