@@ -1,0 +1,33 @@
+import { type NextRequest, NextResponse } from "next/server";
+import { getApiUserId } from "@/lib/session";
+import { readJsonBody, z } from "@/lib/api/route-helpers";
+import { listConversations, createConversation } from "@/db/queries/conversations";
+
+const CreateBody = z.object({
+  title: z.string().trim().min(1).max(200),
+  projectKeys: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
+});
+
+export async function GET(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const projectsParam = req.nextUrl.searchParams.get("projects");
+  const projectKeys = projectsParam
+    ? projectsParam.split(",").map((s) => s.trim()).filter(Boolean)
+    : undefined;
+
+  const conversations = await listConversations(userId, { projectKeys });
+  return NextResponse.json({ conversations });
+}
+
+export async function POST(req: NextRequest) {
+  const userId = await getApiUserId();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const dataOrResp = await readJsonBody(req, CreateBody);
+  if (dataOrResp instanceof NextResponse) return dataOrResp;
+
+  const conversation = await createConversation(userId, dataOrResp);
+  return NextResponse.json({ conversation }, { status: 201 });
+}

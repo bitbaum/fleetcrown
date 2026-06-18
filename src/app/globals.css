@@ -2417,6 +2417,48 @@
   .ui-btn-danger:hover {
     background-color: color-mix(in oklch, var(--status-negative) 18%, transparent);
   }
+
+  /* ── Loki — conversational command surface (3-pane) ──────────────────────── */
+  /* Conversation list row (left pane). */
+  .ui-loki-convo {
+    @apply w-full rounded-lg border border-transparent px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-loki-convo-active {
+    @apply border-border-subtle bg-surface-raised text-text-primary;
+  }
+  .ui-loki-convo-title { @apply truncate font-medium; }
+  .ui-loki-convo-meta  { @apply mt-0.5 truncate text-xs text-text-tertiary; }
+
+  /* Message bubbles (center pane). */
+  .ui-loki-bubble {
+    @apply max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words;
+  }
+  .ui-loki-bubble-user {
+    @apply self-end bg-accent-muted text-text-primary;
+  }
+  .ui-loki-bubble-assistant {
+    @apply self-start border border-border-subtle bg-surface-base text-text-secondary;
+  }
+  /* Kind badge above an assistant turn (dispatch / chat / command). */
+  .ui-loki-kind {
+    @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
+  }
+
+  /* Composer (center pane, bottom). */
+  .ui-loki-composer {
+    @apply flex items-end gap-2 rounded-2xl border border-border-subtle bg-surface-base p-2;
+  }
+  .ui-loki-composer-input {
+    @apply max-h-40 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+  }
+
+  /* Project multi-select (right pane). */
+  .ui-loki-project {
+    @apply flex w-full items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
+  }
+  .ui-loki-project-active {
+    @apply border-accent-primary/30 bg-accent-muted text-text-primary;
+  }
 }
 
 /* ─── Sidebar portal tooltip (outside @layer to avoid Tailwind 4 keyframe issue) ── */
