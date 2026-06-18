@@ -29,6 +29,16 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.8",
+    tag: "fleet-runner-v0.8.8",
+    date: "2026-06-18T09:00:00Z",
+    highlights: [
+      "The runner no longer goes silently offline after the dashboard restarts (e.g. during a deploy). The command poll now has a hard timeout, so a half-open connection can't wedge the loop with the app still running.",
+    ],
+    breaking: [],
+    notes: "Reliability: the wait=0 command poll had no request timeout, so a connection left half-open by a backend restart could hang the poll forever — the poller went silent, the process stayed alive (so nothing restarted it), and the autopilot loop stalled. Bounded the poll with AbortSignal.timeout(20s); on timeout it backs off and retries instead of hanging. Pairs with the supervised systemd service (Restart=always) for end-to-end 'never silently offline'.",
+  },
+  {
     version: "0.8.7",
     tag: "fleet-runner-v0.8.7",
     date: "2026-06-18T07:00:00Z",

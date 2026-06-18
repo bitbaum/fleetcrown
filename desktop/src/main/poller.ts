@@ -90,6 +90,10 @@ type StatusListener = (s: PollerStatus) => void
 
 const listeners = new Set<StatusListener>()
 const COMMAND_POLL_IDLE_MS = 2_000
+// Hard ceiling on a single wait=0 command poll. With wait=0 the server returns
+// immediately, so this only ever fires on a stuck/half-open socket — bounding
+// it stops the poller from wedging silently when the backend restarts.
+const POLL_FETCH_TIMEOUT_MS = 20_000
 let currentStatus: PollerStatus = {
   state: 'idle',
   baseUrl: (process.env.FLEETCROWN_WEB_URL || '').trim() || APP_URL,
@@ -207,9 +211,16 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       // commands claimed without visible progress under cloud/bridge edge
       // conditions. A 2s deterministic poll is cheap and makes phone/web
       // control reliable today.
+      // Bridge-wake can abort this fetch; the timeout guarantees the loop can
+      // NEVER hang forever on a half-open connection (e.g. the backend restarts
+      // mid-request during a deploy). Previously the poll had no timeout, so a
+      // hung socket left the poller silently wedged with the process still
+      // alive — supervision couldn't see it, and the autopilot loop stalled.
+      // A timeout aborts only the .any signal (not currentFetchCtrl), so the
+      // catch falls through to backoff+retry instead of the bridge-wake `continue`.
       const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(FLEET_RUNNER_COMMAND_TYPES_PARAM)}`, {
         headers: { Authorization: `Bearer ${token}` },
-        signal: currentFetchCtrl.signal,
+        signal: AbortSignal.any([currentFetchCtrl.signal, AbortSignal.timeout(POLL_FETCH_TIMEOUT_MS)]),
       })
 
       if (resp.status === 401 || resp.status === 403) {
