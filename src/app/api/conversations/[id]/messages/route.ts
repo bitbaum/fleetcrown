@@ -98,6 +98,9 @@ export async function POST(
         intentId: resolution.intentId,
         ok,
         mode: inject.body.mode ?? null,
+        // "runner-offline" when queued with no live runner — surfaced so the
+        // transcript can warn the work is waiting, not running.
+        warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
       },
     });
     // Keep the thread tagged with the project it now talks to.

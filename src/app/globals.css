@@ -2459,6 +2459,10 @@
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
   }
+  /* Outcome line under a dispatch bubble — status dot + text + Control link. */
+  .ui-loki-dispatch-foot {
+    @apply mt-1 flex items-center gap-2 text-xs text-text-tertiary;
+  }
 
   /* Composer (center pane, bottom). */
   .ui-loki-composer {

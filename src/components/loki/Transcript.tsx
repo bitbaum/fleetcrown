@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import type { LokiMessage } from "./types";
 
@@ -11,6 +12,37 @@ const KIND_LABEL: Record<string, string> = {
   chat: "Ivy",
   command: "Needs project",
 };
+
+/** Outcome footer under a dispatch bubble — tells the operator whether the work
+ *  is running, queued, or stuck (runner offline), and links into Control to
+ *  watch it. Reads the meta the messages route stamps on dispatch turns. */
+function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
+  if (!meta) return null;
+  const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
+  const offline = meta.warning === "runner-offline";
+  const failed = meta.ok === false;
+  const warn = offline || failed;
+  const status = failed
+    ? "Dispatch failed"
+    : offline
+      ? "Fleet Runner offline — queued, runs on reconnect"
+      : meta.mode === "queued"
+        ? "Queued for the runner"
+        : meta.mode === "direct"
+          ? "Running now"
+          : "Dispatched";
+  return (
+    <div className="ui-loki-dispatch-foot">
+      <span className={warn ? "ui-dot-warning" : "ui-dot-positive"} />
+      <span>{status}</span>
+      {projectKey && (
+        <Link href={`/control?focus=${encodeURIComponent(projectKey)}`} className="ui-link-subtle">
+          Open in Control →
+        </Link>
+      )}
+    </div>
+  );
+}
 
 export function Transcript({
   messages,
@@ -52,6 +84,7 @@ export function Transcript({
           <div key={m.id} className="flex flex-col">
             {m.kind && <span className="ui-loki-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
             <div className="ui-loki-bubble ui-loki-bubble-assistant">{m.content}</div>
+            {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
           </div>
         ),
       )}
