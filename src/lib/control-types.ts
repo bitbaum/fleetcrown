@@ -142,5 +142,6 @@ export type ControlData = {
   recentActivity: import("@/db/queries/prompt-history").ActivityItem[];
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
+  runnerVersion: string | null;
   failedCommands: FailedCommand[];
 };

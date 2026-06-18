@@ -28,6 +28,7 @@
  * the pusher's 30s cadence would slip. Two timers, two responsibilities.
  */
 
+import { app } from 'electron'
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
@@ -103,6 +104,7 @@ async function pushOnce(): Promise<void> {
         installedAgents,
         projects,
         panes,
+        runnerVersion: app.getVersion(),
         observedAt: Date.now(),
       }),
       // Bound the push. Without this, a single hung runtime-state request never

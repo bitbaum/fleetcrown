@@ -28,6 +28,7 @@ export const runtimeSnapshots = pgTable("runtime_snapshots", {
     .references(() => users.id, { onDelete: "cascade" }),
   openTabs: text("open_tabs").array().notNull().default([]),
   installedAgents: text("installed_agents").array().notNull().default([]),
+  runnerVersion: text("runner_version"),
   /**
    * Per-pane topology. SSOT for Fleet Runner's cold-start restore path: the
    * latest snapshot's panes IS the "desired state" we regenerate from. Empty

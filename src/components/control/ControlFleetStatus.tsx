@@ -27,6 +27,7 @@ type Props = {
   runnerOffline: boolean;
   runnerStateUnknown: boolean;
   runnerLastPushedAt: string | null;
+  runnerVersion?: string | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
   automationSaving: boolean;
@@ -48,6 +49,7 @@ export function ControlFleetStatus({
   runnerOffline,
   runnerStateUnknown,
   runnerLastPushedAt,
+  runnerVersion,
   lastUpdated,
   automationMode,
   automationSaving,
@@ -82,11 +84,17 @@ export function ControlFleetStatus({
   });
   const runnerDef = RUNNER_STATE_DEFINITIONS[runnerStateKey];
 
-  const runnerDetail = !runnerNeverSeen && runnerLastPushedAt
+  const syncDetail = !runnerNeverSeen && runnerLastPushedAt
     ? `sync ${timeAgo(new Date(runnerLastPushedAt).getTime())}`
     : lastUpdated
       ? `page ${timeAgo(lastUpdated)}`
       : null;
+  // Append the connected runner's reported version so the user can confirm
+  // which Fleet Runner build is live (helps diagnose stale-runner bugs).
+  const versionDetail = runnerStateKey === "connected" && runnerVersion
+    ? `runner v${runnerVersion}`
+    : null;
+  const runnerDetail = [syncDetail, versionDetail].filter(Boolean).join(" · ") || null;
 
   const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
   const runnerTone = runnerStateKey === "connected"

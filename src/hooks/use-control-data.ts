@@ -28,6 +28,7 @@ export interface ControlDataHook {
   lastTabResultsAt: number | null;
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
+  runnerVersion: string | null;
   /** Connection-based presence (bridge SSE). null = no event yet → fall back
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
@@ -345,6 +346,7 @@ export function useControlData(): ControlDataHook {
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
     runtimeAvailable: data?.runtimeAvailable ?? true,
     runnerLastPushedAt: data?.runnerLastPushedAt ?? null,
+    runnerVersion: data?.runnerVersion ?? null,
     runnerConnected,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,

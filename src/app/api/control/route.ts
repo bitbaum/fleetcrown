@@ -57,6 +57,7 @@ type SlowCache = {
   builtAt: number;
   runtimeSnapshotUpdatedAt: Date | null;
   installedAgents: string[];
+  runnerVersion: string | null;
 };
 
 let slowCache: SlowCache | null = null;
@@ -85,6 +86,7 @@ async function buildSlowData(userId: string, dirs: string[], key: string): Promi
     builtAt: Date.now(),
     runtimeSnapshotUpdatedAt: runtimeSnapshot?.updatedAt ?? null,
     installedAgents: runtimeSnapshot?.installedAgents ?? [],
+    runnerVersion: runtimeSnapshot?.runnerVersion ?? null,
   };
 }
 
@@ -139,7 +141,7 @@ export async function GET() {
   const dirs = projects.map((p) => p.dir);
 
   // Slow data (git + DB) served from cache — no fork needed for CWD check
-  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents } = await getSlowData(userId, dirs);
+  const { gitMap, zellijTabs, runtimeSnapshotUpdatedAt, installedAgents, runnerVersion } = await getSlowData(userId, dirs);
   const runtimeAvailable = isRuntimeAvailable();
   // Pull the canonical agent ID list straight from the registry — same source
   // buildSwitchableAgentCatalog reads from one line below. Pre-fix this was
@@ -403,6 +405,7 @@ export async function GET() {
             return maxAt?.toISOString() ?? null;
           })()
         : null,
+      runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
       failedCommands: failedCommands ?? [],
     } satisfies ControlData,
     {

@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown };
+  let body: { projects?: unknown; openTabs?: unknown; installedAgents?: unknown; observedAt?: unknown; panes?: unknown; runnerVersion?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
       ? body.installedAgents.filter((agent): agent is string => typeof agent === "string" && agent.trim().length > 0)
       : undefined;
     const panes = Array.isArray(body.panes) ? sanitizePanes(body.panes) : undefined;
-    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents, panes)
+    const runnerVersion = typeof body.runnerVersion === "string" ? body.runnerVersion : undefined;
+    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents, panes, runnerVersion)
       .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 

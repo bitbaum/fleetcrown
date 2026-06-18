@@ -29,6 +29,16 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.7",
+    tag: "fleet-runner-v0.8.7",
+    date: "2026-06-18T07:00:00Z",
+    highlights: [
+      "Dispatched and next-best prompts now actually submit. Large multi-line prompts were being pasted into the agent's input but never sent (stuck as “[Pasted text +N lines]”), so the agent looked launched but never started working.",
+    ],
+    breaking: [],
+    notes: "Injection fix. Claude's TUI treats a big multi-line write as a bracketed paste and absorbs a trailing carriage return into the paste buffer instead of submitting — so the prompt sat in the input unsent and every dispatch reported “the agent didn't pick up the prompt within the window.” Fixed by sending the submit Enter as a separate keystroke after the paste settles (two nudged CRs at 250ms/800ms). Found by driving kivvi end-to-end and reading the live PTY.",
+  },
+  {
     version: "0.8.6",
     tag: "fleet-runner-v0.8.6",
     date: "2026-06-18T00:00:00Z",

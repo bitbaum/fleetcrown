@@ -39,6 +39,7 @@ import {
   isPtyBacked,
   launchAgentPty,
   injectPty,
+  isPtyBusy,
   terminatePty,
   waitForPtyReady,
   peekPtyBuffer,
@@ -516,18 +517,26 @@ async function handleCommand(
             }
           }
           if (ptyOk) {
-            const baseline = readMtimeMs(sessionFilePath(tab))
             injectPty(tab, prompt)
-            verified = await waitForSessionFileBump(tab, baseline, 8000)
+            // Verify via the owned PTY's own activity, not the session-file
+            // mtime. A submitted prompt keeps the agent generating → status
+            // stays "running"; a paste that never submitted falls quiet →
+            // "idle". The old mtime check was a false negative (that file only
+            // bumps when the agent FINISHES a turn, minutes later) and its
+            // retry re-injected the prompt, double-submitting into a busy agent.
+            await asleep(3500)
+            verified = isPtyBusy(tab)
             if (!verified && launched) {
-              await asleep(2500)
-              const retryBaseline = readMtimeMs(sessionFilePath(tab))
+              // Genuinely didn't start — the agent's TUI was likely still
+              // booting at inject time. Re-inject ONCE; safe because the agent
+              // is idle (not mid-turn), so this can't double-submit.
               injectPty(tab, prompt)
-              verified = await waitForSessionFileBump(tab, retryBaseline, 6000)
+              await asleep(3500)
+              verified = isPtyBusy(tab)
             }
             ok = true
             text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
-            if (!verified) warning = `${text}, but the agent didn't pick up the prompt within the window — it may be busy or hung`
+            if (!verified) warning = `${text}, but the agent isn't generating yet — it may still be booting or already idle`
             break
           }
           // PTY launch failed → fall through to the zellij path below.

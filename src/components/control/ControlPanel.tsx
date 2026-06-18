@@ -34,7 +34,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable, runnerLastPushedAt, runnerConnected,
+    runtimeAvailable, runnerLastPushedAt, runnerVersion, runnerConnected,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -289,6 +289,7 @@ export function ControlPanel() {
         runnerOffline={runnerOffline}
         runnerStateUnknown={runnerNeverSeen}
         runnerLastPushedAt={runnerLastPushedAt}
+        runnerVersion={runnerVersion}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
         automationSaving={automationPolicy.saving}

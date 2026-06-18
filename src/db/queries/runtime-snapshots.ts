@@ -8,6 +8,7 @@ export async function upsertRuntimeSnapshotIfNewer(
   observedAt: Date,
   installedAgents?: string[],
   panes?: PaneRecord[],
+  runnerVersion?: string,
 ) {
   const snapshot = {
     userId,
@@ -16,6 +17,7 @@ export async function upsertRuntimeSnapshotIfNewer(
     updatedAt: new Date(),
     ...(installedAgents ? { installedAgents } : {}),
     ...(panes ? { panes } : {}),
+    ...(runnerVersion ? { runnerVersion } : {}),
   };
   const [inserted] = await db
     .insert(runtimeSnapshots)

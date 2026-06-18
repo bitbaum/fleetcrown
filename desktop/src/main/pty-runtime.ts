@@ -73,9 +73,36 @@ export async function launchAgentPty(
   });
 }
 
-/** Write a prompt into the agent's PTY stdin (Enter-terminated). */
+/**
+ * Write a prompt into the agent's PTY stdin and submit it.
+ *
+ * Claude Code's TUI treats a large multi-line write as a bracketed paste and
+ * renders it as "[Pasted text +N lines]" WITHOUT submitting — a trailing CR in
+ * the same write gets absorbed into the paste buffer as content, not Enter. So
+ * the prompt sits in the input and the agent never "picks it up". (Observed
+ * live driving kivvi: 59-line next-best template stuck in `-- INSERT --`.)
+ *
+ * Fix: write the body, then send the submit CR as a SEPARATE keystroke after a
+ * short settle so the TUI registers it as Enter rather than paste content. A
+ * second nudged CR covers TUIs that need an extra beat after a big paste. Safe
+ * for short single-line prompts too (the extra CRs are harmless no-ops at an
+ * empty prompt).
+ */
 export function injectPty(tab: string, text: string): void {
-  executor.write(runnerWorkspaceId(tab), text.endsWith("\r") ? text : `${text}\r`);
+  const id = runnerWorkspaceId(tab);
+  const body = text.replace(/[\r\n]+$/, "");
+  executor.write(id, body);
+  setTimeout(() => executor.write(id, "\r"), 250);
+  setTimeout(() => executor.write(id, "\r"), 800);
+}
+
+/**
+ * True when the owned PTY is actively generating (status "running"). Used to
+ * verify a dispatch landed: a submitted prompt keeps the agent generating,
+ * while a paste that never submitted falls quiet → "idle" after IDLE_MS.
+ */
+export function isPtyBusy(tab: string): boolean {
+  return executor.get(runnerWorkspaceId(tab))?.status === "running";
 }
 
 /** Kill the agent's PTY and release the workspace. */
