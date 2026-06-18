@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Info } from "lucide-react";
-import { WorkspaceTerminal } from "@/components/control/WorkspaceTerminal";
+import { TerminalView } from "@/components/terminal/TerminalView";
+import { workspaceTransport } from "@/components/terminal/terminal-transport";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 
 type ViewStatus = AgentLifecycle | "provisioning" | "error";
@@ -90,7 +91,7 @@ export default function WorkspaceTerminalPage() {
       {error && <p className="ui-error">{error}</p>}
       {id && (
         <div className="ui-panel flex-1 overflow-hidden p-2">
-          <WorkspaceTerminal id={id} onStatus={setStatus} className="h-full w-full" />
+          <TerminalView transport={workspaceTransport(id)} interactive bare onStatus={setStatus} className="h-full w-full" />
         </div>
       )}
     </div>

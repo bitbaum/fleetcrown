@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, RefreshCw, X } from "lucide-react";
 import { Drawer } from "@/components/ui/modal";
-import { TerminalView } from "./TerminalView";
+import { TerminalView } from "../terminal/TerminalView";
+import { runnerTransport } from "../terminal/terminal-transport";
 
 // Live snapshot of a Zellij tab's visible scrollback, rendered as a static
 // terminal frame in a drawer. Pre-v0.7.2 the user could see tab names + state
@@ -179,7 +180,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
       <div className="ui-control-terminal-surface">
         {live ? (
           <div className="p-3">
-            <TerminalView tab={tab} onSend={sendLine} />
+            <TerminalView transport={runnerTransport(tab)} onSend={sendLine} />
           </div>
         ) : error ? (
           <div className="p-6 text-sm text-text-secondary">

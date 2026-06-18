@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
-import { TerminalView } from "@/components/control/TerminalView";
+import { TerminalView } from "./TerminalView";
+import { runnerTransport } from "./terminal-transport";
 
 /**
  * "My machine" terminal source — live views of the agents Fleet Runner is
@@ -62,7 +63,7 @@ export function LocalMachineView() {
         ))}
       </div>
       <div className="min-h-0 flex-1">
-        {active && <TerminalView key={active} tab={active} onSend={send} fill interactive />}
+        {active && <TerminalView key={active} transport={runnerTransport(active)} onSend={send} fill interactive />}
       </div>
     </div>
   );

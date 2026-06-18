@@ -9,8 +9,8 @@ runner PID), opened "My machine" → that tab, typed `ECHOTEST42` in the browser
 round-tripped the full chain (xterm onData → `POST /api/control/tab-inject-raw` → bridge
 rawkey → runner `onRawKey` → `writeRawKey` → owned PTY → Claude TUI render → `pty.onData` →
 peek-stream SSE → xterm) and echoed in the prompt box. Killing the test agent left the runner
-green (0 restarts) — PTY isolation confirmed. Remaining: the WorkspaceTerminal+TerminalView
-wrapper merge (P4).
+green (0 restarts) — PTY isolation confirmed. **P4 (wrapper merge) DONE** — the two xterm
+wrappers are now one transport-parameterized view (see Consolidation below).
 
 George's complaint (2026-06-18): the in-app terminal is "abysmal — I cannot easily type
 commands there, it's slow and awful, and there's no parity between the server and machine
@@ -92,11 +92,15 @@ input channel** to the runner's `executor.write` (the primitive `injectPty` alre
 
 ## Consolidation (organic-growth cruft — overlaps Thread B)
 
-- **Two xterm wrappers** diverged only because one assumed read-only:
-  `src/components/control/WorkspaceTerminal.tsx` (interactive) and the machine-side
-  `TerminalView`. After parity they should **merge into one** component parameterized by its
-  input/output transport — the SSOT the `TerminalSurface` doc-comment already promises
-  ("same xterm view, two substrates") but the code doesn't deliver.
+- **Two xterm wrappers** — DONE (P4). `WorkspaceTerminal` and the machine-side `TerminalView`
+  both diverged only because one assumed read-only. They are now **one** component,
+  `src/components/terminal/TerminalView.tsx`, parameterized by a `TerminalTransport`
+  (`src/components/terminal/terminal-transport.ts`): `workspaceTransport(id)` drives a
+  server-owned PTY (`/api/workspaces/[id]`), `runnerTransport(tab)` drives the Fleet Runner
+  machine PTY (peek-stream + rawkey fast lane). The view owns xterm, the shared input-buffer
+  (the server-terminal race fix, now in ONE place), fit/resize and chrome; the transport owns
+  I/O. This is the "same xterm view, two substrates" the `TerminalSurface` doc-comment promised
+  — now delivered. Adding a third substrate = a third factory, no view change.
 - `PeekTabDrawer` (one-shot zellij dump-screen snapshot) is largely superseded by live PTY
   streaming — candidate for removal.
 - `ZellijLivePanel` / `ZellijLiveRows` on Control overlap the "My machine" terminal — audit

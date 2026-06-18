@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Columns2, Rows2, X, Loader2 } from "lucide-react";
-import { WorkspaceTerminal } from "@/components/control/WorkspaceTerminal";
+import { TerminalView } from "./TerminalView";
+import { workspaceTransport } from "./terminal-transport";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 import type { SplitDir } from "@/lib/terminal-layout";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ const DOT: Record<string, string> = {
 };
 
 /** One terminal pane: provisions a FleetCrown-owned bash PTY, streams it into
- *  xterm (via WorkspaceTerminal), and terminates it on unmount (pane close or
+ *  xterm (via TerminalView), and terminates it on unmount (pane close or
  *  leaving the page). Kept mounted while the terminal page is open so switching
  *  tabs/splitting never drops the shell. */
 export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit, onClose }: Props) {
@@ -110,7 +111,7 @@ export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit
             Starting shell…
           </div>
         ) : (
-          <WorkspaceTerminal id={wsId} onStatus={setState} className="h-full w-full" />
+          <TerminalView transport={workspaceTransport(wsId)} interactive bare onStatus={setState} className="h-full w-full" />
         )}
       </div>
     </div>
