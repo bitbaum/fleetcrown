@@ -1,11 +1,16 @@
 # Terminal parity & usability
 
-**Status:** server terminal FIXED (deployed); machine-terminal interactive parity SHIPPED
-(2026-06-18) — bridge rawkey/resize fast lane + cloud endpoint + runner 0.8.9 + interactive
-TerminalView all live. Chain verified link-by-link (bridge delivery proven in isolation;
-runner 0.8.9 reconnected + version shown in Control). The final literal keystroke-echo test
-needs a runner-PTY-backed tab live (launch an agent on a project with NO existing zellij tab,
-then type in "My machine"). Remaining: the WorkspaceTerminal+TerminalView wrapper merge (P4).
+**Status:** server terminal FIXED (deployed); machine-terminal interactive parity SHIPPED &
+VERIFIED END-TO-END (2026-06-18) — bridge rawkey/resize fast lane + cloud endpoint + runner
+0.8.9 + interactive TerminalView all live. The final literal keystroke-echo test is now done:
+launched a throwaway Claude agent on `truthseeker` (a project with no existing zellij tab, so
+the Fleet Runner owned a fresh PTY — confirmed `bash -lic … claude` as a direct child of the
+runner PID), opened "My machine" → that tab, typed `ECHOTEST42` in the browser xterm, and it
+round-tripped the full chain (xterm onData → `POST /api/control/tab-inject-raw` → bridge
+rawkey → runner `onRawKey` → `writeRawKey` → owned PTY → Claude TUI render → `pty.onData` →
+peek-stream SSE → xterm) and echoed in the prompt box. Killing the test agent left the runner
+green (0 restarts) — PTY isolation confirmed. Remaining: the WorkspaceTerminal+TerminalView
+wrapper merge (P4).
 
 George's complaint (2026-06-18): the in-app terminal is "abysmal — I cannot easily type
 commands there, it's slow and awful, and there's no parity between the server and machine
