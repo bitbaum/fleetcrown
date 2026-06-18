@@ -38,7 +38,15 @@ async function callLocalRoute(
 ): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
   const cookie = req.headers.get("cookie") ?? "";
   const auth = req.headers.get("authorization") ?? "";
-  const res = await fetch(new URL(path, req.nextUrl.origin), {
+  // Server-to-server: hit the standalone Node server directly over loopback
+  // HTTP. Behind Caddy (prod) the public origin is https:// but the Node server
+  // speaks plain HTTP on $PORT, so req.nextUrl.origin caused a TLS "wrong
+  // version number" error. PORT is set in standalone/prod; fall back to the
+  // request origin for local dev. (Self-HTTP here is a deliberate MVP tradeoff
+  // that reuses the inject + ivy routes as SSOT — TODO Phase 3: extract their
+  // cores into shared lib fns and call them directly instead of over HTTP.)
+  const internalBase = process.env.PORT ? `http://127.0.0.1:${process.env.PORT}` : req.nextUrl.origin;
+  const res = await fetch(new URL(path, internalBase), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
