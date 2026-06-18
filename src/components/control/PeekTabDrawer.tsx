@@ -5,31 +5,27 @@ import { Eye, RefreshCw, X } from "lucide-react";
 import { Drawer } from "@/components/ui/modal";
 import { TerminalView } from "../terminal/TerminalView";
 import { runnerTransport } from "../terminal/terminal-transport";
+import { ActivityTimeline } from "./ActivityTimeline";
 
-// Live snapshot of a Zellij tab's visible scrollback, rendered as a static
-// terminal frame in a drawer. Pre-v0.7.2 the user could see tab names + state
-// chips on /control but had to alt-tab into Zellij to see what the agent was
-// actually saying. The Peek button bridges that gap with a one-click
-// dump-screen round-trip (~200ms) — same disruption budget as a prompt
-// injection, which users have already accepted as the cost of remote dispatch.
+// Per-project drawer with three views of one project:
+//   • activity  — the unified activity SSOT timeline (default): every prompt,
+//                 run outcome, and lifecycle signal, newest first. The "what
+//                 happened" half of the cockpit; readable regardless of agent.
+//   • live      — stream the pane via xterm (real PTY bytes / dump-screen frames)
+//   • snapshot  — one-shot dump-screen capture, the pre-v0.7.2 fallback
 //
-// Uses the fastest available runtime: Fleet Runner IPC when the desktop bridge
-// exists, otherwise a pending_commands round-trip that the local runner drains.
-//
-// Auto-refresh is opt-in: a re-peek every N seconds is useful for watching
-// long-running agents, but stays off by default so we don't disrupt the user
-// (each peek briefly flashes their Zellij to the target tab and back).
+// Live/snapshot stream a Zellij pane; activity reads the DB, so it's the view
+// that always renders cleanly. See docs/architecture/embedded-terminal.md.
+
+type View = "activity" | "live" | "snapshot";
 
 export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => void }) {
+  const [view, setView] = useState<View>("activity");
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
-  // Live mode (P1): stream the pane via xterm instead of one-shot snapshots.
-  // Default on; snapshot stays as the fallback when no runner is streaming.
-  // See docs/architecture/embedded-terminal.md.
-  const [live, setLive] = useState(true);
   const preRef = useRef<HTMLPreElement>(null);
   const requestSeq = useRef(0);
 
@@ -111,19 +107,34 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   };
 
   useEffect(() => {
-    if (live) return; // live mode streams via TerminalView; no snapshot round-trip
+    if (view !== "snapshot") return; // live streams via TerminalView; activity reads the DB
     void fetchPeek();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, live]);
+  }, [tab, view]);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh || view !== "snapshot") return;
     // 3s cadence — fast enough to feel live during a working agent, slow
     // enough that the brief Zellij focus flash doesn't become annoying.
     const id = setInterval(() => { void fetchPeek(); }, 3_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh, tab]);
+  }, [autoRefresh, view, tab]);
+
+  const subtitle =
+    view === "activity"
+      ? "Activity timeline"
+      : view === "live"
+        ? "Live terminal"
+        : lastFetchedAt
+          ? `Snapshot captured ${new Date(lastFetchedAt).toLocaleTimeString()}${autoRefresh ? " · auto-refresh on" : ""}`
+          : "Capturing screen…";
+
+  const VIEWS: { id: View; label: string }[] = [
+    { id: "activity", label: "Activity" },
+    { id: "live", label: "Live" },
+    { id: "snapshot", label: "Snapshot" },
+  ];
 
   return (
     <Drawer onClose={onClose} size="xl">
@@ -132,25 +143,21 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
           <Eye className="h-4 w-4 text-accent-text" />
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-text-primary">{tab}</h2>
-            <p className="text-micro text-text-tertiary">
-              {live
-                ? "Live terminal"
-                : lastFetchedAt
-                  ? `Snapshot captured ${new Date(lastFetchedAt).toLocaleTimeString()}${autoRefresh ? " · auto-refresh on" : ""}`
-                  : "Capturing screen…"}
-            </p>
+            <p className="text-micro text-text-tertiary">{subtitle}</p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setLive((v) => !v)}
-            className={live ? "ui-btn-primary ui-btn-xs" : "ui-btn-ghost ui-btn-xs"}
-            title={live ? "Switch to one-shot snapshot" : "Switch to live stream"}
-          >
-            {live ? "Live" : "Snapshot"}
-          </button>
-          {!live && (
+          {VIEWS.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setView(v.id)}
+              className={view === v.id ? "ui-btn-primary ui-btn-xs" : "ui-btn-ghost ui-btn-xs"}
+            >
+              {v.label}
+            </button>
+          ))}
+          {view === "snapshot" && (
             <>
               <button
                 type="button"
@@ -178,7 +185,11 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
       </header>
 
       <div className="ui-control-terminal-surface">
-        {live ? (
+        {view === "activity" ? (
+          <div className="h-full p-3">
+            <ActivityTimeline tab={tab} />
+          </div>
+        ) : view === "live" ? (
           <div className="p-3">
             <TerminalView transport={runnerTransport(tab)} onSend={sendLine} />
           </div>
