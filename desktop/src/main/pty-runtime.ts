@@ -105,6 +105,24 @@ export function isPtyBusy(tab: string): boolean {
   return executor.get(runnerWorkspaceId(tab))?.status === "running";
 }
 
+/**
+ * Write raw terminal keystroke bytes into the agent's PTY, VERBATIM — no CR
+ * append, no settle delays, no prompt-state side effects (unlike injectPty).
+ * This is the interactive-terminal fast lane (Ctrl-C, arrows, Tab, etc.).
+ * No-ops if the tab has no live owned PTY — a stray key for a dead tab is
+ * harmless, mirroring executor.write's own guard.
+ */
+export function writeRawKey(tab: string, bytes: string): void {
+  if (!isPtyBacked(tab)) return;
+  executor.write(runnerWorkspaceId(tab), bytes);
+}
+
+/** Resize the agent's PTY (interactive terminal fit). No-ops without a live PTY. */
+export function resizePty(tab: string, cols: number, rows: number): void {
+  if (!isPtyBacked(tab)) return;
+  executor.resize(runnerWorkspaceId(tab), cols, rows);
+}
+
 /** Kill the agent's PTY and release the workspace. */
 export async function terminatePty(tab: string): Promise<void> {
   await executor.terminate(runnerWorkspaceId(tab));

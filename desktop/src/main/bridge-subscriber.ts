@@ -40,6 +40,8 @@ import {
   isKnownTable,
   TABLE_PENDING_COMMANDS,
   type ChangeEvent,
+  type RawKeyEvent,
+  type ResizeEvent,
 } from '@/lib/event-stream-types'
 
 /** Public hook callbacks. Kept narrow — the subscriber's job is detection,
@@ -48,6 +50,11 @@ export interface BridgeSubscriberCallbacks {
   /** Called when a pending_commands INSERT event arrives for our user.
    *  The poller's job is to immediately drain the queue. */
   onCommandPending: (commandId: string) => void
+  /** Fast-lane raw keystroke for the interactive terminal — write verbatim to
+   *  the tab's PTY. Non-durable: just deliver, no ack. */
+  onRawKey?: (event: RawKeyEvent) => void
+  /** Fast-lane terminal resize for the tab's PTY. */
+  onResize?: (event: ResizeEvent) => void
   /** Optional: called whenever the connection state changes, for status UI. */
   onStateChange?: (state: BridgeSubscriberState) => void
 }
@@ -230,6 +237,20 @@ export function startBridgeSubscriber(
         if (Number.isFinite(parsed)) lastEventId = parsed
       }
     }
+    // Fast-lane (non-durable) events: distinct SSE event names, no replay.
+    // Deliver straight to the PTY callbacks; never touch the command path.
+    if (eventType === 'rawkey' || eventType === 'resize') {
+      if (!data) return
+      try {
+        const ev = JSON.parse(data)
+        if (eventType === 'rawkey') callbacks.onRawKey?.(ev as RawKeyEvent)
+        else callbacks.onResize?.(ev as ResizeEvent)
+      } catch {
+        // Bad payload — drop it; a lost keystroke is re-typed.
+      }
+      return
+    }
+
     if (eventType !== 'change' || !data) return
 
     let event: ChangeEvent

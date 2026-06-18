@@ -43,6 +43,8 @@ import {
   terminatePty,
   waitForPtyReady,
   peekPtyBuffer,
+  writeRawKey,
+  resizePty,
 } from './pty-runtime'
 import { pushNow } from './pusher'
 import { startBridgeSubscriber } from './bridge-subscriber'
@@ -169,6 +171,11 @@ export function startPoller(): void {
       pendingWake = true
       currentFetchCtrl?.abort()
     },
+    // Interactive terminal fast lane — write keystrokes/resizes straight to the
+    // tab's PTY. Independent of the command-drain path, so it cannot affect the
+    // autopilot loop.
+    onRawKey: ({ tab, b }) => writeRawKey(tab, b),
+    onResize: ({ tab, c, r }) => resizePty(tab, c, r),
   })
   void runLoop(token, lifetimeCtrl.signal)
 }
