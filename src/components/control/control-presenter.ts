@@ -251,6 +251,14 @@ export function getTabActivityText(
   if (display?.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
+  // Idle: surface the last dispatch + when, from the activity stream the API
+  // already attaches (project.recentInjections). Without this the Activity
+  // column read "—" for every idle row even right after the agent ran work —
+  // a column literally labeled "Activity" showing nothing.
+  const last = project.recentInjections?.[0];
+  if (last) {
+    return `${last.displayText} · ${timeAgo(new Date(last.dispatchedAt).getTime())}`;
+  }
   return null;
 }
 

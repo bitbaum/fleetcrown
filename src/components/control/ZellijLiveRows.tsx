@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Focus, Terminal, Trash2 } from "lucide-react";
+import { Crosshair, Eye, Maximize2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LiveTabRow } from "./control-presenter";
 import { PeekTabDrawer } from "./PeekTabDrawer";
@@ -89,7 +89,7 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   )}
                 </td>
                 <td className="py-0.5 text-right">
-                  <div className="flex justify-end gap-0.5">
+                  <div className="flex items-center justify-end gap-0.5">
                     <button
                       type="button"
                       onClick={() => setPeekTab(row.tabName)}
@@ -102,28 +102,29 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                       type="button"
                       onClick={() => focusTab(row.tabName)}
                       className="ui-icon-action p-0.5"
-                      title={`Focus ${row.tabName}`}
+                      title={`Focus ${row.tabName} in Zellij`}
                     >
-                      <Terminal className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => closeTab(row.tabName)}
-                      className="ui-icon-action p-0.5"
-                      title={`Close ${row.tabName}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Crosshair className="h-3.5 w-3.5" />
                     </button>
                     {row.project && onFocusProject && (
                       <button
                         type="button"
                         onClick={() => onFocusProject(row.project!.tab)}
                         className="ui-icon-action p-0.5"
-                        title="Expand"
+                        title={`Open ${row.tabName} project details`}
                       >
-                        <Focus className="h-3.5 w-3.5" />
+                        <Maximize2 className="h-3.5 w-3.5" />
                       </button>
                     )}
+                    <span className="mx-0.5 h-4 w-px self-center bg-border-subtle" aria-hidden />
+                    <button
+                      type="button"
+                      onClick={() => closeTab(row.tabName)}
+                      className="ui-icon-action-danger p-0.5"
+                      title={`Close ${row.tabName}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -148,12 +149,12 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   <p className="mt-0.5 text-micro text-text-tertiary">{row.agentLabel}</p>
                 )}
               </div>
-              <div className="flex shrink-0 gap-0.5">
+              <div className="flex shrink-0 items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => setPeekTab(row.tabName)}
                   className="ui-icon-action p-0.5"
-                  title="Peek"
+                  title="Peek terminal"
                 >
                   <Eye className="h-3.5 w-3.5" />
                 </button>
@@ -161,28 +162,29 @@ export function ZellijLiveRows({ rows, highlightTab, focusTab, closeTab, onFocus
                   type="button"
                   onClick={() => focusTab(row.tabName)}
                   className="ui-icon-action p-0.5"
-                  title="Focus"
+                  title="Focus in Zellij"
                 >
-                  <Terminal className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => closeTab(row.tabName)}
-                  className="ui-icon-action p-0.5"
-                  title="Close tab"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Crosshair className="h-3.5 w-3.5" />
                 </button>
                 {row.project && onFocusProject && (
                   <button
                     type="button"
                     onClick={() => onFocusProject(row.project!.tab)}
                     className="ui-icon-action p-0.5"
-                    title="Expand"
+                    title="Open project details"
                   >
-                    <Focus className="h-3.5 w-3.5" />
+                    <Maximize2 className="h-3.5 w-3.5" />
                   </button>
                 )}
+                <span className="mx-0.5 h-4 w-px self-center bg-border-subtle" aria-hidden />
+                <button
+                  type="button"
+                  onClick={() => closeTab(row.tabName)}
+                  className="ui-icon-action-danger p-0.5"
+                  title="Close tab"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
             {row.activity && (

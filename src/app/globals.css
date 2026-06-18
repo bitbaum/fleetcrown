@@ -1736,6 +1736,11 @@
   .ui-icon-action {
     @apply inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-surface-overlay hover:text-text-primary;
   }
+  /* Destructive variant — for the inline "Close tab" action, set apart from the
+     safe peek/focus/expand actions so it never reads as just another gray icon. */
+  .ui-icon-action-danger {
+    @apply inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 items-center justify-center rounded-xl p-2 text-text-muted transition-colors hover:bg-status-negative/10 hover:text-status-negative;
+  }
   .ui-chip-action-compact {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-xl border border-border-subtle bg-surface-overlay px-3 py-1.5 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:opacity-40;
   }
