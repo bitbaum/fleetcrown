@@ -76,7 +76,7 @@
     "publish": {
       "provider": "github",
       "owner": "maonakamoto",
-      "repo": "fleetcrown"
+      "repo": "fleetcrown-releases"
     }
   },
   "dependencies": {
