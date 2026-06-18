@@ -140,6 +140,12 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 
 ## 8. Cross-references
 
+- **Engineering standards (non-negotiable):** build this per `CONTRIBUTING.md` →
+  "Engineering Standards" and the global standards imported in `CLAUDE.md` —
+  SSOT, DRY, SoC, no god files, no hardcoded values, the four-layer design system,
+  config-driven, first-principles. The resolver derives intent ids from
+  `ORCHESTRATION_TASK_INTENT_IDS`; the composer reuses the existing dispatch path
+  and `ui-*` classes rather than re-rolling either.
 - Terminal parity / usability: `docs/terminal-parity.md` (Thread A — separate concern).
 - Cleanup of organic-growth cruft: `docs/debt-reduction-roadmap.md` (Thread B).
 - Dispatch backend Loki builds on: `docs/architecture/agent-execution-platform.md`,

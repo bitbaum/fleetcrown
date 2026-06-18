@@ -17,6 +17,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getApiUserId } from "@/lib/session";
 import { callGroqText } from "@/lib/groq";
+import { ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 
 const Body = z.object({
   text: z.string().trim().min(1).max(2000),
@@ -24,16 +25,10 @@ const Body = z.object({
   selectedProject: z.string().trim().min(1).optional(),
 });
 
-// SSOT-ish: mirror of the dispatchable intent ids (see config/control-intents.ts).
-const KNOWN_INTENTS = [
-  "next_best", "test_and_fix", "quality", "commit_push",
-  "full_audit", "ux_review", "deploy_check", "product", "close_session",
-] as const;
-
 export type CommandResolution = {
   kind: "command" | "chat";
   projectKey: string | null;
-  intentId: (typeof KNOWN_INTENTS)[number] | null;
+  intentId: OrchestrationTaskIntentId | null;
   prompt: string;
   needsProject: boolean;
   reason: string;
@@ -42,7 +37,7 @@ export type CommandResolution = {
 const SYSTEM = `You route an operator's input in a multi-project AI-agent console. Return ONLY compact JSON with keys: kind, projectKey, intentId, prompt, reason.
 - kind: "command" if they want an agent to DO work on a project; "chat" if they're asking a question or just discussing.
 - projectKey: the EXACT project name (copied verbatim from the provided list) the input refers to, or null if none is named. NEVER invent a name that is not in the list.
-- intentId: one of [next_best, test_and_fix, quality, commit_push, full_audit, ux_review, deploy_check, product, close_session] when the request clearly maps to one, else null. Hints: "code review"->quality; "review the ui"/"ux"->ux_review; "run tests"/"fix types"/"fix tests"->test_and_fix; "commit"/"push"->commit_push; "audit"/"full audit"->full_audit; "what next"/"keep going"/"next best"->next_best; "deploy check"->deploy_check; "product review"->product; "wrap up"/"close"->close_session.
+- intentId: one of [${ORCHESTRATION_TASK_INTENT_IDS.join(", ")}] when the request clearly maps to one, else null. Hints: "code review"->quality; "review the ui"/"ux"->ux_review; "run tests"/"fix types"/"fix tests"->test_and_fix; "commit"/"push"->commit_push; "audit"/"full audit"->full_audit; "what next"/"keep going"/"next best"->next_best; "deploy check"->deploy_check; "product review"->product; "wrap up"/"close"->close_session.
 - prompt: the cleaned instruction to give the agent (for command) or the user's message (for chat), with the project name removed.
 - reason: <= 8 words.`;
 
@@ -73,8 +68,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const llmProject = typeof raw.projectKey === "string" && projects.includes(raw.projectKey) ? raw.projectKey : null;
     const projectKey = llmProject ?? namedInText ?? selectedProject ?? null;
-    const intentId = typeof raw.intentId === "string" && (KNOWN_INTENTS as readonly string[]).includes(raw.intentId)
-      ? (raw.intentId as CommandResolution["intentId"])
+    const intentId = typeof raw.intentId === "string" && (ORCHESTRATION_TASK_INTENT_IDS as readonly string[]).includes(raw.intentId)
+      ? (raw.intentId as OrchestrationTaskIntentId)
       : null;
     const kind = raw.kind === "chat" ? "chat" : "command";
     const prompt = typeof raw.prompt === "string" && raw.prompt.trim() ? raw.prompt.trim() : text;

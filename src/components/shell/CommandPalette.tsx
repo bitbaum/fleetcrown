@@ -347,12 +347,12 @@ export function CommandPalette() {
         {voice.error && (
           <div className="ui-palette-voice-error">{voice.error}</div>
         )}
-        {(busy || note || pending) && (
-          <div className="ui-palette-voice-error">
-            {busy ? (<><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Working…</>)
-              : note ? note
-              : pending ? `Pick a project to run: “${pending.prompt}”`
-              : null}
+        {note && <div className="ui-palette-voice-error">{note}</div>}
+        {!note && (busy || pending) && (
+          <div className="ui-palette-status">
+            {busy
+              ? (<><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> Working…</>)
+              : `Pick a project to run: “${pending!.prompt}”`}
           </div>
         )}
         <ul className="ui-palette-list" role="listbox">
