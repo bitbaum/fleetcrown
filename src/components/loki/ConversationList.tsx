@@ -49,7 +49,7 @@ export function ConversationList({
             {conversations.map((c) => {
               const armed = armedId === c.id;
               return (
-                <div key={c.id} className="ui-loki-convo-row">
+                <div key={c.id} className="ui-loki-convo-row group/convo">
                   <button
                     type="button"
                     onClick={() => onSelect(c.id)}
@@ -66,7 +66,7 @@ export function ConversationList({
                     onBlur={() => armed && setArmedId(null)}
                     aria-label={armed ? `Confirm delete ${c.title}` : `Delete ${c.title}`}
                     title={armed ? "Click again to delete" : "Delete conversation"}
-                    className={`ui-loki-convo-delete ${armed ? "ui-loki-convo-delete-armed" : ""}`}
+                    className={`ui-loki-convo-delete group-hover/convo:opacity-100 ${armed ? "ui-loki-convo-delete-armed" : ""}`}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
