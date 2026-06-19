@@ -7,7 +7,9 @@ import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 /**
  * Default abort ceiling for every useFetch call. Individual sites can pass
  * `timeoutMs` to tighten (8_000 for weather, 12_000 for calendar, 10_000 for
- * system, 15_000 for GitHub) or pass `timeoutMs: 0` to disable entirely.
+ * system) or to LOOSEN past a long server budget (35_000 for GitHub, whose
+ * endpoint has its own 30s server-side timeout) — or pass `timeoutMs: 0` to
+ * disable entirely.
  * 20s is intentionally generous — it catches genuinely-hung calls without
  * tripping cold serverless paths.
  */

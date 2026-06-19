@@ -23,7 +23,13 @@ const STATUS_ICONS: Record<string, { icon: typeof CheckCircle; className: string
 };
 
 export function GitHubStatus() {
-  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string; runtimeOnly?: boolean }>("/api/github", { intervalMs: 2 * 60_000, timeoutMs: 15_000 });
+  // 35s, not 15s: /api/github shells out to github-status.sh which runs the `gh`
+  // CLI across every connected repo (30s server-side budget in runTool). A 15s
+  // client abort fired BEFORE the server's own timeout, so a slow-but-succeeding
+  // scan (common with many repos) surfaced a false "Timed out after 15s" error
+  // instead of the data. Client must outlast the server so the server's graceful
+  // timeout governs; only a true hang past 35s aborts here.
+  const { data, loading, error, refetch } = useFetch<{ repos: RepoStatus[]; error?: string; runtimeOnly?: boolean }>("/api/github", { intervalMs: 2 * 60_000, timeoutMs: 35_000 });
   const repos = data?.repos ?? [];
 
   return (
