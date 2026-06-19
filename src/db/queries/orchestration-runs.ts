@@ -39,6 +39,12 @@ export async function cleanupStaleOrchestrationRuns(userId: string) {
     .update(orchestrationRuns)
     .set({
       state: "error",
+      // Record a terminal OUTCOME, not just state=error. Without this, a reaped
+      // run stays outcome=null and is invisible to the outcome streak / success
+      // stats (which read `outcome`), so a runner that dies mid-task silently
+      // vanishes from the autonomy feedback loop instead of counting as a
+      // timeout — the exact truthful-state gap the loop must reflect.
+      outcome: "timeout",
       finishedAt: new Date(),
       payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', '"Timed out — run exceeded maximum duration and was cleaned up"')`,
     })
