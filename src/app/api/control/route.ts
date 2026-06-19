@@ -406,6 +406,12 @@ export async function GET() {
           })()
         : null,
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
+      // Execution health (≠ push heartbeat): a runner can keep pushing snapshots
+      // while its command loop is hung, so dispatches silently queue forever.
+      // Surface that so a stalled runner is visible, not masquerading as "Connected".
+      runnerExecutionStall: !isRuntimeAvailable()
+        ? await (await import("@/db/queries/pending-commands")).getRunnerExecutionStall(userId)
+        : null,
       failedCommands: failedCommands ?? [],
     } satisfies ControlData,
     {

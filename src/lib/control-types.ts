@@ -143,5 +143,8 @@ export type ControlData = {
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion: string | null;
+  /** Execution health: a runner can push snapshots while its command loop is
+   *  hung, queuing dispatches forever. null when runtime is local. */
+  runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   failedCommands: FailedCommand[];
 };

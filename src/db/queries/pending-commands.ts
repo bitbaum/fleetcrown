@@ -8,6 +8,32 @@ export async function getCommandById(id: string) {
   return row ?? null;
 }
 
+/**
+ * Runner EXECUTION health — distinct from the push/sync heartbeat. A Fleet
+ * Runner can keep pushing snapshots ("Connected · sync just now") while its
+ * command-execution loop is hung, so every dispatch silently queues forever and
+ * agents never move. This detects exactly that: commands accepted but not
+ * executed past a grace window (ignoring ancient leftovers). Surfaced in the
+ * fleet header so a stalled runner is loud instead of masquerading as healthy.
+ * (Dogfood 2026-06-19: a hung runner wasted hours while showing "Connected".)
+ */
+export async function getRunnerExecutionStall(userId: string, graceSeconds = 120) {
+  const [row] = await db
+    .select({
+      stalledCount: sql<number>`count(*)::int`,
+      oldestSeconds: sql<number>`coalesce(extract(epoch from (now() - min(created_at)))::int, 0)`,
+    })
+    .from(pendingCommands)
+    .where(and(
+      eq(pendingCommands.userId, userId),
+      isNull(pendingCommands.executedAt),
+      sql`created_at < now() - interval '1 second' * ${graceSeconds}`,
+      sql`created_at > now() - interval '2 hours'`,
+    ));
+  const stalledCount = row?.stalledCount ?? 0;
+  return { stalled: stalledCount > 0, stalledCount, oldestSeconds: row?.oldestSeconds ?? 0 };
+}
+
 export async function enqueuePendingCommand(
   command: Omit<NewPendingCommand, "id" | "createdAt">,
 ): Promise<string> {

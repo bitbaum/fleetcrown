@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, RefreshCw, Radio, WifiOff, Zap } from "lucide-react";
+import { Plus, RefreshCw, Radio, WifiOff, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
 import type { ControlDashboardState } from "./control-presenter";
@@ -28,6 +28,7 @@ type Props = {
   runnerStateUnknown: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion?: string | null;
+  runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
   automationSaving: boolean;
@@ -50,6 +51,7 @@ export function ControlFleetStatus({
   runnerStateUnknown,
   runnerLastPushedAt,
   runnerVersion,
+  runnerExecutionStall,
   lastUpdated,
   automationMode,
   automationSaving,
@@ -174,6 +176,17 @@ export function ControlFleetStatus({
           )}
         </div>
       </div>
+
+      {runnerExecutionStall?.stalled && (
+        <div
+          className="ui-control-fleet-chip ui-control-fleet-chip-attention"
+          role="alert"
+          title="The Fleet Runner is pushing status but not executing dispatched commands — it is likely hung. Restart Fleet Runner; the queued commands will then run."
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mr-1" aria-hidden="true" />
+          Runner stalled — accepting but not executing ({runnerExecutionStall.stalledCount} queued {runnerExecutionStall.oldestSeconds}s). Restart Fleet Runner.
+        </div>
+      )}
 
       <div className="ui-control-fleet-metrics">
         {attention > 0 && (

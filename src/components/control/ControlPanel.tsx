@@ -290,6 +290,7 @@ export function ControlPanel() {
         runnerStateUnknown={runnerNeverSeen}
         runnerLastPushedAt={runnerLastPushedAt}
         runnerVersion={runnerVersion}
+        runnerExecutionStall={data.runnerExecutionStall}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
         automationSaving={automationPolicy.saving}
