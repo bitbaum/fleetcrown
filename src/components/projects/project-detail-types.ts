@@ -1,6 +1,10 @@
 import type { Milestone } from "@/db/schema/goals";
 import type { DevLogEntry } from "@/db/schema/user-projects";
+import type { ProjectActivityEvent } from "@/db/queries/activity";
 export type { DevLogEntry };
+// The project profile's activity feed is the unified activity read-model SSOT
+// (prompts + run outcomes + lifecycle), the same type the /control panel uses.
+export type { ProjectActivityEvent };
 
 // ─── Health Signal Config (base — no Lucide icons, safe to import anywhere) ──
 
@@ -81,24 +85,6 @@ export type ProjectData = {
   activity: ProjectActivityEvent[];
   runtimeState: ProjectRuntimeState | null;
 };
-
-export type ProjectActivityEvent =
-  | {
-      id: string;
-      kind: "user_prompt";
-      occurredAt: string;
-      title: string;
-      body: string;
-    }
-  | {
-      id: string;
-      kind: "orchestrated_run";
-      occurredAt: string;
-      title: string;
-      body: string;
-      state: string;
-      health?: string;
-    };
 
 export type ProjectRuntimeState = {
   tabName: string;

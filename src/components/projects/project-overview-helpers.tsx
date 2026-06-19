@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, Loader2, Pencil, Save, Trash2, Terminal, X, Bot, History } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Pencil, Save, Trash2, Terminal, X, History } from "lucide-react";
 import { DevLogList } from "@/components/shared/DevLogList";
-import type { ProjectData, DevLogEntry } from "./project-detail-types";
-import { APP_LOCALE } from "@/lib/constants";
-import { HEALTH_TAG_STYLE } from "@/config/ui";
+import type { DevLogEntry } from "./project-detail-types";
 import { getJson } from "@/lib/api/fetch";
 import type { SessionData } from "@/app/api/sessions/route";
 import { setAttr, removeAttr } from "@/lib/api/attrs";
@@ -164,49 +162,6 @@ export function AttrRow({
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-export function ProjectHistorySection({ events }: { events: ProjectData["activity"] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 ui-link-muted py-1"
-      >
-        <Bot className="h-3.5 w-3.5" />
-        Agent History ({events.length})
-        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-      </button>
-      {open && (
-        <div className="mt-2 space-y-2">
-          {events.map((event) => {
-            const healthLabel = event.kind === "orchestrated_run" ? event.health : undefined;
-            const healthCls = healthLabel ? HEALTH_TAG_STYLE[healthLabel.toLowerCase()] : undefined;
-            return (
-              <div key={event.id} className="rounded-lg border border-border-subtle bg-surface-overlay px-3 py-2">
-                <div className="flex items-center gap-2 text-xs flex-wrap">
-                  <span className="font-medium text-text-secondary">{event.title}</span>
-                  {"state" in event && event.state !== "done" && (
-                    <span className="ui-tag ui-tag-neutral">{event.state}</span>
-                  )}
-                  {healthCls && healthLabel && (
-                    <span className={healthCls}>{healthLabel}</span>
-                  )}
-                  <span className="ml-auto text-text-muted shrink-0">{new Date(event.occurredAt).toLocaleString(APP_LOCALE)}</span>
-                </div>
-                {event.body && (
-                  <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-text-tertiary" title={event.body}>
-                    {event.body}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
