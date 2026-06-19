@@ -102,7 +102,11 @@ export function ProjectOperationsView({
               input" is the waiting bucket's label, and the idle bucket is
               called idle — calling it "open" collided with the fleet chip's
               "N tabs open" (a different denominator) on the same screen. */}
-          <p className="mt-1 text-xs text-text-tertiary">
+          {/* Hidden on mobile: identical to the fleet-status chips stacked
+              directly above on a phone (working · awaiting input · idle). The
+              desktop two-column layout separates the rail from those chips
+              enough to keep the at-a-glance count here. */}
+          <p className="mt-1 text-xs text-text-tertiary max-md:hidden">
             {workingCount} working · {readyCount} awaiting input · {openIdleCount} idle
           </p>
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-base px-2.5 py-1.5">
