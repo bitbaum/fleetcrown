@@ -17,6 +17,9 @@ npm run test:digest
 echo "→ test:auth"
 npm run test:auth
 
+echo "→ test:prompt-history"
+npm run test:prompt-history
+
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
 if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
