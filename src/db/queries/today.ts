@@ -12,6 +12,7 @@ import { eq, and, lt, lte, isNotNull, gte, desc, sql } from "drizzle-orm";
 import { HEALTH_FADING_DAYS } from "@/lib/constants/people";
 import { GOAL_STATUS, SUB_STATUS, COMMITMENT_STATUS, ACTION_STATUS, ALERT_SEVERITY, EVENT_STATUS, HABIT_FREQUENCY } from "@/lib/constants/statuses";
 import { READY_WINDOW_S, PROMPT_RUNNING_WINDOW_S, getHealthShort, isHealthPoor } from "@/lib/constants/control";
+import { toPromptDisplayFields } from "@/lib/activity-status";
 import { z } from "zod";
 
 export const CreateCommitmentBody = z.object({
@@ -325,13 +326,14 @@ export async function getRecentOrchestrationRuns(userId: string, hours = RECENT_
 // they queued five injects today, which destroys trust in the dashboard.
 export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HOURS, limit = RECENT_RUNS_LIMIT) {
   const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-  return db
+  const rows = await db
     .select({
       id: promptHistory.id,
       projectKey: promptHistory.projectKey,
       adapter: promptHistory.adapter,
       intent: promptHistory.intent,
       customPrompt: promptHistory.customPrompt,
+      resolvedPrompt: promptHistory.resolvedPrompt,
       dispatchedAt: promptHistory.dispatchedAt,
     })
     .from(promptHistory)
@@ -343,4 +345,16 @@ export async function getRecentDispatches(userId: string, hours = RECENT_RUNS_HO
     )
     .orderBy(desc(promptHistory.dispatchedAt))
     .limit(limit);
+  // Route through the shared display mapper so the harness envelope is stripped
+  // (SSOT with the Activity feed): a dispatch that is pure scaffolding — e.g. a
+  // <task-notification> completion signal mis-recorded as a custom prompt —
+  // surfaces its intent label instead of leaking the raw machine envelope.
+  return rows.map((r) => ({
+    id: r.id,
+    projectKey: r.projectKey,
+    adapter: r.adapter,
+    intent: r.intent,
+    customPrompt: toPromptDisplayFields(r).customPrompt,
+    dispatchedAt: r.dispatchedAt,
+  }));
 }

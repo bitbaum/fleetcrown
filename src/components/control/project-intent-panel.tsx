@@ -12,6 +12,7 @@ import { PromptInput } from "./prompt-input";
 import { QueueList } from "./queue-list";
 import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 import { haptic } from "@/lib/haptics";
+import { stripHarnessScaffolding } from "@/lib/activity-status";
 
 /** "Reuse recent prompts" chip row — rendered in both the running and idle
  *  branches of IntentButtonPanel; extracted so the two stay identical.
@@ -161,16 +162,27 @@ export function IntentButtonPanel({
       : `Manual for this project: ${APP_NAME} will wait for you before sending more work.`,
   };
 
-  const recentPrompts = project.recentCustomPrompts
-    .filter((r) => {
-      const t = r.customPrompt.toLowerCase();
-      // Hide meta LOOP / autopilot template prompts from the "Reuse recent" chips.
-      // These pollute history (the "Setup (run, read outputs)..." ones the user sees).
-      if (t.startsWith("setup (run, read outputs)")) return false;
-      if (t.includes("picked ") && t.includes(" (t")) return false; // the accountability line
-      if (/\bwaiting for instructions\b/.test(t)) return false;
-      return true;
-    })
+  // Strip the harness envelope (<task-notification>/<system-reminder>/…) BEFORE
+  // filtering and display — a reuse chip exists to replay human intent, so a
+  // dispatch captured as pure scaffolding (e.g. a task-completion notification
+  // recorded as a custom prompt) has nothing to reuse and is dropped. Cleaned
+  // variants of the same intent collapse into one chip with summed counts, in
+  // original recency order (Map preserves insertion order). SSOT: the same
+  // stripHarnessScaffolding the Activity feed uses.
+  const cleanedCounts = new Map<string, number>();
+  for (const r of project.recentCustomPrompts) {
+    const clean = stripHarnessScaffolding(r.customPrompt).replace(/\s+/g, " ").trim();
+    if (!clean) continue; // pure harness scaffolding — nothing to reuse
+    const t = clean.toLowerCase();
+    // Hide meta LOOP / autopilot template prompts from the "Reuse recent" chips.
+    // These pollute history (the "Setup (run, read outputs)..." ones the user sees).
+    if (t.startsWith("setup (run, read outputs)")) continue;
+    if (t.includes("picked ") && t.includes(" (t")) continue; // the accountability line
+    if (/\bwaiting for instructions\b/.test(t)) continue;
+    cleanedCounts.set(clean, (cleanedCounts.get(clean) ?? 0) + r.count);
+  }
+  const recentPrompts = [...cleanedCounts.entries()]
+    .map(([customPrompt, count]) => ({ customPrompt, count }))
     .slice(0, isRunning ? 3 : 5);
 
   // Unified layout for every state (running + idle). Per the user's 2026-06-15

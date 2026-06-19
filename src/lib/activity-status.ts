@@ -74,9 +74,23 @@ export function promptDisplayBody(row: PromptBodyInput): string {
   return getIntentLabel(row.intent);
 }
 
+// Strip the harness envelope and collapse to null when nothing human remains.
+// Used so the display fields below are display-safe by construction.
+function nonEmptyStripped(text: string | null | undefined): string | null {
+  if (!text) return null;
+  const stripped = stripHarnessScaffolding(text).trim();
+  return stripped ? stripped : null;
+}
+
 export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields {
-  const customPrompt = row.customPrompt?.trim() ? row.customPrompt : null;
-  const resolvedPrompt = row.resolvedPrompt?.trim() ? row.resolvedPrompt : null;
+  // Display contract: customPrompt/resolvedPrompt are harness-envelope-free, so
+  // every surface that renders them directly (Recent Agent Work, history feed)
+  // is display-safe without re-stripping. A dispatch that is pure scaffolding —
+  // e.g. a <task-notification> completion signal mis-recorded as a custom
+  // prompt — strips to empty → null, so isCustom is false and the row falls back
+  // to its intent label instead of leaking the raw machine envelope.
+  const customPrompt = nonEmptyStripped(row.customPrompt);
+  const resolvedPrompt = nonEmptyStripped(row.resolvedPrompt);
   return {
     customPrompt,
     resolvedPrompt,
