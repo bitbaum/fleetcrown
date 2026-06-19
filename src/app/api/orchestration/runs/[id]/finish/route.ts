@@ -4,6 +4,7 @@ import { getApiUserId } from "@/lib/session";
 import { updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { inferOutcome } from "@/lib/orchestration";
 import { ORCHESTRATION_TASK_SUMMARY_FIELDS } from "@/lib/orchestration";
+import { buildOrchestrationSummary } from "@/lib/orchestration/summary";
 import { ORCHESTRATION_OUTCOMES, type OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 
 const FinishBody = z.object({
@@ -33,21 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (dataOrResp instanceof NextResponse) return dataOrResp;
   const body = dataOrResp;
 
-  const summary = body.summary
-    ? {
-        status: body.summary.status ?? "",
-        "last-3-same-dir": body.summary["last-3-same-dir"] ?? "",
-        "wip-or-revert-in-last-5": body.summary["wip-or-revert-in-last-5"] ?? "",
-        tsc: body.summary.tsc ?? "",
-        lint: body.summary.lint ?? "",
-        done:   body.summary.done   ?? "",
-        next:   body.summary.next   ?? "",
-        tests:  body.summary.tests  ?? "",
-        todos:  body.summary.todos  ?? "",
-        commit: body.summary.commit ?? "",
-        health: body.summary.health ?? "",
-      }
-    : null;
+  // Built from the SSOT field array (not a hand-written literal) so every
+  // contract field — including block-reason / no-op-count — is persisted.
+  const summary = body.summary ? buildOrchestrationSummary(body.summary) : null;
 
   const outcome: OrchestrationOutcome = body.outcome ?? inferOutcome({
     summary,

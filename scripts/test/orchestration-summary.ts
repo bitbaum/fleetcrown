@@ -50,6 +50,17 @@ function runTests(): void {
     assert(summary?.commit === "none", "expected commit:none to round-trip");
   });
 
+  check("persists loop-control fields that the old literal dropped", () => {
+    const summary = parseOrchestrationSummary([
+      "status: working",
+      "block-reason: awaiting_user",
+      "no-op-count: 7",
+      "done: paused on a decision",
+    ].join("\n"));
+    assert(summary?.["block-reason"] === "awaiting_user", "expected block-reason to survive");
+    assert(summary?.["no-op-count"] === "7", "expected no-op-count to survive");
+  });
+
   check("retains legacy health summaries", () => {
     const summary = parseOrchestrationSummary("done: shipped\nhealth: good\ntests: 2 pass");
     assert(summary?.health === "good", "expected legacy health");
