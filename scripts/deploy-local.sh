@@ -52,6 +52,18 @@ if [ -d "$NODE_PTY_SRC" ] && [ -d "$STANDALONE/node_modules/node-pty" ]; then
   echo "→ deploy: node-pty native binary copied to standalone"
 fi
 
+# ── Schema-drift warning (non-fatal, read-only) ───────────────────────────────
+# A table added in src/db/schema but never pushed to this box's database silently
+# 500s the first feature that queries it (how /prompts, /loki and System cron
+# went dark). Surface drift on every local build so it's caught here, not by a
+# user hitting a blank page. Never blocks the deploy — a stale build still beats
+# no restart — so the check is fully isolated behind `|| true`.
+DRIFT_OUT="$(npm run --silent check:schema 2>&1 || true)"
+if printf '%s' "$DRIFT_OUT" | grep -q "MISSING"; then
+  echo "→ deploy: ⚠ SCHEMA DRIFT DETECTED — run \`npm run migrate\` (drizzle-kit push):"
+  printf '%s\n' "$DRIFT_OUT" | sed 's/^/    /'
+fi
+
 # ── Restart systemd service (local machine only) ──────────────────────────────
 # Prefer the canonical fleetcrown-app service; fall back to legacy cockpit-app
 # for machines still running the pre-rename install.
