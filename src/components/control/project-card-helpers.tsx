@@ -185,6 +185,14 @@ export function LatestOrchestrationPanel({
   const committed = commitRaw && commitRaw.toLowerCase() !== "none";
   const claimedWorkNoCommit = run.state === "done" && summaryDone.length > 0 && !committed;
 
+  // Loop-control truthful state (persisted via the SSOT summary build): a blocked
+  // agent isn't failing OR succeeding — it's stuck waiting, and a high no-op count
+  // means it's spinning without shipping. Surface both so a "done"-looking card
+  // can't hide that the loop actually stalled on a decision or went in circles.
+  const blockReason = run.summary?.["block-reason"]?.trim() ?? "";
+  const noOpRaw = run.summary?.["no-op-count"]?.trim() ?? "";
+  const noOpCount = /^\d+$/.test(noOpRaw) ? parseInt(noOpRaw, 10) : 0;
+
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
@@ -201,6 +209,16 @@ export function LatestOrchestrationPanel({
         {claimedWorkNoCommit && (
           <span className="ui-tag ui-tag-warning" title="Run reported work done but recorded no commit — nothing landed in git.">
             no commit
+          </span>
+        )}
+        {blockReason && (
+          <span className="ui-tag ui-tag-warning" title="Agent reported it is blocked and can't progress without input.">
+            blocked: {blockReason.replace(/_/g, " ")}
+          </span>
+        )}
+        {noOpCount >= 3 && (
+          <span className="ui-tag ui-tag-warning" title="Consecutive no-op turns — the agent is looping without shipping.">
+            {noOpCount} no-ops
           </span>
         )}
       </div>
