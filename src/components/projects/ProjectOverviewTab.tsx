@@ -11,11 +11,13 @@ import {
 import { ProjectBriefFill } from "./ProjectBriefFill";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
-import { AddAttrInline, AttrRow, ClaudeSession, ProjectHistorySection, DevLogSection } from "./project-overview-helpers";
+import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
 import { postJson } from "@/lib/api/fetch";
-import { toLocalDateStr } from "@/lib/dates";
+import { toLocalDateStr, timeAgo } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
-import { APP_LOCALE } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { STATUS_DOT_CLASS, formatActivityTime } from "@/components/activity/activity-shared";
+import type { EventStatus } from "@/lib/activity-status";
 
 const CHANNEL_ICON: Record<string, React.ElementType> = {
   "work-session": Code2,
@@ -130,6 +132,43 @@ export function OverviewTab({
   const attrs = data.attrs;
   const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
   const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
+
+  // One unified Recent Activity feed: the agent activity SSOT (dispatches, run
+  // outcomes, lifecycle — from getProjectActivity) merged with manually-logged
+  // interactions, newest first. Previously this panel showed ONLY manual
+  // interactions, so it read "No activity recorded yet" even when the project
+  // had dozens of agent runs (they were hidden in a separate collapsed section).
+  type FeedEntry = {
+    id: string;
+    at: string;
+    tone: EventStatus;
+    icon: React.ElementType;
+    primary: string;
+    secondary?: string | null;
+    meta?: string;
+  };
+  const activityFeed: FeedEntry[] = [
+    ...data.activity.map((ev) => ({
+      id: ev.id,
+      at: ev.at,
+      tone: ev.status,
+      icon: Bot,
+      primary: ev.title,
+      secondary: ev.detail,
+      meta: [ev.source, ev.adapter, ev.intent].filter(Boolean).join(" · "),
+    })),
+    ...activityList.map((i, idx) => ({
+      id: `interaction:${idx}:${i.occurredAt}`,
+      at: i.occurredAt,
+      tone: "neutral" as EventStatus,
+      icon: CHANNEL_ICON[i.channel] ?? Circle,
+      primary: i.channel.replace(/-/g, " "),
+      secondary: i.summary,
+      meta: "logged",
+    })),
+  ]
+    .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+    .slice(0, 15);
 
   return (
     <div className="space-y-5">
@@ -272,23 +311,30 @@ export function OverviewTab({
         <div className="flex items-center gap-1.5 ui-micro-label mb-2 font-medium">
           <MessageSquare className="h-3 w-3" /> Recent Activity
         </div>
-        <div className="space-y-3">
-          {activityList.map((i, idx) => {
-            const ChannelIcon = CHANNEL_ICON[i.channel] ?? Circle;
+        <div className="space-y-2.5">
+          {activityFeed.map((e) => {
+            const Icon = e.icon;
             return (
-              <div key={idx} className="text-xs">
-                <div className="flex items-center gap-1.5 text-text-tertiary mb-0.5">
-                  <ChannelIcon className="h-3 w-3 shrink-0" />
-                  <span className="capitalize">{i.channel.replace(/-/g, " ")}</span>
-                  <span className="text-text-muted">·</span>
-                  <span>{new Date(i.occurredAt).toLocaleDateString(APP_LOCALE)}</span>
+              <div key={e.id} className="flex items-start gap-2 text-xs">
+                <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[e.tone])} aria-hidden />
+                <Icon className="mt-0.5 h-3 w-3 shrink-0 text-text-tertiary" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="truncate capitalize text-text-secondary">{e.primary}</span>
+                    <span className="ml-auto shrink-0 text-text-muted tabular-nums" title={formatActivityTime(e.at)}>
+                      {timeAgo(Date.parse(e.at))}
+                    </span>
+                  </div>
+                  {e.meta && <div className="text-text-muted">{e.meta}</div>}
+                  {e.secondary && (
+                    <p className="line-clamp-2 leading-relaxed text-text-tertiary" title={e.secondary}>{e.secondary}</p>
+                  )}
                 </div>
-                {i.summary && <p className="text-text-secondary leading-relaxed">{i.summary}</p>}
               </div>
             );
           })}
-          {activityList.length === 0 && !loggingActivity && (
-            <p className="text-xs text-text-secondary">No activity recorded yet.</p>
+          {activityFeed.length === 0 && !loggingActivity && (
+            <p className="text-xs text-text-secondary">No activity yet.</p>
           )}
         </div>
 
@@ -343,10 +389,6 @@ export function OverviewTab({
 
       {data.devLog.length > 0 && (
         <DevLogSection entries={data.devLog} />
-      )}
-
-      {data.activity.length > 0 && (
-        <ProjectHistorySection events={data.activity} />
       )}
 
       <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />

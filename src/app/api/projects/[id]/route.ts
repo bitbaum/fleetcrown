@@ -3,10 +3,8 @@ import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
-import { getProjectPromptActivity } from "@/db/queries/prompt-history";
-import { getProjectOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getProjectActivity } from "@/db/queries/activity";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
-import { getIntentLabel, getAdapterLabel } from "@/config/control-intents";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   const nameLower = projectName.toLowerCase();
@@ -79,39 +77,26 @@ export async function GET(
   if (idOrResp instanceof NextResponse) return idOrResp;
   const id = idOrResp;
 
-  const [resolved, promptActivity, orchestrationRuns] = await Promise.all([
-    resolveProjectDetailWithOrgFallback(userId, id),
-    getProjectPromptActivity(userId, id, 40).catch((e) => { console.error("[projects/[id]] promptActivity query failed:", e); return []; }),
-    getProjectOrchestrationRuns(userId, id, 20).catch((e) => { console.error("[projects/[id]] orchestrationRuns query failed:", e); return []; }),
-  ]);
-
+  const resolved = await resolveProjectDetailWithOrgFallback(userId, id);
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
-  // Runtime state belongs to the project owner — fetch under their userId so org
-  // peers viewing a shared project see the same row the owner's runner writes.
-  const runtimeState = await getProjectStateByProjectId(ownerId, id).catch(() => null);
   const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
   const readonly = ownerId !== userId;
 
+  // Runtime state + activity both belong to the project owner — fetch under their
+  // userId so org peers viewing a shared project see the same rows the owner's
+  // runner writes. Activity is the unified read-model SSOT (prompts + run
+  // outcomes + lifecycle, deduped) keyed by project name — the same source the
+  // /control Activity panel uses, instead of a parallel bespoke assembly.
+  const [runtimeState, activity] = await Promise.all([
+    getProjectStateByProjectId(ownerId, id).catch(() => null),
+    getProjectActivity(ownerId, project.name, { days: 90, limit: 50 }).catch((e) => {
+      console.error("[projects/[id]] activity query failed:", e);
+      return [];
+    }),
+  ]);
+
   const linkedJobs = getLinkedJobs(project.id, project.name);
-  const activity = [
-    ...promptActivity.map((item) => ({
-      id: `prompt:${item.id}`,
-      kind: "user_prompt" as const,
-      occurredAt: item.dispatchedAt,
-      title: "Sent prompt",
-      body: item.customPrompt ?? getIntentLabel(item.intent),
-    })),
-    ...orchestrationRuns.map((run) => ({
-      id: `run:${run.id}`,
-      kind: "orchestrated_run" as const,
-      occurredAt: run.startedAt.toISOString(),
-      title: `${getAdapterLabel(run.adapter)} · ${getIntentLabel(run.intent)}`,
-      body: run.summary?.next || run.summary?.done || run.payload?.resultText || run.payload?.error || "",
-      state: run.state,
-      health: run.summary?.health,
-    })),
-  ].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 50);
 
   return NextResponse.json({
     id: project.id,
