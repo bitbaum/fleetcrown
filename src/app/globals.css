@@ -65,6 +65,8 @@
   --color-accent-hover:    var(--accent-hover);
   --color-accent-muted:    var(--accent-muted);
   --color-accent-text:     var(--accent-text);
+  --color-accent-warm:       var(--accent-warm);
+  --color-accent-warm-hover: var(--accent-warm-hover);
   /* Status tokens — the only chromatic colors in the system */
   --color-status-positive:        var(--status-positive);
   --color-status-positive-subtle: var(--status-positive-subtle);
@@ -127,7 +129,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.87 0 0);
   --input: oklch(0.87 0 0);
-  --ring: oklch(0.50 0 0);
+  --ring: oklch(0.66 0.21 41 / 55%);
   --chart-1: oklch(0.70 0 0);
   --chart-2: oklch(0.55 0 0);
   --chart-3: oklch(0.43 0 0);
@@ -203,6 +205,10 @@
   --accent-hover:      oklch(0.20 0 0);
   --accent-muted:      oklch(0.10 0 0 / 8%);
   --accent-text:       oklch(0.10 0 0);
+  /* Warm brand accent (x.ai/grok #ff5c00) — used sparingly on primary CTAs +
+     focus rings. Darker hover for the light theme. SSOT for warm = here. */
+  --accent-warm:       oklch(0.66 0.21 41);
+  --accent-warm-hover: oklch(0.60 0.21 40);
   /* Status — light */
   --status-positive:        oklch(0.44 0.16 145);
   --status-positive-subtle: oklch(0.44 0.16 145 / 8%);
@@ -233,7 +239,7 @@
   --destructive: oklch(0.65 0.20 22);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.92 0 0 / 40%);
+  --ring: oklch(0.69 0.21 41 / 55%);
   --chart-1: oklch(0.80 0 0);
   --chart-2: oklch(0.60 0 0);
   --chart-3: oklch(0.45 0 0);
@@ -267,6 +273,9 @@
   --accent-hover:      oklch(1 0 0);
   --accent-muted:      oklch(1 0 0 / 8%);
   --accent-text:       oklch(0.75 0 0);
+  /* Warm brand accent (x.ai/grok #ff5c00) — lighter hover for dark. */
+  --accent-warm:       oklch(0.69 0.21 41);
+  --accent-warm-hover: oklch(0.75 0.19 43);
   /* Status — dark */
   --status-positive:        oklch(0.72 0.14 145);
   --status-positive-subtle: oklch(0.72 0.14 145 / 12%);
@@ -1850,7 +1859,7 @@
      iOS HIG) while keeping the desktop py-2 (≈36px) compact look. Same trick
      already used by ui-btn-add, ui-chip-toggle, ui-link-subtle. */
   .ui-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-text-primary px-4 py-2 text-sm font-medium text-text-inverted transition-colors hover:opacity-90 active:opacity-80 disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg bg-accent-warm px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover active:opacity-90 disabled:opacity-40;
   }
   .ui-btn-secondary {
     @apply inline-flex items-center justify-center gap-2 min-h-11 sm:min-h-0 rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-40;
@@ -1929,7 +1938,7 @@
   }
   /* Compact ready-banner action buttons (py-2.5 vs py-3 for lg) */
   .ui-btn-ready-primary {
-    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg bg-accent-primary px-3 py-2 text-sm font-medium text-text-inverted transition-colors hover:bg-accent-hover;
+    @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover;
   }
   .ui-btn-ready-action {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
