@@ -26,8 +26,13 @@ export const HABIT_HISTORY_DAYS = 30;
 /** Default timezone for schedule-related operations (cron jobs, calendar). */
 export const DEFAULT_TIMEZONE = envAlias("DEFAULT_TIMEZONE", "Europe/Zurich");
 
-/** Locale used for date/time formatting throughout the app. */
-export const APP_LOCALE = envAlias("LOCALE", "de-CH");
+/** Locale used for date/time formatting throughout the app. English-Swiss:
+ *  the UI is entirely English, so de-CH rendered jarring German dates
+ *  ("Freitag, 19. Juni 2026") under an English greeting. en-CH anglicises the
+ *  weekday/month names while preserving Swiss numeric + currency conventions
+ *  (apostrophe thousands, "CHF 1’234.50"), so only the dates change. Override
+ *  with the LOCALE env var. */
+export const APP_LOCALE = envAlias("LOCALE", "en-CH");
 
 /** Lookahead windows for the /today summary cards. */
 export const GOALS_DUE_SOON_DAYS = 14;
