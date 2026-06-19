@@ -94,7 +94,7 @@ type RunRow = {
   state: string;
   outcome: string | null;
   payload: { error?: string } | null;
-  summary: { done?: string } | null;
+  summary: { done?: string; commit?: string } | null;
   finishedAt: Date | null;
 };
 
@@ -127,6 +127,11 @@ function dispatchToEvent(r: DispatchRow): ProjectActivityEvent {
 
 function runToEvent(r: RunRow): ProjectActivityEvent {
   const failed = r.outcome === "error" || r.state === "error" || Boolean(r.payload?.error);
+  // Did the run actually ship? Surface the captured commit SHA in the title so the
+  // timeline shows what landed in git — not just that a run "completed".
+  const commit = r.summary?.commit?.trim();
+  const committed = commit && commit.toLowerCase() !== "none";
+  const shipped = !failed && committed ? ` · ${commit}` : "";
   return {
     id: `run:${r.id}`,
     projectKey: r.projectKey,
@@ -136,7 +141,7 @@ function runToEvent(r: RunRow): ProjectActivityEvent {
     source: "runner",
     adapter: r.adapter,
     intent: r.intent,
-    title: failed ? "Task failed" : `Task complete${r.outcome && r.outcome !== "success" ? ` (${r.outcome})` : ""}`,
+    title: failed ? "Task failed" : `Task complete${r.outcome && r.outcome !== "success" ? ` (${r.outcome})` : ""}${shipped}`,
     detail: r.payload?.error ? oneLine(r.payload.error) : r.summary?.done ? oneLine(r.summary.done) : null,
     status: runStatus(r),
   };
