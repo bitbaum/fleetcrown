@@ -31,6 +31,7 @@ export function parseOrchestrationSummary(text: string | undefined): Orchestrati
     next: fields.next ?? "",
     tests: fields.tests ?? "",
     todos: fields.todos ?? "",
+    commit: fields.commit ?? "",
     health: fields.health ?? "",
   };
 }

@@ -177,6 +177,14 @@ export function LatestOrchestrationPanel({
   const summaryNext = run.summary?.next?.trim() ?? "";
   const resultText = expanded ? fallbackText : shorten(fallbackText, 220);
 
+  // Truthful-state signal: a finished run that claims work done but recorded
+  // no commit ("none"/empty) left nothing in git. Surface that gap instead of
+  // trusting the self-report — a "done" with no trace is the exact failure
+  // mode the control loop must catch.
+  const commitRaw = run.summary?.commit?.trim() ?? "";
+  const committed = commitRaw && commitRaw.toLowerCase() !== "none";
+  const claimedWorkNoCommit = run.state === "done" && summaryDone.length > 0 && !committed;
+
   return (
     <div className="space-y-2.5 ui-card-section">
       <div className="flex flex-wrap items-center gap-2">
@@ -185,6 +193,16 @@ export function LatestOrchestrationPanel({
         </span>
         <span className="ui-tag ui-tag-neutral">{getAdapterLabel(run.adapter)} · {getIntentLabel(run.intent)}</span>
         <span className={stateClass}>{displayState}</span>
+        {committed && (
+          <span className="ui-tag ui-tag-neutral font-mono" title="Commit produced by this run">
+            ↪ {commitRaw}
+          </span>
+        )}
+        {claimedWorkNoCommit && (
+          <span className="ui-tag ui-tag-warning" title="Run reported work done but recorded no commit — nothing landed in git.">
+            no commit
+          </span>
+        )}
       </div>
 
       {summaryNext && (

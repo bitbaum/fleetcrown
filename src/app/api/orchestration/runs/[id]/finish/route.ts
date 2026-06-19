@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         next:   body.summary.next   ?? "",
         tests:  body.summary.tests  ?? "",
         todos:  body.summary.todos  ?? "",
+        commit: body.summary.commit ?? "",
         health: body.summary.health ?? "",
       }
     : null;

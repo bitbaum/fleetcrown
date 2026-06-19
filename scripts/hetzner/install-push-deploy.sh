@@ -39,8 +39,11 @@ install_hook() { # repo_path deploy_cmd app_name
 
   cat >> "$hook" <<EOF
 $MARK_BEGIN
-# Pushing main deploys to the Hetzner box (background; see /tmp/push-deploy-$app.log)
-if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then
+# Pushing the repo's default branch deploys to the Hetzner box
+# (background; see /tmp/push-deploy-$app.log). Repos differ: some use
+# 'main', some still use 'master' — match either so push-to-deploy fires
+# regardless of the repo's branch convention.
+if git symbolic-ref --short HEAD 2>/dev/null | grep -qxE 'main|master'; then
   ( sleep 5 && $deploy_cmd ) >> /tmp/push-deploy-$app.log 2>&1 & disown 2>/dev/null || true
   echo "[push-deploy] $app: deploy started in background → /tmp/push-deploy-$app.log"
 fi

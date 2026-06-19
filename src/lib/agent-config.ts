@@ -223,6 +223,7 @@ export function buildPromptWithSession(base: string, tab: string, projectStateDe
     "todos: <N from `rg -c '(TODO|FIXME|HACK)' src/`>",
     "done: <one sentence what you completed>",
     "next: <state to resume from — NOT a verb. EMPTY if nothing mid-flight; empty > lie.>",
+    "commit: <short SHA you produced this run — `git rev-parse --short HEAD` — or 'none' if you committed nothing>",
   ].join("\n");
 
   // Project-state block — same one-line description the badge tooltip
