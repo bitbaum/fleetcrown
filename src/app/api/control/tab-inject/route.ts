@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
-import { enqueueInjectCommand } from "@/db/queries/pending-commands";
+import { enqueueInjectCommand, enqueueDispatchCommand } from "@/db/queries/pending-commands";
+import { getUserProjects } from "@/db/queries/user-projects";
 import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
@@ -54,6 +55,27 @@ export async function POST(req: NextRequest) {
     clearHandshakeFiles(tab);
     injectIntoTab(tab, prompt);
     return NextResponse.json({ ok: true, mode: "direct", tab });
+  }
+
+  // Cloud mode: prefer the self-healing `dispatch` command (ensure tab → launch
+  // agent if none is running → inject → verify) over a bare `inject`, which
+  // silently no-ops — and surfaces "tab not found" — when the tab's agent has
+  // exited or its zellij tab vanished. That no-op was the failure that broke the
+  // loop. Resolve the project's dir + agent so the runner can recover the tab.
+  // Fall back to bare inject only when the project/dir is unknown.
+  const projects = await getUserProjects(userId);
+  const project = projects.find((p) => p.name.toLowerCase() === tab.toLowerCase());
+  if (project?.dirPath) {
+    const commandId = await enqueueDispatchCommand(userId, {
+      tab,
+      dir: project.dirPath,
+      agent: project.agentPref ?? "claude",
+      prompt,
+      promptLabel: prompt.slice(0, 40),
+      model: project.modelPref ?? undefined,
+      projectKey: tab,
+    });
+    return NextResponse.json({ ok: true, mode: "dispatch", commandId, tab });
   }
 
   const commandId = await enqueueInjectCommand(userId, {
