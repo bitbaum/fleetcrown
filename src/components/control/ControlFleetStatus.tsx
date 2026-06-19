@@ -14,9 +14,14 @@ import {
 // Single-line hint shown under the fleet chips when this mode is active.
 // Binary autopilot since the 2026-06-11 collapse. Plain language only — no
 // internal template names (next_best) or handoff-field jargon (status:working).
-const AUTOMATION_HINTS: Record<AutoInjectMode, string> = {
-  off: "Autopilot off — agents stop when a task ends; you dispatch every next step yourself.",
-  on:  "Autopilot on — agents work through each project's queue, then pick the next-best task automatically. Busy agents, blockers, and failing health checks still pause dispatch.",
+// Split into primary + secondary so the space-constrained mobile card shows
+// only the essential sentence; the caveat rides along on sm+ where there's room.
+const AUTOMATION_HINTS: Record<AutoInjectMode, { primary: string; secondary?: string }> = {
+  off: { primary: "Autopilot off — agents stop when a task ends; you dispatch every next step yourself." },
+  on:  {
+    primary: "Autopilot on — agents work through each project's queue, then pick the next-best task automatically.",
+    secondary: "Busy agents, blockers, and failing health checks still pause dispatch.",
+  },
 };
 
 type Props = {
@@ -217,7 +222,10 @@ export function ControlFleetStatus({
       <p className="ui-control-fleet-hint">
         <Zap className="inline h-3 w-3 shrink-0 text-accent-text" aria-hidden="true" />
         {" "}
-        {AUTOMATION_HINTS[automationMode]}
+        {AUTOMATION_HINTS[automationMode].primary}
+        {AUTOMATION_HINTS[automationMode].secondary && (
+          <span className="hidden sm:inline"> {AUTOMATION_HINTS[automationMode].secondary}</span>
+        )}
         {projectOverrideCount > 0 && (
           <span className="ml-1 text-accent-text">
             {projectOverrideCount === 1
