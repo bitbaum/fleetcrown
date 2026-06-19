@@ -36,6 +36,20 @@ function runTests(): void {
     assert(inferOutcome({ summary }) === "success", "expected success");
   });
 
+  check("captures the resulting commit SHA from the handoff", () => {
+    const summary = parseOrchestrationSummary([
+      "status: ready",
+      "done: shipped commit-capture",
+      "commit: a1b2c3d",
+    ].join("\n"));
+    assert(summary?.commit === "a1b2c3d", "expected commit SHA to be parsed");
+  });
+
+  check("treats commit:none as no commit (truthful-state gap)", () => {
+    const summary = parseOrchestrationSummary("status: ready\ndone: claimed work\ncommit: none");
+    assert(summary?.commit === "none", "expected commit:none to round-trip");
+  });
+
   check("retains legacy health summaries", () => {
     const summary = parseOrchestrationSummary("done: shipped\nhealth: good\ntests: 2 pass");
     assert(summary?.health === "good", "expected legacy health");

@@ -103,6 +103,12 @@ export const ORCHESTRATION_TASK_SUMMARY_FIELDS = [
   "todos",
   "done",
   "next",
+  // 2026-06-19 — the resulting HEAD short SHA (or "none" when the run made no
+  // commit). Closes the "did the agent actually ship?" gap: an outcome of
+  // "success" with commit:none is a self-reported success that left no trace
+  // in git — exactly the untruthful-state failure mode the control loop must
+  // surface rather than trust. Optional for back-compat with older summaries.
+  "commit",
   // Retained for summaries written before LOOP v2.
   "health",
   // 2026-06-08 — explicit loop-control fields. Added because the OC no-op
@@ -129,6 +135,7 @@ export type OrchestrationTaskSummary = {
   "wip-or-revert-in-last-5"?: string;
   tsc?: string;
   lint?: string;
+  commit?: string;
   "block-reason"?: string;
   "no-op-count"?: string;
 };

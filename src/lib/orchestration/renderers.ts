@@ -29,6 +29,7 @@ function renderSharedHandoffBlock(): string {
     "todos: <count from TODO/FIXME/HACK scan>",
     "done: <one sentence what you completed>",
     "next: <state to resume from; empty when nothing is mid-flight>",
+    "commit: <short SHA you produced this run (`git rev-parse --short HEAD`), or 'none' if you committed nothing>",
   ].join("\n");
 }
 
