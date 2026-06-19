@@ -88,10 +88,14 @@ export function UserPromptsSection({
         />
       )}
 
+      {/* No full empty-state card here: the header already says "Build your own
+          library" with the New prompt button, and the forkable FleetCrown
+          defaults render immediately below. A padded card repeating that was a
+          dead band — costly on mobile. One muted line keeps the fork pointer. */}
       {prompts.length === 0 && !isCreating && (
-        <div className="ui-card-shell p-6 text-center text-sm text-text-muted">
-          No prompts yet. Click <em>New prompt</em> to add one, or fork a FleetCrown default below.
-        </div>
+        <p className="text-xs text-text-muted">
+          …or fork a FleetCrown default below to make it your own.
+        </p>
       )}
 
       {prompts.length > 0 && (
