@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { db } from "@/db";
 import { agentTokens, type AgentToken } from "@/db/schema";
-import { eq, and, or, gt, isNull, lt, desc } from "drizzle-orm";
+import { eq, and, or, gt, isNull, lt, desc, sql } from "drizzle-orm";
 
 export function generateToken(): string {
   return "ck_" + randomBytes(32).toString("hex");
@@ -38,18 +38,28 @@ export async function deleteAgentToken(id: string, userId: string): Promise<void
  * Find a reusable event-stream token for `userId`. Returns the plaintext
  * token string + record, or null if none qualifies.
  *
- * "Reusable" = label='event-stream', not expired, and last_used_at within
- * `maxIdleMs` (default 7 days). The /api/event-stream-token endpoint
- * previously minted a fresh token on every call, leaking ~1 token per
- * browser session per day. Reuse caps the per-user table footprint at
- * "one live event-stream token per active week."
+ * "Reusable" = label='event-stream', not expired, and FRESH within
+ * `maxIdleMs` (default 7 days), where freshness = last_used_at when present,
+ * else created_at.
+ *
+ * Why coalesce to created_at: the SSE bridge is a SEPARATE service
+ * (bridge.orangecat.ch), so it never calls validateAgentToken — a live
+ * event-stream token's last_used_at therefore stays NULL forever. The original
+ * filter `last_used_at > cutoff` treated NULL as "abandoned" and never matched,
+ * so EVERY browser session minted a fresh token (56 never-used rows accumulated
+ * for one account). Falling back to created_at reuses a token minted within the
+ * window, capping the footprint at "one live token per active week" as intended.
  */
 export async function getReusableEventStreamToken(
   userId: string,
   maxIdleMs: number = 7 * 24 * 60 * 60 * 1000,
 ): Promise<{ token: string; record: AgentToken } | null> {
   const now = new Date();
-  const cutoff = new Date(Date.now() - maxIdleMs);
+  // ISO string + explicit ::timestamptz cast: a bare JS Date inside a raw sql
+  // fragment has no column-type context for postgres-js to bind, which throws
+  // (and the route then silently mints — the leak this fix exists to stop).
+  const cutoffIso = new Date(Date.now() - maxIdleMs).toISOString();
+  const freshness = sql`coalesce(${agentTokens.lastUsedAt}, ${agentTokens.createdAt})`;
   const [record] = await db
     .select()
     .from(agentTokens)
@@ -58,14 +68,10 @@ export async function getReusableEventStreamToken(
         eq(agentTokens.userId, userId),
         eq(agentTokens.label, "event-stream"),
         or(isNull(agentTokens.expiresAt), gt(agentTokens.expiresAt, now)),
-        // last_used_at recently — covers the "active browser" case. NULL
-        // last_used_at means never used; treat those as too stale to reuse
-        // (a token that was minted but never validated against the bridge
-        // is likely abandoned).
-        gt(agentTokens.lastUsedAt, cutoff),
+        sql`${freshness} > ${cutoffIso}::timestamptz`,
       ),
     )
-    .orderBy(desc(agentTokens.lastUsedAt))
+    .orderBy(desc(freshness))
     .limit(1);
   return record ? { token: record.token, record } : null;
 }
