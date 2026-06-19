@@ -13,6 +13,7 @@
     "start": "next start",
     "install-app": "bash scripts/install-fleetcrown-app.sh",
     "migrate": "drizzle-kit push",
+    "check:schema": "npx tsx scripts/check-schema-drift.ts",
     "lint": "eslint src/ home/",
     "check:design": "bash scripts/check-design-system.sh",
     "smoke": "bash scripts/smoke.sh",

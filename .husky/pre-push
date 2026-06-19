@@ -20,6 +20,9 @@ npm run test:auth
 echo "→ test:prompt-history"
 npm run test:prompt-history
 
+echo "→ check:schema (drift guard — skips if DB unreachable)"
+npm run check:schema
+
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
 if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
