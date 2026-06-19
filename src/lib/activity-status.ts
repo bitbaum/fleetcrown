@@ -42,12 +42,36 @@ export type PromptDisplayFields = {
   isCustom: boolean;
 };
 
+// Strip harness scaffolding so an activity title shows the human intent, not the
+// raw injected machine prompt. Dispatches can capture the fully-assembled prompt
+// (context tiers + harness envelopes), which renders as noise like
+// "<task-notification><task-id>…" in every activity feed. Only rewrites when a
+// harness tag is actually present — clean prompts (and their whitespace) pass
+// through verbatim, so existing display semantics are preserved.
+const HARNESS_TAG = /<\/?(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)[^>]*>/i;
+export function stripHarnessScaffolding(text: string): string {
+  if (!HARNESS_TAG.test(text)) return text;
+  return text
+    // Drop whole paired blocks first (content between open/close tags).
+    .replace(/<(task-notification|system-reminder|command-[a-z-]+|local-command-[a-z-]+)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    // Then any stray/self-closing harness tags left behind.
+    .replace(HARNESS_TAG, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // The most informative body for a prompt row. Custom text (what the user
 // typed) wins; then the rendered intent template (populated for dispatches
 // from 2026-06-10 onward); then the intent label so legacy rows still
-// render something. Used by every surface that displays a prompt.
+// render something. Harness scaffolding is stripped so titles stay human;
+// if stripping a value leaves nothing, fall through to the next source.
+// Used by every surface that displays a prompt.
 export function promptDisplayBody(row: PromptBodyInput): string {
-  return row.customPrompt || row.resolvedPrompt || getIntentLabel(row.intent);
+  const custom = row.customPrompt ? stripHarnessScaffolding(row.customPrompt) : "";
+  if (custom) return custom;
+  const resolved = row.resolvedPrompt ? stripHarnessScaffolding(row.resolvedPrompt) : "";
+  if (resolved) return resolved;
+  return getIntentLabel(row.intent);
 }
 
 export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields {
