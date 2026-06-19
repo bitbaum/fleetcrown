@@ -32,6 +32,21 @@ function loadEnvFile(file: string) {
 }
 
 async function main() {
+  // --print: emit the schema-declared table names (one per line) and exit, no
+  // DB needed. Lets a remote deploy (deploy-hetzner.sh) compare this list
+  // against the BOX database, which the laptop can't reach directly.
+  if (process.argv.includes("--print")) {
+    const { getTableName, is } = await import("drizzle-orm");
+    const { PgTable } = await import("drizzle-orm/pg-core");
+    const schema = await import("@/db/schema");
+    const names = new Set<string>();
+    for (const value of Object.values(schema)) {
+      if (is(value, PgTable)) names.add(getTableName(value));
+    }
+    console.log([...names].sort().join("\n"));
+    process.exit(0);
+  }
+
   loadEnvFile(resolve(process.cwd(), ".env.local"));
   loadEnvFile(resolve(process.cwd(), ".env"));
 
