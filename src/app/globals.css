@@ -1940,6 +1940,12 @@
   .ui-btn-ready-primary {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg bg-accent-warm px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-warm-hover;
   }
+  /* "Next best" primary CTA — full-width, warm-tinted (soft x.ai accent, not a
+     solid slab). Extracted from inline utilities so the recurring pattern lives
+     in one place and inherits the warm brand accent. */
+  .ui-btn-nextbest {
+    @apply w-full rounded-xl border border-accent-warm/40 bg-accent-warm/[0.10] px-4 py-2.5 text-sm font-semibold text-accent-warm transition-colors hover:border-accent-warm/60 hover:bg-accent-warm/[0.16] disabled:opacity-50;
+  }
   .ui-btn-ready-action {
     @apply inline-flex min-h-11 sm:min-h-0 items-center rounded-lg border border-border-default bg-surface-overlay px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
   }
