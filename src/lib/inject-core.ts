@@ -10,7 +10,8 @@
  * This path is autopilot-critical — keep it behavior-preserving.
  */
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
-import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
@@ -142,8 +143,19 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       }
     }
 
+    // Global + Project tiers (operating principles + brief + active goals) — the
+    // SAME assembler the /api/orchestration/run path uses. Previously this local
+    // inject path skipped it, so quick-send / promptKey dispatches reached the
+    // agent without the founder's standards or the project's roadmap (the
+    // "inject-core bypass"). buildPromptWithSession then adds the Session tier, so
+    // every dispatch now carries all three tiers. Best-effort: never break a
+    // dispatch if context assembly fails.
+    const projectContext = await getProjectContext(userId, canonical).catch(() => null);
+    const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
+    const withContext = (body: string) => (contextBlock ? `${contextBlock}\n\n${body}` : body);
+
     if (customPrompt) {
-      prompt = customPrompt;
+      prompt = withContext(customPrompt);
       promptLabel = customPrompt.slice(0, 40);
     } else if (promptKey) {
       const prompts = readPrompts();
@@ -161,7 +173,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         closingAt: injectRow?.closingAt ? Math.floor(injectRow.closingAt.getTime() / 1000) : null,
         closedAt: injectRow?.closedAt ? Math.floor(injectRow.closedAt.getTime() / 1000) : null,
       });
-      prompt = buildPromptWithSession(base, effectiveTab, projectStateDescription(stateKey));
+      prompt = withContext(buildPromptWithSession(base, effectiveTab, projectStateDescription(stateKey)));
       const meta = readPromptMeta().find((m) => m.key === promptKey);
       promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
     } else {
