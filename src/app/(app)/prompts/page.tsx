@@ -37,7 +37,7 @@ export default async function PromptsPage() {
   }));
 
   const subtitle = userPrompts.length > 0
-    ? `${PROMPT_TEMPLATES.length} FleetCrown defaults · ${userPrompts.length} yours`
+    ? `${PROMPT_TEMPLATES.length} FleetCrown defaults · ${userPrompts.length} custom`
     : `${PROMPT_TEMPLATES.length} templates · fleet control, security, engineering, design, business`;
 
   return (
