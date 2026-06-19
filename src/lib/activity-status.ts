@@ -75,11 +75,15 @@ export function promptDisplayBody(row: PromptBodyInput): string {
 }
 
 // Strip the harness envelope and collapse to null when nothing human remains.
-// Used so the display fields below are display-safe by construction.
+// Used so the display fields below are display-safe by construction. Mirrors
+// stripHarnessScaffolding's own contract: a clean value (no harness tag) passes
+// through VERBATIM — surrounding whitespace included — so existing display
+// semantics are preserved; only a value that actually carried scaffolding gets
+// the strip's whitespace-collapse. Whitespace-only or scaffolding-only → null.
 function nonEmptyStripped(text: string | null | undefined): string | null {
-  if (!text) return null;
-  const stripped = stripHarnessScaffolding(text).trim();
-  return stripped ? stripped : null;
+  if (!text || !text.trim()) return null;
+  const stripped = stripHarnessScaffolding(text);
+  return stripped.trim() ? stripped : null;
 }
 
 export function toPromptDisplayFields(row: PromptBodyInput): PromptDisplayFields {
