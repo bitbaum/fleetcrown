@@ -2,6 +2,7 @@
 # Full-fleet verification sweep: systemd state + public HTTPS for every app
 # in apps.conf plus the four pre-existing services. Exit 1 if anything fails.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../_brand.sh"   # APP_SLUG / APP_DOMAIN / BRIDGE_DOMAIN
 set +e   # we aggregate failures ourselves; set -e from lib.sh aborts the sweep
 
 fail=0
@@ -26,13 +27,13 @@ check() { # name domain port
 # The bridge serves SSE endpoints only — any HTTP answer (even 404 on /)
 # proves liveness, so it gets its own check.
 bridge_state=$(box "systemctl is-active fleetcrown-bridge" 2>/dev/null | tr -d '[:space:]')
-bridge_pub=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://bridge.orangecat.ch/ 2>/dev/null)
+bridge_pub=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "https://${BRIDGE_DOMAIN}/" 2>/dev/null)
 if [ "$bridge_state" = "active" ] && [ "$bridge_pub" != "000" ]; then
   printf "%-4s %-22s systemd=%-8s public=%s (SSE service, 404 on / is normal)\n" "OK " fleetcrown-bridge "$bridge_state" "$bridge_pub"
 else
   printf "%-4s %-22s systemd=%-8s public=%s\n" FAIL fleetcrown-bridge "$bridge_state" "$bridge_pub"; fail=1
 fi
-check fleetcrown fleetcrown.orangecat.ch 4002
+check "$APP_SLUG" "$APP_DOMAIN" 4002
 check orangecat orangecat.ch 4003
 check revampit revampit.orangecat.ch 4004
 
