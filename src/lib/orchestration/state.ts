@@ -19,7 +19,7 @@ export type DerivedLifecycleState = {
   closedAt: number | null;
 };
 
-type RuntimeEventCandidate = {
+export type RuntimeEventCandidate = {
   type: OrchestrationEventType;
   at: number;
   source: "runtime-sentinel" | "runtime-prompt";

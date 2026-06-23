@@ -8,6 +8,7 @@
  */
 
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { DEFAULT_ADAPTER_ID } from "@/lib/orchestration";
 import { enqueueInjectCommand, enqueueDispatchCommand } from "@/db/queries/pending-commands";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
 import type { InjectPayload } from "@/db/schema/pending-commands";
@@ -68,7 +69,7 @@ export async function executeInject(
       ? await enqueueDispatchCommand(userId, {
           tab: payload.tab,
           dir: payload.dir,
-          agent: payload.adapter ?? "claude",
+          agent: payload.adapter ?? DEFAULT_ADAPTER_ID,
           prompt: payload.prompt,
           model: payload.model,
           promptKey: payload.promptKey,

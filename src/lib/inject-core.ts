@@ -10,7 +10,7 @@
  * This path is autopilot-critical — keep it behavior-preserving.
  */
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
-import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
+import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
@@ -49,7 +49,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   let runId = params.runId;
   // Provisional adapter for early-return logging; the real resolution happens
   // after we've looked up dbMatch and can honor user_projects.agent_pref below.
-  let eventAdapter: ResolvedAdapter = adapter ?? "claude";
+  let eventAdapter: ResolvedAdapter = adapter ?? DEFAULT_ADAPTER_ID;
 
   // Resolve canonical tab name and project path — own projects first, then org team projects.
   const [dbProjects, dbTeamProjects] = await Promise.all([
@@ -122,7 +122,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   if (isRuntimeAvailable()) {
     // Local: resolve live zellij tab and build prompt with session context.
     // These imports call execSync / read /tmp files — only safe locally.
-    const { resolveEffectiveTab, readPrompts, readPromptMeta, buildPromptWithSession, getZellijTabs } =
+    const { resolveEffectiveTab, readPrompts, readPromptMeta, getZellijTabs } =
       await import("@/lib/agent-config").then(async (m) => ({
         ...m,
         getZellijTabs: (await import("@/lib/zellij")).getZellijTabs,
@@ -173,7 +173,13 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         closingAt: injectRow?.closingAt ? Math.floor(injectRow.closingAt.getTime() / 1000) : null,
         closedAt: injectRow?.closedAt ? Math.floor(injectRow.closedAt.getTime() / 1000) : null,
       });
-      prompt = withContext(buildPromptWithSession(base, effectiveTab, projectStateDescription(stateKey)));
+      // Adapter owns prompt enrichment: the claude seam appends
+      // ~/.claude/sessions/<tab>.md (identical to the prior buildPromptWithSession
+      // call); adapters without a session seam fall back to identity.
+      const enrichPrompt =
+        (await import("@/lib/orchestration/adapter-registry")).adapterFor(eventAdapter)?.enrichPrompt ??
+        ((b: string) => b);
+      prompt = withContext(enrichPrompt(base, effectiveTab, projectStateDescription(stateKey)));
       const meta = readPromptMeta().find((m) => m.key === promptKey);
       promptLabel = meta ? `${meta.icon} ${meta.label}` : promptKey;
     } else {

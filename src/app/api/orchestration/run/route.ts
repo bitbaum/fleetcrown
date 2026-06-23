@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     // Cloud mode: only the claude adapter can be queued via pending_commands.
     // Other adapters (openclaw, codex, gemini) require local workers/tools.
     const request = dataOrResp as OrchestrationTaskRequest;
-    if (request.adapter !== "claude") {
+    if (!getAdapterDefinition(request.adapter).capabilities.cloudQueueable) {
       return NextResponse.json(
         { error: `${request.adapter} orchestration requires the local runtime — not available in cloud mode` },
         { status: 503 },
@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
   // user-defined queue items during auto-fire or manual 'Next best' clicks.
   // Health gate mirrors sessionHealthBlocksQueue() on the client: if session health is critical
   // or tests are failing, skip queue pop so the agent picks the recovery task instead.
-  if (request.adapter !== "openclaw" && request.intent === "next_best") {
+  if (adapter.capabilities.tabInjected && request.intent === "next_best") {
     const projectState = await getProjectState(userId, request.projectKey).catch(() => null);
     const healthBlocks = (projectState?.sessionHealth ?? "").toLowerCase().includes("critical")
       || (projectState?.sessionTests ?? "").toLowerCase().includes("fail");
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
   // an outcome to learn from, not just openclaw worker runs. Lifecycle intents (hard_stop /
   // close_session) end sessions and don't produce work outcomes, so they're skipped.
   const TRACKABLE_INTENTS = (request.intent !== "hard_stop" && request.intent !== "close_session");
-  const TAB_ADAPTERS = (request.adapter === "claude" || request.adapter === "codex" || request.adapter === "gemini" || request.adapter === "grok");
+  const TAB_ADAPTERS = adapter.capabilities.tabInjected;
   let trackedRunId: string | null = null;
   if (TAB_ADAPTERS && TRACKABLE_INTENTS) {
     try {
