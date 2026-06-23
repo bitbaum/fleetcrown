@@ -12,6 +12,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { NOTIFY_CHANNEL } from "@/db/setup-notify-trigger";
 import type { FastProjectState } from "@/lib/control-fast-state";
 import { sseBus } from "@/lib/sse-bus";
+import { resolveProjectSession, dbRowToSession } from "@/lib/project-session";
 import { getDatabaseDirectUrl } from "@/lib/db-url";
 import postgres from "postgres";
 
@@ -36,20 +37,7 @@ function dbToFastState(
       agentRunning: r.agentRunning,
       tabOpen: r.tabOpen,
       activeAgents: r.activeAgents,
-      session: r.sessionDone || r.sessionNext
-        ? {
-            status: r.sessionStatus ?? "",
-            done: r.sessionDone ?? "",
-            next: r.sessionNext ?? "",
-            tests: r.sessionTests ?? "",
-            todos: r.sessionTodos ?? "",
-            health: r.sessionHealth ?? "",
-            ...(r.sessionBlockReason ? { blockReason: r.sessionBlockReason } : {}),
-            ...(r.sessionNoOpCount !== null && r.sessionNoOpCount !== undefined
-              ? { noOpCount: r.sessionNoOpCount } : {}),
-            mtime: r.sessionUpdatedAt?.getTime() ?? 0,
-          }
-        : null,
+      session: dbRowToSession(r),
       currentPrompt: r.currentPromptKey
         ? { key: r.currentPromptKey, label: r.currentPromptLabel ?? r.currentPromptKey, startedAt: r.currentPromptStartedAt ? Math.floor(r.currentPromptStartedAt.getTime() / 1000) : 0, source: "inject" as const }
         : null,
@@ -113,9 +101,9 @@ export async function GET() {
   let lastRunnerConnected: boolean | null = null;
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const scanProjects = () => {
+  const scanProjects = async (): Promise<FastProjectState[]> => {
     const agentProcesses = getAgentProcesses(agentRegistry.agents);
-    const projects = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
+    const scanInput = confProjects.map(({ tab, dir, sessionLifecycleSignals }) => {
       const resolvedTab = resolveEffectiveTab(tab, zellijTabCache);
       const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(dir + "/"));
       return {
@@ -129,7 +117,21 @@ export async function GET() {
       };
     });
     const agentCwds = agentProcesses.map((p) => p.cwd);
-    return readFastState(projects, agentCwds);
+    const fast = readFastState(scanInput, agentCwds);
+    // DB fallback so the local stream matches the /api/control GET (file ?? db).
+    // Without it a project whose session .md is absent but whose project_states
+    // row persists shows null here while the GET shows the row — the SSE/GET
+    // divergence that hid the auto-reroute banner. resolveProjectSession is the
+    // shared SSOT; fast[i] aligns with confProjects[i] (same map order). The DB
+    // hit only happens when some session came back null (rare), not every tick.
+    if (!fast.some((p) => p.session === null)) return fast;
+    const dbRows = await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []);
+    const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
+    return fast.map((p, i) =>
+      p.session
+        ? p
+        : { ...p, session: resolveProjectSession(null, byKey.get(`${confProjects[i].ownerUserId}:${confProjects[i].tab.toLowerCase()}`)) },
+    );
   };
 
   const stream = new ReadableStream({
@@ -143,7 +145,7 @@ export async function GET() {
       const tick = async () => {
         refreshTabsCacheIfStale();
         const current = isRuntimeAvailable()
-          ? scanProjects()
+          ? await scanProjects()
           : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
         // Connection-based presence rides every stream event so the online
         // badge flips in <1s (the bridge pg_notify's this channel on
@@ -188,7 +190,7 @@ export async function GET() {
 
       // Initial snapshot
       const initialProjects = isRuntimeAvailable()
-        ? scanProjects()
+        ? await scanProjects()
         : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
       lastSent = initialProjects;
       lastRunnerConnected = await getRunnerConnected(userId).catch(() => false);

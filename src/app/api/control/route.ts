@@ -44,6 +44,7 @@ import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
+import { resolveProjectSession } from "@/lib/project-session";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta, ActivityItem };
@@ -206,20 +207,9 @@ export async function GET() {
       ?? (agentPref && isAgentId(agentPref) ? agentPref : null)
       ?? agentConfig.agent;
     const localSession = runtimeAvailable ? parseSession(liveTab, liveAdapter) : null;
-    const session = localSession ?? (dbState && (dbState.sessionDone || dbState.sessionNext || dbState.sessionStatus)
-      ? {
-          status: dbState.sessionStatus ?? undefined,
-          done: dbState.sessionDone ?? "",
-          next: dbState.sessionNext ?? "",
-          tests: dbState.sessionTests ?? "",
-          todos: dbState.sessionTodos ?? "",
-          health: dbState.sessionHealth ?? "",
-          ...(dbState.sessionBlockReason ? { blockReason: dbState.sessionBlockReason } : {}),
-          ...(dbState.sessionNoOpCount !== null && dbState.sessionNoOpCount !== undefined
-            ? { noOpCount: dbState.sessionNoOpCount } : {}),
-          mtime: dbState.sessionUpdatedAt?.getTime() ?? 0,
-        }
-      : null);
+    // File handoff wins, else the persisted project_states row. Shared with the
+    // SSE stream via resolveProjectSession so the two paths can't diverge.
+    const session = resolveProjectSession(localSession, dbState);
 
     // The DB is authoritative; the local runtime reads this transport mirror.
     if (!readonly && isRuntimeAvailable() && dbState?.promptQueue) {

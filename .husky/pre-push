@@ -26,6 +26,9 @@ npm run check:schema
 echo "→ test:brand-sync"
 npm run test:brand-sync
 
+echo "→ test:project-session"
+npm run test:project-session
+
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
 if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
