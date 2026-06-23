@@ -3,7 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { PageLayout } from "@/components/ui/page-layout";
+import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { ThoughtArticleNav } from "@/components/thoughts/ThoughtArticleNav";
 import { MermaidDiagram } from "@/components/thoughts/MermaidDiagram";
 import { getAdjacentThoughts, getRelatedThoughts, getThought, parseThoughtBlocks } from "@/lib/thoughts-content";
@@ -72,8 +73,15 @@ export default async function ThoughtArticlePage({
   const related = getRelatedThoughts(slug);
 
   return (
-    <PageLayout title={article.title} subtitle={article.summary} maxWidth="max-w-5xl">
-      <div className="space-y-6">
+    <PublicSurface right={<PublicHeaderActions />}>
+      <div className="relative z-10 mx-auto max-w-5xl space-y-6 px-6 pb-24 pt-16 sm:px-10">
+        <div className="ui-public-doc-header">
+          <h1 className="ui-public-doc-title">{article.title}</h1>
+          {article.summary && (
+            <p className="ui-public-doc-subtitle">{article.summary}</p>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/thoughts" className="ui-btn-chip">All essays</Link>
           <span className="ui-badge">{article.publishedAt}</span>
@@ -160,6 +168,6 @@ export default async function ThoughtArticlePage({
 
         <ThoughtArticleNav previous={previous} next={next} related={related} />
       </div>
-    </PageLayout>
+    </PublicSurface>
   );
 }
