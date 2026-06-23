@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil } from "lucide-react";
+import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, RotateCcw } from "lucide-react";
 import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
 import { SUB_STATUS } from "@/lib/constants/statuses";
-import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { patchJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { advanceDueDate } from "@/lib/dates";
 import { SubscriptionEditForm } from "./SubscriptionEditForm";
 
@@ -46,6 +46,9 @@ export function SubscriptionActions({
   const [paid, setPaid] = useState(false);
   const [paidError, setPaidError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [confirmReactivate, setConfirmReactivate] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
+  const [reactivateError, setReactivateError] = useState<string | null>(null);
 
   const meta = SUBSCRIPTION_META[subName];
   const isCancelled = status === SUB_STATUS.CANCELLED;
@@ -69,6 +72,23 @@ export function SubscriptionActions({
       setConfirmCancel(false);
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function onReactivate() {
+    setReactivating(true);
+    setReactivateError(null);
+    try {
+      const res = await postJson(`/api/subscriptions/${subId}`, {});
+      if (!res.ok) await throwApiError(res, "Failed to reactivate");
+      setCancelled(false);
+      setConfirmReactivate(false);
+      router.refresh();
+    } catch (e) {
+      setReactivateError(e instanceof Error ? e.message : "Failed to reactivate — try again");
+      setConfirmReactivate(false);
+    } finally {
+      setReactivating(false);
     }
   }
 
@@ -116,10 +136,39 @@ export function SubscriptionActions({
 
   if (deleted) return null;
 
-  if (cancelled) {
+  // Reactivate control — shown for cancelled subs (both the in-session
+  // just-cancelled state and a row that loaded already cancelled). Same
+  // 2-step inline-confirm style as the cancel action.
+  const reactivateControl = (
+    <>
+      {confirmReactivate ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-text-tertiary">Reactivate?</span>
+          <button onClick={onReactivate} disabled={reactivating}
+            className="text-xs text-status-positive hover:text-status-positive transition-colors px-1 disabled:opacity-50">
+            {reactivating ? <Loader2 className="ui-spinner-2xs inline" /> : "Yes"}
+          </button>
+          <button onClick={() => { setConfirmReactivate(false); setReactivateError(null); }}
+            className="ui-btn-text-cancel">
+            No
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => { setConfirmReactivate(true); setReactivateError(null); }}
+          className="ui-btn-xs border-status-positive/20 text-status-positive/60 hover:text-status-positive hover:bg-status-positive/5">
+          <RotateCcw className="h-2.5 w-2.5" />
+          Reactivate
+        </button>
+      )}
+      {reactivateError && <span className="ui-error-xs w-full">{reactivateError}</span>}
+    </>
+  );
+
+  if (cancelled || isCancelled) {
     return (
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className="text-xs text-text-tertiary">Marked cancelled</span>
+        {reactivateControl}
         <DeleteButton
           onDelete={onDeleteRecord}
           label="Delete record?"
