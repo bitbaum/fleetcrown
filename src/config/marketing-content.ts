@@ -384,7 +384,9 @@ export const DESKTOP_DOWNLOAD = {
     {
       id: "mac",
       label: "macOS",
-      status: "ready" as const,
+      // Linux-only ships today (the latest release has no mac asset); surface the
+      // honest release-watch CTA instead of a Download button that 404s.
+      status: "comingSoon" as const,
       primary: {
         label: "Download .dmg",
         note: "Apple Silicon · ~98 MB",
@@ -405,7 +407,9 @@ export const DESKTOP_DOWNLOAD = {
     {
       id: "win",
       label: "Windows",
-      status: "ready" as const,
+      // No Windows asset on the latest release yet — show the release-watch CTA
+      // rather than a Download button that 404s.
+      status: "comingSoon" as const,
       primary: {
         label: "Download installer",
         note: "x64 · ~81 MB",

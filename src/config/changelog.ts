@@ -29,6 +29,16 @@ export interface ReleaseEntry {
 /** Newest first. */
 export const FLEET_RUNNER_RELEASES: ReleaseEntry[] = [
   {
+    version: "0.8.9",
+    tag: "fleet-runner-v0.8.9",
+    date: "2026-06-18T17:09:04Z",
+    highlights: [
+      "The \"My machine\" terminal is now fully interactive — char-level keystrokes, Ctrl-C / Tab / arrows, and live resize — at parity with the server terminal.",
+    ],
+    breaking: [],
+    notes: "P3 terminal interactive parity. A non-durable rawkey/resize event rides the existing bridge NOTIFY → SSE channel (no per-keystroke DB rows, no command-claim); the runner dispatches it to writeRawKey/resizePty, writing bytes verbatim into the agent's owned PTY. Strictly additive and independent of the autopilot command-drain path. Verified end-to-end: typed in the browser terminal, echoed from a runner-owned PTY with no zellij dependency; killing an agent leaves the runner green (PTY isolation confirmed). Linux (AppImage + .deb).",
+  },
+  {
     version: "0.8.8",
     tag: "fleet-runner-v0.8.8",
     date: "2026-06-18T09:00:00Z",

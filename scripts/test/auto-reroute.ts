@@ -103,9 +103,10 @@ function runTests(): void {
     assert(!shouldShowManualCapacityBanner(true, "switch-in-flight"), "on + in-flight → hide");
   });
 
-  check("manual banner surfaces under autopilot only when exhausted", () => {
+  check("manual banner surfaces under autopilot when autopilot can't act", () => {
     assert(shouldShowManualCapacityBanner(true, "all-tried"), "on + all-tried → surface");
     assert(shouldShowManualCapacityBanner(true, "no-fallback"), "on + no-fallback → surface");
+    assert(shouldShowManualCapacityBanner(true, "tab-closed"), "on + tab-closed (not running) → surface, never invisible");
   });
 
   // ── Headless (server/beacon) reroute ────────────────────────────────────
