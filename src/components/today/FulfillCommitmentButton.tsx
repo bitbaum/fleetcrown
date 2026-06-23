@@ -6,28 +6,33 @@ import { handleFulfillCommitment } from "@/app/actions";
 
 export function FulfillCommitmentButton({ commitmentId }: { commitmentId: string }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function onClick() {
     setBusy(true);
+    setError(null);
     try {
       await handleFulfillCommitment(commitmentId);
     } catch {
-      // state unchanged — user can retry
+      setError("Failed — try again");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <button
-      onClick={onClick}
-      disabled={busy}
-      className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors disabled:opacity-50 shrink-0"
-      title="Mark fulfilled"
-    >
-      {busy
-        ? <Loader2 className="ui-spinner" />
-        : <CheckCircle className="h-4 w-4" />}
-    </button>
+    <div className="flex items-center gap-1 shrink-0">
+      {error && <span className="ui-error-xs">{error}</span>}
+      <button
+        onClick={onClick}
+        disabled={busy}
+        className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors disabled:opacity-50 shrink-0"
+        title="Mark fulfilled"
+      >
+        {busy
+          ? <Loader2 className="ui-spinner" />
+          : <CheckCircle className="h-4 w-4" />}
+      </button>
+    </div>
   );
 }

@@ -92,7 +92,7 @@ export function GoalCard({
     togglingStatus, abandoningStatus, displayTitle, description,
     addingChild, childTitle, savingChild, childError,
     titleEdit, descEdit, isClosed, isCompleted, isAbandoned,
-    titleError, descError,
+    titleError, descError, statusError,
     handleAddChild, commitTitle, commitDesc, toggleComplete, toggleAbandon,
     setAddingChild, setChildTitle,
   } = useGoalCard(goal);
@@ -145,6 +145,7 @@ export function GoalCard({
               goalId={goal.id}
             />
             {titleError && <p className="ui-error-xs mt-0.5">{titleError}</p>}
+            {statusError && <p className="ui-error-xs mt-0.5">{statusError}</p>}
             <GoalDescriptionEdit
               isClosed={isClosed}
               description={description ?? null}

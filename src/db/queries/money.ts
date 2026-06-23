@@ -97,6 +97,24 @@ export async function patchSubscription(userId: string, id: string, data: PatchS
     .set(patch)
     .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
     .returning();
+
+  // Re-sync the OrangeCat mirror after an edit so an amount/frequency
+  // change does not leave the OC `service` record stale. Same
+  // fire-and-forget contract as createSubscription — a network blip on
+  // OrangeCat must never fail the PATCH. The integration no-ops when
+  // ORANGECAT_API_KEY is unset (most dev environments).
+  if (updated) {
+    void syncSubscriptionToOrangeCat({
+      id: updated.id,
+      name: updated.name,
+      vendor: updated.vendor,
+      amount: updated.amount,
+      currency: updated.currency,
+      frequency: updated.frequency,
+      notes: updated.notes,
+    });
+  }
+
   return updated ?? null;
 }
 
@@ -151,6 +169,21 @@ export async function cancelSubscription(id: string, userId: string) {
     .update(subscriptions)
     .set({ status: SUB_STATUS.CANCELLED, updatedAt: new Date() })
     .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)));
+}
+
+/**
+ * Reactivate a cancelled subscription — flips status back to active so a
+ * cancellation is reversible without delete + recreate (which would lose
+ * amount/frequency/notes). Returns the updated row, or null when no row
+ * matched (wrong id / not owned by user).
+ */
+export async function reactivateSubscription(id: string, userId: string) {
+  const [updated] = await db
+    .update(subscriptions)
+    .set({ status: SUB_STATUS.ACTIVE, updatedAt: new Date() })
+    .where(and(eq(subscriptions.id, id), eq(subscriptions.userId, userId)))
+    .returning();
+  return updated ?? null;
 }
 
 export function calculateMonthlyBurn(

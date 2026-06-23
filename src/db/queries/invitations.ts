@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { invitations, users, orgMemberships, orgs, type Invitation } from "@/db/schema";
 import { randomBytes } from "crypto";
 import { INVITATION_EXPIRY_DAYS } from "@/lib/constants";
+import { createPersonalOrg, getOwnerOrgId } from "@/db/queries/orgs";
 
 export async function createInvitation(createdBy: string, email?: string): Promise<Invitation> {
   const token = randomBytes(32).toString("hex");
@@ -41,7 +42,7 @@ export async function acceptInvitation(
   if (!invite) return { error: "Invitation not found or expired." };
   if (invite.usedAt) return { error: "Invitation already used." };
 
-  return db.transaction(async (tx) => {
+  const { userId } = await db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
       .values({
@@ -73,4 +74,21 @@ export async function acceptInvitation(
 
     return { userId: user.id };
   });
+
+  // Bootstrap the invitee's OWN personal owned org — the same bootstrap that
+  // auth.ts events.signIn performs for normal OAuth/credential users. That hook
+  // only fires when the user has zero org memberships, but an invitee already
+  // belongs to the inviter's org by the time sign-in runs, so its guard skips
+  // them and getOwnerOrgId() stays null forever. A null owner-org later breaks
+  // agent-token / event-stream-token creation, and if the inviter owns no org
+  // the invitee would be fully orphaned. Idempotent: only create if absent, and
+  // outside the accept transaction so a bootstrap failure can't void a valid
+  // invite acceptance (sign-in's events.signIn is a second safety net only when
+  // the membership count is zero, which it won't be here).
+  const ownedOrg = await getOwnerOrgId(userId);
+  if (!ownedOrg) {
+    await createPersonalOrg(userId, name);
+  }
+
+  return { userId };
 }
