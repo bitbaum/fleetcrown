@@ -51,7 +51,12 @@ export async function cleanupStaleOrchestrationRuns(userId: string) {
     .where(
       and(
         eq(orchestrationRuns.userId, userId),
-        eq(orchestrationRuns.state, "running"),
+        // Both un-terminal states: "running" (runner picked it up) and "waiting"
+        // (opened but never closed). The local-runtime path opens runs as
+        // "waiting" and closes them from the session handoff; if the agent never
+        // writes a ready handoff (tab closed, process killed), the run would
+        // otherwise linger open forever — reap it as a timeout like a dead runner.
+        inArray(orchestrationRuns.state, ["waiting", "running"]),
         lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
       ),
     );

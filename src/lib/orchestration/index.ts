@@ -5,3 +5,4 @@ export * from "./renderers";
 export * from "./mappings";
 export * from "./state";
 export * from "./infer-outcome";
+export * from "./close-from-session";

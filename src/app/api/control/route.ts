@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getZellijTabs } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
 import { createOrchestrationEventOnce, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
-import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
 import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
@@ -25,6 +25,7 @@ import {
   collectRuntimeLifecycleEvents,
   deriveLifecycleState,
   shouldPersistLifecycleEvent,
+  closeRunFromSession,
 } from "@/lib/orchestration";
 // Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
 // contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
@@ -258,6 +259,18 @@ export async function GET() {
           else appendProjectDevLog(ownerUserId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
         }
       }).catch((err) => console.error("[control] session state write failed:", err));
+    }
+
+    // Close an open orchestration run when the agent's handoff reports ready.
+    // The local-runtime path has no stop-hook closer since the bash-daemon kill,
+    // so the session.md we just read IS the completion signal. Idempotent — only
+    // the owner writes, and a run with finishedAt is never re-closed.
+    if (!readonly && session && latestRun && !latestRun.finishedAt) {
+      const closePatch = closeRunFromSession(latestRun, session);
+      if (closePatch) {
+        updateOrchestrationRun(latestRun.id, closePatch, ownerUserId)
+          .catch((err) => console.error("[control] run close failed:", err));
+      }
     }
 
     const nowS = Math.floor(Date.now() / 1000);
