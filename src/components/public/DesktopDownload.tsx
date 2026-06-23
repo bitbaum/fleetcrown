@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import { DESKTOP_DOWNLOAD, type DesktopDownloadPlatform } from "@/config/marketing-content";
 import { FEEDBACK_MEDIUM_MS } from "@/lib/constants/timings";
@@ -87,7 +88,11 @@ export function DesktopDownload() {
           ))}
         </div>
 
-        <ReadyPlatformPanel platform={active} />
+        {active.status === "ready" ? (
+          <ReadyPlatformPanel platform={active} />
+        ) : (
+          <ComingSoonPanel platform={active} />
+        )}
 
         {/* 3-step "what happens next" — only relevant once a CTA is in view */}
         <div className="ui-public-download-steps">
@@ -201,6 +206,33 @@ function ReadyPlatformPanel({ platform }: { platform: Extract<DesktopDownloadPla
       <div className="ui-public-download-command">
         <span>{platform.afterDownload}</span>
         <CopyableCommand command={platform.command} />
+      </div>
+    </div>
+  );
+}
+
+function ComingSoonPanel({ platform }: { platform: Extract<DesktopDownloadPlatform, { status: "comingSoon" }> }) {
+  // Honest CTA instead of a Download button that 404s: Fleet Runner ships
+  // Linux-only today; mac/Windows builds are in the release pipeline.
+  return (
+    <div className="ui-public-download-panel">
+      <div className="flex flex-col items-center gap-3 text-center">
+        <p className="ui-public-download-lede">
+          The {platform.label} build is coming soon. Fleet Runner ships for Linux today — watch releases to get
+          the {platform.label} build the moment it lands, or use FleetCrown on the web now.
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <a
+            href="https://github.com/maonakamoto/fleetcrown-releases/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ui-public-download-cta"
+          >
+            Watch releases
+            <ExternalLink className="ui-public-download-prereq-link-icon" aria-hidden />
+          </a>
+          <Link href="/" className="ui-public-download-secondary">Use FleetCrown on the web</Link>
+        </div>
       </div>
     </div>
   );

@@ -103,6 +103,7 @@ export async function GET(
     name: project.name,
     type: project.type,
     description: project.description,
+    gitUrl: project.gitUrl ?? null,
     source: project.source,
     createdAt: createdAt instanceof Date ? createdAt.toISOString() : (createdAt ?? null),
     readonly: readonly || undefined,
