@@ -47,6 +47,6 @@ if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then
   # exact commit in an isolated worktree instead.
   DEPLOY_SHA="$(git rev-parse HEAD)"
   ( sleep 5 && env -u CI -u VERCEL bash /home/g/dev/fleetcrown/scripts/deploy-hetzner.sh --ref "$DEPLOY_SHA" ) >> /tmp/push-deploy-fleetcrown.log 2>&1 & disown 2>/dev/null || true
-  echo "[push-deploy] fleetcrown: deploy of ${DEPLOY_SHA:0:12} started in background → /tmp/push-deploy-fleetcrown.log"
+  echo "[push-deploy] fleetcrown: deploy of $(printf %.12s "$DEPLOY_SHA") started in background → /tmp/push-deploy-fleetcrown.log"
 fi
 # <<< fleetcrown push-deploy <<<
