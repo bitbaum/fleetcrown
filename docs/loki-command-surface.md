@@ -1,7 +1,30 @@
 # Loki — the conversational command surface
 
-**Status:** design / not built. Captures George's 2026-06-18 vision. Do not implement
-without sign-off on the open questions (§6).
+**Status:** shipped (Phases 1–3 live; Phase 4 partial). This document started as the
+design spec for the original vision and is retained as the rationale of record; the
+**Shipped state** note below tracks what is actually live. See the `loki`/`control`
+commit series in git history for the implementation.
+
+### Shipped state (verified in the running app)
+
+The Loki page (`/loki`) is live and in daily use as a dogfood surface. Confirmed working:
+
+- **The command composer (§3):** one natural-language field; resolves the project named in
+  the text (e.g. "for fleetcrown, …" scopes to the `fleetcrown` project) and routes the
+  message to **dispatch** vs **chat** automatically.
+- **The Loki page (§4):** the 3-pane layout shipped as specced — conversation list (left),
+  transcript (center) with the composer at the bottom, and the selectable **Projects**
+  panel (right). Project tiles surface each project's active goal as a subtitle.
+- **Composer affordances (§4):** microphone, file attach, and a **model picker** (defaults
+  to `Auto`) are all present.
+- **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → runner →
+  agent-terminal path as a Control "Next best" click, and a dispatched message links back
+  with **"Open in Control →"**.
+
+Open questions §6 #1 (chat vs command — both, routed by intent resolution) and #2
+(dispatches go to the project's existing session; the conversation is the human-readable
+log) are resolved the way the doc was leaning. The remaining design notes below are kept
+for context.
 
 This document covers two related-but-distinct ideas, kept in separate sections so they
 don't blur together:
@@ -129,14 +152,14 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 ## 7. Phased plan
 
 - **Phase 0 (done):** server terminal made usable (input no longer scrambles); this doc.
-- **Phase 1 — composer in Control (small, high ROI):** add NL resolution to Control's existing
-  prompt field: "code review for kivvi" auto-selects kivvi + maps to the review intent. Reuses
-  dispatch. Proves the resolution layer with almost no new surface.
-- **Phase 2 — Loki page scaffold:** conversations table + the 3-pane layout; composer wired to
-  Phase-1 resolution; chat via Ivy; dispatch via Control backend; project-filter on the right.
-- **Phase 3 — affordances:** microphone, file attach, model picker.
-- **Phase 4 — learned context:** pre-select likely project, surface suggested next commands,
-  progressively remove decisions (the cognitive-load north star).
+- **Phase 1 (done) — composer with NL resolution:** natural-language → `{ project, intent|prompt }`
+  resolution shipped; naming a project in the text auto-scopes the dispatch.
+- **Phase 2 (done) — Loki page scaffold:** conversations + the 3-pane layout; composer wired to
+  Phase-1 resolution; chat via Ivy; dispatch via the Control backend; projects panel on the right.
+- **Phase 3 (done) — affordances:** microphone, file attach, and model picker are live.
+- **Phase 4 (partial) — learned context:** project tiles surface each project's active goal;
+  still open: pre-selecting the likely project from an unscoped message and surfacing suggested
+  next commands (the cognitive-load north star).
 
 ## 8. Cross-references
 
