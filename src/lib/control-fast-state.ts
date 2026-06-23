@@ -1,12 +1,12 @@
 import fs from "fs";
-import { sessionFilePath, stateFile } from "@/lib/agent-config";
+import { resolveSessionFile, stateFile } from "@/lib/agent-config";
 import { SENTINEL_VALIDITY_S } from "@/lib/constants/control";
 import { parseSessionFile } from "@/lib/session-content";
 import type { CurrentPrompt, SessionState } from "@/lib/control-types";
 
 export function parseSession(tab: string, adapter = "claude"): SessionState | null {
-  const file = sessionFilePath(tab, adapter);
-  if (!fs.existsSync(file)) return null;
+  const file = resolveSessionFile(tab, adapter);
+  if (!file) return null;
   try {
     const raw = fs.readFileSync(file, "utf-8");
     const fields = parseSessionFile(raw);
