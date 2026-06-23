@@ -216,8 +216,14 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
           injectIntoTab(effectiveTab, prompt);
         };
 
+  // Open a tracked run for every trackable dispatch, on BOTH the cloud and the
+  // local-runtime path. Previously the local path was excluded (it relied on
+  // home/worker.ts to open the run), but that worker was retired in the
+  // bash-daemon kill — leaving local dispatches with no run at all, so Activity
+  // showed "0 runs / 0 finished". The control poll closes it when the agent's
+  // session handoff reports ready (see closeRunFromSession).
   const trackableIntent = eventIntent !== "hard_stop" && eventIntent !== "close_session";
-  if (!runId && trackableIntent && !isRuntimeAvailable()) {
+  if (!runId && trackableIntent) {
     try {
       const run = await createOrchestrationRun({
         userId,
