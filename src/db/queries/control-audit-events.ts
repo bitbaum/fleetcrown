@@ -2,6 +2,17 @@ import { createHash } from "crypto";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { controlAuditEvents, type NewControlAuditEvent } from "@/db/schema/control-audit-events";
+import type { Action } from "@/db/schema/actions";
+
+/** Lifecycle stages of an action, mirrored into the control audit log so the
+ *  whole propose → approve → execute path is visible in RecentControlAuditCard. */
+export type ActionAuditLifecycle =
+  | "proposed"
+  | "approved"
+  | "executed"
+  | "rejected"
+  | "deferred"
+  | "failed";
 
 export function promptFingerprint(prompt: string | null | undefined) {
   const text = prompt?.trim();
@@ -20,6 +31,34 @@ export function recordControlAuditEvent(entry: Omit<NewControlAuditEvent, "id" |
       action: entry.action,
       projectKey: entry.projectKey,
     });
+  });
+}
+
+/**
+ * Audit one stage of an action's lifecycle. Thin wrapper over
+ * recordControlAuditEvent so producers/executors don't re-declare the
+ * event/source shape. Fire-and-forget (never throws — inherits the catch above).
+ */
+export function recordActionAuditEvent(
+  userId: string,
+  action: Pick<Action, "id" | "type" | "title" | "reasoning" | "payload" | "entityId">,
+  lifecycle: ActionAuditLifecycle,
+  extra?: { reason?: string; meta?: Record<string, unknown> },
+): Promise<unknown> {
+  return recordControlAuditEvent({
+    userId,
+    event: "action",
+    source: "actions",
+    action: lifecycle,
+    reason: extra?.reason ?? action.title,
+    promptPreview: action.reasoning ?? null,
+    meta: {
+      actionId: action.id,
+      type: action.type,
+      channel: action.payload?.channel ?? null,
+      entityId: action.entityId ?? null,
+      ...extra?.meta,
+    },
   });
 }
 
