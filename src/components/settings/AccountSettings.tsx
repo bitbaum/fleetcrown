@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, GitBranch, X as XIcon, Globe, Trash2 } from "lucide-react";
-import { patchJson, deleteJson } from "@/lib/api/fetch";
+import { patchJson, postJson, deleteJson } from "@/lib/api/fetch";
 import { useFetch } from "@/hooks/use-fetch";
 import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 
@@ -72,6 +73,88 @@ function ConnectedAccountsSection({ hasPassword }: { hasPassword: boolean }) {
   );
 }
 
+/**
+ * Lets an OAuth-only user (no password yet) set an initial password, so they
+ * gain a second, provider-independent sign-in method and can safely disconnect
+ * their only OAuth provider. Without this the Connected-accounts disconnect
+ * button is permanently disabled with no escape — a dead end.
+ */
+function SetInitialPasswordSection() {
+  const router = useRouter();
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const mismatch = confirmPwd.length > 0 && newPwd !== confirmPwd;
+  const tooShort = newPwd.length > 0 && newPwd.length < 8;
+  const canSave = newPwd.length >= 8 && newPwd === confirmPwd;
+
+  const setInitialPassword = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await postJson("/api/me/password", { newPassword: newPwd });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Failed to set password");
+      }
+      // Re-render the server component so hasPassword flips to true and this
+      // block is replaced by the regular change-password form.
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-border-subtle pt-4 space-y-3">
+      <h3 className="text-sm font-medium text-text-primary">Set a password</h3>
+      <p className="text-xs text-text-muted">
+        Add a password so you can sign in without an external provider — required
+        before you can disconnect your only connected account.
+      </p>
+      <div className="space-y-2">
+        <div className="space-y-1.5">
+          <label className="ui-kicker">New password</label>
+          <input
+            type="password"
+            value={newPwd}
+            onChange={(e) => { setNewPwd(e.target.value); setError(""); }}
+            autoComplete="new-password"
+            className={`ui-input ${tooShort ? "border-status-negative/50" : ""}`}
+            placeholder="At least 8 characters"
+          />
+          {tooShort && <p className="ui-error-xs">At least 8 characters required</p>}
+        </div>
+        <div className="space-y-1.5">
+          <label className="ui-kicker">Confirm password</label>
+          <input
+            type="password"
+            value={confirmPwd}
+            onChange={(e) => { setConfirmPwd(e.target.value); setError(""); }}
+            autoComplete="new-password"
+            className={`ui-input ${mismatch ? "border-status-negative/50" : ""}`}
+            placeholder="Repeat password"
+          />
+          {mismatch && <p className="ui-error-xs">Passwords don&apos;t match</p>}
+        </div>
+      </div>
+      {error && <p className="ui-error">{error}</p>}
+      <button
+        onClick={setInitialPassword}
+        disabled={saving || !canSave}
+        className="ui-btn-secondary"
+      >
+        {saving && <Loader2 className="ui-spinner" />}
+        Set password
+      </button>
+    </div>
+  );
+}
+
 type Props = {
   user: { email: string | null; hasPassword: boolean };
 };
@@ -126,6 +209,9 @@ export function AccountSettings({ user }: Props) {
         <label className="ui-kicker">Connected accounts</label>
         <ConnectedAccountsSection hasPassword={user.hasPassword} />
       </div>
+
+      {/* Set initial password (OAuth-only accounts with no password yet) */}
+      {!user.hasPassword && <SetInitialPasswordSection />}
 
       {/* Password */}
       {user.hasPassword && (
