@@ -5,7 +5,7 @@ import { inferOutcome } from "./infer-outcome";
 import type { OrchestrationTaskSummary } from "./contract";
 
 /** The subset of an orchestration run this decision needs. */
-type OpenRun = { startedAt: Date | null; finishedAt: Date | null };
+export type OpenRun = { startedAt: Date | null; finishedAt: Date | null };
 
 export type RunClosePatch = {
   state: "done" | "error";

@@ -22,11 +22,13 @@ import {
   getAgentProcesses,
 } from "@/lib/control-fast-state";
 import {
-  collectRuntimeLifecycleEvents,
   deriveLifecycleState,
   shouldPersistLifecycleEvent,
-  closeRunFromSession,
+  DEFAULT_ADAPTER_ID,
+  ORCHESTRATION_ADAPTER_IDS,
+  type AdapterId,
 } from "@/lib/orchestration";
+import { adapterFor } from "@/lib/orchestration/adapter-registry";
 // Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
 // contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
 // sessions) and pending-commands are *inputs* / compat only. Derived truth +
@@ -261,12 +263,21 @@ export async function GET() {
       }).catch((err) => console.error("[control] session state write failed:", err));
     }
 
+    // Resolve the orchestration seam for this project's agent. Claude binds the
+    // existing lifecycle/close/enrich hooks (behavior-identical); unregistered
+    // adapters yield undefined → neutral fallbacks (no close / no events).
+    const adapterId: AdapterId =
+      typeof liveAdapter === "string" && (ORCHESTRATION_ADAPTER_IDS as readonly string[]).includes(liveAdapter)
+        ? (liveAdapter as AdapterId)
+        : DEFAULT_ADAPTER_ID;
+    const seam = adapterFor(adapterId);
+
     // Close an open orchestration run when the agent's handoff reports ready.
     // The local-runtime path has no stop-hook closer since the bash-daemon kill,
     // so the session.md we just read IS the completion signal. Idempotent — only
     // the owner writes, and a run with finishedAt is never re-closed.
     if (!readonly && session && latestRun && !latestRun.finishedAt) {
-      const closePatch = closeRunFromSession(latestRun, session);
+      const closePatch = seam?.closeRunFromSession?.(latestRun, session) ?? null;
       if (closePatch) {
         updateOrchestrationRun(latestRun.id, closePatch, ownerUserId)
           .catch((err) => console.error("[control] run close failed:", err));
@@ -325,13 +336,13 @@ export async function GET() {
       nowS,
     });
 
-    for (const event of collectRuntimeLifecycleEvents({
+    for (const event of seam?.collectLifecycleEvents?.({
       readyAt: tmpReady,
       lockAt: tmpLock,
       closingAt: tmpClosing,
       closedAt: tmpClosed,
       currentPromptStartedAt: currentPrompt?.startedAt ?? null,
-    })) {
+    }) ?? []) {
       if (!shouldPersistLifecycleEvent(event, lifecycleEvents)) continue;
       createOrchestrationEventOnce({
         userId,

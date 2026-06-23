@@ -1,3 +1,7 @@
+import type { RuntimeLifecycleFacts, RuntimeEventCandidate } from "./state";
+import type { OpenRun, RunClosePatch } from "./close-from-session";
+import type { SessionState } from "@/lib/control-types";
+
 export const ORCHESTRATION_STATES = [
   "idle",
   "running",
@@ -32,6 +36,10 @@ export const ORCHESTRATION_CAPABILITIES = [
   "closeSession",
   "autonomousContinue",
   "sessionHandoff",
+  // Adapter may be queued for execution in cloud mode (no local runtime).
+  "cloudQueueable",
+  // Adapter executes by injecting into a live terminal tab (zellij PTY).
+  "tabInjected",
 ] as const;
 
 export type OrchestrationCapability = (typeof ORCHESTRATION_CAPABILITIES)[number];
@@ -163,7 +171,32 @@ export interface AgentAdapter {
   injectTask(request: OrchestrationTaskRequest): Promise<void>;
   getStatus(request: OrchestrationTaskRequest): Promise<OrchestrationTaskStatus>;
   closeSession?(request: OrchestrationTaskRequest): Promise<void>;
+
+  // --- Seam hooks (vendor-specific signal → neutral product semantics) ---
+  // Absent hooks mean "this adapter has no such signal"; callers fall back to
+  // the current neutral behavior (no events / no close / identity prompt).
+
+  /** Map this adapter's runtime facts (e.g. /tmp sentinels) to neutral
+   *  lifecycle events. */
+  collectLifecycleEvents?(runtime: RuntimeLifecycleFacts): RuntimeEventCandidate[];
+
+  /** Decide whether an agent's session handoff closes an open run. */
+  closeRunFromSession?(run: OpenRun, session: SessionState): RunClosePatch | null;
+
+  /** Wrap a base prompt with this adapter's session context. */
+  enrichPrompt?(base: string, tab: string, projectStateDescription?: string): string;
 }
+
+/** The default adapter when none is specified (replaces scattered `?? "claude"`). */
+export const DEFAULT_ADAPTER_ID: AdapterId = "claude";
+
+/** The orchestration seam used by control/inject call sites today. Narrower
+ *  than the full AgentAdapter so the registry stays honest while injectTask/
+ *  getStatus dispatch consolidation is deferred (see openclaw plan). */
+export type OrchestrationSeam = Pick<
+  AgentAdapter,
+  "id" | "label" | "capabilities" | "collectLifecycleEvents" | "closeRunFromSession" | "enrichPrompt"
+>;
 
 export function createCapabilities(
   overrides: Partial<AdapterCapabilities> = {},
@@ -177,6 +210,8 @@ export function createCapabilities(
     closeSession: false,
     autonomousContinue: false,
     sessionHandoff: false,
+    cloudQueueable: false,
+    tabInjected: false,
     ...overrides,
   };
 }
