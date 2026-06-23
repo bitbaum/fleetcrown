@@ -20,7 +20,7 @@ import {
 } from "@/lib/orchestration";
 import { getAdapterDefinition, getOrchestrationIntent, renderTaskForAdapter } from "@/lib/orchestration";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
-import { createOrchestrationRun, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
+import { createOrchestrationRun, updateOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
 import { getSessionUserId } from "@/lib/session";
@@ -241,6 +241,32 @@ export async function POST(req: NextRequest) {
       console.error("[orchestration/run] tracked run create failed:", err);
       // Non-fatal — dispatch still proceeds without outcome tracking for this run.
     }
+  }
+
+  // Serialize same-project dispatch for tab-injected adapters (claude/codex/
+  // gemini/grok) — the ones that share the project's zellij tab + git checkout +
+  // /tmp sentinels. If another agent's run is already ahead of ours for this
+  // project, queue this dispatch for the runner instead of colliding; it drains
+  // FIFO once our run is the oldest open one. TRACKABLE_INTENTS already excludes
+  // hard_stop/close_session (which must always fire to interrupt). openclaw is a
+  // detached worker (no shared tab/checkout) → not gated. Fail open on DB hiccup.
+  if (TAB_ADAPTERS && TRACKABLE_INTENTS
+      && (await isProjectBusy(userId, request.projectKey, { excludeRunId: trackedRunId ?? undefined }).catch(() => false))) {
+    const runnerConnected = await getRunnerConnected(userId);
+    const commandId = await enqueueDispatchCommand(userId, {
+      tab: request.projectKey,
+      dir: request.projectPath,
+      agent: request.adapter,
+      prompt: resolvedPromptBody,
+      promptKey: request.intent,
+      promptLabel: intent.name,
+      model: request.model,
+      projectKey: request.projectKey,
+      runId: trackedRunId ?? undefined,
+    });
+    return NextResponse.json({
+      ok: true, queued: true, queuedBehind: true, mode: "queued", commandId, runId: trackedRunId, runnerConnected,
+    });
   }
 
   // Claude remains hook-driven via prompt injection into a live tab.

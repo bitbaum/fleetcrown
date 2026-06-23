@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   orchestrationRuns,
@@ -7,7 +7,7 @@ import {
 } from "@/db/schema/orchestration-runs";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 
-const STALE_RUN_MINUTES = 60;
+export const STALE_RUN_MINUTES = 60;
 
 export async function createOrchestrationRun(run: NewOrchestrationRun) {
   const [created] = await db.insert(orchestrationRuns).values(run).returning();
@@ -60,6 +60,44 @@ export async function cleanupStaleOrchestrationRuns(userId: string) {
         lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
       ),
     );
+}
+
+/**
+ * Is this project busy for this user — i.e. is another agent's run AHEAD of
+ * ours? The SSOT "busy" predicate for per-project dispatch serialization.
+ *
+ * Gates on run AGE, not mere existence: busy iff an OPEN run (finishedAt IS
+ * NULL, within the stale-reap window) for this project is OLDER than our own
+ * run `excludeRunId`. This is what makes serialization FIFO WITHOUT deadlock —
+ * every queued dispatch opens its own run, so "any other open run = busy" would
+ * have queued dispatches block each other forever; "oldest open run wins" lets
+ * them drain in creation order. The (started_at, id) tuple compare also
+ * self-excludes (a run is never older than itself) and breaks the sub-µs
+ * started_at tie deterministically. The stale-window floor mirrors
+ * cleanupStaleOrchestrationRuns so a crashed run can't wedge a project past
+ * STALE_RUN_MINUTES. With no excludeRunId, ANY open run counts as busy.
+ */
+export async function isProjectBusy(
+  userId: string,
+  projectKey: string,
+  opts: { excludeRunId?: string } = {},
+): Promise<boolean> {
+  const conds = [
+    eq(orchestrationRuns.userId, userId),
+    eq(orchestrationRuns.projectKey, projectKey),
+    isNull(orchestrationRuns.finishedAt),
+    sql`${orchestrationRuns.startedAt} > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}`,
+  ];
+  if (opts.excludeRunId) {
+    // Only runs strictly older than ours (by started_at, then id) block us.
+    conds.push(sql`(${orchestrationRuns.startedAt}, ${orchestrationRuns.id}) < (SELECT own.started_at, own.id FROM orchestration_runs own WHERE own.id = ${opts.excludeRunId})`);
+  }
+  const [row] = await db
+    .select({ one: sql<number>`1` })
+    .from(orchestrationRuns)
+    .where(and(...conds))
+    .limit(1);
+  return !!row;
 }
 
 export async function getLatestRunsByProjectPaths(userId: string, projectPaths: string[]) {

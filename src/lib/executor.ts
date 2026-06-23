@@ -36,6 +36,12 @@ export async function executeInject(
      *  of a bare `inject` — so the prompt lands even when no agent is running
      *  yet. Without a dir we can't launch, so fall back to `inject`. */
     dir?: string | null;
+    /** When true (a busy local project), skip the direct inject and queue for
+     *  the runner instead — so a 2nd same-project dispatch serializes behind the
+     *  running agent rather than colliding in the shared tab/PTY/checkout. The
+     *  runner claims it once the project frees (claimNextPendingCommand gates on
+     *  the open run). */
+    projectBusy?: boolean;
   },
   userId: string,
   injectFn: () => Promise<void>,
@@ -51,7 +57,9 @@ export async function executeInject(
   // /api/control/tab-inject already gates on isRuntimeAvailable() alone; this
   // keeps the two inject paths consistent (one SSOT for "inject into a tab").
   // On the cloud host isRuntimeAvailable() is false, so remote still queues for the runner.
-  if (isRuntimeAvailable()) {
+  // `projectBusy` forces the queue path locally too: a 2nd same-project dispatch
+  // serializes behind the running agent instead of colliding in the shared PTY.
+  if (isRuntimeAvailable() && !payload.projectBusy) {
     try {
       await injectFn();
       return { ok: true, mode: "direct" };

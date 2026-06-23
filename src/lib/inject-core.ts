@@ -17,7 +17,7 @@ import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
-import { createOrchestrationRun } from "@/db/queries/orchestration-runs";
+import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
@@ -311,8 +311,18 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     }
   }
 
+  // Serialize same-project dispatch: if another agent's run is already ahead of
+  // ours for this project, executeInject queues this one for the runner instead
+  // of colliding in the shared tab/PTY/checkout (it drains FIFO when our run
+  // becomes the oldest open one). Lifecycle intents (hard_stop/close_session)
+  // must always fire to interrupt the running agent. Fail open on a DB hiccup —
+  // never block a dispatch on a transient error.
+  const lifecycleIntent = promptKey === "hard_stop" || promptKey === "close_session";
+  const projectBusy = !lifecycleIntent
+    && (await isProjectBusy(userId, canonical, { excludeRunId: runId }).catch(() => false));
+
   const result = await executeInject(
-    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath },
+    { tab: effectiveTab, prompt, promptKey, promptLabel, adapter: eventAdapter, model: eventModel, projectId, projectKey: canonical, runId, dir: projectPath, projectBusy },
     userId,
     injectFn ?? (() => Promise.reject(new Error("Runtime unavailable"))),
   );

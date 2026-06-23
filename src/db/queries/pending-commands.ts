@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
+import { STALE_RUN_MINUTES } from "./orchestration-runs";
 
 export async function getCommandById(id: string) {
   const [row] = await db.select().from(pendingCommands).where(eq(pendingCommands.id, id)).limit(1);
@@ -172,7 +173,40 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
     const [row] = await tx
       .select()
       .from(pendingCommands)
-      .where(and(userFilter, typeFilter, isNull(pendingCommands.claimedAt)))
+      .where(and(
+        userFilter,
+        typeFilter,
+        isNull(pendingCommands.claimedAt),
+        // Per-project serialization (FIFO by run age): a dispatch/inject is
+        // eligible only when its own run is the OLDEST open run for the project —
+        // i.e. NO open run is older (by started_at, then id) than the run its
+        // payload.runId points to. Gating on age (not mere existence) is what
+        // avoids deadlock: every queued dispatch opens its own run, so "any other
+        // open run = busy" would have them block each other; "oldest wins" drains
+        // them in order. Commands with no projectKey/runId (focus_tab, peek,
+        // lifecycle hard_stop/close_session — which open no run) are never blocked.
+        // A busy project's rows are skipped so a different project's row is claimed
+        // → cross-project parallelism intact. The check runs INSIDE the FOR UPDATE
+        // SKIP LOCKED tx (correct under concurrent pollers); the started_at floor
+        // mirrors cleanupStaleOrchestrationRuns so a crashed run can't wedge a
+        // project past STALE_RUN_MINUTES.
+        sql`(
+          ${pendingCommands.type} NOT IN ('dispatch','inject')
+          OR ${pendingCommands.payload}->>'projectKey' IS NULL
+          OR ${pendingCommands.payload}->>'runId' IS NULL
+          OR NOT EXISTS (
+            SELECT 1 FROM orchestration_runs r
+            WHERE r.user_id = ${pendingCommands.userId}
+              AND r.project_key = ${pendingCommands.payload}->>'projectKey'
+              AND r.finished_at IS NULL
+              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
+              AND (r.started_at, r.id) < (
+                SELECT own.started_at, own.id FROM orchestration_runs own
+                WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+              )
+          )
+        )`,
+      ))
       .orderBy(pendingCommands.createdAt)
       .limit(1)
       .for("update", { skipLocked: true });
