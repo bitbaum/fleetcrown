@@ -17,7 +17,46 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
 
-if [ "${1:-}" != "--no-build" ]; then
+# Args:
+#   --no-build     rsync the existing $STANDALONE as-is
+#   --ref <sha>    only build+ship if the working tree is STILL on that commit
+#                  (used by the push-deploy hook). `npm run build` always compiles
+#                  the floating working tree, so a hook that fires after you've
+#                  switched branches would otherwise ship the wrong ref (it once
+#                  shipped an off-main feature branch to the box). An isolated
+#                  worktree would be ideal but Turbopack rejects an out-of-root
+#                  node_modules symlink, so we guard in-place instead: build only
+#                  when HEAD == ref, and re-check HEAD after the build so a switch
+#                  mid-build can't ship a torn tree. On drift we skip loudly
+#                  rather than ship wrong code.
+NO_BUILD=""; REF=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-build) NO_BUILD=1; shift ;;
+    --ref)      REF="${2:-}"; shift 2 ;;
+    *)          shift ;;
+  esac
+done
+
+git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
+
+if [ -n "$NO_BUILD" ]; then
+  :  # reuse the existing $STANDALONE
+elif [ -n "$REF" ]; then
+  CURRENT="$(git_head)"
+  if [ "$CURRENT" != "$REF" ]; then
+    echo "✗ pinned deploy SKIPPED — working tree is on ${CURRENT:0:12}, not the pushed ref ${REF:0:12}."
+    echo "  A backgrounded push-deploy must not build whatever branch you've since switched to."
+    echo "  Deploy it explicitly: git checkout ${REF:0:12} && bash scripts/deploy-hetzner.sh   (or push from main again)"
+    exit 1
+  fi
+  (cd "$PROJECT_DIR" && npm run build)
+  AFTER="$(git_head)"
+  if [ "$AFTER" != "$REF" ]; then
+    echo "✗ pinned deploy ABORTED — HEAD moved to ${AFTER:0:12} during the build; not shipping a torn tree." >&2
+    exit 1
+  fi
+else
   (cd "$PROJECT_DIR" && npm run build)
 fi
 
@@ -80,4 +119,4 @@ if [ -n "$MISSING" ]; then
 fi
 echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables present on box"
 
-echo "✓ deployed $(cd "$PROJECT_DIR" && git rev-parse --short HEAD) to Hetzner — verified"
+echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to Hetzner — verified"
