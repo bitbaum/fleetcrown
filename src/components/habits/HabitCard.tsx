@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, Loader2, Check, X, Trash2 } from "lucide-react";
+import { Flame, Loader2, Check, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { DeleteButton } from "@/components/ui/delete-button";
 import { HabitHeatmap } from "./HabitHeatmap";
 import { HabitGoalLinks } from "./HabitGoalLinks";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
@@ -30,7 +31,6 @@ export function HabitCard({
   const [frequency, setFrequency] = useState<HabitFrequency>(habit.frequency);
   const [togglingActive, setTogglingActive] = useState(false);
   const [savingFreq, setSavingFreq] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const titleEdit = useInlineEdit<string>(habit.title);
   const [displayTitle, setDisplayTitle] = useState(habit.title);
 
@@ -115,17 +115,11 @@ export function HabitCard({
     }
   };
 
+  // DeleteButton handles confirm + busy + error surfacing; it rethrows on failure.
   const handleDelete = async () => {
-    if (deleting) return;
-    setDeleting(true);
-    try {
-      const res = await deleteJson(`/api/habits/${habit.id}`);
-      if (!res.ok) throw new Error("Failed");
-      router.refresh();
-    } catch {
-      setDeleting(false);
-      flashError("Failed to delete — try again");
-    }
+    const res = await deleteJson(`/api/habits/${habit.id}`);
+    if (!res.ok) throw new Error("Failed to delete — try again");
+    router.refresh();
   };
 
   return (
@@ -243,17 +237,14 @@ export function HabitCard({
             className="mt-0.5 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
           />
 
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            title="Delete habit"
-            className="mt-0.5 p-1.5 rounded transition-colors hover:bg-surface-raised text-text-muted hover:text-status-negative disabled:opacity-50"
-          >
-            {deleting
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Trash2 className="h-4 w-4" />
-            }
-          </button>
+          <div className="mt-0.5">
+            <DeleteButton
+              onDelete={handleDelete}
+              label="Delete?"
+              triggerTitle="Delete habit"
+              triggerClassName="p-1.5 rounded transition-colors hover:bg-surface-raised text-text-muted hover:text-status-negative"
+            />
+          </div>
         </div>
       </div>
 

@@ -1954,6 +1954,10 @@
   }
   /* Hover-reveal: hidden on desktop until parent .group hovers; always visible on mobile */
   .ui-hover-reveal { @apply sm:opacity-0 sm:group-hover:opacity-100; }
+  /* Touch devices have no hover — keep the controls permanently visible there */
+  @media (hover: none) {
+    .ui-hover-reveal { opacity: 1; }
+  }
 
   /* Icon/content overlay button — border + surface-overlay bg, caller adds padding */
   .ui-btn-overlay {

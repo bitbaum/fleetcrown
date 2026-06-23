@@ -24,6 +24,7 @@ export function useGoalCard(goal: GoalWithChildren) {
   const [childError, setChildError] = useState<string | null>(null);
   const [titleError, setTitleError] = useState<string | null>(null);
   const [descError, setDescError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const titleEdit = useInlineEdit<string>(goal.title);
   const descEdit = useInlineEdit<string>(goal.description ?? "");
 
@@ -83,12 +84,14 @@ export function useGoalCard(goal: GoalWithChildren) {
     setTogglingStatus(true);
     const newStatus = status === GOAL_STATUS.COMPLETED ? GOAL_STATUS.ACTIVE : GOAL_STATUS.COMPLETED;
     const newProgress = newStatus === GOAL_STATUS.COMPLETED ? 100 : progress;
+    setStatusError(null);
     try {
       await patchGoal(goal.id, { status: newStatus, progress: newProgress });
       setStatus(newStatus);
       if (newStatus === GOAL_STATUS.COMPLETED) setProgress(100);
     } catch {
-      // state unchanged — user can retry
+      setStatusError("Failed to save — try again");
+      setTimeout(() => setStatusError(null), 4000);
     } finally {
       setTogglingStatus(false);
     }
@@ -98,11 +101,13 @@ export function useGoalCard(goal: GoalWithChildren) {
     if (abandoningStatus) return;
     setAbandoningStatus(true);
     const newStatus = status === GOAL_STATUS.ABANDONED ? GOAL_STATUS.ACTIVE : GOAL_STATUS.ABANDONED;
+    setStatusError(null);
     try {
       await patchGoal(goal.id, { status: newStatus });
       setStatus(newStatus);
     } catch {
-      // state unchanged — user can retry
+      setStatusError("Failed to save — try again");
+      setTimeout(() => setStatusError(null), 4000);
     } finally {
       setAbandoningStatus(false);
     }
@@ -121,7 +126,7 @@ export function useGoalCard(goal: GoalWithChildren) {
     addingChild, childTitle, savingChild, childError,
     titleEdit, descEdit,
     isClosed, isCompleted, isAbandoned,
-    titleError, descError,
+    titleError, descError, statusError,
     handleAddChild, commitTitle, commitDesc,
     toggleComplete, toggleAbandon,
     setAddingChild: (v: boolean) => { setAddingChild(v); if (!v) { setChildTitle(""); setChildError(null); } },
