@@ -121,5 +121,13 @@ export function shouldShowManualCapacityBanner(
   lastDecisionReason: AutoRerouteSkipReason | null,
 ): boolean {
   if (!automationOn) return true;
-  return lastDecisionReason === "all-tried" || lastDecisionReason === "no-fallback";
+  // Under autopilot, surface to the human whenever autopilot CANNOT act on its
+  // own — every fallback already tried, no installed fallback, or no live
+  // tab/agent to switch inside (a not-running project that hit a capacity wall;
+  // clicking Switch still persists the agent preference for the next launch).
+  // When autopilot CAN act, autoRerouteHandling renders the auto banner instead.
+  // A capacity wall must never be silently invisible.
+  return lastDecisionReason === "all-tried"
+    || lastDecisionReason === "no-fallback"
+    || lastDecisionReason === "tab-closed";
 }
