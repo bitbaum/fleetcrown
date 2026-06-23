@@ -26,6 +26,11 @@ import {
   resolveNextFallbackAgent,
   resolveOutgoingAgent,
 } from "@/lib/agent-resolution";
+import {
+  decideAutoReroute,
+  shouldShowManualCapacityBanner,
+  type AutoRerouteSkipReason,
+} from "@/lib/auto-reroute";
 
 export function ProjectCard({
   project,
@@ -118,6 +123,56 @@ export function ProjectCard({
     }
     await performAgentSwitch(agentId);
   };
+
+  // ── Auto-reroute ────────────────────────────────────────────────────────
+  // Under autopilot, hitting a capacity wall is a judgment-free step: switch to
+  // the next installed agent ourselves instead of waiting for a human click.
+  // Loop safety: AGENT_FALLBACK_ORDER cycles (grok→claude), so we track which
+  // agents we've already auto-tried THIS episode and stop (surfacing a manual
+  // banner) once exhausted rather than churning. We act once per distinct
+  // session state (mtime + outgoing agent) so a switch landing — which lags the
+  // session poll — doesn't re-trigger or flash a false "exhausted".
+  const autopilotOn = automationMode === "on";
+  const tabOpen = isProjectTabOpen(project, zellijTabs);
+  const autoTriedAgentsRef = useRef<Set<string>>(new Set());
+  const handledCapacitySignatureRef = useRef<string | null>(null);
+  const [autoRerouteReason, setAutoRerouteReason] = useState<AutoRerouteSkipReason | null>(null);
+
+  useEffect(() => {
+    if (!capacityIssue) {
+      autoTriedAgentsRef.current.clear();
+      handledCapacitySignatureRef.current = null;
+      setAutoRerouteReason(null);
+      return;
+    }
+    const signature = `${project.session?.mtime ?? ""}:${outgoingAgent ?? ""}`;
+    if (signature === handledCapacitySignatureRef.current) return;
+    handledCapacitySignatureRef.current = signature;
+
+    const decision = decideAutoReroute({
+      capacityIssue,
+      automationOn: autopilotOn,
+      tabOpen,
+      switchInFlight: switchingAgent,
+      suggestedFallback,
+      triedAgents: autoTriedAgentsRef.current,
+    });
+    if (decision.reroute) {
+      autoTriedAgentsRef.current.add(decision.toAgent);
+      setAutoRerouteReason(null);
+      void performAgentSwitch(decision.toAgent);
+    } else {
+      setAutoRerouteReason(decision.reason);
+    }
+    // performAgentSwitch is a stable closure over component state; the primitive
+    // deps below capture every signal that should re-run the decision.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capacityIssue, autopilotOn, tabOpen, switchingAgent, suggestedFallback, project.session?.mtime, outgoingAgent]);
+
+  // Autopilot is actively switching (or about to) — distinct from "can't act"
+  // skips like tab-closed, which surface no banner at all.
+  const autoRerouteHandling =
+    autopilotOn && capacityIssue && (autoRerouteReason === null || autoRerouteReason === "switch-in-flight");
 
   const [dismissed, setDismissed] = useState(false);
   const { enabled: autoContinueEnabled, toggle: toggleAutoContinue } = useAutoContinue(project.tab, project.autoContinueEnabled);
@@ -220,14 +275,24 @@ export function ProjectCard({
           : "border-border-subtle bg-surface-base"
       )}
     >
-      {capacityIssue && suggestedFallback && !capacityDismissed && (
-        <CapacityIssueBanner
-          currentAgentId={outgoingAgent ?? project.agentPref ?? "claude"}
-          nextAgentId={suggestedFallback}
-          switching={switchingAgent}
-          onSwitch={() => performAgentSwitch(suggestedFallback)}
-          onDismiss={() => setCapacityDismissed(true)}
-        />
+      {capacityIssue && suggestedFallback && (
+        autoRerouteHandling ? (
+          <CapacityIssueBanner
+            currentAgentId={outgoingAgent ?? project.agentPref ?? "claude"}
+            nextAgentId={suggestedFallback}
+            auto
+            onSwitch={() => {}}
+          />
+        ) : !capacityDismissed && shouldShowManualCapacityBanner(autopilotOn, autoRerouteReason) ? (
+          <CapacityIssueBanner
+            currentAgentId={outgoingAgent ?? project.agentPref ?? "claude"}
+            nextAgentId={suggestedFallback}
+            switching={switchingAgent}
+            exhausted={autopilotOn && autoRerouteReason === "all-tried"}
+            onSwitch={() => performAgentSwitch(suggestedFallback)}
+            onDismiss={() => setCapacityDismissed(true)}
+          />
+        ) : null
       )}
 
       <ProjectCardHeader
