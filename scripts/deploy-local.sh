@@ -28,14 +28,36 @@ if [ ! -d "$STANDALONE" ]; then
   exit 0
 fi
 
-# ── Copy runtime assets ───────────────────────────────────────────────────────
+# ── Copy runtime assets (atomic swap) ─────────────────────────────────────────
 # Next standalone tracing does not include client/static assets or markdown
-# loaded from process.cwd() by server-rendered content routes.
-rm -rf "$STANDALONE/.next/static" "$STANDALONE/public" "$STANDALONE/content"
-cp -r "$PROJECT_DIR/.next/static"  "$STANDALONE/.next/static"
-cp -r "$PROJECT_DIR/public"        "$STANDALONE/public"
-cp -r "$PROJECT_DIR/content"       "$STANDALONE/content"
-echo "→ deploy: runtime assets copied to standalone"
+# loaded from process.cwd() by server-rendered content routes, so we copy them
+# in here. The naive `rm -rf <dir>; cp -r <dir>` left a multi-second window where
+# the LIVE dir was missing/half-populated — the running server 500'd on
+# /whitepaper (reads content/*.md at request time) and served broken CSS/JS until
+# the copy finished. swap_dir builds the new tree in a sibling temp dir, then
+# renames it into place: the only window where the live dir is absent is between
+# two consecutive renames on the same filesystem (microseconds), not seconds.
+swap_dir() {
+  local src="$1" dest="$2"
+  [ -d "$src" ] || return 0
+  local tmp="${dest}.new.$$" old="${dest}.old.$$"
+  rm -rf "$tmp" "$old"
+  mkdir -p "$(dirname "$dest")"
+  cp -r "$src" "$tmp"                         # build full tree off to the side
+  if [ -e "$dest" ]; then mv "$dest" "$old"; fi  # live aside (instant)
+  mv "$tmp" "$dest"                           # new into place (instant)
+  rm -rf "$old"                               # drop the old copy after the switch
+}
+
+# Clear any swap temporaries left by a previously interrupted deploy.
+rm -rf "$STANDALONE/.next/static".new.* "$STANDALONE/.next/static".old.* \
+       "$STANDALONE/public".new.*        "$STANDALONE/public".old.* \
+       "$STANDALONE/content".new.*       "$STANDALONE/content".old.* 2>/dev/null || true
+
+swap_dir "$PROJECT_DIR/.next/static" "$STANDALONE/.next/static"
+swap_dir "$PROJECT_DIR/public"       "$STANDALONE/public"
+swap_dir "$PROJECT_DIR/content"      "$STANDALONE/content"
+echo "→ deploy: runtime assets swapped into standalone (atomic)"
 
 # ── node-pty native binary ────────────────────────────────────────────────────
 # node-pty (the LocalPtyExecutor that backs FleetCrown-owned agent PTYs) loads
@@ -47,9 +69,8 @@ echo "→ deploy: runtime assets copied to standalone"
 NODE_PTY_SRC="$PROJECT_DIR/node_modules/node-pty/build"
 NODE_PTY_DEST="$STANDALONE/node_modules/node-pty/build"
 if [ -d "$NODE_PTY_SRC" ] && [ -d "$STANDALONE/node_modules/node-pty" ]; then
-  rm -rf "$NODE_PTY_DEST"
-  cp -r "$NODE_PTY_SRC" "$NODE_PTY_DEST"
-  echo "→ deploy: node-pty native binary copied to standalone"
+  swap_dir "$NODE_PTY_SRC" "$NODE_PTY_DEST"
+  echo "→ deploy: node-pty native binary swapped into standalone (atomic)"
 fi
 
 # ── Schema-drift warning (non-fatal, read-only) ───────────────────────────────
