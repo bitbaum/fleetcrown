@@ -9,8 +9,32 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Loader2, X, Pencil, Trash2 } from "lucide-react";
+import { Plus, Loader2, X, Pencil, Trash2, Zap, Clock } from "lucide-react";
 import type { Project } from "./types";
+import type { PromptTemplate } from "@/config/prompt-library";
+import { RunModal } from "./RunModal";
+import { ScheduleModal } from "./ScheduleModal";
+
+/**
+ * Adapt a user-owned prompt into the PromptTemplate shape the existing
+ * RunModal / ScheduleModal consume. Run + Schedule are identical flows for
+ * user prompts and FC defaults — the only difference is where the body comes
+ * from — so we reuse the exact same modals instead of re-rolling the run UI.
+ *
+ * Scope mapping: the modals only understand "global" | "project". An "org"
+ * prompt has no per-project picker, so it runs as "global" (the body is the
+ * whole instruction; org just controls who can see it in the library).
+ */
+function asTemplate(p: UserPromptCard): PromptTemplate {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    category: "fleet",
+    scope: p.scope === "project" ? "project" : "global",
+    template: p.body,
+  };
+}
 
 export interface UserPromptCard {
   id: string;
@@ -39,6 +63,8 @@ export function UserPromptsSection({
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [scheduleId, setScheduleId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   async function handleDelete(id: string) {
@@ -53,6 +79,8 @@ export function UserPromptsSection({
   }
 
   const editingPrompt = editingId ? prompts.find((p) => p.id === editingId) ?? null : null;
+  const runningPrompt = runId ? prompts.find((p) => p.id === runId) ?? null : null;
+  const schedulingPrompt = scheduleId ? prompts.find((p) => p.id === scheduleId) ?? null : null;
 
   return (
     <section className="space-y-3">
@@ -119,6 +147,24 @@ export function UserPromptsSection({
                   <div className="flex shrink-0 gap-1">
                     <button
                       type="button"
+                      onClick={() => setRunId(p.id)}
+                      className="ui-btn-icon text-accent-text hover:text-accent-hover"
+                      aria-label="Run prompt"
+                      title="Run with Ivy"
+                    >
+                      <Zap className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setScheduleId(p.id)}
+                      className="ui-btn-icon"
+                      aria-label="Schedule prompt"
+                      title="Schedule as cron job"
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => { setIsCreating(false); setEditingId(p.id); }}
                       className="ui-btn-icon"
                       aria-label="Edit prompt"
@@ -142,9 +188,12 @@ export function UserPromptsSection({
                 <div className="flex flex-wrap gap-1.5 text-micro">
                   <span className="ui-tag">{p.scope}</span>
                   {projectName && <span className="ui-tag" title="Pinned to project">{projectName}</span>}
+                  {/* Only shown once a prompt has actually been run. runCount is
+                      schema-backed; until run-tracking writes it, this stays
+                      hidden rather than displaying a placeholder 0% metric. */}
                   {p.runCount > 0 && (
                     <span className="ui-tag" title={`${p.successCount} of ${p.runCount} runs succeeded`}>
-                      {p.runCount > 0 ? `${Math.round((p.successCount / p.runCount) * 100)}% · ${p.runCount} runs` : null}
+                      {`${Math.round((p.successCount / p.runCount) * 100)}% · ${p.runCount} runs`}
                     </span>
                   )}
                   {p.tags.slice(0, 3).map((t) => (
@@ -159,6 +208,21 @@ export function UserPromptsSection({
             );
           })}
         </div>
+      )}
+
+      {runningPrompt && (
+        <RunModal
+          template={asTemplate(runningPrompt)}
+          projects={projects}
+          onClose={() => setRunId(null)}
+        />
+      )}
+      {schedulingPrompt && (
+        <ScheduleModal
+          template={asTemplate(schedulingPrompt)}
+          projects={projects}
+          onClose={() => setScheduleId(null)}
+        />
       )}
     </section>
   );

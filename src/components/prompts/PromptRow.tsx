@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Zap, Clock, Globe, FolderOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Zap, Clock, Globe, FolderOpen, ChevronDown, ChevronUp, Check, Copy, Loader2 } from "lucide-react";
 import { usePromptModals } from "./use-prompt-modals";
+import { useForkPrompt } from "./use-fork-prompt";
 import type { PromptTemplate } from "@/config/prompt-library";
 import type { Project } from "./types";
 
@@ -16,6 +18,11 @@ export function PromptRow({
 }) {
   const { openRun, openSchedule, modals } = usePromptModals(template, projects);
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const { fork, state } = useForkPrompt(template, () =>
+    startTransition(() => router.refresh()),
+  );
 
   return (
     <>
@@ -45,6 +52,21 @@ export function PromptRow({
                 title="Preview prompt"
               >
                 {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              <button
+                onClick={fork}
+                disabled={state === "forking" || isPending}
+                className="ui-btn-overlay p-3 disabled:opacity-40"
+                title="Fork into your own prompts"
+                aria-label="Fork prompt"
+              >
+                {state === "forking" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : state === "done" ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
               </button>
               {template.suggestedSchedule && (
                 <button
