@@ -46,6 +46,36 @@ export function sessionFilePath(tab: string, adapter = "claude"): string {
   return path.join(agentSessionDir(adapter), `${tab}.md`);
 }
 
+/**
+ * Resolve the actual on-disk session file for a tab, tolerating case drift.
+ *
+ * The control poll reads handoffs by the LIVE zellij tab name (what
+ * resolveEffectiveTab returns, e.g. "Fleetcrown"), but agents/tooling write the
+ * handoff with their own casing ("FleetCrown.md"). A case-sensitive lookup
+ * misses the file, so parseSession returns null and the live completion signal
+ * is lost — which (among other things) leaves orchestration runs unclosed.
+ *
+ * Returns the exact-case path when it exists (fast path, no dir scan), otherwise
+ * the most-recently-modified case-insensitive match in the adapter's session dir
+ * (newest = the live handoff when several case variants linger), or null.
+ */
+export function resolveSessionFile(tab: string, adapter = "claude"): string | null {
+  const exact = sessionFilePath(tab, adapter);
+  if (fs.existsSync(exact)) return exact;
+  const dir = agentSessionDir(adapter);
+  const target = `${tab}.md`.toLowerCase();
+  let best: { path: string; mtimeMs: number } | null = null;
+  try {
+    for (const name of fs.readdirSync(dir)) {
+      if (name.toLowerCase() !== target) continue;
+      const full = path.join(dir, name);
+      const mtimeMs = fs.statSync(full).mtimeMs;
+      if (!best || mtimeMs > best.mtimeMs) best = { path: full, mtimeMs };
+    }
+  } catch { /* session dir missing */ }
+  return best?.path ?? null;
+}
+
 // ── State file helpers ────────────────────────────────────────────────────────
 // Single place where the /tmp/<name>-<tab> file names are defined for TypeScript.
 // Bash scripts in ~/.claude/hooks/ duplicate these as string literals — if you
