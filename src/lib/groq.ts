@@ -13,6 +13,9 @@ type GroqOptions = {
   temperature?: number;
   timeoutMs?: number;
   systemPrompt?: string;
+  /** Override the model (defaults to GROQ_FAST_MODEL). Lets a verifier run on a
+   *  different model than the generator — the first step of cross-model checking. */
+  model?: string;
 };
 
 /**
@@ -23,7 +26,7 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("GROQ_API_KEY not set");
 
-  const { maxTokens = 200, temperature = 0.2, timeoutMs = 10_000, systemPrompt } = options;
+  const { maxTokens = 200, temperature = 0.2, timeoutMs = 10_000, systemPrompt, model = GROQ_FAST_MODEL } = options;
 
   const messages: Array<{ role: string; content: string }> = [];
   if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
@@ -32,7 +35,7 @@ export async function callGroqText(prompt: string, options: GroqOptions = {}): P
   const res = await fetch(GROQ_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: GROQ_FAST_MODEL, messages, max_tokens: maxTokens, temperature }),
+    body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
     signal: AbortSignal.timeout(timeoutMs),
   });
 

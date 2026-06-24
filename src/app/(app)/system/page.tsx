@@ -5,6 +5,7 @@ import { ScheduledJobsCard } from "@/components/system/ScheduledJobsCard";
 import { MemorySummaryCard } from "@/components/system/MemorySummaryCard";
 import { RecentFailuresCard } from "@/components/system/RecentFailuresCard";
 import { FleetDoctorCard } from "@/components/system/FleetDoctorCard";
+import { FrontierProposalsCard } from "@/components/system/FrontierProposalsCard";
 import { RecentControlAuditCard } from "@/components/system/RecentControlAuditCard";
 import { GlobalAutoContinueCard } from "@/components/system/GlobalAutoContinueCard";
 import { CardSkeleton } from "@/components/ui/card";
@@ -38,6 +39,9 @@ export default async function SystemPage() {
       <PageLayout title="System" subtitle="Infrastructure health and scheduled jobs">
         <SystemStats />
         <FleetDoctorCard />
+        <Suspense fallback={<CardSkeleton />}>
+          <FrontierProposalsCard userId={userId} />
+        </Suspense>
         <GlobalAutoContinueCard />
         <ScheduledJobsCard initialJobs={jobs} />
         <Suspense fallback={<CardSkeleton />}>
