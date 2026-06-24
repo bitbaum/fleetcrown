@@ -41,7 +41,7 @@ Type=oneshot
 ExecStart=/opt/fleetcrown/fc-cron.sh %i
 SVC
 
-declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [send-digest-emails]="07:00" )
+declare -A SCHED=( [prune-debug-logs]="03:00" [nudge-idle]="04:00" [prune-agent-tokens]="05:00" [email-canary]="06:00" [send-digest-emails]="07:00" [frontier-digest]="08:00" )
 for name in "${!SCHED[@]}"; do
   cat > "/etc/systemd/system/fc-cron@${name}.timer" <<TIMER
 [Unit]
@@ -58,7 +58,7 @@ TIMER
 done
 
 systemctl daemon-reload
-for name in prune-debug-logs nudge-idle prune-agent-tokens email-canary send-digest-emails; do
+for name in prune-debug-logs nudge-idle prune-agent-tokens email-canary send-digest-emails frontier-digest; do
   systemctl enable --now "fc-cron@${name}.timer" >/dev/null 2>&1
 done
 

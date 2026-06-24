@@ -59,6 +59,7 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
           { label: "Download", href: "/download", description: "Linux app, dependencies, and setup path" },
           { label: "Whitepaper", href: "/whitepaper", description: "Architecture and control-plane details" },
           { label: "Thoughts", href: "/thoughts", description: "Technical essays and product thinking" },
+          { label: "Frontier", href: "/frontier", description: "Daily AI & robotics frontier digest" },
         ],
       },
       {
