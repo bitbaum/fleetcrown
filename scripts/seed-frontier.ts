@@ -3,7 +3,7 @@
 //
 //   DATABASE_URL=... GROQ_API_KEY=... npx tsx scripts/seed-frontier.ts
 
-import { runFrontierDigest } from "@/lib/frontier/run";
+import { runFrontierDigest, runFrontierProposals } from "@/lib/frontier/run";
 
 async function main() {
   const r = await runFrontierDigest();
@@ -12,8 +12,14 @@ async function main() {
   console.log(`  headline: ${r.saved.headline}`);
   for (const it of r.saved.items) {
     console.log(`   • [${it.category}] ${it.title}`);
-    console.log(`       ${it.summary}`);
-    console.log(`       ${it.url}`);
+  }
+
+  console.log("\n— self-improvement proposals —");
+  const p = await runFrontierProposals(r.saved);
+  if (p.skipped) {
+    console.log(`  skipped: ${p.skipped}`);
+  } else {
+    console.log(`  drafted ${p.drafted}, surfaced ${p.surfaced} (cleared the critique bar)`);
   }
 }
 
