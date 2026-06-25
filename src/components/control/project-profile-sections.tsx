@@ -109,10 +109,37 @@ function MetaRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
+// Human labels for profile attributes — so a shared profile reads like a brief,
+// not a raw key dump (definition_of_done → "Definition of done"). Order also
+// drives display order: the build-execution lens first (what an engineer/agent
+// needs), then the market lens.
+const ATTR_LABELS: Record<string, string> = {
+  vision: "Vision",
+  architecture: "Architecture",
+  conventions: "Conventions",
+  definition_of_done: "Definition of done",
+  next_step: "Next step",
+  customers: "Customers",
+  problem: "Problem",
+  solution: "Solution",
+  current_alternatives: "Current alternatives",
+  competitors: "Competitors",
+  complements_substitutes: "Complements & substitutes",
+  partnerships: "Partnerships",
+  potential_customers: "Potential customers",
+  expansion_ideas: "Expansion ideas",
+};
+const ATTR_ORDER = Object.keys(ATTR_LABELS);
+const attrLabel = (k: string) => ATTR_LABELS[k] ?? k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
 export function MetaSection({ profile }: { profile: NonNullable<ProjectState["profile"]> }) {
-  const extraAttrs = Object.entries(profile.attrs).filter(
-    ([k, v]) => v && !["mission", "stack", "status", "maturity", "url", "description"].includes(k)
-  );
+  const excluded = new Set(["mission", "stack", "status", "maturity", "url", "description"]);
+  const extraAttrs = Object.entries(profile.attrs)
+    .filter(([k, v]) => v && !excluded.has(k))
+    .sort(([a], [b]) => {
+      const ia = ATTR_ORDER.indexOf(a), ib = ATTR_ORDER.indexOf(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+    });
 
   return (
     <div className="space-y-5 px-4 pb-5 pt-4 sm:px-5">
@@ -157,7 +184,7 @@ export function MetaSection({ profile }: { profile: NonNullable<ProjectState["pr
         <div className="ui-panel overflow-hidden">
           {profile.stack && <MetaRow label="Stack">{profile.stack}</MetaRow>}
           {extraAttrs.map(([k, v]) => (
-            <MetaRow key={k} label={k.replace(/_/g, " ")}>{v}</MetaRow>
+            <MetaRow key={k} label={attrLabel(k)}>{v}</MetaRow>
           ))}
         </div>
       )}
