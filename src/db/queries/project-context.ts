@@ -14,8 +14,23 @@ import { entities, goals } from "@/db/schema";
 import type { Milestone } from "@/db/schema/goals";
 import { ENTITY_TYPE, GOAL_STATUS } from "@/lib/constants/statuses";
 import { renderOperatingPrinciples } from "@/config/operating-principles";
+import { fetchAttributesByEntityIds } from "./utils";
 
 const MAX_GOALS = 6;
+
+// The structured profile fields that drive HOW a project should be built —
+// injected into every dispatch so the agent works to the project's actual
+// mission, stack, architecture, conventions, and bar for "done", not generics.
+// The market-lens fields (competitors, expansion ideas, …) are for the human
+// operator, so they're deliberately excluded to keep the prompt focused + cheap.
+const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
+  ["mission", "Mission"],
+  ["vision", "Vision"],
+  ["stack", "Stack"],
+  ["architecture", "Architecture"],
+  ["conventions", "Conventions (how this project is built — follow these)"],
+  ["definition_of_done", "Definition of done (a change isn't finished until this holds)"],
+];
 
 /**
  * Formatted brief + active goals for a project, or null when the project has no
@@ -35,18 +50,29 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
   const entity = projectEntities.find((e) => e.name.toLowerCase() === projectKey.toLowerCase());
 
   if (entity) {
-    const activeGoals = await db
-      .select({ title: goals.title, progress: goals.progress, milestones: goals.milestones })
-      .from(goals)
-      .where(and(eq(goals.userId, userId), eq(goals.entityId, entity.id), eq(goals.status, GOAL_STATUS.ACTIVE)))
-      .orderBy(desc(goals.updatedAt))
-      .limit(MAX_GOALS);
+    const [activeGoals, attrsByEntity] = await Promise.all([
+      db
+        .select({ title: goals.title, progress: goals.progress, milestones: goals.milestones })
+        .from(goals)
+        .where(and(eq(goals.userId, userId), eq(goals.entityId, entity.id), eq(goals.status, GOAL_STATUS.ACTIVE)))
+        .orderBy(desc(goals.updatedAt))
+        .limit(MAX_GOALS),
+      fetchAttributesByEntityIds([entity.id]),
+    ]);
+    const attrs = attrsByEntity.get(entity.id) ?? {};
 
     const projectLines: string[] = [];
     // Some projects store their filesystem path in `description` — that's noise
     // in a prompt, so only include a real, prose brief (not a path).
     const briefText = entity.description?.trim();
     if (briefText && !briefText.startsWith("/")) projectLines.push(briefText);
+    // Structured profile — the build-driving fields the operator filled. Without
+    // these, "next best" is judged on description + goals alone; with them, the
+    // agent knows the stack, architecture, conventions, and what "done" means.
+    for (const [key, label] of DRIVING_FIELDS) {
+      const v = attrs[key]?.trim();
+      if (v) projectLines.push(`${label}: ${v}`);
+    }
     if (activeGoals.length > 0) {
       projectLines.push("Active goals (the roadmap — aim work at these, highest-impact first):");
       for (const g of activeGoals) {

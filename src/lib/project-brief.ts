@@ -30,6 +30,12 @@ export const ExtractedProfileSchema = z.object({
   stack: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   status: z.string().trim().min(1).max(60).optional(),
   next_step: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  // Build-execution lens — how an agent should build this project correctly.
+  // Injected into every autopilot dispatch (project-context.ts DRIVING_FIELDS),
+  // so the project is driven in the right direction without re-deriving each run.
+  architecture: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  conventions: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
+  definition_of_done: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
   // Market lens — the "nerd out on your project" dimensions. Same storage
   // (attributes table), so they're inline-editable like everything else.
   problem: z.string().trim().min(1).max(FIELD_LIMIT).optional(),
@@ -53,6 +59,9 @@ Respond with ONLY a JSON object — no prose, no markdown fences. Allowed keys:
 - "stack": technologies used, comma-separated (max 200 chars)
 - "status": current state in 1-4 words, e.g. "Production", "MVP", "Idea" (max 40 chars)
 - "next_step": the owner's single most important next build/business action (max 300 chars) — never installation or usage instructions aimed at readers
+- "architecture": the key building blocks and how they fit — main modules/services, data stores, external integrations (max 400 chars). Only from the text/README; omit if unknown.
+- "conventions": how this project is built — patterns, rules, do's and don'ts an engineer must follow (e.g. "Drizzle not Prisma", "server components by default", "never edit generated files") (max 400 chars). Only from the text/README; omit if unknown.
+- "definition_of_done": the bar a change must clear to be finished — e.g. "tsc + lint clean, tests pass, deploys green" (max 300 chars). Only from the text/README; omit if unknown.
 - "problem": the concrete problem being solved, from the user's point of view (max 400 chars)
 - "solution": how this project solves that problem — the offered approach (max 400 chars)
 - "current_alternatives": how people solve this problem today without the project (max 400 chars)
