@@ -13,6 +13,7 @@ import Link from "next/link";
 import { ArrowLeft, Loader2, GitBranch, Check, Copy } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { TEMPLATES, type TemplateId } from "@/lib/project-templates";
+import { setDraft } from "@/lib/draft-storage";
 
 type CreateResponse = {
   ok: boolean;
@@ -27,6 +28,8 @@ type CreateResponse = {
   };
   template?: TemplateId;
   templateSeeded?: boolean;
+  infra?: string[];
+  firstTask?: string;
   cloneCmd?: string;
   cloneHttpsCmd?: string;
   error?: string;
@@ -43,7 +46,16 @@ export default function NewFromScratchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreateResponse | null>(null);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<"ssh" | "https" | null>(null);
+  const [copied, setCopied] = useState<"ssh" | "https" | "task" | null>(null);
+
+  function startBuilding(firstTask: string, projectName: string) {
+    // Prime the project's dispatch box via the same per-tab draft store the
+    // ProjectCard reads on mount (getDraft) — so when the project appears in
+    // Control (once a runner has cloned it), its box is already filled with the
+    // setup task. One less copy-paste; zero new plumbing.
+    setDraft(projectName, firstTask);
+    router.push("/control");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -84,7 +96,7 @@ export default function NewFromScratchPage() {
     }
   }
 
-  async function copy(text: string, kind: "ssh" | "https") {
+  async function copy(text: string, kind: "ssh" | "https" | "task") {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(kind);
@@ -97,8 +109,13 @@ export default function NewFromScratchPage() {
   // ── Result view ─────────────────────────────────────────────────────────
 
   if (result?.ok && result.repo && result.project) {
+    const seededLabel = result.template && result.template !== "bare" && result.templateSeeded
+      ? TEMPLATES[result.template].label
+      : null;
+    const infra = result.infra ?? [];
+    const firstTask = result.firstTask ?? "";
     return (
-      <PageLayout title="Project created 🎉">
+      <PageLayout title="Project ready">
         <div className="space-y-6 max-w-2xl">
           <div>
             <Link href="/control" className="ui-btn-ghost inline-flex items-center gap-1 text-sm">
@@ -108,98 +125,116 @@ export default function NewFromScratchPage() {
           </div>
 
           <div className="ui-card-shell space-y-5 p-6">
+            {/* What FleetCrown already did, automatically */}
             <div>
               <h2 className="ui-page-subtitle">{result.project.name}</h2>
-              <p className="text-sm text-text-muted mt-1">
-                GitHub repo created ({result.repo.private ? "private" : "public"}) and registered in FleetCrown
-                {result.template && result.template !== "bare" && result.templateSeeded && (
-                  <> · seeded with the <strong>{TEMPLATES[result.template].label}</strong> starter</>
+              <p className="text-sm text-text-muted mt-1">FleetCrown set these up for you:</p>
+              <ul className="mt-3 space-y-1.5">
+                <li className="flex items-start gap-2 text-sm text-text-secondary">
+                  <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
+                  <span>
+                    <GitBranch className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                    {result.repo.private ? "Private" : "Public"} GitHub repo{" "}
+                    <a href={result.repo.gitUrl} target="_blank" rel="noopener noreferrer" className="text-accent underline break-all">
+                      {result.repo.full_name}
+                    </a>
+                  </span>
+                </li>
+                {seededLabel && (
+                  <li className="flex items-start gap-2 text-sm text-text-secondary">
+                    <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
+                    <span><strong>{seededLabel}</strong> starter scaffolded into the repo</span>
+                  </li>
                 )}
                 {result.template && result.template !== "bare" && !result.templateSeeded && (
-                  <> · template seeding failed (repo is bare with just a README — sorry, run <code className="text-xs">npx create-next-app</code> in your clone)</>
+                  <li className="flex items-start gap-2 text-sm text-status-warning">
+                    <span>⚠ Starter seeding failed — the repo has just a README; the agent will scaffold the stack instead.</span>
+                  </li>
                 )}
-                .
-              </p>
+                <li className="flex items-start gap-2 text-sm text-text-secondary">
+                  <Check className="h-4 w-4 mt-0.5 shrink-0 text-status-positive" />
+                  <span>Registered as a FleetCrown project (it&apos;s in Control now)</span>
+                </li>
+              </ul>
             </div>
 
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-text-primary">
-                <GitBranch className="inline h-4 w-4 mr-1 -mt-0.5" />
-                Repo
+            {/* The bridge: start building it on autopilot */}
+            <div className="pt-4 border-t border-border-subtle space-y-3">
+              <div>
+                <div className="text-sm font-medium text-text-primary">Now build it on autopilot</div>
+                <p className="text-sm text-text-muted mt-1">
+                  Dispatch the first task and an agent takes it from scaffold to running — setting up
+                  {infra.length > 0 ? " " : " everything it needs"}
+                  {infra.length > 0 && (
+                    <span className="inline-flex flex-wrap gap-1.5 align-middle ml-1">
+                      {infra.map((i) => (
+                        <span key={i} className="ui-tag text-xs">{i}</span>
+                      ))}
+                    </span>
+                  )}.
+                </p>
               </div>
-              <a
-                href={result.repo.gitUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-accent underline break-all"
-              >
-                {result.repo.gitUrl}
-              </a>
-            </div>
 
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-text-primary">Clone to your machine</div>
-              <div className="relative">
-                <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-xs text-text-secondary">
-                  <code>{result.cloneCmd}</code>
-                </pre>
-                <button
-                  type="button"
-                  onClick={() => copy(result.cloneCmd ?? "", "ssh")}
-                  className="absolute top-2 right-2 ui-btn-icon"
-                  title="Copy SSH clone command"
-                >
-                  {copied === "ssh" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-              </div>
-              <details className="text-xs text-text-tertiary">
-                <summary className="cursor-pointer">HTTPS clone (no SSH key required)</summary>
-                <div className="relative mt-2">
-                  <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-xs text-text-secondary">
-                    <code>{result.cloneHttpsCmd}</code>
+              {firstTask && (
+                <div className="relative">
+                  <div className="text-xs text-text-tertiary mb-1">The agent&apos;s first task</div>
+                  <pre className="ui-card-shell p-3 pr-10 overflow-x-auto whitespace-pre-wrap text-xs text-text-secondary">
+                    <code>{firstTask}</code>
                   </pre>
                   <button
                     type="button"
-                    onClick={() => copy(result.cloneHttpsCmd ?? "", "https")}
-                    className="absolute top-2 right-2 ui-btn-icon"
+                    onClick={() => copy(firstTask, "task")}
+                    className="absolute top-7 right-2 ui-btn-icon"
+                    title="Copy first task"
                   >
-                    {copied === "https" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied === "task" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
                 </div>
-              </details>
+              )}
+
+              <div className="ui-card-shell p-3 text-xs text-text-muted">
+                The one thing FleetCrown can&apos;t do for you: run code on your machine.{" "}
+                <Link href="/download" className="text-accent underline">Connect Fleet Runner</Link>{" "}
+                on the machine you&apos;ll build from — it clones the repo and runs this task automatically. No runner yet? The task queues until one connects.
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => { setResult(null); setName(""); setDescription(""); }} className="ui-btn-ghost">
+                  Create another
+                </button>
+                <button type="button" onClick={() => startBuilding(firstTask, result.project!.name)} className="ui-btn-primary">
+                  Open in Control →
+                </button>
+              </div>
             </div>
 
-            <details className="text-xs text-text-tertiary">
-              <summary className="cursor-pointer">After cloning — open in editor</summary>
-              <p className="mt-2 mb-1 text-text-muted">
-                These deeplinks assume you cloned to{" "}
-                <code className="px-1 rounded bg-surface-base">~/dev/{result.repo.name}</code> (default).
-                The browser will hand the URL to your editor if it&apos;s installed.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <a
-                  href={`cursor://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
-                  className="ui-btn-secondary text-xs"
-                >
-                  Open in Cursor
-                </a>
-                <a
-                  href={`vscode://file/${encodeURIComponent("~/dev/" + result.repo.name)}`}
-                  className="ui-btn-secondary text-xs"
-                >
-                  Open in VS Code
-                </a>
+            {/* Escape hatch for local-first builders */}
+            <details className="text-xs text-text-tertiary pt-2 border-t border-border-subtle">
+              <summary className="cursor-pointer">Prefer to set it up by hand?</summary>
+              <div className="mt-3 space-y-3">
+                <div className="relative">
+                  <div className="text-text-muted mb-1">Clone it yourself</div>
+                  <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-text-secondary">
+                    <code>{result.cloneCmd}</code>
+                  </pre>
+                  <button type="button" onClick={() => copy(result.cloneCmd ?? "", "ssh")} className="absolute top-7 right-2 ui-btn-icon">
+                    {copied === "ssh" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                  </button>
+                  <div className="relative mt-2">
+                    <pre className="ui-card-shell p-3 pr-10 overflow-x-auto text-text-secondary">
+                      <code>{result.cloneHttpsCmd}</code>
+                    </pre>
+                    <button type="button" onClick={() => copy(result.cloneHttpsCmd ?? "", "https")} className="absolute top-2 right-2 ui-btn-icon">
+                      {copied === "https" ? <Check className="h-3.5 w-3.5 text-status-positive" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a href={`cursor://file/${encodeURIComponent("~/dev/" + result.repo.name)}`} className="ui-btn-secondary text-xs">Open in Cursor</a>
+                  <a href={`vscode://file/${encodeURIComponent("~/dev/" + result.repo.name)}`} className="ui-btn-secondary text-xs">Open in VS Code</a>
+                </div>
               </div>
             </details>
-
-            <div className="pt-3 border-t border-border-subtle flex justify-end gap-2">
-              <button type="button" onClick={() => router.push("/control")} className="ui-btn-secondary">
-                Open Control
-              </button>
-              <button type="button" onClick={() => { setResult(null); setName(""); setDescription(""); }} className="ui-btn-ghost">
-                Create another
-              </button>
-            </div>
           </div>
         </div>
       </PageLayout>
