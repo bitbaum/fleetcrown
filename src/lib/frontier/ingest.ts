@@ -52,14 +52,15 @@ async function fetchText(url: string): Promise<string> {
   return res.text();
 }
 
-async function ingestArxiv(src: Extract<FrontierSource, { kind: "arxiv" }>): Promise<FrontierCandidate[]> {
+// Generic RSS/Atom parser — works for arXiv category feeds and lobste.rs alike.
+async function ingestRss(src: Extract<FrontierSource, { kind: "rss" }>): Promise<FrontierCandidate[]> {
   const xml = await fetchText(src.url);
   const blocks = xml.split(/<item[\s>]/i).slice(1).map((b) => b.split(/<\/item>/i)[0]);
   const out: FrontierCandidate[] = [];
   for (const block of blocks.slice(0, src.max)) {
     const url = stripTags(tag(block, "link"));
     const rawTitle = stripTags(tag(block, "title"));
-    // arXiv titles end with " (arXiv:NNNN [cs.XX])" — drop that tail.
+    // arXiv titles end with " (arXiv:NNNN [cs.XX])" — drop that tail (no-op elsewhere).
     const title = rawTitle.replace(/\s*\(arXiv:[^)]*\)\s*$/i, "").trim();
     if (!url || !title) continue;
     out.push({
@@ -115,13 +116,39 @@ export type IngestResult = {
   sourcesFailed: number;
 };
 
-/** Fetch every source, merge, dedupe, sort by score (HN points first). */
+// Interleave candidates round-robin across sources so the top of the pool is
+// balanced. A pure score sort would put every HN story (points) ahead of every
+// arXiv paper (score 0), starving the agent/software-eng feeds that matter most
+// for the proposal loop. Round-robin guarantees each source reaches the ranker
+// while still preferring higher-scored items within each source.
+function balancedMerge(candidates: FrontierCandidate[]): FrontierCandidate[] {
+  const bySource = new Map<string, FrontierCandidate[]>();
+  for (const c of candidates) {
+    const arr = bySource.get(c.source) ?? [];
+    arr.push(c);
+    bySource.set(c.source, arr);
+  }
+  const queues = [...bySource.values()].map((arr) => arr.sort((a, b) => b.score - a.score));
+  const out: FrontierCandidate[] = [];
+  let added = true;
+  while (added) {
+    added = false;
+    for (const q of queues) {
+      const next = q.shift();
+      if (next) { out.push(next); added = true; }
+    }
+  }
+  return out;
+}
+
+/** Fetch every source, merge, dedupe, and interleave so every source is
+ *  represented near the top (not drowned out by HN's point scores). */
 export async function ingestFrontier(nowMs = Date.now()): Promise<IngestResult> {
   const cutoff = Math.floor(nowMs / 1000) - HN_LOOKBACK_SECONDS;
 
   const settled = await Promise.allSettled(
     FRONTIER_SOURCES.map((src) =>
-      src.kind === "arxiv" ? ingestArxiv(src) : ingestHn(src, cutoff),
+      src.kind === "rss" ? ingestRss(src) : ingestHn(src, cutoff),
     ),
   );
 
@@ -139,6 +166,6 @@ export async function ingestFrontier(nowMs = Date.now()): Promise<IngestResult> 
     }
   }
 
-  const candidates = [...seen.values()].sort((a, b) => b.score - a.score);
+  const candidates = balancedMerge([...seen.values()]);
   return { candidates, sourcesOk, sourcesFailed };
 }
