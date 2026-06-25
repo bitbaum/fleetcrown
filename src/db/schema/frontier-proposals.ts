@@ -17,7 +17,10 @@ export const frontierProposals = pgTable("frontier_proposals", {
   rationale:     text("rationale").notNull(),
   /** URLs of the digest items that inspired this proposal (real links). */
   sourceUrls:    jsonb("source_urls").$type<string[]>().notNull(),
+  /** Consensus score = the lowest score across the judge panel (conservative). */
   score:         integer("score").notNull(),
+  /** Per-judge breakdown from the cross-model panel: which models scored it what. */
+  verifierScores: jsonb("verifier_scores").$type<{ model: string; score: number }[]>(),
   /** "proposed" | "accepted" | "dismissed" */
   status:        text("status").notNull().default("proposed"),
   /** Set when accepted — the goal this proposal became. */
