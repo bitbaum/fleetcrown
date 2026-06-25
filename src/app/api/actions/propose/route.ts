@@ -21,7 +21,7 @@ const ProposeActionBody = z.object({
 
 /**
  * Producer seam for Loki's action queue. Enqueues a status='draft' action that
- * George must approve before anything executes (IRON RULE — see schema/actions.ts).
+ * the operator must approve before anything executes (IRON RULE — see schema/actions.ts).
  * This is the entry point the future "handle X" loop calls; nothing here executes.
  */
 export async function POST(req: NextRequest) {

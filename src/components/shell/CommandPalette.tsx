@@ -81,7 +81,7 @@ export function CommandPalette() {
   );
 
   // Fire-and-forget the resolved instruction into the project's agent session
-  // (George's call: dispatch goes to the existing session, not a new one).
+  // (the operator's call: dispatch goes to the existing session, not a new one).
   const dispatchInject = useCallback(async (projectKey: string, prompt: string) => {
     setBusy(true);
     setNote(null);

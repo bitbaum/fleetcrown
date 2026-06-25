@@ -30,7 +30,7 @@ export function parseAliases(raw: string): string[] {
   }
 }
 
-// "relationship_to_george" → "Relationship to george"
+// "relationship_to_team" → "Relationship to team"
 export function formatKey(key: string): string {
   return key.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 }

@@ -2,7 +2,7 @@
  * NL command resolution for the Loki command composer (SSOT).
  *
  * Turns a plain-language input into a routable decision, per the design in
- * docs/loki-command-surface.md and George's calls:
+ * docs/loki-command-surface.md and the operator's calls:
  *   - chat vs command: route each input to one or the other.
  *   - ask when ambiguous: a command with no resolvable project sets
  *     needsProject=true so the UI asks instead of guessing.

@@ -72,7 +72,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
       }
 
       case ACTION_TYPE.SEND_MESSAGE: {
-        // External + irreversible. Slice 2 enables Telegram ONLY, to George HIMSELF only.
+        // External + irreversible. Slice 2 enables Telegram ONLY, to the operator HIMSELF only.
         const payload = action.payload ?? {};
         const channel =
           (typeof payload.channel === "string" && payload.channel.trim()) || "telegram";
@@ -86,7 +86,7 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
 
         const requested = typeof payload.to === "string" ? payload.to : null;
         if (!isAllowedTelegramTarget(requested)) {
-          // Self-only guardrail: refuse any recipient but George until widened.
+          // Self-only guardrail: refuse any recipient but the operator until widened.
           await recordActionAuditEvent(userId, action, "deferred", {
             reason: `recipient not in self-only allowlist: ${requested ?? "(none)"}`,
           });

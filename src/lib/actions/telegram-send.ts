@@ -5,7 +5,7 @@ export type SendResult = { ok: boolean; messageId?: string; error?: string };
 const TELEGRAM_API = "https://api.telegram.org";
 
 /**
- * George's own Telegram chat id — the ONLY allowed recipient in the self-only phase.
+ * the operator's own Telegram chat id — the ONLY allowed recipient in the self-only phase.
  * Sourced from TELEGRAM_CHAT_ID (env, via constants). Null when unset => no allowed
  * recipient => every send is blocked (fail-closed; we never guess a target).
  */
@@ -14,7 +14,7 @@ export function selfTelegramTarget(): string | null {
 }
 
 /**
- * Self-only allowlist guardrail. In this slice Loki may send to George HIMSELF only.
+ * Self-only allowlist guardrail. In this slice Loki may send to the operator HIMSELF only.
  * A requested target is allowed iff it is empty (defaults to self) or equals the
  * configured self chat id. Any other recipient is refused until the allowlist is
  * deliberately widened — directly bounds the blast radius (no spamming real contacts).

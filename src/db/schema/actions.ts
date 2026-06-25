@@ -27,7 +27,7 @@ export type ActionPayload = {
  * Action Queue — Loki's hands.
  *
  * IRON RULE: Nothing with status 'draft' ever executes.
- * Only 'approved' actions are executed. George must review every draft.
+ * Only 'approved' actions are executed. the operator must review every draft.
  * Status flow: draft → approved → executed (or draft → rejected)
  * There is no auto-approve. There is no bypass.
  */
@@ -40,10 +40,10 @@ export const actions = pgTable("actions", {
 
   // Workflow status — the critical field
   status: text("status").$type<ActionStatus>().notNull().default(ACTION_STATUS.DRAFT),
-  // draft     = Loki proposes, George hasn't seen it yet
-  // approved  = George said yes, ready to execute
+  // draft     = Loki proposes, the operator hasn't seen it yet
+  // approved  = the operator said yes, ready to execute
   // executed  = Done, action was taken
-  // rejected  = George said no
+  // rejected  = the operator said no
   // expired   = Too old, no longer relevant
 
   // What Loki wants to do
