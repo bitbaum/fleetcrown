@@ -255,10 +255,9 @@ export default function NewFromScratchPage() {
 
         <div className="ui-card-shell space-y-5 p-6">
           <div>
-            <h2 className="ui-page-subtitle">Start fresh — GitHub repo + FleetCrown project</h2>
+            <h2 className="ui-page-subtitle">Start a new project</h2>
             <p className="text-sm text-text-muted mt-1">
-              Creates a brand-new GitHub repo (with README) and registers it as a FleetCrown project.
-              No local runtime needed — clone it to your machine when you&apos;re ready.
+              Name it and say what you want to build. FleetCrown creates the GitHub repo and — unless you choose otherwise below — picks the best stack and sets it up for you. No technical decisions required.
             </p>
           </div>
 
@@ -268,87 +267,78 @@ export default function NewFromScratchPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Name</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Project name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="catsitting-startup"
+                placeholder="catsitting-marketplace"
                 autoFocus
                 required
                 maxLength={80}
                 className="ui-input w-full"
               />
-              <p className="text-xs text-text-tertiary mt-1">
-                Used as both the GitHub repo name (lowercase, hyphens) and the FleetCrown project display name.
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-1">Description (optional)</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">What do you want to build?</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="A peer-to-peer marketplace for catsitters."
+                placeholder="A peer-to-peer marketplace where cat owners find trusted sitters nearby."
                 maxLength={300}
-                rows={2}
+                rows={3}
                 className="ui-input w-full resize-y"
               />
+              <p className="text-xs text-text-tertiary mt-1">
+                Plain English. The agent uses this to choose the stack and build the first version.
+              </p>
             </div>
 
-            <div>
-              <div className="text-sm font-medium text-text-primary mb-1">Visibility</div>
-              <div className="flex gap-2">
-                <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
-                  <input
-                    type="radio"
-                    name="visibility"
-                    value="private"
-                    checked={visibility === "private"}
-                    onChange={() => setVisibility("private")}
-                  />
-                  <div>
-                    <div className="text-sm font-medium">Private</div>
-                    <div className="text-xs text-text-muted">Only you can see this repo.</div>
+            {/* Advanced — collapsed by default so a non-technical user never has to
+                choose a stack. Defaults: private repo + agent picks the stack. */}
+            <details className="ui-card-shell px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium text-text-secondary">
+                Advanced — choose the stack &amp; visibility yourself
+              </summary>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <div className="text-sm font-medium text-text-primary mb-1">Visibility</div>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
+                      <input type="radio" name="visibility" value="private" checked={visibility === "private"} onChange={() => setVisibility("private")} />
+                      <div>
+                        <div className="text-sm font-medium">Private</div>
+                        <div className="text-xs text-text-muted">Only you can see this repo.</div>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
+                      <input type="radio" name="visibility" value="public" checked={visibility === "public"} onChange={() => setVisibility("public")} />
+                      <div>
+                        <div className="text-sm font-medium">Public</div>
+                        <div className="text-xs text-text-muted">Anyone can find and read it.</div>
+                      </div>
+                    </label>
                   </div>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer flex-1 ui-card-shell p-3">
-                  <input
-                    type="radio"
-                    name="visibility"
-                    value="public"
-                    checked={visibility === "public"}
-                    onChange={() => setVisibility("public")}
-                  />
-                  <div>
-                    <div className="text-sm font-medium">Public</div>
-                    <div className="text-xs text-text-muted">Anyone can find and read it.</div>
-                  </div>
-                </label>
-              </div>
-            </div>
+                </div>
 
-            <div>
-              <div className="text-sm font-medium text-text-primary mb-1">Starter</div>
-              <div className="space-y-2">
-                {Object.values(TEMPLATES).map((t) => (
-                  <label key={t.id} className="flex items-start gap-2 cursor-pointer ui-card-shell p-3">
-                    <input
-                      type="radio"
-                      name="template"
-                      value={t.id}
-                      checked={template === t.id}
-                      onChange={() => setTemplate(t.id)}
-                      className="mt-1"
-                    />
-                    <div>
-                      <div className="text-sm font-medium">{t.label}</div>
-                      <div className="text-xs text-text-muted">{t.description}</div>
-                    </div>
-                  </label>
-                ))}
+                <div>
+                  <div className="text-sm font-medium text-text-primary mb-1">Starter</div>
+                  <p className="text-xs text-text-tertiary mb-2">Leave on <strong>Empty</strong> and the agent picks the stack that fits your idea.</p>
+                  <div className="space-y-2">
+                    {Object.values(TEMPLATES).map((t) => (
+                      <label key={t.id} className="flex items-start gap-2 cursor-pointer ui-card-shell p-3">
+                        <input type="radio" name="template" value={t.id} checked={template === t.id} onChange={() => setTemplate(t.id)} className="mt-1" />
+                        <div>
+                          <div className="text-sm font-medium">{t.label}</div>
+                          <div className="text-xs text-text-muted">{t.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
+            </details>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-border-subtle">
               <Link href="/control" className="ui-btn-ghost">Cancel</Link>
@@ -363,7 +353,7 @@ export default function NewFromScratchPage() {
                     Creating…
                   </>
                 ) : (
-                  <>Create repo + project</>
+                  <>Create project →</>
                 )}
               </button>
             </div>
