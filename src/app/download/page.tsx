@@ -8,7 +8,7 @@ import { isFleetRunnerRequest } from "@/lib/fleet-runner";
 import { ROUTES } from "@/config/auth";
 
 export const metadata = {
-  title: "Download Fleet Runner — FleetCrown",
+  title: "Download Fleet Runner",
   description: DESKTOP_DOWNLOAD.hero.lede,
 };
 

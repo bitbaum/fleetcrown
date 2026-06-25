@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 import { CURRENT_RELEASE } from "@/config/changelog";
+import { APP_NAME } from "@/config/brand";
 
 // Build identity baked in at compile time (see next.config.ts). SHA is the
 // precise "which build is this"; CURRENT_RELEASE.version is the SSOT product
@@ -41,7 +42,7 @@ export function BrandVersion() {
   const label = desktopVersion ? `Fleet Runner v${desktopVersion}` : `v${VERSION}`;
   const tooltip = desktopVersion
     ? `Fleet Runner v${desktopVersion} (desktop) · web v${VERSION} · build ${SHA} — view changelog`
-    : `FleetCrown v${VERSION} · build ${SHA} — view changelog`;
+    : `${APP_NAME} v${VERSION} · build ${SHA} — view changelog`;
 
   return (
     <Link

@@ -2,7 +2,7 @@ import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
-  title: "Privacy — FleetCrown",
+  title: "Privacy",
   description: "What FleetCrown collects, why, and what you can do about it.",
 };
 

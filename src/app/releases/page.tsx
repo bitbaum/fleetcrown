@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { FLEET_RUNNER_RELEASES, CURRENT_RELEASE } from "@/config/changelog";
+import { APP_NAME } from "@/config/brand";
 
 export const metadata = {
-  title: "Changelog — FleetCrown",
+  title: "Changelog",
   description: "Fleet Runner changelog. Every shipped version, what changed, and why.",
 };
 
@@ -21,7 +22,7 @@ export default function ReleasesPage() {
   return (
     <div className="ui-changelog-root">
       <nav className="ui-changelog-nav">
-        <Link href="/" className="ui-changelog-brand">FleetCrown</Link>
+        <Link href="/" className="ui-changelog-brand">{APP_NAME}</Link>
         <Link href="/sign-in" className="ui-changelog-nav-link">Sign in →</Link>
       </nav>
       <div className="ui-changelog-page">

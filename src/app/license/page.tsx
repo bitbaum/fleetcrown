@@ -2,7 +2,7 @@ import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
-  title: "License — FleetCrown",
+  title: "License",
   description: "How FleetCrown source and binaries may be used.",
 };
 

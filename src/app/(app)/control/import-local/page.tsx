@@ -8,7 +8,7 @@ import { PageLayout } from "@/components/ui/page-layout";
 import { CopyableCommand } from "@/components/control/CopyableCommand";
 import { APP_URL } from "@/config/brand";
 
-export const metadata = { title: "Import from local ~/dev — FleetCrown" };
+export const metadata = { title: "Import from local ~/dev" };
 
 export default function ImportFromLocalPage() {
   const command = `curl -sS ${APP_URL}/import-from-local.sh \\

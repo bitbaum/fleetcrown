@@ -8,6 +8,7 @@ import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { DesktopDownload } from "@/components/public/DesktopDownload";
 import { PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE } from "@/config/marketing-content";
 import {
+  APP_NAME,
   MARKETING_TAGLINE,
   MARKETING_SUBTITLE,
   MARKETING_HERO_PRIMARY,
@@ -70,7 +71,7 @@ export default async function LandingPage() {
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
-              {signedIn ? "Open FleetCrown" : "Start building"}
+              {signedIn ? `Open ${APP_NAME}` : "Start building"}
             </Link>
             {!insideRunner && (
               <Link href="/download" className="ui-public-cta-ghost">
@@ -123,7 +124,7 @@ export default async function LandingPage() {
               <h2 className="ui-public-display-lg mt-4">One control plane. Local execution.</h2>
             </div>
             <p className="ui-public-section-lede md:justify-self-end">
-              FleetCrown is built for operators already running multiple AI agents across multiple projects. It makes the work visible, steerable, and recoverable.
+              {APP_NAME} is built for operators already running multiple AI agents across multiple projects. It makes the work visible, steerable, and recoverable.
             </p>
           </div>
 
@@ -289,7 +290,7 @@ export default async function LandingPage() {
 
       <div className="border-t border-border-subtle py-20 text-center">
         <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta-lg">
-          {signedIn ? "Open FleetCrown" : "Begin"}
+          {signedIn ? `Open ${APP_NAME}` : "Begin"}
         </Link>
         <p className="ui-public-meta mt-4">For builders running real agent operations.</p>
       </div>

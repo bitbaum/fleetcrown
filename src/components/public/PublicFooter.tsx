@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CURRENT_RELEASE } from "@/config/changelog";
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
+import { APP_NAME } from "@/config/brand";
 
 // PublicFooter — links to legal pages and support surfaces on every
 // unauthenticated marketing page. Rendered by PublicSurface so individual
@@ -77,7 +78,7 @@ export function PublicFooter() {
         ))}
       </div>
       <div className="ui-public-footer-bottom">
-        <div>© {new Date().getFullYear()} FleetCrown · Mao Nakamoto</div>
+        <div>© {new Date().getFullYear()} {APP_NAME} · Mao Nakamoto</div>
         <Link href="/releases" className="ui-public-link font-mono">
           Fleet Runner v{CURRENT_RELEASE.version}
         </Link>

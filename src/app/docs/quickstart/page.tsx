@@ -3,7 +3,7 @@ import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 
 export const metadata = {
-  title: "Quickstart — FleetCrown",
+  title: "Quickstart",
   description: "From zero to dispatching your first agent in 5 minutes.",
 };
 
