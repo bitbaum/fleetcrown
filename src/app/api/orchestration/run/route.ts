@@ -23,7 +23,8 @@ import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, updateOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { consumeProjectPrompt, getProjectState, persistProjectRuntimeIfNewer, prependProjectPrompt } from "@/db/queries/project-states";
-import { getSessionUserId } from "@/lib/session";
+import { getApiUserId } from "@/lib/session";
+import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { enqueueDispatchCommand } from "@/db/queries/pending-commands";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
@@ -34,8 +35,10 @@ import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
   projectKey: z.string().trim().min(1).max(120),
-  projectPath: z.string().trim().min(1).max(500),
-  adapter: z.enum(ORCHESTRATION_ADAPTER_IDS).default("openclaw"),
+  // Optional: when omitted (e.g. Loki's loki_dispatch by name), the server
+  // resolves projectPath + adapter from the user's project registry.
+  projectPath: z.string().trim().min(1).max(500).optional(),
+  adapter: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   intent: z.enum(ORCHESTRATION_TASK_INTENT_IDS),
   model: z.string().trim().max(160).optional(),
   customInstructions: z.string().trim().max(4000).optional(),
@@ -70,8 +73,31 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, RunOrchestrationBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const userId = await getSessionUserId();
+  const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Resolve projectPath + adapter from the registry when omitted (Loki dispatches
+  // by name). Mirrors inject-core's lookup; downstream branches read dataOrResp.
+  if (!dataOrResp.projectPath || !dataOrResp.adapter) {
+    const all = [
+      ...(await getUserProjects(userId).catch(() => [])),
+      ...(await getOrgProjects(userId).catch(() => [])),
+    ];
+    const match = all.find((p) => p.name.toLowerCase() === dataOrResp.projectKey.toLowerCase());
+    if (!dataOrResp.projectPath) {
+      if (!match?.dirPath) {
+        return NextResponse.json(
+          { error: `Unknown project "${dataOrResp.projectKey}" (or it has no local path).` },
+          { status: 404 },
+        );
+      }
+      dataOrResp.projectPath = match.dirPath;
+      dataOrResp.projectId = dataOrResp.projectId ?? match.entityProjectId ?? null;
+    }
+    if (!dataOrResp.adapter) {
+      dataOrResp.adapter = (match?.agentPref as (typeof ORCHESTRATION_ADAPTER_IDS)[number]) ?? "openclaw";
+    }
+  }
 
   // status:working gate removed 2026-06-11 (Session 5b of killing-the-bash-
   // runner). Original 2026-05-31 rationale: "even with status:working set,
