@@ -19,6 +19,9 @@ Runtimes/workers  Claude Code · Grok Build · Hermes · OpenClaw  one agent: to
 Economy/gov       OrangeCat · Solon                             work plugged into value
 ```
 
+## One identity, many swappable engines
+You talk to exactly **one** agent — **Loki**. Under Loki sits a roster of interchangeable *runtimes* (Claude Code · Grok · Codex · Cursor · Gemini · OpenClaw — and others as they earn their place) behind a single adapter contract. The roster is plumbing the user never sees; the **identity stays singular**. More runtimes is the bet (agent-neutrality) — two identities was never the plan. **Rule: a runtime joins the roster when we'll actually run it, not for completeness.** (Hermes, e.g., is a parked spike until the hosted runner ships — see below.)
+
 ## The moat — what only a captain can do
 - **Cross-model verification.** Your work is judged by a *different model lineage* than the one that did it — so "done" means done. Structurally impossible for a single-agent runtime (its judge would be itself). Shipped: the definition-of-done stop-gate.
 - **Govern + see across the fleet.** Queues, handoffs, per-project autonomy, one injected bar for "done", live status across every project.
@@ -31,4 +34,4 @@ Economy/gov       OrangeCat · Solon                             work plugged in
 Builders running **multiple projects** who want autonomous agents they can trust and steer — not a single chat window. For individuals: command your whole fleet, with verification you can believe. For teams (the part we're still building): multi-tenant governance + the shared economy.
 
 ## Honest status (2026-06)
-Single-builder, pre-1.0, shipping fast. Real and live: the adapter registry (7 runtimes incl. Hermes), cross-model verification, project-context injection, the self-improvement loop, a local Fleet Runner, and a phased hosted runner. Not yet: multi-tenancy (Phase 3), and hosted execution is mid-build (Phase 0 read-only live; Phase 1 = orchestrate Hermes). We compete with no one on this list — we sit above them.
+Single-builder, pre-1.0, shipping fast. Real and live: the adapter registry (6 live runtimes; a 7th — Hermes — is a proven spike, parked out of the active catalog until the hosted runner wires it), cross-model verification, project-context injection, the self-improvement loop, a local Fleet Runner, and a phased hosted runner. Not yet: multi-tenancy (Phase 3), and hosted execution is mid-build (Phase 0 read-only live; Phase 1 = orchestrate Hermes). We compete with no one on this list — we sit above them.

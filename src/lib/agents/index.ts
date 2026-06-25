@@ -21,7 +21,13 @@ import { cursorAdapter } from "./cursor";
 import { codexAdapter } from "./codex";
 import { openclawAdapter } from "./openclaw";
 import { geminiAdapter } from "./gemini";
-import { hermesAdapter } from "./hermes";
+// Hermes adapter PARKED (2026-06-25): dormant spike, not pulling weight —
+// `runHermesTask` is unwired (zero call sites), Hermes isn't in
+// ORCHESTRATION_ADAPTER_IDS, and the `hermes` CLI isn't installed anywhere, so
+// it only surfaced as a broken/unavailable runtime. The strategic bet (adopt
+// Hermes's sandboxed hosted execution) is intact — re-add `import { hermesAdapter }
+// from "./hermes"` + the ALL_ADAPTERS entry when the hosted runner (Phase 1)
+// actually ships. Files preserved: ./hermes.ts + ./hosted-runner/run-hermes.ts.
 
 export type { AgentAdapter, AgentCapabilities, AgentAvailability, AgentRuntimeConfig } from "./types";
 
@@ -33,7 +39,6 @@ export const ALL_ADAPTERS: readonly AgentAdapter[] = [
   codexAdapter,
   openclawAdapter,
   geminiAdapter,
-  hermesAdapter,
 ];
 
 /** Find an adapter by its id. Returns undefined for unknown ids — callers
