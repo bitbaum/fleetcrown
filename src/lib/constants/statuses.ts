@@ -34,7 +34,7 @@ export const ACTION_STATUS = {
 } as const;
 export type ActionStatus = (typeof ACTION_STATUS)[keyof typeof ACTION_STATUS];
 
-/** Action type — what kind of action Ivy is proposing. */
+/** Action type — what kind of action Loki is proposing. */
 export const ACTION_TYPE = {
   SEND_MESSAGE:      "send_message",
   SEND_EMAIL:        "send_email",

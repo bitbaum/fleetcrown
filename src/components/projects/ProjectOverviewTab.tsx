@@ -22,7 +22,7 @@ import type { EventStatus } from "@/lib/activity-status";
 const CHANNEL_ICON: Record<string, React.ElementType> = {
   "work-session": Code2,
   meeting: Users,
-  ivy: Bot,
+  ivy: Bot, // key kept for DB compat
   review: FileCheck,
   deployment: Rocket,
   call: Phone,

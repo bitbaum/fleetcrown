@@ -22,7 +22,7 @@ import { LockedZoneBanner } from "@/components/today/LockedZoneBanner";
 import { TodayWatch } from "@/components/today/TodayWatch";
 import { LayoutGrid } from "lucide-react";
 import { APP_NAME } from "@/config/brand";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { requirePageUserId, getCurrentUserName } from "@/lib/session";
 import { getUserProjects, getOrgProjects } from "@/db/queries/user-projects";
 import { PLAN_DAY_PROMPT, WRAP_UP_PROMPT } from "@/lib/constants/today";
@@ -96,17 +96,17 @@ export default async function TodayPage() {
         </Suspense>
         <div className="mt-3 ui-quick-actions-row ui-scroll-fade-right">
           {isEvening ? (
-            <IvyDispatchButton
+            <LokiDispatchButton
               prompt={WRAP_UP_PROMPT}
               label="Wrap up day"
-              title="Ask Ivy to run your end-of-day review"
+              title="Ask Loki to run your end-of-day review"
               className="ui-btn-pill-positive"
             />
           ) : (
-            <IvyDispatchButton
+            <LokiDispatchButton
               prompt={PLAN_DAY_PROMPT}
               label="Plan my day"
-              title="Ask Ivy to plan your day"
+              title="Ask Loki to plan your day"
               className="ui-btn-pill-positive"
             />
           )}
@@ -119,7 +119,7 @@ export default async function TodayPage() {
         <LockedZoneBanner />
       </Suspense>
 
-      {/* Ivy's proactive read on the private zone — one thing to focus on,
+      {/* Loki's proactive read on the private zone — one thing to focus on,
           plus a totals strip across categories. Renders only when unlocked. */}
       <Suspense fallback={<CardSkeleton />}>
         <TodayWatch />

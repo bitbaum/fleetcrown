@@ -186,7 +186,7 @@ export const ROADMAP = {
     {
       marker: "CONVERGE",
       title: "One agent per user — the surface merge",
-      summary: "Today's Ivy (FleetCrown) and Cat (OrangeCat) become one agent that sees the user's whole life. Two AIs is engineering convenience; one agent per user is the only interaction model that scales to nine billion builders.",
+      summary: "Today's Loki (FleetCrown) and Cat (OrangeCat) become one agent that sees the user's whole life. Two AIs is engineering convenience; one agent per user is the only interaction model that scales to nine billion builders.",
       bullets: [
         "Memory layer unifies — the user's contacts, projects, goals, transactions, listings, and decisions live in one graph the agent reasons against.",
         "Reasoning loop unifies — when the user says \"do X,\" the agent decomposes X across whatever surfaces are involved without the user choosing the surface.",
@@ -204,7 +204,7 @@ export const ROADMAP = {
         "Storage in OrangeCat. The eight categories are edges between entities OrangeCat already has (projects, actors, groups, products, services, investments). One typed-edge schema covers all eight — no new entity tables.",
         "Operations in FleetCrown. /projects renders the eight stakeholder lanes per project, read from OrangeCat via the identity bridge. The Watch on /today surfaces signals derived from the graph.",
         "Ship competitors first — the most automatable category. Landing-page diffs, RSS, funding-event detection, hiring-page diffs. The other seven follow with the same primitives.",
-        "Action loop: signal → Watch focus → \"Brief Ivy on this\" → agent drafts a response (pricing tweak, positioning post, feature pull-forward) → approve / disapprove.",
+        "Action loop: signal → Watch focus → \"Brief Loki on this\" → agent drafts a response (pricing tweak, positioning post, feature pull-forward) → approve / disapprove.",
         "No second graph. FleetCrown does not duplicate OrangeCat's entity model. Two graphs are always wrong.",
       ],
       note: "First concrete instance of the convergence — same data, two surfaces, one agent reasoning across both. See the Thoughts essay \"Where Stakeholders Live\" for the full design.",

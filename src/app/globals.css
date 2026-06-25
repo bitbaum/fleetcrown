@@ -404,10 +404,10 @@
   .ui-mobile-nav-item-idle {
     @apply text-text-muted hover:text-text-secondary;
   }
-  .ui-mobile-nav-ivy {
+  .ui-mobile-nav-loki {
     @apply relative flex flex-1 flex-col items-center justify-center rounded-2xl min-h-11;
   }
-  .ui-mobile-nav-ivy-btn {
+  .ui-mobile-nav-loki-btn {
     @apply flex h-11 w-11 items-center justify-center rounded-full bg-text-primary text-lg text-text-inverted shadow-panel-strong transition-transform active:scale-95;
   }
   .ui-mobile-nav-sheet {
@@ -459,7 +459,7 @@
   .ui-sidebar-section-lock-active {
     @apply h-3 w-3 text-accent-text;
   }
-  /* Today's Watch — Ivy's proactive read on the user's private life,
+  /* Today's Watch — Loki's proactive read on the user's private life,
      pinned to the top of /today when the zone is unlocked. */
   .ui-today-watch {
     @apply rounded-2xl border border-border-subtle bg-surface-base p-5 space-y-3;
@@ -488,15 +488,15 @@
   .ui-today-watch-action {
     @apply pt-1;
   }
-  /* Ivy-composed prose under a Watch focus. Lights up once the compose
+  /* Loki-composed prose under a Watch focus. Lights up once the compose
      endpoint returns; falls back invisibly if Groq is unavailable. */
-  .ui-ivy-nudge {
+  .ui-loki-nudge {
     @apply mt-1 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2;
   }
-  .ui-ivy-nudge-text {
+  .ui-loki-nudge-text {
     @apply text-sm leading-relaxed text-text-secondary;
   }
-  .ui-ivy-nudge-shimmer {
+  .ui-loki-nudge-shimmer {
     @apply text-text-muted italic;
   }
   /* Locked-zone banner on /today — turns the silent absence of private data
@@ -2366,7 +2366,7 @@
     @apply flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-muted px-4 py-2.5 text-sm text-accent-text;
   }
 
-  /* FAB — desktop only; mobile uses ui-mobile-nav-ivy in the bottom bar */
+  /* FAB — desktop only; mobile uses ui-mobile-nav-loki in the bottom bar */
   .ui-fab {
     @apply rounded-full bg-text-primary text-text-inverted transition-opacity hover:opacity-90;
   }

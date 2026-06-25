@@ -157,7 +157,7 @@ export type ChannelConfig = { key: string; label: string };
 export const CHANNEL_CONFIG: ChannelConfig[] = [
   { key: "work-session", label: "Work Session" },
   { key: "meeting",      label: "Meeting" },
-  { key: "ivy",          label: "Ivy" },
+  { key: "ivy",          label: "Loki" }, // key kept for DB compat
   { key: "review",       label: "Review" },
   { key: "deployment",   label: "Deployment" },
   { key: "call",         label: "Call" },

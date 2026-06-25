@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 // Tiny renderer for plain LLM output: paragraphs, list bullets, headings,
 // and **bold** spans. Anything fancier (code blocks, links, tables) is out
 // of scope — pull in a real markdown lib when a surface needs them. Lives
-// in ui/ so every LLM-output panel (digest, project bios, Ivy responses)
+// in ui/ so every LLM-output panel (digest, project bios, Loki responses)
 // renders consistently.
 export function MarkdownText({ text, className }: { text: string; className?: string }) {
   const blocks = parseBlocks(text);

@@ -23,7 +23,7 @@ export default function SystemError({
   }, [error]);
 
   return (
-    <PageLayout title="System" subtitle="Infrastructure health and Ivy autopilot">
+    <PageLayout title="System" subtitle="Infrastructure health and Loki autopilot">
       <Card>
         <CardHeader icon={AlertCircle} title="System data unavailable" />
         <p className="text-sm text-text-secondary">

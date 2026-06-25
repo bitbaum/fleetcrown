@@ -56,7 +56,7 @@ export function listThoughts(): Array<ThoughtMeta & { body: string }> {
         publishedAt: meta.publishedAt ?? "",
         tags: (meta.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         featured: (meta.featured ?? "false") === "true",
-        author: meta.author ?? "Ivy",
+        author: meta.author ?? "Loki",
         readingTimeMin: Number(meta.readingTimeMin ?? "6"),
         body,
       };

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Lightbulb, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCheck, Pencil, RotateCcw } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { handleCancelSubscription } from "@/app/actions";
 import { SUBSCRIPTION_META, FREQUENCY } from "@/config/subscriptions";
@@ -124,7 +124,7 @@ export function SubscriptionActions({
     router.refresh();
   }
 
-  const ivyPrompt = [
+  const lokiPrompt = [
     `Subscription: ${subName}`,
     vendor && `Vendor: ${vendor}`,
     amount != null && `Cost: ${amount} ${currency ?? "CHF"} / ${frequency ?? "month"}`,
@@ -206,9 +206,9 @@ export function SubscriptionActions({
         </button>
       )}
 
-      <IvyDispatchButton
-        prompt={ivyPrompt}
-        title="Ask Ivy about this subscription"
+      <LokiDispatchButton
+        prompt={lokiPrompt}
+        title="Ask Loki about this subscription"
         className="p-1 rounded text-text-muted hover:text-status-positive transition-colors"
       />
 

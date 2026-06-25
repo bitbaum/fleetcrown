@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { MobileNav } from "./MobileNav";
-import { AskIvyButton } from "./AskIvyButton";
+import { AskLokiButton } from "./AskLokiButton";
 import { AppTopBar } from "./AppTopBar";
 import { AppFooter } from "./AppFooter";
 import { CommandPalette } from "./CommandPalette";
@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <AppFooter />
         </div>
         <MobileNav />
-        <AskIvyButton />
+        <AskLokiButton />
         <RefreshOnFocus />
         <CommandPalette />
         <FleetRunnerAutoMint />

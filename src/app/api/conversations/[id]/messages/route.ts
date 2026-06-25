@@ -5,12 +5,12 @@
  *   2. resolveCommand() — the SHARED resolver (src/lib/command-resolve.ts)
  *   3a. command + projectKey  → dispatch into the project session via injectPrompt(),
  *                               persist an assistant "dispatch" turn
- *   3b. chat                  → ask Ivy via askIvy(), persist an assistant "chat" turn
+ *   3b. chat                  → ask Loki via askLoki(), persist an assistant "chat" turn
  *   3c. command, no project   → persist an assistant "command" turn asking which
  *                               project (meta.needsProject)
  *
- * Dispatch + chat call the shared cores (inject-core / ivy-core) in-process —
- * the same SSOT the /api/inject and /api/ivy routes wrap. No self-HTTP.
+ * Dispatch + chat call the shared cores (inject-core / loki-core) in-process —
+ * the same SSOT the /api/inject and /api/loki routes wrap. No self-HTTP.
  */
 import { type NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
@@ -26,7 +26,7 @@ import {
 } from "@/db/queries/conversations";
 import { resolveCommand } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
-import { askIvy } from "@/lib/ivy-core";
+import { askLoki } from "@/lib/loki-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_CHARS, renderAttachments } from "@/lib/loki/attachments";
 
@@ -158,17 +158,17 @@ export async function POST(
       meta: { needsProject: true, intentId: resolution.intentId },
     });
   } else {
-    // 3b. Chat — answer via Ivy (attachments included so a question can be
+    // 3b. Chat — answer via Loki (attachments included so a question can be
     //     about the attached file).
-    const ivy = await askIvy(resolution.prompt + attachmentSuffix);
+    const loki = await askLoki(resolution.prompt + attachmentSuffix);
     const reply =
-      (typeof ivy.body.text === "string" && ivy.body.text) ||
-      (typeof ivy.body.error === "string" ? ivy.body.error : "Ivy is unavailable right now.");
+      (typeof loki.body.text === "string" && loki.body.text) ||
+      (typeof loki.body.error === "string" ? loki.body.error : "Loki is unavailable right now.");
     assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "chat",
       content: reply,
-      meta: { model: ivy.body.model ?? null },
+      meta: { model: loki.body.model ?? null },
     });
   }
 

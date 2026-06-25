@@ -6,7 +6,7 @@ import { ACTION_STATUS, type ActionType } from "@/lib/constants/statuses";
 
 export type ActionRow = typeof actions.$inferSelect;
 
-/** Input Ivy (or any producer) supplies to enqueue a draft action.
+/** Input Loki (or any producer) supplies to enqueue a draft action.
  *  Mirrors the writable subset of NewAction; userId/status/timestamps are set here. */
 export type ProposeActionInput = {
   type: ActionType;

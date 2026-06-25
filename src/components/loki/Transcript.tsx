@@ -9,7 +9,7 @@ import type { LokiMessage } from "./types";
  *  small set of kinds the messages route emits. */
 const KIND_LABEL: Record<string, string> = {
   dispatch: "Dispatched",
-  chat: "Ivy",
+  chat: "Loki",
   command: "Needs project",
 };
 

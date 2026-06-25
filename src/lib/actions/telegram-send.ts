@@ -14,7 +14,7 @@ export function selfTelegramTarget(): string | null {
 }
 
 /**
- * Self-only allowlist guardrail. In this slice Ivy may send to George HIMSELF only.
+ * Self-only allowlist guardrail. In this slice Loki may send to George HIMSELF only.
  * A requested target is allowed iff it is empty (defaults to self) or equals the
  * configured self chat id. Any other recipient is refused until the allowlist is
  * deliberately widened — directly bounds the blast radius (no spamming real contacts).
@@ -29,7 +29,7 @@ export function isAllowedTelegramTarget(requested: string | null | undefined): b
 
 /**
  * Deterministic Telegram send via the Telegram Bot API directly (no OpenClaw) —
- * the same @AnthropigBot identity Ivy uses, and the same path ivy-health.sh uses,
+ * the same @AnthropigBot identity Loki uses, and the same path ivy-health.sh uses,
  * so it works even when the OpenClaw gateway is down and regardless of OS user.
  * The caller is responsible for the self-only allowlist check BEFORE calling this.
  */

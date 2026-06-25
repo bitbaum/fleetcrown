@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { AskIvyModal } from "./AskIvyModal";
+import { AskLokiModal } from "./AskLokiModal";
 
-export function AskIvyButton() {
+export function AskLokiButton() {
   const [open, setOpen] = useState(false);
   const [prefill, setPrefill] = useState("");
 
@@ -32,8 +32,8 @@ export function AskIvyButton() {
       setPrefill(prompt);
       setOpen(true);
     };
-    window.addEventListener("ivy:open", eventHandler);
-    return () => window.removeEventListener("ivy:open", eventHandler);
+    window.addEventListener("loki:open", eventHandler);
+    return () => window.removeEventListener("loki:open", eventHandler);
   }, []);
 
   return (
@@ -41,12 +41,12 @@ export function AskIvyButton() {
       <button
         onClick={() => { setPrefill(""); setOpen(true); }}
         className="ui-fab fixed bottom-7 right-7 z-40 hidden h-14 w-14 items-center justify-center text-xl active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        title="Ask Ivy (press ?)"
+        title="Ask Loki (press ?)"
       >
         🌿
       </button>
 
-      {open && <AskIvyModal onClose={() => setOpen(false)} initialInput={prefill} />}
+      {open && <AskLokiModal onClose={() => setOpen(false)} initialInput={prefill} />}
     </>
   );
 }

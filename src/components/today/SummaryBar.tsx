@@ -1,7 +1,7 @@
 import { Target, Bell, Inbox, AlertCircle, Clock, Calendar, Users, Repeat2, Bot, Activity, CirclePause } from "lucide-react";
 import { ScrollAffordance } from "@/components/ui/scroll-affordance";
 import Link from "next/link";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { getTodaySummary, getFleetSummary } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
@@ -73,7 +73,7 @@ export async function SummaryBar() {
   ].filter(Boolean).join("\n");
 
   // Group chips by semantic so the row reads as: "what I have" → "what wants me"
-  // → "what my fleet is doing" → "ask Ivy." Previously 10+ mixed chips with
+  // → "what my fleet is doing" → "ask Loki." Previously 10+ mixed chips with
   // unit confusion ("0/2 habits" next to "1 urgent") and the action button
   // styled identically to a status chip. Three counts arrays + thin dividers
   // give scannable hierarchy while still wrapping cleanly on mobile.
@@ -126,10 +126,10 @@ export async function SummaryBar() {
         {alerts.length > 0 && fleetPills.length > 0 && divider}
         {fleetPills}
         {(counters.length > 0 || alerts.length > 0 || fleetPills.length > 0) && divider}
-        <IvyDispatchButton
+        <LokiDispatchButton
           prompt={todayBriefPrompt}
-          title="Brief Ivy on today"
-          label="Brief Ivy"
+          title="Brief Loki on today"
+          label="Brief Loki"
           className="inline-flex items-center gap-1.5 rounded-full border border-status-positive/30 bg-status-positive-subtle/40 px-3 py-2 text-xs font-semibold text-status-positive hover:bg-status-positive-subtle transition-colors min-h-11 sm:min-h-0 shrink-0"
         />
       </div>

@@ -6,7 +6,7 @@ import { requirePageUserId } from "@/lib/session";
 import { timeAgo } from "@/lib/dates";
 import { HEALTH_TAG_STYLE } from "@/config/ui";
 import { getHealthShort } from "@/lib/constants/control";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 import { NAV } from "@/config/navigation";
 
@@ -141,9 +141,9 @@ export async function RecentRunsCard() {
                     <div className="mt-1 flex items-start gap-1">
                       <ArrowRight className="h-3 w-3 shrink-0 mt-0.5 text-accent-text/80" />
                       <p className="flex-1 text-xs text-accent-text/80 leading-relaxed line-clamp-2">{next}</p>
-                      <IvyDispatchButton
+                      <LokiDispatchButton
                         prompt={`Project: ${run.projectKey}\nAgent recommended next step: ${next}\n\nPlease help me execute this next step.`}
-                        title="Ask Ivy to execute this next step"
+                        title="Ask Loki to execute this next step"
                       />
                       <ControlDispatchButton
                         tab={run.projectKey}

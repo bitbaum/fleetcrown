@@ -21,7 +21,7 @@ async function mergeViaGroq(message: string): Promise<string> {
 }
 
 // ── openclaw fallback (Claude via gateway, ~20-30s) ────────────────────────
-// Uses the same agent+model as Ivy. No additional API keys needed.
+// Uses the same agent+model as Loki. No additional API keys needed.
 async function mergeViaAgent(message: string): Promise<string> {
   const safe = message.replace(/'/g, "'\\''");
   const result = await runTool(

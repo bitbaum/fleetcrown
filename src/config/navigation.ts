@@ -31,7 +31,7 @@ export type NavItem = {
   href: string;
   icon: LucideIcon;
   active: boolean;
-  /** Show in the mobile bottom tab bar (3 routes + Ask Ivy + More) */
+  /** Show in the mobile bottom tab bar (3 routes + Ask Loki + More) */
   mobile: boolean;
 };
 

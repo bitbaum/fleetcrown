@@ -17,7 +17,7 @@ export type WatchFocus = {
   title: string;
   context: string;        // a single short clarifying line ("85% done · 1mo past target")
   href: string;           // where the user goes if they click through
-  ivyPrompt: string;      // pre-built prompt body for "Brief Ivy on this"
+  lokiPrompt: string;      // pre-built prompt body for "Brief Loki on this"
 };
 
 export type WatchData = {
@@ -185,7 +185,7 @@ function pickFocus(
       title: c.description,
       context: daysOverdue !== null ? `Overdue by ${daysOverdue}d` : "Overdue",
       href: "/today#commitments",
-      ivyPrompt: `An overdue commitment needs attention:\n\n"${c.description}"\n${daysOverdue !== null ? `It's ${daysOverdue} days past the due date.\n` : ""}\nWhat's the cleanest path to close this out today?`,
+      lokiPrompt: `An overdue commitment needs attention:\n\n"${c.description}"\n${daysOverdue !== null ? `It's ${daysOverdue} days past the due date.\n` : ""}\nWhat's the cleanest path to close this out today?`,
     };
   }
 
@@ -198,7 +198,7 @@ function pickFocus(
       title: g.title,
       context: `${progress}% done · ${daysOverdue !== null ? `${daysOverdue}d past target` : "past target"}`,
       href: "/goals",
-      ivyPrompt: `An overdue goal is close to done:\n\nGoal: ${g.title}\nProgress: ${progress}%\n${daysOverdue !== null ? `Days past target: ${daysOverdue}\n` : ""}\nWhat's the smallest concrete step today to close it out?`,
+      lokiPrompt: `An overdue goal is close to done:\n\nGoal: ${g.title}\nProgress: ${progress}%\n${daysOverdue !== null ? `Days past target: ${daysOverdue}\n` : ""}\nWhat's the smallest concrete step today to close it out?`,
     };
   }
 
@@ -209,7 +209,7 @@ function pickFocus(
       title: h.title,
       context: `${h.streak}-day streak · not done today`,
       href: "/habits",
-      ivyPrompt: `A habit streak is at risk:\n\nHabit: ${h.title}\nCurrent streak: ${h.streak} day${h.streak === 1 ? "" : "s"}\nStatus today: not yet done\n\nNudge me to do it now in two short lines — be direct and warm, not preachy.`,
+      lokiPrompt: `A habit streak is at risk:\n\nHabit: ${h.title}\nCurrent streak: ${h.streak} day${h.streak === 1 ? "" : "s"}\nStatus today: not yet done\n\nNudge me to do it now in two short lines — be direct and warm, not preachy.`,
     };
   }
 
@@ -221,7 +221,7 @@ function pickFocus(
       title: b.name,
       context: `${b.amount !== null ? `${b.amount}${b.currency ? ` ${b.currency}` : ""} · ` : ""}${daysUntil !== null ? `renews in ${daysUntil}d` : "renews soon"}`,
       href: "/money",
-      ivyPrompt: `Subscription renewal coming up:\n\n${b.name}${b.amount !== null ? ` — ${b.amount}${b.currency ? ` ${b.currency}` : ""}` : ""}${daysUntil !== null ? ` in ${daysUntil} days` : ""}.\n\nIs this still pulling its weight? Anything to flag?`,
+      lokiPrompt: `Subscription renewal coming up:\n\n${b.name}${b.amount !== null ? ` — ${b.amount}${b.currency ? ` ${b.currency}` : ""}` : ""}${daysUntil !== null ? ` in ${daysUntil} days` : ""}.\n\nIs this still pulling its weight? Anything to flag?`,
     };
   }
 
@@ -233,7 +233,7 @@ function pickFocus(
       title: e.name,
       context: daysUntil !== null ? (daysUntil <= 0 ? "Today" : `In ${daysUntil}d`) : "Soon",
       href: "/events",
-      ivyPrompt: `A deadline is approaching:\n\n${e.name}${daysUntil !== null ? ` — ${daysUntil} days away` : ""}.\n\nWhat needs to happen between now and then?`,
+      lokiPrompt: `A deadline is approaching:\n\n${e.name}${daysUntil !== null ? ` — ${daysUntil} days away` : ""}.\n\nWhat needs to happen between now and then?`,
     };
   }
 
@@ -247,7 +247,7 @@ function pickFocus(
       title: sc.name,
       context: daysSince !== null ? `Last interaction ${daysSince}d ago` : "No recent interaction",
       href: `/people?health=fading`,
-      ivyPrompt: `A relationship is going stale:\n\n${sc.name}${daysSince !== null ? ` — last interaction ${daysSince} days ago` : ""}.\n\nDraft a warm, short check-in message I can send to ${firstName}. Keep it natural, no business angle, in the tone I'd actually use.`,
+      lokiPrompt: `A relationship is going stale:\n\n${sc.name}${daysSince !== null ? ` — last interaction ${daysSince} days ago` : ""}.\n\nDraft a warm, short check-in message I can send to ${firstName}. Keep it natural, no business angle, in the tone I'd actually use.`,
     };
   }
 
@@ -260,7 +260,7 @@ function pickFocus(
       title: s.title,
       context: `${progress}% done · ${daysIdle}d idle`,
       href: "/goals",
-      ivyPrompt: `A goal has stalled:\n\nGoal: ${s.title}\nProgress: ${progress}%\nIdle for ${daysIdle} days.\n\nIs this still worth pursuing? If yes, what's the smallest unblock?`,
+      lokiPrompt: `A goal has stalled:\n\nGoal: ${s.title}\nProgress: ${progress}%\nIdle for ${daysIdle} days.\n\nIs this still worth pursuing? If yes, what's the smallest unblock?`,
     };
   }
 

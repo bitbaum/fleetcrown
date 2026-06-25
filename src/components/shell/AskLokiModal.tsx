@@ -6,9 +6,9 @@ import { CATEGORY_META } from "@/config/prompt-library";
 import { Modal } from "@/components/ui/modal";
 import { postJson } from "@/lib/api/fetch";
 import { useWhisperMic } from "@/hooks/use-whisper-mic";
-import { type Message, QUICK_PROMPTS, GLOBAL_PROMPTS, useElapsedTimer } from "./ask-ivy-helpers";
+import { type Message, QUICK_PROMPTS, GLOBAL_PROMPTS, useElapsedTimer } from "./ask-loki-helpers";
 
-export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => void; initialInput?: string }) {
+export function AskLokiModal({ onClose, initialInput = "" }: { onClose: () => void; initialInput?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState(initialInput);
   const [loading, setLoading] = useState(false);
@@ -34,15 +34,15 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
     setMessages((prev) => [...prev, { role: "user", text }]);
     setLoading(true);
     try {
-      const res = await postJson("/api/ivy", { message: text });
+      const res = await postJson("/api/loki", { message: text });
       const data = await res.json();
       if (!res.ok || data.error) {
-        setMessages((prev) => [...prev, { role: "ivy", text: data.error ?? "Something went wrong.", error: true }]);
+        setMessages((prev) => [...prev, { role: "loki", text: data.error ?? "Something went wrong.", error: true }]);
       } else {
-        setMessages((prev) => [...prev, { role: "ivy", text: data.text, durationMs: data.durationMs, model: data.model }]);
+        setMessages((prev) => [...prev, { role: "loki", text: data.text, durationMs: data.durationMs, model: data.model }]);
       }
     } catch (e) {
-      setMessages((prev) => [...prev, { role: "ivy", text: String(e), error: true }]);
+      setMessages((prev) => [...prev, { role: "loki", text: String(e), error: true }]);
     } finally {
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -64,7 +64,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
             <span className="text-lg">🌿</span>
             <div>
               <p className="ui-kicker">Copilot</p>
-              <div className="text-base font-medium text-text-primary">Ask Ivy</div>
+              <div className="text-base font-medium text-text-primary">Ask Loki</div>
             </div>
           </div>
           <button onClick={onClose} disabled={loading} className="ui-icon-action disabled:opacity-30">
@@ -151,7 +151,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
                   : "bg-surface-raised text-text-primary rounded-bl-sm border border-border-subtle"
               }`}>
                 <div className="whitespace-pre-wrap">{msg.text}</div>
-                {msg.role === "ivy" && !msg.error && msg.durationMs && (
+                {msg.role === "loki" && !msg.error && msg.durationMs && (
                   <div className="mt-1.5 text-micro text-text-tertiary">
                     {(msg.durationMs / 1000).toFixed(1)}s{msg.model ? ` · ${msg.model}` : ""}
                   </div>
@@ -166,7 +166,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
                 <Loader2 className="ui-spinner-sm text-status-positive shrink-0" />
                 <div>
                   <span className="text-xs text-text-secondary">
-                    {elapsed < 5 ? "Ivy is thinking…" :
+                    {elapsed < 5 ? "Loki is thinking…" :
                      elapsed < 15 ? "Searching your knowledge graph…" :
                      elapsed < 25 ? "Composing a response…" :
                      "Almost there…"}
@@ -193,7 +193,7 @@ export function AskIvyModal({ onClose, initialInput = "" }: { onClose: () => voi
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={listening ? "Recording — click mic to stop…" : micProcessing ? "Transcribing…" : "Ask Ivy anything…"}
+              placeholder={listening ? "Recording — click mic to stop…" : micProcessing ? "Transcribing…" : "Ask Loki anything…"}
               rows={1}
               disabled={loading}
               className="flex-1 resize-none bg-transparent px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:outline-none max-h-32 disabled:opacity-50"

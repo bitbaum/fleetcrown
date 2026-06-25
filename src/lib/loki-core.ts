@@ -1,8 +1,8 @@
 /**
- * Ivy chat core — SSOT for the openclaw-then-Groq assistant logic.
+ * Loki chat core — SSOT for the openclaw-then-Groq assistant logic.
  *
- * Extracted from the /api/ivy route so server-side callers (the Loki messages
- * route) can ask Ivy WITHOUT a self-HTTP round-trip. Returns `{ status, body }`
+ * Extracted from the /api/loki route so server-side callers (the Loki messages
+ * route) can ask Loki WITHOUT a self-HTTP round-trip. Returns `{ status, body }`
  * — the route wraps it in NextResponse; in-process callers read `body.text`.
  */
 import { runTool } from "@/lib/tools";
@@ -18,23 +18,23 @@ type OpenclawResult = {
   };
 };
 
-const IVY_SYSTEM_PROMPT =
-  `You are Ivy, a helpful AI assistant inside ${APP_NAME} — a personal life operating system for builders. Be concise and direct.`;
+const LOKI_SYSTEM_PROMPT =
+  `You are Loki, a helpful AI assistant inside ${APP_NAME} — a personal life operating system for builders. Be concise and direct.`;
 
 // Direct Groq fallback when the local openclaw gateway is unavailable.
 async function callGroq(message: string): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
-    systemPrompt: IVY_SYSTEM_PROMPT,
+    systemPrompt: LOKI_SYSTEM_PROMPT,
     maxTokens: 1024,
     timeoutMs: 30_000,
   });
   return { text, model: `groq/${GROQ_FAST_MODEL}` };
 }
 
-export type AskIvyResult = { status: number; body: Record<string, unknown> };
+export type AskLokiResult = { status: number; body: Record<string, unknown> };
 
-/** Ask Ivy a question — openclaw gateway first, Groq fallback. */
-export async function askIvy(message: string): Promise<AskIvyResult> {
+/** Ask Loki a question — openclaw gateway first, Groq fallback. */
+export async function askLoki(message: string): Promise<AskLokiResult> {
   // Try openclaw gateway first
   if (process.env.OPENCLAW_GATEWAY_URL || process.env.OPENCLAW_ENABLED !== "false") {
     try {
@@ -58,16 +58,16 @@ export async function askIvy(message: string): Promise<AskIvyResult> {
 
       // openclaw failed — fall through to Groq if available
       const isTimeout = result.error?.includes("timeout");
-      console.error("[ivy] openclaw failed:", result.error);
+      console.error("[loki] openclaw failed:", result.error);
       if (!process.env.GROQ_API_KEY) {
         const friendly = isTimeout
-          ? "Ivy timed out — the request took too long. Try again."
-          : "Ivy is unavailable right now — please try again in a moment.";
+          ? "Loki timed out — the request took too long. Try again."
+          : "Loki is unavailable right now — please try again in a moment.";
         return { status: 500, body: { error: friendly } };
       }
-      console.warn("[ivy] falling back to Groq");
+      console.warn("[loki] falling back to Groq");
     } catch (e) {
-      console.error("[ivy] openclaw exception:", e);
+      console.error("[loki] openclaw exception:", e);
       if (!process.env.GROQ_API_KEY) {
         return { status: 500, body: { error: String(e) } };
       }
@@ -87,8 +87,8 @@ export async function askIvy(message: string): Promise<AskIvyResult> {
               : /\b429\b/.test(raw)                  ? "Groq rate-limited — try again shortly"
               : /\b5\d\d\b/.test(raw)                ? "Groq server error"
               : /timeout|abort/i.test(raw)           ? "Groq timed out"
-              : `Ivy is unavailable right now (${raw.slice(0, 80)})`;
-    console.error("[ivy] Groq fallback failed:", raw);
-    return { status: 503, body: { error: `Ivy is offline — ${hint}.` } };
+              : `Loki is unavailable right now (${raw.slice(0, 80)})`;
+    console.error("[loki] Groq fallback failed:", raw);
+    return { status: 503, body: { error: `Loki is offline — ${hint}.` } };
   }
 }

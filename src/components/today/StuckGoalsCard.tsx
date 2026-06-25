@@ -5,7 +5,7 @@ import { getStuckGoals } from "@/db/queries/today";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { AbandonGoalButton } from "./AbandonGoalButton";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { ControlDispatchButton } from "@/components/shared/ControlDispatchButton";
 import { NAV } from "@/config/navigation";
 
@@ -50,9 +50,9 @@ export async function StuckGoalsCard() {
                   </p>
                 </div>
                 <span className="shrink-0 text-xs text-text-muted">{idle}d idle</span>
-                <IvyDispatchButton
+                <LokiDispatchButton
                   prompt={`Goal: ${goal.title}\nProgress: 0%\nIdle for ${idle} days with no progress.\n\nThis goal has been completely stalled. What is the single smallest concrete step I can take right now to get it moving?`}
-                  title="Ask Ivy to unblock this goal"
+                  title="Ask Loki to unblock this goal"
                 />
                 {goal.entityName && (
                   <ControlDispatchButton

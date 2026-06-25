@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ExternalLink, Loader2, Archive, Pencil, Check, X } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { format } from "date-fns";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
@@ -37,7 +37,7 @@ export function EventCard({
   const deadline = event.deadline ? new Date(event.deadline) : null;
   const { label: deadlineText, overdue } = deadlineLabel(deadline);
 
-  const ivyPrompt = [
+  const lokiPrompt = [
     `Event: ${event.name}`,
     `Type: ${event.type}`,
     event.category && `Category: ${event.category}`,
@@ -195,9 +195,9 @@ export function EventCard({
 
         <div className="shrink-0 flex items-center gap-0.5 ui-hover-reveal transition-opacity">
           {!dimmed && (
-            <IvyDispatchButton
-              prompt={ivyPrompt}
-              title="Ask Ivy about this event"
+            <LokiDispatchButton
+              prompt={lokiPrompt}
+              title="Ask Loki about this event"
               className="p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
             />
           )}

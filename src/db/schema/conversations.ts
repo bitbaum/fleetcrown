@@ -7,7 +7,7 @@ import { users } from "./users";
  * + control thread; it is tagged with 0..n project keys so the right-pane
  * project filter can scope the conversation list client-side.
  *
- * A message in a conversation either (a) chats with Ivy or (b) dispatches work
+ * A message in a conversation either (a) chats with Loki or (b) dispatches work
  * to a project's agent session — the per-message `kind` records which path ran.
  */
 export const conversations = pgTable("conversations", {
@@ -29,7 +29,7 @@ export const conversationMessages = pgTable("conversation_messages", {
   /** "user" | "assistant" | "system" — text, not an enum, to mirror the
    *  project's existing schema convention (see beacon-sessions agent fields). */
   role:           text("role").notNull(),
-  /** How the assistant turn was produced: "chat" (Ivy reply), "command"
+  /** How the assistant turn was produced: "chat" (Loki reply), "command"
    *  (resolved but awaiting a project), or "dispatch" (sent to a project
    *  session). NULL for plain user turns. */
   kind:           text("kind"),

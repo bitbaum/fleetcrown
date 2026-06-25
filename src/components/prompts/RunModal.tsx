@@ -41,7 +41,7 @@ export function RunModal({
     setResult(null);
     setError(null);
     try {
-      const res = await postJson("/api/ivy", { message: resolvedMessage });
+      const res = await postJson("/api/loki", { message: resolvedMessage });
       const data = await res.json();
       if (data.error) setError(data.error);
       else setResult(data.text ?? "");
@@ -120,7 +120,7 @@ export function RunModal({
           {(running || result || error) && (
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span>Ivy&apos;s Response</span>
+                <span>Loki&apos;s Response</span>
                 {result && (
                   <button
                     onClick={handleCopy}
@@ -134,7 +134,7 @@ export function RunModal({
               {running && (
                 <div className="ui-card-shell flex items-center gap-2 p-4 text-base text-text-secondary">
                   <Loader2 className="ui-spinner text-accent-primary" />
-                  Ivy is working… (this may take up to 60s)
+                  Loki is working… (this may take up to 60s)
                 </div>
               )}
               {error && (
@@ -160,7 +160,7 @@ export function RunModal({
             {running ? (
               <><Loader2 className="ui-spinner" /> Running…</>
             ) : (
-              <><Zap className="h-4 w-4" /> Run with Ivy</>
+              <><Zap className="h-4 w-4" /> Run with Loki</>
             )}
           </button>
         </div>

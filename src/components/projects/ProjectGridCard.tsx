@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, GitBranch, Globe } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import {
   MaturityBar,
   StatusBadge,
@@ -9,7 +9,7 @@ import {
   getHealthSignals,
 } from "./project-badges";
 import { getProjectLinks, RESERVED } from "./project-detail-types";
-import { buildProjectIvyPrompt } from "@/lib/ivy-prompts";
+import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
 
 /**
  * Project metadata as the grid view consumes it. Source-of-truth shape
@@ -55,7 +55,7 @@ export function ProjectGridCard({
   const hasIssues = signals.length > 0;
   const extraAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
 
-  const ivyPrompt = buildProjectIvyPrompt({ name: project.name, description, attrs });
+  const lokiPrompt = buildProjectLokiPrompt({ name: project.name, description, attrs });
 
   return (
     <div
@@ -83,9 +83,9 @@ export function ProjectGridCard({
 
         <div className="ui-card-actions shrink-0 self-start">
           <div onClick={(e) => e.stopPropagation()}>
-            <IvyDispatchButton
-              prompt={ivyPrompt}
-              title="Ask Ivy about this project"
+            <LokiDispatchButton
+              prompt={lokiPrompt}
+              title="Ask Loki about this project"
               className="ui-icon-action min-h-8 min-w-8 rounded-lg p-1.5 text-text-muted hover:text-status-positive"
             />
           </div>

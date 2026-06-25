@@ -8,7 +8,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { HabitHeatmap } from "./HabitHeatmap";
 import { HabitGoalLinks } from "./HabitGoalLinks";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { patchJson, deleteJson } from "@/lib/api/fetch";
 import type { HabitWithHistory } from "@/db/queries/habits";
 import type { LinkedGoal } from "@/db/queries/habit-goals";
@@ -41,7 +41,7 @@ export function HabitCard({
   const scheduled = scheduledDays(frequency, HABIT_HISTORY_DAYS);
   const pct = Math.round((habit.completionsInWindow / scheduled) * 100);
 
-  const ivyPrompt = [
+  const lokiPrompt = [
     `Habit: ${habit.title}`,
     `Frequency: ${frequency}`,
     `Completion rate: ${pct}% (${habit.completionsInWindow}/${scheduled} days in the last ${HABIT_HISTORY_DAYS} days)`,
@@ -231,9 +231,9 @@ export function HabitCard({
             }
           </button>
 
-          <IvyDispatchButton
-            prompt={ivyPrompt}
-            title="Ask Ivy about this habit"
+          <LokiDispatchButton
+            prompt={lokiPrompt}
+            title="Ask Loki about this habit"
             className="mt-0.5 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
           />
 

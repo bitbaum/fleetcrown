@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 export { GLOBAL_PROMPTS, QUICK_PROMPTS } from "@/config/prompt-library";
 
 export type Message = {
-  role: "user" | "ivy";
+  role: "user" | "loki";
   text: string;
   durationMs?: number;
   model?: string;

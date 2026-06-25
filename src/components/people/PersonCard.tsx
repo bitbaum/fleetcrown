@@ -5,7 +5,7 @@ import type { PersonWithAttributes } from "@/db/queries/people";
 import { CHANNEL_CONFIG, CHANNEL_NAMES, isChannelAttrKey } from "@/config/channels";
 import { HEALTH_DOT_COLOR } from "@/lib/constants/people";
 import { Link2, Plus, Check, Loader2 } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { formatDistanceToNow } from "date-fns";
 import { postJson, throwApiError } from "@/lib/api/fetch";
 import { INTERACTION_DIRECTION, type InteractionDirection } from "@/lib/constants/statuses";
@@ -26,7 +26,7 @@ export function PersonCard({
 
   const quickChannel = channels[0] ?? CHANNEL_NAMES[0] ?? "other";
 
-  const ivyPrompt = [
+  const lokiPrompt = [
     `Person: ${person.name}`,
     profession && `Role: ${profession}`,
     location && `Location: ${location}`,
@@ -169,9 +169,9 @@ export function PersonCard({
             )}
           </button>
           <div className="flex items-center gap-1.5">
-            <IvyDispatchButton
-              prompt={ivyPrompt}
-              title="Ask Ivy about this person"
+            <LokiDispatchButton
+              prompt={lokiPrompt}
+              title="Ask Loki about this person"
               className="opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 p-1.5 rounded text-text-muted hover:text-status-positive transition-colors"
             />
             <button

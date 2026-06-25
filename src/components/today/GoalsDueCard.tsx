@@ -7,7 +7,7 @@ import { deadlineLabel } from "@/lib/dates";
 import { GOALS_DUE_SOON_DAYS } from "@/lib/constants";
 import Link from "next/link";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { NAV } from "@/config/navigation";
 
 export async function GoalsDueCard() {
@@ -60,9 +60,9 @@ export async function GoalsDueCard() {
                     </div>
                   )}
                 </div>
-                <IvyDispatchButton
+                <LokiDispatchButton
                   prompt={`Goal: ${goal.title}\nProgress: ${progress}%\nDue: ${deadlineText}\n\nThis goal deadline is approaching${overdue ? " and is overdue" : ""}. What should I focus on right now to hit it? What are the key risks?`}
-                  title="Ask Ivy about this deadline"
+                  title="Ask Loki about this deadline"
                 />
               </div>
             );

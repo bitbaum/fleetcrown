@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Globe, GitBranch, AlertTriangle, Activity } from "lucide-react";
 import Link from "next/link";
 import { DeleteButton } from "@/components/ui/delete-button";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { setAttr } from "@/lib/api/attrs";
 import type { ProjectData, Tab } from "./project-detail-types";
 import { getProjectLinks } from "./project-detail-types";
@@ -19,7 +19,7 @@ import {
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
-import { buildProjectIvyPrompt } from "@/lib/ivy-prompts";
+import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
 import { compactRelativeDate } from "@/lib/dates";
 
 export function ProjectDetailHeader({
@@ -106,9 +106,9 @@ export function ProjectDetailHeader({
 
         <div className="ui-card-actions shrink-0 self-start">
           {data && (
-            <IvyDispatchButton
-              prompt={buildProjectIvyPrompt(data)}
-              title="Ask Ivy about this project"
+            <LokiDispatchButton
+              prompt={buildProjectLokiPrompt(data)}
+              title="Ask Loki about this project"
               className="ui-icon-action"
             />
           )}

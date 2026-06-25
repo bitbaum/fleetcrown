@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle, Clipboard, Loader2, X } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import type { Milestone } from "@/db/schema/goals";
 import { patchGoal } from "@/lib/api/goals";
 import { deadlineLabel, toLocalDateStr } from "@/lib/dates";
@@ -187,11 +187,11 @@ export function CopyGoalPromptButton(props: GoalPromptProps) {
   );
 }
 
-export function SendToIvyButton(props: GoalPromptProps) {
+export function SendToLokiButton(props: GoalPromptProps) {
   return (
-    <IvyDispatchButton
+    <LokiDispatchButton
       prompt={buildGoalPrompt(props)}
-      title="Ask Ivy about this goal"
+      title="Ask Loki about this goal"
       className="ui-hover-reveal ui-icon-btn p-1 rounded transition-all shrink-0 text-text-muted hover:text-status-positive"
     />
   );

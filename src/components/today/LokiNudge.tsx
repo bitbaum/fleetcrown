@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { postJson } from "@/lib/api/fetch";
 
-const CACHE_PREFIX = "fleetcrown-ivy-nudge-v1:";
+const CACHE_PREFIX = "fleetcrown-loki-nudge-v1:";
 const CACHE_TTL_MS = 60 * 60 * 1000; // one hour
 
 type CacheEntry = { composed: string; expiresAt: number };
@@ -36,7 +36,7 @@ function writeCache(key: string, composed: string) {
 }
 
 /**
- * IvyNudge — upgrades a Watch focus from templated context to Ivy-composed
+ * LokiNudge — upgrades a Watch focus from templated context to Loki-composed
  * prose. Server-rendered Watch shows the template line for instant signal,
  * then this component fetches a composed paragraph and replaces the line
  * once it arrives. Cached in localStorage for one hour so the same focus
@@ -46,7 +46,7 @@ function writeCache(key: string, composed: string) {
  * this renders nothing — the parent's template prose stays in place. Strict
  * enhancement, never a regression.
  */
-export function IvyNudge({
+export function LokiNudge({
   kind,
   title,
   context,
@@ -100,10 +100,10 @@ export function IvyNudge({
   if (state === "error" || state === "idle") return null;
 
   return (
-    <div className="ui-ivy-nudge">
+    <div className="ui-loki-nudge">
       <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent-text" />
-      <span className="ui-ivy-nudge-text">
-        {state === "ready" ? composed : <span className="ui-ivy-nudge-shimmer">Ivy is composing…</span>}
+      <span className="ui-loki-nudge-text">
+        {state === "ready" ? composed : <span className="ui-loki-nudge-shimmer">Loki is composing…</span>}
       </span>
     </div>
   );

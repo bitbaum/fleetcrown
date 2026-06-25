@@ -150,7 +150,7 @@ export function UserPromptsSection({
                       onClick={() => setRunId(p.id)}
                       className="ui-btn-icon text-accent-text hover:text-accent-hover"
                       aria-label="Run prompt"
-                      title="Run with Ivy"
+                      title="Run with Loki"
                     >
                       <Zap className="h-3.5 w-3.5" />
                     </button>

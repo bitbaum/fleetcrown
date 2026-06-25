@@ -1,6 +1,6 @@
 /**
  * Shared Groq API client — single source of truth for the model name and call pattern.
- * Dispatch strategist, prompt-merge, and Ivy all use this.
+ * Dispatch strategist, prompt-merge, and Loki all use this.
  */
 
 export const GROQ_FAST_MODEL = "llama-3.3-70b-versatile";

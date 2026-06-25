@@ -4,7 +4,7 @@ import { LokiWorkspace } from "@/components/loki/LokiWorkspace";
 export const metadata: Metadata = { title: "Loki" };
 
 // Loki — the conversational command surface (docs/loki-command-surface.md §4).
-// One composer, a conversation list, a project filter; chat routes to Ivy and
+// One composer, a conversation list, a project filter; chat routes to Loki and
 // commands dispatch into the project's agent session via the shared resolver.
 export default function LokiPage() {
   return (

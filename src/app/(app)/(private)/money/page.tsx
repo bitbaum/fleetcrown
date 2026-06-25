@@ -164,7 +164,7 @@ export default async function MoneyPage() {
         <div className="mt-5 flex items-start gap-2 border-t border-border-subtle pt-4 text-sm text-text-tertiary">
           <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
           <span>
-            Click the arrow icon to verify at the source. Unverified = no billing email found. Ask Ivy to re-scan if something looks wrong.
+            Click the arrow icon to verify at the source. Unverified = no billing email found. Ask Loki to re-scan if something looks wrong.
           </span>
         </div>
       </Card>

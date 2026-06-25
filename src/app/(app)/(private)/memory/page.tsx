@@ -46,7 +46,7 @@ export default async function MemoryPage() {
 
   return (
     <PullToRefresh>
-    <PageLayout title="Memory" subtitle="What Ivy knows — the knowledge graph">
+    <PageLayout title="Memory" subtitle="What Loki knows — the knowledge graph">
 
       <StatRow>
         <Card>

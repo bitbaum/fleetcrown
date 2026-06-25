@@ -4,7 +4,7 @@ import { users } from "./users";
 import { ACTION_STATUS, type ActionStatus, type ActionType } from "@/lib/constants/statuses";
 
 /** Shape of the JSONB `payload` column on actions — the union of fields
- *  Ivy fills in for each action type. Exported so render code can pick
+ *  Loki fills in for each action type. Exported so render code can pick
  *  it up via the schema rather than re-declaring `Record<string,unknown>`. */
 export type ActionPayload = {
   // For messages:
@@ -24,7 +24,7 @@ export type ActionPayload = {
 };
 
 /**
- * Action Queue — Ivy's hands.
+ * Action Queue — Loki's hands.
  *
  * IRON RULE: Nothing with status 'draft' ever executes.
  * Only 'approved' actions are executed. George must review every draft.
@@ -40,20 +40,20 @@ export const actions = pgTable("actions", {
 
   // Workflow status — the critical field
   status: text("status").$type<ActionStatus>().notNull().default(ACTION_STATUS.DRAFT),
-  // draft     = Ivy proposes, George hasn't seen it yet
+  // draft     = Loki proposes, George hasn't seen it yet
   // approved  = George said yes, ready to execute
   // executed  = Done, action was taken
   // rejected  = George said no
   // expired   = Too old, no longer relevant
 
-  // What Ivy wants to do
+  // What Loki wants to do
   title: text("title").notNull(),
   description: text("description"),
 
   // The actual content (message body, event details, etc.)
   payload: jsonb("payload").$type<ActionPayload>(),
 
-  // Why Ivy thinks this action is needed
+  // Why Loki thinks this action is needed
   reasoning: text("reasoning"),
 
   // Link to related entity (person, project, etc.)
@@ -69,7 +69,7 @@ export const actions = pgTable("actions", {
   index("idx_actions_status").on(table.status),
   index("idx_actions_type").on(table.type),
   index("idx_actions_created_at").on(table.createdAt),
-  // Prevent Ivy from queuing a second draft for the same action title.
+  // Prevent Loki from queuing a second draft for the same action title.
   // Once approved/rejected/executed the title is free to reappear.
   uniqueIndex("idx_actions_unique_draft_title")
     .on(table.userId, table.title)

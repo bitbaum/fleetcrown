@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { X, Link2, Loader2 } from "lucide-react";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { formatDistanceToNow } from "date-fns";
 import { deriveRelationshipHealth, HEALTH_DOT_COLOR, HEALTH_LABEL } from "@/lib/constants/people";
@@ -156,9 +156,9 @@ export function PersonDetail({
               "What do you know about this person from my knowledge graph? What would be a good next step with them?",
             ].filter(Boolean).join("\n");
             return (
-              <IvyDispatchButton
+              <LokiDispatchButton
                 prompt={prompt}
-                title="Ask Ivy about this person"
+                title="Ask Loki about this person"
                 className="ui-btn-icon text-text-muted hover:text-status-positive"
               />
             );

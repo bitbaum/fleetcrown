@@ -5,7 +5,7 @@ import { callGroqText } from "@/lib/groq";
 
 // Keep the prose tight — this lands inside a Watch card, not a long-form
 // reply. Two sentences max, no preamble, no hedging.
-const SYSTEM_PROMPT = `You are Ivy, the user's AI agent.
+const SYSTEM_PROMPT = `You are Loki, the user's AI agent.
 
 Compose one short paragraph (one or two sentences max) that names the focus item the user should pay attention to right now and proposes one small concrete next move.
 
@@ -35,7 +35,7 @@ const requestSchema = z.object({
 /**
  * POST /api/today/watch/compose
  *
- * Turn a templated Watch focus (kind + title + context) into an Ivy-composed
+ * Turn a templated Watch focus (kind + title + context) into a Loki-composed
  * one-paragraph nudge. Called by the TodayWatch client component once the
  * page is interactive — the server-rendered Watch card shows the templated
  * context as immediate signal, then upgrades to composed prose when the LLM

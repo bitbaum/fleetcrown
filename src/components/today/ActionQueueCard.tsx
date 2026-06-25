@@ -147,7 +147,7 @@ export async function ActionQueueCard() {
                     })}
                   </div>
                   <div className="text-xs md:text-sm text-text-secondary mt-2 italic">
-                    Ivy: {group.reasoning}
+                    Loki: {group.reasoning}
                   </div>
                 </div>
               </div>
@@ -191,7 +191,7 @@ export async function ActionQueueCard() {
 
                     {action.reasoning && (
                       <div className="text-xs md:text-sm text-text-secondary mt-2 italic">
-                        Ivy: {action.reasoning}
+                        Loki: {action.reasoning}
                       </div>
                     )}
 

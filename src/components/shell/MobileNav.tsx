@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 
 const OVERFLOW_ITEMS = NAV_ITEMS.filter((item) => !item.mobile);
 
-function openAskIvy() {
-  window.dispatchEvent(new CustomEvent("ivy:open", { detail: { prompt: "" } }));
+function openAskLoki() {
+  window.dispatchEvent(new CustomEvent("loki:open", { detail: { prompt: "" } }));
 }
 
 export function MobileNav() {
@@ -45,13 +45,13 @@ export function MobileNav() {
           );
         })}
 
-        <div className="ui-mobile-nav-ivy">
+        <div className="ui-mobile-nav-loki">
           <button
             type="button"
-            onClick={openAskIvy}
-            className="ui-mobile-nav-ivy-btn"
-            aria-label="Ask Ivy"
-            title="Ask Ivy"
+            onClick={openAskLoki}
+            className="ui-mobile-nav-loki-btn"
+            aria-label="Ask Loki"
+            title="Ask Loki"
           >
             <Sparkles className="h-5 w-5" aria-hidden="true" />
           </button>

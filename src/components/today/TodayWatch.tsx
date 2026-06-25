@@ -3,8 +3,8 @@ import { Eye, ArrowRight, CheckCircle2 } from "lucide-react";
 import { requirePageUserId } from "@/lib/session";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { getTodayWatch, type WatchFocus } from "@/db/queries/today-watch";
-import { IvyDispatchButton } from "@/components/shared/IvyDispatchButton";
-import { IvyNudge } from "./IvyNudge";
+import { LokiDispatchButton } from "@/components/shared/LokiDispatchButton";
+import { LokiNudge } from "./LokiNudge";
 
 const KIND_LABEL: Record<WatchFocus["kind"], string> = {
   "overdue-commitment": "Overdue commitment",
@@ -23,7 +23,7 @@ const KIND_LABEL: Record<WatchFocus["kind"], string> = {
  *
  * The point: prove the AI is paying attention to the user's life, not just
  * showing them dashboards. One specific thing to look at right now, with
- * context and a one-click handoff to Ivy for a longer conversation.
+ * context and a one-click handoff to Loki for a longer conversation.
  */
 export async function TodayWatch() {
   const userId = await requirePageUserId();
@@ -38,7 +38,7 @@ export async function TodayWatch() {
     <div className="ui-today-watch">
       <div className="ui-today-watch-head">
         <Eye className="h-4 w-4 shrink-0 text-accent-text" />
-        <span className="ui-today-watch-eyebrow">Ivy is watching</span>
+        <span className="ui-today-watch-eyebrow">Loki is watching</span>
       </div>
 
       {focus ? (
@@ -49,7 +49,7 @@ export async function TodayWatch() {
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </Link>
           <p className="ui-today-watch-focus-context">{focus.context}</p>
-          <IvyNudge kind={focus.kind} title={focus.title} context={focus.context} />
+          <LokiNudge kind={focus.kind} title={focus.title} context={focus.context} />
         </>
       ) : allClear ? (
         <div className="ui-today-watch-clear">
@@ -69,10 +69,10 @@ export async function TodayWatch() {
 
       {focus && (
         <div className="ui-today-watch-action">
-          <IvyDispatchButton
-            prompt={focus.ivyPrompt}
-            label="Brief Ivy on this"
-            title="Hand this focus to Ivy"
+          <LokiDispatchButton
+            prompt={focus.lokiPrompt}
+            label="Brief Loki on this"
+            title="Hand this focus to Loki"
             className="ui-btn-secondary"
           />
         </div>

@@ -1,8 +1,8 @@
 import type { ProjectData } from "@/components/projects/project-detail-types";
 import { HEALTH_SIGNAL_CONFIG } from "@/components/projects/project-badges";
 
-/** Build a rich context prompt about a project for Ivy. */
-export function buildProjectIvyPrompt(data: {
+/** Build a rich context prompt about a project for Loki. */
+export function buildProjectLokiPrompt(data: {
   name: string;
   description?: string | null;
   attrs: Record<string, string>;

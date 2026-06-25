@@ -4,7 +4,7 @@ import { Loader2, Archive, X, Check } from "lucide-react";
 import type { Milestone } from "@/db/schema/goals";
 import type { useInlineEdit } from "@/hooks/use-inline-edit";
 import { DeleteGoalButton } from "./DeleteGoalButton";
-import { SendToIvyButton, CopyGoalPromptButton } from "./goal-card-helpers";
+import { SendToLokiButton, CopyGoalPromptButton } from "./goal-card-helpers";
 
 type InlineEdit<T> = ReturnType<typeof useInlineEdit<T>>;
 
@@ -81,7 +81,7 @@ export function GoalTitleRow({
       <div className="ml-auto flex items-center gap-0.5">
         {!isClosed && (
           <>
-            <SendToIvyButton
+            <SendToLokiButton
               title={displayTitle}
               description={description}
               progress={progress}
