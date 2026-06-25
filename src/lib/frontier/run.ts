@@ -11,7 +11,8 @@ import {
   listConsideredProposalTitles,
   insertProposals,
 } from "@/db/queries/frontier";
-import { listActiveGoals } from "@/db/queries/goals";
+import { listActiveGoalsWithMilestones } from "@/db/queries/goals";
+import { FLEET_RUNNER_RELEASES } from "@/config/changelog";
 import type { FrontierDigestRow } from "@/db/schema";
 
 export type RunFrontierResult = {
@@ -54,13 +55,22 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   if (!target) return { skipped: "no-target", drafted: 0, surfaced: 0 };
 
   const [activeGoals, consideredTitles] = await Promise.all([
-    listActiveGoals(target.userId),
+    listActiveGoalsWithMilestones(target.userId),
     listConsideredProposalTitles(target.userId),
   ]);
+
+  // Open milestones across active goals = the declared gaps to fill.
+  const openGaps = activeGoals
+    .flatMap((g) => (g.milestones ?? []).filter((m) => !m.done).map((m) => `${g.title}: ${m.title}`))
+    .slice(0, 16);
+  // Recently shipped, user-facing features — build on these, don't repropose.
+  const recentlyShipped = FLEET_RUNNER_RELEASES.slice(0, 6).flatMap((r) => r.highlights).slice(0, 12);
 
   const drafts = await generateProposals(digest.items, {
     activeGoalTitles: activeGoals.map((g) => g.title),
     consideredTitles,
+    openGaps,
+    recentlyShipped,
   });
   if (drafts.length === 0) return { drafted: 0, surfaced: 0 };
 

@@ -55,6 +55,17 @@ export async function listActiveGoals(userId: string) {
     .orderBy(goals.title);
 }
 
+/** Active goals with their descriptions + milestones — used to ground the
+ *  frontier proposal generator in the real roadmap (open milestones = the
+ *  declared gaps it should fill, rather than inventing generic ideas). */
+export async function listActiveGoalsWithMilestones(userId: string) {
+  return db
+    .select({ title: goals.title, description: goals.description, milestones: goals.milestones })
+    .from(goals)
+    .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE)))
+    .orderBy(goals.title);
+}
+
 /** Throws if entityId is set but the entity doesn't belong to userId.
  *  Prevents users from linking goals to other tenants' entities, which would
  *  leak the entity name through getGoals' join. */

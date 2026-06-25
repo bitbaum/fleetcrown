@@ -27,7 +27,22 @@ export type ProposalContext = {
   activeGoalTitles: string[];
   /** Titles already proposed/considered (incl. dismissed) — do not repropose. */
   consideredTitles: string[];
+  /** Open roadmap milestones ("Goal: milestone") — the declared gaps to fill. */
+  openGaps: string[];
+  /** Recently shipped, user-facing features — build on these, don't repropose. */
+  recentlyShipped: string[];
 };
+
+// FleetCrown's real subsystems, so proposals target a concrete part of the
+// product rather than generic "use AI" ideas. Stable enough to live here.
+const FLEETCROWN_ARCHITECTURE = `FleetCrown's subsystems a proposal can target:
+- Control plane: dispatch intents to agents, real-time SSE status, per-project cards, git-sync guard.
+- Vendor-agnostic agents: adapter pattern over claude/cursor/codex/gemini/grok, AGENT_FALLBACK_ORDER, auto-reroute on capacity walls.
+- Orchestration: orchestration_runs (open→close with inferred outcome), session.md handoffs, outcome capture.
+- Fleet Runner (local desktop executor): owns PTYs, types into agent stdin, bridge SSE.
+- Self-improvement: the frontier digest + this proposal loop + cross-model verifier.
+- Life-OS surfaces: people, money, goals, habits, events, prompts library.
+- Governance/captain-mode: see + govern across deployed agents (the north star).`;
 
 function digestForPrompt(items: FrontierItem[]): string {
   return items.map((it, i) => `[${i}] (${it.category}) ${it.title} — ${it.summary} <${it.url}>`).join("\n");
@@ -37,15 +52,24 @@ const GENERATE_SYSTEM = `You are FleetCrown's self-improvement strategist.
 
 ${FLEETCROWN_MISSION}
 
-Given today's frontier developments AND FleetCrown's current goals, propose AT MOST 3 specific, actionable ways FleetCrown should evolve. Each proposal MUST:
-- tie a specific frontier development to a specific FleetCrown capability (not generic "use more AI");
-- be concrete enough that an engineer could start building it;
-- NOT duplicate an existing active goal or a previously-considered proposal.
+${FLEETCROWN_ARCHITECTURE}
 
-If nothing today genuinely warrants a new direction, return an empty list. Do NOT invent work to fill the quota — an empty list is the correct answer most days.
+You will be given today's frontier developments, FleetCrown's RECENTLY SHIPPED features, its OPEN ROADMAP GAPS (planned-but-not-done milestones), and its current goals.
+
+Your reasoning procedure (follow it):
+1. Start from the OPEN ROADMAP GAPS and the subsystems above — that is what FleetCrown actually needs.
+2. For each gap/subsystem, ask: does any of TODAY'S frontier developments offer a concrete technique, result, or tool that would advance it?
+3. Propose ONLY where there is a real match. The proposal's subject is the GAP; the frontier development is the means. Title it after the FleetCrown change, not the paper.
+
+Propose your best 1-3 gap-anchored matches. Each MUST:
+- name a specific open gap or subsystem it advances, AND the specific frontier development it draws on;
+- be concrete enough that an engineer could start building it this week;
+- build ON recently-shipped work, never repropose it; not duplicate an active goal or a considered proposal.
+
+Lean toward proposing when there is a plausible connection — a separate panel of reviewers will score and filter your proposals, so your job is to surface the strongest candidate matches, not to pre-reject them. Title each after the FleetCrown change, not the paper. Only return an empty list if today's developments have genuinely no plausible bearing on any gap or subsystem.
 
 Return STRICT JSON only:
-{"proposals":[{"title":"...","rationale":"... (2-3 sentences, name the frontier item and the FleetCrown capability)","sourceUrls":["<url from the candidate list>"]}]}`;
+{"proposals":[{"title":"...","rationale":"... (2-3 sentences: name the frontier item, the FleetCrown subsystem/gap, and what concretely gets built)","sourceUrls":["<url from the candidate list>"]}]}`;
 
 const CRITIQUE_SYSTEM = `You are an adversarial reviewer of self-improvement proposals for FleetCrown (a model-agnostic AI-agent-fleet control plane). Default to REJECTING. A proposal only earns a high score if it is ALL of: genuinely actionable, specific to FleetCrown (not generic AI hype), tied to a real frontier development, and NOT a restatement of an existing goal.
 
@@ -106,7 +130,9 @@ export async function generateProposals(
   const validUrls = new Set(items.map((it) => it.url));
 
   const user = [
-    `Today's frontier digest:\n${digestForPrompt(items)}`,
+    ctx.openGaps.length ? `OPEN ROADMAP GAPS — start here; these are what FleetCrown needs:\n- ${ctx.openGaps.join("\n- ")}` : "",
+    `\nTODAY'S FRONTIER DEVELOPMENTS — match these against the gaps above:\n${digestForPrompt(items)}`,
+    ctx.recentlyShipped.length ? `\nRECENTLY SHIPPED (build on, do NOT repropose):\n- ${ctx.recentlyShipped.join("\n- ")}` : "",
     ctx.activeGoalTitles.length ? `\nCurrent active goals (do NOT duplicate):\n- ${ctx.activeGoalTitles.join("\n- ")}` : "",
     ctx.consideredTitles.length ? `\nAlready considered (do NOT repropose):\n- ${ctx.consideredTitles.join("\n- ")}` : "",
   ].join("\n");
