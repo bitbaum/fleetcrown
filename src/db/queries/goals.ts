@@ -57,12 +57,19 @@ export async function listActiveGoals(userId: string) {
 
 /** Active goals with their descriptions + milestones — used to ground the
  *  frontier proposal generator in the real roadmap (open milestones = the
- *  declared gaps it should fill, rather than inventing generic ideas). */
-export async function listActiveGoalsWithMilestones(userId: string) {
+ *  declared gaps it should fill, rather than inventing generic ideas).
+ *  Pass entityId to scope to one entity's goals — the frontier loop scopes to
+ *  the FleetCrown product entity so it grounds on engineering gaps, not the
+ *  owner's unrelated personal life-OS goals. */
+export async function listActiveGoalsWithMilestones(userId: string, entityId?: string) {
   return db
     .select({ title: goals.title, description: goals.description, milestones: goals.milestones })
     .from(goals)
-    .where(and(eq(goals.userId, userId), eq(goals.status, GOAL_STATUS.ACTIVE)))
+    .where(and(
+      eq(goals.userId, userId),
+      eq(goals.status, GOAL_STATUS.ACTIVE),
+      entityId ? eq(goals.entityId, entityId) : undefined,
+    ))
     .orderBy(goals.title);
 }
 

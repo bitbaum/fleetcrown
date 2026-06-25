@@ -44,6 +44,9 @@ export type RunProposalsResult = {
   skipped?: "no-target" | "no-items";
   drafted: number;
   surfaced: number;
+  /** Every draft with its panel verdict — makes the loop observable (you can
+   *  see what was proposed and why it did/didn't clear the bar), not a black box. */
+  details?: { title: string; score: number; passed: boolean; judges: { model: string; score: number }[] }[];
 };
 
 /** The self-improvement half: draft proposals from a digest, critique them,
@@ -55,7 +58,9 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   if (!target) return { skipped: "no-target", drafted: 0, surfaced: 0 };
 
   const [activeGoals, consideredTitles] = await Promise.all([
-    listActiveGoalsWithMilestones(target.userId),
+    // Scope to the FleetCrown entity so grounding uses engineering gaps, not the
+    // owner's unrelated personal life-OS goals (financial independence, burn, …).
+    listActiveGoalsWithMilestones(target.userId, target.entityId),
     listConsideredProposalTitles(target.userId),
   ]);
 
@@ -72,11 +77,12 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
     openGaps,
     recentlyShipped,
   });
-  if (drafts.length === 0) return { drafted: 0, surfaced: 0 };
+  if (drafts.length === 0) return { drafted: 0, surfaced: 0, details: [] };
 
   const verified = await verifyProposals(drafts);
+  const details = verified.map((p) => ({ title: p.title, score: p.score, passed: p.passed, judges: p.verifierScores }));
   const survivors = verified.filter((p) => p.passed);
-  if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0 };
+  if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0, details };
 
   await insertProposals(survivors.map((p) => ({
     digestDate: digest.digestDate,
@@ -90,5 +96,5 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
     status: "proposed",
   })));
 
-  return { drafted: drafts.length, surfaced: survivors.length };
+  return { drafted: drafts.length, surfaced: survivors.length, details };
 }
