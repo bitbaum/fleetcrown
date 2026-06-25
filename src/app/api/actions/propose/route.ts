@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePrivateApiAccess } from "@/lib/private-zone-api";
+import { requirePrivateApiAccessWithBearer } from "@/lib/private-zone-api";
 import { readJsonBody } from "@/lib/api/route-helpers";
 import { proposeAction } from "@/db/queries/actions";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
@@ -25,7 +25,7 @@ const ProposeActionBody = z.object({
  * This is the entry point the future "handle X" loop calls; nothing here executes.
  */
 export async function POST(req: NextRequest) {
-  const access = await requirePrivateApiAccess();
+  const access = await requirePrivateApiAccessWithBearer();
   if (access instanceof NextResponse) return access;
   const { userId } = access;
 

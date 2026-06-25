@@ -3,11 +3,8 @@ import { ACTION_TYPE } from "@/lib/constants/statuses";
 import { markActionExecuted } from "@/db/queries/actions";
 import { createCommitment } from "@/db/queries/today";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
-import {
-  sendTelegramMessage,
-  selfTelegramTarget,
-  isAllowedTelegramTarget,
-} from "@/lib/actions/telegram-send";
+import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
+import { sendEmail } from "@/lib/email";
 
 export type ExecuteActionResult = {
   /** true only when a real-world effect happened and the row reached status='executed'. */
@@ -18,12 +15,11 @@ export type ExecuteActionResult = {
   error?: string;
 };
 
-/** Action types whose executor delegates to external reach not yet wired
- *  (Gmail/Calendar/WhatsApp/etc). Deliberately fail-closed: they pass the human
- *  gate but do nothing at execution until that path is built and reviewed.
- *  SEND_MESSAGE is now wired (Telegram, self-only) — see the switch below. */
+/** Action types whose executor isn't wired yet. Fail-closed: they pass the human
+ *  gate but do nothing at execution until built. SEND_MESSAGE (Telegram) and
+ *  SEND_EMAIL (Resend) are now wired — see the switch below. CREATE_EVENT stays
+ *  deferred (no calendar backend; gog mutations are blocked by design). */
 const DEFERRED_TYPES = new Set<Action["type"]>([
-  ACTION_TYPE.SEND_EMAIL,
   ACTION_TYPE.CREATE_EVENT,
   ACTION_TYPE.FOLLOW_UP,
   ACTION_TYPE.OTHER,
@@ -72,33 +68,25 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
       }
 
       case ACTION_TYPE.SEND_MESSAGE: {
-        // External + irreversible. Slice 2 enables Telegram ONLY, to the operator HIMSELF only.
+        // External + irreversible. Telegram only. The QUEUE APPROVAL is the gate now —
+        // George approved this exact message + recipient — so we send to payload.to
+        // (the approved recipient); empty recipient defaults to George himself.
         const payload = action.payload ?? {};
         const channel =
           (typeof payload.channel === "string" && payload.channel.trim()) || "telegram";
         if (channel !== "telegram") {
-          // WhatsApp/email/etc not enabled this slice — fail closed.
           await recordActionAuditEvent(userId, action, "deferred", {
             reason: `send channel not enabled: ${channel}`,
           });
           return { executed: false, deferred: true };
         }
 
-        const requested = typeof payload.to === "string" ? payload.to : null;
-        if (!isAllowedTelegramTarget(requested)) {
-          // Self-only guardrail: refuse any recipient but the operator until widened.
-          await recordActionAuditEvent(userId, action, "deferred", {
-            reason: `recipient not in self-only allowlist: ${requested ?? "(none)"}`,
-          });
-          return { executed: false, deferred: true };
-        }
-
-        const target = selfTelegramTarget();
+        const target = (typeof payload.to === "string" && payload.to.trim()) || selfTelegramTarget();
         if (!target) {
           await recordActionAuditEvent(userId, action, "failed", {
-            reason: "no TELEGRAM_CHAT_ID configured for self-send",
+            reason: "no telegram recipient and no self target configured",
           });
-          return { executed: false, error: "no-self-target" };
+          return { executed: false, error: "no-target" };
         }
 
         const text = (typeof payload.body === "string" && payload.body.trim()) || action.title;
@@ -118,8 +106,44 @@ export async function executeAction(userId: string, action: Action): Promise<Exe
           return { executed: false, error: "not-approved-at-execute-time" };
         }
         await recordActionAuditEvent(userId, action, "executed", {
-          meta: { channel, messageId: sent.messageId ?? null },
+          meta: { channel, to: target, messageId: sent.messageId ?? null },
         });
+        return { executed: true };
+      }
+
+      case ACTION_TYPE.SEND_EMAIL: {
+        // External + irreversible. Sent via Resend (FleetCrown's email) on approval.
+        // (From a FleetCrown address, not George's Gmail — gog sends are blocked by
+        // design; a true from-Gmail path is a later enhancement.)
+        const payload = action.payload ?? {};
+        if (!process.env.RESEND_API_KEY) {
+          await recordActionAuditEvent(userId, action, "deferred", {
+            reason: "email not configured (no RESEND_API_KEY)",
+          });
+          return { executed: false, deferred: true };
+        }
+        const to = typeof payload.to === "string" ? payload.to.trim() : "";
+        if (!to.includes("@")) {
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: `invalid email recipient: ${to || "(none)"}`,
+          });
+          return { executed: false, error: "invalid-recipient" };
+        }
+        const subject = (typeof payload.subject === "string" && payload.subject.trim()) || action.title;
+        const text =
+          (typeof payload.body === "string" && payload.body.trim()) || action.description || action.title;
+        const html = text
+          .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+
+        await sendEmail(to, subject, html, text); // throws on Resend error → caught below
+        const done = await markActionExecuted(action.id, userId);
+        if (!done) {
+          await recordActionAuditEvent(userId, action, "failed", {
+            reason: "email sent but action was not in 'approved' state to mark executed",
+          });
+          return { executed: false, error: "not-approved-at-execute-time" };
+        }
+        await recordActionAuditEvent(userId, action, "executed", { meta: { channel: "email", to } });
         return { executed: true };
       }
 
