@@ -5,6 +5,57 @@ import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 import type { TerminalTransport } from "./terminal-transport";
 
+// Strip ANSI/VT escape sequences so URL detection sees plain text. URLs never
+// contain ESC, so removing colour/cursor codes is enough to match cleanly.
+const ANSI_RE = /\x1b\[[0-9;?]*[ -/]*[@-~]/g;
+const URL_RE = /https?:\/\/[^\s"'`<>\\)\]}]+/g;
+
+/** Pull whole URLs out of a chunk of terminal OUTPUT. The byte stream keeps each
+ *  URL on one logical line even when xterm wraps it across visual rows, so this
+ *  always recovers the complete link — the fix for "only the first line is
+ *  clickable". Trailing sentence punctuation is trimmed. */
+function extractUrls(text: string): string[] {
+  const matches = text.replace(ANSI_RE, "").match(URL_RE) ?? [];
+  return matches.map((u) => u.replace(/[.,;:!?)\]}]+$/, "")).filter(Boolean);
+}
+
+/** Real-DOM bar listing URLs detected in the terminal output — clickable + a
+ *  one-click Copy each. Renders nothing until a URL appears, so it never steals
+ *  terminal height. */
+function LinkBar({ links, onDismiss }: { links: string[]; onDismiss: () => void }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  if (links.length === 0) return null;
+  const copy = (url: string) => {
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopied(url);
+      window.setTimeout(() => setCopied((c) => (c === url ? null : c)), 1500);
+    }).catch(() => {});
+  };
+  return (
+    <div className="ui-term-linkbar">
+      <span className="ui-term-linkbar-label">Links</span>
+      <div className="ui-term-linkbar-list">
+        {links.map((url) => (
+          <div key={url} className="ui-term-linkbar-row">
+            <a className="ui-term-linkbar-url" href={url} target="_blank" rel="noopener noreferrer" title={url}>
+              {url}
+            </a>
+            <button type="button" className="ui-term-linkbar-btn" onClick={() => copy(url)}>
+              {copied === url ? "Copied" : "Copy"}
+            </button>
+            <a className="ui-term-linkbar-btn" href={url} target="_blank" rel="noopener noreferrer">
+              Open
+            </a>
+          </div>
+        ))}
+      </div>
+      <button type="button" className="ui-term-linkbar-dismiss" onClick={onDismiss} aria-label="Dismiss links">
+        ✕
+      </button>
+    </div>
+  );
+}
+
 /**
  * The ONE xterm view, parameterized by its transport (terminal-transport.ts).
  * Renders a workspace's / agent's byte stream, optionally captures keystrokes,
@@ -46,6 +97,8 @@ export function TerminalView({
   const [sendOpen, setSendOpen] = useState(false);
   const [line, setLine] = useState("");
   const [sending, setSending] = useState(false);
+  // URLs detected in the terminal output stream — surfaced by <LinkBar/>.
+  const [links, setLinks] = useState<string[]>([]);
 
   // Keep the latest transport/onStatus without retearing the stream every render.
   const transportRef = useRef(transport);
@@ -101,9 +154,19 @@ export function TerminalView({
       // links un-clickable). noopener/noreferrer for safety.
       term.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, "_blank", "noopener,noreferrer")));
 
-      // Copy: ⌘C (mac) or Ctrl/⌘-Shift-C → clipboard when there's a selection.
-      // Plain Ctrl-C stays SIGINT (don't break interrupting an agent). This is
-      // why copying "was impossible" — xterm doesn't copy-on-select by default.
+      // Copy-on-select: the reliable fix for "copying is impossible". xterm's
+      // selection lives in its own canvas layer (not the DOM), so the browser's
+      // native ⌘C copies nothing. Mirror every non-empty selection straight to
+      // the system clipboard the moment it's made (terminal "primary selection"
+      // behaviour) — no keypress, no focus dance required.
+      term.onSelectionChange(() => {
+        const sel = term.getSelection();
+        if (sel) navigator.clipboard?.writeText(sel).catch(() => {});
+      });
+
+      // Keyboard copy/paste as the explicit path. Copy: ⌘C / Ctrl-Shift-C (only
+      // when there's a selection — plain Ctrl-C stays SIGINT so interrupting an
+      // agent still works). Paste: ⌘V / Ctrl-Shift-V → clipboard into the PTY.
       term.attachCustomKeyEventHandler((e) => {
         if (e.type !== "keydown") return true;
         const key = e.key.toLowerCase();
@@ -111,6 +174,11 @@ export function TerminalView({
         if (isCopy && term.hasSelection()) {
           navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
           return false; // handled — don't forward to the PTY
+        }
+        const isPaste = (e.metaKey && key === "v") || (e.ctrlKey && e.shiftKey && key === "v");
+        if (isPaste && interactive) {
+          navigator.clipboard?.readText().then((t) => { if (t) void transport.sendKey(t); }).catch(() => {});
+          return false;
         }
         return true;
       });
@@ -154,9 +222,24 @@ export function TerminalView({
       resizeObserver.observe(host);
       syncSize();
 
+      // Rolling tail of recent output (plain text) scanned for URLs. The stream
+      // keeps each URL contiguous regardless of xterm's visual wrapping, so the
+      // whole link is recovered and shown in <LinkBar/> — newest first, capped.
+      let tail = "";
       disconnect = transport.connect({
-        onOutput: (data) => term.write(data),
-        onReset: () => term.reset(),
+        onOutput: (data) => {
+          term.write(data);
+          tail = (tail + data).slice(-8000);
+          const urls = extractUrls(tail);
+          if (urls.length) {
+            setLinks((prev) => {
+              const next = [...prev];
+              for (const u of urls) if (!next.includes(u)) next.unshift(u);
+              return next.length === prev.length ? prev : next.slice(0, 4);
+            });
+          }
+        },
+        onReset: () => { term.reset(); tail = ""; setLinks([]); },
         onStatus: (status) => onStatusRef.current?.(status),
         onConnected: (c) => setConnected(c),
       });
@@ -178,7 +261,12 @@ export function TerminalView({
   }, [transport.key, interactive]);
 
   if (bare) {
-    return <div ref={hostRef} className={className ?? "h-full w-full"} />;
+    return (
+      <div className={`flex flex-col ${className ?? "h-full w-full"}`}>
+        <div ref={hostRef} className="min-h-0 flex-1" />
+        <LinkBar links={links} onDismiss={() => setLinks([])} />
+      </div>
+    );
   }
 
   const send = async () => {
@@ -199,6 +287,7 @@ export function TerminalView({
         )}
       </div>
       <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
+      <LinkBar links={links} onDismiss={() => setLinks([])} />
       {onSend && sendOpen && (
         <div className="flex items-center gap-2">
           <input

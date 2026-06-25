@@ -1549,6 +1549,35 @@
   .ui-term-divider-h::after { @apply inset-x-0 top-1/2 h-px -translate-y-1/2; }
   .ui-term-divider:hover::after { @apply bg-border-interactive; }
 
+  /* Detected-link bar — surfaces URLs found in the terminal's OUTPUT STREAM as
+     real DOM elements. xterm wraps long URLs across visual rows and its link
+     addon only catches the first row, so a `claude setup-token` URL is
+     effectively unclickable in-grid. The byte stream, though, has the whole URL
+     on one logical line — scan that and present it here, clickable + copyable,
+     regardless of how the canvas wrapped it. */
+  .ui-term-linkbar {
+    @apply flex items-start gap-2 border-t border-border-subtle bg-surface-base px-2.5 py-1.5;
+  }
+  .ui-term-linkbar-label {
+    @apply mt-0.5 shrink-0 text-nano font-semibold uppercase tracking-caps text-text-muted;
+  }
+  .ui-term-linkbar-list {
+    @apply flex min-w-0 flex-1 flex-col gap-1;
+  }
+  .ui-term-linkbar-row {
+    @apply flex min-w-0 items-center gap-1.5;
+  }
+  .ui-term-linkbar-url {
+    @apply min-w-0 flex-1 truncate text-micro text-accent-text underline decoration-dotted underline-offset-2 transition-colors hover:text-text-primary;
+    font-family: var(--font-mono);
+  }
+  .ui-term-linkbar-btn {
+    @apply shrink-0 rounded border border-border-subtle px-1.5 py-0.5 text-nano font-semibold uppercase tracking-caps text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-term-linkbar-dismiss {
+    @apply shrink-0 rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+
   /* Light / Dark / Auto switch — shared by the sidebar footer (icon-only) and
      Settings → Appearance (with labels). Segmented control on a subtle track. */
   .ui-theme-toggle {
