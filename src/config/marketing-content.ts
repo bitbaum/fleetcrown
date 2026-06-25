@@ -13,6 +13,27 @@ export const HOME_HERO = {
   subheadline: MARKETING_SUBTITLE,
 };
 
+// Hero product visual — an illustrative snapshot of the fleet-command surface
+// rendered directly in the hero fold (x.ai/SpaceX heroes always *show* the
+// product). SSOT for the sample fleet state so the JSX carries no inline
+// literals. Statuses map to the four status tokens via the console dot classes.
+export const HOME_HERO_CONSOLE = {
+  label: "Fleet Command",
+  dispatch: "❯ migrate auth from sessions to jwt",
+  projects: [
+    { name: "orangecat", state: "running", note: "patch callbackUrl matcher" },
+    { name: "revampit", state: "running", note: "draining listmonk queue" },
+    { name: "kivvi", state: "queued", note: "3 intents queued" },
+    { name: "aoz-housing", state: "idle", note: "synced · clean tree" },
+  ],
+  metrics: [
+    { value: "11", label: "active projects" },
+    { value: "4", label: "agents running" },
+    { value: "7", label: "queued intents" },
+  ],
+} as const;
+export type HeroConsoleState = (typeof HOME_HERO_CONSOLE.projects)[number]["state"];
+
 // Differentiation
 export const DIFFERENTIATION = {
   title: "Not another coding agent.",

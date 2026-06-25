@@ -39,3 +39,5 @@ export * from "./runner-presence";
 export * from "./conversations";
 export * from "./frontier-digests";
 export * from "./frontier-proposals";
+
+export * from "./knowledge-embeddings";

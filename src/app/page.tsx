@@ -5,7 +5,7 @@ import { getUserCount } from "@/db/queries/users";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
 import { DesktopDownload } from "@/components/public/DesktopDownload";
-import { PRODUCT_SURFACES, START_PATHS } from "@/config/marketing-content";
+import { PRODUCT_SURFACES, START_PATHS, HOME_HERO_CONSOLE } from "@/config/marketing-content";
 import {
   MARKETING_TAGLINE,
   MARKETING_SUBTITLE,
@@ -47,7 +47,7 @@ export default async function LandingPage() {
 
           <h1 className="ui-public-hero-title">
             {MARKETING_HERO_PRIMARY}<br />
-            <span className="text-text-tertiary">{MARKETING_HERO_SECONDARY}</span>
+            <span className="ui-public-hero-title-dim">{MARKETING_HERO_SECONDARY}</span>
           </h1>
 
           <p className="ui-public-hero-lede">
@@ -58,7 +58,7 @@ export default async function LandingPage() {
             {MARKETING_SUBTITLE}
           </p>
 
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link href={signedIn ? ROUTES.APP_HOME : ROUTES.SIGN_UP} className="ui-public-cta">
               {signedIn ? "Open FleetCrown" : "Start building"}
             </Link>
@@ -67,6 +67,34 @@ export default async function LandingPage() {
                 Download runner
               </Link>
             )}
+          </div>
+
+          {/* Hero product visual — illustrative fleet-command snapshot. Gives the
+              fold a payload (x.ai/SpaceX heroes show the product); data from
+              HOME_HERO_CONSOLE. */}
+          <div className="ui-public-hero-console">
+            <div className="ui-public-hero-console-bar">
+              <span className="ui-public-hero-console-label">{HOME_HERO_CONSOLE.label}</span>
+              <span className="ui-public-hero-console-live">Live</span>
+            </div>
+            <div className="ui-public-hero-console-dispatch">{HOME_HERO_CONSOLE.dispatch}</div>
+            <div className="ui-public-hero-console-rows">
+              {HOME_HERO_CONSOLE.projects.map((project) => (
+                <div key={project.name} className="ui-public-hero-console-row">
+                  <span className={`ui-public-hero-console-dot ui-public-hero-console-dot-${project.state}`} />
+                  <span className="ui-public-hero-console-name">{project.name}</span>
+                  <span className="ui-public-hero-console-note">{project.note}</span>
+                </div>
+              ))}
+            </div>
+            <div className="ui-public-hero-console-metrics">
+              {HOME_HERO_CONSOLE.metrics.map((metric) => (
+                <div key={metric.label}>
+                  <div className="ui-public-hero-console-metric-num">{metric.value}</div>
+                  <div className="ui-public-hero-console-metric-label">{metric.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

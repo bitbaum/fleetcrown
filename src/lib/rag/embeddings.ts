@@ -1,0 +1,69 @@
+/**
+ * Provider-agnostic embeddings client (OpenAI /v1/embeddings shape).
+ *
+ * Ported from OrangeCat's services/ai/embeddings.ts so the two products share one
+ * convention. FleetCrown points it at a LOCAL fastembed server on the box
+ * (BAAI/bge-small-en-v1.5, 384-dim) — no cloud key needed — but it's just an
+ * env-switch away from text-embedding-3-small or any OpenAI-compatible endpoint.
+ *
+ *   EMBEDDINGS_BASE_URL  e.g. http://127.0.0.1:7997/v1   (unset → RAG disabled)
+ *   EMBEDDINGS_MODEL     default BAAI/bge-small-en-v1.5
+ *   EMBEDDINGS_DIM       default 384   (must match the DB vector(N) column)
+ *   EMBEDDINGS_API_KEY   optional (local server needs none)
+ *
+ * Switching models = a migration: the vector(N) column dimension is fixed.
+ */
+
+const DEFAULT_MODEL = "BAAI/bge-small-en-v1.5";
+export const EMBEDDINGS_DIM = Number(process.env.EMBEDDINGS_DIM ?? "384");
+
+function baseUrl(): string | null {
+  const u = process.env.EMBEDDINGS_BASE_URL?.trim();
+  return u ? u.replace(/\/+$/, "") : null;
+}
+
+/** RAG is on only when an embeddings endpoint is configured (graceful-off locally). */
+export function embeddingsEnabled(): boolean {
+  return baseUrl() !== null;
+}
+
+function model(): string {
+  return process.env.EMBEDDINGS_MODEL?.trim() || DEFAULT_MODEL;
+}
+
+/** Embed a batch. Returns null per-input on failure; [] when RAG is disabled. */
+export async function embedTexts(inputs: string[]): Promise<(number[] | null)[]> {
+  const url = baseUrl();
+  if (!url || inputs.length === 0) return inputs.map(() => null);
+  try {
+    const res = await fetch(`${url}/embeddings`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.EMBEDDINGS_API_KEY ? { Authorization: `Bearer ${process.env.EMBEDDINGS_API_KEY}` } : {}),
+      },
+      body: JSON.stringify({ model: model(), input: inputs }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) {
+      console.error("[embeddings] HTTP", res.status, (await res.text()).slice(0, 200));
+      return inputs.map(() => null);
+    }
+    const json = (await res.json()) as { data?: { embedding: number[]; index: number }[] };
+    const out: (number[] | null)[] = inputs.map(() => null);
+    for (const d of json.data ?? []) out[d.index] = d.embedding;
+    return out;
+  } catch (e) {
+    console.error("[embeddings] failed:", e instanceof Error ? e.message : e);
+    return inputs.map(() => null);
+  }
+}
+
+export async function embedText(input: string): Promise<number[] | null> {
+  return (await embedTexts([input]))[0];
+}
+
+/** pgvector text literal: [0.1,0.2,…] */
+export function toVectorLiteral(v: number[]): string {
+  return `[${v.join(",")}]`;
+}

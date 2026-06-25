@@ -24,6 +24,7 @@ import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-st
 import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
+import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -153,7 +154,16 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     // dispatch if context assembly fails.
     const projectContext = await getProjectContext(userId, canonical).catch(() => null);
     const contextBlock = renderProjectContextBlock(projectContext ?? undefined);
-    const withContext = (body: string) => (contextBlock ? `${contextBlock}\n\n${body}` : body);
+    // Captain RAG: surface relevant context from the operator's OTHER projects
+    // (fleet-knowledge vector index), retrieved against this task. The current
+    // project's own profile is already in contextBlock, so it's excluded. Off
+    // (returns "") when EMBEDDINGS_BASE_URL is unset — e.g. local dev.
+    const ragQuery = customPrompt ?? promptKey ?? "";
+    const fleetBlock = ragQuery
+      ? await retrieveFleetContextBlock(userId, ragQuery, { excludeProject: canonical }).catch(() => "")
+      : "";
+    const withContext = (body: string) =>
+      [contextBlock || null, fleetBlock || null, body].filter(Boolean).join("\n\n");
 
     if (customPrompt) {
       prompt = withContext(customPrompt);

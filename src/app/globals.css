@@ -170,6 +170,7 @@
   --public-glow-primary-2:  rgba(0, 0, 0, 0.02);
   --public-glow-secondary:  rgba(0, 0, 0, 0.025);
   --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs (band forces dark aesthetic) */
+  --public-glow-accent:     rgba(255, 92, 0, 0.06);
   --public-title-min: 52px;
   --public-title-preferred: 8vw;
   --public-title-max: 108px;
@@ -287,11 +288,15 @@
   --shadow-panel: 0 1px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 6%);
   --shadow-panel-strong: 0 2px 0 oklch(1 0 0 / 4%), 0 0 0 1px oklch(1 0 0 / 8%);
   /* Marketing backdrop overrides — dark theme flips the grid + glow to white. */
-  --public-grid-stroke:     rgba(255, 255, 255, 0.055);
-  --public-glow-primary:    rgba(255, 255, 255, 0.09);
-  --public-glow-primary-2:  rgba(255, 255, 255, 0.03);
-  --public-glow-secondary:  rgba(255, 255, 255, 0.04);
+  --public-grid-stroke:     rgba(255, 255, 255, 0.06);
+  --public-glow-primary:    rgba(255, 255, 255, 0.14);
+  --public-glow-primary-2:  rgba(255, 255, 255, 0.04);
+  --public-glow-secondary:  rgba(255, 255, 255, 0.05);
   --public-accent:          #ff5c00; /* x.ai-style warm orange for download CTAs and highlights on public dark bands */
+  /* Subtle warm spotlight bleeding down from the top of the hero — injects the
+     brand warmth into the otherwise-monochrome dark surface without using the
+     accent as fill. Kept very low alpha so it reads as depth, not colour. */
+  --public-glow-accent:     rgba(255, 92, 0, 0.10);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */
@@ -516,6 +521,7 @@
   .ui-public-backdrop {
     @apply pointer-events-none absolute inset-0 overflow-hidden;
     background:
+      radial-gradient(ellipse 700px 480px at 50% -8%, var(--public-glow-accent) 0%, transparent 60%),
       radial-gradient(ellipse var(--public-backdrop-primary-width) var(--public-backdrop-primary-height) at 50% 0%, var(--public-glow-primary) 0%, var(--public-glow-primary-2) 40%, transparent 70%),
       radial-gradient(ellipse var(--public-backdrop-secondary-width) var(--public-backdrop-secondary-height) at 50% 33%, var(--public-glow-secondary) 0%, transparent 60%);
   }
@@ -947,7 +953,14 @@
     @apply text-xs uppercase tracking-[0.18em] text-text-tertiary;
   }
   .ui-public-hero-badge {
-    @apply mb-6 inline-block rounded-full border border-border-subtle px-4 py-1 text-xs uppercase tracking-[0.15em] text-text-secondary;
+    @apply mb-8 inline-flex items-center gap-2.5 rounded-full border border-border-subtle bg-white/[0.03] px-4 py-1.5 text-xs uppercase tracking-[0.15em] text-text-secondary backdrop-blur-sm;
+  }
+  /* Live status dot leading the hero badge — warm accent with a soft halo. */
+  .ui-public-hero-badge::before {
+    content: "";
+    @apply h-1.5 w-1.5 shrink-0 rounded-full;
+    background: var(--public-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--public-accent) 22%, transparent);
   }
   .ui-public-page-title {
     @apply font-semibold text-text-primary;
@@ -958,16 +971,22 @@
   .ui-public-hero-title {
     @apply font-heading font-semibold text-text-primary;
     font-size: clamp(3.25rem, 8.5vw, 5.75rem);
-    line-height: 0.92;
-    letter-spacing: -0.035em;
+    line-height: 0.9;
+    letter-spacing: -0.042em;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+  /* Second line of the hero headline. A deliberate two-tone display: line one
+     reads at full brightness, line two steps down — but to a still-legible
+     secondary tone, not the near-disabled tertiary it used to use. */
+  .ui-public-hero-title-dim {
+    @apply text-text-secondary;
+  }
   .ui-public-hero-lede {
-    @apply mx-auto mt-8 max-w-2xl text-2xl leading-tight tracking-tight text-text-secondary;
+    @apply mx-auto mt-7 max-w-2xl text-2xl leading-tight tracking-tight text-text-secondary;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
   }
   .ui-public-hero-sublede {
-    @apply mx-auto mt-6 max-w-xl text-lg text-text-tertiary;
+    @apply mx-auto mt-5 max-w-xl text-lg text-text-tertiary;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.16s both;
   }
   /* x.ai/SpaceX-style entrance: a short, eased rise+fade. Staggered down the
@@ -980,6 +999,74 @@
     .ui-public-hero-title,
     .ui-public-hero-lede,
     .ui-public-hero-sublede { animation: none; }
+  }
+  /* Hero product visual — a framed snapshot of the fleet-command surface that
+     gives the hero fold a payload instead of leaving type on empty black. A
+     floating, faintly-glassy panel with a top sheen, deep drop shadow, and the
+     same status language the real Control view uses. Data is sourced from
+     HOME_HERO_CONSOLE (marketing-content.ts) — no inline literals. */
+  .ui-public-hero-console {
+    @apply relative mx-auto mt-16 w-full max-w-2xl overflow-hidden rounded-2xl border border-border-default bg-surface-raised p-6 text-left;
+    box-shadow: var(--shadow-panel-strong), 0 50px 90px -50px rgba(0, 0, 0, 0.85);
+    animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
+  }
+  .ui-public-hero-console::before {
+    content: "";
+    @apply pointer-events-none absolute inset-x-0 top-0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  }
+  .ui-public-hero-console-bar {
+    @apply mb-5 flex items-center justify-between border-b border-border-subtle pb-4;
+  }
+  .ui-public-hero-console-label {
+    @apply font-mono text-xs uppercase tracking-[0.18em] text-text-tertiary;
+  }
+  .ui-public-hero-console-live {
+    @apply inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-text-tertiary;
+  }
+  .ui-public-hero-console-live::before {
+    content: "";
+    @apply h-1.5 w-1.5 rounded-full;
+    background: var(--public-accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--public-accent) 22%, transparent);
+  }
+  .ui-public-hero-console-dispatch {
+    @apply mb-5 font-mono text-lg text-text-primary;
+  }
+  .ui-public-hero-console-rows {
+    @apply space-y-px overflow-hidden rounded-xl border border-border-subtle;
+  }
+  .ui-public-hero-console-row {
+    @apply flex items-center gap-3 bg-surface-base px-4 py-3;
+  }
+  .ui-public-hero-console-dot {
+    @apply h-2 w-2 shrink-0 rounded-full;
+  }
+  .ui-public-hero-console-dot-running {
+    background: var(--status-positive);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-positive) 20%, transparent);
+  }
+  .ui-public-hero-console-dot-queued {
+    background: var(--status-warning);
+  }
+  .ui-public-hero-console-dot-idle {
+    background: var(--status-neutral);
+  }
+  .ui-public-hero-console-name {
+    @apply font-mono text-sm text-text-secondary;
+  }
+  .ui-public-hero-console-note {
+    @apply ml-auto truncate pl-3 font-mono text-xs text-text-muted;
+  }
+  .ui-public-hero-console-metrics {
+    @apply mt-4 grid grid-cols-3 gap-3 border-t border-border-subtle pt-4;
+  }
+  .ui-public-hero-console-metric-num {
+    @apply font-mono text-2xl text-text-primary;
+  }
+  .ui-public-hero-console-metric-label {
+    @apply mt-0.5 text-xs text-text-tertiary;
   }
   .ui-public-display-lg {
     @apply font-semibold text-text-primary;
@@ -994,13 +1081,15 @@
     letter-spacing: -0.02em;
   }
   .ui-public-cta {
-    @apply inline-flex items-center justify-center rounded-2xl bg-text-primary px-10 py-4 text-lg font-medium text-text-inverted transition-opacity hover:opacity-85 active:opacity-75;
+    @apply inline-flex items-center justify-center rounded-xl bg-text-primary px-7 py-3 text-[15px] font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98];
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 8px 24px -8px rgba(255, 255, 255, 0.25);
   }
   .ui-public-cta-ghost {
-    @apply inline-flex items-center justify-center rounded-2xl border border-border-default px-10 py-4 text-lg font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary;
+    @apply inline-flex items-center justify-center rounded-xl border border-border-default bg-white/[0.02] px-7 py-3 text-[15px] font-medium text-text-secondary transition-all hover:border-border-strong hover:bg-white/[0.05] hover:text-text-primary active:scale-[0.98];
   }
   .ui-public-cta-lg {
-    @apply inline-flex items-center justify-center rounded-2xl bg-text-primary px-12 py-4 text-xl font-medium text-text-inverted transition-opacity hover:opacity-85;
+    @apply inline-flex items-center justify-center rounded-xl bg-text-primary px-9 py-3.5 text-lg font-medium text-text-inverted transition-all hover:opacity-90 active:scale-[0.98];
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 10px 30px -10px rgba(255, 255, 255, 0.3);
   }
   .ui-public-lede {
     @apply text-2xl leading-snug text-text-secondary;
@@ -1012,8 +1101,8 @@
     @apply text-sm text-text-tertiary;
   }
   .ui-public-hero-fold {
-    @apply relative z-10 flex flex-col items-center justify-center px-6 text-center;
-    min-height: 92vh;
+    @apply relative z-10 flex flex-col items-center justify-center px-6 pb-16 pt-10 text-center;
+    min-height: 84vh;
   }
   .ui-public-section-lede {
     @apply max-w-2xl text-xl text-text-secondary;
