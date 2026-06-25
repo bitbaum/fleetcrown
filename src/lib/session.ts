@@ -4,21 +4,33 @@ import { auth } from "@/auth";
 import { DEFAULT_USER_NAME } from "@/lib/constants";
 import { ROUTES } from "@/config/auth";
 import { validateAgentToken } from "@/db/queries/agent-tokens";
-import { getUserByEmail } from "@/db/queries/users";
+import { getUserById, getUserByEmail } from "@/db/queries/users";
 import { envAlias, envAliasBool } from "@/lib/brand-env";
 import { isValidUuid } from "@/lib/utils";
 
 /**
- * Resolve the DB user id from a session. OAuth JWTs may briefly carry the
- * provider id instead of our UUID — fall back to email lookup only then.
- * Fast path (no DB) for the common case where the JWT already carries our UUID.
+ * Resolve the DB user id from a session.
+ *
+ * A valid-looking UUID in the JWT is NOT proof the user still exists: tokens
+ * outlive rows. A box reseed, an account deletion, or a restore can orphan a
+ * still-valid 30-day JWT — its `id` then points at a user that's gone, and the
+ * holder gets a "logged in but everything is empty" phantom session. (This is
+ * exactly how 21 real projects went invisible: the session id no longer matched
+ * the user that owned them, though the email did.) So we verify the id maps to
+ * a real user, and when it doesn't, recover via the email claim — which our own
+ * auth layer signed into the JWT, so it carries the same trust as the id.
+ * OAuth JWTs that briefly carry a non-UUID provider id recover the same way.
  */
 export async function resolveSessionUserId(): Promise<string | null> {
   const session = await auth();
   if (!session?.user) return null;
 
   const id = session.user.id;
-  if (id && isValidUuid(id)) return id;
+  if (id && isValidUuid(id)) {
+    const user = await getUserById(id);
+    if (user) return id;
+    // valid UUID but no such user → orphaned token; fall through to email recovery
+  }
 
   const email = session.user.email;
   if (email) {
