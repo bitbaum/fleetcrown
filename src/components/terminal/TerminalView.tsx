@@ -63,23 +63,35 @@ export function TerminalView({
     // Dynamic import keeps xterm out of the initial bundle — it loads only when
     // a terminal is actually opened.
     (async () => {
-      const [{ Terminal }, { FitAddon }, { WebLinksAddon }, { WebglAddon }, { TERMINAL_THEME }] = await Promise.all([
+      const [{ Terminal }, { FitAddon }, { WebLinksAddon }, { TERMINAL_THEME }] = await Promise.all([
         import("@xterm/xterm"),
         import("@xterm/addon-fit"),
         import("@xterm/addon-web-links"),
-        import("@xterm/addon-webgl"),
         import("@/lib/terminal-theme"),
       ]);
       if (disposed) return;
       const transport = transportRef.current;
+
+      // xterm draws into a canvas/WebGL context where CSS variables DON'T resolve,
+      // so "var(--font-mono)" silently fell back to generic monospace — the "awful
+      // font". Resolve the real family from CSS, and wait for the web font to load
+      // first, or xterm measures the fallback glyph and mis-sizes every cell.
+      await document.fonts.ready;
+      if (disposed) return;
+      const cssMono = getComputedStyle(document.documentElement).getPropertyValue("--font-mono").trim();
+      const fontFamily = [cssMono, "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"]
+        .filter(Boolean)
+        .join(", ");
 
       const term = new Terminal({
         convertEol: transport.convertEol,
         cursorBlink: interactive,
         // Read-only peeks keep stdin disabled so the view never swallows page input.
         disableStdin: !interactive,
-        fontFamily: "var(--font-mono), ui-monospace, monospace",
-        fontSize: 13,
+        fontFamily,
+        fontSize: 14,
+        lineHeight: 1.2,
+        letterSpacing: 0,
         scrollback: 5000,
         theme: TERMINAL_THEME,
       });
@@ -88,16 +100,26 @@ export function TerminalView({
       // Clickable URLs — open in a new tab (the gap that made `claude setup-token`
       // links un-clickable). noopener/noreferrer for safety.
       term.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, "_blank", "noopener,noreferrer")));
+
+      // Copy: ⌘C (mac) or Ctrl/⌘-Shift-C → clipboard when there's a selection.
+      // Plain Ctrl-C stays SIGINT (don't break interrupting an agent). This is
+      // why copying "was impossible" — xterm doesn't copy-on-select by default.
+      term.attachCustomKeyEventHandler((e) => {
+        if (e.type !== "keydown") return true;
+        const key = e.key.toLowerCase();
+        const isCopy = (e.metaKey && key === "c") || (e.ctrlKey && e.shiftKey && key === "c");
+        if (isCopy && term.hasSelection()) {
+          navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
+          return false; // handled — don't forward to the PTY
+        }
+        return true;
+      });
+
       term.open(host);
-      // GPU-accelerated renderer. WebGL can fail (context loss / no GPU); on any
-      // failure xterm falls back to the DOM renderer, so guard + auto-dispose.
-      let webgl: { dispose: () => void } | null = null;
-      try {
-        const addon = new WebglAddon();
-        addon.onContextLoss(() => { addon.dispose(); });
-        term.loadAddon(addon);
-        webgl = addon;
-      } catch { /* no WebGL — fall back to the default renderer */ }
+      // Default (DOM) renderer on purpose: it draws glyphs with the browser's
+      // native font engine, so text is crisp + identical to the rest of the page.
+      // WebGL is faster but rasterizes to a texture atlas that can blur text on
+      // fractional-DPR displays — wrong trade for a readability-first terminal.
       try { fit.fit(); } catch { /* host not laid out yet */ }
 
       // Serialize keystrokes through a single in-flight send chain so bytes never
@@ -142,7 +164,6 @@ export function TerminalView({
       cleanupTerm = () => {
         resizeObserver.disconnect();
         inputDisposable?.dispose();
-        webgl?.dispose();
         term.dispose();
       };
     })();
