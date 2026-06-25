@@ -67,6 +67,18 @@ export async function enqueueHostedAnalyzeCommand(
   return enqueuePendingCommand({ userId, type: "hosted_analyze", payload });
 }
 
+/** Hosted runner Phase 1: a WRITE-class task dispatched to a coding agent
+ *  (Hermes) on hosted compute — clone, run the agent in its own sandbox, return
+ *  the work. Own type so it's distinct from the read-only hosted_analyze and
+ *  from the local-runner dispatch path. `model` overrides HERMES_INFERENCE_MODEL. */
+export type HostedDispatchPayload = { projectKey: string; gitUrl: string; task: string; model?: string };
+export async function enqueueHostedDispatchCommand(
+  userId: string,
+  payload: HostedDispatchPayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "hosted_dispatch", payload });
+}
+
 export async function enqueueSwitchAgentCommand(
   userId: string,
   payload: SwitchAgentPayload,
