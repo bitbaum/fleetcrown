@@ -21,6 +21,7 @@ import { cursorAdapter } from "./cursor";
 import { codexAdapter } from "./codex";
 import { openclawAdapter } from "./openclaw";
 import { geminiAdapter } from "./gemini";
+import { hermesAdapter } from "./hermes";
 
 export type { AgentAdapter, AgentCapabilities, AgentAvailability, AgentRuntimeConfig } from "./types";
 
@@ -32,6 +33,7 @@ export const ALL_ADAPTERS: readonly AgentAdapter[] = [
   codexAdapter,
   openclawAdapter,
   geminiAdapter,
+  hermesAdapter,
 ];
 
 /** Find an adapter by its id. Returns undefined for unknown ids — callers
