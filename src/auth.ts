@@ -361,14 +361,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const email = user?.email ?? (token.email as string | undefined);
       const userId = user?.id ?? (token.id as string | undefined);
 
-      // Only refresh from the DB on sign-in or an explicit session.update().
-      // Every other request reuses the cached token — otherwise every
-      // Node-runtime hit costs getUserById + countActiveProjects (+ a possible
-      // updateUser from heal), turning a 1-user app into a per-request DB
-      // amplifier when traffic scales. The places that actually need fresh
-      // state (post-onboarding finish, /onboarding mount) all call update()
-      // explicitly, so this is correctness-preserving.
-      if (!user?.id && trigger !== "update") return token;
+      // Fast path: reuse the cached token on normal requests to avoid a
+      // per-request DB amplifier (getUserById + heal). BUT only while the token
+      // still maps to a real user — a reseed/restore can orphan a valid JWT
+      // (same root cause resolveSessionUserId handles for the data path). When
+      // the cached id points at a wiped user, fall through to re-resolve by
+      // email so the session's id + username self-heal to the real account,
+      // instead of presenting stale claims (a stale username 404'd the user's
+      // own /u/<username> profile even though it owned all their projects).
+      if (!user?.id && trigger !== "update") {
+        const cachedId = token.id as string | undefined;
+        if (cachedId && isValidUuid(cachedId) && (await getUserById(cachedId))) return token;
+        // stale/orphaned token → fall through to email recovery + refresh below
+      }
 
       let dbUser = userId && isValidUuid(userId) ? await getUserById(userId) : null;
       if (!dbUser && email) {
