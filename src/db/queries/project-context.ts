@@ -90,6 +90,19 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
   return blocks.join("\n\n");
 }
 
+/** A project's definition_of_done (the autopilot stop-gate bar), or null. */
+export async function getProjectDefinitionOfDone(userId: string, projectKey: string): Promise<string | null> {
+  const rows = await db
+    .select({ id: entities.id, name: entities.name })
+    .from(entities)
+    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)));
+  const entity = rows.find((e) => e.name.toLowerCase() === projectKey.toLowerCase());
+  if (!entity) return null;
+  const attrs = (await fetchAttributesByEntityIds([entity.id])).get(entity.id) ?? {};
+  const dod = attrs["definition_of_done"]?.trim();
+  return dod || null;
+}
+
 /** The single goal a project is currently aiming at, for at-a-glance UI. */
 export type TopGoal = { title: string; progress: number | null };
 

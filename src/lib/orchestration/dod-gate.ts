@@ -1,0 +1,108 @@
+// Definition-of-done stop-gate — the /goal pattern for autopilot.
+//
+// The agent writes its own handoff (status: ready), so "done" is the agent
+// grading its own homework — the Ralph Wiggum failure mode. When a project
+// declares a definition_of_done, we don't take the agent's word for it: a
+// DIFFERENT model reads the handoff against the stated bar and decides whether
+// it actually holds. If it doesn't, the run closes "partial" with the gap as
+// the next instruction, and autopilot's existing continue-loop keeps going —
+// i.e. don't stop until the objective condition is met.
+//
+// Cross-model on purpose: the worker is claude/llama; the judge here is a
+// different lineage (gpt-oss), so its blind spots don't overlap the worker's.
+// Fail-OPEN: if the judge errors, we let the run close as-is rather than wedge
+// the loop — a missed gate is recoverable, a stuck loop is not.
+
+import { callGroqText } from "@/lib/groq";
+import type { RunClosePatch } from "./close-from-session";
+import type { OrchestrationTaskSummary } from "./contract";
+
+const JUDGE_MODEL = "openai/gpt-oss-120b"; // different lineage from the worker
+
+export type DoDVerdict = { met: boolean; gap: string };
+
+const SYSTEM = `You are an exacting reviewer deciding whether a coding agent's work meets a project's stated Definition of Done. You are NOT the agent — you do not trust its self-assessment, you check the evidence in its handoff.
+
+A change is done ONLY if the handoff shows the Definition of Done is actually satisfied (e.g. if it says "tests pass + deploy green", the handoff must evidence both). Missing evidence = not done. Default to NOT met when the handoff is vague or silent on a required check.
+
+Return STRICT JSON only: {"met": <true|false>, "gap": "<if not met, the single most important thing still required, one sentence; else empty>"}`;
+
+function summaryForJudge(s: OrchestrationTaskSummary): string {
+  // Only the fields that evidence completion — keep the judge prompt tight.
+  const pick: Array<[keyof OrchestrationTaskSummary, string]> = [
+    ["done", "What the agent says it did"],
+    ["tests", "Tests"],
+    ["tsc", "Typecheck"],
+    ["lint", "Lint"],
+    ["health", "Health"],
+    ["next", "Agent's stated next step"],
+  ];
+  return pick
+    .map(([k, label]) => [label, (s as Record<string, unknown>)[k as string]])
+    .filter(([, v]) => typeof v === "string" && (v as string).trim())
+    .map(([label, v]) => `${label}: ${v}`)
+    .join("\n");
+}
+
+function extractJson(raw: string): string | null {
+  const text = (() => {
+    const i = raw.lastIndexOf("</think>");
+    return i === -1 ? raw : raw.slice(i + 8);
+  })();
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}" && --depth === 0) return text.slice(start, i + 1);
+  }
+  return null;
+}
+
+/** Ask a different-lineage model whether the handoff meets the DoD. Fail-open. */
+export async function verifyDefinitionOfDone(
+  definitionOfDone: string,
+  summary: OrchestrationTaskSummary,
+  opts: { model?: string } = {},
+): Promise<DoDVerdict> {
+  const user = `Definition of Done:\n${definitionOfDone}\n\nAgent's handoff:\n${summaryForJudge(summary)}`;
+  let raw: string;
+  try {
+    raw = await callGroqText(user, {
+      systemPrompt: SYSTEM,
+      maxTokens: 400,
+      temperature: 0.1,
+      timeoutMs: 20_000,
+      model: opts.model ?? JUDGE_MODEL,
+    });
+  } catch {
+    return { met: true, gap: "" }; // fail-open: don't wedge the loop on a judge error
+  }
+  const json = extractJson(raw);
+  if (!json) return { met: true, gap: "" };
+  try {
+    const parsed = JSON.parse(json) as { met?: unknown; gap?: unknown };
+    return { met: parsed.met !== false, gap: typeof parsed.gap === "string" ? parsed.gap.trim() : "" };
+  } catch {
+    return { met: true, gap: "" };
+  }
+}
+
+/**
+ * Apply the DoD verdict to a close patch. Pure + testable.
+ * Only gates a SUCCESS close: a run the agent already reported as error/partial
+ * keeps its outcome. When the bar isn't met, downgrade success → partial and
+ * write the gap into `next` so autopilot's continue-loop picks it up as the
+ * next instruction ("don't stop until the bar holds").
+ */
+export function applyDoDGate(patch: RunClosePatch, verdict: DoDVerdict): RunClosePatch {
+  if (patch.outcome !== "success" || verdict.met) return patch;
+  return {
+    ...patch,
+    outcome: "partial",
+    summary: {
+      ...patch.summary,
+      next: `Definition of done not yet met — ${verdict.gap || "the stated bar is not evidenced in the handoff"}. Address this, then re-verify.`,
+    },
+  };
+}

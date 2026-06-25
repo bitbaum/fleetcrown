@@ -29,6 +29,32 @@ import {
   type AdapterId,
 } from "@/lib/orchestration";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
+import { getProjectDefinitionOfDone } from "@/db/queries/project-context";
+import { verifyDefinitionOfDone, applyDoDGate } from "@/lib/orchestration/dod-gate";
+import type { RunClosePatch } from "@/lib/orchestration/close-from-session";
+
+// Runs whose close is being gated/persisted right now — prevents the DoD judge
+// from firing more than once per run while the fire-and-forget close is in flight.
+const closingRuns = new Set<string>();
+
+/**
+ * Close an orchestration run, applying the definition-of-done stop-gate first.
+ * When the run would close SUCCESS and the project declares a definition_of_done,
+ * a different-lineage model checks the handoff against that bar; if it isn't met,
+ * the run closes "partial" with the gap as `next`, so autopilot's continue-loop
+ * keeps working instead of stopping on the agent's own say-so (the /goal pattern).
+ */
+async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId: string, projectKey: string): Promise<void> {
+  let patch = closePatch;
+  if (closePatch.outcome === "success") {
+    const dod = await getProjectDefinitionOfDone(userId, projectKey).catch(() => null);
+    if (dod) {
+      const verdict = await verifyDefinitionOfDone(dod, closePatch.summary);
+      patch = applyDoDGate(closePatch, verdict);
+    }
+  }
+  await updateOrchestrationRun(runId, patch, userId);
+}
 // Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
 // contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
 // sessions) and pending-commands are *inputs* / compat only. Derived truth +
@@ -268,9 +294,14 @@ export async function GET() {
     // the owner writes, and a run with finishedAt is never re-closed.
     if (!readonly && session && latestRun && !latestRun.finishedAt) {
       const closePatch = seam?.closeRunFromSession?.(latestRun, session) ?? null;
-      if (closePatch) {
-        updateOrchestrationRun(latestRun.id, closePatch, ownerUserId)
-          .catch((err) => console.error("[control] run close failed:", err));
+      // Guard: closePatch stays non-null across polls until the close persists
+      // (fire-and-forget). The in-flight set keeps the DoD judge from firing
+      // more than once for the same run.
+      if (closePatch && !closingRuns.has(latestRun.id)) {
+        closingRuns.add(latestRun.id);
+        gateAndCloseRun(latestRun.id, closePatch, ownerUserId, tab)
+          .catch((err) => console.error("[control] run close failed:", err))
+          .finally(() => closingRuns.delete(latestRun.id));
       }
     }
 
