@@ -11,15 +11,25 @@
  */
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
+import { getUserPreferences } from "@/db/queries/user-preferences";
 import { APP_NAME } from "@/config/brand";
 
 const LOKI_SYSTEM_PROMPT =
   `You are Loki, a helpful AI assistant inside ${APP_NAME} — a personal life operating system for builders. Be concise and direct.`;
 
+// The user's Settings → Voice preference, layered onto whichever brain answers.
+// SSOT for turning that free-text instruction into a directive — applied to both
+// the Groq fallback (system prompt) and the gateway agent (message preface) so
+// the voice holds no matter which path serves the turn.
+function voiceClause(voice: string | null | undefined): string {
+  const v = voice?.trim();
+  return v ? ` Adopt this writing voice in your reply: ${v}` : "";
+}
+
 // Degraded fallback when the OpenClaw gateway is unavailable.
-async function callGroq(message: string): Promise<{ text: string; model: string }> {
+async function callGroq(message: string, voice: string | null): Promise<{ text: string; model: string }> {
   const text = await callGroqText(message, {
-    systemPrompt: LOKI_SYSTEM_PROMPT,
+    systemPrompt: LOKI_SYSTEM_PROMPT + voiceClause(voice),
     maxTokens: 1024,
     timeoutMs: 30_000,
   });
@@ -33,10 +43,17 @@ export type AskLokiResult = { status: number; body: Record<string, unknown> };
  * labelled degraded fallback. `sessionKey` lets callers keep a per-conversation
  * web thread; all web sessions share the same agent (`main`) and its memory.
  */
-export async function askLoki(message: string, opts?: { sessionKey?: string }): Promise<AskLokiResult> {
-  // Real Loki: the OpenClaw agent (same brain + memory as Telegram).
+export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
+  // Resolve the caller's writing-voice preference once; null when no user or none set.
+  const voice = opts?.userId ? (await getUserPreferences(opts.userId).then((p) => p.writingVoice).catch(() => null)) : null;
+
+  // Real Loki: the OpenClaw agent (same brain + memory as Telegram). The voice
+  // rides in as a one-line preface so the shared `main` agent honours it per-turn
+  // without mutating its own persistent personality.
   if (isGatewayConfigured()) {
-    const res = await askGatewayAgent(message, { sessionKey: opts?.sessionKey });
+    const v = voice?.trim();
+    const prefaced = v ? `[Voice for this reply — ${v}]\n\n${message}` : message;
+    const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
     if (res.ok) {
       return {
         status: 200,
@@ -52,7 +69,7 @@ export async function askLoki(message: string, opts?: { sessionKey?: string }): 
 
   // Groq fallback — DEGRADED, labelled `via: "groq-fallback"` (not the real Loki brain).
   try {
-    const { text, model } = await callGroq(message);
+    const { text, model } = await callGroq(message, voice);
     return { status: 200, body: { ok: true, text, model, durationMs: 0, via: "groq-fallback" } };
   } catch (e) {
     // Surface the actual Groq cause so the user can act (rotate key / wait out

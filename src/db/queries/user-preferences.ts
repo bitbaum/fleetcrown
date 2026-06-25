@@ -11,6 +11,7 @@ export type UserPreferencesData = {
   currentCity:      string | null;
   currentTimezone:  string | null;
   currentCityUntil: string | null;
+  writingVoice:     string | null;
 };
 
 export function getActiveCity(prefs: UserPreferencesData | null): string {
@@ -41,7 +42,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     .limit(1)
     .then((r) => r[0] ?? null);
 
-  if (!row) return { homeCity: null, homeTimezone: null, homeLocale: null, currentCity: null, currentTimezone: null, currentCityUntil: null };
+  if (!row) return { homeCity: null, homeTimezone: null, homeLocale: null, currentCity: null, currentTimezone: null, currentCityUntil: null, writingVoice: null };
 
   return {
     homeCity:         row.homeCity,
@@ -50,6 +51,7 @@ export async function getUserPreferences(userId: string): Promise<UserPreference
     currentCity:      row.currentCity,
     currentTimezone:  row.currentTimezone,
     currentCityUntil: row.currentCityUntil,
+    writingVoice:     row.writingVoice,
   };
 }
 
@@ -79,5 +81,6 @@ function toRow(d: UserPreferencesData) {
     currentCity:      d.currentCity,
     currentTimezone:  d.currentTimezone,
     currentCityUntil: d.currentCityUntil,
+    writingVoice:     d.writingVoice,
   };
 }

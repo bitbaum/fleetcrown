@@ -14,6 +14,6 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, AskLokiBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { status, body } = await askLoki(dataOrResp.message);
+  const { status, body } = await askLoki(dataOrResp.message, { userId });
   return NextResponse.json(body, { status });
 }

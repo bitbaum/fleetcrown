@@ -12,6 +12,10 @@ export const userPreferences = pgTable("user_preferences", {
   currentCity:      text("current_city"),
   currentTimezone:  text("current_timezone"),
   currentCityUntil: date("current_city_until"),
+  // Writing voice — free-text instruction layered on top of the house style
+  // (docs/thoughts-style-guide.md) so AI-written content (Loki, essays) adopts
+  // the user's preferred tone. Null = use the house default.
+  writingVoice:     text("writing_voice"),
   updatedAt:        timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("idx_user_preferences_user_id").on(t.userId),

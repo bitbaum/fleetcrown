@@ -48,6 +48,7 @@ export default async function SettingsPage() {
           currentCity: null,
           currentTimezone: null,
           currentCityUntil: null,
+          writingVoice: null,
         }}
         projects={projects}
         teamProjects={teamProjects}

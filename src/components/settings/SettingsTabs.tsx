@@ -7,6 +7,7 @@ import { AccountSettings } from "./AccountSettings";
 import { AppearanceSettings } from "./AppearanceSettings";
 import { PrivacySettings } from "./PrivacySettings";
 import { LocationSettings } from "./LocationSettings";
+import { VoiceSettings } from "./VoiceSettings";
 import { AgentTokenSettings } from "./AgentTokenSettings";
 import { BeaconSettings } from "./BeaconSettings";
 import { FleetLifecycleSettings } from "./FleetLifecycleSettings";
@@ -43,6 +44,7 @@ const TABS = [
   { id: "account",       label: "Account"       },
   { id: "notifications", label: "Notifications" },
   { id: "appearance",    label: "Appearance"    },
+  { id: "voice",         label: "Voice"         },
   { id: "privacy",       label: "Privacy"       },
   { id: "location",      label: "Location"      },
   { id: "agent",         label: "Agent"         },
@@ -116,6 +118,9 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
       )}
       {activeTab === "appearance" && (
         <AppearanceSettings />
+      )}
+      {activeTab === "voice" && (
+        <VoiceSettings initialPrefs={userPrefs} />
       )}
       {activeTab === "privacy" && (
         <PrivacySettings />

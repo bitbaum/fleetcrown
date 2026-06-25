@@ -23,6 +23,7 @@ const PatchBody = z.object({
   currentCity:      z.string().trim().max(100).nullable().optional(),
   currentTimezone:  z.string().refine((s) => SUPPORTED_TIMEZONES.has(s), "Invalid timezone").nullable().optional(),
   currentCityUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD").nullable().optional(),
+  writingVoice:     z.string().trim().max(600).nullable().optional(),
 });
 
 export async function GET() {
