@@ -1031,6 +1031,11 @@
     background: var(--public-accent);
     box-shadow: 0 0 0 3px color-mix(in oklch, var(--public-accent) 22%, transparent);
   }
+  /* Idle state — no agent running. Honest: a neutral dot, no warm "live" halo. */
+  .ui-public-hero-console-live-idle::before {
+    background: var(--status-neutral);
+    box-shadow: none;
+  }
   .ui-public-hero-console-dispatch {
     @apply mb-5 font-mono text-lg text-text-primary;
   }

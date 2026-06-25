@@ -1,22 +1,32 @@
 import { cache } from "react";
 import { getUserByUsername } from "@/db/queries/users";
 import Link from "next/link";
-import { ExternalLink, BookOpen, Folder, ArrowRight } from "lucide-react";
+import { ExternalLink, BookOpen, Folder, ArrowRight, Activity } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Avatar } from "@/components/shared/Avatar";
-import { ROUTES, PUBLIC_NAV_LINKS } from "@/config/auth";
-import { APP_TAGLINE } from "@/config/brand";
+import { ROUTES } from "@/config/auth";
+import { APP_TAGLINE, APP_NAME } from "@/config/brand";
+import { PublicSurface } from "@/components/public/PublicSurface";
+import { PublicHeaderActions } from "@/components/public/PublicHeaderActions";
+import { getPublicProjects } from "@/db/queries/user-projects";
+import { getRecentOrchestrationRuns } from "@/db/queries/today";
+import { listThoughts } from "@/lib/thoughts-content";
+import { HEALTH_TAG_STYLE } from "@/config/ui";
+import { cleanDescription } from "@/lib/project-display";
+import type { DevLogEntry } from "@/db/schema/user-projects";
 
 // Deduplicate the user lookup across generateMetadata + the page component.
 // Both run in the same request; React cache() collapses them to one DB query.
 const getUser = cache(getUserByUsername);
-import { BrandMark } from "@/components/shell/BrandMark";
-import { getPublicProjects } from "@/db/queries/user-projects";
-import { listThoughts } from "@/lib/thoughts-content";
-import { HEALTH_TAG_STYLE } from "@/config/ui";
-import { APP_NAME } from "@/config/brand";
-import type { DevLogEntry } from "@/db/schema/user-projects";
+
+// Compact "2d ago" relative time for the activity feed.
+function timeAgo(d: Date): string {
+  const s = Math.max(1, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
 
 export async function generateMetadata({
   params,
@@ -42,7 +52,15 @@ export default async function PublicProfilePage({
   const user = await getUser(username);
   if (!user) notFound();
 
-  const projects = await getPublicProjects(user.id);
+  const projectsRaw = await getPublicProjects(user.id);
+  // Hierarchy, not 18 equal cards — lead with the flagships.
+  const FLAGSHIPS = ["fleetcrown", "orangecat"];
+  const projects = [...projectsRaw].sort((a, b) => {
+    const ai = FLAGSHIPS.indexOf(a.name.toLowerCase());
+    const bi = FLAGSHIPS.indexOf(b.name.toLowerCase());
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+
   // Only show filesystem-based essays on the site owner's profile.
   // Team member profiles have no associated authored content.
   const allThoughts = user.isDefault ? listThoughts() : [];
@@ -50,37 +68,13 @@ export default async function PublicProfilePage({
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
     .slice(0, 4);
 
-  return (
-    <div className="flex min-h-screen flex-col bg-surface-page text-text-primary">
-      <nav className="flex items-center justify-between px-6 py-5 sm:px-10">
-        <Link
-          href="/"
-          className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive"
-        >
-          <BrandMark showWordmark={false} />
-        </Link>
-        {/* Desktop-only — anonymous share-target visitors get a path to the rest
-            of the marketing site without typing URLs. Mobile users have the
-            footer CTA + the brand-home link instead. */}
-        <div className="hidden items-center gap-6 md:flex">
-          {PUBLIC_NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm text-text-secondary transition-colors hover:text-text-primary"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <Link
-            href={ROUTES.SIGN_IN}
-            className="text-sm font-medium text-text-primary transition-opacity hover:opacity-80"
-          >
-            Sign in
-          </Link>
-        </div>
-      </nav>
+  // Fleet liveness — recent agent runs. Public-safe: project + coarse state +
+  // time only, never the run summary. This is what a repo list / Linktree can't show.
+  const recentRuns = (await getRecentOrchestrationRuns(user.id, 168, 6).catch(() => []))
+    .filter((r) => r.finishedAt);
 
+  return (
+    <PublicSurface right={<PublicHeaderActions />}>
       <main className="mx-auto w-full max-w-2xl px-6 py-10 pb-20">
         {/* Profile header */}
         <div className="flex items-center gap-4">
@@ -106,6 +100,7 @@ export default async function PublicProfilePage({
                 const latest = log.length > 0 ? log[log.length - 1] : null;
                 const healthKey = (latest?.health ?? "").toLowerCase();
                 const healthCls = HEALTH_TAG_STYLE[healthKey];
+                const desc = cleanDescription(project.description);
                 return (
                   <a
                     key={project.id}
@@ -120,9 +115,9 @@ export default async function PublicProfilePage({
                           <span className="font-medium text-text-primary">{project.name}</span>
                           <ExternalLink className="h-3.5 w-3.5 shrink-0 text-text-muted" />
                         </div>
-                        {project.description && (
+                        {desc && (
                           <p className="mt-1 text-sm text-text-secondary line-clamp-2">
-                            {project.description}
+                            {desc}
                           </p>
                         )}
                       </div>
@@ -143,6 +138,28 @@ export default async function PublicProfilePage({
             </div>
           )}
         </section>
+
+        {/* Fleet activity — recent agent runs. The differentiator: a builder
+            profile that shows the fleet is actually alive, not just a repo list.
+            Public-safe: project + coarse state + time, never the run summary. */}
+        {recentRuns.length > 0 && (
+          <section className="mt-12">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="h-4 w-4 text-text-tertiary" />
+              <span className="ui-kicker">Fleet activity</span>
+            </div>
+            <div className="ui-card-shell divide-y divide-border-subtle">
+              {recentRuns.map((run) => (
+                <div key={run.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="ui-dot-positive shrink-0" />
+                  <span className="font-mono text-sm text-text-secondary">{run.projectKey}</span>
+                  <span className="text-sm text-text-tertiary">agent run · {run.state}</span>
+                  <span className="ml-auto text-xs text-text-muted">{run.finishedAt ? timeAgo(run.finishedAt) : ""}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Writing */}
         {recentThoughts.length > 0 && (
@@ -195,6 +212,6 @@ export default async function PublicProfilePage({
           </Link>
         </footer>
       </main>
-    </div>
+    </PublicSurface>
   );
 }
