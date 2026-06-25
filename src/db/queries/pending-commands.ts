@@ -56,6 +56,17 @@ export async function enqueueDispatchCommand(
   return enqueuePendingCommand({ userId, type: "dispatch", payload });
 }
 
+/** Hosted runner (Phase 0): a read-only analysis/plan/review of a project's
+ *  repo, executed on hosted compute rather than the operator's machine. Its own
+ *  command type so it never collides with the local-runner dispatch/inject path. */
+export type HostedAnalyzePayload = { projectKey: string; gitUrl: string; task: string };
+export async function enqueueHostedAnalyzeCommand(
+  userId: string,
+  payload: HostedAnalyzePayload,
+): Promise<string> {
+  return enqueuePendingCommand({ userId, type: "hosted_analyze", payload });
+}
+
 export async function enqueueSwitchAgentCommand(
   userId: string,
   payload: SwitchAgentPayload,
