@@ -26,6 +26,15 @@ export interface TemplateMeta {
   /** Map of repo-relative path → file contents. {{NAME}} is replaced with
    *  the slugged repo name; {{DESCRIPTION}} with the project description. */
   files: Record<string, string>;
+  /** Human-readable infra the first agent task will set up on the user's
+   *  machine — shown on the post-create bridge so the user sees what gets
+   *  handled automatically (deps, database, dev server) vs. left to them. */
+  infra: string[];
+  /** The pre-composed first dispatch: an agent runs this to take the freshly
+   *  cloned repo from "files exist" to "running locally", setting up everything
+   *  the stack needs (dependencies, database + schema, dev server) — the
+   *  auto-infra step, done where the code actually runs. {{NAME}} substituted. */
+  firstTask: string;
 }
 
 const NEXTJS_PAGE_TSX = `export default function Home() {
@@ -506,6 +515,9 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
     label: "Empty (just a README)",
     description: "Just a README. Bring your own stack.",
     files: {}, // empty — the GitHub auto_init flag already creates README.md
+    infra: ["Stack chosen to fit the goal", "Dependencies installed", "Dev server running"],
+    firstTask:
+      "This is a fresh empty repo for \"{{NAME}}\". Set it up from scratch: pick the simplest stack that fits the project goal, scaffold it, install dependencies, set up any database the project needs (a local Postgres or SQLite — your call, create a .env with the connection string and keep secrets out of git), and get a dev server running. Then tell me the stack you chose and the exact command + URL to run it.",
   },
   "nextjs-tailwind": {
     id: "nextjs-tailwind",
@@ -522,6 +534,9 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "src/app/layout.tsx": NEXTJS_LAYOUT_TSX,
       "src/app/globals.css": NEXTJS_GLOBALS_CSS,
     },
+    infra: ["npm install", "Database (Postgres via Drizzle, or SQLite)", "Dev server on :3000"],
+    firstTask:
+      "Set up this Next.js 15 project \"{{NAME}}\" end to end so it runs locally: run `npm install`; if the project needs persistence, add a database (Drizzle ORM + a local Postgres, or SQLite for a quick start), define an initial schema and migration, and create a `.env.local` with the connection string (never commit it); then start the dev server with `npm run dev`. Confirm it builds and renders at http://localhost:3000, then summarize what you set up and how to run it.",
   },
   "python-fastapi": {
     id: "python-fastapi",
@@ -533,6 +548,9 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "README.md": FASTAPI_README,
       ".gitignore": FASTAPI_GITIGNORE,
     },
+    infra: ["uv sync", "Database (Postgres via SQLModel, or SQLite)", "Dev server on :8000"],
+    firstTask:
+      "Set up this FastAPI project \"{{NAME}}\" so it runs locally: run `uv sync`; if it needs persistence, add a database layer (SQLModel + a local Postgres via asyncpg, or SQLite to start), wire an initial model + migration, and put the connection string in a `.env` (keep it out of git); then start the server with `uv run uvicorn src.main:app --reload`. Confirm http://localhost:8000/health and /docs respond, then summarize what you set up.",
   },
   "hono-cloudflare": {
     id: "hono-cloudflare",
@@ -546,6 +564,9 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "README.md": HONO_README,
       ".gitignore": HONO_GITIGNORE,
     },
+    infra: ["npm install", "D1 database binding (if needed)", "Local Worker on :8787"],
+    firstTask:
+      "Set up this Hono + Cloudflare Workers project \"{{NAME}}\" so it runs locally: run `npm install`; if it needs persistence, create a D1 database (`npx wrangler d1 create`), bind it in `wrangler.toml`, and add a first table/migration; then run `npm run dev`. Confirm http://localhost:8787 responds, then summarize what you set up and the deploy command.",
   },
   "html-tailwind": {
     id: "html-tailwind",
@@ -557,6 +578,9 @@ export const TEMPLATES: Record<TemplateId, TemplateMeta> = {
       "README.md": HTML_README,
       ".gitignore": HTML_GITIGNORE,
     },
+    infra: ["Local static server"],
+    firstTask:
+      "Serve this static site \"{{NAME}}\" locally (`npx serve .`) and confirm it renders in a browser. No database is needed yet — if the project later needs a backend, say so and recommend the Hono + Cloudflare Workers stack alongside it. Summarize how to run it.",
   },
 };
 

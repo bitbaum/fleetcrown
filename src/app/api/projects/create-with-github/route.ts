@@ -246,6 +246,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // The auto-infra bridge: the agent's first task takes the cloned repo from
+  // "files exist" to "running locally" (deps + database + dev server), and the
+  // infra list shows the user what gets handled automatically.
+  const tpl = TEMPLATES[template];
+  const firstTask = renderTemplate(tpl.firstTask, {
+    name: projectName,
+    description: description ?? `Started from FleetCrown · ${name}`,
+  });
+
   return NextResponse.json({
     ok: true,
     project: { id: projectId, name: projectName },
@@ -259,6 +268,8 @@ export async function POST(req: NextRequest) {
     },
     template,
     templateSeeded,
+    infra: tpl.infra,
+    firstTask,
     cloneCmd: `git clone ${repo.ssh_url}`,
     cloneHttpsCmd: `git clone ${repo.clone_url}`,
   });
