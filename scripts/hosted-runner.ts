@@ -42,10 +42,15 @@ async function tick(userId: string): Promise<boolean> {
   const cmd = await claimNextPendingCommand([userId], HOSTED_TYPES);
   if (!cmd) return false;
   const p = cmd.payload as HostedAnalyzePayload | HostedDispatchPayload;
-  const [ctx, token] = await Promise.all([
+  const [ctx, dbToken] = await Promise.all([
     getProjectContext(userId, p.projectKey).catch(() => null),
     getGithubToken(userId).catch(() => null),
   ]);
+  // The owner's linked-OAuth token (DB) is preferred; on a hosted box where no
+  // GitHub account is linked, fall back to GITHUB_TOKEN (provided by `gh auth
+  // login` on the box → `gh auth token`). Without either, Hermes still runs but
+  // can't push/PR — run-hermes surfaces that as an error, not silent data loss.
+  const token = dbToken ?? process.env.GITHUB_TOKEN ?? null;
   try {
     if (cmd.type === "hosted_dispatch") {
       // Phase 1: write-class task → Hermes in its own sandbox (orchestrate, not out-build).
