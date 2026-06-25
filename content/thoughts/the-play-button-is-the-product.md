@@ -5,7 +5,7 @@ excerpt: The cognitive load of building is not the building. It is deciding, aga
 publishedAt: 2026-06-12
 tags: autopilot,control,ux,context,vision
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## The end state

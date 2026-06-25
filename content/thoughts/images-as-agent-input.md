@@ -5,7 +5,7 @@ excerpt: An image of a broken UI tells the agent more than a paragraph of text. 
 publishedAt: 2026-05-09
 tags: agents,control,ux,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 ## The Gap in the Current Interface

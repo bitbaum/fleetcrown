@@ -5,7 +5,7 @@ excerpt: The gap between having an idea and the first agent dispatch is mostly p
 publishedAt: 2026-06-05
 tags: control,agents,onboarding,product,bootstrap,first-principles
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 14
 ---
 ## The friction between idea and first dispatch

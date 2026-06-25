@@ -5,7 +5,7 @@ excerpt: Habits turn invisible recurrence into visible pattern, which is the min
 publishedAt: 2026-05-06
 tags: habits,consistency,behavior,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 ## What Habits Are For

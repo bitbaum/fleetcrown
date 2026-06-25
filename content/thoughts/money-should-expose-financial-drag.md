@@ -5,7 +5,7 @@ excerpt: Money is not a bookkeeping afterthought. It is the part of the system t
 publishedAt: 2026-05-06
 tags: money,subscriptions,finance,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What Money Is For

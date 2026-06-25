@@ -5,7 +5,7 @@ excerpt: Money is not wealth. Money is energy — stored capacity to make things
 publishedAt: 2026-06-16
 tags: abundance-economy,money,bitcoin,vision,gift-economy,orangecat,human-in-the-loop
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 10
 ---
 

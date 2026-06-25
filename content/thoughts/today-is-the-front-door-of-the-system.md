@@ -5,7 +5,7 @@ excerpt: The Today page exists to collapse goals, events, habits, subscriptions,
 publishedAt: 2026-05-06
 tags: today,product,ux,operations
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What Today Is For

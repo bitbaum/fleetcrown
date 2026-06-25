@@ -5,7 +5,7 @@ excerpt: Grok Build, Claude dispatch, ChatGPT Codex, Gemini CLI. The labs are ra
 publishedAt: 2026-05-18
 tags: product,strategy,agents,dispatch,model-agnostic,hardware
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 14
 ---
 ## The Race Nobody Asked For

@@ -5,7 +5,7 @@ excerpt: The difference is not model quality. The difference is whether a runtim
 publishedAt: 2026-05-06
 tags: agents,claude,codex,gemini,openclaw,openrouter
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 10
 ---
 ## The Important Distinction

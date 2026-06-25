@@ -5,7 +5,7 @@ excerpt: The System page is where infrastructure becomes a product concern inste
 publishedAt: 2026-05-06
 tags: system,runtime,autopilot,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What System Is

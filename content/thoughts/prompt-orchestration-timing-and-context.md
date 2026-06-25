@@ -5,7 +5,7 @@ excerpt: "A single auto-inject prompt that fires unconditionally is just automat
 publishedAt: "2026-05-18"
 tags: agents,orchestration,prompts,automation,dispatch
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 11
 ---
 

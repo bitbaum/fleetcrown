@@ -5,7 +5,7 @@ excerpt: Memory is where scattered facts become durable context the rest of the 
 publishedAt: 2026-05-06
 tags: memory,knowledge-graph,context,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What Memory Is

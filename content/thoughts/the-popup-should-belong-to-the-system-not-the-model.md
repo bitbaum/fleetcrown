@@ -5,7 +5,7 @@ excerpt: If the popup only appears for Claude, the product is not agent-agnostic
 publishedAt: 2026-05-06
 tags: architecture,beacon,fleetcrown,lifecycle
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 11
 ---
 ## The Real Requirement

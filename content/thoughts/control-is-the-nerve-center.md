@@ -5,7 +5,7 @@ excerpt: Control is where project state, agent state, and operator intent meet. 
 publishedAt: 2026-05-06
 tags: control,agents,orchestration,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 8
 ---
 ## What Control Is

@@ -5,7 +5,7 @@ excerpt: The interface for building everything should look like a media player. 
 publishedAt: 2026-06-12
 tags: vision,autopilot,context,product
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 ## The Interface Is a Media Player

@@ -5,7 +5,7 @@ excerpt: Every decision the interface forces on the operator is a tax. The goal 
 publishedAt: 2026-06-18
 tags: product,ux,agents,cognitive-load,loki
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 ## The tax of every decision

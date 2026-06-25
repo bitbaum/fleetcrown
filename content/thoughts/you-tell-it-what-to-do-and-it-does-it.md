@@ -5,7 +5,7 @@ excerpt: Most of the world sees AI as something you talk to. We see it as someth
 publishedAt: 2026-06-16
 tags: vision,robotics,marketplace,agents,governance,automation,b2b,orangecat,bitcoin,human-in-the-loop,abundance-economy
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 26
 ---
 

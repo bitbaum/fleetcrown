@@ -75,7 +75,7 @@ Competitors are the most automatable of the eight:
 - A competitor entity is a URL plus metadata. Easy to register.
 - Their public surface is monitorable — landing-page diffs, RSS feeds for blog or changelog, funding-event detection, hiring-page diffs.
 - The signal is high-density and time-sensitive. A competitor shipping new pricing or a flagship feature is something a builder wants to know about within hours, not weeks.
-- The action loop is concrete. The Watch fires "Competitor X just shipped Y — here is the diff. Brief Ivy on this?" The user approves, the agent drafts a response (a pricing tweak, a positioning post, a feature pull-forward). The user approves or disapproves.
+- The action loop is concrete. The Watch fires "Competitor X just shipped Y — here is the diff. Brief Loki on this?" The user approves, the agent drafts a response (a pricing tweak, a positioning post, a feature pull-forward). The user approves or disapproves.
 
 The other seven follow with the same primitives but different polling shapes and different signal types. Investors are slower-moving and require human-in-the-loop more heavily. Customers blur into CRM territory. Acquirers are mostly silent until they aren't. Each gets its own iteration. The platform code is shared — typed edges, per-stakeholder watchers, action proposals into the approval queue.
 
@@ -83,7 +83,7 @@ The other seven follow with the same primitives but different polling shapes and
 
 A builder running FleetCrown and OrangeCat in tandem, with the identity bridge live and the stakeholder graph populated, gets a different daily experience than the one most builders have today.
 
-They open FleetCrown. The Watch greets them with "Three things this morning: your nearest competitor just shipped a competing feature; the investor you pitched two weeks ago just opened your deck again; one of your stalled in-house projects has a milestone Ivy thinks is worth finishing this week. Brief Ivy on which one to take first?"
+They open FleetCrown. The Watch greets them with "Three things this morning: your nearest competitor just shipped a competing feature; the investor you pitched two weeks ago just opened your deck again; one of your stalled in-house projects has a milestone Loki thinks is worth finishing this week. Brief Loki on which one to take first?"
 
 That is not a CRM. It is not a competitive-intelligence tool. It is not a fundraising dashboard. It is **the same approval-queue interaction model**, pointed at the relationships around the project, with the graph living in the platform that was built for graphs and the agent operations living in the platform that was built for agents.
 

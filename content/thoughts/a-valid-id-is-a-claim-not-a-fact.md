@@ -5,7 +5,7 @@ excerpt: A token is a claim about who you are. The database is the fact. When th
 publishedAt: 2026-06-25
 tags: auth,identity,multitenancy,architecture
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 5
 ---
 

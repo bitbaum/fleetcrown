@@ -5,7 +5,7 @@ excerpt: The prompt library is where one good instruction stops being a one-off 
 publishedAt: 2026-05-06
 tags: prompts,templates,agents,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What The Prompt Library Is

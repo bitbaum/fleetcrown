@@ -22,7 +22,7 @@ Concrete benefits of a full codebase merger, today:
 
 3. **One deploy surface.** One CI pipeline, one Vercel project, one database, one set of env vars to rotate. The operational tax of running two products goes away.
 
-4. **One agent context naturally.** Instead of two AIs (Ivy on FleetCrown, Cat on OrangeCat) that have to converge into one, the agent is one from day one. No merge engineering ever.
+4. **One agent context naturally.** Instead of two AIs (Loki on FleetCrown, Cat on OrangeCat) that have to converge into one, the agent is one from day one. No merge engineering ever.
 
 5. **Faster strategy execution.** A single product can ship features that touch both production and transaction surfaces without coordinating across two repos. Cycle time drops.
 
@@ -80,7 +80,7 @@ The most likely correct sequence:
 
 **Phase 1 (now → six months).** Two products, tight integration. Identity bridge, shared agent context, cross-product navigation and content. The user perceives one agent across both surfaces. The codebases remain separate but the experience does not.
 
-**Phase 2 (six → twelve months).** Shared agent service that both products consume. Ivy and the Cat become facades over the same underlying agent. Users on either product talk to the same agent with the same memory. This is the convergence essay shipping.
+**Phase 2 (six → twelve months).** Shared agent service that both products consume. Loki and the Cat become facades over the same underlying agent. Users on either product talk to the same agent with the same memory. This is the convergence essay shipping.
 
 **Phase 3 (twelve → twenty-four months).** Evaluate codebase merger. By this point the architectural overlap is substantial. If merging reduces complexity, merge. If separation still preserves valuable optionality (regulatory, fundraising, audience-focused product velocity), keep them separate.
 

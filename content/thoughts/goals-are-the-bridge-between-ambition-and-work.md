@@ -5,7 +5,7 @@ excerpt: A goal system is only useful if it changes what projects, commitments, 
 publishedAt: 2026-05-06
 tags: goals,planning,execution,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What Goals Are For

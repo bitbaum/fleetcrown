@@ -5,7 +5,7 @@ excerpt: In FleetCrown, the project is the container where code, context, runtim
 publishedAt: 2026-05-06
 tags: projects,execution,context,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## Why Projects Matter

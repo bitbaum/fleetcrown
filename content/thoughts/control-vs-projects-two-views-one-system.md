@@ -5,7 +5,7 @@ excerpt: Control is operational. Projects is strategic. The confusion comes when
 publishedAt: 2026-05-09
 tags: control,projects,architecture,ssot,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## The Core Question

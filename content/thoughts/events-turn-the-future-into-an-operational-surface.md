@@ -5,7 +5,7 @@ excerpt: Events are where time enters the product: deadlines, meetings, opportun
 publishedAt: 2026-05-06
 tags: events,time,planning,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 ## What Events Are

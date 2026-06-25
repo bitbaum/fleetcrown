@@ -8,13 +8,13 @@ publishedAt: 2026-06-01
 
 There is an honest question worth asking out loud about the FleetCrown + OrangeCat pairing: what ties them together, and is that tie sustainable at scale?
 
-The naïve answer is "Ivy" — FleetCrown's AI agent — extended into the economic surface that OrangeCat provides. The naïve answer is wrong, and getting it wrong matters because the actual target is not a thousand builders or a million builders. The actual target is **every voluntary creator on earth**. Nine billion people who want to express themselves through science, art, engineering, entrepreneurship, charity, or whatever creative voluntary work they are drawn toward — and who want most of the operational burden of that work taken off their plate.
+The naïve answer is "Loki" — FleetCrown's AI agent — extended into the economic surface that OrangeCat provides. The naïve answer is wrong, and getting it wrong matters because the actual target is not a thousand builders or a million builders. The actual target is **every voluntary creator on earth**. Nine billion people who want to express themselves through science, art, engineering, entrepreneurship, charity, or whatever creative voluntary work they are drawn toward — and who want most of the operational burden of that work taken off their plate.
 
 That target rules out a lot of architectures. Let me lay out what actually has to be true for it to work.
 
 ## Today's Tie Is the Founder, Not the Software
 
-Today, FleetCrown has Ivy (its AI agent). OrangeCat has the Cat (its AI agent). The two products are paired in vision and in the founder's head. The integration between them, right now, is a strategic intention published on two roadmaps — not running code.
+Today, FleetCrown has Loki (its AI agent). OrangeCat has the Cat (its AI agent). The two products are paired in vision and in the founder's head. The integration between them, right now, is a strategic intention published on two roadmaps — not running code.
 
 If you zoom out and ask "what actually ties FleetCrown and OrangeCat together right now?", the honest answer is: the same human is building both. That tie scales to one user.
 
@@ -22,13 +22,13 @@ It is fine for the present stage. The two products were built with the same firs
 
 ## Two AIs Per User Is an Engineering Convenience
 
-Build FleetCrown. Build OrangeCat. Each ends up with its own AI agent because that's how you ship two products in parallel. From the inside, it looks coherent — Ivy handles work, Cat handles money, they share a thesis.
+Build FleetCrown. Build OrangeCat. Each ends up with its own AI agent because that's how you ship two products in parallel. From the inside, it looks coherent — Loki handles work, Cat handles money, they share a thesis.
 
-From a user's perspective at scale, **two AIs is two personas to remember**, two contexts to keep in sync, two interfaces to learn. At nine billion builders, that's bad architecture. Nobody at scale is going to maintain a mental model of "talk to Ivy about my goals, talk to my Cat about my listings." They will expect one agent that knows their whole life — their work, their money, the people they care about, the things they've promised to ship.
+From a user's perspective at scale, **two AIs is two personas to remember**, two contexts to keep in sync, two interfaces to learn. At nine billion builders, that's bad architecture. Nobody at scale is going to maintain a mental model of "talk to Loki about my goals, talk to my Cat about my listings." They will expect one agent that knows their whole life — their work, their money, the people they care about, the things they've promised to ship.
 
 The sustainable end-state is one agent per user. The user does not perceive "FleetCrown + OrangeCat." The user perceives **my agent, which happens to act on multiple surfaces on my behalf.**
 
-The question is not "how do we keep Ivy and Cat in sync?" The question is "how do they become the same agent?"
+The question is not "how do we keep Loki and Cat in sync?" The question is "how do they become the same agent?"
 
 ## What "Same Agent" Actually Means
 
@@ -82,9 +82,9 @@ This is what I think the honest evolution is. Not a marketing roadmap; the actua
 
 **Now: Two products, paired thesis.** FleetCrown and OrangeCat in production. The integration is engineering, not invention. The Thoughts essays make the pairing public. The roadmaps name the integration phases. First-customer learning happens with two AIs and a shared founder.
 
-**Soon: Identity bridge, then memory bridge.** A user's FleetCrown identity and OrangeCat actor get paired through OAuth (one identity, two products). Then the memory layers connect — Ivy can read what the Cat knows about the user's economy, and vice versa. Two agents, one shared substrate. Users feel less seam.
+**Soon: Identity bridge, then memory bridge.** A user's FleetCrown identity and OrangeCat actor get paired through OAuth (one identity, two products). Then the memory layers connect — Loki can read what the Cat knows about the user's economy, and vice versa. Two agents, one shared substrate. Users feel less seam.
 
-**Next: Agent convergence.** The two AIs become one agent per user with two surface skins. The reasoning loop unifies. The autonomy ladder unifies. The approval queue unifies. Users stop thinking "Ivy vs. Cat" — they have one assistant.
+**Next: Agent convergence.** The two AIs become one agent per user with two surface skins. The reasoning loop unifies. The autonomy ladder unifies. The approval queue unifies. Users stop thinking "Loki vs. Cat" — they have one assistant.
 
 **Then: Generalization.** The work-surface assumptions expand. A scientist, an artist, a charity organizer can all run their voluntary work through the same approval-queue-centric interface. FleetCrown's connectors widen beyond software development. OrangeCat's economic surfaces widen beyond startup-adjacent listings.
 

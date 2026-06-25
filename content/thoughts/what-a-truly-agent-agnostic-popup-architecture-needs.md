@@ -5,7 +5,7 @@ excerpt: Agent-agnostic does not mean every backend works the same way internall
 publishedAt: 2026-05-06
 tags: architecture,orchestration,beacon,control-plane
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 13
 ---
 ## Agent-Agnostic Does Not Mean Internally Identical

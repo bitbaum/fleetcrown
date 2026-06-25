@@ -5,7 +5,7 @@ excerpt: Most systems remember tasks better than relationships. People exists to
 publishedAt: 2026-05-06
 tags: people,relationships,crm,product
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 ## What People Is

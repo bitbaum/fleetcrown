@@ -5,7 +5,7 @@ excerpt: How we moved from fragmented project context-switching to a compounding
 publishedAt: 2026-04-29
 tags: origin,product,workflow,execution
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 8
 ---
 ## The Original Pain

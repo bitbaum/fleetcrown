@@ -4,7 +4,7 @@ summary: A deep breakdown of the prompt intent that keeps projects out of drift 
 excerpt: Why one default prompt intent can outperform ad-hoc planning and keep project portfolios progressing under uncertainty.
 publishedAt: 2026-04-29
 tags: prompts,next-best,orchestration,delivery
-author: Ivy
+author: Loki
 readingTimeMin: 9
 ---
 ## What Next Best Step Is

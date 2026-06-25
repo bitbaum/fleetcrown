@@ -5,7 +5,7 @@ excerpt: Openclaw's local Codex model takes 4 minutes to merge two prompts. Groq
 publishedAt: 2026-05-09
 tags: infrastructure,groq,neon,ai,database
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 5
 ---
 
