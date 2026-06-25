@@ -4,7 +4,7 @@
 
 import { ingestFrontier } from "./ingest";
 import { generateFrontierDigest } from "./digest";
-import { generateProposals, critiqueProposals, PROPOSAL_SCORE_THRESHOLD } from "./propose";
+import { generateProposals, verifyProposals } from "./propose";
 import {
   upsertFrontierDigest,
   getSelfImprovementTarget,
@@ -64,8 +64,8 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
   });
   if (drafts.length === 0) return { drafted: 0, surfaced: 0 };
 
-  const scored = await critiqueProposals(drafts);
-  const survivors = scored.filter((p) => p.score >= PROPOSAL_SCORE_THRESHOLD);
+  const verified = await verifyProposals(drafts);
+  const survivors = verified.filter((p) => p.passed);
   if (survivors.length === 0) return { drafted: drafts.length, surfaced: 0 };
 
   await insertProposals(survivors.map((p) => ({
@@ -76,6 +76,7 @@ export async function runFrontierProposals(digest: FrontierDigestRow): Promise<R
     rationale: p.rationale,
     sourceUrls: p.sourceUrls,
     score: p.score,
+    verifierScores: p.verifierScores,
     status: "proposed",
   })));
 
