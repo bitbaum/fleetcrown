@@ -371,8 +371,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // own /u/<username> profile even though it owned all their projects).
       if (!user?.id && trigger !== "update") {
         const cachedId = token.id as string | undefined;
-        if (cachedId && isValidUuid(cachedId) && (await getUserById(cachedId))) return token;
-        // stale/orphaned token → fall through to email recovery + refresh below
+        if (cachedId && isValidUuid(cachedId)) {
+          const u = await getUserById(cachedId);
+          // Fast path only while the cached token is fully in sync with the DB.
+          // Orphaned id (reseed/restore) OR drifted username/name (e.g. the
+          // operator renamed to a pseudonym) both fall through to refresh, so
+          // the session — and the public /u/<username> it links to — self-heal.
+          if (u && (u.username ?? null) === (token.username ?? null) && (u.name ?? null) === (token.name ?? null)) {
+            return token;
+          }
+        }
+        // else fall through to email recovery + refresh below
       }
 
       let dbUser = userId && isValidUuid(userId) ? await getUserById(userId) : null;
@@ -383,6 +392,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         dbUser = await healReturningUserOnboarding(dbUser);
         token.id = dbUser.id;
         token.email = dbUser.email ?? email ?? null;
+        token.name = dbUser.name ?? token.name ?? null;
         token.username = dbUser.username ?? null;
         token.onboardedAt = dbUser.onboardedAt ?? null;
         token.onboardingComplete = onboardingCompleteFlag(dbUser);

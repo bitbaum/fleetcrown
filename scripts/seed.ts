@@ -47,7 +47,7 @@ async function main() {
   console.log("Creating default user...");
   await db.insert(schema.users).values({
     id: GEORGE_USER_ID,
-    name: "George",
+    name: "Mao Nakamoto", // pseudonym — never seed the operator's real name (it surfaces on the public /u/ profile)
     email: "butaeff@gmail.com",
     isDefault: true,
   });
