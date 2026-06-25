@@ -14,10 +14,13 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, AskLokiBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  // Stable per-user session for the global "Ask Loki" modal (own thread, same
-  // agent + memory). Distinct from per-conversation Loki-page threads.
-  const { status, body } = await askLoki(dataOrResp.message, {
-    sessionKey: `agent:main:web:ask:${userId}`,
-  });
+  // "Ask Loki" = the user's PERSONAL Loki conversation. When LOKI_PERSONAL_SESSION_KEY
+  // is set (single-tenant box: George's `agent:main:direct:george`), the modal joins
+  // the SAME session as Telegram/WhatsApp → one continuous conversation across surfaces.
+  // Unset (multi-tenant default) → a stable per-user web thread. The Loki *page* keeps
+  // its own per-conversation threads regardless (same agent + memory).
+  const personalSessionKey =
+    process.env.LOKI_PERSONAL_SESSION_KEY?.trim() || `agent:main:web:ask:${userId}`;
+  const { status, body } = await askLoki(dataOrResp.message, { sessionKey: personalSessionKey });
   return NextResponse.json(body, { status });
 }
