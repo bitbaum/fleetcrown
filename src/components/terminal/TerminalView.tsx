@@ -63,9 +63,12 @@ export function TerminalView({
     // Dynamic import keeps xterm out of the initial bundle — it loads only when
     // a terminal is actually opened.
     (async () => {
-      const [{ Terminal }, { FitAddon }] = await Promise.all([
+      const [{ Terminal }, { FitAddon }, { WebLinksAddon }, { WebglAddon }, { TERMINAL_THEME }] = await Promise.all([
         import("@xterm/xterm"),
         import("@xterm/addon-fit"),
+        import("@xterm/addon-web-links"),
+        import("@xterm/addon-webgl"),
+        import("@/lib/terminal-theme"),
       ]);
       if (disposed) return;
       const transport = transportRef.current;
@@ -78,11 +81,23 @@ export function TerminalView({
         fontFamily: "var(--font-mono), ui-monospace, monospace",
         fontSize: 13,
         scrollback: 5000,
-        theme: { background: "#000000" },
+        theme: TERMINAL_THEME,
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
+      // Clickable URLs — open in a new tab (the gap that made `claude setup-token`
+      // links un-clickable). noopener/noreferrer for safety.
+      term.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, "_blank", "noopener,noreferrer")));
       term.open(host);
+      // GPU-accelerated renderer. WebGL can fail (context loss / no GPU); on any
+      // failure xterm falls back to the DOM renderer, so guard + auto-dispose.
+      let webgl: { dispose: () => void } | null = null;
+      try {
+        const addon = new WebglAddon();
+        addon.onContextLoss(() => { addon.dispose(); });
+        term.loadAddon(addon);
+        webgl = addon;
+      } catch { /* no WebGL — fall back to the default renderer */ }
       try { fit.fit(); } catch { /* host not laid out yet */ }
 
       // Serialize keystrokes through a single in-flight send chain so bytes never
@@ -127,6 +142,7 @@ export function TerminalView({
       cleanupTerm = () => {
         resizeObserver.disconnect();
         inputDisposable?.dispose();
+        webgl?.dispose();
         term.dispose();
       };
     })();
