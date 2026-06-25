@@ -1,22 +1,21 @@
-// Hosted runner — Phase 1 (spike): dispatch a real coding task to Hermes.
+// Hosted runner — Phase 1: dispatch a real coding task to Hermes.
 //
 // Where Phase 0 (analyze.ts) does read-only analysis via Groq, this runs an
 // actual agent that can WRITE code — by orchestrating Hermes headless rather
 // than building our own sandboxed agent. The strategic bet (Thoughts: "The
 // Captain Needs a Ship"): we don't out-build Nous's runtime; we point it at a
-// project the same way we point claude/grok. Hermes brings its own sandboxed
-// backends (Docker/SSH/Daytona/Modal), so isolation is theirs, not ours to
-// hand-roll.
+// project the same way we point claude/grok.
 //
-// Invocation (from the docs):
-//   HERMES_INFERENCE_MODEL=<model> hermes -z "<task>"   # prompt in, final answer out
-//   --ignore-user-config loads credentials from .env only (no Nous Portal OAuth
-//   for a headless run). Run inside the cloned repo dir; Hermes infers CWD.
+// Invocation (verified live on the box, 2026-06-25):
+//   hermes -z "<task>" --yolo            # one-shot; --yolo bypasses approval stalls
+//   Model + Nous-Portal creds come from ~/.hermes/config.yaml (provider: nous,
+//   default: qwen/qwen3-coder-next). We do NOT pass --ignore-user-config — that
+//   bypasses the config and falls back to a built-in default that doesn't work.
+//   Run inside the cloned repo dir; Hermes' terminal.backend=local edits CWD.
 //
-// SPIKE STATUS: the invocation + guard are real and tsc-clean; going live needs
-// the `hermes` CLI installed on the runner + a model credential. Without it this
-// returns a clear needs-install result (never a crash), proving the integration
-// shape end to end.
+// The agent's work is PRESERVED: after it edits, we commit on a fresh branch,
+// push, and open a PR — so an offline dispatch lands reviewable changes instead
+// of a discarded diff. Never auto-merges; a human reviews the PR.
 
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -28,13 +27,41 @@ import { commandExistsInPath } from "@/lib/agents/helpers";
 const run = promisify(execFile);
 
 export type HermesRunResult =
-  | { ok: true; output: string; diff: string; model: string }
+  | { ok: true; output: string; diff: string; model: string; prUrl?: string; branch?: string; noChanges?: boolean }
   | { ok: false; error: string; needsInstall?: boolean };
 
+/** Parse "https://github.com/owner/repo(.git)" → {owner, repo}; null if not GitHub. */
+function parseGitHub(gitUrl: string): { owner: string; repo: string } | null {
+  const m = gitUrl.match(/github\.com[/:]([^/]+)\/([^/.]+)(?:\.git)?\/?$/);
+  return m ? { owner: m[1], repo: m[2] } : null;
+}
+
+/** Open a PR via the GitHub API. Returns the html_url, or null on failure. */
+async function openPr(opts: {
+  owner: string; repo: string; token: string; head: string; base: string; title: string; body: string;
+}): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${opts.owner}/${opts.repo}/pulls`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${opts.token}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: opts.title, head: opts.head, base: opts.base, body: opts.body }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { html_url?: string };
+    return json.html_url ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Clone the repo, run Hermes against `task` headless, and return its final
- * output + the git diff it produced. Does NOT push — the caller decides whether
- * to commit/PR (Phase 1 keeps writes behind a human gate). Always cleans up.
+ * Clone the repo, run Hermes against `task` headless, then preserve any changes
+ * as a pushed branch + PR. Always cleans up the temp clone.
  */
 export async function runHermesTask(input: {
   gitUrl: string;
@@ -45,10 +72,9 @@ export async function runHermesTask(input: {
 }): Promise<HermesRunResult> {
   const { gitUrl, task, projectContext, token, model } = input;
 
-  // Orchestrate, don't assume: if the runtime isn't present, say so clearly
-  // (the hosted runner surfaces this as "install Hermes on the runner").
+  // Orchestrate, don't assume: if the runtime isn't present, say so clearly.
   if (!commandExistsInPath("hermes")) {
-    return { ok: false, needsInstall: true, error: "The `hermes` CLI is not installed on this runner. Install it (curl … nousresearch.com/install.sh) + provide a model credential, then re-dispatch." };
+    return { ok: false, needsInstall: true, error: "The `hermes` CLI is not installed on this runner." };
   }
 
   let dir: string | null = null;
@@ -59,26 +85,50 @@ export async function runHermesTask(input: {
       : gitUrl;
     await run("git", ["clone", "--depth", "1", "--no-tags", cloneUrl, dir], { timeout: 120_000, maxBuffer: 16 * 1024 * 1024 });
 
-    const prompt = projectContext ? `${projectContext}\n\nTask:\n${task}` : task;
-    const resolvedModel = model && model !== "auto" ? model : (process.env.HERMES_INFERENCE_MODEL ?? "auto");
+    // Identify base branch + a unique work branch up front.
+    const { stdout: baseRaw } = await run("git", ["-C", dir, "rev-parse", "--abbrev-ref", "HEAD"], { timeout: 15_000 }).catch(() => ({ stdout: "main" }));
+    const base = baseRaw.trim() || "main";
+    const slug = task.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "task";
+    const branch = `hermes/${slug}-${Date.now().toString(36)}`;
 
-    // Headless: prompt in, final answer to stdout. --ignore-user-config keeps
-    // it deterministic + credentials-from-env. Generous timeout — real work.
+    const prompt = projectContext ? `${projectContext}\n\nTask:\n${task}` : task;
+    const modelArgs = model && model !== "auto" ? ["-m", model] : [];
+
+    // Headless agentic run. --yolo bypasses approval prompts (we're in a throwaway
+    // clone). Model + Nous creds resolved from ~/.hermes/config.yaml.
     const { stdout } = await run(
       "hermes",
-      ["-z", "--ignore-user-config", prompt],
-      {
-        cwd: dir,
-        timeout: 15 * 60_000,
-        maxBuffer: 32 * 1024 * 1024,
-        env: { ...process.env, ...(resolvedModel !== "auto" ? { HERMES_INFERENCE_MODEL: resolvedModel } : {}) },
-      },
+      ["-z", prompt, "--yolo", ...modelArgs],
+      { cwd: dir, timeout: 15 * 60_000, maxBuffer: 32 * 1024 * 1024, env: { ...process.env } },
     );
+    const output = stdout.trim();
 
-    // What did it change? (read-only inspection of the agent's own work.)
-    const { stdout: diff } = await run("git", ["-C", dir, "diff", "--stat"], { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }).catch(() => ({ stdout: "" }));
+    // Stage everything the agent touched; if nothing changed, report that honestly.
+    await run("git", ["-C", dir, "add", "-A"], { timeout: 30_000 });
+    const { stdout: diffStat } = await run("git", ["-C", dir, "diff", "--cached", "--stat"], { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }).catch(() => ({ stdout: "" }));
+    if (!diffStat.trim()) {
+      return { ok: true, output, diff: "", model: model ?? "config-default", noChanges: true };
+    }
 
-    return { ok: true, output: stdout.trim(), diff: diff.trim(), model: resolvedModel };
+    // Preserve the work: commit on a branch, push, open a PR (never auto-merge).
+    await run("git", ["-C", dir, "config", "user.email", "runner@fleetcrown.local"], { timeout: 10_000 });
+    await run("git", ["-C", dir, "config", "user.name", "FleetCrown Hosted Runner"], { timeout: 10_000 });
+    await run("git", ["-C", dir, "checkout", "-b", branch], { timeout: 15_000 });
+    await run("git", ["-C", dir, "commit", "-m", `hermes: ${task.slice(0, 72)}`], { timeout: 30_000 });
+    await run("git", ["-C", dir, "push", "origin", `HEAD:refs/heads/${branch}`], { timeout: 120_000 });
+
+    let prUrl: string | undefined;
+    const gh = parseGitHub(gitUrl);
+    if (gh && token) {
+      const url = await openPr({
+        owner: gh.owner, repo: gh.repo, token, head: branch, base,
+        title: `hermes: ${task.slice(0, 72)}`,
+        body: `Autonomous change by the FleetCrown hosted runner (Hermes) for an offline dispatch.\n\n**Task:** ${task}\n\n**Agent summary:**\n${output.slice(0, 4000)}\n\n_Review before merging — this was produced unattended._`,
+      });
+      if (url) prUrl = url;
+    }
+
+    return { ok: true, output, diff: diffStat.trim(), model: model ?? "config-default", branch, prUrl };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "hermes run failed" };
   } finally {

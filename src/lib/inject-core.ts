@@ -23,6 +23,7 @@ import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/proj
 import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
 import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
+import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -471,6 +472,25 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     result.mode === "queued" &&
     (result as { runnerConnected?: boolean }).runnerConnected === false;
 
+  // Producer for the hosted runner: when the local Fleet Runner is offline, a
+  // WORK dispatch doesn't have to wait forever — auto-route it to the hosted
+  // runner (Hermes), which clones the repo, makes the change, and opens a PR.
+  // Only for real coding tasks with a git URL — never for lifecycle commands
+  // (close/stop) or projects we can't clone. Hermes uses its own configured
+  // Nous model, so we deliberately don't pass the local agent's model pref.
+  const isLifecycle = promptKey === "close_session" || promptKey === "hard_stop";
+  let hostedDispatchId: string | undefined;
+  if (queuedOffline && !isLifecycle && dbMatch.gitUrl) {
+    hostedDispatchId = await enqueueHostedDispatchCommand(userId, {
+      projectKey: canonical,
+      gitUrl: dbMatch.gitUrl,
+      task: prompt,
+    }).catch((err) => {
+      console.error("[inject] hosted-dispatch enqueue failed:", err);
+      return undefined;
+    });
+  }
+
   return {
     status: 200,
     body: {
@@ -485,8 +505,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       // so the UI can warn instead of pretending it's running.
       ...(queuedOffline && {
         warning: "runner-offline",
-        message:
-          "Fleet Runner is offline — this command is queued and will run as soon as it reconnects.",
+        message: hostedDispatchId
+          ? "Fleet Runner is offline — handed to the hosted runner (Hermes), which will make the change and open a PR. It'll also run locally when your runner reconnects."
+          : "Fleet Runner is offline — this command is queued and will run as soon as it reconnects.",
+        ...(hostedDispatchId && { hostedDispatchId, hostedRunner: "hermes" }),
       }),
       ...(runId && { runId }),
     },

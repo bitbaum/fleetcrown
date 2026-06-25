@@ -53,9 +53,12 @@ async function tick(userId: string): Promise<boolean> {
       const model = (cmd.payload as HostedDispatchPayload).model;
       const res = await runHermesTask({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token, model });
       if (res.ok) {
-        await markCommandExecuted(cmd.id, userId, { ok: true, text: `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}` });
-        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`, `${res.output}\n\n${res.diff}`);
-        console.log(`[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})`);
+        const summary = res.noChanges
+          ? `${res.output}\n\n(Hermes made no file changes.)`
+          : `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}${res.prUrl ? `\n\nPR: ${res.prUrl}` : res.branch ? `\n\nPushed branch: ${res.branch}` : ""}`;
+        await markCommandExecuted(cmd.id, userId, { ok: true, text: summary });
+        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`, summary);
+        console.log(`[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})${res.prUrl ? ` → ${res.prUrl}` : ""}`);
       } else {
         await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
         console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
