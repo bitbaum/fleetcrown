@@ -50,10 +50,15 @@ elif [ -n "$REF" ]; then
     echo "  Deploy it explicitly: git checkout ${REF:0:12} && bash scripts/deploy-hetzner.sh   (or push from main again)"
     exit 1
   fi
-  (cd "$PROJECT_DIR" && npm run build)
+  # Pass the pinned ref into the build env so the postbuild (deploy-local.sh)
+  # gates the LOCAL systemd restart on it too. Without this, a HEAD switch
+  # mid-build is caught here (box rsync aborts) but the postbuild has already
+  # restarted the local prod service with the torn build — the box was protected
+  # but local was not. Now a drifted pinned build restarts nothing, anywhere.
+  (cd "$PROJECT_DIR" && FLEETCROWN_DEPLOY_REF="$REF" npm run build)
   AFTER="$(git_head)"
   if [ "$AFTER" != "$REF" ]; then
-    echo "✗ pinned deploy ABORTED — HEAD moved to ${AFTER:0:12} during the build; not shipping a torn tree." >&2
+    echo "✗ pinned deploy ABORTED — HEAD moved to ${AFTER:0:12} during the build; not shipping a torn tree (local restart was skipped too)." >&2
     exit 1
   fi
 else

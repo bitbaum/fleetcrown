@@ -85,6 +85,21 @@ if printf '%s' "$DRIFT_OUT" | grep -q "MISSING"; then
   printf '%s\n' "$DRIFT_OUT" | sed 's/^/    /'
 fi
 
+# ── Pinned-deploy guard ───────────────────────────────────────────────────────
+# When deploy-hetzner.sh runs a pinned (--ref) build it exports FLEETCROWN_DEPLOY_REF.
+# If HEAD drifted during the build (a branch switch landed mid-compile), the
+# standalone we just assembled may be torn — so don't restart the LOCAL service
+# into it. deploy-hetzner.sh's own AFTER==REF check already aborts the box rsync;
+# this keeps local consistent, so one mid-build `git checkout` ships nothing,
+# anywhere, instead of silently leaving local prod on a torn build.
+if [ -n "${FLEETCROWN_DEPLOY_REF:-}" ]; then
+  HEAD_NOW="$(git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown)"
+  if [ "$HEAD_NOW" != "$FLEETCROWN_DEPLOY_REF" ]; then
+    echo "→ deploy: ⚠ HEAD drifted to ${HEAD_NOW:0:12} (pinned ${FLEETCROWN_DEPLOY_REF:0:12}) — skipping local restart; build may be torn"
+    exit 0
+  fi
+fi
+
 # ── Restart systemd service (local machine only) ──────────────────────────────
 # Prefer the canonical fleetcrown-app service; fall back to legacy cockpit-app
 # for machines still running the pre-rename install.
