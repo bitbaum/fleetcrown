@@ -14,42 +14,67 @@
 // docs/architecture/hosted-ephemeral-runner.md.
 
 import { setRunnerConnected } from "@/db/queries/runner-presence";
-import { claimNextPendingCommand, markCommandExecuted, type HostedAnalyzePayload } from "@/db/queries/pending-commands";
+import { claimNextPendingCommand, markCommandExecuted, type HostedAnalyzePayload, type HostedDispatchPayload } from "@/db/queries/pending-commands";
 import { getProjectContext } from "@/db/queries/project-context";
 import { getSelfImprovementTarget } from "@/db/queries/frontier";
 import { getGithubToken } from "@/lib/github-token";
 import { appendProjectDevLog } from "@/db/queries/user-projects";
 import { analyzeRepo } from "@/lib/hosted-runner/analyze";
+import { runHermesTask } from "@/lib/hosted-runner/run-hermes";
 
 const POLL_MS = 5_000;
+// Both hosted classes: read-only analysis (Groq, Phase 0) + write-class dispatch
+// to a sandboxed coding agent (Hermes, Phase 1). Local-runner dispatch/inject
+// commands are deliberately NOT claimed here.
+const HOSTED_TYPES = ["hosted_analyze", "hosted_dispatch"];
 
-/** Claim + execute one hosted_analyze command. Returns false when the queue is empty. */
+async function logResult(userId: string, projectKey: string, label: string, text: string) {
+  await appendProjectDevLog(userId, projectKey, {
+    date: new Date().toISOString(),
+    done: label.slice(0, 100),
+    next: text.slice(0, 2_000),
+    tests: "", todos: "", health: "good",
+  }).catch((e) => console.error("[hosted-runner] devlog append failed:", e));
+}
+
+/** Claim + execute one hosted command (analyze or dispatch). False when queue empty. */
 async function tick(userId: string): Promise<boolean> {
-  const cmd = await claimNextPendingCommand([userId], ["hosted_analyze"]);
+  const cmd = await claimNextPendingCommand([userId], HOSTED_TYPES);
   if (!cmd) return false;
-  const p = cmd.payload as HostedAnalyzePayload;
-  console.log(`[hosted-runner] analyzing ${p.projectKey}: ${p.task.slice(0, 60)}`);
+  const p = cmd.payload as HostedAnalyzePayload | HostedDispatchPayload;
+  const [ctx, token] = await Promise.all([
+    getProjectContext(userId, p.projectKey).catch(() => null),
+    getGithubToken(userId).catch(() => null),
+  ]);
   try {
-    const [ctx, token] = await Promise.all([
-      getProjectContext(userId, p.projectKey).catch(() => null),
-      getGithubToken(userId).catch(() => null),
-    ]);
-    const res = await analyzeRepo({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token });
-    if (res.ok) {
-      await markCommandExecuted(cmd.id, userId, { ok: true, text: res.report });
-      await appendProjectDevLog(userId, p.projectKey, {
-        date: new Date().toISOString(),
-        done: `Hosted analysis — ${p.task.slice(0, 80)}`,
-        next: res.report.slice(0, 2_000),
-        tests: "", todos: "", health: "good",
-      }).catch((e) => console.error("[hosted-runner] devlog append failed:", e));
-      console.log(`[hosted-runner] ✓ ${p.projectKey} (${res.model})`);
+    if (cmd.type === "hosted_dispatch") {
+      // Phase 1: write-class task → Hermes in its own sandbox (orchestrate, not out-build).
+      console.log(`[hosted-runner] dispatch→hermes ${p.projectKey}: ${p.task.slice(0, 60)}`);
+      const model = (cmd.payload as HostedDispatchPayload).model;
+      const res = await runHermesTask({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token, model });
+      if (res.ok) {
+        await markCommandExecuted(cmd.id, userId, { ok: true, text: `${res.output}\n\n— changed:\n${res.diff || "(no diff)"}` });
+        await logResult(userId, p.projectKey, `Hosted dispatch (Hermes) — ${p.task.slice(0, 70)}`, `${res.output}\n\n${res.diff}`);
+        console.log(`[hosted-runner] ✓ ${p.projectKey} (hermes/${res.model})`);
+      } else {
+        await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
+        console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
+      }
     } else {
-      await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
-      console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
+      // Phase 0: read-only analysis via Groq.
+      console.log(`[hosted-runner] analyze ${p.projectKey}: ${p.task.slice(0, 60)}`);
+      const res = await analyzeRepo({ gitUrl: p.gitUrl, task: p.task, projectContext: ctx, token });
+      if (res.ok) {
+        await markCommandExecuted(cmd.id, userId, { ok: true, text: res.report });
+        await logResult(userId, p.projectKey, `Hosted analysis — ${p.task.slice(0, 80)}`, res.report);
+        console.log(`[hosted-runner] ✓ ${p.projectKey} (${res.model})`);
+      } else {
+        await markCommandExecuted(cmd.id, userId, { ok: false, error: res.error });
+        console.log(`[hosted-runner] ✗ ${p.projectKey}: ${res.error}`);
+      }
     }
   } catch (e) {
-    await markCommandExecuted(cmd.id, userId, { ok: false, error: e instanceof Error ? e.message : "hosted analysis failed" });
+    await markCommandExecuted(cmd.id, userId, { ok: false, error: e instanceof Error ? e.message : "hosted run failed" });
   }
   return true;
 }
