@@ -160,7 +160,10 @@ export async function POST(
   } else {
     // 3b. Chat — answer via Loki (attachments included so a question can be
     //     about the attached file).
-    const loki = await askLoki(resolution.prompt + attachmentSuffix);
+    // Per-conversation web session → same agent (main) + memory as Telegram, own transcript.
+    const loki = await askLoki(resolution.prompt + attachmentSuffix, {
+      sessionKey: `agent:main:web:conv:${conversationId}`,
+    });
     const reply =
       (typeof loki.body.text === "string" && loki.body.text) ||
       (typeof loki.body.error === "string" ? loki.body.error : "Loki is unavailable right now.");

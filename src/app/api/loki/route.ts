@@ -14,6 +14,10 @@ export async function POST(req: NextRequest) {
   const dataOrResp = await readJsonBody(req, AskLokiBody);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
 
-  const { status, body } = await askLoki(dataOrResp.message);
+  // Stable per-user session for the global "Ask Loki" modal (own thread, same
+  // agent + memory). Distinct from per-conversation Loki-page threads.
+  const { status, body } = await askLoki(dataOrResp.message, {
+    sessionKey: `agent:main:web:ask:${userId}`,
+  });
   return NextResponse.json(body, { status });
 }
