@@ -5,18 +5,36 @@ import "@xterm/xterm/css/xterm.css";
 import type { AgentLifecycle } from "@/lib/agent-execution/types";
 import type { TerminalTransport } from "./terminal-transport";
 
-// Strip ANSI/VT escape sequences so URL detection sees plain text. URLs never
-// contain ESC, so removing colour/cursor codes is enough to match cleanly.
-const ANSI_RE = /\x1b\[[0-9;?]*[ -/]*[@-~]/g;
 const URL_RE = /https?:\/\/[^\s"'`<>\\)\]}]+/g;
 
-/** Pull whole URLs out of a chunk of terminal OUTPUT. The byte stream keeps each
- *  URL on one logical line even when xterm wraps it across visual rows, so this
- *  always recovers the complete link — the fix for "only the first line is
- *  clickable". Trailing sentence punctuation is trimmed. */
-function extractUrls(text: string): string[] {
-  const matches = text.replace(ANSI_RE, "").match(URL_RE) ?? [];
-  return matches.map((u) => u.replace(/[.,;:!?)\]}]+$/, "")).filter(Boolean);
+/** Reconstruct whole URLs from the rendered terminal BUFFER (not the raw byte
+ *  stream). TUI tools — ink, e.g. `claude setup-token` — HARD-wrap long URLs to
+ *  the terminal width in their output, so the bytes split the URL across lines
+ *  with no soft-wrap marker; scanning the stream yields only the first segment
+ *  (the "link is cut off" bug). The grid is unambiguous though: a row whose
+ *  trimmed text fills the full width continued onto the next row. Join those
+ *  full-width runs back into logical lines, then match. Handles plainly-printed
+ *  URLs (single short line) and width-wrapped ones alike. */
+function extractUrlsFromBuffer(term: import("@xterm/xterm").Terminal): string[] {
+  const buf = term.buffer.active;
+  const cols = term.cols;
+  const urls = new Set<string>();
+  let logical = "";
+  const flush = () => {
+    for (const u of logical.match(URL_RE) ?? []) urls.add(u.replace(/[.,;:!?)\]}]+$/, ""));
+    logical = "";
+  };
+  // Scan a bounded recent window; back up to a logical-line boundary so a URL
+  // that began just above the window isn't captured truncated.
+  let start = Math.max(0, buf.length - 300);
+  while (start > 0 && (buf.getLine(start - 1)?.translateToString(true).length ?? 0) === cols) start--;
+  for (let i = start; i < buf.length; i++) {
+    const text = buf.getLine(i)?.translateToString(true) ?? "";
+    logical += text;
+    if (text.length < cols) flush(); // row didn't fill the width → logical line ended
+  }
+  flush();
+  return [...urls];
 }
 
 /** Real-DOM bar listing URLs detected in the terminal output — clickable + a
@@ -234,15 +252,16 @@ export function TerminalView({
       resizeObserver.observe(host);
       syncSize();
 
-      // Rolling tail of recent output (plain text) scanned for URLs. The stream
-      // keeps each URL contiguous regardless of xterm's visual wrapping, so the
-      // whole link is recovered and shown in <LinkBar/> — newest first, capped.
-      let tail = "";
-      disconnect = transport.connect({
-        onOutput: (data) => {
-          term.write(data);
-          tail = (tail + data).slice(-8000);
-          const urls = extractUrls(tail);
+      // Scan the rendered buffer for URLs (newest first, capped) and surface them
+      // in <LinkBar/>. Debounced: run once output settles, after xterm has laid
+      // the bytes into the grid — only then can full-width rows be joined back
+      // into whole URLs. Kept after the URL leaves the screen on a TUI redraw.
+      let scanTimer = 0;
+      const scheduleScan = () => {
+        if (scanTimer) return;
+        scanTimer = window.setTimeout(() => {
+          scanTimer = 0;
+          const urls = extractUrlsFromBuffer(term);
           if (urls.length) {
             setLinks((prev) => {
               const next = [...prev];
@@ -250,13 +269,17 @@ export function TerminalView({
               return next.length === prev.length ? prev : next.slice(0, 4);
             });
           }
-        },
-        onReset: () => { term.reset(); tail = ""; setLinks([]); },
+        }, 150);
+      };
+      disconnect = transport.connect({
+        onOutput: (data) => { term.write(data); scheduleScan(); },
+        onReset: () => { term.reset(); setLinks([]); },
         onStatus: (status) => onStatusRef.current?.(status),
         onConnected: (c) => setConnected(c),
       });
 
       cleanupTerm = () => {
+        if (scanTimer) window.clearTimeout(scanTimer);
         resizeObserver.disconnect();
         inputDisposable?.dispose();
         term.dispose();
