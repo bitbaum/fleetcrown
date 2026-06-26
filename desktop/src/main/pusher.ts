@@ -28,7 +28,6 @@
  * the pusher's 30s cadence would slip. Two timers, two responsibilities.
  */
 
-import { app } from 'electron'
 import { getZellijTabs } from '@/lib/zellij'
 import { APP_URL } from '@/config/brand'
 import { DAEMON_HEARTBEAT_MS } from '@/lib/constants/daemon'
@@ -38,6 +37,12 @@ import { listAgentRegistry } from '@/lib/agent-registry'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
 import { listPtyTabs } from './pty-runtime'
+
+// Runner version is reported in the runtime-state heartbeat. The desktop sets
+// FLEETCROWN_RUNNER_VERSION from app.getVersion() before starting the pusher
+// (so this module stays Electron-free and importable by the headless
+// box-runner); the box-runner sets it from systemd. Fallback keeps it defined.
+const RUNNER_VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? 'dev'
 
 const DEFAULT_SESSION_NAME = 'fleet'
 
@@ -104,7 +109,7 @@ async function pushOnce(): Promise<void> {
         installedAgents,
         projects,
         panes,
-        runnerVersion: app.getVersion(),
+        runnerVersion: RUNNER_VERSION,
         observedAt: Date.now(),
       }),
       // Bound the push. Without this, a single hung runtime-state request never

@@ -839,6 +839,11 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.fleetcrown.fleet-runner')
 
+  // Hand the desktop's version to the now-Electron-free pusher (it reads this
+  // env so the same module runs in the headless box-runner). Set before any
+  // pusher start below.
+  process.env.FLEETCROWN_RUNNER_VERSION = app.getVersion()
+
   // Crash reporting via Sentry — opt-in. The SDK is no-op until a DSN is
   // present in the environment (SENTRY_DSN or VITE_SENTRY_DSN), so this
   // ships silent by default. When the Sentry project is created and the

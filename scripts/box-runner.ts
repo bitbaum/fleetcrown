@@ -1,0 +1,68 @@
+/**
+ * Headless FleetCrown box-runner.
+ *
+ * The desktop Fleet Runner's core — poller (drains pending_commands), pusher
+ * (runtime-state heartbeat), bridge subscriber (fast-path wake + presence), and
+ * owned PTYs (LocalPtyExecutor) — running as a systemd service on the always-on
+ * box, with NO Electron, window, or tray. This is the piece that deletes the
+ * "laptop must be on" dependency: dispatches execute server-side in
+ * FleetCrown-owned PTYs, presence stays online via the bridge SSE connection,
+ * and it survives web-app deploys because it is its own service.
+ *
+ * It reuses the EXACT desktop modules (desktop/src/main/{poller,pusher,...}) —
+ * that core is already Electron-free (pusher's lone app.getVersion() was lifted
+ * to FLEETCROWN_RUNNER_VERSION). Same control-plane contract as the desktop:
+ * HTTP + a ck_ runner token, no direct DB. Run via tsx from
+ * /opt/fleetcrown/runner. See docs/architecture/box-owned-pty-executor.md.
+ */
+import { startPoller, stopPoller, onPollerStatus, formatTrayTooltip } from "../desktop/src/main/poller";
+import { startPusher, stopPusher } from "../desktop/src/main/pusher";
+import { loadToken } from "../desktop/src/main/token-store";
+import { APP_URL } from "@/config/brand";
+
+const VERSION = process.env.FLEETCROWN_RUNNER_VERSION ?? "box";
+const WEB = (process.env.FLEETCROWN_WEB_URL || "").trim() || APP_URL;
+
+function log(msg: string): void {
+  // journald captures stdout; keep a stable prefix for `journalctl -u`.
+  console.log(`[box-runner] ${msg}`);
+}
+
+function main(): void {
+  const token = loadToken();
+  if (!token) {
+    console.error(
+      "[box-runner] no runner token at ~/.config/fleetcrown/fleet-runner-token — cannot authenticate. Exiting.",
+    );
+    process.exit(1);
+  }
+  log(`v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…, PTY=${process.env.FLEETCROWN_RUNNER_PTY !== "false"})`);
+
+  onPollerStatus((s) => log(formatTrayTooltip(s)));
+
+  // Poller starts the bridge subscriber (presence + fast-path wake) itself; the
+  // pusher publishes the runtime-state heartbeat. Together they are the whole
+  // runner: claim → execute in an owned PTY → stream → ack, presence online.
+  startPoller();
+  startPusher();
+  log("poller + pusher started; presence via bridge SSE");
+
+  let shuttingDown = false;
+  const shutdown = (sig: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    log(`${sig} → draining`);
+    try { stopPoller(); } catch { /* best-effort */ }
+    try { stopPusher(); } catch { /* best-effort */ }
+    // Let in-flight stop work settle, then exit so systemd sees a clean stop.
+    setTimeout(() => process.exit(0), 300);
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+
+  // Nothing else holds the event loop open (poller/pusher run on timers), so
+  // keep the process alive explicitly until a signal arrives.
+  setInterval(() => { /* keep-alive */ }, 1 << 30);
+}
+
+main();
