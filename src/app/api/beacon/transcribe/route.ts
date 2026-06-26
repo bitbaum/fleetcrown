@@ -111,7 +111,12 @@ async function attemptGroq(audio: File): Promise<AttemptResult> {
 // a whisper model file. Slower than Groq (5–30s depending on model size and
 // CPU) but durable when the cloud is down.
 async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptResult> {
-  if (!isRuntimeAvailable()) {
+  // Enable on any host that actually has Whisper installed. The box is a
+  // stateless control plane (RUNTIME_AVAILABLE unset) but still runs
+  // ffmpeg + faster-whisper for the self-hosted fallback — opted in via
+  // TRANSCRIBE_LOCAL_AVAILABLE so deployments without Whisper don't try + fail.
+  const localOk = isRuntimeAvailable() || process.env.TRANSCRIBE_LOCAL_AVAILABLE === "true";
+  if (!localOk) {
     return {
       ok: false,
       recoverable: false,

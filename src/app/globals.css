@@ -2672,6 +2672,55 @@
   .ui-loki-composer-select {
     @apply h-8 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary;
   }
+  /* Grok-style voice overlay — covers the composer while recording/transcribing:
+     a live waveform, elapsed timer, and cancel/confirm. */
+  .ui-voice-bar {
+    @apply absolute inset-0 z-10 flex items-center gap-3 rounded-2xl border border-border-default bg-surface-base px-3 sm:px-4;
+  }
+  .ui-voice-rec-dot {
+    @apply h-2.5 w-2.5 shrink-0 rounded-full bg-status-negative;
+    animation: ui-voice-pulse 1.2s ease-in-out infinite;
+  }
+  .ui-voice-wave {
+    @apply flex flex-1 items-center justify-center gap-1 overflow-hidden;
+    height: 1.75rem;
+  }
+  .ui-voice-wave-bar {
+    @apply w-1 rounded-full bg-accent-primary;
+    height: 100%;
+    transform: scaleY(0.3);
+    transform-origin: center;
+    animation: ui-voice-wave 1s ease-in-out infinite;
+  }
+  /* Staggered, uneven delays so the row reads as an organic waveform, not a
+     single sine sweep. */
+  .ui-voice-wave-bar:nth-child(1) { animation-delay: -0.9s; }
+  .ui-voice-wave-bar:nth-child(2) { animation-delay: -0.3s; }
+  .ui-voice-wave-bar:nth-child(3) { animation-delay: -0.7s; }
+  .ui-voice-wave-bar:nth-child(4) { animation-delay: -0.1s; }
+  .ui-voice-wave-bar:nth-child(5) { animation-delay: -0.6s; }
+  .ui-voice-wave-bar:nth-child(6) { animation-delay: -0.2s; }
+  .ui-voice-wave-bar:nth-child(7) { animation-delay: -0.8s; }
+  .ui-voice-wave-bar:nth-child(8) { animation-delay: -0.4s; }
+  .ui-voice-wave-bar:nth-child(9) { animation-delay: -0.5s; }
+  .ui-voice-timer {
+    @apply shrink-0 text-sm font-medium text-text-secondary;
+  }
+  .ui-voice-cancel {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-voice-stop {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-primary text-accent-foreground transition-transform active:scale-95;
+  }
+  @keyframes ui-voice-wave {
+    0%, 100% { transform: scaleY(0.25); }
+    50% { transform: scaleY(1); }
+  }
+  @keyframes ui-voice-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
   /* Staged file attachment, shown above the composer until sent. */
   .ui-loki-attach-chip {
     @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary;

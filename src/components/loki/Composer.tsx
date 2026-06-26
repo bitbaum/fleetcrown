@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Mic, MicOff, Loader2, Paperclip, X } from "lucide-react";
+import { Send, Mic, MicOff, Check, Loader2, Paperclip, X } from "lucide-react";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { getJson } from "@/lib/api/fetch";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_CHARS } from "@/lib/loki/attachments";
@@ -38,6 +38,24 @@ export function Composer({
   const voice = useVoiceInput({
     onTranscript: (t) => setText((prev) => (prev ? `${prev} ${t}` : t)),
   });
+
+  const recording = voice.status === "recording";
+  const transcribing = voice.status === "transcribing";
+  // Elapsed seconds for the Grok-style recording bar. The interval callback (not
+  // the effect body, and not render) is the only place state/Date.now() are
+  // touched, satisfying the purity + no-cascading-setState rules.
+  const recStartRef = useRef(0);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!recording) return;
+    recStartRef.current = Date.now();
+    const t = window.setInterval(
+      () => setElapsed(Math.floor((Date.now() - recStartRef.current) / 1000)),
+      250,
+    );
+    return () => window.clearInterval(t);
+  }, [recording]);
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   // Dispatchable agents + their models for the picker. Best-effort: if it
   // fails, the picker simply stays "Auto"-only and dispatch uses project defaults.
@@ -116,6 +134,36 @@ export function Composer({
         </div>
       )}
 
+      <div className="relative">
+      {/* Grok-style voice overlay — covers the composer while recording or
+          transcribing so the live waveform + timer + cancel/confirm are the
+          whole surface, then hands the transcript back to the input. */}
+      {(recording || transcribing) && (
+        <div className="ui-voice-bar" role="status" aria-live="polite">
+          {recording ? (
+            <>
+              <span className="ui-voice-rec-dot" aria-hidden />
+              <div className="ui-voice-wave" aria-hidden>
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <span key={i} className="ui-voice-wave-bar" />
+                ))}
+              </div>
+              <span className="ui-voice-timer tabular-nums">{fmtTime(elapsed)}</span>
+              <button type="button" className="ui-voice-cancel" onClick={voice.cancel} aria-label="Cancel recording" title="Cancel">
+                <X className="h-4 w-4" />
+              </button>
+              <button type="button" className="ui-voice-stop" onClick={voice.stop} aria-label="Stop and transcribe" title="Done">
+                <Check className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-text-secondary" />
+              <span className="ui-voice-timer">Transcribing…</span>
+            </>
+          )}
+        </div>
+      )}
       <div className="ui-loki-composer">
         <textarea
           className="ui-loki-composer-input"
@@ -202,6 +250,7 @@ export function Composer({
         >
           <Send className="h-4 w-4" />
         </button>
+      </div>
       </div>
     </div>
   );
