@@ -64,9 +64,23 @@ export async function launchAgentPty(
   agent: AgentOption,
   model?: string,
 ): Promise<void> {
+  let effectiveDir = dir;
+  // Box-runner: the dispatch's dir is the LAPTOP path and won't exist here.
+  // Resolve a box-local workspace (clone-on-demand + pre-trust for claude)
+  // before provisioning. Dynamic import keeps @/db + git out of the desktop
+  // bundle — only the box-runner sets this env.
+  if (process.env.FLEETCROWN_BOX_PREPARE === "true") {
+    try {
+      const { ensureBoxWorkspace } = await import("@/lib/agent-execution/box-workspace");
+      effectiveDir = await ensureBoxWorkspace(tab, dir);
+    } catch (e) {
+      console.error(`[box-prepare] ${tab}: ${e instanceof Error ? e.message : String(e)}`);
+      // Fall through with the requested dir; provision will surface the failure.
+    }
+  }
   await provisionAgentWorkspace("runner", {
     projectKey: tab,
-    dir,
+    dir: effectiveDir,
     agent,
     model,
     workspaceId: runnerWorkspaceId(tab),
