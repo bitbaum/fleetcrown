@@ -1,6 +1,21 @@
 # Box-side owned-PTY executor — delete the laptop dependency
 
-**Status:** proposed · **Date:** 2026-06-25
+**Status:** P0 + P1 SHIPPED (2026-06-26) · **Date:** 2026-06-25
+
+> **Update 2026-06-26 — P1 is live.** `fleetcrown-box-runner.service` runs on the box
+> (headless, `tsx scripts/box-runner.ts`, `User=ubuntu`), reusing the desktop runner
+> core verbatim (the only Electron coupling — `pusher.ts`'s `app.getVersion()` — was
+> lifted to `FLEETCROWN_RUNNER_VERSION`). Verified end-to-end with the laptop off:
+> presence shows online (bridge SSE), a `launch_agent` dispatch was claimed and
+> executed in a FleetCrown-owned node-pty PTY (`bash -lic … cd <dir> && claude`),
+> `close_tab` terminated it cleanly, and the PTY lives in the box-runner's own
+> process tree (a `fleetcrown-app` deploy can't touch it). Reproduce/redeploy with
+> `scripts/hetzner/install-box-runner.sh`. **Remaining follow-ups before "any project,
+> any agent":** (a) complete `claude /login` for the interactive `user:sessions`
+> scopes (setup-token's `user:inference` is enough for `claude -p` but interactive
+> `claude` prompts /login); (b) project clone-on-demand (the box has no user repos —
+> dispatches only run for dirs present on the box, e.g. a manually-created one);
+> (c) `SandboxExecutor` before opening box execution to other users (P3).
 **One line:** Run FleetCrown's already-built owned-PTY executor on the always-on box, so dispatches execute server-side with no laptop. Make the desktop Fleet Runner *optional*, not the keystone.
 
 ## Context (the problem this deletes)

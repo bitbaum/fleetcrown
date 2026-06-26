@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Install / redeploy the headless FleetCrown box-runner (P1).
+#
+# The box-runner is the desktop Fleet Runner's core (poller + pusher + bridge +
+# owned PTYs) running as a systemd service on the box — no Electron, always-on,
+# survives web-app deploys. It deletes the "laptop must be on" dependency:
+# dispatches execute server-side in FleetCrown-owned PTYs.
+# See docs/architecture/box-owned-pty-executor.md.
+#
+# Idempotent: re-run to push code changes + restart. Mints the runner token only
+# if one isn't already present.
+#
+# Usage:  bash scripts/hetzner/install-box-runner.sh [user@host]
+set -euo pipefail
+
+HOST="${1:-root@167.233.22.31}"
+RUNNER_DIR="/opt/fleetcrown/runner"
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+echo "→ box-runner: syncing source into ${HOST}:${RUNNER_DIR} (node_modules untouched)"
+rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/src/"        "${HOST}:${RUNNER_DIR}/src/"
+rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/desktop/src/" "${HOST}:${RUNNER_DIR}/desktop/src/"
+rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/scripts/"    "${HOST}:${RUNNER_DIR}/scripts/"
+rsync -a "${REPO_ROOT}/tsconfig.json" "${HOST}:${RUNNER_DIR}/tsconfig.json"
+ssh "$HOST" "chown -R ubuntu:ubuntu ${RUNNER_DIR}/src ${RUNNER_DIR}/desktop ${RUNNER_DIR}/scripts ${RUNNER_DIR}/tsconfig.json"
+
+echo "→ box-runner: minting runner token if absent"
+ssh "$HOST" "sudo -u ubuntu -H bash -c '
+  TF=/home/ubuntu/.config/fleetcrown/fleet-runner-token
+  if [ -s \"\$TF\" ]; then echo \"   token present, skipping mint\"; else
+    cd ${RUNNER_DIR} && set -a && . ./.env && set +a && node_modules/.bin/tsx scripts/mint-box-runner-token.ts
+  fi
+'"
+
+echo "→ box-runner: writing systemd unit"
+ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-box-runner.service" <<'UNIT'
+[Unit]
+Description=FleetCrown box-runner (headless Fleet Runner — drains pending_commands, owns agent PTYs)
+After=network-online.target fleetcrown-app.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/fleetcrown/runner
+EnvironmentFile=/opt/fleetcrown/runner/.env
+Environment=HOME=/home/ubuntu
+Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+Environment=FLEETCROWN_RUNNER_PTY=true
+Environment=FLEETCROWN_WEB_URL=https://fleetcrown.orangecat.ch
+Environment=FLEETCROWN_RUNNER_VERSION=box-0.8.9
+ExecStart=/opt/fleetcrown/runner/node_modules/.bin/tsx scripts/box-runner.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+echo "→ box-runner: (re)start"
+ssh "$HOST" "systemctl daemon-reload && systemctl enable --now fleetcrown-box-runner.service && systemctl restart fleetcrown-box-runner.service && sleep 4 && systemctl is-active fleetcrown-box-runner.service"
+
+echo "✓ box-runner installed. Logs: ssh ${HOST} journalctl -u fleetcrown-box-runner -f"
