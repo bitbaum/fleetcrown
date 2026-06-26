@@ -22,17 +22,23 @@ function sanitizeKey(tab: string): string {
   return tab.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
 }
 
-/** Pre-seed ~/.claude.json so claude launches fully unattended:
- *   - per-folder `hasTrustDialogAccepted` skips the first-run trust gate, and
- *   - the global `bypassPermissionsModeAccepted` skips the one-time
- *     "Bypass Permissions mode — Yes, I accept" gate that
- *     `--dangerously-skip-permissions` otherwise blocks on.
- *  Both are interactive prompts with no one to answer them on the box. */
+// Tools the dispatched agent needs auto-approved. A settings.json allow-list
+// runs claude unattended WITHOUT bypass mode (whose own interactive acceptance
+// gate would hang the agent). Verified live: with this list and no bypass flag,
+// claude runs the Bash tool with no prompt.
+const UNATTENDED_ALLOW = ["Bash", "Edit", "Write", "Read", "Glob", "Grep", "WebFetch", "WebSearch", "MultiEdit", "TodoWrite"];
+
+/** Pre-seed claude's config so a dispatched agent launches fully unattended:
+ *   - ~/.claude.json projects[dir].hasTrustDialogAccepted → skip the first-run
+ *     trust-folder gate, and
+ *   - ~/.claude/settings.json permissions.allow → auto-approve tools so claude
+ *     never blocks on a per-tool confirmation (no human to answer it). */
 function ensureClaudeReady(dir: string): void {
-  const cfgPath = path.join(os.homedir(), ".claude.json");
-  let cfg: { projects?: Record<string, Record<string, unknown>>; bypassPermissionsModeAccepted?: boolean } = {};
+  const home = os.homedir();
+  // 1) Folder trust.
+  const cfgPath = path.join(home, ".claude.json");
+  let cfg: { projects?: Record<string, Record<string, unknown>> } = {};
   try { cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")); } catch { /* fresh config */ }
-  cfg.bypassPermissionsModeAccepted = true;
   cfg.projects ??= {};
   const existing = cfg.projects[dir] ?? {};
   cfg.projects[dir] = {
@@ -41,6 +47,17 @@ function ensureClaudeReady(dir: string): void {
     projectOnboardingSeenCount: Math.max(1, Number(existing.projectOnboardingSeenCount) || 0),
   };
   fs.writeFileSync(cfgPath, JSON.stringify(cfg, null, 2));
+
+  // 2) Tool permission allow-list (merge, don't clobber existing rules).
+  const setPath = path.join(home, ".claude", "settings.json");
+  let settings: { permissions?: { allow?: string[] } } = {};
+  try { settings = JSON.parse(fs.readFileSync(setPath, "utf-8")); } catch { /* fresh settings */ }
+  settings.permissions ??= {};
+  const allow = new Set(settings.permissions.allow ?? []);
+  for (const t of UNATTENDED_ALLOW) allow.add(t);
+  settings.permissions.allow = [...allow];
+  fs.mkdirSync(path.dirname(setPath), { recursive: true });
+  fs.writeFileSync(setPath, JSON.stringify(settings, null, 2));
 }
 
 /** Inject a GitHub token into an https clone URL for unattended cloning. */

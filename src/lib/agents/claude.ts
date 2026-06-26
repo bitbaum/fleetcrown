@@ -62,12 +62,11 @@ export const claudeAdapter: AgentAdapter = {
   },
 
   buildLaunchCommand({ dir }: AgentRuntimeConfig): string {
-    // Unattended hosts (the box-runner) have no human to answer claude's
-    // per-tool permission prompts, so the agent would hang mid-task. Skip them
-    // there — the folder is pre-trusted by box-workspace; on a desktop the flag
-    // is omitted so the user keeps interactive confirmations.
-    const unattended = process.env.FLEETCROWN_RUNNER_UNATTENDED === "true" ? " --dangerously-skip-permissions" : "";
-    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude${unattended}`;
+    // Plain launch. Unattended hosts (the box-runner) run claude without
+    // prompts via a settings.json permissions allow-list seeded by
+    // box-workspace — NOT --dangerously-skip-permissions, which has its own
+    // one-time interactive "Yes, I accept" gate that would hang the agent.
+    return `source ~/.bashrc >/dev/null 2>&1 || true; cd ${shellEscape(dir)} && claude`;
   },
 
   syncSelectedModel(model: string): void {
