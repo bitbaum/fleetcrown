@@ -184,6 +184,10 @@ export function TerminalView({
       });
 
       term.open(host);
+      // Debug/automation handle: reach the live xterm instance from devtools or
+      // an e2e harness (e.g. to assert copy/paste wiring) via
+      // `document.querySelector('.xterm')._fcTerm`. Harmless in prod.
+      if (term.element) (term.element as HTMLElement & { _fcTerm?: unknown })._fcTerm = term;
       // Default (DOM) renderer on purpose: it draws glyphs with the browser's
       // native font engine, so text is crisp + identical to the rest of the page.
       // WebGL is faster but rasterizes to a texture atlas that can blur text on
