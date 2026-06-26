@@ -1,15 +1,25 @@
 import type { ReactNode } from "react";
 
-// Tiny renderer for plain LLM output: paragraphs, list bullets, headings,
-// and **bold** spans. Anything fancier (code blocks, links, tables) is out
-// of scope — pull in a real markdown lib when a surface needs them. Lives
-// in ui/ so every LLM-output panel (digest, project bios, Loki responses)
-// renders consistently.
+// Renderer for plain LLM output: paragraphs, list bullets, headings, **bold**,
+// `inline code`, [links](url), and ```fenced code blocks```. Deliberately a
+// small hand-rolled subset (no tables/images) — pull in a real markdown lib if a
+// surface needs more. Lives in ui/ so every LLM-output panel (digest, project
+// bios, Loki responses) renders consistently.
 export function MarkdownText({ text, className }: { text: string; className?: string }) {
   const blocks = parseBlocks(text);
   return (
     <div className={className ?? "space-y-2 text-sm leading-relaxed text-text-secondary"}>
       {blocks.map((block, i) => {
+        if (block.kind === "code") {
+          return (
+            <pre
+              key={i}
+              className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-xs leading-relaxed text-text-primary"
+            >
+              <code className="font-mono whitespace-pre">{block.items.join("\n")}</code>
+            </pre>
+          );
+        }
         if (block.kind === "ul") {
           return (
             <ul key={i} className="space-y-1 pl-4 list-disc marker:text-text-tertiary">
@@ -32,13 +42,26 @@ export function MarkdownText({ text, className }: { text: string; className?: st
   );
 }
 
-type Block = { kind: "p" | "ul" | "h"; items: string[] };
+type Block = { kind: "p" | "ul" | "h" | "code"; items: string[] };
 
 function parseBlocks(text: string): Block[] {
   const blocks: Block[] = [];
   let currentList: string[] | null = null;
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
+  const lines = text.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // ``` fenced code block — collect verbatim until the closing fence.
+    if (line.startsWith("```")) {
+      currentList = null;
+      const code: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+        code.push(lines[i]);
+        i++;
+      }
+      blocks.push({ kind: "code", items: code });
+      continue; // i sits on the closing fence; the for-loop's i++ skips it
+    }
     if (!line) {
       currentList = null;
       continue;
@@ -60,12 +83,29 @@ function parseBlocks(text: string): Block[] {
   return blocks;
 }
 
+// Inline spans: `code`, **bold**, and [text](url) links. One split keeps the
+// order they appear; everything else is plain text.
+const INLINE_RE = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\([^)\s]+\))/g;
+
 function renderInline(text: string): ReactNode {
-  // Alternate between plain text and **bold** spans.
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
+  return text.split(INLINE_RE).map((part, i) => {
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return (
+        <code key={i} className="rounded bg-surface-raised px-1 py-0.5 font-mono text-text-primary">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
     if (part.startsWith("**") && part.endsWith("**")) {
       return <strong key={i} className="text-text-primary">{part.slice(2, -2)}</strong>;
+    }
+    const link = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (link) {
+      return (
+        <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" className="text-accent-text underline underline-offset-2 hover:text-text-primary">
+          {link[1]}
+        </a>
+      );
     }
     return <span key={i}>{part}</span>;
   });

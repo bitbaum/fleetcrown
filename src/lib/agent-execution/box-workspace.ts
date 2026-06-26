@@ -22,12 +22,17 @@ function sanitizeKey(tab: string): string {
   return tab.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "workspace";
 }
 
-/** Mark a folder trusted in ~/.claude.json so claude skips its first-run trust
- *  gate (which blocks unattended launches). Idempotent. */
-function ensureClaudeTrust(dir: string): void {
+/** Pre-seed ~/.claude.json so claude launches fully unattended:
+ *   - per-folder `hasTrustDialogAccepted` skips the first-run trust gate, and
+ *   - the global `bypassPermissionsModeAccepted` skips the one-time
+ *     "Bypass Permissions mode — Yes, I accept" gate that
+ *     `--dangerously-skip-permissions` otherwise blocks on.
+ *  Both are interactive prompts with no one to answer them on the box. */
+function ensureClaudeReady(dir: string): void {
   const cfgPath = path.join(os.homedir(), ".claude.json");
-  let cfg: { projects?: Record<string, Record<string, unknown>> } = {};
+  let cfg: { projects?: Record<string, Record<string, unknown>>; bypassPermissionsModeAccepted?: boolean } = {};
   try { cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")); } catch { /* fresh config */ }
+  cfg.bypassPermissionsModeAccepted = true;
   cfg.projects ??= {};
   const existing = cfg.projects[dir] ?? {};
   cfg.projects[dir] = {
@@ -61,7 +66,7 @@ async function ownerId(): Promise<string | null> {
  */
 export async function ensureBoxWorkspace(tab: string, requestedDir: string): Promise<string> {
   if (requestedDir && fs.existsSync(requestedDir)) {
-    ensureClaudeTrust(requestedDir);
+    ensureClaudeReady(requestedDir);
     return requestedDir;
   }
 
@@ -87,6 +92,6 @@ export async function ensureBoxWorkspace(tab: string, requestedDir: string): Pro
     }
   }
 
-  ensureClaudeTrust(boxDir);
+  ensureClaudeReady(boxDir);
   return boxDir;
 }

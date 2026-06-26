@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
+import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
@@ -88,7 +89,9 @@ export function Transcript({
         ) : (
           <div key={m.id} className="flex flex-col">
             {m.kind && <span className="ui-loki-kind">{KIND_LABEL[m.kind] ?? m.kind}</span>}
-            <div className="ui-loki-bubble ui-loki-bubble-assistant">{m.content}</div>
+            <div className="ui-loki-bubble ui-loki-bubble-assistant">
+              <MarkdownText text={m.content} className="space-y-2" />
+            </div>
             {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
           </div>
         ),
