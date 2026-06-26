@@ -164,11 +164,16 @@ export function TerminalView({
         if (sel) navigator.clipboard?.writeText(sel).catch(() => {});
       });
 
-      // Explicit copy: ⌘C / Ctrl-Shift-C when there's a selection (plain Ctrl-C
-      // stays SIGINT so interrupting an agent still works). Paste is deliberately
-      // left to xterm's built-in paste-event handler: it reads clipboardData on
-      // the native paste event with no permission prompt, and intercepting ⌘V
-      // here would DOUBLE-paste (our send + xterm's native paste both firing).
+      // Cross-platform copy/paste. The OS-standard paste — ⌘V (mac) / Ctrl-V
+      // (Linux/Win) — is left to xterm's built-in paste handler: it reads
+      // clipboardData on the browser's native paste event, no permission prompt,
+      // and intercepting it here would DOUBLE-paste. We handle only the *terminal*
+      // shortcuts the browser does NOT paste for: Ctrl-Shift-V / ⌘⇧V. Those get
+      // an explicit preventDefault() so that even if a browser does emit a native
+      // paste for the combo, exactly one paste runs.
+      //   Copy: ⌘C / Ctrl-Shift-C with a selection (plain Ctrl-C stays SIGINT, so
+      //   interrupting an agent still works); copy-on-select already covers the
+      //   common case above.
       term.attachCustomKeyEventHandler((e) => {
         if (e.type !== "keydown") return true;
         const key = e.key.toLowerCase();
@@ -176,6 +181,12 @@ export function TerminalView({
         if (isCopy && term.hasSelection()) {
           navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
           return false; // handled — don't forward to the PTY
+        }
+        const isShiftPaste = e.shiftKey && (e.ctrlKey || e.metaKey) && key === "v";
+        if (isShiftPaste && interactive) {
+          e.preventDefault(); // guarantee a single paste even if the browser also pastes
+          navigator.clipboard?.readText().then((t) => { if (t) void transport.sendKey(t); }).catch(() => {});
+          return false;
         }
         return true;
       });
