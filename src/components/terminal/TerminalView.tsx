@@ -164,9 +164,11 @@ export function TerminalView({
         if (sel) navigator.clipboard?.writeText(sel).catch(() => {});
       });
 
-      // Keyboard copy/paste as the explicit path. Copy: ⌘C / Ctrl-Shift-C (only
-      // when there's a selection — plain Ctrl-C stays SIGINT so interrupting an
-      // agent still works). Paste: ⌘V / Ctrl-Shift-V → clipboard into the PTY.
+      // Explicit copy: ⌘C / Ctrl-Shift-C when there's a selection (plain Ctrl-C
+      // stays SIGINT so interrupting an agent still works). Paste is deliberately
+      // left to xterm's built-in paste-event handler: it reads clipboardData on
+      // the native paste event with no permission prompt, and intercepting ⌘V
+      // here would DOUBLE-paste (our send + xterm's native paste both firing).
       term.attachCustomKeyEventHandler((e) => {
         if (e.type !== "keydown") return true;
         const key = e.key.toLowerCase();
@@ -174,11 +176,6 @@ export function TerminalView({
         if (isCopy && term.hasSelection()) {
           navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
           return false; // handled — don't forward to the PTY
-        }
-        const isPaste = (e.metaKey && key === "v") || (e.ctrlKey && e.shiftKey && key === "v");
-        if (isPaste && interactive) {
-          navigator.clipboard?.readText().then((t) => { if (t) void transport.sendKey(t); }).catch(() => {});
-          return false;
         }
         return true;
       });
