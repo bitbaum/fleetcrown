@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
 import { Composer } from "./Composer";
@@ -25,6 +27,10 @@ export function LokiWorkspace() {
   const [messages, setMessages] = useState<LokiMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Mobile-only slide-overs for the history + project panes (desktop shows them
+  // as permanent columns). Keeps the chat full-width on phones.
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   // Initial load — conversations + projects.
   useEffect(() => {
@@ -143,9 +149,9 @@ export function LokiWorkspace() {
   };
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[16rem_1fr] gap-4 lg:grid-cols-[16rem_1fr_16rem]">
-      {/* LEFT — conversation list */}
-      <aside className="ui-panel min-h-0 p-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 md:grid md:grid-cols-[16rem_1fr] md:gap-4 lg:grid-cols-[16rem_1fr_16rem]">
+      {/* LEFT — conversation list (permanent column on md+; a drawer on mobile) */}
+      <aside className="ui-panel hidden min-h-0 p-3 md:block">
         <ConversationList
           conversations={visibleConversations}
           activeId={activeId}
@@ -156,9 +162,24 @@ export function LokiWorkspace() {
         />
       </aside>
 
-      {/* CENTER — transcript + composer */}
-      <section className="flex min-h-0 flex-col gap-3">
-        <div className="ui-panel flex min-h-0 flex-1 flex-col px-4 py-3">
+      {/* CENTER — the chat itself, always the primary, full-width on mobile */}
+      <section className="flex min-h-0 flex-1 flex-col gap-2 md:gap-3">
+        {/* Mobile-only toolbar: reach the history + project panes without
+            stealing chat width. Hidden on md+ where they're permanent columns. */}
+        <div className="flex items-center gap-2 md:hidden">
+          <button type="button" className="ui-btn-chip" onClick={() => setHistoryOpen(true)}>
+            <MessagesSquare className="h-4 w-4" /> Chats
+          </button>
+          <button type="button" className="ui-btn-chip" onClick={() => void createConversation()}>
+            <Plus className="h-4 w-4" /> New
+          </button>
+          <button type="button" className="ui-btn-chip ml-auto" onClick={() => setFilterOpen(true)}>
+            <SlidersHorizontal className="h-4 w-4" />
+            Projects{selectedProjects.length > 0 ? ` · ${selectedProjects.length}` : ""}
+          </button>
+        </div>
+
+        <div className="ui-panel flex min-h-0 flex-1 flex-col px-3 py-2 md:px-4 md:py-3">
           <Transcript messages={messages} sending={sending} />
         </div>
         {error && <p className="ui-error">{error}</p>}
@@ -169,7 +190,7 @@ export function LokiWorkspace() {
         />
       </section>
 
-      {/* RIGHT — project multi-select (hidden below lg to keep the transcript usable) */}
+      {/* RIGHT — project multi-select (permanent column on lg+; a drawer on mobile) */}
       <aside className="ui-panel hidden min-h-0 p-3 lg:block">
         <ProjectFilter
           projects={projects}
@@ -178,6 +199,34 @@ export function LokiWorkspace() {
           onToggle={toggleProject}
         />
       </aside>
+
+      {/* Mobile slide-overs */}
+      {historyOpen && (
+        <Drawer onClose={() => setHistoryOpen(false)} size="md">
+          <div className="flex min-h-0 flex-1 flex-col p-3">
+            <ConversationList
+              conversations={visibleConversations}
+              activeId={activeId}
+              loading={convosLoading}
+              onSelect={(id) => { setActiveId(id); setHistoryOpen(false); }}
+              onNew={() => { void createConversation(); setHistoryOpen(false); }}
+              onDelete={(id) => void deleteConversation(id)}
+            />
+          </div>
+        </Drawer>
+      )}
+      {filterOpen && (
+        <Drawer onClose={() => setFilterOpen(false)} size="md">
+          <div className="flex min-h-0 flex-1 flex-col p-3">
+            <ProjectFilter
+              projects={projects}
+              selected={selectedProjects}
+              loading={projectsLoading}
+              onToggle={toggleProject}
+            />
+          </div>
+        </Drawer>
+      )}
     </div>
   );
 }

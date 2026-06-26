@@ -2629,10 +2629,21 @@
   .ui-loki-convo-delete-armed {
     @apply opacity-100 text-status-negative bg-status-negative-subtle;
   }
+  /* Touch devices have no hover, so the delete would be permanently invisible.
+     Show it (dimmed) there; desktop keeps the reveal-on-hover behaviour. */
+  @media (hover: none) {
+    .ui-loki-convo-delete { @apply opacity-60; }
+  }
 
   /* Message bubbles (center pane). */
   .ui-loki-bubble {
-    @apply max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words;
+    @apply rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words;
+    /* Roomy on phones, tighter on desktop — bubbles read as chat, not full-width
+       blocks. Direct CSS (not an arbitrary Tailwind value) keeps it responsive. */
+    max-width: 90%;
+  }
+  @media (min-width: 640px) {
+    .ui-loki-bubble { max-width: 75%; }
   }
   .ui-loki-bubble-user {
     @apply self-end bg-accent-muted text-text-primary;

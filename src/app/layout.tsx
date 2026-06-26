@@ -48,6 +48,10 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // The on-screen keyboard shrinks the visual viewport instead of overlaying
+  // it, so a bottom-anchored composer (Loki, Terminal) stays visible above the
+  // keyboard rather than being covered by it.
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f7f7f7" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
