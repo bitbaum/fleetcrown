@@ -134,10 +134,9 @@ export function TerminalView({
     // Dynamic import keeps xterm out of the initial bundle — it loads only when
     // a terminal is actually opened.
     (async () => {
-      const [{ Terminal }, { FitAddon }, { WebLinksAddon }, { TERMINAL_THEME }] = await Promise.all([
+      const [{ Terminal }, { FitAddon }, { TERMINAL_THEME }] = await Promise.all([
         import("@xterm/xterm"),
         import("@xterm/addon-fit"),
-        import("@xterm/addon-web-links"),
         import("@/lib/terminal-theme"),
       ]);
       if (disposed) return;
@@ -168,9 +167,50 @@ export function TerminalView({
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
-      // Clickable URLs — open in a new tab (the gap that made `claude setup-token`
-      // links un-clickable). noopener/noreferrer for safety.
-      term.loadAddon(new WebLinksAddon((_event, uri) => window.open(uri, "_blank", "noopener,noreferrer")));
+      // Clickable URLs that survive wrapping. The stock web-links addon detects
+      // per visual row, so a URL wrapped across rows (ink TUIs hard-wrap to the
+      // width) is clickable only on row 1 and opens a TRUNCATED link — the
+      // "link is broken into pieces" bug. This provider reconstructs the whole
+      // URL from the full-width row run, then highlights its cells on EVERY row
+      // it spans; clicking any piece opens the complete link in a new tab.
+      const linkProvider = term.registerLinkProvider({
+        provideLinks(viewportY, callback) {
+          const buf = term.buffer.active;
+          const cols = term.cols;
+          const absRow = buf.viewportY + (viewportY - 1);
+          const lineLen = (i: number) => buf.getLine(i)?.translateToString(true).length ?? 0;
+          // Span the logical line: a row that fills the full width continued below.
+          let start = absRow;
+          while (start > 0 && lineLen(start - 1) === cols) start--;
+          let end = absRow;
+          while (lineLen(end) === cols) end++;
+          let logical = "";
+          let rowOffset = -1;
+          for (let i = start; i <= end; i++) {
+            if (i === absRow) rowOffset = logical.length;
+            logical += buf.getLine(i)?.translateToString(true) ?? "";
+          }
+          if (rowOffset < 0) { callback(undefined); return; }
+          const rowLen = lineLen(absRow);
+          const links: import("@xterm/xterm").ILink[] = [];
+          for (const m of logical.matchAll(URL_RE)) {
+            const url = m[0].replace(/[.,;:!?)\]}]+$/, "");
+            const uStart = m.index ?? 0;
+            const uEnd = uStart + url.length;
+            // Intersect the URL's span with the cells this row contributes.
+            const segStart = Math.max(uStart, rowOffset);
+            const segEnd = Math.min(uEnd, rowOffset + rowLen);
+            if (segStart >= segEnd) continue;
+            links.push({
+              text: url,
+              range: { start: { x: segStart - rowOffset + 1, y: viewportY }, end: { x: segEnd - rowOffset, y: viewportY } },
+              decorations: { underline: true, pointerCursor: true },
+              activate: () => window.open(url, "_blank", "noopener,noreferrer"),
+            });
+          }
+          callback(links.length ? links : undefined);
+        },
+      });
 
       // Copy-on-select: the reliable fix for "copying is impossible". xterm's
       // selection lives in its own canvas layer (not the DOM), so the browser's
@@ -280,6 +320,7 @@ export function TerminalView({
 
       cleanupTerm = () => {
         if (scanTimer) window.clearTimeout(scanTimer);
+        linkProvider.dispose();
         resizeObserver.disconnect();
         inputDisposable?.dispose();
         term.dispose();
