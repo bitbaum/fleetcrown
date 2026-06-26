@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { TerminalWorkspace } from "./TerminalWorkspace";
 import { LocalMachineView } from "./LocalMachineView";
 
@@ -52,8 +53,17 @@ export function TerminalSurface({ local }: { local: boolean }) {
         </p>
       )}
 
-      <div className="min-h-0 flex-1">
-        {source === "server" ? <TerminalWorkspace /> : <LocalMachineView />}
+      {/* Both substrates stay MOUNTED; the inactive one is hidden (not
+          unmounted) so toggling This server ↔ My machine never tears down a
+          live server PTY. Switching back reveals the same shell, not a fresh
+          empty one. (Internal tabs already keep-alive the same way.) */}
+      <div className="relative min-h-0 flex-1">
+        <div className={cn("absolute inset-0", source !== "server" && "hidden")}>
+          <TerminalWorkspace />
+        </div>
+        <div className={cn("absolute inset-0", source !== "machine" && "hidden")}>
+          <LocalMachineView />
+        </div>
       </div>
     </div>
   );
