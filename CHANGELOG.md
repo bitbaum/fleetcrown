@@ -2,6 +2,17 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (h)
+
+### Fixed
+- **Mobile overlays.** Drawers and modals hide the bottom nav and top bar
+  (`fc-overlay-open`) so project profiles and Loki slide-overs use the full screen.
+- **Projects mobile.** Drawer close button moved to the title row; tab bar and
+  card action links meet 44px tap targets.
+
+### Added
+- **`scripts/mobile-pages-audit.mjs`** — Playwright sweep of main routes at 390px.
+
 ## 2026-06-27 (g)
 
 ### Changed

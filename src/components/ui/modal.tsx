@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { useOverlayLock } from "@/hooks/use-overlay-lock";
 
 const SIZE_CLASSES = {
   sm: "max-w-sm",
@@ -48,6 +49,7 @@ export function Modal({
   children: React.ReactNode;
 }) {
   useEscapeToClose(onClose, disableClose);
+  useOverlayLock(true);
   const containerPos =
     position === "bottom-mobile"
       ? "items-end md:items-center"
@@ -57,7 +59,7 @@ export function Modal({
       ? cn("mx-4 md:mx-0", MOBILE_CHROME_INSET, "md:mb-0 md:max-h-[calc(100vh-2rem)]")
       : MOBILE_CHROME_INSET;
   return (
-    <div className={cn("fixed inset-0 z-50 flex justify-center p-4", containerPos)}>
+    <div className={cn("fixed inset-0 z-[60] flex justify-center p-4", containerPos)}>
       <div
         className="absolute inset-0 bg-black/48 backdrop-blur-md"
         onClick={disableClose ? undefined : onClose}
@@ -95,6 +97,7 @@ export function Drawer({
   children: React.ReactNode;
 }) {
   useEscapeToClose(onClose, disableClose);
+  useOverlayLock(true);
   const surfaceClass =
     surface === "drawer"
       ? "bg-surface-drawer"
@@ -102,7 +105,7 @@ export function Drawer({
         ? "bg-surface-modal"
         : "bg-surface-page";
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="presentation">
+    <div className="fixed inset-0 z-[60] flex justify-end" role="presentation">
       <div
         className="absolute inset-0 bg-black/42 backdrop-blur-sm"
         onClick={disableClose ? undefined : onClose}

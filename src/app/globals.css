@@ -1618,14 +1618,20 @@
   body.fc-terminal-fullscreen {
     overflow: hidden;
   }
-  body.fc-terminal-fullscreen .ui-mobile-nav {
+  body.fc-terminal-fullscreen .ui-mobile-nav,
+  body.fc-overlay-open .ui-mobile-nav {
     display: none;
   }
-  body.fc-terminal-fullscreen .ui-app-topbar {
+  body.fc-terminal-fullscreen .ui-app-topbar,
+  body.fc-overlay-open .ui-app-topbar {
     display: none;
   }
-  body.fc-terminal-fullscreen .app-main {
+  body.fc-terminal-fullscreen .app-main,
+  body.fc-overlay-open .app-main {
     padding-bottom: 0;
+  }
+  body.fc-overlay-open {
+    overflow: hidden;
   }
   .ui-term-mobile-fullscreen {
     @apply fixed inset-0 z-[80] flex flex-col bg-surface-page p-3;
@@ -2119,7 +2125,7 @@
   .ui-btn-save:disabled { opacity: 0.4; }
   /* Drawer tab bar — shared by all entity detail drawers */
   .ui-tab {
-    @apply flex items-center gap-1.5 border-b-2 border-transparent px-5 py-2.5 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary;
+    @apply flex min-h-11 items-center justify-center gap-1.5 border-b-2 border-transparent px-4 py-3 text-xs font-medium text-text-tertiary transition-colors hover:border-border-strong hover:text-text-secondary sm:min-h-0 sm:px-5 sm:py-2.5;
   }
   .ui-tab-active {
     @apply border-status-positive text-text-primary;
@@ -2424,7 +2430,7 @@
     @apply flex flex-wrap items-center gap-2 border-t border-border-subtle bg-surface-raised/50 px-3 py-2 sm:px-4;
   }
   .ui-projects-card-action {
-    @apply inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary sm:min-h-0;
+    @apply inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary;
   }
   .ui-projects-ci-panel {
     @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;

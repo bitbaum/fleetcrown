@@ -244,7 +244,7 @@ export function Composer({
         )}
         <button
           type="button"
-          className="ui-btn-icon-accent p-2"
+          className="ui-btn-icon-accent min-h-11 min-w-11 p-2"
           disabled={disabled || sending || !text.trim()}
           onClick={submit}
           aria-label="Send"

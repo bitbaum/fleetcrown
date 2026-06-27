@@ -90,12 +90,12 @@ export function ProjectDetailHeader({
 
   return (
     <div className="shrink-0 bg-surface-drawer border-b border-border-subtle">
-      <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:flex-row sm:items-start sm:gap-3 sm:px-5">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-start gap-2 px-4 pb-2 pt-4 sm:gap-3 sm:px-5 sm:pb-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <NameEditor value={displayName} editable={editable} onSave={saveName} />
             {owner && (
-              <span className="ui-micro-badge border-border-subtle text-text-tertiary shrink-0">{owner}</span>
+              <span className="ui-micro-badge shrink-0 border-border-subtle text-text-tertiary">{owner}</span>
             )}
           </div>
           <DescriptionEditor value={description} editable={editable} onSave={saveDescription} />
@@ -103,8 +103,30 @@ export function ProjectDetailHeader({
             <p className="mt-1 text-micro text-text-muted">Created {compactRelativeDate(data.createdAt)}</p>
           )}
         </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="ui-icon-action shrink-0"
+          aria-label="Close project profile"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
 
-        <div className="ui-card-actions shrink-0 self-start flex-wrap">
+      {data && (
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-5 sm:pb-3">
+          <StatusEditor value={effectiveStatus} editable={editable} onSave={saveStatus} />
+          <MaturityEditor value={effectiveMaturity} editable={editable} onSave={saveMaturity} />
+          {hasIssues && (
+            <span className="ui-tag ui-tag-negative gap-1">
+              <AlertTriangle className="h-3 w-3" /> Issues detected
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1 border-t border-border-subtle px-4 py-2 sm:px-5">
+        <div className="ui-card-actions min-w-0 flex-1">
           {data && (
             <LokiDispatchButton
               prompt={buildProjectLokiPrompt(data)}
@@ -119,6 +141,7 @@ export function ProjectDetailHeader({
               rel="noreferrer"
               className="ui-icon-action"
               title="Live site"
+              aria-label="Open live site"
             >
               <Globe className="h-4 w-4" />
             </a>
@@ -130,6 +153,7 @@ export function ProjectDetailHeader({
               rel="noreferrer"
               className="ui-icon-action"
               title="Repository"
+              aria-label="Open repository"
             >
               <GitBranch className="h-4 w-4" />
             </a>
@@ -139,11 +163,11 @@ export function ProjectDetailHeader({
               href={NAV.control.href}
               className="ui-icon-action"
               title={`Agent active — go to Control (${data.runtimeState.tabName})`}
+              aria-label="Open in Control"
             >
               <Activity className="h-4 w-4 text-accent-text" />
             </Link>
           )}
-          <div className="w-px h-4 bg-border-default mx-0.5 shrink-0" />
           {editable && (
             <DeleteButton
               onDelete={async () => {
@@ -154,29 +178,11 @@ export function ProjectDetailHeader({
               }}
               label="Delete?"
               triggerTitle="Delete project"
-              triggerClassName="ui-icon-action ml-1 text-status-negative hover:bg-surface-raised"
+              triggerClassName="ui-icon-action text-status-negative hover:bg-surface-raised"
             />
           )}
-          <button
-            onClick={onClose}
-            className="ui-icon-action ml-1"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
       </div>
-
-      {data && (
-        <div className="flex flex-wrap items-center gap-2 px-4 pb-3 sm:px-5">
-          <StatusEditor value={effectiveStatus} editable={editable} onSave={saveStatus} />
-          <MaturityEditor value={effectiveMaturity} editable={editable} onSave={saveMaturity} />
-          {hasIssues && (
-            <span className="ui-tag ui-tag-negative gap-1">
-              <AlertTriangle className="h-3 w-3" /> Issues detected
-            </span>
-          )}
-        </div>
-      )}
 
       <ProjectDetailTabBar tab={tab} setTab={setTab} jobCount={jobCount} goalCount={goalCount} />
     </div>

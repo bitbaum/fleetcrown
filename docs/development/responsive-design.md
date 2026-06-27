@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-27  
 **Last modified:** 2026-06-27  
-**Last modified summary:** Terminal mobile full-screen expand; Loki develop-handoff routing + watch link.
+**Last modified summary:** Mobile overlay lock for drawers; project drawer header + tab tap targets; mobile pages audit script.
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -98,6 +98,8 @@ Run `npm run smoke` with dev server up for route health; Playwright viewport tes
 ## Terminal page (`/terminal`)
 
 On phones the default viewport pane leaves too little height for xterm (top bar + bottom nav + page header + source toggle). **Expand** (`TerminalMobileShell`) switches to `.ui-term-mobile-fullscreen`: fixed `100svh`, hides mobile nav and top bar, body class `fc-terminal-fullscreen` locks scroll. **My machine** agent tabs use a `<select>` on `<md`; desktop keeps the vertical chip list. Deep link after Loki dispatch: `/terminal?source=machine&tab=<projectKey>`.
+
+**Overlays (drawers/modals):** opening any `Drawer` or `Modal` sets `body.fc-overlay-open` — hides bottom nav and top bar so full-screen project profiles and Loki slide-overs are not obscured. Audit: `node scripts/mobile-pages-audit.mjs`.
 
 ## Projects page layout
 
