@@ -1,8 +1,9 @@
-import { Brain, Database, Link2, Clock, Zap } from "lucide-react";
+import { Brain, Database, Link2, Clock, Zap, Search } from "lucide-react";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Card, CardHeader } from "@/components/ui/card";
 import { StatRow } from "@/components/ui/stat-row";
 import { getEntityStats, getRecentEntities, getRecentInteractions } from "@/db/queries/memory";
+import { getKnowledgeIndexStats } from "@/db/queries/knowledge-index-stats";
 import { requirePageUserId } from "@/lib/session";
 import { compactRelativeDate } from "@/lib/dates";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,8 +39,9 @@ function TypeBadge({ type }: { type: EntityType }) {
 
 export default async function MemoryPage() {
   const userId = await requirePageUserId();
-  const [stats, recent, activity] = await Promise.all([
+  const [stats, rag, recent, activity] = await Promise.all([
     getEntityStats(userId),
+    getKnowledgeIndexStats(userId),
     getRecentEntities(userId, 12),
     getRecentInteractions(userId, 10),
   ]);
@@ -62,6 +64,43 @@ export default async function MemoryPage() {
           <div className="text-2xl font-bold">{stats.entityTypes.length}</div>
         </Card>
       </StatRow>
+
+      <Card>
+        <CardHeader icon={Search} title="Fleet knowledge (RAG)" />
+        {!rag.enabled ? (
+          <p className="text-sm text-text-secondary">
+            Cross-project retrieval is off — set <code className="text-text-primary">EMBEDDINGS_BASE_URL</code> on
+            the server to index project profiles for dispatch context.
+          </p>
+        ) : rag.totalChunks === 0 ? (
+          <p className="text-sm text-text-secondary">
+            Embeddings server is up but the index is empty. Run{" "}
+            <code className="text-text-primary">scripts/reindex-knowledge.ts</code> on the box, or edit a project
+            profile to trigger embed-on-write.
+          </p>
+        ) : (
+          <div className="space-y-2 text-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="text-text-primary font-medium">{rag.totalChunks.toLocaleString()} indexed chunks</span>
+              {rag.lastUpdatedAt && (
+                <span className="text-text-tertiary">
+                  last update {compactRelativeDate(rag.lastUpdatedAt)}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {rag.bySourceType.map(({ sourceType, count }) => (
+                <span key={sourceType} className="ui-tag bg-surface-overlay text-text-secondary border-border-subtle">
+                  {sourceType.replace(/_/g, " ")} · {count}
+                </span>
+              ))}
+            </div>
+            <p className="text-text-secondary">
+              Injected into dispatches as relevant context from your other projects — task-ranked, never repo code.
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* Recent activity + recent additions side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,9 +1,25 @@
 # Fleet Knowledge — pgvector / RAG for context injection
 
 **Status:** P0 partial · P1 inject wired (cloud + local) · embed-on-write for profiles
-**Created:** 2026-06-25 · **Last modified:** 2026-06-27 · **Last modified summary:** Cloud inject assembles full context; profile saves trigger `reindex-project-profile`.
+**Created:** 2026-06-25 · **Last modified:** 2026-06-27 · **Last modified summary:** Box install script SSOT; Memory page shows index health; embed-on-write on profile saves.
 
 **One line:** Add retrieval to context injection — but only at the layer the *captain* uniquely owns (cross-project + fleet memory + life-OS), never the codebase the *runtime* already retrieves.
+
+## Box operations
+
+Install or refresh the local embed server, env vars, and daily reindex timer:
+
+```bash
+bash scripts/hetzner/install-fleet-rag.sh
+```
+
+Manual backfill (also runs nightly at 03:30 UTC via `fleetcrown-reindex.timer`):
+
+```bash
+ssh root@167.233.22.31 'systemctl start fleetcrown-reindex.service'
+```
+
+Verify: `/memory` shows chunk counts; `npx tsx scripts/test/rag-retrieval.ts` exercises retrieval.
 
 ## Why now
 

@@ -2,6 +2,15 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (j)
+
+### Added
+- **Memory → Fleet knowledge card.** Shows RAG on/off, indexed chunk counts by
+  source type, and last reindex time when `EMBEDDINGS_BASE_URL` is configured.
+- **`scripts/hetzner/install-fleet-rag.sh`** — SSOT for box embed server, env
+  vars, and daily reindex timer.
+- **`scripts/test/rag-retrieval.ts`** — verifies retrieval against the vector index.
+
 ## 2026-06-27 (i)
 
 ### Fixed
