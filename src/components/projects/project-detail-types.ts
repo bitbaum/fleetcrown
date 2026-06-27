@@ -100,6 +100,18 @@ export type Tab = "overview" | "prompts" | "goals";
 
 // Keys shown as quick-links in header
 export const LINK_ATTRS = ["production_url", "repo", "github_repo", "url"];
+// Build contract — injected into every dispatch (project-context DRIVING_FIELDS)
+export const BUILD_ATTRS = ["architecture", "conventions", "definition_of_done"] as const;
+export const BUILD_ATTR_LABELS: Record<(typeof BUILD_ATTRS)[number], string> = {
+  architecture: "Architecture",
+  conventions: "Conventions",
+  definition_of_done: "Definition of done",
+};
+export const BUILD_ATTR_PLACEHOLDERS: Record<(typeof BUILD_ATTRS)[number], string> = {
+  architecture: "Main modules, data stores, integrations",
+  conventions: "Patterns and rules engineers must follow",
+  definition_of_done: "Bar a change must clear — tsc, lint, tests, deploy",
+};
 // Derived from HEALTH_SIGNAL_BASE — never list these manually again
 export const ISSUE_ATTRS = HEALTH_SIGNAL_BASE.map((s) => s.key);
 // Business-plan keys rendered by BusinessPlanSection (kept here, not imported
@@ -110,7 +122,7 @@ export const BUSINESS_ATTRS = [
   "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
 ];
 // Keys with dedicated rendering (not shown in generic grid)
-export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, ...BUSINESS_ATTRS, "status", "maturity", "description", "owner", "next_step"];
+export const RESERVED = [...LINK_ATTRS, ...ISSUE_ATTRS, ...BUSINESS_ATTRS, ...BUILD_ATTRS, "status", "maturity", "description", "owner", "next_step"];
 
 /**
  * Resolve project quick-link attrs into ready-to-use href strings.

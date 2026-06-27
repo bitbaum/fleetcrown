@@ -25,6 +25,7 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
+import { assembleInjectPrompt } from "@/lib/inject-prompt";
 
 type ResolvedAdapter = (typeof ORCHESTRATION_ADAPTER_IDS)[number];
 
@@ -197,18 +198,25 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       return { status: 400, body: { error: "promptKey or customPrompt required" } };
     }
   } else {
-    // Remote: use the raw prompt text, no session-file enrichment available.
-    if (customPrompt) {
-      prompt = customPrompt;
-      promptLabel = customPrompt.slice(0, 40);
-    } else if (promptKey) {
-      // Prompt key without local session context — send the key as the label,
-      // the local runner will resolve the full prompt text when it executes.
-      prompt = promptKey;
-      promptLabel = promptKey;
-    } else {
-      return { status: 400, body: { error: "promptKey or customPrompt required" } };
+    // Remote (cloud host): assemble the SAME prompt body as orchestration/run —
+    // profile + goals + intent template + fleet RAG — before queueing for the
+    // runner. Previously we queued bare promptKey strings ("next_best"), so
+    // phone/Loki/beacon dispatches reached agents without project context.
+    const assembled = await assembleInjectPrompt({
+      userId,
+      projectKey: canonical,
+      projectPath: projectPath ?? canonical,
+      projectId,
+      adapter: eventAdapter,
+      promptKey,
+      customPrompt,
+      model: eventModel,
+    });
+    if (!assembled.ok) {
+      return { status: assembled.status, body: { error: assembled.error } };
     }
+    prompt = assembled.prompt;
+    promptLabel = assembled.promptLabel;
   }
 
   const eventIntent: OrchestrationTaskIntentId | undefined =

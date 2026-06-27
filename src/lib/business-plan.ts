@@ -5,6 +5,7 @@ import { entities } from "@/db/schema/entities";
 import { callGroqText } from "@/lib/groq";
 import { fetchAttributesByEntityIds, upsertEntityAttribute } from "@/db/queries/utils";
 import { getProjectPromptActivity } from "@/db/queries/prompt-history";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 /**
  * The living business plan — automatic business creation and development.
@@ -139,5 +140,6 @@ export async function generateBusinessPlan(userId: string, entityId: string): Pr
   const ok3 = await upsertEntityAttribute(userId, entityId, "business_plan_updated_at", new Date().toISOString());
   if (!ok1 || !ok2 || !ok3) return null;
 
+  scheduleProjectProfileReindexByEntityId(userId, entityId);
   return parsed.data;
 }

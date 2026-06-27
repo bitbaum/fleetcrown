@@ -25,6 +25,9 @@ import {
   SUGGESTED_ATTRS,
   SUGGESTED_ATTR_LABELS,
   SUGGESTED_ATTR_PLACEHOLDERS,
+  BUILD_ATTRS,
+  BUILD_ATTR_LABELS,
+  BUILD_ATTR_PLACEHOLDERS,
   CHANNEL_CONFIG,
   getProjectLinks,
 } from "./project-detail-types";
@@ -157,6 +160,8 @@ export function OverviewTab({
   const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
 
   const profileAttrs = SUGGESTED_ATTRS.filter(({ key }) => attrs[key]?.trim());
+  const buildAttrs = BUILD_ATTRS.filter((key) => attrs[key]?.trim());
+  const missingBuild = BUILD_ATTRS.filter((key) => !attrs[key]?.trim());
   const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]?.trim());
   const otherAttrs = Object.entries(attrs).filter(
     ([k]) => !RESERVED.includes(k) && !PROFILE_KEYS.has(k),
@@ -247,7 +252,7 @@ export function OverviewTab({
       )}
 
       {/* 2. Context — only filled profile fields (no empty placeholders) */}
-      {(profileAttrs.length > 0 || otherAttrs.length > 0) && (
+      {(profileAttrs.length > 0 || buildAttrs.length > 0 || otherAttrs.length > 0) && (
         <section aria-label="Profile context">
           <h3 className="ui-projects-section-label mb-2">Context</h3>
           <div className="ui-project-profile-block">
@@ -260,6 +265,18 @@ export function OverviewTab({
                 attrKey={key}
                 onReload={onReload}
                 placeholder={SUGGESTED_ATTR_PLACEHOLDERS[key]}
+                editable={editable}
+              />
+            ))}
+            {buildAttrs.map((key) => (
+              <AttrRow
+                key={key}
+                label={BUILD_ATTR_LABELS[key]}
+                value={attrs[key]!}
+                projectId={projectId}
+                attrKey={key}
+                onReload={onReload}
+                placeholder={BUILD_ATTR_PLACEHOLDERS[key]}
                 editable={editable}
               />
             ))}
@@ -295,12 +312,12 @@ export function OverviewTab({
         </details>
       )}
 
-      {editable && missingSuggested.length > 0 && (
+      {editable && (missingSuggested.length > 0 || missingBuild.length > 0) && (
         <details className="ui-project-drawer-panel">
           <summary className="ui-project-drawer-panel-summary">
             <Plus className="h-3.5 w-3.5 shrink-0 text-text-tertiary" aria-hidden="true" />
             Add context
-            <span className="ui-projects-filter-count">{missingSuggested.length}</span>
+            <span className="ui-projects-filter-count">{missingSuggested.length + missingBuild.length}</span>
           </summary>
           <div className="ui-project-drawer-panel-body space-y-2">
             {missingSuggested.map(({ key, label, placeholder }) => (
@@ -325,6 +342,32 @@ export function OverviewTab({
                     <Plus className="h-3.5 w-3.5 shrink-0 text-text-muted" aria-hidden="true" />
                     <span>{label}</span>
                     <span className="truncate text-text-muted">— {placeholder}</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            {missingBuild.map((key) => (
+              <div key={key}>
+                {addingKey === key ? (
+                  <>
+                    <div className="ui-micro-label mb-1">{BUILD_ATTR_LABELS[key]}</div>
+                    <AddAttrInline
+                      projectId={projectId}
+                      presetKey={key}
+                      presetPlaceholder={BUILD_ATTR_PLACEHOLDERS[key]}
+                      onSaved={() => { setAddingKey(null); onReload(); }}
+                      onCancel={() => setAddingKey(null)}
+                    />
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAddingKey(key)}
+                    className="flex min-h-11 w-full items-center gap-2 text-left text-sm text-text-secondary hover:text-text-primary"
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0 text-text-muted" aria-hidden="true" />
+                    <span>{BUILD_ATTR_LABELS[key]}</span>
+                    <span className="truncate text-text-muted">— {BUILD_ATTR_PLACEHOLDERS[key]}</span>
                   </button>
                 )}
               </div>

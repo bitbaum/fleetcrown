@@ -3,6 +3,7 @@ import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
 import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWithOrgFallback } from "@/db/queries/projects";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { getProjectActivity } from "@/db/queries/activity";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
 
@@ -44,6 +45,9 @@ export async function PATCH(
   try {
     const updated = await patchProject(userId, idOrResp, dataOrResp);
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (dataOrResp.description !== undefined) {
+      scheduleProjectProfileReindexByEntityId(userId, idOrResp);
+    }
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     if (e && typeof e === "object" && "code" in e && e.code === "23505") {

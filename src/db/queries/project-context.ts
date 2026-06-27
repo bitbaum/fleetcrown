@@ -26,7 +26,9 @@ const MAX_GOALS = 6;
 const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
   ["mission", "Mission"],
   ["vision", "Vision"],
+  ["customers", "Customers"],
   ["stack", "Stack"],
+  ["next_step", "Next step (owner's highest-priority action right now)"],
   ["architecture", "Architecture"],
   ["conventions", "Conventions (how this project is built — follow these)"],
   ["definition_of_done", "Definition of done (a change isn't finished until this holds)"],

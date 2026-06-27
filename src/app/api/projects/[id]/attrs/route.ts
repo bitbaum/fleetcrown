@@ -7,6 +7,7 @@ import {
   DeleteAttrBody,
 } from "@/db/queries/utils";
 import { getSessionUserId } from "@/lib/session";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 export async function POST(
   req: NextRequest,
@@ -22,6 +23,7 @@ export async function POST(
 
   const ok = await upsertEntityAttribute(userId, idOrResp, dataOrResp.key, dataOrResp.value);
   if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  scheduleProjectProfileReindexByEntityId(userId, idOrResp);
   return NextResponse.json({ ok: true });
 }
 

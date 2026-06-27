@@ -2,6 +2,26 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (i)
+
+### Fixed
+- **Cloud dispatch context.** Phone/Loki/beacon `/api/inject` paths now assemble the
+  full prompt (operating principles, project profile, goals, intent template, fleet
+  RAG) before queueing for Fleet Runner — same SSOT as Control → orchestration/run.
+- **AI profile persistence.** Brief/enrich now saves `architecture`, `conventions`,
+  and `definition_of_done` (were extracted but dropped on write).
+
+### Changed
+- **Project context injection.** Dispatch prompts now include `customers` and
+  `next_step` alongside mission/stack/DoD. Build-contract fields have dedicated
+  rows in the project drawer.
+- **Fleet RAG embed-on-write.** Profile/attr/description saves reindex the
+  project's `knowledge_embeddings` chunk when `EMBEDDINGS_BASE_URL` is set.
+
+### Added
+- **`src/lib/inject-prompt.ts`** — SSOT for inject prompt assembly (cloud + local).
+- **`scripts/test/inject-prompt.ts`** — verifies assembled prompts carry context.
+
 ## 2026-06-27 (h)
 
 ### Fixed

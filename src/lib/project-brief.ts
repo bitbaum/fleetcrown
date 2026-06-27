@@ -2,6 +2,7 @@ import { z } from "zod";
 import { callGroqText } from "@/lib/groq";
 import { patchProject } from "@/db/queries/projects";
 import { upsertEntityAttribute } from "@/db/queries/utils";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 /**
  * AI-powered project profile extraction — the "no forms" path.
@@ -144,6 +145,7 @@ export async function applyProjectProfile(
 
   const attrKeys = [
     "mission", "vision", "customers", "stack", "status", "next_step",
+    "architecture", "conventions", "definition_of_done",
     "problem", "solution", "current_alternatives", "competitors",
     "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
   ] as const;
@@ -155,5 +157,6 @@ export async function applyProjectProfile(
     applied[key] = value;
   }
 
+  scheduleProjectProfileReindexByEntityId(userId, entityId);
   return applied;
 }

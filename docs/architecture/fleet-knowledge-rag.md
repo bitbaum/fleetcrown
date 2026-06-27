@@ -1,6 +1,8 @@
 # Fleet Knowledge — pgvector / RAG for context injection
 
-**Status:** exploration → proposed · **Date:** 2026-06-25
+**Status:** P0 partial · P1 inject wired (cloud + local) · embed-on-write for profiles
+**Created:** 2026-06-25 · **Last modified:** 2026-06-27 · **Last modified summary:** Cloud inject assembles full context; profile saves trigger `reindex-project-profile`.
+
 **One line:** Add retrieval to context injection — but only at the layer the *captain* uniquely owns (cross-project + fleet memory + life-OS), never the codebase the *runtime* already retrieves.
 
 ## Why now
@@ -51,13 +53,13 @@ CREATE INDEX ON knowledge_embeddings (user_id, source_type);
 ```
 
 - **Embeddings service:** port OrangeCat's `embeddings.ts` near-verbatim — provider-agnostic OpenAI-compatible (`EMBEDDINGS_API_KEY/BASE_URL/MODEL`). Two viable providers, both already on the box: `text-embedding-3-small` (1536, matches OrangeCat → vectors are *cross-product comparable*) or a **Nous Portal** embedding model (`qwen/qwen3-embedding-8b`, `google/gemini-embedding-2` — we just wired Nous). Recommend `text-embedding-3-small` for cross-product consistency; keep it env-switchable. **Pin the dimension** — it's baked into the column; changing models means a migration.
-- **Ingest:** embed-on-write (profile saved, dev-log appended, run closed, decision recorded) + a `reindex` script/cron for backfill (OrangeCat has an admin reindex route to copy). Idempotent upsert on `(user_id, source_type, source_id)`.
+- **Ingest:** embed-on-write on profile/attr/description saves via `src/lib/rag/reindex-project-profile.ts` (fire-and-forget when `EMBEDDINGS_BASE_URL` is set) + `scripts/reindex-knowledge.ts` for backfill. Dev-log / orchestration sources still manual/cron-only (P2).
 - **Retrieve:** embed the task → `ORDER BY embedding <=> $query LIMIT k` **filtered by `user_id`** → threshold at ~0.35 → inject a delimited *"Relevant fleet knowledge"* block alongside (not instead of) the curated profile. Hybrid: union with a keyword/`ILIKE` pass for recall (OrangeCat's recall-first lesson).
 - **Multi-tenancy:** every query is `user_id`-scoped. This matters doubly given the shared-`main`-agent hazard flagged in [[bug_loki_realname_leak_scrub]] — the index must never cross tenants.
 
 ## Where it plugs in
 
-- **Dispatch context** (`getProjectContext` / inject-core): append top-K retrieved fleet-knowledge chunks to the existing profile block. The structured profile stays (high-signal anchor); RAG adds task-relevant breadth.
+- **Dispatch context** (`assembleInjectPrompt` / inject-core / orchestration/run): project profile block + optional fleet RAG on **both cloud queue and local inject** paths. Previously cloud `/api/inject` queued bare `promptKey` strings.
 - **Cross-project reference:** *suggested references* = nearest project-profile embeddings to the task. RAG is the engine for that spec's Phase 3.
 - **Loki:** retrieve over life-OS sources before answering — real recall, not just the gateway agent's own memory.
 - **Self-improvement loop:** the frontier generator already wants "FleetCrown's real gaps" — retrieve over dev-logs/outcomes to ground proposals.
