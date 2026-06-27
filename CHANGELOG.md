@@ -2,6 +2,14 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (c)
+
+### Changed
+- **Projects page redesign.** Summary stats, filter chips, grouped sections (needs
+  attention / yours / team), richer project cards with next-step callouts and
+  quick actions, collapsible GitHub CI panel scoped to linked repos, and clearer
+  empty/search states.
+
 ## 2026-06-27 (b)
 
 ### Changed

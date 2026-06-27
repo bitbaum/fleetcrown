@@ -2342,6 +2342,61 @@
   .ui-control-live-details-body {
     @apply border-t border-border-subtle px-2 pb-2 pt-1 sm:px-3 sm:pb-3;
   }
+
+  /* Projects page — fleet overview, cards, CI panel */
+  .ui-projects-filter-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary min-h-11 sm:min-h-0;
+  }
+  .ui-projects-filter-chip-active {
+    @apply border-accent-primary/40 bg-accent-muted text-text-primary ring-1 ring-accent-primary/30;
+  }
+  .ui-projects-filter-count {
+    @apply rounded-full bg-surface-overlay px-1.5 py-0.5 font-mono text-micro text-text-tertiary;
+  }
+  .ui-projects-toolbar {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center;
+  }
+  .ui-projects-card {
+    @apply flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-projects-card-attention {
+    @apply border-status-warning/25 bg-status-warning-subtle/40;
+  }
+  .ui-projects-card-main {
+    @apply flex w-full flex-col px-4 py-4 text-left transition-colors hover:bg-surface-raised/60 sm:px-5 sm:py-5;
+  }
+  .ui-projects-next-step {
+    @apply mt-3 flex items-start gap-2 rounded-xl border border-status-positive/20 bg-status-positive-subtle px-3 py-2.5;
+  }
+  .ui-projects-card-actions {
+    @apply flex flex-wrap items-center gap-2 border-t border-border-subtle bg-surface-raised/50 px-3 py-2 sm:px-4;
+  }
+  .ui-projects-card-action {
+    @apply inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface-overlay hover:text-text-primary sm:min-h-0;
+  }
+  .ui-projects-ci-panel {
+    @apply overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-projects-ci-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-surface-raised;
+  }
+  .ui-projects-ci-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-projects-ci-panel[open] .ui-details-chevron {
+    transform: rotate(180deg);
+  }
+  .ui-details-chevron {
+    @apply transition-transform duration-200;
+  }
+  .ui-projects-ci-body {
+    @apply border-t border-border-subtle px-4 pb-4 pt-2;
+  }
+  .ui-projects-ci-row {
+    @apply flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-raised;
+  }
   .ui-control-workspace {
     @apply grid items-start gap-4 lg:grid-cols-[17.5rem_minmax(0,1fr)];
   }
