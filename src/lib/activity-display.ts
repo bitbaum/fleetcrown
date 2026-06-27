@@ -25,3 +25,17 @@ export function sanitizeActivityPreview(text: string | null | undefined, maxLen 
   }
   return out;
 }
+
+/** Raw agent log lines belong on Activity, not the project profile drawer. */
+export function isNoisyProfileActivity(title: string, detail?: string | null): boolean {
+  const t = title.trim().toLowerCase();
+  if (t !== "custom") return false;
+  const d = (detail ?? "").toLowerCase();
+  return (
+    d.includes("autopilot batch") ||
+    d.includes("do not idle") ||
+    d.startsWith(">") ||
+    d.includes("gh secret set") ||
+    d.length > 400
+  );
+}

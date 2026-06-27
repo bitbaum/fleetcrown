@@ -94,6 +94,8 @@ export function TerminalView({
   onSend,
   fill = false,
   bare = false,
+  /** Minimal chrome for mobile full-screen — more rows for xterm. */
+  compactChrome = false,
   className,
 }: {
   transport: TerminalTransport;
@@ -107,6 +109,7 @@ export function TerminalView({
   fill?: boolean;
   /** Render only the xterm host — no label, no send box. */
   bare?: boolean;
+  compactChrome?: boolean;
   /** Host div class (bare layout). */
   className?: string;
 }) {
@@ -159,7 +162,7 @@ export function TerminalView({
         // Read-only peeks keep stdin disabled so the view never swallows page input.
         disableStdin: !interactive,
         fontFamily,
-        fontSize: 14,
+        fontSize: typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches ? 13 : 14,
         lineHeight: 1.2,
         letterSpacing: 0,
         scrollback: 5000,
@@ -354,15 +357,24 @@ export function TerminalView({
 
   return (
     <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
-      <div className="flex items-center justify-between">
-        <span className="ui-micro-label">{connected ? "live" : "connecting…"}</span>
-        {onSend && (
-          <button type="button" className="ui-btn-xs" onClick={() => setSendOpen((v) => !v)}>
+      {!compactChrome && (
+        <div className="flex items-center justify-between">
+          <span className="ui-micro-label">{connected ? "live" : "connecting…"}</span>
+          {onSend && (
+            <button type="button" className="ui-btn-xs" onClick={() => setSendOpen((v) => !v)}>
+              {sendOpen ? "Cancel" : "Send a line"}
+            </button>
+          )}
+        </div>
+      )}
+      {compactChrome && onSend && (
+        <div className="flex justify-end">
+          <button type="button" className="ui-btn-xs min-h-11" onClick={() => setSendOpen((v) => !v)}>
             {sendOpen ? "Cancel" : "Send a line"}
           </button>
-        )}
-      </div>
-      <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
+        </div>
+      )}
+      <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
       <LinkBar links={links} onDismiss={() => setLinks([])} />
       {onSend && sendOpen && (
         <div className="flex items-center gap-2">

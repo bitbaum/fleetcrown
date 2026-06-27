@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-06-17
-last_modified_summary: Document /terminal "My machine" live view (runner-owned PTY stream) and v0.8.5 peek reliability fixes.
+last_modified_date: 2026-06-27
+last_modified_summary: Mobile terminal full-screen expand; Loki "let's develop" routes to dispatch; Watch agent deep link.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.

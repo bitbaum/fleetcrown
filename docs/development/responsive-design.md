@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-27  
 **Last modified:** 2026-06-27  
-**Last modified summary:** Projects page sticky search, compact list + show-more, deduped fleet rows.
+**Last modified summary:** Terminal mobile full-screen expand; Loki develop-handoff routing + watch link.
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -94,6 +94,10 @@ Before shipping UI changes, verify at **375×667** and **320×568**:
 6. Landing `/` — hero readable; public nav drawer opens
 
 Run `npm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
+
+## Terminal page (`/terminal`)
+
+On phones the default viewport pane leaves too little height for xterm (top bar + bottom nav + page header + source toggle). **Expand** (`TerminalMobileShell`) switches to `.ui-term-mobile-fullscreen`: fixed `100svh`, hides mobile nav and top bar, body class `fc-terminal-fullscreen` locks scroll. **My machine** agent tabs use a `<select>` on `<md`; desktop keeps the vertical chip list. Deep link after Loki dispatch: `/terminal?source=machine&tab=<projectKey>`.
 
 ## Projects page layout
 

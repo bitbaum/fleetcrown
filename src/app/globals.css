@@ -1614,6 +1614,26 @@
     @apply shrink-0 rounded p-0.5 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
 
+  /* Mobile terminal full-screen — covers app chrome so xterm is usable on phones */
+  body.fc-terminal-fullscreen {
+    overflow: hidden;
+  }
+  body.fc-terminal-fullscreen .ui-mobile-nav {
+    display: none;
+  }
+  body.fc-terminal-fullscreen .ui-app-topbar {
+    display: none;
+  }
+  body.fc-terminal-fullscreen .app-main {
+    padding-bottom: 0;
+  }
+  .ui-term-mobile-fullscreen {
+    @apply fixed inset-0 z-[80] flex flex-col bg-surface-page p-3;
+    height: 100svh;
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
   /* Theme — one cycle button (Light → Dark → Auto), not three toggles. */
   .ui-theme-cycle-btn {
     @apply inline-flex h-9 min-w-9 shrink-0 items-center justify-center gap-2 rounded-full border border-border-subtle bg-surface-base px-2.5 text-sm text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary disabled:opacity-50;
@@ -2428,6 +2448,26 @@
   .ui-projects-ci-row {
     @apply flex items-center justify-between gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-surface-raised;
   }
+
+  /* Project profile drawer — action-first hierarchy */
+  .ui-project-drawer-panel {
+    @apply overflow-hidden rounded-xl border border-border-subtle bg-surface-base;
+  }
+  .ui-project-drawer-panel-summary {
+    @apply flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+  }
+  .ui-project-drawer-panel-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-project-drawer-panel-body {
+    @apply space-y-3 border-t border-border-subtle px-4 py-3;
+  }
+  .ui-project-action-stack {
+    @apply space-y-3;
+  }
+  .ui-project-profile-block {
+    @apply space-y-0 overflow-hidden rounded-xl border border-border-subtle bg-surface-base;
+  }
   .ui-control-workspace {
     @apply grid items-start gap-4 lg:grid-cols-[17.5rem_minmax(0,1fr)];
   }
@@ -2778,7 +2818,7 @@
   }
   /* Outcome line under a dispatch bubble — status dot + text + Control link. */
   .ui-loki-dispatch-foot {
-    @apply mt-1 flex items-center gap-2 text-xs text-text-tertiary;
+    @apply mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
   }
 
   /* Composer (center pane, bottom). Stacks on phones so Send stays reachable. */

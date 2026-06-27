@@ -35,11 +35,21 @@ export type ResolveCommandInput = {
 };
 
 const SYSTEM = `You route an operator's input in a multi-project AI-agent console. Return ONLY compact JSON with keys: kind, projectKey, intentId, prompt, reason.
-- kind: "command" if they want an agent to DO work on a project; "chat" if they're asking a question or just discussing.
+- kind: "command" if they want an agent to DO work on a project — including when they're done discussing and ready to build ("let's develop", "build it", "implement this", "start coding", "ship it", "make it happen", "go ahead"); "chat" if they're asking a question or still exploring ideas without asking to run work.
 - projectKey: the EXACT project name (copied verbatim from the provided list) the input refers to, or null if none is named. NEVER invent a name that is not in the list.
-- intentId: one of [${ORCHESTRATION_TASK_INTENT_IDS.join(", ")}] when the request clearly maps to one, else null. Hints: "code review"->quality; "review the ui"/"ux"->ux_review; "run tests"/"fix types"/"fix tests"->test_and_fix; "commit"/"push"->commit_push; "audit"/"full audit"->full_audit; "what next"/"keep going"/"next best"->next_best; "deploy check"->deploy_check; "product review"->product; "wrap up"/"close"->close_session.
-- prompt: the cleaned instruction to give the agent (for command) or the user's message (for chat), with the project name removed.
+- intentId: one of [${ORCHESTRATION_TASK_INTENT_IDS.join(", ")}] when the request clearly maps to one, else null. Hints: "code review"->quality; "review the ui"/"ux"->ux_review; "run tests"/"fix types"/"fix tests"->test_and_fix; "commit"/"push"->commit_push; "audit"/"full audit"->full_audit; "what next"/"keep going"/"next best"/"let's develop"/"build it"/"implement"->next_best; "deploy check"->deploy_check; "product review"->product; "wrap up"/"close"->close_session.
+- prompt: the cleaned instruction to give the agent (for command) or the user's message (for chat), with the project name removed. For develop/build handoffs, include the concrete task from the message (or "Continue from our discussion and implement the plan we agreed.").
 - reason: <= 8 words.`;
+
+/** Phrases that mean "stop talking, start building" — deterministic fast path. */
+const DEVELOP_READY_RE =
+  /\b(let['']?s|time to|ready to|go ahead(?: and)?|please|now)\s+(develop|build|implement|code|ship|make it|start(?:\s+coding)?)\b|\b(start|begin)\s+(develop(?:ment|ing)?|building|implement(?:ation|ing)?|coding)\b/i;
+
+/** True when the operator gave a short generic handoff ("let's develop it") — use
+ *  the intent's orchestration template instead of the literal phrase as customPrompt. */
+export function isGenericDevelopHandoff(text: string): boolean {
+  return DEVELOP_READY_RE.test(text) && text.trim().length < 48;
+}
 
 /**
  * Resolve a natural-language input into a routable {@link CommandResolution}.
@@ -52,10 +62,21 @@ export async function resolveCommand(
   userId?: string,
 ): Promise<CommandResolution> {
   void userId; // reserved for per-user biasing; see doc comment.
-  // Deterministic exact match first — a project named in the text wins, and is
-  // the fallback if the LLM is unavailable or returns an unlisted name.
   const lower = text.toLowerCase();
   const namedInText = projects.find((p) => lower.includes(p.toLowerCase())) ?? null;
+  const projectKey = namedInText ?? selectedProject ?? null;
+
+  // Fast path — "let's develop it" with a known project should dispatch, not chat.
+  if (DEVELOP_READY_RE.test(text)) {
+    return {
+      kind: "command",
+      projectKey,
+      intentId: "next_best",
+      prompt: text,
+      needsProject: !projectKey,
+      reason: "develop handoff",
+    };
+  }
 
   try {
     const out = await callGroqText(

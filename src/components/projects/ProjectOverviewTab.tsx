@@ -1,11 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Bot, Circle, Code2, FileCheck, Loader2, MessageSquare, Phone, Plus, Rocket, Users } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Bot,
+  Circle,
+  Code2,
+  FileCheck,
+  Loader2,
+  MessageSquare,
+  Phone,
+  Plus,
+  Rocket,
+  Sparkles,
+  Terminal,
+  Users,
+  Wrench,
+} from "lucide-react";
 import type { ProjectData } from "./project-detail-types";
 import {
-  ISSUE_ATTRS, RESERVED, SUGGESTED_ATTRS, CHANNEL_CONFIG,
-  SUGGESTED_ATTR_LABELS, SUGGESTED_ATTR_PLACEHOLDERS,
+  ISSUE_ATTRS,
+  RESERVED,
+  SUGGESTED_ATTRS,
+  SUGGESTED_ATTR_LABELS,
+  SUGGESTED_ATTR_PLACEHOLDERS,
+  CHANNEL_CONFIG,
   getProjectLinks,
 } from "./project-detail-types";
 import { ProjectBriefFill } from "./ProjectBriefFill";
@@ -17,18 +37,22 @@ import { toLocalDateStr, timeAgo } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { cn } from "@/lib/utils";
 import { STATUS_DOT_CLASS, formatActivityTime } from "@/components/activity/activity-shared";
-import { sanitizeActivityPreview } from "@/lib/activity-display";
+import { isNoisyProfileActivity, sanitizeActivityPreview } from "@/lib/activity-display";
 import type { EventStatus } from "@/lib/activity-status";
+import { NAV } from "@/config/navigation";
 
 const CHANNEL_ICON: Record<string, React.ElementType> = {
   "work-session": Code2,
   meeting: Users,
-  ivy: Bot, // key kept for DB compat
+  ivy: Bot,
   review: FileCheck,
   deployment: Rocket,
   call: Phone,
   other: Circle,
 };
+
+const PROFILE_KEYS = new Set(SUGGESTED_ATTRS.map((s) => s.key));
+const ACTIVITY_IN_DRAWER = 8;
 
 function NextStepSection({
   attrs, projectId, editable, onReload,
@@ -45,8 +69,8 @@ function NextStepSection({
 
   if (editing) {
     return (
-      <div className="rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 space-y-2">
-        <div className="ui-micro-label text-status-positive/70">Next Step</div>
+      <div className="rounded-xl border border-status-positive/20 bg-status-positive-subtle p-3 space-y-2">
+        <div className="ui-micro-label text-status-positive/70">Next step</div>
         <AddAttrInline
           projectId={projectId}
           presetKey="next_step"
@@ -62,26 +86,51 @@ function NextStepSection({
   if (!value) {
     return (
       <button
+        type="button"
         onClick={() => setEditing(true)}
-        className="flex min-h-9 w-full items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-left transition-colors hover:border-status-positive/30 hover:bg-status-positive-subtle"
+        className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border-subtle bg-surface-raised px-3 py-2.5 text-left transition-colors hover:border-status-positive/30 hover:bg-status-positive-subtle"
       >
-        <Plus className="h-3 w-3 shrink-0 text-status-positive/60" />
-        <span className="text-xs text-text-muted italic">Define next step — the single most important action</span>
+        <Plus className="h-3.5 w-3.5 shrink-0 text-status-positive/60" aria-hidden="true" />
+        <span className="text-sm text-text-muted">Define the one action that moves this forward</span>
       </button>
     );
   }
 
   return (
     <div
-      className={`rounded-lg border border-status-positive/20 bg-status-positive-subtle p-3 ${editable ? "cursor-text" : ""}`}
+      className={cn(
+        "rounded-xl border border-status-positive/20 bg-status-positive-subtle p-3",
+        editable && "cursor-text",
+      )}
       onClick={editable ? () => setEditing(true) : undefined}
+      onKeyDown={editable ? (e) => { if (e.key === "Enter") setEditing(true); } : undefined}
+      role={editable ? "button" : undefined}
+      tabIndex={editable ? 0 : undefined}
       title={editable ? "Click to edit next step" : undefined}
     >
-      <div className="flex items-center gap-1.5 ui-micro-label text-status-positive/70 mb-1.5">
-        <ArrowRight className="h-3 w-3" /> Next Step
+      <div className="mb-1.5 flex items-center gap-1.5 ui-micro-label text-status-positive/70">
+        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" /> Next step
       </div>
-      <p className="text-xs text-text-primary leading-relaxed">{value}</p>
+      <p className="text-sm leading-relaxed text-text-primary">{value}</p>
     </div>
+  );
+}
+
+function IssuesBlock({ attrs }: { attrs: Record<string, string> }) {
+  const issues = HEALTH_SIGNAL_CONFIG.filter((cfg) => attrs[cfg.key]);
+  if (issues.length === 0) return null;
+
+  return (
+    <section className="ui-project-action-stack" aria-label="Issues">
+      {issues.map(({ key, icon: Icon, cardLabel, cardBorder, cardBg, cardText, cardBody }) => (
+        <div key={key} className={cn("ui-card-shell p-3", cardBorder, cardBg)}>
+          <div className={cn("mb-1.5 flex items-center gap-1.5 ui-micro-label font-semibold", cardText)}>
+            <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {cardLabel}
+          </div>
+          <p className={cn("text-sm leading-relaxed", cardBody)}>{attrs[key]}</p>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -95,7 +144,6 @@ export function OverviewTab({
   onReload: () => void;
 }) {
   const [addingKey, setAddingKey] = useState<string | null>(null);
-  const [showEmpty, setShowEmpty] = useState(false);
   const [activityList, setActivityList] = useState(data.interactions);
   const [loggingActivity, setLoggingActivity] = useState(false);
   const [actChannel, setActChannel] = useState<string>(CHANNEL_CONFIG[0].key);
@@ -103,6 +151,16 @@ export function OverviewTab({
   const [actDate, setActDate] = useState(toLocalDateStr(new Date()));
   const [actSaving, setActSaving] = useState(false);
   const [actError, setActError] = useState<string | null>(null);
+
+  const editable = !data.readonly;
+  const attrs = data.attrs;
+  const hasIssues = ISSUE_ATTRS.some((k) => attrs[k]);
+
+  const profileAttrs = SUGGESTED_ATTRS.filter(({ key }) => attrs[key]?.trim());
+  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]?.trim());
+  const otherAttrs = Object.entries(attrs).filter(
+    ([k]) => !RESERVED.includes(k) && !PROFILE_KEYS.has(k),
+  );
 
   const handleLogActivity = async () => {
     setActSaving(true);
@@ -116,7 +174,10 @@ export function OverviewTab({
       });
       const json = await res.json() as { ok?: boolean; error?: string };
       if (json.ok) {
-        setActivityList((prev) => [{ channel: actChannel, direction: INTERACTION_DIRECTION.OUTBOUND, summary: actSummary || null, occurredAt: actDate }, ...prev]);
+        setActivityList((prev) => [
+          { channel: actChannel, direction: INTERACTION_DIRECTION.OUTBOUND, summary: actSummary || null, occurredAt: actDate },
+          ...prev,
+        ]);
         setLoggingActivity(false);
         setActSummary("");
         setActDate(toLocalDateStr(new Date()));
@@ -130,15 +191,6 @@ export function OverviewTab({
     }
   };
 
-  const attrs = data.attrs;
-  const displayAttrs = Object.entries(attrs).filter(([k]) => !RESERVED.includes(k));
-  const missingSuggested = SUGGESTED_ATTRS.filter(({ key }) => !attrs[key]);
-
-  // One unified Recent Activity feed: the agent activity SSOT (dispatches, run
-  // outcomes, lifecycle — from getProjectActivity) merged with manually-logged
-  // interactions, newest first. Previously this panel showed ONLY manual
-  // interactions, so it read "No activity recorded yet" even when the project
-  // had dozens of agent runs (they were hidden in a separate collapsed section).
   type FeedEntry = {
     id: string;
     at: string;
@@ -148,16 +200,19 @@ export function OverviewTab({
     secondary?: string | null;
     meta?: string;
   };
+
   const activityFeed: FeedEntry[] = [
-    ...data.activity.map((ev) => ({
-      id: ev.id,
-      at: ev.at,
-      tone: ev.status,
-      icon: Bot,
-      primary: ev.title,
-      secondary: ev.detail,
-      meta: [ev.source, ev.adapter, ev.intent].filter(Boolean).join(" · "),
-    })),
+    ...data.activity
+      .filter((ev) => !isNoisyProfileActivity(ev.title, ev.detail))
+      .map((ev) => ({
+        id: ev.id,
+        at: ev.at,
+        tone: ev.status,
+        icon: Bot,
+        primary: ev.title,
+        secondary: ev.detail,
+        meta: [ev.source, ev.adapter, ev.intent].filter(Boolean).join(" · "),
+      })),
     ...activityList.map((i, idx) => ({
       id: `interaction:${idx}:${i.occurredAt}`,
       at: i.occurredAt,
@@ -169,138 +224,166 @@ export function OverviewTab({
     })),
   ]
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
-    .slice(0, 15);
+    .slice(0, ACTIVITY_IN_DRAWER);
+
+  const activityTotal = data.activity.length + activityList.length;
+  const hasBusiness = Boolean(attrs["business_plan"]) || Boolean(attrs["problem"]);
+  const hasDeveloper = data.devLog.length > 0 || Boolean(data.runtimeState);
 
   return (
     <div className="space-y-5">
-      {/* AI intake first: free-form description (or the repo README) fills the
-          profile — the attribute form below stays as the manual fallback. */}
-      {!data.readonly && (
-        <ProjectBriefFill
-          projectId={projectId}
-          hasRepo={getProjectLinks(attrs, data.gitUrl).repo !== null}
-          onReload={onReload}
-        />
-      )}
-
-      {ISSUE_ATTRS.some((k) => attrs[k]) && (
-        <div className="space-y-2">
-          {HEALTH_SIGNAL_CONFIG.filter((cfg) => attrs[cfg.key]).map(({ key, icon: Icon, cardLabel, cardBorder, cardBg, cardText, cardBody }) => (
-            <div key={key} className={`ui-card-shell ${cardBorder} ${cardBg} p-3`}>
-              <div className={`flex items-center gap-1.5 ui-micro-label font-semibold ${cardText} mb-1.5`}>
-                <Icon className="h-3.5 w-3.5" /> {cardLabel}
-              </div>
-              <p className={`text-xs ${cardBody} leading-relaxed`}>{attrs[key]}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <NextStepSection
-        attrs={attrs}
-        projectId={projectId}
-        editable={!data.readonly}
-        onReload={onReload}
-      />
-
-      <BusinessPlanSection
-        attrs={attrs}
-        projectId={projectId}
-        projectName={data.name}
-        editable={!data.readonly}
-        onReload={onReload}
-      />
-
-      {displayAttrs.length > 0 && (
-        <div>
-          {displayAttrs.map(([key, value]) => (
-            <AttrRow
-              key={key}
-              label={SUGGESTED_ATTR_LABELS[key] ?? key.replace(/_/g, " ")}
-              value={value}
-              projectId={projectId}
-              attrKey={key}
-              onReload={onReload}
-              placeholder={SUGGESTED_ATTR_PLACEHOLDERS[key]}
-              editable={!data.readonly}
-            />
-          ))}
-        </div>
-      )}
-
-      {!data.readonly && missingSuggested.length > 0 && (
-        <div>
-          {showEmpty ? (
-            <div className="space-y-1">
-              <div className="ui-micro-label mb-2">Add missing context</div>
-              {missingSuggested.map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  {addingKey === key ? (
-                    <div className="py-1">
-                      <div className="ui-micro-label mb-1">{label}</div>
-                      <AddAttrInline
-                        projectId={projectId}
-                        presetKey={key}
-                        presetPlaceholder={placeholder}
-                        onSaved={() => { setAddingKey(null); setShowEmpty(false); onReload(); }}
-                        onCancel={() => setAddingKey(null)}
-                      />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setAddingKey(key)}
-                    className="flex min-h-9 w-full items-center gap-1.5 py-1.5 text-left ui-link-muted"
-                    >
-                      <Plus className="h-3 w-3 shrink-0" />
-                      <span className="font-medium text-text-tertiary">{label}</span>
-                      <span className="text-text-muted italic ml-1">— {placeholder}</span>
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button onClick={() => setShowEmpty(false)} className="text-micro text-text-muted hover:text-text-secondary transition-colors mt-1">
-                Collapse
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowEmpty(true)}
-              className="ui-link-subtle flex min-h-9 items-center gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add {missingSuggested.map((s) => s.label.toLowerCase()).join(", ")}
-            </button>
+      {/* 1. Action — what is wrong and what to do next */}
+      {(hasIssues || attrs["next_step"] || editable) && (
+        <section className="ui-project-action-stack">
+          <IssuesBlock attrs={attrs} />
+          <NextStepSection attrs={attrs} projectId={projectId} editable={editable} onReload={onReload} />
+          {hasIssues && editable && (
+            <Link href={NAV.control.href} className="ui-btn-chip inline-flex min-h-11 w-full items-center justify-center gap-2 text-sm">
+              <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
+              Open Control to dispatch a fix
+            </Link>
           )}
-        </div>
+        </section>
       )}
 
-      {!data.readonly && (addingKey === "__custom__" ? (
-        <div className="pt-1">
-          <AddAttrInline
-            projectId={projectId}
-            onSaved={() => { setAddingKey(null); onReload(); }}
-            onCancel={() => setAddingKey(null)}
-          />
-        </div>
-      ) : (
-        <button
-          onClick={() => setAddingKey("__custom__")}
-          className="flex min-h-9 items-center gap-1.5 text-xs text-text-tertiary transition-colors hover:text-status-positive"
-        >
-          <Plus className="h-3.5 w-3.5" /> Add custom attribute
-        </button>
-      ))}
-
-      {data.relations.filter((r) => r.targetType === ENTITY_TYPE.PERSON).length > 0 && (
-        <div>
-          <div className="flex items-center gap-1.5 ui-micro-label mb-2 font-medium">
-            <Users className="h-3 w-3" /> People
+      {/* 2. Context — only filled profile fields (no empty placeholders) */}
+      {(profileAttrs.length > 0 || otherAttrs.length > 0) && (
+        <section aria-label="Profile context">
+          <h3 className="ui-projects-section-label mb-2">Context</h3>
+          <div className="ui-project-profile-block">
+            {profileAttrs.map(({ key, label }) => (
+              <AttrRow
+                key={key}
+                label={label}
+                value={attrs[key]!}
+                projectId={projectId}
+                attrKey={key}
+                onReload={onReload}
+                placeholder={SUGGESTED_ATTR_PLACEHOLDERS[key]}
+                editable={editable}
+              />
+            ))}
+            {otherAttrs.map(([key, value]) => (
+              <AttrRow
+                key={key}
+                label={SUGGESTED_ATTR_LABELS[key] ?? key.replace(/_/g, " ")}
+                value={value}
+                projectId={projectId}
+                attrKey={key}
+                onReload={onReload}
+                editable={editable}
+              />
+            ))}
           </div>
+        </section>
+      )}
+
+      {/* 3. Progressive disclosure — tools, not triage */}
+      {!data.readonly && (
+        <details className="ui-project-drawer-panel">
+          <summary className="ui-project-drawer-panel-summary">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent-text" aria-hidden="true" />
+            Fill or update profile
+          </summary>
+          <div className="ui-project-drawer-panel-body">
+            <ProjectBriefFill
+              projectId={projectId}
+              hasRepo={getProjectLinks(attrs, data.gitUrl).repo !== null}
+              onReload={onReload}
+            />
+          </div>
+        </details>
+      )}
+
+      {editable && missingSuggested.length > 0 && (
+        <details className="ui-project-drawer-panel">
+          <summary className="ui-project-drawer-panel-summary">
+            <Plus className="h-3.5 w-3.5 shrink-0 text-text-tertiary" aria-hidden="true" />
+            Add context
+            <span className="ui-projects-filter-count">{missingSuggested.length}</span>
+          </summary>
+          <div className="ui-project-drawer-panel-body space-y-2">
+            {missingSuggested.map(({ key, label, placeholder }) => (
+              <div key={key}>
+                {addingKey === key ? (
+                  <>
+                    <div className="ui-micro-label mb-1">{label}</div>
+                    <AddAttrInline
+                      projectId={projectId}
+                      presetKey={key}
+                      presetPlaceholder={placeholder}
+                      onSaved={() => { setAddingKey(null); onReload(); }}
+                      onCancel={() => setAddingKey(null)}
+                    />
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAddingKey(key)}
+                    className="flex min-h-11 w-full items-center gap-2 text-left text-sm text-text-secondary hover:text-text-primary"
+                  >
+                    <Plus className="h-3.5 w-3.5 shrink-0 text-text-muted" aria-hidden="true" />
+                    <span>{label}</span>
+                    <span className="truncate text-text-muted">— {placeholder}</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            {addingKey === "__custom__" ? (
+              <AddAttrInline
+                projectId={projectId}
+                onSaved={() => { setAddingKey(null); onReload(); }}
+                onCancel={() => setAddingKey(null)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingKey("__custom__")}
+                className="text-xs text-text-tertiary hover:text-status-positive"
+              >
+                + Custom attribute
+              </button>
+            )}
+          </div>
+        </details>
+      )}
+
+      {(hasBusiness || editable) && (
+        hasBusiness ? (
+          <BusinessPlanSection
+            attrs={attrs}
+            projectId={projectId}
+            projectName={data.name}
+            editable={editable}
+            onReload={onReload}
+          />
+        ) : (
+          <details className="ui-project-drawer-panel">
+            <summary className="ui-project-drawer-panel-summary">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent-text" aria-hidden="true" />
+              Business plan
+            </summary>
+            <div className="ui-project-drawer-panel-body">
+              <BusinessPlanSection
+                attrs={attrs}
+                projectId={projectId}
+                projectName={data.name}
+                editable={editable}
+                onReload={onReload}
+              />
+            </div>
+          </details>
+        )
+      )}
+
+      {data.relations.some((r) => r.targetType === ENTITY_TYPE.PERSON) && (
+        <div>
+          <h3 className="ui-projects-section-label mb-2">People</h3>
           <div className="flex flex-wrap gap-1.5">
             {data.relations
               .filter((r) => r.targetType === ENTITY_TYPE.PERSON)
-              .map((r, i) => (
-                <span key={i} className="ui-tag ui-tag-neutral">
+              .map((r) => (
+                <span key={r.targetId} className="ui-tag ui-tag-neutral">
                   {r.targetName}
                 </span>
               ))}
@@ -321,7 +404,7 @@ export function OverviewTab({
             return (
               <div key={e.id} className="flex items-start gap-2 text-xs">
                 <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[e.tone])} aria-hidden />
-                <Icon className="mt-0.5 h-3 w-3 shrink-0 text-text-tertiary" />
+                <Icon className="mt-0.5 h-3 w-3 shrink-0 text-text-tertiary" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1.5">
                     <span className="truncate capitalize text-text-secondary">{e.primary}</span>
@@ -329,7 +412,7 @@ export function OverviewTab({
                       {timeAgo(Date.parse(e.at))}
                     </span>
                   </div>
-                  {e.meta && <div className="text-text-muted">{e.meta}</div>}
+                  {e.meta && e.meta !== "logged" && <div className="text-text-muted">{e.meta}</div>}
                   {preview && (
                     <p className="line-clamp-2 leading-relaxed text-text-tertiary">{preview}</p>
                   )}
@@ -338,7 +421,15 @@ export function OverviewTab({
             );
           })}
           {activityFeed.length === 0 && !loggingActivity && (
-            <p className="text-xs text-text-secondary">No activity yet.</p>
+            <p className="text-xs text-text-secondary">No notable activity — agent noise is on the Activity page.</p>
+          )}
+          {activityTotal > ACTIVITY_IN_DRAWER && (
+            <Link
+              href={`${NAV.activity.href}?project=${encodeURIComponent(data.name)}`}
+              className="inline-block text-xs text-accent-text hover:underline"
+            >
+              View full timeline ({activityTotal} events)
+            </Link>
           )}
         </div>
 
@@ -350,7 +441,9 @@ export function OverviewTab({
                 onChange={(e) => setActChannel(e.target.value)}
                 className="flex-1 ui-input-tight"
               >
-                {CHANNEL_CONFIG.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                {CHANNEL_CONFIG.map((c) => (
+                  <option key={c.key} value={c.key}>{c.label}</option>
+                ))}
               </select>
               <input
                 type="date"
@@ -369,34 +462,37 @@ export function OverviewTab({
             />
             {actError && <p className="ui-error-xs">{actError}</p>}
             <div className="flex gap-2">
-              <button
-                onClick={handleLogActivity}
-                disabled={actSaving}
-                className="ui-btn-save"
-              >
+              <button type="button" onClick={handleLogActivity} disabled={actSaving} className="ui-btn-save">
                 {actSaving ? <Loader2 className="ui-spinner-xs" /> : "Save"}
               </button>
-              <button onClick={() => { setLoggingActivity(false); setActError(null); }} className="ui-btn-text-cancel">
+              <button type="button" onClick={() => { setLoggingActivity(false); setActError(null); }} className="ui-btn-text-cancel">
                 Cancel
               </button>
             </div>
           </div>
-        ) : !data.readonly && (
+        ) : editable && (
           <button
+            type="button"
             onClick={() => setLoggingActivity(true)}
             className="ui-btn-add-success mx-4 mb-4 mt-2"
           >
-            <Plus className="h-3.5 w-3.5" /> Log activity
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Log activity
           </button>
         )}
       </details>
 
-      {data.devLog.length > 0 && (
-        <DevLogSection entries={data.devLog} />
+      {hasDeveloper && (
+        <details className="ui-project-drawer-panel">
+          <summary className="ui-project-drawer-panel-summary">
+            <Wrench className="h-3.5 w-3.5 shrink-0 text-text-tertiary" aria-hidden="true" />
+            Developer
+          </summary>
+          <div className="ui-project-drawer-panel-body space-y-4">
+            {data.devLog.length > 0 && <DevLogSection entries={data.devLog} />}
+            <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
+          </div>
+        </details>
       )}
-
-      <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { TerminalView } from "./TerminalView";
 import { runnerTransport } from "./terminal-transport";
+import { cn } from "@/lib/utils";
 
 /**
  * "My machine" terminal source — live views of the agents Fleet Runner is
@@ -14,10 +15,16 @@ import { runnerTransport } from "./terminal-transport";
  * zellij snapshots otherwise). A typed line is sent into the agent via the
  * inject path (which routes to the owned PTY when present).
  */
-export function LocalMachineView() {
+export function LocalMachineView({
+  initialTab,
+  immersive = false,
+}: {
+  initialTab?: string | null;
+  immersive?: boolean;
+}) {
   const { data, loading } = useFetch<{ tabs: string[] }>("/api/control/open-tabs", { intervalMs: 5000 });
   const tabs = data?.tabs ?? [];
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   const active = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
 
   const send = async (text: string) => {
@@ -48,8 +55,20 @@ export function LocalMachineView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 md:flex-row">
-      <div className="flex shrink-0 gap-1 overflow-x-auto md:w-40 md:flex-col md:overflow-y-auto">
+    <div className={cn("flex h-full min-h-0 flex-col gap-2 md:flex-row md:gap-3", immersive && "gap-2")}>
+      {tabs.length > 1 && (
+        <select
+          className="ui-input-compact shrink-0 md:hidden"
+          value={active ?? ""}
+          onChange={(e) => setSelected(e.target.value)}
+          aria-label="Agent tab"
+        >
+          {tabs.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      )}
+      <div className="hidden shrink-0 gap-1 overflow-x-auto md:flex md:w-40 md:flex-col md:overflow-y-auto">
         {tabs.map((t) => (
           <button
             key={t}
@@ -63,7 +82,16 @@ export function LocalMachineView() {
         ))}
       </div>
       <div className="min-h-0 flex-1">
-        {active && <TerminalView key={active} transport={runnerTransport(active)} onSend={send} fill interactive />}
+        {active && (
+          <TerminalView
+            key={active}
+            transport={runnerTransport(active)}
+            onSend={send}
+            fill
+            interactive
+            compactChrome={immersive}
+          />
+        )}
       </div>
     </div>
   );

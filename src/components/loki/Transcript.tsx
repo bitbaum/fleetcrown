@@ -42,9 +42,17 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
       <span>{status}</span>
       {pinned && <span className="text-text-tertiary">on {pinned}</span>}
       {projectKey && (
-        <Link href={`/control?focus=${encodeURIComponent(projectKey)}`} className="ui-link-subtle">
-          Open in Control →
-        </Link>
+        <>
+          <Link href={`/control?focus=${encodeURIComponent(projectKey)}`} className="ui-link-subtle">
+            Open in Control →
+          </Link>
+          <Link
+            href={`/terminal?source=machine&tab=${encodeURIComponent(projectKey)}`}
+            className="ui-link-subtle"
+          >
+            Watch agent →
+          </Link>
+        </>
       )}
     </div>
   );

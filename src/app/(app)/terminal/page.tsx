@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { TerminalSurface } from "@/components/terminal/TerminalSurface";
+import { Suspense } from "react";
+import { TerminalPageClient } from "@/components/terminal/TerminalPageClient";
 import { PageTitle } from "@/components/ui/page-title";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
 export const metadata: Metadata = { title: "Terminal" };
 
-// Two terminal sources behind one view (see TerminalSurface): server-owned PTYs
-// ("This server") and the agents Fleet Runner runs on the user's machine
-// ("My machine", streamed live via the peek channel). The latter is the
-// runner-hosted local terminal that used to be "coming".
 export default function TerminalPage() {
   const local = isRuntimeAvailable();
   return (
@@ -21,9 +18,9 @@ export default function TerminalPage() {
           </p>
         </div>
       </div>
-      <div className="min-h-0 flex-1">
-        <TerminalSurface local={local} />
-      </div>
+      <Suspense fallback={<div className="ui-empty-page text-sm text-text-muted">Loading terminal…</div>}>
+        <TerminalPageClient local={local} />
+      </Suspense>
     </div>
   );
 }

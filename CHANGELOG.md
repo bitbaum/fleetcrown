@@ -2,6 +2,23 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (g)
+
+### Changed
+- **Terminal on mobile.** Expand/collapse full-screen mode hides bottom nav and
+  top bar so xterm gets usable height; agent tabs use a dropdown on phones.
+  Loki dispatch footers link to `Watch agent →` on `/terminal?source=machine`.
+- **Loki develop handoff.** Phrases like "let's develop" resolve to a command
+  (`next_best` dispatch) when a project is selected or named, not idle chat.
+
+## 2026-06-27 (f)
+
+### Changed
+- **Project profile drawer.** Overview tab follows action-first hierarchy: issues and
+  next step up top, filled profile fields only (no empty placeholder spam), business
+  plan and developer sections behind progressive disclosure. Activity in the drawer
+  filters autopilot noise and caps at eight items with a link to the full timeline.
+
 ## 2026-06-27 (e)
 
 ### Fixed

@@ -84,7 +84,7 @@ export function TerminalLeaf({ paneId, label, active, canClose, onFocus, onSplit
         <span className={cn("ui-term-dot", DOT[state] ?? "ui-dot-warning")} />
         <span className="ui-term-pane-label">{label}</span>
         <span className="ui-term-pane-state">{state}</span>
-        <div className="ui-term-pane-actions">
+        <div className="ui-term-pane-actions hidden md:flex">
           <button type="button" title="Split right" onClick={() => onSplit("row")} className="ui-term-icon-btn">
             <Columns2 className="h-3.5 w-3.5" />
           </button>

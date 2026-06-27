@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { sanitizeActivityPreview } from "../../src/lib/activity-display";
+import { sanitizeActivityPreview, isNoisyProfileActivity } from "../../src/lib/activity-display";
 import {
   mergeDuplicateProjectRows,
 } from "../../src/lib/domain/project-canonical";
@@ -22,6 +22,9 @@ assert.ok(sanitizeActivityPreview(long).endsWith("…"));
 assert.equal(shortProjectStatus("Production"), "Production");
 assert.equal(shortProjectStatus("Strategic planning only - no code, nothing else"), null);
 assert.equal(shortProjectStatus("Active development — shipping v2"), "Active development");
+
+assert.equal(isNoisyProfileActivity("custom", "AUTOPILOT BATCH — do NOT idle"), true);
+assert.equal(isNoisyProfileActivity("dispatch", "Ship the fix"), false);
 
 const merged = mergeDuplicateProjectRows([
   row({ id: "1", name: "botsmann", attrs: {} }),

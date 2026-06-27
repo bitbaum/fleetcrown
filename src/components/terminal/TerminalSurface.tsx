@@ -15,8 +15,21 @@ type Source = "server" | "machine";
  * the peek stream). Same xterm view, two substrates — the doc's "terminal is a
  * view" made literal.
  */
-export function TerminalSurface({ local }: { local: boolean }) {
-  const [source, setSource] = useState<Source>("server");
+export function TerminalSurface({
+  local,
+  immersive = false,
+  initialSource,
+  initialTab,
+}: {
+  local: boolean;
+  /** Mobile full-screen mode — hide helper copy, maximize xterm height. */
+  immersive?: boolean;
+  /** Deep link: ?source=machine|server */
+  initialSource?: Source;
+  /** Deep link: ?tab=<projectKey> for My machine */
+  initialTab?: string | null;
+}) {
+  const [source, setSource] = useState<Source>(initialSource ?? "server");
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
@@ -37,7 +50,7 @@ export function TerminalSurface({ local }: { local: boolean }) {
         </button>
       </div>
 
-      {source === "server" && !local && (
+      {source === "server" && !local && !immersive && (
         <div className="ui-callout-warning">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
           <div className="text-sm leading-relaxed text-text-secondary">
@@ -46,8 +59,8 @@ export function TerminalSurface({ local }: { local: boolean }) {
           </div>
         </div>
       )}
-      {source === "machine" && (
-        <p className="text-xs leading-relaxed text-text-muted">
+      {source === "machine" && !immersive && (
+        <p className="hidden text-xs leading-relaxed text-text-muted sm:block">
           Live view of the agents Fleet Runner runs on your machine. Pick a tab to watch it;
           &ldquo;Send a line&rdquo; types a prompt into it.
         </p>
@@ -62,7 +75,7 @@ export function TerminalSurface({ local }: { local: boolean }) {
           <TerminalWorkspace />
         </div>
         <div className={cn("absolute inset-0", source !== "machine" && "hidden")}>
-          <LocalMachineView />
+          <LocalMachineView initialTab={initialTab} immersive={immersive} />
         </div>
       </div>
     </div>

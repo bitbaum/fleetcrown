@@ -24,7 +24,7 @@ import {
   deriveConversationTitle,
   DEFAULT_CONVERSATION_TITLE,
 } from "@/db/queries/conversations";
-import { resolveCommand } from "@/lib/command-resolve";
+import { resolveCommand, isGenericDevelopHandoff } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
@@ -107,15 +107,24 @@ export async function POST(
     // 3a. Dispatch — fire-and-forget into the project's session. A composer
     //     model-picker selection (agent/model) overrides the project default;
     //     "Auto" sends neither, so the project's stored prefs apply.
+    const useIntentKey =
+      Boolean(resolution.intentId) &&
+      isGenericDevelopHandoff(text) &&
+      !(attachments && attachments.length > 0);
     const inject = await injectPrompt(
-      {
-        tab: resolution.projectKey,
-        // Attachment bodies ride along with the dispatched prompt (not the
-        // displayed bubble, which stays the user's command).
-        customPrompt: resolution.prompt + attachmentSuffix,
-        adapter: agent as AdapterId | undefined,
-        model,
-      },
+      useIntentKey
+        ? {
+            tab: resolution.projectKey,
+            promptKey: resolution.intentId!,
+            adapter: agent as AdapterId | undefined,
+            model,
+          }
+        : {
+            tab: resolution.projectKey,
+            customPrompt: resolution.prompt + attachmentSuffix,
+            adapter: agent as AdapterId | undefined,
+            model,
+          },
       userId,
     );
     const ok = inject.status < 400;
