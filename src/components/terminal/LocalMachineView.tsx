@@ -48,8 +48,8 @@ export function LocalMachineView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 gap-3">
-      <div className="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto">
+    <div className="flex h-full min-h-0 flex-col gap-3 md:flex-row">
+      <div className="flex shrink-0 gap-1 overflow-x-auto md:w-40 md:flex-col md:overflow-y-auto">
         {tabs.map((t) => (
           <button
             key={t}

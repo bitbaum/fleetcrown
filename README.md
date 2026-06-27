@@ -154,6 +154,7 @@ for the full matrix of browser-only vs local-runtime workflows.
 - [Architecture principles](docs/architecture-first-principles.md)
 - [Debt reduction roadmap](docs/debt-reduction-roadmap.md)
 - [Cloud vs local workflows](docs/development/cloud-local-workflows.md)
+- [Responsive design (mobile/tablet)](docs/development/responsive-design.md)
 - [Agent CLI registry spec](docs/agent-cli-registry-spec.md)
 - [Postgres portability](docs/infrastructure/postgres-portability.md)
 - [Local orchestration runtime](home/README.md)

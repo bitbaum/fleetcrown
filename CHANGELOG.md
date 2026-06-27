@@ -2,6 +2,28 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27
+
+### Added
+- **Responsive design SSOT.** `docs/development/responsive-design.md` documents mobile
+  chrome tokens, shell layout, component patterns, audit commands, and a viewport
+  testing checklist.
+
+### Changed
+- **Mobile shell and viewport math.** Layer 1 tokens (`--app-topbar-height`,
+  `--app-viewport-height`) plus `.app-viewport-pane` / `.app-page-compact` replace
+  ad-hoc `100vh` heights on Loki, Terminal, and workspace routes.
+- **Control project rail on phones.** Vertical project list instead of a hidden
+  horizontal scroll strip.
+- **Public marketing surfaces.** Hero fold, lede typography, nav padding, and signed-out
+  CTA tuned for narrow viewports.
+
+### Fixed
+- **Mobile usability across the app.** Loki composer stacks on phones (no horizontal
+  overflow); modals respect bottom-nav inset; drawers scroll with safe-area padding;
+  Terminal "My machine" tabs stack above the xterm pane; Habits/People/Projects detail
+  layouts wrap on narrow screens; horizontal page scroll contained at the shell.
+
 ## 2026-06-25
 
 ### Added

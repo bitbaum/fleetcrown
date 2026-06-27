@@ -60,14 +60,14 @@ export default function WorkspaceTerminalPage() {
   const exitedFast = status === "exited" || status === "error";
 
   return (
-    <div className="app-page flex h-[82vh] flex-col gap-3">
+    <div className="app-page app-page-compact app-viewport-pane flex flex-col gap-2 md:gap-3">
       <Link href="/control" className="ui-btn-ghost ui-btn-xs self-start gap-1.5">
         <ArrowLeft className="h-3.5 w-3.5" /> Back to Control
       </Link>
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="ui-page-title">Workspace terminal</h1>
         <span className="ui-badge">{status}</span>
-        {meta && <span className="ui-micro-label">{meta.cmd} · {meta.dir}</span>}
+        {meta && <span className="ui-micro-label max-w-full truncate">{meta.cmd} · {meta.dir}</span>}
       </div>
 
       {/* This shell runs on whatever server hosts FleetCrown. On the hosted box
@@ -75,7 +75,21 @@ export default function WorkspaceTerminalPage() {
           so an agent launch exits immediately. The reliable path is "Focus
           terminal" on a Control card, which drives your LOCAL zellij via Fleet
           Runner. (This page is only meaningful when FleetCrown runs locally.) */}
-      <div className="ui-callout-warning">
+      <details className="ui-callout-warning md:hidden">
+        <summary className="cursor-pointer text-sm font-medium text-text-secondary">
+          Server-hosted terminal note
+        </summary>
+        <div className="mt-2 text-sm leading-relaxed text-text-secondary">
+          {exitedFast ? (
+            <>This embedded terminal runs on the server hosting FleetCrown, which can&apos;t reach your machine when you&apos;re on the hosted app — so the agent exited.{" "}</>
+          ) : (
+            <>This embedded terminal runs on the server hosting FleetCrown.{" "}</>
+          )}
+          To drive an agent on your computer, use <strong>Focus terminal</strong> / <strong>Dispatch</strong> on a project in{" "}
+          <Link href="/control" className="text-accent underline">Control</Link> — those run through Fleet Runner against your local Zellij.
+        </div>
+      </details>
+      <div className="ui-callout-warning hidden md:flex">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-status-warning" />
         <div className="text-sm leading-relaxed text-text-secondary">
           {exitedFast ? (
@@ -90,7 +104,7 @@ export default function WorkspaceTerminalPage() {
 
       {error && <p className="ui-error">{error}</p>}
       {id && (
-        <div className="ui-panel flex-1 overflow-hidden p-2">
+        <div className="ui-panel min-h-0 flex-1 overflow-hidden p-2">
           <TerminalView transport={workspaceTransport(id)} interactive bare onStatus={setStatus} className="h-full w-full" />
         </div>
       )}

@@ -13,6 +13,10 @@ const SIZE_CLASSES = {
 
 type Size = keyof typeof SIZE_CLASSES;
 
+/** Bottom inset so modal actions clear the floating mobile nav pill. */
+const MOBILE_CHROME_INSET =
+  "max-md:mb-[calc(var(--mobile-chrome-bottom)+0.5rem)] max-md:max-h-[calc(100svh-var(--mobile-chrome-bottom)-2rem)]";
+
 function useEscapeToClose(onClose: () => void, disabled: boolean) {
   useEffect(() => {
     if (disabled) return;
@@ -47,9 +51,11 @@ export function Modal({
   const containerPos =
     position === "bottom-mobile"
       ? "items-end md:items-center"
-      : "items-center";
+      : "items-end md:items-center";
   const panelMargin =
-    position === "bottom-mobile" ? "mx-4 mb-4 md:mb-0" : "";
+    position === "bottom-mobile"
+      ? cn("mx-4 md:mx-0", MOBILE_CHROME_INSET, "md:mb-0 md:max-h-[calc(100vh-2rem)]")
+      : MOBILE_CHROME_INSET;
   return (
     <div className={cn("fixed inset-0 z-50 flex justify-center p-4", containerPos)}>
       <div
@@ -103,7 +109,7 @@ export function Drawer({
       />
       <div
         className={cn(
-          "relative flex w-full flex-col sm:border-l border-border-subtle shadow-panel-strong",
+          "relative flex h-full w-full max-w-full flex-col overflow-hidden sm:border-l border-border-subtle shadow-panel-strong",
           SIZE_CLASSES[size],
           surfaceClass,
           className,

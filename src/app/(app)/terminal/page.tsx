@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TerminalSurface } from "@/components/terminal/TerminalSurface";
+import { PageTitle } from "@/components/ui/page-title";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
 export const metadata: Metadata = { title: "Terminal" };
@@ -11,11 +12,11 @@ export const metadata: Metadata = { title: "Terminal" };
 export default function TerminalPage() {
   const local = isRuntimeAvailable();
   return (
-    <div className="app-page flex h-[calc(100dvh-2rem)] flex-col gap-4">
+    <div className="app-page app-page-compact app-viewport-pane flex flex-col gap-3 md:gap-4">
       <div className="ui-page-header">
         <div>
-          <h1 className="ui-page-title">Terminal</h1>
-          <p className="ui-page-subtitle">
+          <PageTitle title="Terminal" />
+          <p className="ui-page-subtitle hidden sm:block">
             Shells on this server, or a live view of the agents running on your machine.
           </p>
         </div>

@@ -27,7 +27,7 @@ export function PublicSurface({
     <div className="dark ui-public-surface">
       <div aria-hidden className="ui-public-backdrop" />
       <nav className="ui-public-nav">
-        <div className="flex items-center gap-8">
+        <div className="ui-public-nav-brand-row">
           <Link href={homeHref} className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-border-interactive">
             <BrandMark />
           </Link>

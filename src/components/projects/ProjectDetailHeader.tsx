@@ -90,7 +90,7 @@ export function ProjectDetailHeader({
 
   return (
     <div className="shrink-0 bg-surface-drawer border-b border-border-subtle">
-      <div className="flex flex-row items-start gap-2 px-4 pb-3 pt-4 sm:gap-3 sm:px-5">
+      <div className="flex flex-col gap-3 px-4 pb-3 pt-4 sm:flex-row sm:items-start sm:gap-3 sm:px-5">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <NameEditor value={displayName} editable={editable} onSave={saveName} />
@@ -104,7 +104,7 @@ export function ProjectDetailHeader({
           )}
         </div>
 
-        <div className="ui-card-actions shrink-0 self-start">
+        <div className="ui-card-actions shrink-0 self-start flex-wrap">
           {data && (
             <LokiDispatchButton
               prompt={buildProjectLokiPrompt(data)}

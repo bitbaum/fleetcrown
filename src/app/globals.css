@@ -157,6 +157,8 @@
   --mobile-nav-offset: 0.75rem;
   --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
   --mobile-chrome-bottom: calc(var(--mobile-nav-offset) + var(--mobile-nav-height) + var(--mobile-safe-bottom));
+  --app-topbar-height: 3.25rem;
+  --app-viewport-height: calc(100svh - var(--app-topbar-height) - var(--mobile-chrome-bottom));
   --public-nav-height: 76px;
   --public-backdrop-primary-width: 900px;
   --public-backdrop-primary-height: 700px;
@@ -330,14 +332,28 @@
 @layer components {
 
   /* Shell */
-  .app-shell-frame { @apply min-h-screen text-text-primary; }
+  .app-shell-frame { @apply min-h-screen overflow-x-clip text-text-primary; }
   .app-main-column {
     /* The right side of the shell — top bar + main + footer stacked. */
-    @apply flex min-w-0 flex-1 flex-col;
+    @apply flex min-w-0 flex-1 flex-col overflow-x-clip;
   }
   .app-main {
-    @apply min-w-0 flex-1 overflow-y-auto md:pb-0;
+    @apply min-w-0 flex-1 overflow-x-clip overflow-y-auto md:pb-0;
     padding-bottom: calc(var(--mobile-chrome-bottom) + 1rem);
+  }
+  /* Full-height panes (Loki, Terminal, workspace) — SSOT for viewport math */
+  .app-viewport-pane {
+    height: var(--app-viewport-height);
+    @apply flex min-h-0 flex-col;
+  }
+  @media (min-width: 48rem) {
+    .app-viewport-pane {
+      height: calc(100dvh - 2rem);
+    }
+  }
+  /* Chat/terminal pages — tighter vertical padding on phones so content fits */
+  .app-page-compact {
+    @apply py-3 sm:py-5 md:py-8;
   }
 
   /* App top bar — slim, sticky, hosts Cmd-K + global status pills */
@@ -401,7 +417,7 @@
     @apply fixed inset-x-3 z-40 flex md:hidden rounded-pill border border-border-default bg-surface-base/92 px-1.5 py-1.5 backdrop-blur-md shadow-panel-strong;
   }
   .ui-mobile-nav-item {
-    @apply relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-micro font-medium transition-colors min-h-11;
+    @apply relative flex flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl py-2 text-nano font-medium transition-colors min-h-11 sm:text-micro;
   }
   .ui-mobile-nav-item-active {
     @apply bg-accent-muted text-text-primary;
@@ -535,8 +551,11 @@
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 70%, transparent 100%);
   }
+  .ui-public-nav-brand-row {
+    @apply flex items-center gap-3 sm:gap-8;
+  }
   .ui-public-nav {
-    @apply relative z-40 flex items-center justify-between border-b border-border-subtle px-6 py-5 sm:px-10;
+    @apply relative z-40 flex items-center justify-between border-b border-border-subtle px-4 py-4 sm:px-10 sm:py-5;
   }
   .ui-public-nav-action {
     @apply rounded-full border border-border-default px-5 py-2 text-sm font-medium text-text-tertiary transition-all hover:border-border-strong hover:text-text-secondary;
@@ -982,7 +1001,7 @@
     @apply text-text-secondary;
   }
   .ui-public-hero-lede {
-    @apply mx-auto mt-7 max-w-2xl text-2xl leading-tight tracking-tight text-text-secondary;
+    @apply mx-auto mt-7 max-w-2xl text-lg leading-snug tracking-tight text-text-secondary sm:text-2xl sm:leading-tight;
     animation: ui-public-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.08s both;
   }
   .ui-public-hero-sublede {
@@ -1097,7 +1116,7 @@
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.4) inset, 0 10px 30px -10px rgba(255, 255, 255, 0.3);
   }
   .ui-public-lede {
-    @apply text-2xl leading-snug text-text-secondary;
+    @apply text-lg leading-snug text-text-secondary sm:text-2xl;
   }
   .ui-public-body-lg {
     @apply text-lg leading-relaxed text-text-secondary;
@@ -1106,8 +1125,13 @@
     @apply text-sm text-text-tertiary;
   }
   .ui-public-hero-fold {
-    @apply relative z-10 flex flex-col items-center justify-center px-6 pb-16 pt-10 text-center;
-    min-height: 84vh;
+    @apply relative z-10 flex flex-col items-center justify-center px-4 pb-12 pt-8 text-center sm:px-6 sm:pb-16 sm:pt-10;
+    min-height: min(84vh, 100svh);
+  }
+  @media (min-width: 40rem) {
+    .ui-public-hero-fold {
+      min-height: 84vh;
+    }
   }
   .ui-public-section-lede {
     @apply max-w-2xl text-xl text-text-secondary;
@@ -2273,9 +2297,12 @@
     @apply flex flex-wrap gap-2;
   }
   .ui-control-fleet-chip {
-    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary transition-all;
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-full px-2.5 py-1 text-xs text-text-secondary transition-all;
     background: oklch(1 0 0 / 0.04);
     box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.04);
+  }
+  .ui-control-fleet-chip-alert {
+    @apply w-full flex-wrap rounded-xl px-3 py-2 text-left leading-snug;
   }
   .ui-control-fleet-chip:hover {
     background: oklch(1 0 0 / 0.08);
@@ -2315,7 +2342,7 @@
     box-shadow: var(--shadow-panel);
   }
   .ui-control-project-list {
-    @apply flex gap-2 overflow-x-auto p-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1 lg:overflow-y-auto;
+    @apply flex flex-col gap-2 p-2 lg:block lg:max-h-[calc(100dvh-20rem)] lg:space-y-1 lg:overflow-y-auto;
   }
   @media (min-width: 64rem) {
     .ui-control-project-list {
@@ -2327,7 +2354,7 @@
     }
   }
   .ui-control-project-row {
-    @apply flex w-[15rem] shrink-0 gap-3 rounded-2xl px-3 py-3 text-left transition-all hover:bg-surface-overlay hover:-translate-x-px lg:w-full;
+    @apply flex w-full shrink-0 gap-3 rounded-2xl px-3 py-3 text-left transition-all hover:bg-surface-overlay hover:-translate-x-px;
     /* High-flier esthetics: softer rounding, lift on hover for tactile 'rail' in command workspace */
   }
   /* Dim non-selected rows in the rail when SOMETHING is selected. Pre-fix
@@ -2660,17 +2687,25 @@
     @apply mt-1 flex items-center gap-2 text-xs text-text-tertiary;
   }
 
-  /* Composer (center pane, bottom). */
+  /* Composer (center pane, bottom). Stacks on phones so Send stays reachable. */
   .ui-loki-composer {
-    @apply flex items-end gap-2 rounded-2xl border border-border-subtle bg-surface-base p-2;
+    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-2 sm:flex-row sm:items-end;
   }
   .ui-loki-composer-input {
-    @apply max-h-40 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+    @apply max-h-40 w-full min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+  }
+  .ui-loki-composer-actions {
+    @apply flex shrink-0 items-center justify-end gap-1 self-stretch sm:self-auto;
   }
   /* Inline model picker — low-profile so "Auto" reads as a quiet default and
      doesn't compete with the input for attention (cognitive-load north star). */
   .ui-loki-composer-select {
-    @apply h-8 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary;
+    @apply h-8 max-w-full min-w-0 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary sm:max-w-48;
+  }
+  /* Drawer scroll body — safe-area padding on phones */
+  .ui-drawer-body {
+    @apply min-h-0 flex-1 overflow-y-auto;
+    padding-bottom: max(1rem, var(--mobile-safe-bottom));
   }
   /* Grok-style voice overlay — covers the composer while recording/transcribing:
      a live waveform, elapsed timer, and cancel/confirm. */

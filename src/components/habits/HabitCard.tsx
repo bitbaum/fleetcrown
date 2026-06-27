@@ -124,7 +124,7 @@ export function HabitCard({
 
   return (
     <Card className={active ? "" : "opacity-50"}>
-      <div className="flex items-start justify-between gap-4 mb-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {titleEdit.editing ? (
@@ -194,7 +194,7 @@ export function HabitCard({
           <HabitGoalLinks habitId={habit.id} linked={linkedGoals} allGoals={activeGoals} />
         </div>
 
-        <div className="flex items-start gap-3 shrink-0">
+      <div className="flex flex-wrap items-start justify-end gap-2 shrink-0 max-sm:w-full max-sm:justify-between">
           <button
             onClick={handleToggleDone}
             disabled={togglingDone || !active}

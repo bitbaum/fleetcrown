@@ -93,8 +93,8 @@ export function PersonDetail({
   };
 
   return (
-    <Drawer onClose={onClose} size="md" surface="background" className="overflow-y-auto">
-      <div className="sticky top-0 flex items-center justify-between border-b border-border-subtle bg-surface-page/95 p-5 backdrop-blur">
+    <Drawer onClose={onClose} size="md" surface="background">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-surface-page/95 p-4 sm:p-5 backdrop-blur">
         <div className="flex min-w-0 items-center gap-2">
           {nameEdit.editing ? (
             <div className="flex flex-col gap-1">
@@ -107,7 +107,7 @@ export function PersonDetail({
                     if (e.key === "Escape") { nameEdit.cancel(); setNameError(null); }
                   }}
                   autoFocus
-                  className={`w-56 rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors ${nameError ? "border-status-negative/60 focus:border-status-negative" : "border-border-default focus:border-accent-primary"}`}
+                  className={`w-full max-w-xs rounded-lg border bg-surface-overlay px-3 py-1.5 text-xl font-semibold text-text-primary outline-none transition-colors sm:w-56 ${nameError ? "border-status-negative/60 focus:border-status-negative" : "border-border-default focus:border-accent-primary"}`}
                 />
                 {nameSaving && <Loader2 className="ui-spinner-sm shrink-0 text-text-tertiary" />}
               </div>
@@ -182,7 +182,7 @@ export function PersonDetail({
       </div>
 
       {loading ? (
-        <div className="animate-pulse space-y-7 p-5">
+        <div className="ui-drawer-body animate-pulse space-y-7 p-4 sm:p-5">
           <div className="space-y-2">
             <div className="h-2.5 w-20 rounded bg-surface-raised" />
             <div className="h-3 w-full rounded bg-surface-raised" />
@@ -204,9 +204,9 @@ export function PersonDetail({
           </div>
         </div>
       ) : !data ? (
-        <div className="p-5 text-text-tertiary">Person not found</div>
+        <div className="ui-drawer-body p-4 sm:p-5 text-text-tertiary">Person not found</div>
       ) : (
-        <div className="space-y-7 p-5">
+        <div className="ui-drawer-body space-y-7 p-4 sm:p-5">
           {descEdit.editing ? (
             <div className="space-y-1.5">
               <textarea

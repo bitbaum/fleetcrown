@@ -74,7 +74,7 @@ export function ProjectDetail({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
+      <div className="ui-drawer-body p-4 sm:p-5 md:p-6">
         {initialLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="ui-loading-ring" />

@@ -183,6 +183,7 @@ export function Composer({
             }
           }}
         />
+        <div className="ui-loki-composer-actions">
         {/* Model picker — pins the agent/model for the next dispatch; "Auto" uses
             the project's own default. Hidden until agents load. */}
         {agents.length > 0 && (
@@ -250,6 +251,7 @@ export function Composer({
         >
           <Send className="h-4 w-4" />
         </button>
+        </div>
       </div>
       </div>
     </div>

@@ -1,5 +1,9 @@
 # FleetCrown Branding & Design System
 
+**Created:** 2026-03-01  
+**Last modified:** 2026-06-27  
+**Last modified summary:** Added responsive/mobile discipline and link to responsive-design SSOT.
+
 **Decision: We are using FleetCrown.**
 
 This is the canonical reference (in addition to the executable SSOTs). It captures decisions, criteria, and best practices so future changes (rebrands, new surfaces, major visual updates) stay consistent with first principles and the existing four-layer discipline.
@@ -85,6 +89,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 - **Desktop app icons**: The Electron side still has placeholder comments ("in production add a real png/icns"). When shipping signed builds, the desktop/ build must produce branded .icns / .ico from the same mark.
 - **OG / social images**: All use the same mark + `APP_NAME` / tagline from SSOT. Per-article and per-user variants exist and should continue to stamp the small brand mark in the corner for recognition.
 - **Font & typography discipline**: Headings use the display font + `--tracking-display`. Micro / nano sizes and label tracking are CSS vars. Never put font-family or size literals for brand text in components.
+- **Responsive / mobile (2026-06-27)**: All authenticated routes must work at 320px+ without horizontal page scroll. SSOT: `docs/development/responsive-design.md` + Layer 1 chrome tokens (`--mobile-chrome-bottom`, `--app-viewport-height`) and shell classes (`.app-viewport-pane`, `.app-page-compact`). Full-height chat/terminal pages must not use raw `100vh`/`100dvh` in JSX. Modals and drawers must clear the floating bottom nav on phones.
 
 ## When Evaluating Future Names or Visual Refreshes
 

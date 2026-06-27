@@ -184,12 +184,15 @@ export function ControlFleetStatus({
 
       {runnerExecutionStall?.stalled && (
         <div
-          className="ui-control-fleet-chip ui-control-fleet-chip-attention"
+          className="ui-control-fleet-chip ui-control-fleet-chip-attention ui-control-fleet-chip-alert"
           role="alert"
           title="The Fleet Runner is pushing status but not executing dispatched commands — it is likely hung. Restart Fleet Runner; the queued commands will then run."
         >
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mr-1" aria-hidden="true" />
-          Runner stalled — accepting but not executing ({runnerExecutionStall.stalledCount} queued {runnerExecutionStall.oldestSeconds}s). Restart Fleet Runner.
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="sm:hidden">Runner stalled — restart Fleet Runner ({runnerExecutionStall.stalledCount} queued).</span>
+          <span className="hidden sm:inline">
+            Runner stalled — accepting but not executing ({runnerExecutionStall.stalledCount} queued {runnerExecutionStall.oldestSeconds}s). Restart Fleet Runner.
+          </span>
         </div>
       )}
 
