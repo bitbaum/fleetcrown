@@ -2,6 +2,28 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (e)
+
+### Fixed
+- **Duplicate project entities.** Case-insensitive duplicates (e.g. `botsmann` /
+  `Botsmann`) merge in Postgres via `scripts/db/merge-duplicate-projects.ts`.
+  `findOrCreateProjectEntity` and `createProject` now resolve names
+  case-insensitively so duplicates cannot recur.
+
+### Changed
+- (continues 2026-06-27 (d) Projects UI hierarchy work)
+
+## 2026-06-27 (d)
+
+### Changed
+- **Projects page hierarchy.** Search and filters in one sticky bar; redundant stat
+  cards and freeform status chips removed. Attention projects use rich cards;
+  the rest is a compact scannable list with “Show all”. GitHub CI hides on cloud
+  when unavailable. Duplicate project names collapse to the richest row.
+- **Projects URL state.** Search, filter, and open drawer sync to query params.
+- **Activity previews.** Recent activity in project profiles redacts tokens/secrets
+  and collapses by default. Drawer exposes `role="dialog"` for assistive tech.
+
 ## 2026-06-27 (c)
 
 ### Changed

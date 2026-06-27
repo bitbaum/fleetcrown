@@ -25,6 +25,8 @@ for OrangeCat's auth/storage — that is separate from FleetCrown's plain Postgr
 | `restore-to-target.sh` | `psql` a plain-SQL dump into a target, verifying row counts against a manifest; halts on mismatch. |
 | `sync-user-data.sh` | Copy user-owned rows between two databases (schema must already exist on the target). |
 | `bootstrap-migration-ledger.ts` | Seed `drizzle.__drizzle_migrations` when schema arrived via `push` (one-time). |
+| `audit-duplicate-projects.ts` | List case-insensitive duplicate project entities per user. |
+| `merge-duplicate-projects.ts` | Merge duplicate project entities (dry run by default; `--apply` to write). Run after imports that created `botsmann` + `Botsmann` pairs. |
 | `SETUP_HETZNER.md` | Provision + install + secure a Hetzner box for Postgres 17. |
 | `BOTH_PRODUCTS_ONE_HOST.md` | Layer two databases on one Postgres instance — role + pg_hba setup, capacity math, "when to split" triggers. |
 

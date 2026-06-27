@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-27  
 **Last modified:** 2026-06-27  
-**Last modified summary:** Theme cycle control, mobile Menu sheet aligned with sidebar sections.
+**Last modified summary:** Projects page sticky search, compact list + show-more, deduped fleet rows.
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -94,3 +94,7 @@ Before shipping UI changes, verify at **375×667** and **320×568**:
 6. Landing `/` — hero readable; public nav drawer opens
 
 Run `npm run smoke` with dev server up for route health; Playwright viewport tests are planned but not yet in CI.
+
+## Projects page layout
+
+`/projects` uses a **sticky search + filter bar** (`ui-projects-sticky-bar`), one **attention card** per flagged project, then a **compact list** (`ui-projects-row`) capped at 25 rows with “Show all”. Freeform status values never render as filter chips — only lifecycle badges via `shortProjectStatus()` in `lib/projects-display.ts`. Duplicate entity names collapse server-side via `mergeDuplicateProjectRows()`.

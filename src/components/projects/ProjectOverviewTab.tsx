@@ -17,6 +17,7 @@ import { toLocalDateStr, timeAgo } from "@/lib/dates";
 import { ENTITY_TYPE, INTERACTION_DIRECTION } from "@/lib/constants/statuses";
 import { cn } from "@/lib/utils";
 import { STATUS_DOT_CLASS, formatActivityTime } from "@/components/activity/activity-shared";
+import { sanitizeActivityPreview } from "@/lib/activity-display";
 import type { EventStatus } from "@/lib/activity-status";
 
 const CHANNEL_ICON: Record<string, React.ElementType> = {
@@ -307,13 +308,16 @@ export function OverviewTab({
         </div>
       )}
 
-      <div>
-        <div className="flex items-center gap-1.5 ui-micro-label mb-2 font-medium">
-          <MessageSquare className="h-3 w-3" /> Recent Activity
-        </div>
-        <div className="space-y-2.5">
+      <details className="ui-projects-activity-panel">
+        <summary className="ui-projects-activity-summary">
+          <MessageSquare className="h-3.5 w-3.5 shrink-0 text-text-tertiary" aria-hidden="true" />
+          <span>Recent activity</span>
+          <span className="ui-projects-filter-count">{activityFeed.length}</span>
+        </summary>
+        <div className="ui-projects-activity-body space-y-2.5">
           {activityFeed.map((e) => {
             const Icon = e.icon;
+            const preview = e.secondary ? sanitizeActivityPreview(e.secondary) : null;
             return (
               <div key={e.id} className="flex items-start gap-2 text-xs">
                 <span className={cn("mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full", STATUS_DOT_CLASS[e.tone])} aria-hidden />
@@ -326,8 +330,8 @@ export function OverviewTab({
                     </span>
                   </div>
                   {e.meta && <div className="text-text-muted">{e.meta}</div>}
-                  {e.secondary && (
-                    <p className="line-clamp-2 leading-relaxed text-text-tertiary" title={e.secondary}>{e.secondary}</p>
+                  {preview && (
+                    <p className="line-clamp-2 leading-relaxed text-text-tertiary">{preview}</p>
                   )}
                 </div>
               </div>
@@ -339,7 +343,7 @@ export function OverviewTab({
         </div>
 
         {loggingActivity ? (
-          <div className="mt-3 space-y-2 pt-2 border-t border-border-subtle">
+          <div className="ui-projects-activity-body mt-0 space-y-2 border-t border-border-subtle pt-3">
             <div className="flex gap-2">
               <select
                 value={actChannel}
@@ -380,12 +384,12 @@ export function OverviewTab({
         ) : !data.readonly && (
           <button
             onClick={() => setLoggingActivity(true)}
-            className="ui-btn-add-success mt-2"
+            className="ui-btn-add-success mx-4 mb-4 mt-2"
           >
             <Plus className="h-3.5 w-3.5" /> Log activity
           </button>
         )}
-      </div>
+      </details>
 
       {data.devLog.length > 0 && (
         <DevLogSection entries={data.devLog} />

@@ -33,14 +33,19 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
     "/api/github",
     { intervalMs: 2 * 60_000, timeoutMs: 35_000 },
   );
-  const repos = data?.repos ?? [];
+  const repos = useMemo(() => data?.repos ?? [], [data?.repos]);
 
-  const linkedRepos = useMemo(() => {
-    const slugs = new Set(
+  const linkedSlugs = useMemo(() => {
+    return new Set(
       projects.map((p) => repoSlugFromUrl(p.gitUrl ?? p.attrs["repo"] ?? null)).filter(Boolean) as string[],
     );
-    return repos.filter((r) => slugs.has(r.repo));
-  }, [projects, repos]);
+  }, [projects]);
+
+  const linkedRepos = useMemo(() => {
+    return repos.filter((r) => linkedSlugs.has(r.repo));
+  }, [repos, linkedSlugs]);
+
+  const hasLinkedRepos = linkedSlugs.size > 0;
 
   const failing = linkedRepos.filter((r) => r.ci_status === "failure").length;
   const summaryLabel = loading
@@ -48,12 +53,18 @@ export function ProjectsCiPanel({ projects }: { projects: ProjectGridRow[] }) {
     : error || (data?.error && repos.length === 0)
       ? "CI unavailable"
       : data?.runtimeOnly
-        ? "CI on local install only"
+        ? "Local install only"
         : linkedRepos.length === 0
-          ? "No linked repos with CI"
+          ? "No linked repos"
           : failing > 0
             ? `${failing} repo${failing > 1 ? "s" : ""} failing CI`
             : `${linkedRepos.length} repo${linkedRepos.length > 1 ? "s" : ""} tracked`;
+
+  // Cloud hosts can't run gh — hide the panel when it would only say "local only"
+  // and the fleet has nothing linkable anyway.
+  if (!loading && data?.runtimeOnly && !hasLinkedRepos) {
+    return null;
+  }
 
   return (
     <details className="ui-projects-ci-panel">

@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs } from "@/db/schema";
 import { eq, and, desc, inArray, ilike } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
+import { findProjectEntityByName } from "./project-merge";
 import { z } from "zod";
 import { isPrivateZoneLocked } from "@/lib/private-zone";
 import { AUTO_INJECT_MODE_VALUES, type AutoInjectMode } from "@/config/beacon";
@@ -37,6 +38,11 @@ export const PatchProjectBody = z
 type PatchProjectInput = z.infer<typeof PatchProjectBody>;
 
 export async function createProject(userId: string, data: CreateProjectInput, source?: string) {
+  const existing = await findProjectEntityByName(userId, data.name);
+  if (existing) {
+    throw new Error(`A project named "${existing.name}" already exists`);
+  }
+
   const [created] = await db
     .insert(entities)
     .values({

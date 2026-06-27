@@ -15,7 +15,7 @@ import {
   HealthBadge,
   getHealthSignals,
 } from "./project-badges";
-import { getProjectLinks, RESERVED } from "./project-detail-types";
+import { getProjectLinks } from "./project-detail-types";
 import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
 import { NAV } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -70,9 +70,7 @@ export function ProjectGridCard({
             </div>
             {description ? (
               <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-text-secondary">{description}</p>
-            ) : (
-              <p className="mt-1.5 text-sm italic text-text-muted">No description yet — open to add context</p>
-            )}
+            ) : null}
           </div>
           <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-text-secondary" aria-hidden="true" />
         </div>
@@ -119,9 +117,6 @@ export function ProjectGridCard({
             Control
           </Link>
         )}
-        <button type="button" onClick={onOpen} className="ui-projects-card-action">
-          Profile
-        </button>
         <div className="ml-auto flex items-center gap-0.5">
           <LokiDispatchButton
             prompt={lokiPrompt}

@@ -102,12 +102,15 @@ export function Drawer({
         ? "bg-surface-modal"
         : "bg-surface-page";
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end" role="presentation">
       <div
         className="absolute inset-0 bg-black/42 backdrop-blur-sm"
         onClick={disableClose ? undefined : onClose}
+        aria-hidden="true"
       />
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           "relative flex h-full w-full max-w-full flex-col overflow-hidden sm:border-l border-border-subtle shadow-panel-strong",
           SIZE_CLASSES[size],

@@ -2344,6 +2344,37 @@
   }
 
   /* Projects page — fleet overview, cards, CI panel */
+  .ui-projects-sticky-bar {
+    @apply sticky top-0 z-10 -mx-4 border-b border-border-subtle bg-surface-page/95 px-4 pb-3 pt-0 backdrop-blur-sm sm:-mx-0 sm:rounded-2xl sm:border sm:px-4 sm:pb-4;
+  }
+  .ui-projects-section-label {
+    @apply text-micro font-semibold uppercase tracking-wider text-text-muted;
+  }
+  .ui-projects-list {
+    @apply flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-surface-base;
+    box-shadow: var(--shadow-panel);
+  }
+  .ui-projects-row {
+    @apply flex w-full min-h-11 items-center gap-3 border-b border-border-subtle px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-raised/70 active:bg-surface-raised;
+  }
+  .ui-projects-row-flagged {
+    @apply border-l-2 border-l-status-warning/50 pl-[calc(1rem-2px)];
+  }
+  .ui-projects-show-more {
+    @apply flex w-full min-h-11 items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-base py-2.5 text-sm font-medium text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary;
+  }
+  .ui-projects-activity-panel {
+    @apply overflow-hidden rounded-xl border border-border-subtle bg-surface-base;
+  }
+  .ui-projects-activity-summary {
+    @apply flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-text-primary transition-colors hover:bg-surface-raised;
+  }
+  .ui-projects-activity-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-projects-activity-body {
+    @apply border-t border-border-subtle px-4 py-3;
+  }
   .ui-projects-filter-chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-base px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-default hover:bg-surface-raised hover:text-text-primary min-h-11 sm:min-h-0;
   }

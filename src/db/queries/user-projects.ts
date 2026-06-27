@@ -4,6 +4,7 @@ import { entities, orgs, userProjects, type NewUserProject, type UserProject } f
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { getOrgPeerIds } from "./utils";
+import { findProjectEntityByName } from "./project-merge";
 
 export async function getUserProjects(userId: string): Promise<UserProject[]> {
   return db
@@ -40,12 +41,7 @@ export async function countActiveProjects(userId: string): Promise<number> {
 }
 
 async function findOrCreateProjectEntity(userId: string, name: string, description?: string | null): Promise<string> {
-  const [existing] = await db
-    .select({ id: entities.id })
-    .from(entities)
-    .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT), eq(entities.name, name)))
-    .limit(1);
-
+  const existing = await findProjectEntityByName(userId, name);
   if (existing) return existing.id;
 
   const [created] = await db

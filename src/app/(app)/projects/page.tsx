@@ -24,7 +24,8 @@ export default async function ProjectsPage() {
     <PullToRefresh>
       <PageLayout
         title="Projects"
-        subtitle="Health, repos, and next steps across your fleet"
+        subtitle="Search your fleet — attention items surface first"
+        maxWidth="max-w-5xl"
         right={<NewProjectButton />}
       >
         <Suspense fallback={<CardSkeleton />}>
