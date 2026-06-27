@@ -9,10 +9,8 @@ import { ROUTES } from "@/config/auth";
 import { NAV } from "@/config/navigation";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
-// The Light/Dark/Auto switch lives here (compact, icon-only) AND in Settings →
-// Appearance — both render the shared <ThemeToggle/> (SSOT). It was sidebar-
-// less for a while, but users couldn't find theme at all; a small icon row is
-// worth the slot. Hidden when the sidebar is collapsed (no room).
+// The theme switch is a single cycle control (ThemeToggle) in the sidebar footer,
+// app top bar, and mobile menu — not three separate buttons.
 
 export function SidebarFooter({
   collapsed,
@@ -25,7 +23,12 @@ export function SidebarFooter({
 
   return (
     <div className="ui-sidebar-section space-y-1 border-t border-border-subtle">
-      {!collapsed && <ThemeToggle className="mb-1" />}
+      <ThemeToggle
+        showLabel={!collapsed}
+        className={cn(
+          collapsed ? "mx-auto" : "w-full justify-start ui-theme-cycle-btn-labeled",
+        )}
+      />
       <button
         type="button"
         onClick={onToggleCollapsed}

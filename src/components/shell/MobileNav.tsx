@@ -3,24 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, MoreHorizontal, Sparkles, X } from "lucide-react";
-import { signOut } from "next-auth/react";
-import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/config/navigation";
+import { Menu } from "lucide-react";
+import { MOBILE_NAV_ITEMS } from "@/config/navigation";
 import { isCurrentPath } from "@/lib/navigation";
-import { ROUTES } from "@/config/auth";
 import { cn } from "@/lib/utils";
-
-const OVERFLOW_ITEMS = NAV_ITEMS.filter((item) => !item.mobile);
-
-function openAskLoki() {
-  window.dispatchEvent(new CustomEvent("loki:open", { detail: { prompt: "" } }));
-}
+import { MobileNavSheet } from "@/components/shell/MobileNavSheet";
 
 export function MobileNav() {
   const pathname = usePathname();
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  const isMoreActive = !moreOpen && OVERFLOW_ITEMS.some((item) => isCurrentPath(pathname, item.href));
+  const onPrimaryTab = MOBILE_NAV_ITEMS.some((item) => isCurrentPath(pathname, item.href));
+  const isMoreActive = !sheetOpen && !onPrimaryTab;
 
   return (
     <>
@@ -45,92 +39,23 @@ export function MobileNav() {
           );
         })}
 
-        <div className="ui-mobile-nav-loki">
-          <button
-            type="button"
-            onClick={openAskLoki}
-            className="ui-mobile-nav-loki-btn"
-            aria-label="Ask Loki"
-            title="Ask Loki"
-          >
-            <Sparkles className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-
         <button
           type="button"
-          onClick={() => setMoreOpen((v) => !v)}
+          onClick={() => setSheetOpen(true)}
           className={cn(
             "ui-mobile-nav-item",
-            isMoreActive || moreOpen ? "ui-mobile-nav-item-active" : "ui-mobile-nav-item-idle",
+            isMoreActive || sheetOpen ? "ui-mobile-nav-item-active" : "ui-mobile-nav-item-idle",
           )}
-          aria-expanded={moreOpen}
-          aria-label="More navigation"
+          aria-expanded={sheetOpen}
+          aria-label="Open navigation menu"
         >
-          <MoreHorizontal className="h-5 w-5" />
-          <span>More</span>
+          <Menu className="h-5 w-5" />
+          <span>Menu</span>
         </button>
       </nav>
 
-      {moreOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-30 bg-black/48 backdrop-blur-sm md:hidden"
-            onClick={() => setMoreOpen(false)}
-          />
-          <div className="ui-mobile-nav-sheet">
-            <div className="flex items-center justify-between px-5 pt-4 pb-3">
-              <span className="text-sm font-semibold text-text-primary">All views</span>
-              <button
-                type="button"
-                onClick={() => setMoreOpen(false)}
-                className="rounded-xl p-3 text-text-muted transition-colors hover:bg-surface-raised hover:text-text-primary"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-1 px-3">
-              {OVERFLOW_ITEMS.map((item) => {
-                const isActive = isCurrentPath(pathname, item.href);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.id}
-                    href={item.href}
-                    onClick={() => setMoreOpen(false)}
-                    className={cn(
-                      "flex flex-col items-center gap-2 rounded-2xl px-2 py-4 text-xs font-medium transition-colors",
-                      isActive
-                        ? "bg-accent-muted text-text-primary"
-                        : "text-text-secondary hover:bg-surface-raised hover:text-text-primary",
-                    )}
-                  >
-                    <Icon className="h-6 w-6" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-            {/* Sign-out lives in the sidebar on desktop; the sidebar is
-                hidden:md:flex, so without this row mobile users had no in-app
-                exit. Placed at the sheet bottom under a divider so it's
-                discoverable but visually de-emphasized from primary nav. */}
-            <div className="mt-2 border-t border-border-subtle px-3 py-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false);
-                  signOut({ callbackUrl: ROUTES.SIGN_IN });
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary min-h-11"
-              >
-                <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>Sign out</span>
-              </button>
-            </div>
-          </div>
-        </>
+      {sheetOpen && (
+        <MobileNavSheet pathname={pathname} onClose={() => setSheetOpen(false)} />
       )}
     </>
   );

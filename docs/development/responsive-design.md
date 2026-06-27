@@ -2,7 +2,7 @@
 
 **Created:** 2026-06-27  
 **Last modified:** 2026-06-27  
-**Last modified summary:** Initial SSOT for mobile/tablet layout patterns after a full-app responsive pass.
+**Last modified summary:** Theme cycle control, mobile Menu sheet aligned with sidebar sections.
 
 FleetCrown is **mobile-first and dark-first**. Every authenticated route must be usable on a 320px-wide phone without horizontal page scroll, with primary actions reachable above the floating bottom nav.
 
@@ -44,8 +44,8 @@ Defined in `src/app/globals.css` `:root`:
 
 Navigation:
 
-- **Desktop (`md+`)**: `Sidebar` + full `AppTopBar` search
-- **Mobile**: `AppTopBar` page label + icon search; `MobileNav` (3 tabs + Loki FAB + More sheet with sign-out)
+- **Desktop (`md+`)**: `Sidebar` + full `AppTopBar` search + theme cycle in top bar and sidebar footer
+- **Mobile**: `AppTopBar` page label + icon search + theme cycle; bottom bar is **Today · Control · Loki · Menu**; the Menu sheet mirrors sidebar sections (Work / Private / Site) with Settings, appearance, and sign-out in the footer
 
 ## Component patterns
 
@@ -58,6 +58,7 @@ Navigation:
 | Control project rail | `ui-control-project-list` | Vertical list on phones; horizontal scroll removed |
 | Horizontal filters | `overflow-x-auto ui-scroll-fade-right` | Today, Projects, Events, Prompts chip rows |
 | Touch targets | `min-h-11 sm:min-h-0` on icon actions | WCAG 2.5.5 on phones |
+| Theme | `ThemeToggle` cycle button (`ui-theme-cycle-btn`) | One control cycles Light → Dark → Auto; select variant in Settings |
 
 ## Public / auth surfaces
 

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCommandPalette } from "@/hooks/use-command-palette";
 import { NotificationsPill } from "./NotificationsPill";
 import { FleetRunnerStatusPill } from "@/components/desktop/FleetRunnerStatusPill";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { NAV_ITEMS } from "@/config/navigation";
 import { isCurrentPath } from "@/lib/navigation";
 
@@ -79,6 +80,7 @@ export function AppTopBar({
             <LayoutPanelLeft className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
+        <ThemeToggle />
         <FleetRunnerStatusPill />
         <NotificationsPill />
       </div>

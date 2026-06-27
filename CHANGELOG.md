@@ -2,6 +2,16 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (b)
+
+### Changed
+- **Theme control.** Light / Dark / Auto is now a single cycle button in the top bar,
+  sidebar footer, and mobile menu — not three separate buttons. Settings uses one
+  dropdown.
+- **Mobile navigation.** Bottom bar is Today · Control · Loki · Menu; the Menu sheet
+  lists routes by sidebar section (Work / Private / Site) with appearance, settings,
+  and sign-out in the footer.
+
 ## 2026-06-27
 
 ### Added

@@ -90,6 +90,7 @@ FleetCrown is the name because it positions the *product* as the authoritative c
 - **OG / social images**: All use the same mark + `APP_NAME` / tagline from SSOT. Per-article and per-user variants exist and should continue to stamp the small brand mark in the corner for recognition.
 - **Font & typography discipline**: Headings use the display font + `--tracking-display`. Micro / nano sizes and label tracking are CSS vars. Never put font-family or size literals for brand text in components.
 - **Responsive / mobile (2026-06-27)**: All authenticated routes must work at 320px+ without horizontal page scroll. SSOT: `docs/development/responsive-design.md` + Layer 1 chrome tokens (`--mobile-chrome-bottom`, `--app-viewport-height`) and shell classes (`.app-viewport-pane`, `.app-page-compact`). Full-height chat/terminal pages must not use raw `100vh`/`100dvh` in JSX. Modals and drawers must clear the floating bottom nav on phones.
+- **Theme (2026-06-27)**: One `ThemeToggle` cycle button (`ui-theme-cycle-btn`) — never three separate Light/Dark/Auto buttons. Placed in top bar, sidebar footer, and mobile menu footer; Settings uses the `select` variant only.
 
 ## When Evaluating Future Names or Visual Refreshes
 
