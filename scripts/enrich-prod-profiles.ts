@@ -34,6 +34,13 @@ const NAME_TO_DIR_OVERRIDES: Record<string, string> = {
   "revamp-it": "revampit",
 };
 
+const PLACEHOLDER_DESCRIPTION = /^local repository imported from/i;
+
+function isPlaceholderDescription(description: string | null | undefined): boolean {
+  const t = description?.trim();
+  return !t || PLACEHOLDER_DESCRIPTION.test(t);
+}
+
 function localDirFor(name: string): string | null {
   const dirs = readdirSync(DEV_ROOT);
   const target = (NAME_TO_DIR_OVERRIDES[name.toLowerCase()] ?? name).toLowerCase();
@@ -101,8 +108,10 @@ async function main() {
       }
     }
     if (!profile) continue;
-    // Keep an existing human-written description.
-    if (p.description?.trim()) delete profile.description;
+    // Keep a human-written description; replace import placeholders.
+    if (p.description?.trim() && !isPlaceholderDescription(p.description)) {
+      delete profile.description;
+    }
 
     const fields = Object.entries(profile).filter(([, v]) => v);
     if (!fields.length) { console.log(`— ${p.name}: nothing extracted, skipped`); continue; }

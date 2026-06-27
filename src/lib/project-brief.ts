@@ -1,7 +1,10 @@
 import { z } from "zod";
+import { and, eq } from "drizzle-orm";
 import { callGroqText } from "@/lib/groq";
+import { db } from "@/db";
+import { attributes, entities } from "@/db/schema";
+import { SOURCE_FLEETCROWN_UI } from "@/lib/constants";
 import { patchProject } from "@/db/queries/projects";
-import { upsertEntityAttribute } from "@/db/queries/utils";
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 
 /**
@@ -149,12 +152,40 @@ export async function applyProjectProfile(
     "problem", "solution", "current_alternatives", "competitors",
     "complements_substitutes", "partnerships", "potential_customers", "expansion_ideas",
   ] as const;
-  for (const key of attrKeys) {
+
+  const entries = attrKeys.flatMap((key) => {
     const value = profile[key];
-    if (!value) continue;
-    const ok = await upsertEntityAttribute(userId, entityId, key, value);
-    if (!ok) return null;
-    applied[key] = value;
+    return value ? ([[key, value] as const]) : [];
+  });
+
+  if (entries.length > 0) {
+    // One owner check + one transaction — avoids 17 round trips over a remote DB
+    // (the enrich-prod-profiles script was hitting ETIMEDOUT mid-apply).
+    const [owner] = await db
+      .select({ id: entities.id })
+      .from(entities)
+      .where(and(eq(entities.id, entityId), eq(entities.userId, userId)));
+    if (!owner) return null;
+
+    await db.transaction(async (tx) => {
+      for (const [key, value] of entries) {
+        const normalized = key.toLowerCase().replace(/\s+/g, "_");
+        await tx
+          .insert(attributes)
+          .values({
+            userId,
+            entityId,
+            key: normalized,
+            value,
+            source: SOURCE_FLEETCROWN_UI,
+          })
+          .onConflictDoUpdate({
+            target: [attributes.userId, attributes.entityId, attributes.key],
+            set: { value, updatedAt: new Date() },
+          });
+        applied[key] = value;
+      }
+    });
   }
 
   scheduleProjectProfileReindexByEntityId(userId, entityId);

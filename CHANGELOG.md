@@ -4,11 +4,11 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 ## 2026-06-27 (k)
 
-### Changed
-- **Prod profile backfill.** Ran `enrich-prod-profiles.ts --apply` against Hetzner —
-  16 projects now have architecture/conventions/definition_of_done from local
-  repo docs (FleetCrown, OrangeCat, Kivvi, Revamp-it, …). Vector index reindexed.
-- **`enrich-prod-profiles.ts`** — retries transient Groq network failures (up to 3).
+### Fixed
+- **`applyProjectProfile` batch writes.** Attribute upserts run in one transaction
+  (fixes ETIMEDOUT when enriching prod over a remote DB connection).
+- **Prod backfill complete.** petvity, sbb-lost-found, and Bitbaum now have full
+  build-contract profiles; 20/32 projects indexed with architecture attrs.
 
 ## 2026-06-27 (j)
 
