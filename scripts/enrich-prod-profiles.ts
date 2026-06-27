@@ -84,12 +84,23 @@ async function main() {
     await new Promise((r) => setTimeout(r, 8000)); // pace every Groq call, success or not
 
     let profile;
-    try {
-      profile = await extractProjectProfile(p.name, docs);
-    } catch (e) {
-      console.log(`✗ ${p.name}: extraction failed (${e instanceof Error ? e.message : e})`);
-      continue;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        profile = await extractProjectProfile(p.name, docs);
+        break;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const transient = msg.includes("fetch failed") || msg.includes("429") || msg.includes("groq 5");
+        if (!transient || attempt >= 2) {
+          console.log(`✗ ${p.name}: extraction failed (${msg})`);
+          profile = undefined;
+          break;
+        }
+        console.log(`… ${p.name}: retrying after transient Groq error (${msg})`);
+        await new Promise((r) => setTimeout(r, 25_000));
+      }
     }
+    if (!profile) continue;
     // Keep an existing human-written description.
     if (p.description?.trim()) delete profile.description;
 

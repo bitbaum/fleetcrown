@@ -6,8 +6,10 @@ Project profiles must hold the full static context (what the project should beco
 filled by AI from free-form text/voice, never by forms. Dynamic context (what happened,
 what's next) must be one coherent story, not five overlapping surfaces.
 
-> Status 2026-06-12: Phases 1, 2 and 4a DONE (commit 8db6028 + follow-up).
-> 2d ran via scripts/enrich-prod-profiles.ts against the Hetzner prod DB.
+> Status 2026-06-27: Phases 1, 2 and 4a DONE. 2d re-run via
+> `scripts/enrich-prod-profiles.ts --apply` — 16/32 prod projects now have full
+> build-contract attrs (architecture/conventions/definition_of_done) from local
+> README + CLAUDE.md; vector index reindexed on box (24 chunks).
 > Phase 3 deliberately deferred — the explorer audit showed /activity already
 > consolidated /history + /digests; remaining overlap is naming, not
 > architecture. BLOCKER discovered during deploy (2026-06-12): the Vercel team

@@ -2,6 +2,14 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (k)
+
+### Changed
+- **Prod profile backfill.** Ran `enrich-prod-profiles.ts --apply` against Hetzner —
+  16 projects now have architecture/conventions/definition_of_done from local
+  repo docs (FleetCrown, OrangeCat, Kivvi, Revamp-it, …). Vector index reindexed.
+- **`enrich-prod-profiles.ts`** — retries transient Groq network failures (up to 3).
+
 ## 2026-06-27 (j)
 
 ### Added
