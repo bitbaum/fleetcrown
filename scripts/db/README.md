@@ -27,6 +27,9 @@ for OrangeCat's auth/storage — that is separate from FleetCrown's plain Postgr
 | `bootstrap-migration-ledger.ts` | Seed `drizzle.__drizzle_migrations` when schema arrived via `push` (one-time). |
 | `audit-duplicate-projects.ts` | List case-insensitive duplicate project entities per user. |
 | `merge-duplicate-projects.ts` | Merge duplicate project entities (dry run by default; `--apply` to write). Run after imports that created `botsmann` + `Botsmann` pairs. |
+| `retire-stale-projects.ts` | Explicit merge/delete list for renamed or obsolete projects (dry run by default; `--apply`). |
+| `link-prod-runtime.ts` | Upsert `user_projects.dir_path` for entities missing Fleet Runner links. |
+| `list-projects.ts` | Inventory helper — entity attr/goal counts + runtime rows. |
 | `SETUP_HETZNER.md` | Provision + install + secure a Hetzner box for Postgres 17. |
 | `BOTH_PRODUCTS_ONE_HOST.md` | Layer two databases on one Postgres instance — role + pg_hba setup, capacity math, "when to split" triggers. |
 

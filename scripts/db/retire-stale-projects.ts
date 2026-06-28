@@ -21,6 +21,7 @@ const MERGE_PAIRS: Array<{ winner: string; loser: string; reason: string }> = [
   { winner: "fleetcrown", loser: "Cockpit", reason: "Cockpit renamed to FleetCrown — same product" },
   { winner: "aoz-housing", loser: "AOZ", reason: "Empty duplicate shell" },
   { winner: "surf-your-life", loser: "SYL", reason: "Empty duplicate shell" },
+  { winner: "surf-your-life", loser: "swiss-longevity-hub", reason: "Renamed to Surf Your Life — stale SLH repo retired" },
   { winner: "ivy-portal", loser: "Ivy", reason: "Empty duplicate shell" },
   { winner: "revampit", loser: "revamp-it", reason: "Duplicate; revampit has dir_path + richer profile" },
   { winner: "truthseeker", loser: "truthseeker-tmp", reason: "Import stub superseded by truthseeker" },

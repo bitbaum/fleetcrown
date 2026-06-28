@@ -18,7 +18,6 @@ box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
 | datacat-web-app          | 4006 | datacat.orangecat.ch            | datacat               |
 | aoz-wohnen-app           | 4008 | aoz-wohnen.orangecat.ch         | aoz_wohnen            |
 | surf-your-life-app       | 4009 | surf-your-life.orangecat.ch     | surf_your_life        |
-| swiss-longevity-hub-app  | 4010 | slh.orangecat.ch                | swiss_longevity_hub   |
 | vitareba-app             | 4011 | vitareba.orangecat.ch           | vitareba              |
 | revamp-info-app          | 4012 | revamp-info.orangecat.ch        | revampit (shared)     |
 | petvity-app              | 4013 | petvity.orangecat.ch            | petvity               |
@@ -100,8 +99,6 @@ via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
   its hardcoded prod-SSL.
 - surf-your-life: `lib/domain/auth.ts` split (db-using verifyEmailToken →
   `lib/domain/verify-email.ts`) so client components stop pulling pg.
-- swiss-longevity-hub: Auth.js split-config (`auth.config.ts` edge-safe for
-  middleware), Suspense around ResetPasswordForm, lazy Resend client.
 - vitareba/petvity: `@vercel/blob` → `lib/storage.ts` local-disk helper
   (UPLOADS_DIR=/opt/<app>/uploads, Caddy serves /uploads/*). Vercel Blob was
   never actually configured in prod — there were zero blobs to migrate.
@@ -115,7 +112,7 @@ via `.husky/pre-push` + `scripts/selfhost-deploy-revampit.sh` (also in
 ## DNS (Infomaniak, orangecat.ch zone)
 
 A records → 167.233.22.31: @, www (CNAME), bridge, fleetcrown, revampit,
-supabase, kivvi, datacat, aoz-wohnen, surf-your-life, slh, vitareba,
+supabase, kivvi, datacat, aoz-wohnen, surf-your-life, vitareba,
 revamp-info, petvity, printcraft, sbb, reparaturbonus. Caddy issues certs on
 first resolvable request.
 

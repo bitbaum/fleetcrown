@@ -32,6 +32,7 @@ const DEV_ROOT = join(homedir(), "dev");
 // covers genuinely different names.
 const NAME_TO_DIR_OVERRIDES: Record<string, string> = {
   "revamp-it": "revampit",
+  bitbaum: "bitbaum",
 };
 
 const PLACEHOLDER_DESCRIPTION = /^local repository imported from/i;

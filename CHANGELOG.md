@@ -2,6 +2,15 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-28 (l)
+
+### Changed
+- **Retired `swiss-longevity-hub`.** Merged into `surf-your-life` (renamed product);
+  removed from `scripts/hetzner/apps.conf`; dropped orphaned `swiss_longevity_hub`
+  Postgres database on the box. Prod fleet: **18** projects.
+- **`Bitbaum` runtime linked.** `user_projects` row now points at `/home/g/dev/bitbaum`
+  for Fleet Runner dispatch.
+
 ## 2026-06-27 (k)
 
 ### Fixed
