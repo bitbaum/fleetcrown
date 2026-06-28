@@ -7,9 +7,9 @@ filled by AI from free-form text/voice, never by forms. Dynamic context (what ha
 what's next) must be one coherent story, not five overlapping surfaces.
 
 > Status 2026-06-28: Phases 1, 2 and 4a DONE. 2d re-run via
-> `scripts/enrich-prod-profiles.ts --apply` — 18/19 prod projects now have full
-> build-contract attrs (architecture/conventions/definition_of_done) from local
-> README + CLAUDE.md; vector index reindexed on box.
+> `scripts/enrich-prod-profiles.ts --apply` — **19/19** prod projects now have full
+> build-contract attrs (architecture/conventions/definition_of_done); last gap
+> `reparaturbonus-zh` backfilled 2026-06-28.
 > **Project retirement (2026-06-28):** `scripts/db/retire-stale-projects.ts --apply`
 > merged Cockpit→fleetcrown, empty dupes (AOZ, SYL, Ivy, revamp-it, truthseeker-tmp),
 > and deleted infra/stub rows (dotfiles, kivitendo-erp, Catomean, FitFoot, Hirnli,
