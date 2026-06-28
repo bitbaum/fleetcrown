@@ -125,6 +125,8 @@ first resolvable request.
   retired per owner — Mongo-backed features are dead code.
 - **sbb-lost-found**: only the demo frontend is deployed (its backend
   services were never deployed anywhere, incl. on Vercel).
+- **swiss-longevity-hub / slh.orangecat.ch**: retired 2026-06-28 — product
+  renamed to surf-your-life; DB dropped, removed from `apps.conf`.
 - **datacat**: deployed as full-stack Next app; the express `backend/` dir is
   local-dev legacy.
 - **SMTP**: GoTrue + Auth.js reset-mail flows need an SMTP/Resend decision.
