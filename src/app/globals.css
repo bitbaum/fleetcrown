@@ -2367,14 +2367,11 @@
   .ui-control-autopilot-state {
     @apply inline-flex flex-wrap items-center gap-2 text-sm text-text-secondary;
   }
-  .ui-control-autopilot-btn {
-    @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto;
-  }
   .ui-control-autopilot-btn-build {
-    @apply ui-control-autopilot-btn bg-accent-primary text-text-inverted hover:bg-accent-hover;
+    @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto bg-accent-primary text-text-inverted hover:bg-accent-hover;
   }
   .ui-control-autopilot-btn-pause {
-    @apply ui-control-autopilot-btn border border-border-default bg-surface-base text-text-primary hover:border-border-strong hover:bg-surface-overlay;
+    @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto border border-border-default bg-surface-base text-text-primary hover:border-border-strong hover:bg-surface-overlay;
   }
   .ui-control-project-autopilot-paused {
     @apply shrink-0 text-micro font-medium uppercase tracking-wide text-text-muted;
