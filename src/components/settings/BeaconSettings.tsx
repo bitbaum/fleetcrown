@@ -13,6 +13,7 @@ import {
   DEFAULT_AUTO_INJECT_MODE,
 } from "@/lib/constants/control";
 import { WHISPER_MODELS, TRANSCRIPTION_PROVIDERS, POPUP_MODES, AUTO_INJECT_MODES, type AutoInjectMode } from "@/config/beacon";
+import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 
 export function BeaconSettings() {
   const [data, setData]         = useState<BeaconSettingsData | null>(null);
@@ -64,6 +65,7 @@ export function BeaconSettings() {
       if (!res.ok) await throwApiError(res, "Failed to save");
       setData({ popup_mode: popupMode, countdown_seconds: countdown, min_idle_seconds: minIdle, whisper_model: model, transcription_provider: provider, auto_inject_mode: autoInjectMode });
       setSaved(true);
+      window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {

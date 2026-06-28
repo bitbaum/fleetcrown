@@ -2355,6 +2355,30 @@
   .ui-control-fleet-hint {
     @apply text-xs leading-relaxed text-text-tertiary;
   }
+  .ui-control-hero-autopilot {
+    @apply flex flex-col gap-4 border-t border-border-subtle pt-4 sm:flex-row sm:items-center sm:justify-between;
+  }
+  .ui-control-autopilot-status {
+    @apply flex min-w-0 flex-col gap-1;
+  }
+  .ui-control-autopilot-title {
+    @apply text-sm font-semibold text-text-primary;
+  }
+  .ui-control-autopilot-state {
+    @apply inline-flex flex-wrap items-center gap-2 text-sm text-text-secondary;
+  }
+  .ui-control-autopilot-btn {
+    @apply inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition-colors disabled:opacity-50 sm:w-auto;
+  }
+  .ui-control-autopilot-btn-build {
+    @apply ui-control-autopilot-btn bg-accent-primary text-text-inverted hover:bg-accent-hover;
+  }
+  .ui-control-autopilot-btn-pause {
+    @apply ui-control-autopilot-btn border border-border-default bg-surface-base text-text-primary hover:border-border-strong hover:bg-surface-overlay;
+  }
+  .ui-control-project-autopilot-paused {
+    @apply shrink-0 text-micro font-medium uppercase tracking-wide text-text-muted;
+  }
   .ui-control-live-details {
     @apply rounded-2xl border border-border-subtle bg-surface-raised;
     box-shadow: var(--shadow-panel);

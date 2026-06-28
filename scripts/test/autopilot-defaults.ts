@@ -86,6 +86,8 @@ function runTests(): void {
     const hook = readFileSync("src/hooks/use-automation-policy.ts", "utf8");
     assert(/useState<AutoInjectMode>\(DEFAULT_AUTO_INJECT_MODE\)/.test(hook),
       "useAutomationPolicy must not default to off before settings load");
+    assert(/FLEETCROWN_REFRESH_EVENT/.test(hook),
+      "useAutomationPolicy must refetch on FLEETCROWN_REFRESH_EVENT");
   });
 
   check("Settings UI initial state seeds from the constant", () => {

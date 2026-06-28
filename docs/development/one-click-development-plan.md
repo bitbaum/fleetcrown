@@ -6,7 +6,9 @@ Project profiles must hold the full static context (what the project should beco
 filled by AI from free-form text/voice, never by forms. Dynamic context (what happened,
 what's next) must be one coherent story, not five overlapping surfaces.
 
-> Status 2026-06-28: Phases 1, 2 and 4a DONE. 2d re-run via
+> Status 2026-06-28: Phases 1, 2 and 4a DONE. **Phase 1 shipped:** `ui-control-hero`
+> fleet autopilot card with Start building / Pause fleet, per-project Building/Paused
+> toggles + rail override chips, pulsing dot when fleet is building. 2d re-run via
 > `scripts/enrich-prod-profiles.ts --apply` — **18/18** prod projects now have full
 > build-contract attrs (architecture/conventions/definition_of_done); last gap
 > `reparaturbonus-zh` backfilled 2026-06-28.
@@ -30,12 +32,12 @@ what's next) must be one coherent story, not five overlapping surfaces.
 ## Phase 1 — Play/Pause UX (the wow)
 State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.auto_inject_mode_override`.
 
-- [ ] 1a. Global play/pause button in the /control hero (big, ▶/⏸, shows "Fleet autopilot:
+- [x] 1a. Global play/pause button in the /control hero (big, ▶/⏸, shows "Fleet autopilot:
       building / paused"). PATCH /api/beacon-settings. SSE already refetches on change.
-- [ ] 1b. Per-project play/pause button on ProjectCard replacing the ProjectAutopilotToggle
+- [x] 1b. Per-project play/pause button on ProjectCard replacing the ProjectAutopilotToggle
       dropdown. Click toggles effective state via override; small "auto" affordance to
       clear override back to inherit. PATCH /api/projects/{id} (existing contract).
-- [ ] 1c. Clear "building is happening" feedback already exists (SSE status, current prompt,
+- [x] 1c. Clear "building is happening" feedback already exists (SSE status, current prompt,
       sent prompts) — make sure the play state visually connects to it (pulsing dot when on).
 
 ## Phase 2 — AI-powered project context (no forms)

@@ -2,6 +2,17 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-28 (m)
+
+### Added
+- **Control play/pause hero.** `/control` uses `ui-control-hero` with a prominent fleet
+  autopilot card (Building / Paused status, Start building / Pause fleet). Per-project
+  toggles use matching Building/Paused labels; project rail shows override chips.
+
+### Changed
+- **`useAutomationPolicy`** refetches on `FLEETCROWN_REFRESH_EVENT` and broadcasts after
+  global mode changes so Control stays in sync with Settings.
+
 ## 2026-06-28 (l)
 
 ### Changed

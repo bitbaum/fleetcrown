@@ -20,15 +20,17 @@ import { Loader2, Pause, Play } from "lucide-react";
 import { patchJson } from "@/lib/api/fetch";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
 import type { AutoInjectMode } from "@/config/beacon";
+import { cn } from "@/lib/utils";
 
 export interface ProjectAutopilotToggleProps {
   /** Entity id (UUID) of the project. Required for the PATCH endpoint. */
   projectId: string | null;
   /** Current per-project override, or null if inheriting the user default. */
   currentOverride: AutoInjectMode | null;
-  /** The user-level mode this project would inherit if no override is set.
-   *  Surfaced in the tooltip so the user knows what "follow global" means right now. */
+  /** The user-level mode this project would inherit if no override is set. */
   inheritedMode: AutoInjectMode;
+  /** Compact chip for project rail rows; default is full card control. */
+  variant?: "card" | "rail";
   /** Called after a successful PATCH so the parent can refetch /api/control. */
   onAfter?: () => void;
 }
@@ -37,6 +39,7 @@ export function ProjectAutopilotToggle({
   projectId,
   currentOverride,
   inheritedMode,
+  variant = "card",
   onAfter,
 }: ProjectAutopilotToggleProps) {
   const [localOverride, setLocalOverride] = useState<AutoInjectMode | null>(currentOverride);
@@ -47,10 +50,6 @@ export function ProjectAutopilotToggle({
     setLocalOverride(currentOverride);
   }, [currentOverride]);
 
-  // Projects without a registered entity id (legacy paths-only projects
-  // discovered from agent-projects.conf) can't be overridden — there's no
-  // entity row to PATCH. Hide the toggle rather than render a button that
-  // 404s on click.
   if (!projectId) return null;
 
   const effectiveMode = localOverride ?? inheritedMode;
@@ -72,8 +71,6 @@ export function ProjectAutopilotToggle({
         setLocalOverride(previous);
         return;
       }
-      // Trigger a global refresh so /control re-fetches and every consumer
-      // (this card + any downstream) picks up the new override.
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
       }
@@ -91,14 +88,24 @@ export function ProjectAutopilotToggle({
     saveOverride(target === inheritedMode ? null : target);
   }
 
-  // "Auto" / "Paused" describe the autopilot POLICY, not live work — the
-  // pulsing accent dot used to fire here on every autopilot-on project (the
-  // default), making idle projects with no agent look like they were actively
-  // building. The pulse now belongs solely to the genuine `working` state
-  // badge; this control is a static policy chip.
   const tooltip = building
-    ? `Autopilot is on for this project${overridden ? " (project override)" : ` (following global: on)`}. It may dispatch the next task when an agent goes idle. Click to pause just this project.`
-    : `Autopilot is paused for this project${overridden ? " (project override)" : ` (following global: off)`}. Click to turn it on.`;
+    ? `Autopilot is on for this project${overridden ? " (project override)" : " (following fleet: on)"}. Click to pause just this project.`
+    : `Autopilot is paused for this project${overridden ? " (project override)" : " (following fleet: off)"}. Click to resume building.`;
+
+  if (variant === "rail") {
+    if (!overridden && building) return null;
+    return (
+      <span
+        className={cn(
+          "ui-control-project-autopilot-paused",
+          building && overridden && "text-accent-text normal-case tracking-normal",
+        )}
+        title={tooltip}
+      >
+        {building ? "On" : "Paused"}
+      </span>
+    );
+  }
 
   return (
     <div className="inline-flex max-w-full flex-wrap items-center gap-2 text-xs">
@@ -108,26 +115,32 @@ export function ProjectAutopilotToggle({
         title={tooltip}
         disabled={saving}
         onClick={toggle}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:opacity-60"
+        className={cn(
+          "inline-flex min-h-11 sm:min-h-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60",
+          building ? "ui-btn-secondary" : "ui-btn-primary",
+        )}
       >
         {saving ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-text-muted" aria-hidden="true" />
+          <Loader2 className="h-4 w-4 animate-spin text-text-muted" aria-hidden="true" />
         ) : building ? (
-          <Pause className="h-3.5 w-3.5 text-accent-text" aria-hidden="true" />
+          <Pause className="h-4 w-4" aria-hidden="true" />
         ) : (
-          <Play className="h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
+          <Play className="h-4 w-4" aria-hidden="true" />
         )}
-        <span className="font-medium text-text-primary">{building ? "Auto" : "Paused"}</span>
+        {building && (
+          <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-accent-primary" />
+        )}
+        <span>{building ? "Building" : "Paused"}</span>
       </button>
       {overridden && (
         <button
           type="button"
           disabled={saving}
           onClick={() => saveOverride(null)}
-          className="text-micro text-accent-text transition-colors hover:text-text-primary disabled:opacity-60"
-          title={`This project no longer follows the global play/pause. Click to follow global again (currently: ${inheritedMode}).`}
+          className="ui-btn-chip text-micro disabled:opacity-60"
+          title={`Follow fleet autopilot again (currently: ${inheritedMode === "on" ? "building" : "paused"}).`}
         >
-          override · follow global
+          Follow fleet
         </button>
       )}
       {error && <span className="text-xs text-status-warning">{error}</span>}

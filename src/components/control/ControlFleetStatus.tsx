@@ -135,7 +135,7 @@ export function ControlFleetStatus({
       : undefined;
 
   return (
-    <section className="ui-control-fleet">
+    <section className="ui-control-hero">
       <div className="ui-control-fleet-top">
         {/* Compact status indicator only. The prominent offline explanation +
             remediation lives once, in RunnerStatusBanner — this header must not
@@ -150,14 +150,6 @@ export function ControlFleetStatus({
           {runnerDetail && <span className="text-text-muted">· {runnerDetail}</span>}
         </div>
         <div className="ui-control-fleet-actions">
-          {/* Name the control so the fleet-wide play/pause reads as "Autopilot"
-              — the one place that word now means the auto-inject engine. */}
-          <span className="ui-micro-label hidden text-text-tertiary sm:inline">Autopilot</span>
-          <AutomationPolicyControl
-            mode={automationMode}
-            saving={automationSaving}
-            onChange={onAutomationChange}
-          />
           <button
             type="button"
             onClick={onRefresh}
@@ -180,6 +172,31 @@ export function ControlFleetStatus({
             </button>
           )}
         </div>
+      </div>
+
+      <div className="ui-control-hero-autopilot">
+        <div className="ui-control-autopilot-status">
+          <p className="ui-control-autopilot-title">Fleet autopilot</p>
+          <p className="ui-control-autopilot-state">
+            {automationMode === "on" && (
+              <span className="ui-dot ui-dot-positive animate-pulse shrink-0" aria-hidden="true" />
+            )}
+            <span className="font-medium text-text-primary">
+              {automationMode === "on" ? "Building" : "Paused"}
+            </span>
+            {automationMode === "on" && working > 0 && (
+              <span className="text-text-muted">
+                · {working} agent{working === 1 ? "" : "s"} active
+              </span>
+            )}
+          </p>
+        </div>
+        <AutomationPolicyControl
+          mode={automationMode}
+          saving={automationSaving}
+          onChange={onAutomationChange}
+          variant="hero"
+        />
       </div>
 
       {runnerExecutionStall?.stalled && (

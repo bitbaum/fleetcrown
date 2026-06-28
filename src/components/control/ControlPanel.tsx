@@ -308,6 +308,7 @@ export function ControlPanel() {
         selectedTab={selectedTab}
         onSelect={setSelectedTab}
         cardProps={cardProps}
+        automationMode={automationPolicy.mode}
       />
 
       {/* Workspaces panel — collapsed-by-default on every breakpoint when the

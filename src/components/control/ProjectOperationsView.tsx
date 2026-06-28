@@ -7,7 +7,9 @@ import { compactRelativeDate } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { ProjectOperationsSnapshot } from "./control-presenter";
 import { STATE_DEFINITIONS } from "@/lib/control-states";
+import type { AutoInjectMode } from "@/config/beacon";
 import { ProjectCard } from "./ProjectCard";
+import { ProjectAutopilotToggle } from "./ProjectAutopilotToggle";
 
 type CardBaseProps = Omit<Parameters<typeof ProjectCard>[0], "snapshot" | "isOnlyReady">;
 type ProjectRailSort = "priority" | "recent" | "az";
@@ -28,11 +30,13 @@ export function ProjectOperationsView({
   selectedTab,
   onSelect,
   cardProps,
+  automationMode,
 }: {
   snapshots: ProjectOperationsSnapshot[] | null;
   selectedTab: string | null;
   onSelect: (tab: string) => void;
   cardProps: (project: ProjectState) => CardBaseProps;
+  automationMode: AutoInjectMode;
 }) {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<ProjectRailSort>("priority");
@@ -173,7 +177,17 @@ export function ProjectOperationsView({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-medium text-text-primary">{snapshot.project.tab}</span>
-                    {snapshot.attentionReason && <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title={snapshot.attentionReason} />}
+                    <span className="flex shrink-0 items-center gap-1.5">
+                      <ProjectAutopilotToggle
+                        variant="rail"
+                        projectId={snapshot.project.projectId}
+                        currentOverride={snapshot.project.autoInjectModeOverride}
+                        inheritedMode={automationMode}
+                      />
+                      {snapshot.attentionReason && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-status-warning" title={snapshot.attentionReason} />
+                      )}
+                    </span>
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-text-secondary">{snapshot.display.stateLabel}</span>
                   {evidence && <span className="mt-0.5 block truncate text-micro text-text-muted">{evidence}</span>}
