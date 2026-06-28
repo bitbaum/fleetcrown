@@ -6,10 +6,14 @@ Project profiles must hold the full static context (what the project should beco
 filled by AI from free-form text/voice, never by forms. Dynamic context (what happened,
 what's next) must be one coherent story, not five overlapping surfaces.
 
-> Status 2026-06-27: Phases 1, 2 and 4a DONE. 2d re-run via
-> `scripts/enrich-prod-profiles.ts --apply` — 16/32 prod projects now have full
+> Status 2026-06-28: Phases 1, 2 and 4a DONE. 2d re-run via
+> `scripts/enrich-prod-profiles.ts --apply` — 18/19 prod projects now have full
 > build-contract attrs (architecture/conventions/definition_of_done) from local
-> README + CLAUDE.md; vector index reindexed on box (24 chunks).
+> README + CLAUDE.md; vector index reindexed on box.
+> **Project retirement (2026-06-28):** `scripts/db/retire-stale-projects.ts --apply`
+> merged Cockpit→fleetcrown, empty dupes (AOZ, SYL, Ivy, revamp-it, truthseeker-tmp),
+> and deleted infra/stub rows (dotfiles, kivitendo-erp, Catomean, FitFoot, Hirnli,
+> Warbuffet, OpenClaw). Prod inventory: **19** project entities (was 32).
 > Phase 3 deliberately deferred — the explorer audit showed /activity already
 > consolidated /history + /digests; remaining overlap is naming, not
 > architecture. BLOCKER discovered during deploy (2026-06-12): the Vercel team

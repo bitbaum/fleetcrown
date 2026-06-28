@@ -224,3 +224,71 @@ export async function findProjectEntityByName(userId: string, name: string) {
     .limit(1);
   return row ?? null;
 }
+
+/** Remove RAG rows keyed by project name (source_id or metadata.project). */
+export async function purgeProjectKnowledgeEmbeddings(userId: string, projectKey: string): Promise<number> {
+  const key = projectKey.trim();
+  const result = await db.execute(sql`
+    DELETE FROM knowledge_embeddings
+    WHERE user_id = ${userId}
+      AND (
+        lower(source_id) = lower(${key})
+        OR lower(metadata->>'project') = lower(${key})
+      )
+  `);
+  return Number((result as { rowCount?: number }).rowCount ?? 0);
+}
+
+/** Delete orphan runtime rows whose tab name matches a retired project. */
+export async function deleteUserProjectByName(userId: string, name: string): Promise<number> {
+  const deleted = await db
+    .delete(userProjects)
+    .where(and(eq(userProjects.userId, userId), sql`lower(${userProjects.name}) = lower(${name.trim()})`))
+    .returning({ id: userProjects.id });
+  return deleted.length;
+}
+
+/**
+ * Retire a project entity with no canonical merge target. Cascades attrs/interactions;
+ * nulls FKs on goals/history; deletes matching user_projects + knowledge_embeddings rows.
+ */
+export async function deleteProjectEntityByName(userId: string, name: string): Promise<{ name: string; id: string }> {
+  const row = await findProjectEntityByName(userId, name);
+  if (!row) throw new Error(`deleteProjectEntityByName: no project "${name}" for user ${userId}`);
+
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      DELETE FROM knowledge_embeddings
+      WHERE user_id = ${userId}
+        AND (
+          lower(source_id) = lower(${row.name})
+          OR lower(metadata->>'project') = lower(${row.name})
+        )
+    `);
+    await tx
+      .delete(userProjects)
+      .where(and(eq(userProjects.userId, userId), sql`lower(${userProjects.name}) = lower(${row.name})`));
+    await tx.delete(projectStates).where(eq(projectStates.projectId, row.id));
+    await tx.delete(entities).where(and(eq(entities.id, row.id), eq(entities.userId, userId)));
+  });
+
+  return { name: row.name, id: row.id };
+}
+
+/** Merge loser → winner, purge loser RAG rows, drop loser runtime tab if present. */
+export async function retireProjectMerge(
+  userId: string,
+  winnerName: string,
+  loserName: string,
+): Promise<{ winner: string; loser: string }> {
+  const winner = await findProjectEntityByName(userId, winnerName);
+  const loser = await findProjectEntityByName(userId, loserName);
+  if (!winner) throw new Error(`retireProjectMerge: winner "${winnerName}" not found`);
+  if (!loser) throw new Error(`retireProjectMerge: loser "${loserName}" not found`);
+
+  await mergeProjectEntityPair(winner.id, loser.id, userId);
+  await purgeProjectKnowledgeEmbeddings(userId, loser.name);
+  await deleteUserProjectByName(userId, loser.name);
+
+  return { winner: winner.name, loser: loser.name };
+}

@@ -112,7 +112,7 @@ function selfTest() {
   const tmpConf = path.join(os.tmpdir(), `home-projects-selftest-${process.pid}.conf`);
   fs.writeFileSync(tmpConf, [
     "# top-level comment",
-    "FleetCrown|/home/g/dev/cockpit",
+    "FleetCrown|/home/g/dev/fleetcrown",
     "OrangeCat|/home/g/dev/orangecat|codex",      // 3rd field: codex adapter
     "   ",                                          // blank line — should be skipped
     "# inline comment",
@@ -128,9 +128,9 @@ function selfTest() {
       { name: "loads 4 valid entries, skips comments and malformed lines",
         check: () => projects.size === 4 },
       { name: "case-insensitive lookup matches mixed-case names",
-        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/cockpit" },
+        check: () => resolveProjectPath("FLEETCROWN", projects) === "/home/g/dev/fleetcrown" },
       { name: "lowercase lookup also works",
-        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/cockpit" },
+        check: () => resolveProjectPath("fleetcrown", projects) === "/home/g/dev/fleetcrown" },
       { name: "tab name with embedded spaces resolves",
         check: () => resolveProjectPath("Tab With Spaces", projects) === "/some/where" },
       { name: "unknown project returns undefined",

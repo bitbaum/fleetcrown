@@ -59,7 +59,7 @@ function selfTest() {
     const customBody = intent === "custom" ? "run security audit on FleetCrown" : undefined;
     const out = renderPromptForDispatch({
       project: "FleetCrown",
-      projectPath: "/home/g/dev/cockpit",
+      projectPath: "/home/g/dev/fleetcrown",
       intent,
       customInstructions: customBody,
     });
