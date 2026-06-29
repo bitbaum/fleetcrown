@@ -2,6 +2,13 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-28 (n)
+
+### Changed
+- **Phase 3 prompt vocabulary.** SSOT in `config/control-labels.ts`: Saved prompts
+  (/prompts), Up next (queue), Recent dispatches (activity), Paste from history
+  (composer chips). Composer hints say "auto-send" to distinguish from fleet Autopilot.
+
 ## 2026-06-28 (m)
 
 ### Added

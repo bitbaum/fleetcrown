@@ -2,6 +2,7 @@
 
 import { AlertCircle, Loader2, Send, Mic, ListPlus, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { COMPOSER_HINT } from "@/config/control-labels";
 
 export function PromptInput({
   custom,
@@ -64,13 +65,13 @@ export function PromptInput({
     : processing
     ? "Transcribing..."
     : custom.trim()
-    ? "Enter sends · Alt+Enter queues (or sends now if idle)"
+    ? COMPOSER_HINT.enterSends
     : autoContinueEnabled === false
-    ? "Auto-continue paused"
+    ? COMPOSER_HINT.autoSendPaused
     : autoContinueEnabled === true && isComposing
-    ? "Auto-continue pauses while composing"
+    ? COMPOSER_HINT.autoSendWhileTyping
     : autoContinueEnabled === true
-    ? "Auto-continue ready"
+    ? COMPOSER_HINT.autoSendReady
     : "");
 
   return (

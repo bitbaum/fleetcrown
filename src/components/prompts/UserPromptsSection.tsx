@@ -14,6 +14,7 @@ import type { Project } from "./types";
 import type { PromptTemplate } from "@/config/prompt-library";
 import { RunModal } from "./RunModal";
 import { ScheduleModal } from "./ScheduleModal";
+import { SAVED_PROMPTS_TITLE } from "@/config/control-labels";
 
 /**
  * Adapt a user-owned prompt into the PromptTemplate shape the existing
@@ -86,10 +87,10 @@ export function UserPromptsSection({
     <section className="space-y-3">
       <header className="flex items-center justify-between">
         <div>
-          <h2 className="ui-page-subtitle">Your prompts</h2>
+          <h2 className="ui-page-subtitle">{SAVED_PROMPTS_TITLE}</h2>
           <p className="text-sm text-text-muted">
             {prompts.length === 0
-              ? "Build your own library. Project-pinned or global — your call."
+              ? "Reusable templates you write — separate from dispatches on Control."
               : `${prompts.length} saved · most-recent first`}
           </p>
         </div>

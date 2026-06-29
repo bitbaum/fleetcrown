@@ -8,7 +8,7 @@ import type { ProjectDigest } from "@/db/queries/digests";
 export function StatsLine({ stats }: { stats: ProjectDigest["stats"] }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-text-tertiary">
-      <span><span className="text-text-secondary tabular-nums">{stats.promptsSent}</span> prompts</span>
+      <span><span className="text-text-secondary tabular-nums">{stats.promptsSent}</span> dispatches</span>
       <span><span className="text-text-secondary tabular-nums">{stats.runsStarted}</span> runs</span>
       <span><span className="text-text-secondary tabular-nums">{stats.runsFinished}</span> finished</span>
       {stats.success > 0 && (

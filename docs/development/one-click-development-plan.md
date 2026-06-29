@@ -18,7 +18,8 @@ what's next) must be one coherent story, not five overlapping surfaces.
 > (dotfiles, kivitendo-erp, Catomean, FitFoot, Hirnli, Warbuffet, OpenClaw).
 > Prod inventory: **18** project entities (was 32). `Bitbaum` runtime dir linked via
 > `scripts/db/link-prod-runtime.ts`.
-> Phase 3 deliberately deferred — the explorer audit showed /activity already
+> **Phase 3 (2026-06-28):** prompt vocabulary SSOT in `config/control-labels.ts`
+> — Saved prompts / Up next / Recent dispatches / Paste from history.
 > consolidated /history + /digests; remaining overlap is naming, not
 > architecture. BLOCKER discovered during deploy (2026-06-12): the Vercel team
 > `orangecat` was blocked for fair-use overage — the then-current
@@ -54,8 +55,8 @@ State already exists: `beacon_settings.auto_inject_mode` (on|off) + `entities.au
 
 ## Phase 3 — Dynamic context cleanup (light touch)
 /activity is already the consolidated surface; /history and /digests are redirects.
-- [ ] 3a. Naming pass only: "Sent prompts" vs "Your prompts" vs reuse autocomplete —
-      make labels self-explanatory. No rewrites of working systems.
+- [x] 3a. Naming pass only: "Sent prompts" vs "Your prompts" vs reuse autocomplete —
+      make labels self-explanatory. No rewrites of working systems. SSOT: `config/control-labels.ts`.
 
 ## Phase 4 — Tell the story
 - [ ] 4a. Thoughts post: one-click development / the play button as the product.

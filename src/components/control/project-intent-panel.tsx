@@ -5,6 +5,7 @@ import { Eraser, Loader2 } from "lucide-react";
 import { useMicComposer } from "@/hooks/use-mic-composer";
 import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
+import { PASTE_FROM_HISTORY_TITLE } from "@/config/control-labels";
 import { APP_NAME } from "@/config/brand";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
@@ -14,10 +15,10 @@ import { ProjectPromptLibrary } from "./ProjectPromptLibrary";
 import { haptic } from "@/lib/haptics";
 import { stripHarnessScaffolding } from "@/lib/activity-status";
 
-/** "Reuse recent prompts" chip row — rendered in both the running and idle
+/** "Paste from history" chip row — rendered in both the running and idle
  *  branches of IntentButtonPanel; extracted so the two stay identical.
  *  Only shows with 2+ useful items to avoid a third competing list
- *  (Sent / Reuse recent / Prompt library) crowding the card. */
+ *  (Recent dispatches / Paste from history / Prompt library) crowding the card. */
 function RecentPromptChips({
   prompts,
   onPick,
@@ -28,7 +29,7 @@ function RecentPromptChips({
   if (prompts.length < 2) return null;
   return (
     <div className="space-y-1.5">
-      <p className="ui-kicker">Reuse recent prompts</p>
+      <p className="ui-kicker">{PASTE_FROM_HISTORY_TITLE}</p>
       <div className="flex flex-wrap gap-1.5">
         {prompts.map((r) => {
           const text = r.customPrompt.replace(/\s+/g, " ").trim();

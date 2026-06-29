@@ -7,6 +7,12 @@ import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
 import type { ActivityItem } from "@/db/queries/prompt-history";
 import { buildProjectActivityLedger } from "./project-activity-ledger";
+import {
+  ALL_ACTIVITY_LINK,
+  PROJECT_ACTIVITY_TITLE,
+  RECENT_DISPATCHES_TITLE,
+  recentDispatchChip,
+} from "@/config/control-labels";
 
 export function ProjectActivitySection({
   injections,
@@ -47,14 +53,10 @@ export function ProjectActivitySection({
         className="flex w-full items-center gap-1.5 ui-link-muted"
       >
         <Activity className="h-3.5 w-3.5" />
-        <span className="font-medium">Activity</span>
-        {/* promptCount is the last-24h dispatches for this project, capped at
-            5 (see /api/control activityByProject). Bare "N sent" read as a
-            lifetime total; "5+" when capped + the window in the tooltip keep it
-            honest without bloating the chip. "+N commits" stays today-scoped. */}
+        <span className="font-medium">{PROJECT_ACTIVITY_TITLE}</span>
         {promptCount > 0 && (
           <span className="text-text-muted/60" title="Prompts dispatched in the last 24h (up to 5 shown)">
-            {promptCount >= 5 ? "5+" : promptCount} sent
+            {recentDispatchChip(promptCount)}
           </span>
         )}
         {(git?.todayCount ?? 0) > 0 && (
@@ -68,14 +70,14 @@ export function ProjectActivitySection({
           className="mt-2 inline-block ui-link-muted text-xs"
           title="Full unified history — every prompt, run outcome, and digest for this project"
         >
-          Full history →
+          {ALL_ACTIVITY_LINK}
         </Link>
       )}
       {open && (
         <div className="mt-3 space-y-4">
           {promptCount > 0 && (
             <div className="space-y-1.5">
-              <p className="ui-kicker">Sent prompts</p>
+              <p className="ui-kicker">{RECENT_DISPATCHES_TITLE}</p>
               {ledger.filter((event) => event.kind === "user_prompt").map((event) => {
                 const fullText = event.body;
                 const preview = fullText.length > 70 ? `${fullText.slice(0, 70).trimEnd()}...` : fullText;

@@ -18,6 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Loader2, Sparkles } from "lucide-react";
+import { PROMPT_QUEUE_EMPTY_HINT, promptQueueHeading } from "@/config/control-labels";
 import { QueueItemRow, SortableQueueItem, type RowProps } from "./queue-item-row";
 
 export function QueueList({
@@ -123,7 +124,7 @@ export function QueueList({
     <div className="border-t border-border-subtle">
       <div className="flex items-center justify-between px-4 pt-3 pb-2 sm:px-5">
         <div className="min-w-0">
-          <p className="ui-kicker">Queue · {queue.length}</p>
+          <p className="ui-kicker">{promptQueueHeading(queue.length)}</p>
           {blockedReason && (
             <p className="mt-1 text-micro text-status-warning" title="Next best will stay on recovery work while this gate is active. Use the row send button to run a queued item now.">
               {blockedReason} · pick an item manually
@@ -156,7 +157,7 @@ export function QueueList({
 
       {queue.length === 0 && (
         <p className="px-4 pb-3 text-micro text-text-muted sm:px-5">
-          Alt+Enter while composing to queue a prompt
+          {PROMPT_QUEUE_EMPTY_HINT}
         </p>
       )}
 

@@ -2,6 +2,7 @@
 
 import { BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { CATEGORY_META, FEATURED_PROJECT_PROMPTS, substituteProjectName } from "@/config/prompt-library";
+import { PROMPT_LIBRARY_TITLE } from "@/config/control-labels";
 import { cn } from "@/lib/utils";
 
 export function ProjectPromptLibrary({
@@ -28,7 +29,7 @@ export function ProjectPromptLibrary({
       >
         <span className="flex items-center gap-1.5 font-medium">
           <BookOpen className="h-3 w-3" />
-          Prompt library
+          {PROMPT_LIBRARY_TITLE}
         </span>
         {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
