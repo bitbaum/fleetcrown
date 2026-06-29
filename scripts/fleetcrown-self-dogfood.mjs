@@ -59,7 +59,7 @@ async function loginLocal(page) {
   if (!pw) throw new Error("LOCAL_AUTH_PASSWORD required for localhost dogfood");
   await page.goto(`${base}/sign-in?callbackUrl=/loki`, { waitUntil: "networkidle" });
   const ownerTab = page.getByRole("button", { name: /owner key/i });
-  if (await ownerTab.count()) await ownerTab.click();
+  if (await ownerTab.count()) await ownerTab.click({ force: true, timeout: 10_000 });
   await page.locator('input[type="password"]').first().fill(pw);
   await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 });
@@ -124,20 +124,28 @@ try {
 
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
     await page.getByRole("button", { name: "Send" }).click();
-    await page.waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind", { timeout: 90_000 });
+    const gotDispatch = await page
+      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind, .ui-error", { timeout: 120_000 })
+      .then(() => true)
+      .catch(() => false);
     await page.waitForTimeout(1500);
-
-    const lokiAudit = await page.evaluate(() => {
-      const foot = document.querySelector(".ui-loki-dispatch-foot");
-      return {
-        kind: document.querySelector(".ui-loki-kind")?.textContent?.trim(),
-        status: foot?.querySelector("span:nth-of-type(2)")?.textContent?.trim(),
-        links: foot ? [...foot.querySelectorAll("a")].map((a) => a.textContent?.trim()) : [],
-        bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
-      };
-    });
+    let lokiAudit = { kind: null, status: null, links: [], bubble: null };
+    if (!gotDispatch) {
+      note("loki-send", "high", "Loki Send did not produce dispatch footer within 120s", "Check GROQ_API_KEY, network, or composer disabled state");
+      report.shots.push(await shot(page, "03-loki-timeout", "Loki — send hung or failed"));
+    } else {
+      lokiAudit = await page.evaluate(() => {
+        const foot = document.querySelector(".ui-loki-dispatch-foot");
+        return {
+          kind: document.querySelector(".ui-loki-kind")?.textContent?.trim(),
+          status: foot?.querySelector("span:nth-of-type(2)")?.textContent?.trim(),
+          links: foot ? [...foot.querySelectorAll("a")].map((a) => a.textContent?.trim()) : [],
+          bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
+        };
+      });
+      report.shots.push(await shot(page, "03-loki-dispatch", "Loki — after Move forward dispatch"));
+    }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
-    report.shots.push(await shot(page, "03-loki-dispatch", "Loki — after Move forward dispatch"));
 
     if (lokiAudit.status?.includes("runs when the builder is online")) {
       note("presence", "high", "Dispatch footer still says builder offline on localhost", "Local dev has no box-runner; copy should say cloud-only or link to prod");
@@ -195,14 +203,23 @@ try {
     report.shots.push(await shot(page, "02-loki-prod", "Prod Loki scoped"));
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
     await page.getByRole("button", { name: "Send" }).click();
-    await page.waitForSelector(".ui-loki-dispatch-foot", { timeout: 120_000 });
+    const gotDispatch = await page
+      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind, .ui-error", { timeout: 120_000 })
+      .then(() => true)
+      .catch(() => false);
     await page.waitForTimeout(2000);
-    const lokiAudit = await page.evaluate(() => ({
-      status: document.querySelector(".ui-loki-dispatch-foot span:nth-of-type(2)")?.textContent?.trim(),
-      bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
-    }));
+    let lokiAudit = { status: null, bubble: null };
+    if (!gotDispatch) {
+      note("loki-send", "high", "Prod Loki send did not return dispatch footer in 120s", "API or resolver hang — check /api/conversations messages route");
+      report.shots.push(await shot(page, "03-loki-timeout-prod", "Prod Loki timeout"));
+    } else {
+      lokiAudit = await page.evaluate(() => ({
+        status: document.querySelector(".ui-loki-dispatch-foot span:nth-of-type(2)")?.textContent?.trim(),
+        bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
+      }));
+      report.shots.push(await shot(page, "03-loki-dispatch-prod", "Prod dispatch"));
+    }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
-    report.shots.push(await shot(page, "03-loki-dispatch-prod", "Prod dispatch"));
 
     const cloud = page.getByRole("link", { name: /Watch in Cloud/i });
     if (await cloud.count()) {
