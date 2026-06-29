@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getJson, patchJson } from "@/lib/api/fetch";
+import { getJson, patchJson, postJson } from "@/lib/api/fetch";
 import type { BeaconSettingsData } from "@/db/queries/beacon-settings";
 import type { AutoInjectMode } from "@/config/beacon";
 import { DEFAULT_AUTO_INJECT_MODE, DEFAULT_BEACON_COUNTDOWN_S } from "@/lib/constants/control";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import type { FleetKickResult } from "@/lib/fleet-kick";
 
 /**
  * Global automatic-continuation policy. The server setting is authoritative;
@@ -33,8 +34,8 @@ export function useAutomationPolicy() {
     return () => window.removeEventListener(FLEETCROWN_REFRESH_EVENT, reload);
   }, [reload]);
 
-  const updateMode = useCallback(async (next: AutoInjectMode) => {
-    if (saving) return;
+  const updateMode = useCallback(async (next: AutoInjectMode): Promise<FleetKickResult | null> => {
+    if (saving) return null;
     const previous = mode;
     setMode(next);
     setSaving(true);
@@ -42,11 +43,20 @@ export function useAutomationPolicy() {
       const response = await patchJson("/api/beacon-settings", { auto_inject_mode: next });
       if (!response.ok) {
         setMode(previous);
-        return;
+        return null;
       }
       window.dispatchEvent(new CustomEvent(FLEETCROWN_REFRESH_EVENT));
+
+      if (previous === "off" && next === "on") {
+        const kickRes = await postJson("/api/control/fleet-kick", { source: "play_button" });
+        if (kickRes.ok) {
+          return (await kickRes.json()) as FleetKickResult;
+        }
+      }
+      return null;
     } catch {
       setMode(previous);
+      return null;
     } finally {
       setSaving(false);
     }

@@ -18,6 +18,10 @@ export const DEFAULT_POPUP_MODE          = "web"; // "web" | "disabled" — "bot
  *  health). Users who want to dispatch every prompt manually toggle off. */
 export const DEFAULT_AUTO_INJECT_MODE    = "on" as const;
 
+/** Max projects fleet-kick will start in one batch. Autopilot keeps filling
+ *  slots as agents finish — this prevents 18 simultaneous cold starts. */
+export const MAX_CONCURRENT_BUILDING     = 3;
+
 // Fleet query windows — used by getFleetSummary (today.ts) to classify agent states from DB only.
 // PROMPT_RUNNING_WINDOW_S: a started prompt older than this is considered stale (crashed without cleanup).
 // Uses READY_WINDOW_S for the "waiting" cutoff so both the UI banner and the summary pill agree.

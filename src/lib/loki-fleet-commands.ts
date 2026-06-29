@@ -83,6 +83,14 @@ export function isBusinessPlanRequest(text: string): boolean {
   return BUSINESS_PLAN_VERB_RE.test(t) && BUSINESS_PLAN_NOUN_RE.test(t);
 }
 
+const DEVELOP_ALL_FLEET_RE =
+  /\b(develop|build|kick|start|run)\b[\s\S]{0,48}\b(all|every|whole|entire)\b[\s\S]{0,24}\b(projects?|fleet)\b|\b(all|every)\b[\s\S]{0,32}\b(projects?|fleet)\b[\s\S]{0,24}\b(develop|build|kick|start|run)\b|\bbuild\b[\s\S]{0,24}\bfleet\b/i;
+
+/** "Develop all my projects" / "build the whole fleet" — batch fleet-kick. */
+export function isDevelopAllFleetRequest(text: string): boolean {
+  return DEVELOP_ALL_FLEET_RE.test(text.trim());
+}
+
 /** Writable profile fields Loki may propose — keys match attributes or entity.description. */
 export const PROFILE_FIELD_ALIASES: Record<string, string> = {
   mission: "mission",

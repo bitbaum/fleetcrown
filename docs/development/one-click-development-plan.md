@@ -6,9 +6,14 @@ Project profiles must hold the full static context (what the project should beco
 filled by AI from free-form text/voice, never by forms. Dynamic context (what happened,
 what's next) must be one coherent story, not five overlapping surfaces.
 
-> Status 2026-06-28: Phases 1, 2 and 4a DONE. **Phase 1 shipped:** `ui-control-hero`
+> Status 2026-06-29: Phases 1, 2 and 4a DONE. **Phase 1 shipped:** `ui-control-hero`
 > fleet autopilot card with Start building / Pause fleet, per-project Building/Paused
-> toggles + rail override chips, pulsing dot when fleet is building. 2d re-run via
+> toggles + rail override chips, pulsing dot when fleet is building.
+> **Phase 1b (2026-06-29):** Start building now calls `POST /api/control/fleet-kick`
+> — proactively dispatches `next_best` on up to `MAX_CONCURRENT_BUILDING` (3) eligible
+> idle projects; reactive autopilot unchanged. Loki: "develop all my projects".
+> **nudge-idle cron fixed** to target `auto_inject_mode != 'off'` (was dead legacy filter).
+> 2d re-run via
 > `scripts/enrich-prod-profiles.ts --apply` — **18/18** prod projects now have full
 > build-contract attrs (architecture/conventions/definition_of_done); last gap
 > `reparaturbonus-zh` backfilled 2026-06-28.

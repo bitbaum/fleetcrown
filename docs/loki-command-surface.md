@@ -5,7 +5,7 @@ design spec for the original vision and is retained as the rationale of record; 
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
-**Last modified:** 2026-06-29 — Loki business plan + profile update fast paths; project-aware chat.
+**Last modified:** 2026-06-29 — fleet-kick on Start building; nudge-idle autopilot fix.
 
 ### Shipped state (verified in the running app)
 
@@ -19,7 +19,10 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   message to **dispatch** vs **chat** automatically.
 - **Fleet fast paths:** "list my projects" returns the registered fleet from Postgres (no
   web search). "create project …" registers via `createUserProject`; "…and let's go"
-  dispatches `next_best` on the new project.
+  dispatches `next_best` on the new project. **"develop all my projects"** runs batch
+  `fleet-kick` (respects multi-select on the right pane).
+- **Fleet kick (Control):** **Start building** turns autopilot on and kicks up to three
+  idle projects with `next_best`; reactive loops continue when agents finish.
 - **Business plan:** "generate/iterate business plan for `<project>`" calls the same
   `generateBusinessPlan` path as the Projects UI — persists plan + actions, links to
   `/projects?open=…`.

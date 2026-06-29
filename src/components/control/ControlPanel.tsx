@@ -27,6 +27,7 @@ import { GitHubRepoSuggestions } from "./GitHubRepoSuggestions";
 import { LocalDevSuggestions } from "./LocalDevSuggestions";
 import { MissingCLIsBanner } from "@/components/desktop/MissingCLIsBanner";
 import { useAutomationPolicy } from "@/hooks/use-automation-policy";
+import type { AutoInjectMode } from "@/config/beacon";
 
 export function ControlPanel() {
   const {
@@ -41,6 +42,14 @@ export function ControlPanel() {
 
   const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
   const automationPolicy = useAutomationPolicy();
+
+  const handleAutomationChange = (next: AutoInjectMode) => {
+    void automationPolicy.updateMode(next).then((kick) => {
+      if (!kick) return;
+      setQueuedNotice(kick.message.replace(/\*\*/g, ""));
+      setTimeout(() => setQueuedNotice(null), 9000);
+    });
+  };
   const [activityOpen, setActivityOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<string | null>(null);
   const [highlightTab, setHighlightTab] = useState<string | null>(null);
@@ -296,7 +305,7 @@ export function ControlPanel() {
         automationSaving={automationPolicy.saving}
         refreshing={refreshing}
         onRefresh={() => refresh(true)}
-        onAutomationChange={automationPolicy.updateMode}
+        onAutomationChange={handleAutomationChange}
         onNewProject={() => (runtimeAvailable ? setBootstrapOpen(true) : setNewProjectOpen(true))}
         projectOverrideCount={projectOverrideCount}
       />}

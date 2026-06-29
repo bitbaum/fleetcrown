@@ -11,6 +11,9 @@ npm run test:home
 echo "→ test:autopilot-defaults"
 npm run test:autopilot-defaults
 
+echo "→ test:fleet-kick"
+npm run test:fleet-kick
+
 echo "→ test:digest"
 npm run test:digest
 

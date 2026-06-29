@@ -2,7 +2,18 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-06-29 — Loki business plan + profile update fast paths.
+**Last modified:** 2026-06-29 — fleet-kick batch loops; nudge-idle cron fix.
+
+## 2026-06-29 (s)
+
+### Added
+- **Fleet kick.** Start building on Control (or "develop all my projects" in Loki) proactively
+  dispatches `next_best` on eligible idle projects — capped at 3 concurrent; autopilot
+  keeps loops going when agents finish.
+
+### Fixed
+- **nudge-idle cron** now targets users with autopilot on (`!= off`); the legacy `next_best`
+  filter had made the scheduled idle nudge a no-op since the 2026-06-11 mode collapse.
 
 ## 2026-06-29 (r)
 

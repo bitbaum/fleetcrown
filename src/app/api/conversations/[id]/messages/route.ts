@@ -47,6 +47,7 @@ import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-
 import {
   formatProjectList,
   isBusinessPlanRequest,
+  isDevelopAllFleetRequest,
   isListProjectsQuery,
   parseCreateProjectRequest,
   parseProfileUpdateRequest,
@@ -59,6 +60,7 @@ import {
   proposeLokiProfileUpdate,
   runLokiBusinessPlan,
 } from "@/lib/loki/project-mutations";
+import { formatFleetKickReply, kickFleet } from "@/lib/fleet-kick";
 import { getProjectLimit } from "@/lib/plan";
 
 const Body = z
@@ -275,6 +277,27 @@ export async function POST(
       kind: "chat",
       content: `Registered **${projectName}**. Select it on the right, then say what to run.`,
       meta: { source: "create-project", projectKey: projectName },
+    });
+    return NextResponse.json({ message: assistant });
+  }
+
+  if (isDevelopAllFleetRequest(text)) {
+    const scopeKeys =
+      selectedProjects.length > 0 ? selectedProjects : undefined;
+    const outcome = await kickFleet(userId, {
+      source: "loki",
+      projectKeys: scopeKeys,
+      requireFleetOn: false,
+    });
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content: formatFleetKickReply(outcome),
+      meta: {
+        source: "fleet-kick",
+        kicked: outcome.kicked,
+        runnerConnected: outcome.runnerConnected,
+      },
     });
     return NextResponse.json({ message: assistant });
   }

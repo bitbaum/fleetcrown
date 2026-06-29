@@ -4,10 +4,9 @@
 // to keep moving.
 //
 // v1 scope (deliberately narrow):
-//   - Only fires for users on auto_inject_mode = 'next_best' (L4 "Continuous").
-//     Beacon (L3) is reactive to agent-finish events, not idle-poll. Strategist
-//     (L5) requires session-handoff context the cron doesn't have. Both are
-//     v2 follow-ups.
+//   - Only fires for users with fleet autopilot ON (auto_inject_mode != 'off').
+//     Legacy stored values (next_best, beacon, …) count as on via the same rule
+//     the rest of the app uses after the 2026-06-11 collapse.
 //   - Respects per-project auto_inject_mode_override (the toggle shipped
 //     2026-06-05). A project paused via the ProjectCard switch is never nudged.
 //   - Conservative thresholds:
@@ -19,12 +18,10 @@
 //
 // Schedule: daily at 04:00 UTC (system crontab on the box, see
 // scripts/install-hetzner-crons.sh). To run more often, drop the schedule
-// to */30 * * * * for tighter
-// idle-nudge cadence. For now the daily run picks up any project that
-// has been idle > IDLE_WINDOW_HOURS and fires next_best on it once.
+// to */30 * * * * for tighter idle-nudge cadence.
 
 import { type NextRequest, NextResponse } from "next/server";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, ne, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { entities, beaconSettings, orchestrationRuns, pendingCommands } from "@/db/schema";
 import { logDebug } from "@/db/queries/debug-logs";
@@ -69,11 +66,11 @@ export async function GET(req: NextRequest) {
   const nudgedRows: Array<{ userId: string; projectId: string; projectName: string }> = [];
 
   try {
-    // 1. Users on L4 (next_best). Small table, single query.
+    // 1. Users with fleet autopilot enabled (any non-off mode, incl. legacy rows).
     const activeUsers = await db
       .select({ userId: beaconSettings.userId })
       .from(beaconSettings)
-      .where(eq(beaconSettings.autoInjectMode, "next_best"));
+      .where(ne(beaconSettings.autoInjectMode, "off"));
 
     if (activeUsers.length === 0) {
       return NextResponse.json({
@@ -81,7 +78,7 @@ export async function GET(req: NextRequest) {
         checkedUsers: 0,
         nudged: 0,
         skipped,
-        note: "no users on L4 (next_best) — scheduler idle by design",
+        note: "no users with fleet autopilot on — scheduler idle by design",
       });
     }
 
@@ -191,7 +188,7 @@ export async function GET(req: NextRequest) {
     logDebug({
       source: "api/crons/nudge-idle",
       level: "info",
-      message: `Nudged ${nudgedRows.length} idle project(s) across ${activeUsers.length} L4 user(s)`,
+      message: `Nudged ${nudgedRows.length} idle project(s) across ${activeUsers.length} autopilot-on user(s)`,
       meta: { nudged: nudgedRows, skipped, capped: nudgedRows.length >= MAX_NUDGES_PER_TICK },
     });
 

@@ -56,6 +56,25 @@ export async function enqueueDispatchCommand(
   return enqueuePendingCommand({ userId, type: "dispatch", payload });
 }
 
+/** True when an unexecuted command already targets this project (inject or dispatch). */
+export async function hasOpenPendingForProject(userId: string, projectKey: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: pendingCommands.id })
+    .from(pendingCommands)
+    .where(
+      and(
+        eq(pendingCommands.userId, userId),
+        isNull(pendingCommands.executedAt),
+        sql`(
+          ${pendingCommands.payload}->>'projectKey' = ${projectKey}
+          OR ${pendingCommands.payload}->>'tab' = ${projectKey}
+        )`,
+      ),
+    )
+    .limit(1);
+  return !!row;
+}
+
 /** Hosted runner (Phase 0): a read-only analysis/plan/review of a project's
  *  repo, executed on hosted compute rather than the operator's machine. Its own
  *  command type so it never collides with the local-runner dispatch/inject path. */
