@@ -8,6 +8,7 @@ import { getJson, postJson, throwApiError } from "@/lib/api/fetch";
 import { REFRESH_AFTER_DISPATCH_MS, REFRESH_AFTER_LAUNCH_MS, AGENT_COLD_START_MS } from "@/lib/constants/timings";
 import type { Agent } from "@/lib/agent-registry";
 import { FLEETCROWN_REFRESH_EVENT } from "@/lib/client-events";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { useEventStream } from "@/lib/event-stream";
 type AgentEntry = ControlData["agentRegistry"]["agents"][number];
 type TabResult = { status: string; tab?: string; reason?: string; error?: string };
@@ -33,7 +34,7 @@ export interface ControlDataHook {
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
   refresh: (manual?: boolean) => Promise<void>;
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued" }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null }>;
   launchProject: (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => Promise<void>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, ag: string) => Promise<void>;
@@ -233,7 +234,7 @@ export function useControlData(): ControlDataHook {
     return () => clearTimeout(id);
   }, [lastTabResultsAt]);
 
-  const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued" }> => {
+  const inject = async (tab: string, promptKey?: string, customPrompt?: string): Promise<{ mode: "direct" | "queued"; runnerConnected: boolean | null }> => {
     // Same-machine fast path (POST localhost:3001/api/inject → home/server.ts
     // → bash inject_prompt) was retired in Session 4 of killing-the-bash-
     // runner (2026-06-11). Every inject now goes through the cloud
@@ -245,10 +246,13 @@ export function useControlData(): ControlDataHook {
     const body = await res.json().catch(() => ({}));
     // Don't let an offline runner read as success — say it out loud.
     if (body.warning === "runner-offline") {
-      setError(body.message ?? "Fleet Runner is offline — queued; it will run when the runner reconnects.");
+      setError(body.message ?? EXECUTOR_COPY.queuedWhenOfflineLong);
     }
     setTimeout(refresh, REFRESH_AFTER_DISPATCH_MS);
-    return { mode: body.mode === "queued" ? "queued" : "direct" };
+    return {
+      mode: body.mode === "queued" ? "queued" : "direct",
+      runnerConnected: typeof body.runnerConnected === "boolean" ? body.runnerConnected : null,
+    };
   };
 
   const launchProject = async (tab: string, dir: string, agent?: string, model?: string, initialPrompt?: string) => {

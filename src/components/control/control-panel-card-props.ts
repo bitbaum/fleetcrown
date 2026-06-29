@@ -3,6 +3,7 @@ import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { PromptMeta } from "@/lib/agent-config";
 import type { AutoInjectMode } from "@/config/beacon";
 import { TOAST_LONG_MS } from "@/lib/constants/timings";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 type RegistryEntry = { id: string; label: string; modelSuggestions: string[] };
 
@@ -11,7 +12,7 @@ type Deps = {
   zellijTabs: string[];
   selectedAgent: string;
   switchableRegistry: RegistryEntry[];
-  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct" }>;
+  inject: (tab: string, promptKey?: string, customPrompt?: string) => Promise<{ mode: "queued" | "direct"; runnerConnected: boolean | null }>;
   runWithBrain: (project: ProjectState, intent: OrchestrationTaskIntentId) => Promise<void>;
   runCustomPrompt: (project: ProjectState, prompt: string, agent: string) => Promise<void>;
   setError: (error: string | null) => void;
@@ -53,9 +54,13 @@ export function buildCardProps(deps: Deps) {
     availableAgents,
     onInject: async (tab: string, promptKey?: string, customPrompt?: string) => {
       try {
-        const { mode } = await deps.inject(tab, promptKey, customPrompt);
+        const { mode, runnerConnected } = await deps.inject(tab, promptKey, customPrompt);
         if (mode === "queued") {
-          deps.setQueuedNotice(`Command queued — local runner will execute it for ${tab}`);
+          const msg =
+            runnerConnected === false
+              ? EXECUTOR_COPY.queuedWhenOffline
+              : EXECUTOR_COPY.queuedWithBuilderOnline;
+          deps.setQueuedNotice(`${msg} (${tab})`);
           setTimeout(() => deps.setQueuedNotice(null), TOAST_LONG_MS);
         }
       } catch (err) {

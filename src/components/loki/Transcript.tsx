@@ -6,6 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { dispatchStatusLabel } from "@/lib/dispatch-status";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
@@ -21,18 +22,15 @@ const KIND_LABEL: Record<string, string> = {
 function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   if (!meta) return null;
   const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
-  const offline = meta.warning === "runner-offline";
   const failed = meta.ok === false;
-  const warn = offline || failed;
-  const status = failed
-      ? "Dispatch failed"
-      : offline
-      ? EXECUTOR_COPY.queuedWhenOffline
-      : meta.mode === "queued"
-        ? EXECUTOR_COPY.queuedWhenOffline
-        : meta.mode === "direct"
-          ? "Running now"
-          : "Dispatched";
+  const runnerConnected =
+    typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
+  const { label: status, warn } = dispatchStatusLabel({
+    ok: failed ? false : true,
+    mode: typeof meta.mode === "string" ? meta.mode : null,
+    warning: typeof meta.warning === "string" ? meta.warning : null,
+    runnerConnected,
+  });
   // Only present when the operator pinned a non-default model in the composer.
   const agent = typeof meta.agent === "string" ? meta.agent : null;
   const model = typeof meta.model === "string" ? meta.model : null;

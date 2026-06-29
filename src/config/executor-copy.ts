@@ -39,6 +39,11 @@ export const EXECUTOR_COPY = {
   queuedWhenOfflineLong:
     "Work stays in the queue and starts when a builder is online (cloud or this computer).",
 
+  /** Cloud web app always queues; this means a live builder will drain it. */
+  queuedWithBuilderOnline: "With builder — starting shortly",
+  queuedWithBuilderOnlineLong:
+    "the builder will run this in the agent terminal (Claude or your chosen CLI on Cloud or this computer).",
+
   onboarding: {
     stepTitle: "You're ready to build",
     stepDescriptionTeam:

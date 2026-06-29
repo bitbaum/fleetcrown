@@ -49,7 +49,8 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   **Terminal → Cloud** (default) or **This computer** (desktop app).
 - **Move forward:** "move forward", "keep building", "make progress", etc. dispatch
   `next_best` when one project is selected; otherwise batch `fleet-kick` (same as Control
-  Start building scope).
+  Start building scope). When the cloud builder is online, queued dispatches show
+  **With builder — starting shortly** (not "builder offline").
 
 Open questions §6 #1 (chat vs command — both, routed by intent resolution) and #2
 (dispatches go to the project's existing session; the conversation is the human-readable

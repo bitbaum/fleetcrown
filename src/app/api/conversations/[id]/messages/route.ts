@@ -43,6 +43,7 @@ import {
   type Attachment,
 } from "@/lib/loki/attachments";
 import { describeAttachedImages } from "@/lib/loki/vision";
+import { dispatchAssistantContent } from "@/lib/dispatch-status";
 import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-context";
 import {
   formatProjectList,
@@ -137,11 +138,15 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
     opts.userId,
   );
   const ok = inject.status < 400;
-  const queued = inject.body.mode === "queued";
+  const dispatchInput = {
+    ok,
+    mode: typeof inject.body.mode === "string" ? inject.body.mode : null,
+    warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
+    runnerConnected:
+      typeof inject.body.runnerConnected === "boolean" ? inject.body.runnerConnected : null,
+  };
   const content = ok
-    ? queued
-      ? `Queued **${opts.projectKey}** — the builder will run this in the agent terminal (Claude or your chosen CLI on Cloud or this computer).`
-      : `Running on **${opts.projectKey}** in the agent terminal now.`
+    ? dispatchAssistantContent(opts.projectKey, dispatchInput)
     : `Could not dispatch to ${opts.projectKey}: ${
         typeof inject.body.error === "string" ? inject.body.error : "dispatch failed"
       }`;
@@ -153,8 +158,9 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
       projectKey: opts.projectKey,
       intentId: opts.intentId,
       ok,
-      mode: inject.body.mode ?? null,
-      warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
+      mode: dispatchInput.mode,
+      warning: dispatchInput.warning,
+      runnerConnected: dispatchInput.runnerConnected,
       agent: opts.agent ?? null,
       model: opts.model ?? null,
     },

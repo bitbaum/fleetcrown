@@ -37,6 +37,8 @@
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",
     "test:tab-match": "npx tsx scripts/test/tab-match.ts",
     "test:activity-ssot": "node scripts/activity-ssot-check.mjs",
+    "dogfood:loki": "node scripts/loki-dogfood.mjs",
+    "test:dispatch-status": "npx tsx scripts/test/dispatch-status.ts",
     "test:digest": "npx tsx scripts/test/digest.ts",
     "test:auth": "npx tsx scripts/test/auth.ts",
     "generate:brand": "npx tsx scripts/generate-brand.mjs",
