@@ -224,6 +224,7 @@ export function LokiWorkspace() {
         <Composer
           key={composerPrefill ?? "default"}
           defaultText={composerPrefill ?? ""}
+          scopedProject={selectedProjects[0] ?? null}
           disabled={false}
           sending={sending}
           onSend={(t, choice, attachments) => void send(t, choice, attachments)}

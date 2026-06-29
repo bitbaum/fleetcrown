@@ -34,7 +34,15 @@ import { resolveCommand, isGenericDevelopHandoff } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
-import { MAX_ATTACHMENTS, MAX_ATTACHMENT_CHARS, renderAttachments } from "@/lib/loki/attachments";
+import {
+  MAX_ATTACHMENTS,
+  AttachmentBodySchema,
+  attachmentNoteLabel,
+  normalizeAttachment,
+  renderTextAttachments,
+  type Attachment,
+} from "@/lib/loki/attachments";
+import { describeAttachedImages } from "@/lib/loki/vision";
 import {
   formatProjectList,
   isListProjectsQuery,
@@ -43,24 +51,21 @@ import {
 } from "@/lib/loki-fleet-commands";
 import { getProjectLimit } from "@/lib/plan";
 
-const Body = z.object({
-  text: z.string().trim().min(1).max(4000),
-  selectedProjects: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
-  agent: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
-  model: z.string().trim().min(1).max(60).optional(),
-  attachments: z
-    .array(
-      z.object({
-        name: z.string().trim().min(1).max(200),
-        content: z.string().max(MAX_ATTACHMENT_CHARS),
-      }),
-    )
-    .max(MAX_ATTACHMENTS)
-    .optional(),
-  /** When true, skip persisting a user turn — used when picking a project chip
-   *  after a needsProject prompt. `text` is still used for resolution/dispatch. */
-  dispatchOnly: z.boolean().optional(),
-});
+const Body = z
+  .object({
+    text: z.string().trim().max(4000),
+    selectedProjects: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
+    agent: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
+    model: z.string().trim().min(1).max(60).optional(),
+    attachments: z.array(AttachmentBodySchema).max(MAX_ATTACHMENTS).optional(),
+    dispatchOnly: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasAttach = (data.attachments?.length ?? 0) > 0;
+    if (!data.text.trim() && !hasAttach) {
+      ctx.addIssue({ code: "custom", message: "Message text or an attachment is required.", path: ["text"] });
+    }
+  });
 
 type DispatchOpts = {
   userId: string;
@@ -73,8 +78,18 @@ type DispatchOpts = {
   attachmentSuffix: string;
   agent?: AdapterId;
   model?: string;
-  attachments?: { name: string; content: string }[];
+  attachments?: Attachment[];
 };
+
+async function buildAttachmentSuffix(
+  attachments: Attachment[] | undefined,
+  userText: string,
+): Promise<string> {
+  const normalized = attachments ?? [];
+  const images = normalized.filter((a): a is Extract<Attachment, { kind: "image" }> => a.kind === "image");
+  const vision = await describeAttachedImages(images, userText);
+  return renderTextAttachments(normalized) + vision;
+}
 
 async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage> {
   const useIntentKey =
@@ -139,13 +154,14 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text, selectedProjects, agent, model, attachments, dispatchOnly } = dataOrResp;
+  const { text: rawText, selectedProjects, agent, model, attachments: rawAttachments, dispatchOnly } = dataOrResp;
+  const text =
+    rawText.trim() ||
+    "What's wrong here and what should we change?";
+  const attachments = rawAttachments?.map(normalizeAttachment);
 
-  const attachmentSuffix = renderAttachments(attachments);
-  const attachmentNote =
-    attachments && attachments.length > 0
-      ? `\n\n[Attached: ${attachments.map((a) => a.name).join(", ")}]`
-      : "";
+  const attachmentSuffix = await buildAttachmentSuffix(attachments, text);
+  const attachmentNote = attachmentNoteLabel(attachments);
 
   const existing = await getConversationWithMessages(userId, conversationId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });

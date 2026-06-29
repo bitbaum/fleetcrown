@@ -29,8 +29,8 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
 - **The Loki page (§4):** the 3-pane layout shipped as specced — conversation list (left),
   transcript (center) with the composer at the bottom, and the selectable **Projects**
   panel (right). Project tiles surface each project's active goal as a subtitle.
-- **Composer affordances (§4):** microphone, file attach, and a **model picker** (defaults
-  to `Auto`) are all present.
+- **Composer affordances (§4):** microphone, file attach (text + **screenshots via paste or picker**), and a **model picker** (defaults
+  to `Auto`, hidden on phones) are all present. Quick-action chips and a scoped-project pill sit above the composer.
 - **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → runner →
   agent-terminal path as a Control "Next best" click, and a dispatched message links back
   with **"Open in Control →"**.
@@ -160,8 +160,7 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 3. **Ambiguous project** with no selection and no mention: ask, or default to most-recent/most-
    active? (Leaning: ask first; learn to pre-select later.)
 4. **Model picker** scope: which models, and does it map to agent adapters (Claude/Codex/etc.)?
-5. **Voice + attachments**: transcription provider; what attachments do for a dispatch (context
-   files handed to the agent?).
+5. **Voice + attachments**: transcription via shared voice hook; **images** are vision-described server-side (Groq Llama 4 Scout) and folded into chat + dispatch prompts; text files remain inline.
 
 ## 7. Phased plan
 

@@ -2921,8 +2921,19 @@
   .ui-loki-attach-chip {
     @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary;
   }
+  .ui-loki-attach-thumb {
+    @apply h-6 w-6 shrink-0 rounded object-cover;
+  }
   .ui-loki-attach-remove {
     @apply text-text-tertiary transition-colors hover:text-text-primary;
+  }
+
+  /* Composer context — scoped project + quick-action chips. */
+  .ui-loki-scope-pill {
+    @apply inline-flex items-center rounded-full border border-accent-primary/30 bg-accent-muted px-2.5 py-0.5 text-micro font-medium text-accent-text;
+  }
+  .ui-loki-scope-hint {
+    @apply text-micro text-text-tertiary;
   }
 
   /* Project multi-select (right pane). */

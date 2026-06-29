@@ -2,6 +2,18 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+**Last modified:** 2026-06-29 — Loki screenshot vision preflight, composer quick chips, scoped project pill.
+
+## 2026-06-29 (p)
+
+### Added
+- **Loki screenshot attachments.** Paste or pick PNG/JPEG/WebP/GIF; Groq vision preflight describes
+  the image for chat and dispatch prompts (terminal agents get text, not raw pixels).
+- **Composer quick chips** (Next best, Code review, Fix tests, Review UI) and scoped-project pill.
+
+### Changed
+- **Model picker** hidden on small screens (Auto default). **FAB hidden on `/loki`** (Loki tab is enough).
+
 ## 2026-06-27 (o)
 
 ### Changed

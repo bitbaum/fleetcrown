@@ -43,6 +43,8 @@ export function AskLokiButton() {
     return () => window.removeEventListener("loki:open", eventHandler);
   }, [router, pathname]);
 
+  if (pathname === "/loki") return null;
+
   return (
     <button
       onClick={() => navigateToLoki(router, pathname)}
