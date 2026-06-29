@@ -2,9 +2,15 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-06-29 — Loki screenshot vision preflight, composer quick chips, scoped project pill.
+**Last modified:** 2026-06-29 — Loki business plan + profile update fast paths.
 
-**Last modified:** 2026-06-29 — Loki chat injects project profile when scoped; screenshot vision preflight.
+## 2026-06-29 (r)
+
+### Added
+- **Loki business plan fast path.** "Generate/iterate business plan for `<project>`" runs
+  `generateBusinessPlan` (same as Projects UI) and links to the Business section.
+- **Loki profile update drafts.** "Set/update mission, stack, DoD, …" queues a Today action;
+  approving applies the attribute (IRON RULE — no silent profile writes from chat).
 
 ## 2026-06-29 (q)
 

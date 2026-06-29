@@ -3,6 +3,9 @@ import { ACTION_TYPE } from "@/lib/constants/statuses";
 import { markActionExecuted } from "@/db/queries/actions";
 import { createCommitment } from "@/db/queries/today";
 import { recordActionAuditEvent } from "@/db/queries/control-audit-events";
+import { patchProject } from "@/db/queries/projects";
+import { upsertEntityAttribute } from "@/db/queries/utils";
+import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { sendTelegramMessage, selfTelegramTarget } from "@/lib/actions/telegram-send";
 import { sendEmail } from "@/lib/email";
 
@@ -25,6 +28,74 @@ const DEFERRED_TYPES = new Set<Action["type"]>([
   ACTION_TYPE.OTHER,
 ]);
 
+type ProfileUpdatePayload = {
+  kind: "profile_update";
+  projectKey: string;
+  fieldKey: string;
+  value: string;
+};
+
+function parseProfileUpdatePayload(payload: Action["payload"]): ProfileUpdatePayload | null {
+  if (!payload || payload.kind !== "profile_update") return null;
+  const fieldKey = typeof payload.fieldKey === "string" ? payload.fieldKey.trim() : "";
+  const value = typeof payload.value === "string" ? payload.value.trim() : "";
+  const projectKey = typeof payload.projectKey === "string" ? payload.projectKey.trim() : "";
+  if (!fieldKey || !value || !projectKey) return null;
+  return { kind: "profile_update", fieldKey, value, projectKey };
+}
+
+async function executeProfileUpdate(
+  userId: string,
+  action: Action,
+  update: ProfileUpdatePayload,
+): Promise<ExecuteActionResult> {
+  const entityId = action.entityId;
+  if (!entityId) {
+    await recordActionAuditEvent(userId, action, "failed", {
+      reason: "profile_update missing entityId",
+    });
+    return { executed: false, error: "missing-entity" };
+  }
+
+  try {
+    if (update.fieldKey === "description") {
+      const updated = await patchProject(userId, entityId, { description: update.value });
+      if (!updated) {
+        await recordActionAuditEvent(userId, action, "failed", {
+          reason: "project not found for description update",
+        });
+        return { executed: false, error: "not-found" };
+      }
+    } else {
+      const ok = await upsertEntityAttribute(userId, entityId, update.fieldKey, update.value);
+      if (!ok) {
+        await recordActionAuditEvent(userId, action, "failed", {
+          reason: "project not found for attribute update",
+        });
+        return { executed: false, error: "not-found" };
+      }
+    }
+
+    scheduleProjectProfileReindexByEntityId(userId, entityId);
+
+    const done = await markActionExecuted(action.id, userId);
+    if (!done) {
+      await recordActionAuditEvent(userId, action, "failed", {
+        reason: "profile updated but action was not in 'approved' state to mark executed",
+      });
+      return { executed: false, error: "not-approved-at-execute-time" };
+    }
+    await recordActionAuditEvent(userId, action, "executed", {
+      meta: { fieldKey: update.fieldKey, projectKey: update.projectKey },
+    });
+    return { executed: true };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    await recordActionAuditEvent(userId, action, "failed", { reason: error });
+    return { executed: false, error };
+  }
+}
+
 /**
  * Perform an APPROVED action's real-world effect, then advance it to 'executed'.
  *
@@ -35,6 +106,12 @@ const DEFERRED_TYPES = new Set<Action["type"]>([
  * do NOT act. The caller must have already approved the action (IRON RULE).
  */
 export async function executeAction(userId: string, action: Action): Promise<ExecuteActionResult> {
+  const profileUpdate =
+    action.type === ACTION_TYPE.OTHER ? parseProfileUpdatePayload(action.payload) : null;
+  if (profileUpdate) {
+    return executeProfileUpdate(userId, action, profileUpdate);
+  }
+
   // External/irreversible types: gate passes, execution intentionally not yet enabled.
   if (DEFERRED_TYPES.has(action.type)) {
     await recordActionAuditEvent(userId, action, "deferred", {

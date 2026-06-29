@@ -19,6 +19,11 @@ export type ActionPayload = {
   // For commitments:
   commitment?: string;
   dueDate?: string;
+  // For Loki profile updates (OTHER + kind=profile_update):
+  kind?: string;
+  projectKey?: string;
+  fieldKey?: string;
+  value?: string;
   // Generic:
   [key: string]: unknown;
 };

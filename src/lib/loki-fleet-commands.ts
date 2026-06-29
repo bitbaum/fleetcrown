@@ -62,3 +62,96 @@ export function projectNameFromConversationTitle(title: string): string | null {
   const slug = normalizeProjectName(title);
   return slug || null;
 }
+
+/** Resolve which fleet project a fast path applies to — selection wins, then name in text. */
+export function resolveFleetCommandProjectKey(
+  text: string,
+  selectedProject: string | undefined,
+  projectNames: string[],
+): string | null {
+  if (selectedProject) return selectedProject;
+  const lower = text.toLowerCase();
+  return projectNames.find((p) => lower.includes(p.toLowerCase())) ?? null;
+}
+
+const BUSINESS_PLAN_VERB_RE =
+  /\b(generate|write|create|refresh|update|iterate|regenerate|draft|build)\b/i;
+const BUSINESS_PLAN_NOUN_RE = /\b(business\s+plan|living\s+business\s+plan)\b/i;
+
+export function isBusinessPlanRequest(text: string): boolean {
+  const t = text.trim();
+  return BUSINESS_PLAN_VERB_RE.test(t) && BUSINESS_PLAN_NOUN_RE.test(t);
+}
+
+/** Writable profile fields Loki may propose — keys match attributes or entity.description. */
+export const PROFILE_FIELD_ALIASES: Record<string, string> = {
+  mission: "mission",
+  vision: "vision",
+  stack: "stack",
+  customers: "customers",
+  architecture: "architecture",
+  convention: "conventions",
+  conventions: "conventions",
+  "definition of done": "definition_of_done",
+  definition_of_done: "definition_of_done",
+  dod: "definition_of_done",
+  "next step": "next_step",
+  next_step: "next_step",
+  description: "description",
+  status: "status",
+  maturity: "maturity",
+};
+
+export const PROFILE_FIELD_LABELS: Record<string, string> = {
+  mission: "Mission",
+  vision: "Vision",
+  stack: "Stack",
+  customers: "Customers",
+  architecture: "Architecture",
+  conventions: "Conventions",
+  definition_of_done: "Definition of done",
+  next_step: "Next step",
+  description: "Description",
+  status: "Status",
+  maturity: "Maturity",
+};
+
+const PROFILE_UPDATE_RE =
+  /\b(?:update|set|change)\s+(?:the\s+)?([a-z][\w\s]{0,28}?)\s+(?:to|as|for|:|=)\s+([\s\S]+)/i;
+
+export type ProfileUpdateRequest = {
+  fieldKey: string;
+  value: string;
+};
+
+function trimQuotedValue(raw: string): string {
+  let v = raw.trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
+  return v.replace(/\s+$/, "");
+}
+
+function resolveProfileField(raw: string): string | null {
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  return PROFILE_FIELD_ALIASES[normalized] ?? null;
+}
+
+/** Parse "set mission to …" / "update stack: …" when a known profile field is named. */
+export function parseProfileUpdateRequest(text: string): ProfileUpdateRequest | null {
+  if (isBusinessPlanRequest(text)) return null;
+
+  const match = text.trim().match(PROFILE_UPDATE_RE);
+  if (!match) return null;
+
+  const fieldKey = resolveProfileField(match[1]);
+  if (!fieldKey) return null;
+
+  const value = trimQuotedValue(match[2]).slice(0, 4000);
+  if (!value) return null;
+
+  return { fieldKey, value };
+}

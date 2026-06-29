@@ -15,6 +15,7 @@ export const LOKI_SUGGESTED_ACTIONS: LokiSuggestedAction[] = [
   { id: "quality", label: "Code review", template: "code review for {project}" },
   { id: "test_and_fix", label: "Fix tests", template: "fix types and tests for {project}" },
   { id: "ux_review", label: "Review UI", template: "review the ui for {project}" },
+  { id: "business_plan", label: "Business plan", template: "generate business plan for {project}" },
 ];
 
 export function fillSuggestedAction(template: string, projectName: string | null): string {

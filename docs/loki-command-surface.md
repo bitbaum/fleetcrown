@@ -5,8 +5,7 @@ design spec for the original vision and is retained as the rationale of record; 
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
-**Last modified:** 2026-06-27 — single Loki surface (`/` shell `?` FAB → `/loki`);
-fleet list/create project fast paths; project picker chips on ambiguous dispatch.
+**Last modified:** 2026-06-29 — Loki business plan + profile update fast paths; project-aware chat.
 
 ### Shipped state (verified in the running app)
 
@@ -21,6 +20,11 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
 - **Fleet fast paths:** "list my projects" returns the registered fleet from Postgres (no
   web search). "create project …" registers via `createUserProject`; "…and let's go"
   dispatches `next_best` on the new project.
+- **Business plan:** "generate/iterate business plan for `<project>`" calls the same
+  `generateBusinessPlan` path as the Projects UI — persists plan + actions, links to
+  `/projects?open=…`.
+- **Profile updates:** "set/update `<field>` to …" queues an action draft on Today;
+  approving executes `upsertEntityAttribute` (or description patch) — no silent writes.
 - **Ambiguous dispatch:** when a command has no project, the transcript shows tappable
   project chips (plus the right-pane selector). Picking a chip re-dispatches without
   duplicating the user turn.

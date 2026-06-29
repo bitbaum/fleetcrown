@@ -46,10 +46,19 @@ import { describeAttachedImages } from "@/lib/loki/vision";
 import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-context";
 import {
   formatProjectList,
+  isBusinessPlanRequest,
   isListProjectsQuery,
   parseCreateProjectRequest,
+  parseProfileUpdateRequest,
   projectNameFromConversationTitle,
+  resolveFleetCommandProjectKey,
 } from "@/lib/loki-fleet-commands";
+import {
+  formatBusinessPlanReply,
+  formatProfileUpdateReply,
+  proposeLokiProfileUpdate,
+  runLokiBusinessPlan,
+} from "@/lib/loki/project-mutations";
 import { getProjectLimit } from "@/lib/plan";
 
 const Body = z
@@ -267,6 +276,72 @@ export async function POST(
       content: `Registered **${projectName}**. Select it on the right, then say what to run.`,
       meta: { source: "create-project", projectKey: projectName },
     });
+    return NextResponse.json({ message: assistant });
+  }
+
+  const fleetProjectKey = resolveFleetCommandProjectKey(
+    text,
+    selectedProjects[0],
+    projectNames,
+  );
+
+  if (isBusinessPlanRequest(text)) {
+    const outcome = await runLokiBusinessPlan(userId, fleetProjectKey, projects);
+    const content = outcome.ok
+      ? formatBusinessPlanReply(outcome)
+      : outcome.message;
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content,
+      meta: {
+        source: outcome.ok ? "business-plan" : `business-plan-${outcome.code}`,
+        projectKey: outcome.ok ? outcome.projectKey : fleetProjectKey,
+        entityId: outcome.ok ? outcome.entityId : null,
+      },
+    });
+    if (
+      outcome.ok &&
+      !existing.conversation.projectKeys.includes(outcome.projectKey)
+    ) {
+      await updateConversationProjects(userId, conversationId, [
+        ...existing.conversation.projectKeys,
+        outcome.projectKey,
+      ]);
+    }
+    return NextResponse.json({ message: assistant });
+  }
+
+  const profileUpdate = parseProfileUpdateRequest(text);
+  if (profileUpdate) {
+    const outcome = await proposeLokiProfileUpdate(
+      userId,
+      fleetProjectKey,
+      projects,
+      profileUpdate,
+    );
+    const content = outcome.ok
+      ? formatProfileUpdateReply(outcome)
+      : outcome.message;
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content,
+      meta: {
+        source: outcome.ok ? "profile-update-draft" : `profile-update-${outcome.code}`,
+        projectKey: outcome.ok ? outcome.projectKey : fleetProjectKey,
+        fieldKey: profileUpdate.fieldKey,
+      },
+    });
+    if (
+      outcome.ok &&
+      !existing.conversation.projectKeys.includes(outcome.projectKey)
+    ) {
+      await updateConversationProjects(userId, conversationId, [
+        ...existing.conversation.projectKeys,
+        outcome.projectKey,
+      ]);
+    }
     return NextResponse.json({ message: assistant });
   }
 
