@@ -43,6 +43,7 @@ import {
   type Attachment,
 } from "@/lib/loki/attachments";
 import { describeAttachedImages } from "@/lib/loki/vision";
+import { buildLokiChatPrompt, resolveLokiChatProjectKey } from "@/lib/loki/chat-context";
 import {
   formatProjectList,
   isListProjectsQuery,
@@ -303,7 +304,18 @@ export async function POST(
       },
     });
   } else {
-    const loki = await askLoki(resolution.prompt + attachmentSuffix, {
+    const chatProject = resolveLokiChatProjectKey(
+      resolution,
+      selectedProjects,
+      projectNames,
+      text,
+    );
+    const chatPrompt = await buildLokiChatPrompt(
+      userId,
+      resolution.prompt + attachmentSuffix,
+      chatProject,
+    );
+    const loki = await askLoki(chatPrompt, {
       sessionKey: `agent:main:web:conv:${conversationId}`,
       userId,
     });
@@ -314,8 +326,20 @@ export async function POST(
       role: "assistant",
       kind: "chat",
       content: reply,
-      meta: { model: loki.body.model ?? null },
+      meta: {
+        model: loki.body.model ?? null,
+        projectKey: chatProject,
+      },
     });
+    if (
+      chatProject &&
+      !existing.conversation.projectKeys.includes(chatProject)
+    ) {
+      await updateConversationProjects(userId, conversationId, [
+        ...existing.conversation.projectKeys,
+        chatProject,
+      ]);
+    }
   }
 
   return NextResponse.json({ message: assistant });

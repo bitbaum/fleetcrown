@@ -4,6 +4,15 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 **Last modified:** 2026-06-29 — Loki screenshot vision preflight, composer quick chips, scoped project pill.
 
+**Last modified:** 2026-06-29 — Loki chat injects project profile when scoped; screenshot vision preflight.
+
+## 2026-06-29 (q)
+
+### Added
+- **Project-aware Loki chat.** Select a project or name it in your message — chat turns
+  inject the same profile + goals block as dispatch (`getProjectContext`), without
+  sending work to the runner.
+
 ## 2026-06-29 (p)
 
 ### Added

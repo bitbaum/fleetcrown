@@ -26,6 +26,8 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   duplicating the user turn.
 - **Develop handoff:** "let's develop/build" with one selected project, one fleet project,
   or a named project dispatches `next_best` instead of chatting.
+- **Project-aware chat:** chat turns scoped to a selected or named project inject the same
+  `getProjectContext` profile (mission, stack, goals, DoD) as dispatch — without running the agent.
 - **The Loki page (§4):** the 3-pane layout shipped as specced — conversation list (left),
   transcript (center) with the composer at the bottom, and the selectable **Projects**
   panel (right). Project tiles surface each project's active goal as a subtitle.
