@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { TerminalView } from "./TerminalView";
 import { runnerTransport } from "./terminal-transport";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,7 @@ export function LocalMachineView({
   if (loading && tabs.length === 0) {
     return (
       <div className="flex items-center gap-2 p-6 text-sm text-text-muted">
-        <Loader2 className="ui-spinner" /> Looking for agents on your machine…
+        <Loader2 className="ui-spinner" /> {EXECUTOR_COPY.terminal.thisComputerLoading}
       </div>
     );
   }
@@ -48,8 +49,8 @@ export function LocalMachineView({
     return (
       <div className="ui-empty-page">
         <MonitorSmartphone className="h-6 w-6 text-text-muted" />
-        <p className="text-sm text-text-secondary">No agents running on your machine yet.</p>
-        <p className="text-xs text-text-muted">Launch one from Control — it shows up here live.</p>
+        <p className="text-sm text-text-secondary">{EXECUTOR_COPY.terminal.thisComputerEmpty}</p>
+        <p className="text-xs text-text-muted">{EXECUTOR_COPY.terminal.thisComputerEmptyHint}</p>
       </div>
     );
   }

@@ -48,6 +48,7 @@ import {
   formatProjectList,
   isBusinessPlanRequest,
   isDevelopAllFleetRequest,
+  isMoveForwardRequest,
   isListProjectsQuery,
   parseCreateProjectRequest,
   parseProfileUpdateRequest,
@@ -136,8 +137,11 @@ async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage>
     opts.userId,
   );
   const ok = inject.status < 400;
+  const queued = inject.body.mode === "queued";
   const content = ok
-    ? `Dispatched to ${opts.projectKey}: ${opts.prompt}`
+    ? queued
+      ? `Queued **${opts.projectKey}** — the builder will run this in the agent terminal (Claude or your chosen CLI on Cloud or this computer).`
+      : `Running on **${opts.projectKey}** in the agent terminal now.`
     : `Could not dispatch to ${opts.projectKey}: ${
         typeof inject.body.error === "string" ? inject.body.error : "dispatch failed"
       }`;
@@ -307,6 +311,42 @@ export async function POST(
       content: formatFleetKickReply(outcome),
       meta: {
         source: "fleet-kick",
+        kicked: outcome.kicked,
+        runnerConnected: outcome.runnerConnected,
+      },
+    });
+    return NextResponse.json({ message: assistant });
+  }
+
+  if (isMoveForwardRequest(text)) {
+    if (selectedProjects.length === 1) {
+      const assistant = await persistDispatch({
+        userId,
+        conversationId,
+        existing,
+        projectKey: selectedProjects[0],
+        prompt: text,
+        sourceText: text,
+        intentId: "next_best",
+        attachmentSuffix,
+        agent: agent as AdapterId | undefined,
+        model,
+        attachments,
+      });
+      return NextResponse.json({ message: assistant });
+    }
+    const scopeKeys = selectedProjects.length > 0 ? selectedProjects : undefined;
+    const outcome = await kickFleet(userId, {
+      source: "loki",
+      projectKeys: scopeKeys,
+      requireFleetOn: false,
+    });
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content: formatFleetKickReply(outcome),
+      meta: {
+        source: "fleet-kick-move-forward",
         kicked: outcome.kicked,
         runnerConnected: outcome.runnerConnected,
       },

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
  *  small set of kinds the messages route emits. */
@@ -24,11 +25,11 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   const failed = meta.ok === false;
   const warn = offline || failed;
   const status = failed
-    ? "Dispatch failed"
-    : offline
-      ? "Fleet Runner offline — queued, runs on reconnect"
+      ? "Dispatch failed"
+      : offline
+      ? EXECUTOR_COPY.queuedWhenOffline
       : meta.mode === "queued"
-        ? "Queued for the runner"
+        ? EXECUTOR_COPY.queuedWhenOffline
         : meta.mode === "direct"
           ? "Running now"
           : "Dispatched";
@@ -47,10 +48,16 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
             Open in Control →
           </Link>
           <Link
+            href={`/terminal?source=server&tab=${encodeURIComponent(projectKey)}`}
+            className="ui-link-subtle"
+          >
+            {EXECUTOR_COPY.loki.watchCloud}
+          </Link>
+          <Link
             href={`/terminal?source=machine&tab=${encodeURIComponent(projectKey)}`}
             className="ui-link-subtle"
           >
-            Watch agent →
+            {EXECUTOR_COPY.loki.watchThisComputer}
           </Link>
         </>
       )}

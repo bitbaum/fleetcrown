@@ -17,9 +17,9 @@ import { getUserProjects } from "@/db/queries/user-projects";
 import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { injectPrompt } from "@/lib/inject-core";
 import { DEFAULT_AUTO_INJECT_MODE, MAX_CONCURRENT_BUILDING } from "@/lib/constants/control";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { normalizeAutoInjectMode, type AutoInjectMode } from "@/config/beacon";
-import { isRuntimeAvailable } from "@/lib/runtime";
 
 export type FleetKickSource = "play_button" | "loki" | "api" | "control_selected";
 
@@ -108,7 +108,6 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
   const settings = await getBeaconSettings(userId).catch(() => null);
   const fleetMode = normalizeAutoInjectMode(settings?.auto_inject_mode ?? DEFAULT_AUTO_INJECT_MODE);
   const runnerConnected = await getRunnerConnected(userId);
-  const canExecute = isRuntimeAvailable() || runnerConnected;
 
   if (opts.requireFleetOn !== false && fleetMode === "off") {
     return {
@@ -122,22 +121,6 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
       details,
       skipped,
       message: "Fleet autopilot is paused — press **Start building** on Control first.",
-    };
-  }
-
-  if (!canExecute) {
-    return {
-      ok: false,
-      source: opts.source,
-      runnerConnected,
-      fleetMode,
-      kicked: 0,
-      activeBefore: 0,
-      slotsAvailable: 0,
-      details,
-      skipped,
-      message:
-        "Fleet Runner is offline — autopilot is on, but loops start when your machine reconnects.",
     };
   }
 
@@ -215,9 +198,7 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
   const message = formatFleetKickMessage({
     kicked,
     activeBefore,
-    slotsAvailable: Math.max(0, MAX_CONCURRENT_BUILDING - activeBefore - kicked),
     runnerConnected,
-    fleetMode,
   });
 
   return {
@@ -237,17 +218,18 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
 function formatFleetKickMessage(input: {
   kicked: number;
   activeBefore: number;
-  slotsAvailable: number;
   runnerConnected: boolean;
-  fleetMode: AutoInjectMode;
 }): string {
   if (input.kicked > 0) {
-    return `Started **${input.kicked}** project loop${input.kicked === 1 ? "" : "s"}. Autopilot keeps going when agents finish (max **${MAX_CONCURRENT_BUILDING}** concurrent).`;
+    const base = input.runnerConnected
+      ? EXECUTOR_COPY.fleetKick.started(input.kicked)
+      : EXECUTOR_COPY.fleetKick.startedQueued(input.kicked);
+    return `${base} (max **${MAX_CONCURRENT_BUILDING}** concurrent).`;
   }
   if (input.activeBefore >= MAX_CONCURRENT_BUILDING) {
-    return `All **${MAX_CONCURRENT_BUILDING}** build slots are busy — loops continue automatically when agents finish.`;
+    return EXECUTOR_COPY.fleetKick.slotsBusy(MAX_CONCURRENT_BUILDING);
   }
-  return "No idle projects to kick right now — agents may already be working, queued, or paused per project.";
+  return EXECUTOR_COPY.fleetKick.nothingToKick;
 }
 
 export function formatFleetKickReply(result: FleetKickResult): string {
@@ -256,10 +238,11 @@ export function formatFleetKickReply(result: FleetKickResult): string {
   if (kickedNames.length > 0) {
     lines.push("", "**Started:**", ...kickedNames.map((n) => `- ${n}`));
   }
-  if (!result.runnerConnected && result.ok) {
-    lines.push("", "Open [Control](/control) to watch fleet status.");
-  } else if (result.kicked > 0) {
-    lines.push("", "Watch progress on [Control](/control).");
+  if (!result.runnerConnected && result.kicked > 0) {
+    lines.push("", EXECUTOR_COPY.queuedWhenOfflineLong);
+  }
+  if (result.kicked > 0) {
+    lines.push("", EXECUTOR_COPY.fleetKick.watchControl);
   }
   return lines.join("\n");
 }

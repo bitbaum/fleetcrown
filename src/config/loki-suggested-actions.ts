@@ -11,6 +11,8 @@ export type LokiSuggestedAction = {
 };
 
 export const LOKI_SUGGESTED_ACTIONS: LokiSuggestedAction[] = [
+  { id: "move_forward", label: "Move forward", template: "move forward on {project}" },
+  { id: "develop_all", label: "Build fleet", template: "develop all my projects" },
   { id: "next_best", label: "Next best", template: "next best for {project}" },
   { id: "quality", label: "Code review", template: "code review for {project}" },
   { id: "test_and_fix", label: "Fix tests", template: "fix types and tests for {project}" },

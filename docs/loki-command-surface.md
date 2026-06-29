@@ -5,7 +5,7 @@ design spec for the original vision and is retained as the rationale of record; 
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
-**Last modified:** 2026-06-29 — fleet-kick on Start building; nudge-idle autopilot fix.
+**Last modified:** 2026-06-27 — Loki move-forward fast path; cloud-first Terminal links; build-chain docs.
 
 ### Shipped state (verified in the running app)
 
@@ -44,9 +44,12 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   panel (right). Project tiles surface each project's active goal as a subtitle.
 - **Composer affordances (§4):** microphone, file attach (text + **screenshots via paste or picker**), and a **model picker** (defaults
   to `Auto`, hidden on phones) are all present. Quick-action chips and a scoped-project pill sit above the composer.
-- **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → runner →
-  agent-terminal path as a Control "Next best" click, and a dispatched message links back
-  with **"Open in Control →"**.
+- **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → builder →
+  agent-terminal path as a Control "Next best" click. Dispatch bubbles link to Control and
+  **Terminal → Cloud** (default) or **This computer** (desktop app).
+- **Move forward:** "move forward", "keep building", "make progress", etc. dispatch
+  `next_best` when one project is selected; otherwise batch `fleet-kick` (same as Control
+  Start building scope).
 
 Open questions §6 #1 (chat vs command — both, routed by intent resolution) and #2
 (dispatches go to the project's existing session; the conversation is the human-readable
@@ -158,9 +161,27 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 - **Loki = the front door** (low cognitive load, conversational). Becomes the default.
 - **Control = the dashboard** (see every project's live state, autopilot toggles, the fleet
   at a glance). Loki links into it ("open kivvi in Control").
-- **Terminal = the workbench** (raw shell, power use, debugging). Loki/Control link into it.
+- **Terminal = the workbench** (watch the agent PTY — Cloud on Hetzner or This computer via
+  the desktop app). Loki does **not** type into Terminal directly; it enqueues work the builder runs.
 - A Loki "dispatch a command" and a Control "Next best" click produce the **same**
-  `pending_command` → runner → PTY. One backend, three altitudes of UI.
+  `pending_command` → builder (box-runner and/or Fleet Runner) → agent CLI in Zellij. One backend,
+  three altitudes of UI.
+
+### Build chain (what happens when you talk to Loki)
+
+```
+You → Loki composer → resolveCommand / fleet fast paths
+  → injectPrompt() → pending_commands (Postgres)
+  → builder claims job (cloud box-runner OR desktop Fleet Runner)
+  → inject into Zellij → Claude / Codex / …
+  → watch on Terminal (source=server | source=machine)
+```
+
+- **Chat turns** (`askLoki`) answer questions — they do **not** run agents.
+- **Dispatch turns** run work — same queue as Control, including when the builder is offline
+  (queued until cloud or this computer is online).
+- Loki is connected to the **builder queue**, not to the xterm WebSocket. Terminal is a **view**
+  of whichever machine is executing that project's session.
 
 ## 6. Open questions (need George's call before building)
 

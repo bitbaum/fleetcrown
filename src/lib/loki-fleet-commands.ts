@@ -91,6 +91,19 @@ export function isDevelopAllFleetRequest(text: string): boolean {
   return DEVELOP_ALL_FLEET_RE.test(text.trim());
 }
 
+const MOVE_FORWARD_READY_RE =
+  /\b(let['']?s|time to|ready to|go ahead(?: and)?|please|now)\s+(develop|build|implement|code|ship|make it|start(?:\s+coding)?)\b/i;
+
+const MOVE_FORWARD_RE =
+  /\b(move forward|make progress|keep (?:building|going)|push (?:ahead|forward)|start building|get (?:it|this) (?:done|shipped)|work on (?:this|it|them))\b/i;
+
+/** Single-project or fleet progress without naming "all projects". */
+export function isMoveForwardRequest(text: string): boolean {
+  const t = text.trim();
+  if (isDevelopAllFleetRequest(t)) return false;
+  return MOVE_FORWARD_RE.test(t) || MOVE_FORWARD_READY_RE.test(t);
+}
+
 /** Writable profile fields Loki may propose — keys match attributes or entity.description. */
 export const PROFILE_FIELD_ALIASES: Record<string, string> = {
   mission: "mission",

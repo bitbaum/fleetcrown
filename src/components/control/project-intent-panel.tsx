@@ -7,6 +7,7 @@ import { postJson } from "@/lib/api/fetch";
 import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-intents";
 import { PASTE_FROM_HISTORY_TITLE } from "@/config/control-labels";
 import { APP_NAME } from "@/config/brand";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
@@ -153,9 +154,9 @@ export function IntentButtonPanel({
     // lives once in RunnerStatusBanner. Here we just flag that this composer's
     // sends will queue, without re-stating the banner's sentence.
     statusLabel: !runtimeStateKnown
-      ? "Fleet Runner offline — sends queue."
+      ? EXECUTOR_COPY.queuedWhenOffline
       : runnerSyncStale
-      ? "Fleet Runner sync stale — sends queue."
+      ? "Sync stale — sends queue."
       : automationStatusLabel
       ? automationStatusLabel
       : autoContinueEnabled

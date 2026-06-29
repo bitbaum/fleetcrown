@@ -2,7 +2,6 @@
  * SSOT for project control-surface states.
  *
  * Every consumer of project state (badge, chip, summary counter, Zellij row,
- * agent context, hover tooltip, dot color, click-action hint) reads from this
  * file. Adding or removing a state requires editing exactly one literal — the
  * compiler then forces every Record below to remain exhaustive, so drift is
  * structurally impossible.
@@ -23,6 +22,8 @@
  *  2. The compiler will tell you which Records below to fill
  *  3. Add the derivation rule in deriveProjectState() (lib/derive-project-state.ts)
  */
+
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export const PROJECT_STATES = [
   "offline",              // Runner has not pushed state — we genuinely don't know.
@@ -91,13 +92,13 @@ export type ProjectStateDefinition = {
 export const STATE_DEFINITIONS: Record<ProjectStateKey, ProjectStateDefinition> = {
   offline: {
     label: "Offline",
-    description: "Fleet Runner has not pushed state recently. We don't know what's actually happening on your computer.",
+    description: "The builder hasn't pushed fresh state for this project — we don't know what's happening right now.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     counterCategory: "offline",
     problem: {
-      hint: "Fleet Runner is not reporting. Launch it on your computer to restore live status.",
-      ctaLabel: "Install Fleet Runner",
+      hint: "Press Start building or dispatch from Control — the cloud builder or desktop app will pick it up.",
+      ctaLabel: "Get desktop app",
       ctaHref: "/download",
     },
   },
@@ -233,35 +234,35 @@ export type RunnerStateDefinition = {
 
 export const RUNNER_STATE_DEFINITIONS: Record<RunnerStateKey, RunnerStateDefinition> = {
   setup_needed: {
-    label: "Setup needed",
-    description: "This account has never received a state push from Fleet Runner. Install it to connect this computer.",
-    dotClass: "bg-status-warning",
-    tagClass: "ui-tag ui-tag-warning",
+    label: EXECUTOR_COPY.builder.setupOptional,
+    description: "No builder has reported in yet. Git-backed projects can still queue from the browser when the cloud builder is running.",
+    dotClass: "bg-border-default",
+    tagClass: "ui-tag ui-tag-neutral",
     problem: {
-      hint: "Install Fleet Runner desktop to connect this computer.",
-      ctaLabel: "Install Fleet Runner",
+      hint: "Optional: install the desktop app to also run agents on this computer.",
+      ctaLabel: "Get desktop app",
       ctaHref: "/download",
     },
   },
   offline: {
-    label: "Fleet Runner offline",
-    description: "Fleet Runner stopped pushing state. The control surface is showing the last cached values and may be stale.",
+    label: EXECUTOR_COPY.builder.offline,
+    description: "No builder is connected. Dispatches queue until the cloud builder or desktop app is online.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: {
-      hint: "Relaunch Fleet Runner on your computer.",
+      hint: "Work stays queued. Open the desktop app on this computer, or ensure the cloud builder service is running.",
     },
   },
   state_unknown: {
-    label: "Status uncertain",
-    description: "We have a connection but no usable state push has arrived yet. Wait a few seconds; if it persists, Fleet Runner may be crashing.",
+    label: EXECUTOR_COPY.builder.uncertain,
+    description: "A builder is connected but hasn't pushed usable state yet. Wait a few seconds.",
     dotClass: "bg-status-warning",
     tagClass: "ui-tag ui-tag-warning",
     problem: null,
   },
   connected: {
-    label: "Connected",
-    description: "Fleet Runner pushed state within the freshness window — what you see is current.",
+    label: EXECUTOR_COPY.builder.online,
+    description: "A builder pushed state recently — cloud and/or this computer.",
     dotClass: "bg-status-positive",
     tagClass: "ui-tag ui-tag-positive",
     problem: null,

@@ -10,6 +10,8 @@ import {
   RUNNER_STATE_DEFINITIONS,
   deriveRunnerStateKey,
 } from "@/lib/control-states";
+import { builderCompactLabel } from "@/lib/builder-presence";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 // Single-line hint shown under the fleet chips when this mode is active.
 // Binary autopilot since the 2026-06-11 collapse. Plain language only — no
@@ -99,7 +101,7 @@ export function ControlFleetStatus({
   // Append the connected runner's reported version so the user can confirm
   // which Fleet Runner build is live (helps diagnose stale-runner bugs).
   const versionDetail = runnerStateKey === "connected" && runnerVersion
-    ? `runner v${runnerVersion}`
+    ? `${EXECUTOR_COPY.builder.versionPrefix} v${runnerVersion}`
     : null;
   const runnerDetail = [syncDetail, versionDetail].filter(Boolean).join(" · ") || null;
 
@@ -114,13 +116,7 @@ export function ControlFleetStatus({
   // need a glanceable indicator — dot + word + sync timestamp — so the offline
   // story isn't told three times across the page. runnerDef.description still
   // rides along as the hover tooltip for the curious.
-  const RUNNER_COMPACT_LABEL: Record<typeof runnerStateKey, string> = {
-    setup_needed: "Setup needed",
-    offline: "Offline",
-    state_unknown: "Status uncertain",
-    connected: "Connected",
-  };
-  const compactLabel = RUNNER_COMPACT_LABEL[runnerStateKey];
+  const compactLabel = builderCompactLabel(runnerStateKey, runnerVersion);
 
   // Counts come from the last Fleet Runner push. When it's offline or its
   // state is uncertain, those numbers are stale — rendered as live, the user
@@ -131,7 +127,7 @@ export function ControlFleetStatus({
   const staleTitle = isStale && runnerLastPushedAt
     ? `From last sync (${timeAgo(new Date(runnerLastPushedAt).getTime())}) — may be out of date`
     : isStale
-      ? "Cached value — Fleet Runner hasn't pushed fresh state"
+      ? EXECUTOR_COPY.builder.staleSync
       : undefined;
 
   return (
@@ -203,12 +199,20 @@ export function ControlFleetStatus({
         <div
           className="ui-control-fleet-chip ui-control-fleet-chip-attention ui-control-fleet-chip-alert"
           role="alert"
-          title="The Fleet Runner is pushing status but not executing dispatched commands — it is likely hung. Restart Fleet Runner; the queued commands will then run."
+          title={EXECUTOR_COPY.builder.stalledDetail(
+            runnerExecutionStall.stalledCount,
+            runnerExecutionStall.oldestSeconds,
+          )}
         >
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="sm:hidden">Runner stalled — restart Fleet Runner ({runnerExecutionStall.stalledCount} queued).</span>
+          <span className="sm:hidden">
+            {EXECUTOR_COPY.builder.stalledShort(runnerExecutionStall.stalledCount)}
+          </span>
           <span className="hidden sm:inline">
-            Runner stalled — accepting but not executing ({runnerExecutionStall.stalledCount} queued {runnerExecutionStall.oldestSeconds}s). Restart Fleet Runner.
+            {EXECUTOR_COPY.builder.stalledDetail(
+              runnerExecutionStall.stalledCount,
+              runnerExecutionStall.oldestSeconds,
+            )}
           </span>
         </div>
       )}

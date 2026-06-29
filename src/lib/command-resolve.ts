@@ -45,6 +45,38 @@ const SYSTEM = `You route an operator's input in a multi-project AI-agent consol
 const DEVELOP_READY_RE =
   /\b(let['']?s|time to|ready to|go ahead(?: and)?|please|now)\s+(develop|build|implement|code|ship|make it|start(?:\s+coding)?)\b|\b(start|begin)\s+(develop(?:ment|ing)?|building|implement(?:ation|ing)?|coding)\b/i;
 
+/** Imperative work — route to dispatch when a project is in context (not Q&A). */
+const ACTION_VERB_RE =
+  /\b(implement|fix|add|build|ship|refactor|rewrite|migrate|update|write|create|patch|debug|investigate|optimize|remove|delete|integrate|wire|configure|set up|hook up|continue|keep going|move forward|make progress|next step|next best)\b/i;
+
+const CHAT_QUESTION_RE =
+  /^(what|why|how|when|where|who|should|could|would|can you explain|tell me about|describe|compare|summarize|explain|list|show me|is there|are there)\b/i;
+
+function inferIntentFromText(text: string): OrchestrationTaskIntentId | null {
+  const t = text.toLowerCase();
+  if (/\b(code review|review (?:the )?code)\b/.test(t)) return "quality";
+  if (/\b(review (?:the )?ui|ux review)\b/.test(t)) return "ux_review";
+  if (/\b(fix (?:types|tests)|run tests|test_and_fix)\b/.test(t)) return "test_and_fix";
+  if (/\b(commit|push)\b/.test(t)) return "commit_push";
+  if (/\b(full audit|audit the)\b/.test(t)) return "full_audit";
+  if (/\b(deploy check|deploy)\b/.test(t)) return "deploy_check";
+  if (/\b(next best|keep going|continue|move forward|make progress|develop|build it)\b/.test(t)) {
+    return "next_best";
+  }
+  return null;
+}
+
+/** True when the message is work to run, not a question for Loki chat. */
+export function looksLikeDispatchTask(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (DEVELOP_READY_RE.test(t)) return true;
+  if (CHAT_QUESTION_RE.test(t)) return false;
+  if (t.endsWith("?") && !ACTION_VERB_RE.test(t)) return false;
+  if (ACTION_VERB_RE.test(t)) return true;
+  return t.length >= 16 && /\b(for|on|in)\s+\S/.test(t);
+}
+
 /** True when the operator gave a short generic handoff ("let's develop it") — use
  *  the intent's orchestration template instead of the literal phrase as customPrompt. */
 export function isGenericDevelopHandoff(text: string): boolean {
@@ -90,6 +122,21 @@ export async function resolveCommand(
       needsProject: !projectKey,
       reason: "develop handoff",
     };
+  }
+
+  // Fast path — imperative task with project context → dispatch, not Loki chat.
+  if (looksLikeDispatchTask(text)) {
+    const projectKey = pickProjectKey(projects, namedInText, selectedProject, true);
+    if (projectKey) {
+      return {
+        kind: "command",
+        projectKey,
+        intentId: inferIntentFromText(text),
+        prompt: text,
+        needsProject: false,
+        reason: "action task",
+      };
+    }
   }
 
   try {

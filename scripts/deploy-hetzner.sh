@@ -5,6 +5,9 @@
 # 127.0.0.1:4002, systemd unit fleetcrown-app). Box-side .env, launch.sh and
 # backups/ are owned by the box and never touched by a deploy.
 #
+# Also syncs + restarts fleetcrown-box-runner (the always-on cloud builder).
+# First-time install: bash scripts/hetzner/install-box-runner.sh
+#
 # Usage:
 #   bash scripts/deploy-hetzner.sh            # build + rsync + restart
 #   bash scripts/deploy-hetzner.sh --no-build # rsync an existing build
@@ -125,3 +128,25 @@ fi
 echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables present on box"
 
 echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to Hetzner — verified"
+
+# Cloud builder (box-runner) — separate systemd unit from fleetcrown-app so app
+# deploys never kill running agent PTYs. Still sync runner code on every ship
+# so poller/pty-runtime fixes reach the always-on executor.
+RUNNER_DIR="/opt/fleetcrown/runner"
+echo "→ sync box-runner code → $HOST:$RUNNER_DIR"
+rsync -az --no-perms --omit-dir-times \
+  "$PROJECT_DIR/src/" "$HOST:$RUNNER_DIR/src/"
+rsync -az --no-perms --omit-dir-times \
+  "$PROJECT_DIR/desktop/src/" "$HOST:$RUNNER_DIR/desktop/src/"
+rsync -az --no-perms --omit-dir-times \
+  "$PROJECT_DIR/scripts/box-runner.ts" \
+  "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
+  "$HOST:$RUNNER_DIR/scripts/"
+rsync -a "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
+ssh "$HOST" "chown -R ubuntu:ubuntu $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
+
+echo "→ restart fleetcrown-box-runner (cloud builder)"
+ssh "$HOST" "systemctl restart fleetcrown-box-runner \
+  && sleep 4 \
+  && systemctl is-active fleetcrown-box-runner >/dev/null"
+echo "  ✓ fleetcrown-box-runner active (cloud builder)"

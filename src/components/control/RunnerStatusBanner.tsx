@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { X, Radio, WifiOff, Sparkles, Download, Terminal, Cpu, Loader2 } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
-import { APP_NAME } from "@/config/brand";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { postJson } from "@/lib/api/fetch";
 import "@/components/desktop/types"; // declare global window.fleetRunner
 import { useInsideFleetRunner } from "@/hooks/use-inside-fleet-runner";
@@ -92,13 +92,13 @@ export function RunnerStatusBanner({
       <div className="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-raised/60 px-3 py-2 text-xs text-text-tertiary">
         <WifiOff className="h-3.5 w-3.5 shrink-0 text-status-warning" />
         <span className="min-w-0 truncate">
-          Fleet Runner offline{lastSeen ? ` · last seen ${lastSeen}` : ""} — commands queue until it reconnects.
+          {EXECUTOR_COPY.runnerBanner.offlineChip(lastSeen)}
         </span>
         <button
           onClick={() => setExpanded(true)}
           className="ml-auto shrink-0 text-accent hover:underline"
         >
-          How to reconnect
+          {EXECUTOR_COPY.runnerBanner.reconnect}
         </button>
         <button
           onClick={() => setDismissed(true)}
@@ -124,7 +124,9 @@ export function RunnerStatusBanner({
       <div className="min-w-0 flex-1 space-y-2">
         <div>
           <span className="font-medium text-text-primary">
-            {runnerNeverSeen ? `Finish setup to dispatch agents` : "Fleet Runner offline"}
+            {runnerNeverSeen
+              ? EXECUTOR_COPY.runnerBanner.neverSeenTitle
+              : EXECUTOR_COPY.runnerBanner.offlineTitle}
           </span>
           {!runnerNeverSeen && lastSeen && (
             <span className="ml-2 text-xs text-text-tertiary">last seen {lastSeen}</span>
@@ -135,8 +137,8 @@ export function RunnerStatusBanner({
           <>
             <p className="text-text-secondary leading-relaxed">
               {hasProjects
-                ? "Install Fleet Runner to dispatch agents at your local repos."
-                : `${APP_NAME} can do two things — pick whichever you need first:`}
+                ? "Connect this computer if you want agents to run on your local repos. Control works in the browser either way."
+                : EXECUTOR_COPY.runnerBanner.neverSeenBody}
             </p>
 
             <div className={`grid gap-2 ${hasProjects ? "" : "md:grid-cols-2"}`}>
@@ -170,20 +172,20 @@ export function RunnerStatusBanner({
                   <div className="ui-card-shell p-3 flex flex-col gap-1 border-status-positive">
                     <div className="flex items-center gap-1.5 font-medium text-status-positive text-sm">
                       <Cpu className="h-3.5 w-3.5" />
-                      Paired with this Fleet Runner
+                      Paired with this computer
                     </div>
                     <p className="text-xs text-text-muted">
-                      Token <strong>{pairedTokenLabel}</strong> saved to the desktop. Fleet Runner will appear online within ~30s.
+                      Token <strong>{pairedTokenLabel}</strong> saved. {EXECUTOR_COPY.builder.online} within ~30s.
                     </p>
                   </div>
                 ) : (
                   <div className="ui-card-shell p-3 flex flex-col gap-2">
                     <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
                       <Cpu className="h-3.5 w-3.5 text-accent" />
-                      Pair this Fleet Runner
+                      Pair this computer
                     </div>
                     <p className="text-xs text-text-muted">
-                      You&apos;re already inside the desktop app. One click mints an agent token + hands it to Fleet Runner
+                      You&apos;re in the desktop app. One click connects it to the shared builder queue.
                       — no manual copy-paste.
                     </p>
                     <button
@@ -216,10 +218,10 @@ export function RunnerStatusBanner({
                 >
                   <div className="flex items-center gap-1.5 font-medium text-text-primary text-sm">
                     <Download className="h-3.5 w-3.5 text-accent" />
-                    Install Fleet Runner desktop
+                    Get the desktop app
                   </div>
                   <p className="text-xs text-text-muted">
-                    Required only if you want to <strong>dispatch agents at local repos</strong>. Detects your ~/dev folders, runs Claude/Codex/Grok/Gemini/Cursor from this website.
+                    Optional — run agents on this computer with your local folders and CLI tools. Same dashboard as the website.
                   </p>
                   <span className="text-xs text-accent mt-auto pt-1 group-hover:underline">Download for your OS →</span>
                 </Link>
@@ -246,13 +248,13 @@ export function RunnerStatusBanner({
         ) : (
           <>
             <p className="text-text-secondary leading-relaxed">
-              Fleet Runner on your computer stopped sending updates. Agent commands queue safely until it reconnects.
+              {EXECUTOR_COPY.runnerBanner.offlineBody}
             </p>
             <p className="text-xs text-text-muted">
-              Launch Fleet Runner from your tray / app menu. If it won&apos;t connect:{" "}
-              <Link href="/settings" className="text-accent underline">mint a fresh token</Link>{" "}
-              and paste it into Fleet Runner, or{" "}
-              <Link href="/download" className="text-accent underline">re-install</Link>.
+              {EXECUTOR_COPY.runnerBanner.reconnectHint}{" "}
+              <Link href="/settings" className="text-accent underline">{EXECUTOR_COPY.runnerBanner.settingsLink}</Link>{" "}
+              or{" "}
+              <Link href="/download" className="text-accent underline">{EXECUTOR_COPY.runnerBanner.downloadLink}</Link>.
             </p>
           </>
         )}

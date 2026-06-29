@@ -3,41 +3,46 @@
 ---
 created_date: 2026-05-21
 last_modified_date: 2026-06-27
-last_modified_summary: Shell FAB/? opens /loki (single surface); fleet list/create NL paths; Ask Loki wording.
+last_modified_summary: Document Loki → builder queue → Terminal watch path; unified builder UX.
 ---
 
-FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
+FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer. Users never need to pick; both share one queue.
 
-This document is the SSOT for onboarding and support — keep it aligned with the runtime presence banner, the `/download` page, and `isRuntimeAvailable()`.
+User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still say Fleet Runner / box-runner.
 
-> **The local executor is Fleet Runner desktop** (Electron app, signed installer per platform). The old bash daemon (`fleetcrown-daemon.sh` + the Python beacon stack) was retired on 2026-06-11 — see `content/thoughts/killing-the-bash-daemon.md`. There is no bash, no Python beacon, and no `fleetcrown-daemon.service` anymore. Wherever this doc says "daemon" historically, the current equivalent is Fleet Runner.
+> **Fleet Runner desktop** = optional app on your computer. **box-runner** = the same engine headless on Hetzner. Together they are the **builder**.
 
 ## Quick start for new users
 
 | Step | Where | Install required? |
 |------|-------|-----------------|
 | 1. Sign in (GitHub OAuth or email) | Browser | No |
-| 2. Onboarding — username, optional first project, connect machine | Browser | No (runtime step skippable) |
-| 3. Use goals, projects metadata, prompts library, settings | Browser | No |
-| 4. Dispatch agents from Control | Browser + **Fleet Runner** | Yes — download from `/download` |
+| 2. Onboarding — username, optional first project | Browser | No |
+| 3. **Go to Control** — explore, link GitHub repos, press Start building | Browser | No |
+| 4. Use goals, projects metadata, prompts library, Loki, settings | Browser | No |
+| 5. **Optional:** install desktop app from `/download` | Desktop | Only if you want agents on **this computer's** folders and CLIs |
 
-### Local setup (agent dispatch only)
+### Desktop setup (optional — local execution)
 
-1. **[Zellij](https://zellij.dev/)** — terminal multiplexer; Fleet Runner injects prompts into tabs. (Bundled with Fleet Runner.)
-2. **At least one agent CLI** on `$PATH` — not all of them:
-   - Claude Code (`claude`)
-   - Cursor Agent (`agent` — [install](https://cursor.com/docs/cli))
-   - Codex (`codex`)
-   - Gemini CLI (`gemini`)
-   - Grok CLI (`grok` — [x.ai/cli](https://x.ai/cli))
-   - openclaw
-3. **Agent token** — Settings → Agent tokens → Generate.
-4. **Download and connect Fleet Runner:**
-   - Get the signed installer for your platform from [`/download`](https://fleetcrown.orangecat.ch/download).
-   - Launch it and paste your agent token (or sign in) to bind this machine to your account.
-   - Config is written to `~/.config/fleetcrown/daemon.env` (legacy path: `~/.config/cockpit/daemon.env`).
+Use this when you want agents to run on your machine instead of (or alongside) cloud workers:
 
-Until Fleet Runner connects, Control **queues** dispatches and runs them when the runner long-polls in.
+1. **Download Fleet Runner** from [`/download`](https://fleetcrown.orangecat.ch/download) — same UI as the website, plus a background executor.
+2. **Sign in** with the same FleetCrown account (or paste an agent token from Settings).
+3. **Install at least one agent CLI** (Claude, Grok, Codex, Cursor, Gemini, …) — the desktop app can guide you.
+4. **Launch at login** (Settings → Startup) so your machine stays connected.
+
+Until a builder is online, Control **queues** dispatches. **Start building** also queues when offline. Git-backed projects can route to the **hosted worker** (Hermes PR mode) when no builder claims the job.
+
+### Cloud builder (box-runner) — always-on on Hetzner
+
+For the product owner account, `fleetcrown-box-runner.service` is the default executor:
+
+- **Enabled on boot**, `Restart=always` — intended to run 24/7 without a laptop.
+- **Separate from `fleetcrown-app`** — web deploys restart the site, not agent PTYs; deploy still **syncs + restarts** box-runner code via `scripts/deploy-hetzner.sh`.
+- **First install:** `bash scripts/hetzner/install-box-runner.sh`
+- Control shows **Cloud builder online** when the bridge connection is live and the runner reports a `box-*` version.
+
+The optional **desktop app** is the same queue on your computer — use both; each job goes to one claimant.
 
 ### Reliability
 
@@ -71,7 +76,8 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | Goals, commitments, captures, prompts browse | Full CRUD |
 | Projects (metadata, inline edit) | No live git/CI without local runtime |
 | Weather (Today) | Open-Meteo on cloud |
-| Ask Loki (`/loki`) | Needs `GROQ_API_KEY` and/or local openclaw |
+| Ask Loki (`/loki`) — chat | Needs `GROQ_API_KEY` and/or local openclaw |
+| Ask Loki — **dispatch** ("move forward", "code review for …") | Same builder queue as Control; runs when cloud or desktop builder is online (queues if offline) |
 | Agent token minting | Settings creates the token; the hosted installer connects your machine |
 | Schedule prompt job (Prompts → Schedule) | Stored in Postgres per user; **execution** still needs local openclaw |
 | Private zone (People, Money, Habits, Events) | PIN enforced server-side when `PRIVATE_ZONE_PIN_HASH` is set |
@@ -97,16 +103,16 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 
 ### Terminal page (`/terminal`)
 
-Two sources behind one view (toggle **This server** | **My machine**):
+Two sources behind one view (toggle **Cloud** | **This computer**):
 
 | Source | Substrate | When to use |
 |--------|-----------|-------------|
-| **This server** | node-pty shells on the FleetCrown host | Hosted app default — shells run on the box |
-| **My machine** | Fleet Runner-owned agent PTYs on your laptop | Live view of agents you dispatched from Control; same xterm stream as Focus terminal |
+| **Cloud** | Agent PTYs on Hetzner (box-runner) | Default for web users — Loki and Control dispatches run here when the cloud builder is online |
+| **This computer** | Fleet Runner-owned agent PTYs on your laptop | Live view of agents you dispatched locally; same queue as Cloud — only one builder claims each job |
 
-**My machine** lists open tabs from the runner heartbeat (`/api/control/open-tabs`) and streams the selected tab via `/api/control/peek-stream` (viewer ref-count → `peek_start` / `peek_stop` on the runner). Owned-PTY agents get a true byte stream; legacy zellij tabs fall back to dump-screen snapshots.
+Loki and Control do **not** connect to Terminal directly. They enqueue `pending_commands`; a builder injects into the agent CLI; Terminal is the watch surface (`source=server` or `source=machine`).
 
-**Runner version:** v0.8.3+ launches agents in owned PTYs by default. v0.8.5+ fixes live peek (non-blocking `peek_start`, stale dual-instance cleanup, zellij `execSync` timeouts).
+**This computer** lists open tabs from the runner heartbeat (`/api/control/open-tabs`) and streams the selected tab via peek APIs. **Cloud** uses server workspaces for the hosted builder.
 
 ### Environment-gated (optional features)
 

@@ -24,6 +24,7 @@ import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-st
 import { logDebug } from "@/db/queries/debug-logs";
 import { promptFingerprint, recordControlAuditEvent } from "@/db/queries/control-audit-events";
 import { enqueueHostedDispatchCommand } from "@/db/queries/pending-commands";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { retrieveFleetContextBlock } from "@/db/queries/knowledge-embeddings";
 import { assembleInjectPrompt } from "@/lib/inject-prompt";
 
@@ -471,7 +472,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
     reason:
       result.mode === "queued"
         ? ((result as { runnerConnected?: boolean }).runnerConnected === false
-            ? "Queued — Fleet Runner OFFLINE (runs on reconnect)"
+            ? EXECUTOR_COPY.inject.queuedOfflineApi
             : "Queued for local runner")
         : "Injected into local runtime",
     promptHash: fingerprint.promptHash,
@@ -524,8 +525,8 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       ...(queuedOffline && {
         warning: "runner-offline",
         message: hostedDispatchId
-          ? "Fleet Runner is offline — handed to the hosted runner (Hermes), which will make the change and open a PR. It'll also run locally when your runner reconnects."
-          : "Fleet Runner is offline — this command is queued and will run as soon as it reconnects.",
+          ? EXECUTOR_COPY.inject.hostedAndLocal
+          : EXECUTOR_COPY.inject.queuedOnly,
         ...(hostedDispatchId && { hostedDispatchId, hostedRunner: "hermes" }),
       }),
       ...(runId && { runId }),

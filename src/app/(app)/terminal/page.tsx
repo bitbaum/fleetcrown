@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { TerminalPageClient } from "@/components/terminal/TerminalPageClient";
 import { PageTitle } from "@/components/ui/page-title";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 export const metadata: Metadata = { title: "Terminal" };
 
@@ -14,7 +15,7 @@ export default function TerminalPage() {
         <div>
           <PageTitle title="Terminal" />
           <p className="ui-page-subtitle hidden sm:block">
-            Shells on this server, or a live view of the agents running on your machine.
+            {EXECUTOR_COPY.terminal.pageSubtitle}
           </p>
         </div>
       </div>

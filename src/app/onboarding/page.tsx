@@ -7,6 +7,7 @@ import { GitBranch } from "lucide-react";
 import { normalizeUsername } from "@/lib/username";
 import { postJson, patchJson, throwApiError, getJson } from "@/lib/api/fetch";
 import { ROUTES } from "@/config/auth";
+import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { APP_DOMAIN } from "@/config/brand";
 import {
   AuthShell,
@@ -301,11 +302,11 @@ export default function OnboardingPage() {
       ) : (
         <>
           <AuthHeading
-            title="Connect your machine"
+            title={EXECUTOR_COPY.onboarding.stepTitle}
             description={
               isTeamInvitee
-                ? "Dispatch agents from your local runtime when you're ready."
-                : "Last step — link the computer where your agents run."
+                ? EXECUTOR_COPY.onboarding.stepDescriptionTeam
+                : EXECUTOR_COPY.onboarding.stepDescription
             }
           />
           <AuthCard>

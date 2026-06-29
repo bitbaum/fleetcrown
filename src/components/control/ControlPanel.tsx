@@ -99,9 +99,19 @@ export function ControlPanel() {
   // so offline still requires a stale heartbeat. At cutover (once every runner
   // tags itself) this drops to `runnerConnected === false`.
   // See docs/architecture/connection-presence.md.
-  const runnerOffline = !runtimeAvailable && runnerConnected !== true
-    && runnerAgoMs !== null && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS;
-  const runnerNeverSeen = !runtimeAvailable && runnerConnected !== true && runnerLastPushedAt === null;
+  // Connection-based presence is authoritative when the bridge reports it.
+  // runnerConnected === true → online (cloud builder and/or desktop app).
+  // runnerConnected === false → offline even if a stale heartbeat exists.
+  // null → fall back to heartbeat age until the SSE event arrives.
+  const runnerOffline = !runtimeAvailable && (
+    runnerConnected === false
+    || (runnerConnected !== true
+      && runnerAgoMs !== null
+      && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS)
+  );
+  const runnerNeverSeen = !runtimeAvailable
+    && runnerConnected !== true
+    && runnerLastPushedAt === null;
   // Only hide cached runtime when the runner has never connected. When offline
   // but we have a last push, show last-known Working/Ready state with a stale label.
   const runtimeStateKnown = !runnerNeverSeen;
