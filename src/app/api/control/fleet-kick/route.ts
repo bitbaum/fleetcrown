@@ -13,7 +13,7 @@ import { kickFleet, type FleetKickSource } from "@/lib/fleet-kick";
 
 const Body = z.object({
   projectKeys: z.array(z.string().trim().min(1).max(120)).max(50).optional(),
-  source: z.enum(["play_button", "loki", "api"]).optional(),
+  source: z.enum(["play_button", "loki", "api", "control_selected"]).optional(),
 });
 
 export async function POST(req: NextRequest) {

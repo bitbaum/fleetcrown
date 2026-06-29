@@ -23,6 +23,10 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   `fleet-kick` (respects multi-select on the right pane).
 - **Fleet kick (Control):** **Start building** turns autopilot on and kicks up to three
   idle projects with `next_best`; reactive loops continue when agents finish.
+- **Subset loops:** check projects on Control → **Build selected** / **Pause selected**;
+  in Loki, multi-select + a command fans out to all selected (e.g. code review on three).
+- **Screenshot → dispatch:** attach a screenshot with a project scoped — default ask or
+  implement/fix language dispatches (vision text + `ux_review` when appropriate), not chat.
 - **Business plan:** "generate/iterate business plan for `<project>`" calls the same
   `generateBusinessPlan` path as the Projects UI — persists plan + actions, links to
   `/projects?open=…`.

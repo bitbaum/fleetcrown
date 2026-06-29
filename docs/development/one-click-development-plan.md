@@ -9,10 +9,11 @@ what's next) must be one coherent story, not five overlapping surfaces.
 > Status 2026-06-29: Phases 1, 2 and 4a DONE. **Phase 1 shipped:** `ui-control-hero`
 > fleet autopilot card with Start building / Pause fleet, per-project Building/Paused
 > toggles + rail override chips, pulsing dot when fleet is building.
-> **Phase 1b (2026-06-29):** Start building now calls `POST /api/control/fleet-kick`
-> — proactively dispatches `next_best` on up to `MAX_CONCURRENT_BUILDING` (3) eligible
-> idle projects; reactive autopilot unchanged. Loki: "develop all my projects".
-> **nudge-idle cron fixed** to target `auto_inject_mode != 'off'` (was dead legacy filter).
+> **Phase 1b (2026-06-29):** Start building calls `POST /api/control/fleet-kick` —
+> kicks up to `MAX_CONCURRENT_BUILDING` (3) idle projects with `next_best`; Loki
+> phrase "develop all my projects". **nudge-idle cron fixed** (`!= off`, was dead).
+> **Phase 2a (2026-06-29):** Control rail **Build selected** / **Pause selected**;
+> Loki multi-select command fan-out; screenshot → dispatch when project scoped.
 > 2d re-run via
 > `scripts/enrich-prod-profiles.ts --apply` — **18/18** prod projects now have full
 > build-contract attrs (architecture/conventions/definition_of_done); last gap

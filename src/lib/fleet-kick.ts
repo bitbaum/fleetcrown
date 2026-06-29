@@ -21,7 +21,7 @@ import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { normalizeAutoInjectMode, type AutoInjectMode } from "@/config/beacon";
 import { isRuntimeAvailable } from "@/lib/runtime";
 
-export type FleetKickSource = "play_button" | "loki" | "api";
+export type FleetKickSource = "play_button" | "loki" | "api" | "control_selected";
 
 export type FleetKickDetail = {
   projectKey: string;

@@ -318,6 +318,11 @@ export function ControlPanel() {
         onSelect={setSelectedTab}
         cardProps={cardProps}
         automationMode={automationPolicy.mode}
+        onBulkNotice={(msg) => {
+          setQueuedNotice(msg);
+          setTimeout(() => setQueuedNotice(null), 9000);
+          void refresh(true);
+        }}
       />
 
       {/* Workspaces panel — collapsed-by-default on every breakpoint when the

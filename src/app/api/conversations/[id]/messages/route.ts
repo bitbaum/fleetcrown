@@ -61,6 +61,17 @@ import {
   runLokiBusinessPlan,
 } from "@/lib/loki/project-mutations";
 import { formatFleetKickReply, kickFleet } from "@/lib/fleet-kick";
+import { resolveDispatchTargets } from "@/lib/loki/dispatch-targets";
+import {
+  dispatchCommandToProjects,
+  formatMultiDispatchReply,
+} from "@/lib/loki/multi-dispatch";
+import {
+  DEFAULT_VISION_QUESTION,
+  shouldDispatchScreenshot,
+  screenshotDispatchIntentId,
+  screenshotDispatchPrompt,
+} from "@/lib/loki/screenshot-dispatch";
 import { getProjectLimit } from "@/lib/plan";
 
 const Body = z
@@ -169,8 +180,9 @@ export async function POST(
   const { text: rawText, selectedProjects, agent, model, attachments: rawAttachments, dispatchOnly } = dataOrResp;
   const text =
     rawText.trim() ||
-    "What's wrong here and what should we change?";
+    DEFAULT_VISION_QUESTION;
   const attachments = rawAttachments?.map(normalizeAttachment);
+  const hasImages = (attachments ?? []).some((a) => a.kind === "image");
 
   const attachmentSuffix = await buildAttachmentSuffix(attachments, text);
   const attachmentNote = attachmentNoteLabel(attachments);
@@ -368,27 +380,109 @@ export async function POST(
     return NextResponse.json({ message: assistant });
   }
 
-  const resolution = await resolveCommand(
-    { text, projects: projectNames, selectedProject: selectedProjects[0] },
-    userId,
+  const screenshotProject = resolveFleetCommandProjectKey(
+    text,
+    selectedProjects[0],
+    projectNames,
   );
-
-  let assistant;
-
-  if (resolution.kind === "command" && resolution.projectKey) {
-    assistant = await persistDispatch({
+  if (shouldDispatchScreenshot(text, hasImages, screenshotProject)) {
+    const prompt = screenshotDispatchPrompt(text);
+    const intentId = screenshotDispatchIntentId(text);
+    const assistant = await persistDispatch({
       userId,
       conversationId,
       existing,
-      projectKey: resolution.projectKey,
-      prompt: resolution.prompt,
+      projectKey: screenshotProject!,
+      prompt,
       sourceText: text,
-      intentId: resolution.intentId,
+      intentId,
       attachmentSuffix,
       agent: agent as AdapterId | undefined,
       model,
       attachments,
     });
+    return NextResponse.json({ message: assistant });
+  }
+
+  const resolution = await resolveCommand(
+    { text, projects: projectNames, selectedProject: selectedProjects[0] },
+    userId,
+  );
+
+  const namedInText =
+    projectNames.find((p) => text.toLowerCase().includes(p.toLowerCase())) ?? null;
+  const dispatchTargets = resolveDispatchTargets({
+    resolution,
+    selectedProjects,
+    namedInText,
+  });
+
+  let assistant;
+
+  if (resolution.kind === "command" && dispatchTargets.length > 0) {
+    if (
+      dispatchTargets.length > 1 &&
+      resolution.intentId === "next_best" &&
+      !hasImages
+    ) {
+      const kick = await kickFleet(userId, {
+        source: "loki",
+        projectKeys: dispatchTargets,
+        requireFleetOn: false,
+      });
+      assistant = await addMessage(conversationId, {
+        role: "assistant",
+        kind: "chat",
+        content: formatFleetKickReply(kick),
+        meta: { source: "fleet-kick-multi", kicked: kick.kicked },
+      });
+      const kickedKeys = kick.details.filter((d) => d.outcome === "kicked").map((d) => d.projectKey);
+      if (kickedKeys.length > 0) {
+        const merged = [...new Set([...existing.conversation.projectKeys, ...kickedKeys])];
+        await updateConversationProjects(userId, conversationId, merged);
+      }
+    } else if (dispatchTargets.length > 1) {
+      const attempts = await dispatchCommandToProjects({
+        userId,
+        projectKeys: dispatchTargets,
+        prompt: resolution.prompt,
+        sourceText: text,
+        intentId: resolution.intentId,
+        attachmentSuffix,
+        agent: agent as AdapterId | undefined,
+        model,
+        attachments,
+      });
+      assistant = await addMessage(conversationId, {
+        role: "assistant",
+        kind: "dispatch",
+        content: formatMultiDispatchReply(attempts, resolution.intentId ?? undefined),
+        meta: {
+          multiDispatch: true,
+          projectKeys: dispatchTargets,
+          attempts,
+        },
+      });
+      const okKeys = attempts.filter((a) => a.ok).map((a) => a.projectKey);
+      if (okKeys.length > 0) {
+        const merged = [...new Set([...existing.conversation.projectKeys, ...okKeys])];
+        await updateConversationProjects(userId, conversationId, merged);
+      }
+    } else {
+      assistant = await persistDispatch({
+        userId,
+        conversationId,
+        existing,
+        projectKey: dispatchTargets[0],
+        prompt: resolution.prompt,
+        sourceText: text,
+        intentId: resolution.intentId,
+        attachmentSuffix,
+        agent: agent as AdapterId | undefined,
+        model,
+        attachments,
+      });
+    }
   } else if (resolution.needsProject) {
     assistant = await addMessage(conversationId, {
       role: "assistant",

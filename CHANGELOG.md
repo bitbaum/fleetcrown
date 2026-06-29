@@ -2,7 +2,16 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-06-29 — fleet-kick batch loops; nudge-idle cron fix.
+**Last modified:** 2026-06-29 — subset loop control + screenshot dispatch routing.
+
+## 2026-06-29 (t)
+
+### Added
+- **Build / Pause selected** on Control project rail — bulk-select checkboxes kick or pause
+  subsets via `fleet-kick` / `fleet-pause`.
+- **Loki multi-dispatch** — multiple projects selected + a command fans out (concurrency cap 3).
+- **Screenshot → dispatch** — scoped screenshot + implement/default ask routes to dispatch
+  with vision preflight, not chat.
 
 ## 2026-06-29 (s)
 
