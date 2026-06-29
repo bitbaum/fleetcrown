@@ -25,7 +25,7 @@ src/
 ├── app/           → Pages + API routes (thin, delegate to queries/components)
 ├── components/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
-│   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Ivy + More), AskIvyModal
+│   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
 │   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail

@@ -21,20 +21,22 @@ export function Composer({
   disabled,
   sending,
   onSend,
+  defaultText = "",
 }: {
   disabled: boolean;
   sending: boolean;
   onSend: (text: string, choice: ModelChoice, attachments: Attachment[]) => void;
+  /** Initial composer text — parent remounts via `key` when a shell prefill arrives. */
+  defaultText?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(defaultText);
   const [agents, setAgents] = useState<LokiAgent[]>([]);
   const [choiceKey, setChoiceKey] = useState<string>(AUTO);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachNote, setAttachNote] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Voice → text. The transcript appends to whatever is already typed so
-  // dictation composes with typing instead of clobbering it.
+  // Voice → text. Dictation appends to whatever is already typed.
   const voice = useVoiceInput({
     onTranscript: (t) => setText((prev) => (prev ? `${prev} ${t}` : t)),
   });

@@ -57,6 +57,20 @@ export function isGenericDevelopHandoff(text: string): boolean {
  * boundary (auth + scoping) and a future revision can bias by recent/active
  * project, so the param is reserved here without being consumed yet.
  */
+function pickProjectKey(
+  projects: string[],
+  namedInText: string | null,
+  selectedProject?: string,
+  /** When true, a sole registered project is enough context for a develop handoff. */
+  allowSingleProject = false,
+): string | null {
+  return (
+    namedInText ??
+    selectedProject ??
+    (allowSingleProject && projects.length === 1 ? projects[0] : null)
+  );
+}
+
 export async function resolveCommand(
   { text, projects, selectedProject }: ResolveCommandInput,
   userId?: string,
@@ -64,10 +78,10 @@ export async function resolveCommand(
   void userId; // reserved for per-user biasing; see doc comment.
   const lower = text.toLowerCase();
   const namedInText = projects.find((p) => lower.includes(p.toLowerCase())) ?? null;
-  const projectKey = namedInText ?? selectedProject ?? null;
 
   // Fast path — "let's develop it" with a known project should dispatch, not chat.
   if (DEVELOP_READY_RE.test(text)) {
+    const projectKey = pickProjectKey(projects, namedInText, selectedProject, true);
     return {
       kind: "command",
       projectKey,
@@ -86,7 +100,7 @@ export async function resolveCommand(
     const raw = JSON.parse(out.replace(/^```(?:json)?\s*|\s*```$/g, "").trim()) as Record<string, unknown>;
 
     const llmProject = typeof raw.projectKey === "string" && projects.includes(raw.projectKey) ? raw.projectKey : null;
-    const projectKey = llmProject ?? namedInText ?? selectedProject ?? null;
+    const projectKey = pickProjectKey(projects, llmProject ?? namedInText, selectedProject);
     const intentId = typeof raw.intentId === "string" && (ORCHESTRATION_TASK_INTENT_IDS as readonly string[]).includes(raw.intentId)
       ? (raw.intentId as OrchestrationTaskIntentId)
       : null;
@@ -104,7 +118,7 @@ export async function resolveCommand(
   } catch {
     // LLM unavailable → degrade to a deterministic command: project from the
     // text or the current selection; ask if neither.
-    const projectKey = namedInText ?? selectedProject ?? null;
+    const projectKey = pickProjectKey(projects, namedInText, selectedProject);
     return {
       kind: "command",
       projectKey,

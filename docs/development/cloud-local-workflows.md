@@ -3,7 +3,7 @@
 ---
 created_date: 2026-05-21
 last_modified_date: 2026-06-27
-last_modified_summary: Mobile terminal full-screen expand; Loki "let's develop" routes to dispatch; Watch agent deep link.
+last_modified_summary: Shell FAB/? opens /loki (single surface); fleet list/create NL paths; Ask Loki wording.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI; your machine (local runtime) executes agents, git, calendar, and terminal injection.
@@ -71,7 +71,7 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | Goals, commitments, captures, prompts browse | Full CRUD |
 | Projects (metadata, inline edit) | No live git/CI without local runtime |
 | Weather (Today) | Open-Meteo on cloud |
-| Ask Ivy | Needs `GROQ_API_KEY` and/or local openclaw |
+| Ask Loki (`/loki`) | Needs `GROQ_API_KEY` and/or local openclaw |
 | Agent token minting | Settings creates the token; the hosted installer connects your machine |
 | Schedule prompt job (Prompts → Schedule) | Stored in Postgres per user; **execution** still needs local openclaw |
 | Private zone (People, Money, Habits, Events) | PIN enforced server-side when `PRIVATE_ZONE_PIN_HASH` is set |

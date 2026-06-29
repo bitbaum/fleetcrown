@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { Drawer } from "@/components/ui/modal";
@@ -17,6 +18,9 @@ import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelCh
  * threads; filtering here keeps the list responsive without a refetch).
  */
 export function LokiWorkspace() {
+  const searchParams = useSearchParams();
+  const [composerPrefill, setComposerPrefill] = useState<string | null>(null);
+
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [convosLoading, setConvosLoading] = useState(true);
   const [projects, setProjects] = useState<LokiProject[]>([]);
@@ -33,6 +37,20 @@ export function LokiWorkspace() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   // Initial load — conversations + projects.
+  useEffect(() => {
+    const q = searchParams.get("q")?.trim();
+    if (q) setComposerPrefill(q);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const prompt = (e as CustomEvent<{ prompt: string }>).detail?.prompt ?? "";
+      setComposerPrefill(prompt);
+    };
+    window.addEventListener("loki:prefill", handler);
+    return () => window.removeEventListener("loki:prefill", handler);
+  }, []);
+
   useEffect(() => {
     getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
       .then((d) => setConversations(d.conversations))
@@ -96,7 +114,14 @@ export function LokiWorkspace() {
     }
   };
 
-  const send = async (text: string, choice: ModelChoice = {}, attachments: Attachment[] = []) => {
+  const send = async (
+    text: string,
+    choice: ModelChoice = {},
+    attachments: Attachment[] = [],
+    opts: { selectedProjectsOverride?: string[]; dispatchOnly?: boolean } = {},
+  ) => {
+    const scopedProjects = opts.selectedProjectsOverride ?? selectedProjects;
+    const dispatchOnly = opts.dispatchOnly ?? false;
     setError(null);
     setSending(true);
     // Ensure a thread exists; a fresh page send creates one implicitly.
@@ -106,22 +131,25 @@ export function LokiWorkspace() {
       return;
     }
 
-    // Optimistic user bubble.
-    const optimistic: LokiMessage = {
-      id: `pending-${Date.now()}`,
-      conversationId: convoId,
-      role: "user",
-      kind: null,
-      content: text,
-      meta: null,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, optimistic]);
+    // Optimistic user bubble — skip when re-dispatching after a project pick.
+    if (!dispatchOnly) {
+      const optimistic: LokiMessage = {
+        id: `pending-${Date.now()}`,
+        conversationId: convoId,
+        role: "user",
+        kind: null,
+        content: text,
+        meta: null,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, optimistic]);
+    }
 
     try {
       const res = await postJson(`/api/conversations/${convoId}/messages`, {
         text,
-        selectedProjects,
+        selectedProjects: scopedProjects,
+        ...(dispatchOnly ? { dispatchOnly: true } : {}),
         // Model picker — omitted keys mean "Auto" (project default).
         ...(choice.agent ? { agent: choice.agent } : {}),
         ...(choice.model ? { model: choice.model } : {}),
@@ -140,6 +168,12 @@ export function LokiWorkspace() {
     } finally {
       setSending(false);
     }
+  };
+
+  const dispatchWithProject = (projectName: string, pendingText: string) => {
+    if (!activeId || !pendingText.trim()) return;
+    setSelectedProjects([projectName]);
+    void send(pendingText, {}, [], { selectedProjectsOverride: [projectName], dispatchOnly: true });
   };
 
   const toggleProject = (name: string) => {
@@ -180,10 +214,16 @@ export function LokiWorkspace() {
         </div>
 
         <div className="ui-panel flex min-h-0 flex-1 flex-col px-3 py-2 md:px-4 md:py-3">
-          <Transcript messages={messages} sending={sending} />
+          <Transcript
+            messages={messages}
+            sending={sending}
+            onPickProject={dispatchWithProject}
+          />
         </div>
         {error && <p className="ui-error">{error}</p>}
         <Composer
+          key={composerPrefill ?? "default"}
+          defaultText={composerPrefill ?? ""}
           disabled={false}
           sending={sending}
           onSend={(t, choice, attachments) => void send(t, choice, attachments)}

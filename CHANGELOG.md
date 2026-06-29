@@ -2,6 +2,14 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
+## 2026-06-27 (o)
+
+### Changed
+- **Single Loki surface.** Shell FAB and `?` shortcut navigate to `/loki` instead of a
+  chat-only modal. `loki:open` prefills the composer (`?q=` or in-page event).
+- **Fleet-aware Loki commands.** "List my projects" and "create project …" resolve from
+  Postgres; ambiguous dispatches show tappable project chips in the transcript.
+
 ## 2026-06-28 (n)
 
 ### Changed

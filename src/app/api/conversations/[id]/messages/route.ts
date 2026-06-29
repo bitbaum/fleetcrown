@@ -15,7 +15,12 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getApiUserId } from "@/lib/session";
 import { readIdParam, readJsonBody, z } from "@/lib/api/route-helpers";
-import { getUserProjects } from "@/db/queries/user-projects";
+import {
+  countActiveProjects,
+  createUserProject,
+  getUserProjects,
+} from "@/db/queries/user-projects";
+import { getUserById } from "@/db/queries/users";
 import {
   getConversationWithMessages,
   addMessage,
@@ -24,21 +29,25 @@ import {
   deriveConversationTitle,
   DEFAULT_CONVERSATION_TITLE,
 } from "@/db/queries/conversations";
+import type { Conversation, ConversationMessage } from "@/db/schema/conversations";
 import { resolveCommand, isGenericDevelopHandoff } from "@/lib/command-resolve";
 import { injectPrompt } from "@/lib/inject-core";
 import { askLoki } from "@/lib/loki-core";
 import { ORCHESTRATION_ADAPTER_IDS, type AdapterId } from "@/lib/orchestration";
 import { MAX_ATTACHMENTS, MAX_ATTACHMENT_CHARS, renderAttachments } from "@/lib/loki/attachments";
+import {
+  formatProjectList,
+  isListProjectsQuery,
+  parseCreateProjectRequest,
+  projectNameFromConversationTitle,
+} from "@/lib/loki-fleet-commands";
+import { getProjectLimit } from "@/lib/plan";
 
 const Body = z.object({
   text: z.string().trim().min(1).max(4000),
   selectedProjects: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
-  // Composer model picker: pin a one-off agent + model for this dispatch.
-  // Both optional — omitted means "use the project's default" (the picker's
-  // "Auto" option). agent is validated against dispatchable adapters below.
   agent: z.enum(ORCHESTRATION_ADAPTER_IDS).optional(),
   model: z.string().trim().min(1).max(60).optional(),
-  // Composer file attachments — text content folded into the dispatched prompt.
   attachments: z
     .array(
       z.object({
@@ -48,7 +57,74 @@ const Body = z.object({
     )
     .max(MAX_ATTACHMENTS)
     .optional(),
+  /** When true, skip persisting a user turn — used when picking a project chip
+   *  after a needsProject prompt. `text` is still used for resolution/dispatch. */
+  dispatchOnly: z.boolean().optional(),
 });
+
+type DispatchOpts = {
+  userId: string;
+  conversationId: string;
+  existing: { conversation: Conversation; messages: ConversationMessage[] };
+  projectKey: string;
+  prompt: string;
+  sourceText: string;
+  intentId: string | null;
+  attachmentSuffix: string;
+  agent?: AdapterId;
+  model?: string;
+  attachments?: { name: string; content: string }[];
+};
+
+async function persistDispatch(opts: DispatchOpts): Promise<ConversationMessage> {
+  const useIntentKey =
+    Boolean(opts.intentId) &&
+    isGenericDevelopHandoff(opts.sourceText) &&
+    !(opts.attachments && opts.attachments.length > 0);
+  const inject = await injectPrompt(
+    useIntentKey
+      ? {
+          tab: opts.projectKey,
+          promptKey: opts.intentId!,
+          adapter: opts.agent,
+          model: opts.model,
+        }
+      : {
+          tab: opts.projectKey,
+          customPrompt: opts.prompt + opts.attachmentSuffix,
+          adapter: opts.agent,
+          model: opts.model,
+        },
+    opts.userId,
+  );
+  const ok = inject.status < 400;
+  const content = ok
+    ? `Dispatched to ${opts.projectKey}: ${opts.prompt}`
+    : `Could not dispatch to ${opts.projectKey}: ${
+        typeof inject.body.error === "string" ? inject.body.error : "dispatch failed"
+      }`;
+  const assistant = await addMessage(opts.conversationId, {
+    role: "assistant",
+    kind: "dispatch",
+    content,
+    meta: {
+      projectKey: opts.projectKey,
+      intentId: opts.intentId,
+      ok,
+      mode: inject.body.mode ?? null,
+      warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
+      agent: opts.agent ?? null,
+      model: opts.model ?? null,
+    },
+  });
+  if (!opts.existing.conversation.projectKeys.includes(opts.projectKey)) {
+    await updateConversationProjects(opts.userId, opts.conversationId, [
+      ...opts.existing.conversation.projectKeys,
+      opts.projectKey,
+    ]);
+  }
+  return assistant;
+}
 
 export async function POST(
   req: NextRequest,
@@ -63,39 +139,120 @@ export async function POST(
 
   const dataOrResp = await readJsonBody(req, Body);
   if (dataOrResp instanceof NextResponse) return dataOrResp;
-  const { text, selectedProjects, agent, model, attachments } = dataOrResp;
+  const { text, selectedProjects, agent, model, attachments, dispatchOnly } = dataOrResp;
 
-  // Attachment text is appended to the dispatched/asked prompt AFTER resolution,
-  // so the resolver classifies on the user's words — not a dumped file.
   const attachmentSuffix = renderAttachments(attachments);
   const attachmentNote =
     attachments && attachments.length > 0
       ? `\n\n[Attached: ${attachments.map((a) => a.name).join(", ")}]`
       : "";
 
-  // Ownership gate — message writes are only allowed on the caller's own thread.
   const existing = await getConversationWithMessages(userId, conversationId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // 1. Persist the user turn. The note (filenames only) keeps the transcript
-  //    honest about what was sent without dumping file bodies into the bubble.
-  await addMessage(conversationId, { role: "user", content: text + attachmentNote });
+  if (!dispatchOnly) {
+    await addMessage(conversationId, { role: "user", content: text + attachmentNote });
 
-  // Auto-title: the first user turn names a still-untitled thread. `existing`
-  // was loaded BEFORE this write, so an empty history means this is turn one.
-  const currentTitle = existing.conversation.title.trim();
-  if (
-    existing.messages.length === 0 &&
-    (currentTitle === "" || currentTitle === DEFAULT_CONVERSATION_TITLE)
-  ) {
-    const title = deriveConversationTitle(text);
-    if (title) await updateConversationTitle(userId, conversationId, title);
+    const titleForAuto = existing.conversation.title.trim();
+    if (
+      existing.messages.length === 0 &&
+      (titleForAuto === "" || titleForAuto === DEFAULT_CONVERSATION_TITLE)
+    ) {
+      const title = deriveConversationTitle(text);
+      if (title) await updateConversationTitle(userId, conversationId, title);
+    }
   }
 
-  // 2. Resolve against the user's project registry. Selection (right pane) wins
-  //    over a name in the text — explicit choice beats inference.
+  const currentTitle = existing.conversation.title.trim();
+
   const projects = await getUserProjects(userId);
   const projectNames = projects.map((p) => p.name);
+
+  // Fleet fast paths — deterministic, no LLM.
+  if (isListProjectsQuery(text)) {
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content: formatProjectList(projects),
+      meta: { source: "fleet-list" },
+    });
+    return NextResponse.json({ message: assistant });
+  }
+
+  const createReq = parseCreateProjectRequest(text);
+  if (createReq) {
+    let name = createReq.name;
+    if (!name) {
+      const titled =
+        currentTitle !== "" && currentTitle !== DEFAULT_CONVERSATION_TITLE
+          ? currentTitle
+          : deriveConversationTitle(text) ?? "";
+      name = projectNameFromConversationTitle(titled);
+    }
+    if (!name) {
+      const assistant = await addMessage(conversationId, {
+        role: "assistant",
+        kind: "chat",
+        content:
+          "What should the new project be called? Say **create project my-app** or name this conversation first.",
+        meta: { source: "create-project-needs-name" },
+      });
+      return NextResponse.json({ message: assistant });
+    }
+
+    const user = await getUserById(userId);
+    if (user && !user.isDefault) {
+      const limit = getProjectLimit(user.plan);
+      if (Number.isFinite(limit)) {
+        const current = await countActiveProjects(userId);
+        if (current >= limit) {
+          const assistant = await addMessage(conversationId, {
+            role: "assistant",
+            kind: "chat",
+            content: `Project limit reached (${limit} on ${user.plan} plan). Upgrade to add more.`,
+            meta: { source: "create-project-limit" },
+          });
+          return NextResponse.json({ message: assistant });
+        }
+      }
+    }
+
+    let projectName = name;
+    try {
+      const created = await createUserProject({ userId, name });
+      projectName = created.name;
+    } catch (e: unknown) {
+      const duplicate =
+        e && typeof e === "object" && "code" in e && e.code === "23505";
+      if (!duplicate) throw e;
+    }
+
+    if (createReq.dispatchAfter) {
+      const assistant = await persistDispatch({
+        userId,
+        conversationId,
+        existing,
+        projectKey: projectName,
+        prompt: "Continue from our discussion and implement the plan we agreed.",
+        sourceText: text,
+        intentId: "next_best",
+        attachmentSuffix,
+        agent: agent as AdapterId | undefined,
+        model,
+        attachments,
+      });
+      return NextResponse.json({ message: assistant });
+    }
+
+    const assistant = await addMessage(conversationId, {
+      role: "assistant",
+      kind: "chat",
+      content: `Registered **${projectName}**. Select it on the right, then say what to run.`,
+      meta: { source: "create-project", projectKey: projectName },
+    });
+    return NextResponse.json({ message: assistant });
+  }
+
   const resolution = await resolveCommand(
     { text, projects: projectNames, selectedProject: selectedProjects[0] },
     userId,
@@ -104,73 +261,32 @@ export async function POST(
   let assistant;
 
   if (resolution.kind === "command" && resolution.projectKey) {
-    // 3a. Dispatch — fire-and-forget into the project's session. A composer
-    //     model-picker selection (agent/model) overrides the project default;
-    //     "Auto" sends neither, so the project's stored prefs apply.
-    const useIntentKey =
-      Boolean(resolution.intentId) &&
-      isGenericDevelopHandoff(text) &&
-      !(attachments && attachments.length > 0);
-    const inject = await injectPrompt(
-      useIntentKey
-        ? {
-            tab: resolution.projectKey,
-            promptKey: resolution.intentId!,
-            adapter: agent as AdapterId | undefined,
-            model,
-          }
-        : {
-            tab: resolution.projectKey,
-            customPrompt: resolution.prompt + attachmentSuffix,
-            adapter: agent as AdapterId | undefined,
-            model,
-          },
+    assistant = await persistDispatch({
       userId,
-    );
-    const ok = inject.status < 400;
-    const content = ok
-      ? `Dispatched to ${resolution.projectKey}: ${resolution.prompt}`
-      : `Could not dispatch to ${resolution.projectKey}: ${
-          typeof inject.body.error === "string" ? inject.body.error : "dispatch failed"
-        }`;
-    assistant = await addMessage(conversationId, {
-      role: "assistant",
-      kind: "dispatch",
-      content,
-      meta: {
-        projectKey: resolution.projectKey,
-        intentId: resolution.intentId,
-        ok,
-        mode: inject.body.mode ?? null,
-        // "runner-offline" when queued with no live runner — surfaced so the
-        // transcript can warn the work is waiting, not running.
-        warning: typeof inject.body.warning === "string" ? inject.body.warning : null,
-        // Only set when the operator pinned a non-default agent/model, so the
-        // footer can show "on Codex · gpt-5"; Auto leaves these null.
-        agent: agent ?? null,
-        model: model ?? null,
-      },
+      conversationId,
+      existing,
+      projectKey: resolution.projectKey,
+      prompt: resolution.prompt,
+      sourceText: text,
+      intentId: resolution.intentId,
+      attachmentSuffix,
+      agent: agent as AdapterId | undefined,
+      model,
+      attachments,
     });
-    // Keep the thread tagged with the project it now talks to.
-    if (!existing.conversation.projectKeys.includes(resolution.projectKey)) {
-      await updateConversationProjects(userId, conversationId, [
-        ...existing.conversation.projectKeys,
-        resolution.projectKey,
-      ]);
-    }
   } else if (resolution.needsProject) {
-    // 3c. Ambiguous command — ask instead of guessing.
     assistant = await addMessage(conversationId, {
       role: "assistant",
       kind: "command",
-      content: "Which project should I run that on? Select one on the right, or name it in your message.",
-      meta: { needsProject: true, intentId: resolution.intentId },
+      content: "Which project should I run that on? Tap one below, select on the right, or name it in your message.",
+      meta: {
+        needsProject: true,
+        intentId: resolution.intentId,
+        pendingText: text,
+        projectOptions: projectNames,
+      },
     });
   } else {
-    // 3b. Chat — answer via Loki (attachments included so a question can be
-    //     about the attached file).
-    // Per-conversation web session → same agent (main) + memory as Telegram, own
-    // transcript. userId also resolves the caller's writing-voice preference.
     const loki = await askLoki(resolution.prompt + attachmentSuffix, {
       sessionKey: `agent:main:web:conv:${conversationId}`,
       userId,

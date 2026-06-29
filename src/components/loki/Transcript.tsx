@@ -58,12 +58,45 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   );
 }
 
+/** One-tap project pick when a command needs a target project. */
+function NeedsProjectPicker({
+  meta,
+  onPick,
+}: {
+  meta: Record<string, unknown> | null;
+  onPick: (project: string, pendingText: string) => void;
+}) {
+  if (!meta?.needsProject) return null;
+  const pendingText = typeof meta.pendingText === "string" ? meta.pendingText : "";
+  const options = Array.isArray(meta.projectOptions)
+    ? meta.projectOptions.filter((v): v is string => typeof v === "string")
+    : [];
+  if (!pendingText || options.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {options.map((name) => (
+        <button
+          key={name}
+          type="button"
+          className="ui-btn-chip"
+          onClick={() => onPick(name, pendingText)}
+        >
+          {name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function Transcript({
   messages,
   sending,
+  onPickProject,
 }: {
   messages: LokiMessage[];
   sending: boolean;
+  onPickProject?: (project: string, pendingText: string) => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +133,9 @@ export function Transcript({
             <div className="ui-loki-bubble ui-loki-bubble-assistant">
               <MarkdownText text={m.content} className="space-y-2" />
             </div>
+            {m.kind === "command" && onPickProject && (
+              <NeedsProjectPicker meta={m.meta} onPick={onPickProject} />
+            )}
             {m.kind === "dispatch" && <DispatchFooter meta={m.meta} />}
           </div>
         ),

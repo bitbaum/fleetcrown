@@ -1,17 +1,31 @@
 # Loki — the conversational command surface
 
-**Status:** shipped (Phases 1–3 live; Phase 4 partial). This document started as the
+**Status:** shipped (Phases 1–4 partial). This document started as the
 design spec for the original vision and is retained as the rationale of record; the
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
+**Last modified:** 2026-06-27 — single Loki surface (`/` shell `?` FAB → `/loki`);
+fleet list/create project fast paths; project picker chips on ambiguous dispatch.
+
 ### Shipped state (verified in the running app)
 
-The Loki page (`/loki`) is live and in daily use as a dogfood surface. Confirmed working:
+The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirmed working:
 
+- **Single surface:** the shell FAB and `?` shortcut navigate to `/loki` (no chat-only
+  modal). `loki:open` events from Control/Projects prefill the composer via `?q=` or
+  an in-page `loki:prefill` event when already on `/loki`.
 - **The command composer (§3):** one natural-language field; resolves the project named in
   the text (e.g. "for fleetcrown, …" scopes to the `fleetcrown` project) and routes the
   message to **dispatch** vs **chat** automatically.
+- **Fleet fast paths:** "list my projects" returns the registered fleet from Postgres (no
+  web search). "create project …" registers via `createUserProject`; "…and let's go"
+  dispatches `next_best` on the new project.
+- **Ambiguous dispatch:** when a command has no project, the transcript shows tappable
+  project chips (plus the right-pane selector). Picking a chip re-dispatches without
+  duplicating the user turn.
+- **Develop handoff:** "let's develop/build" with one selected project, one fleet project,
+  or a named project dispatches `next_best` instead of chatting.
 - **The Loki page (§4):** the 3-pane layout shipped as specced — conversation list (left),
   transcript (center) with the composer at the bottom, and the selectable **Projects**
   panel (right). Project tiles surface each project's active goal as a subtitle.
@@ -123,7 +137,7 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 - **Right:** **all projects**, each selectable. Selecting/deselecting projects **filters the
   conversation list** to those projects (and scopes new messages to the selected set).
 - **Conversations** are persistent threads, each tagged with 0..n projects. A message in a
-  conversation either (a) is answered (chat with Ivy about the project) or (b) dispatches
+  conversation either (a) is answered (chat with Loki about the project) or (b) dispatches
   work to the project's agent — decided by the same intent resolution as §3.
 
 ## 5. How Loki relates to Control and Terminal
@@ -137,7 +151,7 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 
 ## 6. Open questions (need George's call before building)
 
-1. **Chat vs command vs both.** Is a Loki message primarily *talking about* projects (Ivy
+1. **Chat vs command vs both.** Is a Loki message primarily *talking about* projects (Loki
    answers) or *commanding* agents (work runs), or both in one thread? (Leaning: both, with
    intent resolution routing each message.)
 2. **Conversation ↔ session.** Does a conversation own a long-running agent session, or are
@@ -155,10 +169,11 @@ A new top-level page **above Terminal** in the nav. Layout mirrors ChatGPT/Claud
 - **Phase 1 (done) — composer with NL resolution:** natural-language → `{ project, intent|prompt }`
   resolution shipped; naming a project in the text auto-scopes the dispatch.
 - **Phase 2 (done) — Loki page scaffold:** conversations + the 3-pane layout; composer wired to
-  Phase-1 resolution; chat via Ivy; dispatch via the Control backend; projects panel on the right.
+  Phase-1 resolution; chat via Loki; dispatch via the Control backend; projects panel on the right.
 - **Phase 3 (done) — affordances:** microphone, file attach, and model picker are live.
 - **Phase 4 (partial) — learned context:** project tiles surface each project's active goal;
-  still open: pre-selecting the likely project from an unscoped message and surfacing suggested
+  fleet list/create fast paths and ambiguous-dispatch project chips shipped; still open:
+  pre-selecting the likely project from an unscoped message and surfacing suggested
   next commands (the cognitive-load north star).
 
 ## 8. Cross-references

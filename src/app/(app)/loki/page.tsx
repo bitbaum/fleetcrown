@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { LokiWorkspace } from "@/components/loki/LokiWorkspace";
 import { PageTitle } from "@/components/ui/page-title";
 
@@ -18,7 +19,9 @@ export default function LokiPage() {
           </p>
         </div>
       </div>
-      <LokiWorkspace />
+      <Suspense fallback={null}>
+        <LokiWorkspace />
+      </Suspense>
     </div>
   );
 }
