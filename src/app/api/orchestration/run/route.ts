@@ -31,6 +31,7 @@ import { getRunnerConnected } from "@/db/queries/runner-presence";
 import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
+import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -119,6 +120,10 @@ export async function POST(req: NextRequest) {
         { status: 503 },
       );
     }
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    if (!execution.ok) {
+      return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+    }
     const intent = getOrchestrationIntent(request.intent as OrchestrationTaskIntentId);
     // Aim the agent at the project's roadmap: brief + active goals (getProjectContext).
     request.projectContext = (await getProjectContext(userId, request.projectKey)) ?? undefined;
@@ -158,9 +163,9 @@ export async function POST(req: NextRequest) {
     // an idle project actually starts work instead of typing into the void.
     // Model is forwarded so the runner's auto-launch honors it; when absent the
     // runner's _conf_model_for_tab fallback reads agent-projects.conf.
-    const runnerConnected = await getRunnerConnected(userId);
     const commandId = await enqueueDispatchCommand(userId, {
       tab: request.projectKey,
+      ...(execution.channel ? { channel: execution.channel } : {}),
       dir: request.projectPath,
       agent: request.adapter,
       prompt,
@@ -171,9 +176,9 @@ export async function POST(req: NextRequest) {
       runId: cloudRunId ?? undefined,
     });
     return NextResponse.json({
-      ok: true, queued: true, mode: "queued", commandId, runId: cloudRunId, runnerConnected,
+      ok: true, queued: true, mode: "queued", commandId, runId: cloudRunId, runnerConnected: execution.runnerConnected,
       // Fail loud, not silent — a dispatch with no live runner says so.
-      ...(runnerConnected === false && {
+      ...(execution.runnerConnected === false && {
         warning: "runner-offline",
         message: "Fleet Runner is offline — queued; it will run as soon as the runner reconnects.",
       }),

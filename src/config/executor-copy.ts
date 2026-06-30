@@ -32,7 +32,7 @@ export const EXECUTOR_COPY = {
   /** This computer = laptop/desktop Fleet Runner (optional local path) */
   thisComputer: "This computer",
 
-  /** Cloud = Hetzner box-runner + server workspaces (default for web users) */
+  /** Cloud = hosted builder channel (private beta until per-tenant sandboxes ship) */
   cloud: "Cloud",
 
   desktopApp: `${APP_NAME} desktop`,
@@ -50,17 +50,17 @@ export const EXECUTOR_COPY = {
   onboarding: {
     stepTitle: "You're ready to build",
     stepDescriptionTeam:
-      "Use the web app from anywhere. Connect this computer later for local-only repos.",
+      "Use the web app from anywhere. Connect this computer when you want agents to run your repos and tools.",
     stepDescription:
       "Same app in your browser or on desktop — one account, one Control page.",
-    intro: `${APP_NAME} runs in your browser. Press Start building on Control when you want agents to work. The cloud builder runs git-backed projects automatically. Installing the desktop app is optional — only if you want agents on this computer's folders and tools.`,
+    intro: `${APP_NAME} runs in your browser. Connect a builder when you want agents to work. Hosted cloud builders are private beta; Fleet Runner on this computer is the default path for new accounts.`,
     browserPath: {
       title: "Continue in your browser",
-      body: "Link a GitHub repo to a project, open Control, and press Start building. No install required.",
+      body: "Create projects, keep strategy and context, and connect a builder before dispatching agent work.",
     },
     desktopPath: {
       title: "Optional — also run on this computer",
-      body: `Install ${APP_NAME} desktop to dispatch agents against local folders and your own CLI logins. Works alongside the cloud builder — they share one queue.`,
+      body: `Install ${APP_NAME} desktop to dispatch agents against local folders and your own CLI logins. It uses your account token, so your queue stays tenant-scoped.`,
       cta: "Get the desktop app",
       href: "/download",
     },
@@ -77,7 +77,7 @@ export const EXECUTOR_COPY = {
     neverSeenTitle: "Optional — use this computer too",
     offlineTitle: "Builder offline",
     neverSeenBody:
-      "The cloud builder handles git-backed projects from your browser. Connect this computer only if you want agents on local folders or offline repos.",
+      "Connect Fleet Runner on this computer to execute agent work for this account. Hosted cloud builders are private beta.",
     offlineBody:
       "No builder is executing right now. Work stays queued — nothing is lost. Open the desktop app on this computer, or ensure the cloud builder is running.",
     reconnectHint: "Using this computer? Open the desktop app from the menu bar. Still stuck?",
@@ -125,11 +125,11 @@ export const EXECUTOR_COPY = {
       "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
     cloudLoading: "Looking for agents on the cloud builder…",
     cloudEmpty: "No agents on the cloud builder right now.",
-    cloudEmptyHint: "Dispatch from Control or Loki — the builder claims jobs from the shared queue.",
+    cloudEmptyHint: "Cloud builder is available only for enabled accounts until hosted sandboxes are tenant-isolated.",
     thisComputerHelp:
       "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "No agents on this computer right now.",
-    thisComputerEmptyHint: "Launch from Control — or use Cloud if only the server builder is running.",
+    thisComputerEmptyHint: "Launch from Control or Loki after Fleet Runner is connected to this account.",
     thisComputerLoading: "Looking for agents on this computer…",
   },
 } as const;

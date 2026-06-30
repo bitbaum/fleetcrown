@@ -5,6 +5,7 @@ import { getZellijSessionsSync, shellEscape } from "@/lib/zellij";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getApiUserId } from "@/lib/session";
 import { enqueueTabCommand } from "@/db/queries/pending-commands";
+import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const FocusTabBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -53,8 +54,15 @@ export async function POST(req: NextRequest) {
   if (!isRuntimeAvailable()) {
     const dataOrResp = await readJsonBody(req, FocusTabBody);
     if (dataOrResp instanceof NextResponse) return dataOrResp;
-    const commandId = await enqueueTabCommand(userId, "focus_tab", { tab: dataOrResp.tab });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId });
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    if (!execution.ok) {
+      return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+    }
+    const commandId = await enqueueTabCommand(userId, "focus_tab", {
+      tab: dataOrResp.tab,
+      ...(execution.channel ? { channel: execution.channel } : {}),
+    });
+    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, runnerConnected: execution.runnerConnected });
   }
 
   const dataOrResp = await readJsonBody(req, FocusTabBody);

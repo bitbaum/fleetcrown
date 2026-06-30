@@ -9,6 +9,7 @@ import { getSessionUserId } from "@/lib/session";
 import { readJsonBody, z } from "@/lib/api/route-helpers";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
+import { resolveQueuedExecution } from "@/lib/execution-access";
 
 const UpdateAgentBody = z.object({
   agent: z.enum(AGENT_IDS),
@@ -115,21 +116,32 @@ export async function POST(req: NextRequest) {
         // handles tab-not-open as a no-op via its quit signal path, so
         // queueing for every registered project is safe. Runner also
         // falls back to conf model if model is empty (9a3bd61).
-        tabResults = await Promise.all(
-          allProjects.map(async ({ tab, dir }): Promise<SwitchTabResult> => {
-            try {
-              await enqueueSwitchAgentCommand(userId, {
-                tab,
-                dir,
-                toAgent: dataOrResp.agent,
-                model: dataOrResp.model,
-              });
-              return { tab, dir, status: "queued" as const };
-            } catch (err) {
-              return { tab, dir, status: "failed" as const, error: err instanceof Error ? err.message : String(err) };
-            }
-          }),
-        );
+        const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+        if (!execution.ok) {
+          tabResults = allProjects.map(({ tab, dir }) => ({
+            tab,
+            dir,
+            status: "failed" as const,
+            error: execution.message,
+          }));
+        } else {
+          tabResults = await Promise.all(
+            allProjects.map(async ({ tab, dir }): Promise<SwitchTabResult> => {
+              try {
+                await enqueueSwitchAgentCommand(userId, {
+                  tab,
+                  ...(execution.channel ? { channel: execution.channel } : {}),
+                  dir,
+                  toAgent: dataOrResp.agent,
+                  model: dataOrResp.model,
+                });
+                return { tab, dir, status: "queued" as const };
+              } catch (err) {
+                return { tab, dir, status: "failed" as const, error: err instanceof Error ? err.message : String(err) };
+              }
+            }),
+          );
+        }
       } else {
         tabResults = applyToOpenTabs(dataOrResp.agent, dataOrResp.model, allProjects);
       }

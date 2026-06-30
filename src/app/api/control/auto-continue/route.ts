@@ -7,6 +7,7 @@ import { APP_SLUG } from "@/config/brand";
 import { writeFileSync, unlinkSync } from "fs";
 import { getProjectState, getProjectStatesByUserId, setAllProjectAutoContinue, upsertProjectState } from "@/db/queries/project-states";
 import { recordControlAuditEvent } from "@/db/queries/control-audit-events";
+import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const Body = z.object({
   tab:     z.string().max(200).optional(),
@@ -48,7 +49,15 @@ export async function POST(req: NextRequest) {
       for (const row of rows) applyLocalSentinel(row.projectKey, enabled);
       return NextResponse.json({ ok: true, mode: "local", scope: "all", count: rows.length });
     }
-    const commandIds = await Promise.all(rows.map((row) => enqueueAutoContinueCommand(userId, { tab: row.tabName, enabled })));
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    if (!execution.ok) {
+      return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+    }
+    const commandIds = await Promise.all(rows.map((row) => enqueueAutoContinueCommand(userId, {
+      tab: row.tabName,
+      ...(execution.channel ? { channel: execution.channel } : {}),
+      enabled,
+    })));
     return NextResponse.json({ ok: true, mode: "queued", scope: "all", count: commandIds.length, commandIds });
   }
 
@@ -71,7 +80,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, mode: "local" });
   }
 
-  const commandId = await enqueueAutoContinueCommand(userId, { tab, enabled });
+  const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+  if (!execution.ok) {
+    return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+  }
+  const commandId = await enqueueAutoContinueCommand(userId, {
+    tab,
+    ...(execution.channel ? { channel: execution.channel } : {}),
+    enabled,
+  });
   return NextResponse.json({ ok: true, mode: "queued", commandId });
 }
 

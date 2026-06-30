@@ -405,7 +405,17 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         runtimeAvailable,
       },
     });
-    return { status: 500, body: { error: `Injection failed: ${result.error}` } };
+    const policyStatus =
+      (result as { code?: string }).code === "builder-required" ? 409
+      : (result as { code?: string }).code === "cloud-builder-private" ? 403
+      : 500;
+    return {
+      status: policyStatus,
+      body: {
+        error: `Injection failed: ${result.error}`,
+        ...((result as { code?: string }).code ? { code: (result as { code?: string }).code } : {}),
+      },
+    };
   }
 
   // Prompt history records the user's request in both modes. A queued remote

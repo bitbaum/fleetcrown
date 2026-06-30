@@ -7,6 +7,7 @@ import { injectIntoTab, sendRawKey } from "@/lib/zellij";
 import { getSessionUserId } from "@/lib/session";
 import { enqueueSwitchAgentCommand } from "@/db/queries/pending-commands";
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from "@/lib/agent-process-scan";
+import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const SwitchAgentBody = z.object({
   tab:       z.string().trim().min(1).max(120),
@@ -78,15 +79,27 @@ export async function POST(req: NextRequest) {
   if (!isRuntimeAvailable()) {
     const userId = await getSessionUserId();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    if (!execution.ok) {
+      return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+    }
     const resolvedFrom = resolveOutgoingAgentForDir(dir, fromAgent) ?? fromAgent;
     const commandId = await enqueueSwitchAgentCommand(userId, {
       tab,
+      ...(execution.channel ? { channel: execution.channel } : {}),
       dir,
       toAgent,
       fromAgent: resolvedFrom,
       model,
     });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, fromAgent: resolvedFrom ?? null });
+    return NextResponse.json({
+      ok: true,
+      queued: true,
+      mode: "queued",
+      commandId,
+      fromAgent: resolvedFrom ?? null,
+      runnerConnected: execution.runnerConnected,
+    });
   }
 
   const registry = listAgentRegistry();

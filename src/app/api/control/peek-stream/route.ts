@@ -10,6 +10,7 @@ import { getSessionUserId } from "@/lib/session";
 import { sseBus, peekChannel, addPeekViewer, removePeekViewer, type PeekFrame } from "@/lib/sse-bus";
 import { enqueuePeekCommand } from "@/db/queries/pending-commands";
 import type { RunnerChannel } from "@/db/schema/pending-commands";
+import { getExecutionAccess } from "@/lib/execution-access";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,15 @@ export async function GET(req: NextRequest) {
   const channelParam = new URL(req.url).searchParams.get("channel");
   const runnerChannel: RunnerChannel | undefined =
     channelParam === "cloud" || channelParam === "local" ? channelParam : undefined;
+  if (runnerChannel === "cloud") {
+    const access = await getExecutionAccess(userId);
+    if (!access.cloudBuilderAllowed) {
+      return new Response(JSON.stringify({ error: "Cloud builder is private for this account." }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
 
   const channel = peekChannel(userId, tab, runnerChannel);
 

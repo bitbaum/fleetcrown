@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
+import { getExecutionAccess } from "@/lib/execution-access";
 
 export const runtime = "nodejs";
 
@@ -17,6 +18,19 @@ export async function GET(req: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const channelParam = new URL(req.url).searchParams.get("channel");
   const requestedChannel = channelParam === "cloud" || channelParam === "local" ? channelParam : null;
+
+  if (requestedChannel === "cloud" && !isRuntimeAvailable()) {
+    const access = await getExecutionAccess(userId);
+    if (!access.cloudBuilderAllowed) {
+      return NextResponse.json({
+        tabs: [],
+        unavailable: {
+          code: "cloud-builder-private",
+          message: "Cloud builder is private for this account. Use This computer after connecting Fleet Runner.",
+        },
+      });
+    }
+  }
 
   let tabs: string[] = [];
   if (isRuntimeAvailable()) {

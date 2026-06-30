@@ -8,6 +8,7 @@ import { getApiUserId } from "@/lib/session";
 import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { stateFile } from "@/lib/agent-config";
+import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -92,8 +93,27 @@ export async function POST(req: NextRequest) {
   }
 
   if (!isRuntimeAvailable()) {
-    const commandId = await enqueueLaunchAgentCommand(userId, { tab, dir, agent, model, initialPrompt });
-    return NextResponse.json({ ok: true, queued: true, mode: "queued", commandId, tab, agent });
+    const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+    if (!execution.ok) {
+      return NextResponse.json(executionAccessErrorBody(execution), { status: execution.status });
+    }
+    const commandId = await enqueueLaunchAgentCommand(userId, {
+      tab,
+      ...(execution.channel ? { channel: execution.channel } : {}),
+      dir,
+      agent,
+      model,
+      initialPrompt,
+    });
+    return NextResponse.json({
+      ok: true,
+      queued: true,
+      mode: "queued",
+      commandId,
+      tab,
+      agent,
+      runnerConnected: execution.runnerConnected,
+    });
   }
 
   try {

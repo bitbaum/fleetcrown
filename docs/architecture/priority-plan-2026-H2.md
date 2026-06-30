@@ -3,7 +3,7 @@
 ---
 created_date: 2026-06-30
 last_modified_date: 2026-06-30
-last_modified_summary: B2/B4/B5 closed; runtime snapshot schema guard added; B6 remains partial until legacy zellij fallback is retired.
+last_modified_summary: Multitenancy execution boundary documented and enforced: shared cloud builder remains private; external tenants use Fleet Runner until sandboxed hosted execution ships.
 ---
 
 **North star:** Borrow the workers, own the bridge — one captain's interface over swappable runtimes, with verification and fleet governance you can trust.
@@ -64,7 +64,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 | D2 | Onboarding → first dispatch → watch path | [ ] |
 | D3 | Deploy: ledger migrations + rollback on failed health | [ ] |
 | D4 | Apt repo / desktop auto-update polish | [ ] |
-| D5 | Do not open box-runner to all tenants (needs SandboxExecutor P3) | [ ] |
+| D5 | Do not open box-runner to all tenants (needs SandboxExecutor P3) | [x] first safety gate |
 
 ## Horizon E — Multi-tenant + OrangeCat (6+ months)
 
@@ -100,6 +100,7 @@ OrangeCat identity bridge, multi-tenant SaaS launch, `packages/fleetcrown-core` 
 ## Related docs
 
 - `docs/architecture/box-owned-pty-executor.md` — box-runner architecture
+- `docs/architecture/multitenancy-execution-plan.md` — tenant execution boundary + hosted sandbox plan
 - `docs/debt-reduction-roadmap.md` — orchestration SSOT (B1)
 - `docs/loki-command-surface.md` — Loki phases
 - `docs/development/cloud-local-workflows.md` — builder vs control plane

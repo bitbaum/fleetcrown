@@ -10,8 +10,8 @@
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { DEFAULT_ADAPTER_ID } from "@/lib/orchestration";
 import { enqueueInjectCommand, enqueueDispatchCommand } from "@/db/queries/pending-commands";
-import { getRunnerConnected } from "@/db/queries/runner-presence";
 import type { InjectPayload } from "@/db/schema/pending-commands";
+import { resolveQueuedExecution } from "@/lib/execution-access";
 
 export type ExecuteResult =
   | { ok: true;  mode: "direct" }
@@ -20,7 +20,7 @@ export type ExecuteResult =
   // runner reconnects. Callers MUST surface that so a dispatch to an offline
   // runner is never a silent success (the "queued into the void" bug).
   | { ok: true;  mode: "queued"; commandId: string; runnerConnected: boolean }
-  | { ok: false; mode: "direct" | "queued"; error: string };
+  | { ok: false; mode: "direct" | "queued"; error: string; code?: string };
 
 /**
  * Execute a prompt injection.
@@ -71,11 +71,14 @@ export async function executeInject(
 
   try {
     const remoteDefaultChannel = runtimeAvailable ? undefined : "cloud";
-    const channel = payload.channel ?? remoteDefaultChannel;
-    // Check presence BEFORE enqueue so we can tell the caller whether anything
-    // is actually listening. We still enqueue when offline (so the work runs
-    // once a runner reconnects), but we never report it as a clean success.
-    const runnerConnected = await getRunnerConnected(userId);
+    const decision = await resolveQueuedExecution(userId, {
+      requestedChannel: payload.channel,
+      defaultChannel: remoteDefaultChannel,
+    });
+    if (!decision.ok) {
+      return { ok: false, mode: "queued", error: decision.message, code: decision.code };
+    }
+    const channel = decision.channel;
     const commandId = payload.dir
       ? await enqueueDispatchCommand(userId, {
           tab: payload.tab,
@@ -90,7 +93,7 @@ export async function executeInject(
           runId: payload.runId,
         })
       : await enqueueInjectCommand(userId, channel ? { ...payload, channel } : payload);
-    return { ok: true, mode: "queued", commandId, runnerConnected };
+    return { ok: true, mode: "queued", commandId, runnerConnected: decision.runnerConnected };
   } catch (err) {
     return { ok: false, mode: "queued", error: err instanceof Error ? err.message : String(err) };
   }

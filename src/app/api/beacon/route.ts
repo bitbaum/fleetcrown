@@ -23,6 +23,7 @@ import { getProjectAutopilotOverride } from "@/db/queries/projects";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { enqueueSwitchAgentCommand, recentSwitchAgentStats } from "@/db/queries/pending-commands";
 import { decideHeadlessReroute, MAX_AUTO_REROUTES_PER_WINDOW } from "@/lib/auto-reroute";
+import { resolveQueuedExecution } from "@/lib/execution-access";
 import {
   createBeaconSession,
   getBeaconSession as getBeaconSessionFromDb,
@@ -65,9 +66,15 @@ async function maybeAutoRerouteOnCapacity(
     maxSwitchesPerWindow: MAX_AUTO_REROUTES_PER_WINDOW,
   });
   if (!decision.reroute) return;
+  const execution = await resolveQueuedExecution(userId, { defaultChannel: "cloud" });
+  if (!execution.ok) {
+    console.log(`[beacon] auto-reroute skipped: ${projectName} ${execution.code}`);
+    return;
+  }
 
   await enqueueSwitchAgentCommand(userId, {
     tab: project!.name,
+    ...(execution.channel ? { channel: execution.channel } : {}),
     dir: project!.dirPath!,
     toAgent: decision.toAgent,
     fromAgent: fromAgent ?? undefined,

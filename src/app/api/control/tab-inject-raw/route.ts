@@ -16,6 +16,7 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { publishFastLaneEvent } from "@/lib/bridge-publish";
+import { getExecutionAccess } from "@/lib/execution-access";
 
 const Channel = z.enum(["cloud", "local"]);
 
@@ -57,6 +58,12 @@ export async function POST(req: NextRequest) {
   // so a user can only drive their own tabs. Optional channel targets cloud
   // box-runner vs desktop Fleet Runner when both are online.
   const ch = body.channel;
+  if (ch === "cloud") {
+    const access = await getExecutionAccess(userId);
+    if (!access.cloudBuilderAllowed) {
+      return NextResponse.json({ error: "Cloud builder is private for this account." }, { status: 403 });
+    }
+  }
   if (body.kind === "key") {
     await publishFastLaneEvent({ kind: "rawkey", u: userId, tab: body.tab, b: body.data, ...(ch ? { ch } : {}) });
   } else {

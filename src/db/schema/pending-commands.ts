@@ -49,6 +49,8 @@ export type InjectPayload = {
 
 export type SwitchAgentPayload = {
   tab: string;
+  /** Optional runner target. When set, only that builder channel may claim it. */
+  channel?: RunnerChannel;
   dir: string;
   toAgent: string;
   fromAgent?: string;
@@ -57,6 +59,8 @@ export type SwitchAgentPayload = {
 
 export type AutoContinuePayload = {
   tab: string;
+  /** Optional runner target. When set, only that builder channel may claim it. */
+  channel?: RunnerChannel;
   enabled: boolean;
 };
 
@@ -70,6 +74,8 @@ export type TabPayload = {
 
 export type LaunchAgentPayload = {
   tab: string;
+  /** Optional runner target. When set, only that builder channel may claim it. */
+  channel?: RunnerChannel;
   dir: string;
   agent: string;
   model?: string;

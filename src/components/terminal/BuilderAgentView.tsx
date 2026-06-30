@@ -45,7 +45,10 @@ export function BuilderAgentView({
   const copy = COPY[variant];
   const Icon = copy.icon;
   const builderChannel = variant === "cloud" ? "cloud" as const : "local" as const;
-  const { data, loading } = useFetch<{ tabs: string[] }>(`/api/control/open-tabs?channel=${builderChannel}`, { intervalMs: 5000 });
+  const { data, loading } = useFetch<{ tabs: string[]; unavailable?: { code: string; message: string } }>(
+    `/api/control/open-tabs?channel=${builderChannel}`,
+    { intervalMs: 5000 },
+  );
   const tabs = data?.tabs ?? [];
   const [selected, setSelected] = useState<string | null>(initialTab ?? null);
   const active = selected && tabs.includes(selected) ? selected : (tabs[0] ?? null);
@@ -63,7 +66,7 @@ export function BuilderAgentView({
       <div className="ui-empty-page">
         <Icon className="h-6 w-6 text-text-muted" />
         <p className="text-sm text-text-secondary">{copy.empty}</p>
-        <p className="text-xs text-text-muted">{copy.emptyHint}</p>
+        <p className="max-w-md text-center text-xs text-text-muted">{data?.unavailable?.message ?? copy.emptyHint}</p>
       </div>
     );
   }
