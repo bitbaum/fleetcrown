@@ -5,7 +5,7 @@ design spec for the original vision and is retained as the rationale of record; 
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
-**Last modified:** 2026-06-27 — Loki move-forward fast path; cloud-first Terminal links; build-chain docs.
+**Last modified:** 2026-06-30 — Terminal interactive copy; channel-targeted rawkey for Cloud vs This computer.
 
 ### Shipped state (verified in the running app)
 
@@ -46,11 +46,14 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
   to `Auto`, hidden on phones) are all present. Quick-action chips and a scoped-project pill sit above the composer.
 - **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → builder →
   agent-terminal path as a Control "Next best" click. Dispatch bubbles link to Control and
-  **Terminal → Cloud** (default) or **This computer** (desktop app).
+  **Terminal → Cloud** or **This computer** — full interactive xterm (type directly, not watch-only).
 - **Move forward:** "move forward", "keep building", "make progress", etc. dispatch
   `next_best` when one project is selected; otherwise batch `fleet-kick` (same as Control
   Start building scope). When the cloud builder is online, queued dispatches show
   **With builder — starting shortly** (not "builder offline").
+- **Fast project load:** `/loki` server-prefetches the project list and conversation
+  history (no stuck "Loading…" panes). `?project=fleetcrown` auto-selects that project;
+  a sole registered project is selected by default.
 
 Open questions §6 #1 (chat vs command — both, routed by intent resolution) and #2
 (dispatches go to the project's existing session; the conversation is the human-readable

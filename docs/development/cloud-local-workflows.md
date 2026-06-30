@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-06-27
-last_modified_summary: Document Loki → builder queue → Terminal watch path; unified builder UX.
+last_modified_date: 2026-06-30
+last_modified_summary: Terminal interactive copy + channel-targeted rawkey (cloud vs local); cloud-local workflows.
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer. Users never need to pick; both share one queue.
@@ -56,15 +56,19 @@ Fleet Runner embeds the `home/` orchestration library (`watcher.ts` + `worker.ts
 | **Connection-based presence** | Runner online/offline is the live bridge SSE connection, not a heartbeat (see `runner_presence`) |
 | **Auto-continue pause sentinel** | `/tmp/fleetcrown-auto-continue-<tab>` — respected by the runner's autopilot path |
 
-## Component roles (Fleet Runner vs web app)
+## Component roles (builder vs web app)
 
 | Component | Runs where | Responsibility |
 |-----------|------------|----------------|
-| **Web app** | Hosted (self-hosted on the Hetzner box) or local (`fleetcrown-app.service` on `:3000`) | Auth, Postgres, Control UI, command queue, dispatch gates |
-| **Fleet Runner** | Your machine (Electron desktop app) | Long-polls the command queue, injects into Zellij, pushes runtime snapshots, embeds the `home/` watcher + worker, autopilot |
-| **`home/` library** | Embedded inside Fleet Runner | Local JSONL event loop (`watcher.ts`, `worker.ts`, `decide.ts`, `state.ts`); see `home/README.md` |
+| **Web app** | Hosted Hetzner box (`fleetcrown-app`) or local dev | Auth, Postgres, Control/Loki UI, command queue — **control plane only on prod** (`RUNTIME_AVAILABLE` unset) |
+| **box-runner** | Hetzner box (`fleetcrown-box-runner.service`) | Default cloud builder: polls queue, owned PTY agents, peek-stream for Terminal → Cloud |
+| **Fleet Runner** | Optional — operator's computer (Electron) | Same queue on local machine; Terminal → This computer |
+| **Hermes runner** | Hetzner sandbox | PR-mode offline dispatches when no builder claims |
+| **`home/` library** | Embedded in desktop runner | Local JSONL event loop; see `home/README.md` |
 
-**Production control flow:** Browser → API → Postgres queue → Fleet Runner → Zellij → agent CLI.
+**Production control flow:** Browser → API → Postgres queue → box-runner (or desktop) → owned PTY → agent CLI. Terminal → Cloud / This computer are **fully interactive** (xterm keystrokes → `tab-inject-raw` → bridge rawkey → runner PTY); output streams via peek-stream SSE.
+
+Priority stack: `docs/architecture/priority-plan-2026-H2.md`.
 
 ## Workflow matrix
 

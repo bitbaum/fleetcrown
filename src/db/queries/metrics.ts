@@ -95,7 +95,7 @@ export async function getRunMetrics(userId: string) {
  *  user-scoped (no user_id column — see the schema file header), so this
  *  view is system-wide. That's the right scope anyway: an error spike on
  *  a different user's request path is still operationally relevant. */
-export async function getErrorLogMetrics(_userId: string) {
+export async function getErrorLogMetrics() {
   const since = new Date(Date.now() - HOURS_24_MS);
   const rows = await db
     .select({ source: debugLogs.source, n: count() })

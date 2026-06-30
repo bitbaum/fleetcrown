@@ -29,15 +29,6 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
   const preRef = useRef<HTMLPreElement>(null);
   const requestSeq = useRef(0);
 
-  // P2-lite: send a single line into the pane via the existing inject path.
-  const sendLine = async (text: string) => {
-    await fetch("/api/control/tab-inject", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tab, prompt: text }),
-    });
-  };
-
   const applyContent = (nextContent: string) => {
     setContent(nextContent);
     setLastFetchedAt(Date.now());
@@ -191,7 +182,7 @@ export function PeekTabDrawer({ tab, onClose }: { tab: string; onClose: () => vo
           </div>
         ) : view === "live" ? (
           <div className="p-3">
-            <TerminalView transport={runnerTransport(tab)} onSend={sendLine} />
+            <TerminalView transport={runnerTransport(tab, "local")} interactive fill />
           </div>
         ) : error ? (
           <div className="p-6 text-sm text-text-secondary">

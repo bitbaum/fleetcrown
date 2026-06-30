@@ -11,11 +11,17 @@ Written 2026-06-07 after a 2-day session that took the product from v0.7.0 (brok
 > references to Vercel below have been updated to this reality, but read
 > `docs/infrastructure/hetzner-migration.md` for the authoritative current layout.
 
+> **Execution update (2026-06-30):** Cloud execution keystone is **`fleetcrown-box-runner.service`**
+> (headless builder on Hetzner), not the desktop Fleet Runner. The web app is a control
+> plane only (`RUNTIME_AVAILABLE` unset). Terminal → Cloud watches box-runner agents via
+> peek-stream; `/api/workspaces` is gated on prod. Priority stack:
+> `docs/architecture/priority-plan-2026-H2.md`.
+
 ---
 
 ## 1. The product in one paragraph
 
-FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents (Claude, Codex, Grok, Gemini, Cursor) running locally in Zellij terminals on their machine. The cloud is the **coordination layer**; agents and terminals are pluggable adapters; the daemon (poller + pusher + watcher) runs on the user's machine to close the loop. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Mao Nakamoto**, pre-revenue, one paying user (himself, dogfooding).
+FleetCrown is a multi-user SaaS for builders who run **multiple AI agents across multiple projects in parallel**. The user signs into `fleetcrown.orangecat.ch` (GitHub OAuth), registers their projects, and dispatches prompts to agents running on the **cloud builder** (`fleetcrown-box-runner` on Hetzner) and/or optionally on their computer via the desktop Fleet Runner app. The cloud is the **coordination layer**; agents and terminals are pluggable adapters. FleetCrown itself is the customer of sibling product **OrangeCat** (BTC payment/economic layer). Both ship under solo pseudonymous founder **Mao Nakamoto**, pre-revenue, one paying user (himself, dogfooding).
 
 ## 2. The lay of the land
 
@@ -246,22 +252,17 @@ The mirror script is the bridge between `maonakamoto/fleetcrown` (where CI build
 
 ## 10. First moves for the new agent
 
-In priority order:
+**Follow `docs/architecture/priority-plan-2026-H2.md`** (Horizon A → B). In priority order:
 
-1. **Update task #42 (QA marathon)** — Quit + relaunch Fleet Runner v0.7.5 on the user's machine; verify the UpdateBanner appears with the correct dpkg command; verify Peek opens drawer; verify Cmd-K lists projects. **Report whatever doesn't work.**
+1. **Horizon A — closed loop (in progress).** A1+A2 shipped 2026-06-30: Terminal Cloud uses box-runner peek; `/api/workspaces` gated on cloud. Next: A3 box-runner hardening (Claude auth, clone-on-demand), A4 builder presence clarity, A6 doc pass completion.
 
-2. **Build task #48 — the apt repo.** The user has been bitten by .deb auto-update twice. The v0.7.5 banner is a stopgap. The real fix:
-   - Generate a GPG signing key (one-time, store private key in GitHub Secrets)
-   - Build `Packages.gz` + `Release` + `InRelease` from .deb files per release
-   - Host at `https://fleetcrown.orangecat.ch/apt/` (static files served by Caddy, or a `/api/apt/[...path]` route)
-   - User installs once with `curl ... | sudo tee /etc/apt/sources.list.d/fleetcrown.list`
-   - Future updates: `sudo apt upgrade fleet-runner`. No more silent failures.
+2. **Horizon B — orchestration SSOT (B1).** Without derived state from `orchestration_events`, Control chips keep lying. Start after A loop is dogfood-clean.
 
-3. **Get one real external user.** Everything below is theater until that happens. The single highest-leverage move for the product.
+3. **First external user (Horizon D)** — only after watch path works without SSH. Everything else is theater until one other builder gets value.
 
-4. **Task #56 — split `useControlData`.** Risky but valuable for code health. Plan carefully. 325 lines, 17 returned fields, 4 distinct jobs.
+4. **Task #48 — apt repo** — durable fix for silent .deb auto-update failures (see §6 footguns).
 
-5. **Lift `/api/metrics` JSON into a `/system` page card.** Currently the metrics are curl-able but not visible. Render them as a card grid on `/system` so the operator dashboard is actually a dashboard.
+5. **Lift `/api/metrics` into `/system`** — operator dashboard visibility.
 
 ## 11. Important external context
 

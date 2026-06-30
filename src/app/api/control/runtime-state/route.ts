@@ -6,6 +6,7 @@ import { getApiUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { emitStateChanged } from "@/lib/sse-bus";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
+import { isCloudRunnerVersion } from "@/lib/builder-presence";
 
 function sanitizePanes(raw: unknown[]): PaneRecord[] {
   const out: PaneRecord[] = [];
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
       : undefined;
     const panes = Array.isArray(body.panes) ? sanitizePanes(body.panes) : undefined;
     const runnerVersion = typeof body.runnerVersion === "string" ? body.runnerVersion : undefined;
-    await upsertRuntimeSnapshotIfNewer(userId, openTabs, observedAt, installedAgents, panes, runnerVersion)
+    const channel = isCloudRunnerVersion(runnerVersion) ? "cloud" : "local";
+    await upsertRuntimeSnapshotIfNewer(userId, channel, openTabs, observedAt, installedAgents, panes, runnerVersion)
       .catch((err) => console.error("[runtime-state] runtime snapshot write failed:", err));
   }
 

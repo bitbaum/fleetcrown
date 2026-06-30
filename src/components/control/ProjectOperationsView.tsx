@@ -23,7 +23,7 @@ function snapshotActivityMs(snapshot: ProjectOperationsSnapshot): number {
     project.session?.mtime ?? 0,
     project.latestOrchestrationRun?.finishedAt ? Date.parse(project.latestOrchestrationRun.finishedAt) : 0,
     project.latestOrchestrationRun?.startedAt ? Date.parse(project.latestOrchestrationRun.startedAt) : 0,
-    project.recentInjections[0]?.dispatchedAt ? Date.parse(project.recentInjections[0].dispatchedAt) : 0,
+    project.recentActivity[0]?.at ? Date.parse(project.recentActivity[0].at) : 0,
   );
 }
 

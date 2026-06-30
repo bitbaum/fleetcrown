@@ -13,7 +13,6 @@ import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-
 import { ORCHESTRATION_ADAPTER_IDS, ORCHESTRATION_TASK_INTENT_IDS, DEFAULT_ADAPTER_ID, renderProjectContextBlock, type OrchestrationTaskIntentId } from "@/lib/orchestration";
 import { getProjectContext } from "@/db/queries/project-context";
 import { isRuntimeAvailable } from "@/lib/runtime";
-import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
@@ -50,6 +49,7 @@ export type InjectResult = { status: number; body: Record<string, unknown> };
  */
 export async function injectPrompt(params: InjectParams, userId: string): Promise<InjectResult> {
   const { tab, promptKey, customPrompt, adapter } = params;
+  const runtimeAvailable = isRuntimeAvailable();
   let runId = params.runId;
   // Provisional adapter for early-return logging; the real resolution happens
   // after we've looked up dbMatch and can honor user_projects.agent_pref below.
@@ -97,7 +97,10 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // the zsh user-typing hook). No live workspace → fall back to the legacy zellij
   // path unchanged (cloud mode never has one; injectFn is null there).
   const ptyWorkspaceId = workspaceIdFor(userId, canonical);
-  const ptyHandle = isRuntimeAvailable() ? executor.get(ptyWorkspaceId) : null;
+  const ptyExecutor = runtimeAvailable
+    ? (await import("@/lib/agent-execution")).executor
+    : null;
+  const ptyHandle = ptyExecutor ? ptyExecutor.get(ptyWorkspaceId) : null;
   const ptyBacked = !!ptyHandle && ptyHandle.status !== "exited";
 
   // Honor the project's per-row agent preference when the caller didn't pin one.
@@ -123,7 +126,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   let promptLabel = "Custom";
   let effectiveTab = canonical;
 
-  if (isRuntimeAvailable()) {
+  if (runtimeAvailable) {
     // Local: resolve live zellij tab and build prompt with session context.
     // These imports call execSync / read /tmp files — only safe locally.
     const { resolveEffectiveTab, readPrompts, readPromptMeta, getZellijTabs } =
@@ -231,11 +234,11 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // Build the local injection function. PTY-backed agents are driven directly via
   // the executor (write to the owned PTY's stdin); otherwise fall back to the
   // legacy zellij path. Null in cloud mode → executeInject queues for the runner.
-  const injectFn = !isRuntimeAvailable()
+  const injectFn = !runtimeAvailable
     ? null
     : ptyBacked
       ? async () => {
-          executor.write(ptyWorkspaceId, prompt.endsWith("\r") ? prompt : `${prompt}\r`);
+          ptyExecutor?.write(ptyWorkspaceId, prompt.endsWith("\r") ? prompt : `${prompt}\r`);
         }
       : async () => {
           const { injectIntoTab } = await import("@/lib/zellij");
@@ -277,7 +280,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
   // in ~/.zshrc (see scripts/install-fleetcrown-hooks.sh). This is a zellij-only
   // concept — a FleetCrown-owned PTY has no human at its prompt, so skip it.
   // Side effects (beacon cancel, /tmp state) run only after this gate passes.
-  if (isRuntimeAvailable() && !ptyBacked) {
+  if (runtimeAvailable && !ptyBacked) {
     const { isUserTypingInTab } = await import("@/lib/zellij");
     if (isUserTypingInTab(effectiveTab)) {
       const fingerprint = promptFingerprint(prompt);
@@ -300,7 +303,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
 
   // Run local filesystem side-effects — the server process can always write to /tmp
   // regardless of whether it's inside a Zellij pane or not.
-  if (isRuntimeAvailable()) {
+  if (runtimeAvailable) {
     const [{ cancelActiveBeaconSessions }, { stateFile, clearHandshakeFiles }, fs] = await Promise.all([
       import("@/app/api/beacon/route"),
       import("@/lib/agent-config"),
@@ -364,7 +367,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         promptKey: promptKey ?? null,
         promptLabel,
         customPromptLen: customPrompt?.length ?? 0,
-        runtimeAvailable: isRuntimeAvailable(),
+        runtimeAvailable,
       },
     });
     // Mirror the task_started emit on the failure branch so the
@@ -399,7 +402,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         adapter: eventAdapter,
         model: eventModel ?? null,
         promptKey: promptKey ?? "custom",
-        runtimeAvailable: isRuntimeAvailable(),
+        runtimeAvailable,
       },
     });
     return { status: 500, body: { error: `Injection failed: ${result.error}` } };
@@ -483,7 +486,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       model: eventModel ?? null,
       promptKey: promptKey ?? "custom",
       promptLabel,
-      runtimeAvailable: isRuntimeAvailable(),
+      runtimeAvailable,
     },
   });
 

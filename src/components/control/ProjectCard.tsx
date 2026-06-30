@@ -209,7 +209,7 @@ export function ProjectCard({
 
   const {
     sending, justSent, custom, setCustom, customFocused, setCustomFocused,
-    merging, preloadedDispatch, sendError, clearSendError,
+    merging, sendError, clearSendError,
     sendCustom, sendText, sessionHealthBlocksQueue, sendIntent, send,
     handleAutoInject, handleSendFromQueue, handleMergeQueue,
   } = useProjectCardActions({
@@ -298,8 +298,6 @@ export function ProjectCard({
       <ProjectCardHeader
         project={project}
         tabOpen={display.tabOpen}
-        isClosed={display.isClosed}
-        isClosing={display.isClosing}
         isReady={display.isReady}
         isOrchReady={display.isOrchestrationReady}
         isRunning={display.isRunning}
@@ -449,7 +447,7 @@ export function ProjectCard({
             queueBlockedReason={queueBlockedReason}
           />
           <ProjectActivitySection
-            injections={project.recentInjections}
+            activity={project.recentActivity}
             git={project.git}
             projectTab={project.tab}
             onReusePrompt={setCustom}

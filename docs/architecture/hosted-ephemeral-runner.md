@@ -1,11 +1,10 @@
 # Hosted Ephemeral Runner
 
-**Status:** design + Phase 0 in progress (2026-06-25)
-**Why:** FleetCrown commands a fleet it doesn't run — execution lives on the
-operator's laptop (Fleet Runner). When the laptop sleeps, every project shows
-"Offline · runner offline" and autopilot does nothing. This is the keystone gap
-(see Thoughts: *The Captain Needs a Ship*). A hosted runner executes dispatches
-on cloud compute so the fleet runs regardless of the operator's machine.
+**Status:** Phase 0 + Hermes dispatch largely implemented (2026-06-30). Phase 1 (sandboxed coding agent) design complete; not the same path as box-runner owned-PTY.
+**Why:** FleetCrown commands a fleet it doesn't run — without a cloud builder, every project shows
+"Offline · runner offline" when the laptop sleeps. The **box-runner** (owned PTY, interactive)
+and **Hermes runner** (sandboxed PR-mode) are complementary cloud executors. See
+`docs/architecture/box-owned-pty-executor.md` and `docs/architecture/priority-plan-2026-H2.md`.
 
 ## The loop we reuse (do NOT reinvent)
 

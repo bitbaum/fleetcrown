@@ -46,6 +46,7 @@ export async function executeInject(
   userId: string,
   injectFn: () => Promise<void>,
 ): Promise<ExecuteResult> {
+  const runtimeAvailable = isRuntimeAvailable();
   // Direct injection requires a local runtime (zellij + agents on this machine).
   // It does NOT require this process to live inside a Zellij pane: the terminal
   // adapter resolves the hosting session via findSessionForTab and qualifies
@@ -59,7 +60,7 @@ export async function executeInject(
   // On the cloud host isRuntimeAvailable() is false, so remote still queues for the runner.
   // `projectBusy` forces the queue path locally too: a 2nd same-project dispatch
   // serializes behind the running agent instead of colliding in the shared PTY.
-  if (isRuntimeAvailable() && !payload.projectBusy) {
+  if (runtimeAvailable && !payload.projectBusy) {
     try {
       await injectFn();
       return { ok: true, mode: "direct" };
@@ -69,6 +70,8 @@ export async function executeInject(
   }
 
   try {
+    const remoteDefaultChannel = runtimeAvailable ? undefined : "cloud";
+    const channel = payload.channel ?? remoteDefaultChannel;
     // Check presence BEFORE enqueue so we can tell the caller whether anything
     // is actually listening. We still enqueue when offline (so the work runs
     // once a runner reconnects), but we never report it as a clean success.
@@ -76,6 +79,7 @@ export async function executeInject(
     const commandId = payload.dir
       ? await enqueueDispatchCommand(userId, {
           tab: payload.tab,
+          ...(channel ? { channel } : {}),
           dir: payload.dir,
           agent: payload.adapter ?? DEFAULT_ADAPTER_ID,
           prompt: payload.prompt,
@@ -85,7 +89,7 @@ export async function executeInject(
           projectKey: payload.projectKey,
           runId: payload.runId,
         })
-      : await enqueueInjectCommand(userId, payload);
+      : await enqueueInjectCommand(userId, channel ? { ...payload, channel } : payload);
     return { ok: true, mode: "queued", commandId, runnerConnected };
   } catch (err) {
     return { ok: false, mode: "queued", error: err instanceof Error ? err.message : String(err) };

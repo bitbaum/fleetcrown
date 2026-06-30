@@ -1,33 +1,34 @@
 import { NextResponse } from "next/server";
 import { getZellijTabs } from "@/lib/zellij";
 import { getProjects, type ProjectRow } from "@/db/queries/projects";
-import { createOrchestrationEventOnce, getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
+import { getLatestEventsByProjectKeys } from "@/db/queries/orchestration-events";
 import { getLatestRunsByProjectPaths, getRecentOutcomesByProjectKeys, cleanupStaleOrchestrationRuns, updateOrchestrationRun } from "@/db/queries/orchestration-runs";
-import { getRecentCustomPromptsByProjectKeys, getRecentActivity, type RecentCustomPrompt, type ActivityItem } from "@/db/queries/prompt-history";
+import { getRecentActivity, getRecentCustomPromptsByProjectKeys, type RecentCustomPrompt } from "@/db/queries/prompt-history";
+import { getProjectActivityBatch, type ProjectActivityEvent } from "@/db/queries/activity";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentAvailabilityOverride, type AgentCatalog } from "@/lib/agent-catalog";
 import {
-  stateFile,
   resolveEffectiveTab,
   readPromptMeta,
   type PromptMeta,
 } from "@/lib/agent-config";
 import {
   parseSession,
-  readTmpTs,
   readCurrentPrompt,
   getAgentProcesses,
 } from "@/lib/control-fast-state";
 import {
-  deriveLifecycleState,
-  shouldPersistLifecycleEvent,
   DEFAULT_ADAPTER_ID,
   ORCHESTRATION_ADAPTER_IDS,
   type AdapterId,
 } from "@/lib/orchestration";
+import {
+  deriveProjectLifecycle,
+  persistRuntimeLifecycleEvents,
+} from "@/lib/orchestration/derive-project-lifecycle";
 import { adapterFor } from "@/lib/orchestration/adapter-registry";
 import { getProjectDefinitionOfDone } from "@/db/queries/project-context";
 import { verifyDefinitionOfDone, applyDoDGate } from "@/lib/orchestration/dod-gate";
@@ -62,6 +63,7 @@ async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId:
 // delegate more to lib/orchestration (deriveLifecycleState etc already used).
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
 import { inferAdapterFromTabName } from "@/components/control/control-presenter";
 import type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand } from "@/lib/control-types";
@@ -73,7 +75,8 @@ import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib
 import { resolveProjectSession } from "@/lib/project-session";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
-export type { PromptMeta, ActivityItem };
+export type { PromptMeta };
+export type { ProjectActivityEvent as ActivityTimelineEvent } from "@/db/queries/activity";
 
 // ── Slow-data cache (git + DB) ────────────────────────────────────────────────
 // git state and DB profiles change infrequently; PIDs/session/tmp files are always read fresh.
@@ -191,11 +194,15 @@ export async function GET() {
   // Fetch DB states for own user + all team project owners so session progress is visible.
   const teamOwnerIds = [...new Set(dbTeamProjects.map((p) => p.userId))];
   const allOwnerIds = [userId, ...teamOwnerIds];
-  const [latestRuns, recentPromptsMap, recentOutcomesMap, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
+  const [latestRuns, recentPromptsMap, recentOutcomesMap, activityByProject, recentActivity, dbStatesArr, latestLifecycleEvents, effectiveDbProjects, failedCommands] = await Promise.all([
     getLatestRunsByProjectPaths(userId, dirs),
     getRecentCustomPromptsByProjectKeys(userId, projectKeys).catch((e) => { console.error("[control/GET] recentPromptsMap failed:", e); return new Map<string, RecentCustomPrompt[]>(); }),
     getRecentOutcomesByProjectKeys(userId, projectKeys, 5).catch((e) => { console.error("[control/GET] recentOutcomesMap failed:", e); return new Map<string, import("@/db/schema/orchestration-runs").OrchestrationOutcome[]>(); }),
-    getRecentActivity(userId, 24, Math.max(30, projectKeys.length * 5)).catch((e): ActivityItem[] => { console.error("[control/GET] recentActivity failed:", e); return []; }),
+    getProjectActivityBatch(userId, projectKeys, { days: 1, perKey: 8 }).catch((e) => {
+      console.error("[control/GET] projectActivity failed:", e);
+      return new Map<string, ProjectActivityEvent[]>();
+    }),
+    getRecentActivity(userId).catch((e) => { console.error("[control/GET] recentActivity failed:", e); return []; }),
     // Single batch query instead of N per-owner queries
     getProjectStatesByUserIds(allOwnerIds).catch((e): DbProjectState[] => { console.error("[control/GET] projectStates failed:", e); return []; }),
     getLatestEventsByProjectKeys(userId, projectKeys, ["input_requested", "close_requested", "session_closed", "task_started"])
@@ -209,14 +216,6 @@ export async function GET() {
   // Key by (ownerUserId, projectKey) — two users in the same org may both have a
   // project with the same key, and we want each card to read its own owner's row.
   const dbStateMap = new Map(dbStatesArr.map((s) => [`${s.userId}:${s.projectKey.toLowerCase()}`, s]));
-
-  // Group recent activity by project key so each card gets its own slice (no extra query).
-  const activityByProject = new Map<string, typeof recentActivity>();
-  for (const item of recentActivity) {
-    const arr = activityByProject.get(item.projectKey) ?? [];
-    if (arr.length < 5) arr.push(item);
-    activityByProject.set(item.projectKey, arr);
-  }
 
   const states: ProjectState[] = projects.map(({ id, projectId, tab, dir, agentPref, modelPref, ownerUserId, readonly }) => {
     const latestRun = latestRuns.get(dir);
@@ -306,10 +305,6 @@ export async function GET() {
     }
 
     const nowS = Math.floor(Date.now() / 1000);
-    const tmpReady   = readTmpTs(stateFile.ready(liveTab));
-    const tmpLock    = readTmpTs(stateFile.lock(liveTab));
-    const tmpClosing = readTmpTs(stateFile.closing(liveTab));
-    const tmpClosed  = readTmpTs(stateFile.closed(liveTab));
 
     const projectAgentId = agentPref ?? agentConfig.agent;
     const projectAgent = agentRegistry.agents.find((entry) => entry.id === projectAgentId);
@@ -344,36 +339,26 @@ export async function GET() {
       : rawCurrentPrompt;
 
     const lifecycleEvents = latestLifecycleEvents.get(tab);
-    const derivedLifecycle = deriveLifecycleState({
-      runtime: {
-        readyAt: tmpReady,
-        lockAt: tmpLock,
-        closingAt: tmpClosing,
-        closedAt: tmpClosed,
-        currentPromptStartedAt: currentPrompt?.startedAt ?? null,
-      },
-      events: lifecycleEvents,
+    const { derived: derivedLifecycle, runtimeFacts } = deriveProjectLifecycle({
+      userId: ownerUserId,
+      projectKey: tab,
+      liveTab,
+      runtimeAvailable,
       dbState,
+      lifecycleEvents,
+      currentPrompt,
       nowS,
+      collectAdapterEvents: seam?.collectLifecycleEvents,
     });
 
-    for (const event of seam?.collectLifecycleEvents?.({
-      readyAt: tmpReady,
-      lockAt: tmpLock,
-      closingAt: tmpClosing,
-      closedAt: tmpClosed,
-      currentPromptStartedAt: currentPrompt?.startedAt ?? null,
-    }) ?? []) {
-      if (!shouldPersistLifecycleEvent(event, lifecycleEvents)) continue;
-      createOrchestrationEventOnce({
-        userId,
+    if (!readonly) {
+      persistRuntimeLifecycleEvents({
+        userId: ownerUserId,
         projectKey: tab,
-        eventType: event.type,
-        source: event.source,
-        detail: event.detail,
-        happenedAt: new Date(event.at * 1000),
-      }, `runtime:${userId}:${tab.toLowerCase()}:${event.type}:${event.source}:${event.at}`)
-        .catch((err) => console.error("[control] createOrchestrationEvent failed:", err));
+        runtimeFacts,
+        lifecycleEvents,
+        collectAdapterEvents: seam?.collectLifecycleEvents,
+      });
     }
 
     return ({
@@ -396,7 +381,7 @@ export async function GET() {
     closingAt: derivedLifecycle.closingAt,
     closedAt:  derivedLifecycle.closedAt,
     recentCustomPrompts: recentPromptsMap.get(tab) ?? [],
-    recentInjections: activityByProject.get(tab) ?? [],
+    recentActivity: activityByProject.get(tab) ?? [],
     recentOutcomes: recentOutcomesMap.get(tab) ?? [],
     // Stream-aligned per-tab fields so the first render carries what the SSE
     // patches will keep fresh — replaces per-card polling on mount.
@@ -451,6 +436,9 @@ export async function GET() {
           })()
         : null,
       runnerVersion: !isRuntimeAvailable() ? runnerVersion : null,
+      builderPresence: !isRuntimeAvailable()
+        ? await getBuilderPresence(userId, runnerVersion).catch(() => null)
+        : null,
       // Execution health (≠ push heartbeat): a runner can keep pushing snapshots
       // while its command loop is hung, so dispatches silently queue forever.
       // Surface that so a stalled runner is visible, not masquerading as "Connected".

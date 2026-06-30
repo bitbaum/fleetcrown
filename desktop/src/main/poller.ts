@@ -118,6 +118,11 @@ let bridgeHandle: { stop: () => void } | null = null
 // loop drops the next wait=25 and uses wait=0 to drain immediately.
 let pendingWake = false
 
+function runnerPresenceChannel(): 'cloud' | 'local' | null {
+  const raw = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+  return raw === 'cloud' || raw === 'local' ? raw : null
+}
+
 export function onPollerStatus(cb: StatusListener): () => void {
   listeners.add(cb)
   // Fire immediately so subscribers don't wait for the next change.
@@ -225,7 +230,10 @@ async function runLoop(token: string, lifetimeSignal: AbortSignal): Promise<void
       // alive — supervision couldn't see it, and the autopilot loop stalled.
       // A timeout aborts only the .any signal (not currentFetchCtrl), so the
       // catch falls through to backoff+retry instead of the bridge-wake `continue`.
-      const resp = await fetch(`${base}/api/control/commands?wait=0&types=${encodeURIComponent(FLEET_RUNNER_COMMAND_TYPES_PARAM)}`, {
+      const params = new URLSearchParams({ wait: '0', types: FLEET_RUNNER_COMMAND_TYPES_PARAM })
+      const channel = runnerPresenceChannel()
+      if (channel) params.set('channel', channel)
+      const resp = await fetch(`${base}/api/control/commands?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.any([currentFetchCtrl.signal, AbortSignal.timeout(POLL_FETCH_TIMEOUT_MS)]),
       })

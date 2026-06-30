@@ -25,9 +25,14 @@ readLocalEnv();
 
 const base = process.env.BASE ?? "http://localhost:3002";
 const ownerPassword = process.env.LOCAL_AUTH_PASSWORD;
+const dogfoodEmail = process.env.DOGFOOD_EMAIL;
+const dogfoodPassword = process.env.DOGFOOD_PASSWORD;
+const isLocal = base.includes("localhost") || base.includes("127.0.0.1");
 const routes = [
   "/today",
   "/control",
+  "/loki",
+  "/terminal?source=server&tab=fleetcrown",
   "/projects",
   "/prompts",
   "/activity",
@@ -53,12 +58,17 @@ function slug(route) {
 }
 
 async function login(page) {
-  await page.goto(`${base}/sign-in?callbackUrl=/today`, { waitUntil: "networkidle" });
-  const ownerTab = page.getByRole("button", { name: /owner key/i });
-  if (await ownerTab.count()) await ownerTab.click();
-  const passwordInput = page.locator('input[type="password"]').first();
-  if (!ownerPassword) throw new Error("LOCAL_AUTH_PASSWORD is not configured");
-  await passwordInput.fill(ownerPassword);
+  await page.goto(`${base}/sign-in?callbackUrl=/today`, { waitUntil: "domcontentloaded" });
+  if (isLocal) {
+    const ownerTab = page.getByRole("button", { name: /owner key/i });
+    if (await ownerTab.count()) await ownerTab.click();
+    if (!ownerPassword) throw new Error("LOCAL_AUTH_PASSWORD is not configured");
+    await page.locator('input[type="password"]').first().fill(ownerPassword);
+  } else {
+    if (!dogfoodEmail || !dogfoodPassword) throw new Error("DOGFOOD_EMAIL/DOGFOOD_PASSWORD required for production audit");
+    await page.locator('input[type="email"]').first().fill(dogfoodEmail);
+    await page.locator('input[type="password"]').first().fill(dogfoodPassword);
+  }
   await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 15000 });
 }

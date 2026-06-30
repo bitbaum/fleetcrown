@@ -101,5 +101,5 @@ Two complementary cloud executors, both killing the laptop dependency:
 ## Files this touches
 - New: `fleetcrown-box-runner.service` (systemd, on the box) + a headless runner entry reusing `src/lib/agent-execution/*` (the executor) + the desktop's queue-poll/stream core (factored out of `desktop/src/main/pty-runtime.ts`).
 - Box: install/auth `claude` (then others); a runner `.env` (DATABASE_URL, GitHub token, CLI creds).
-- No web-app code change required for P1 (it already enqueues + streams); `RUNTIME_AVAILABLE` stays unset on the web app.
+- No web-app PTY spawning on prod for P1 — `RUNTIME_AVAILABLE` stays unset on the web app; Terminal → Cloud uses peek-stream (Horizon A1, 2026-06-30). `/api/workspaces` is gated when `!isRuntimeAvailable()` (A2). Local dev with `RUNTIME_AVAILABLE=true` may still use workspaces for P0 throwaway tests.
 See [[project_hermes_on_box]] (move #1), `docs/architecture/agent-execution-platform.md`, `docs/fleet-runner-pty-ownership.md`.

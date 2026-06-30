@@ -33,7 +33,7 @@ function stubProject(overrides: Partial<ProjectState> & Pick<ProjectState, "tab"
     closingAt: null,
     closedAt: null,
     recentCustomPrompts: [],
-    recentInjections: [],
+    recentActivity: [],
     recentOutcomes: [],
     latestOrchestrationRun: null,
     autoInjectModeOverride: null,
@@ -94,7 +94,7 @@ function runTests(): void {
   });
 
   check("resolveNextFallbackAgent skips current", () => {
-    assert(resolveNextFallbackAgent("codex", ["claude", "cursor", "codex"]) === "cursor", "expected cursor");
+    assert(resolveNextFallbackAgent("codex", ["claude", "cursor", "codex"]) === "claude", "expected claude");
   });
 
   check("looksLikeAgentCapacityIssue matches quota", () => {

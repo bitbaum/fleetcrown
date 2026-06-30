@@ -23,13 +23,15 @@ export function emitStateChanged(userId: string) {
 // the existing buffer). Absent/false = a full zellij dump-screen snapshot (the
 // viewer reset()s then writes). One channel, two producers.
 export type PeekFrame = { seq: number; frame: string; at: number; append?: boolean };
+export type PeekBuilderChannel = "cloud" | "local";
 
-export function peekChannel(userId: string, tab: string): string {
-  return `peek:${userId}:${tab.toLowerCase()}`;
+export function peekChannel(userId: string, tab: string, channel?: PeekBuilderChannel): string {
+  return `peek:${channel ?? "any"}:${userId}:${tab.toLowerCase()}`;
 }
 
-export function emitPeekFrame(userId: string, tab: string, payload: PeekFrame): void {
-  sseBus.emit(peekChannel(userId, tab), payload);
+export function emitPeekFrame(userId: string, tab: string, payload: PeekFrame, channel?: PeekBuilderChannel): void {
+  sseBus.emit(peekChannel(userId, tab, channel), payload);
+  if (channel) sseBus.emit(peekChannel(userId, tab), payload);
 }
 
 // Viewer ref-count per (user, tab): the first viewer triggers peek_start, the
@@ -41,16 +43,16 @@ if (!(globalThis as Record<string, unknown>)[VKEY]) {
 const peekViewers = (globalThis as Record<string, unknown>)[VKEY] as Map<string, number>;
 
 /** Register a viewer; returns true if this is the FIRST viewer (→ peek_start). */
-export function addPeekViewer(userId: string, tab: string): boolean {
-  const key = peekChannel(userId, tab);
+export function addPeekViewer(userId: string, tab: string, channel?: PeekBuilderChannel): boolean {
+  const key = peekChannel(userId, tab, channel);
   const n = (peekViewers.get(key) ?? 0) + 1;
   peekViewers.set(key, n);
   return n === 1;
 }
 
 /** Deregister a viewer; returns true if this was the LAST viewer (→ peek_stop). */
-export function removePeekViewer(userId: string, tab: string): boolean {
-  const key = peekChannel(userId, tab);
+export function removePeekViewer(userId: string, tab: string, channel?: PeekBuilderChannel): boolean {
+  const key = peekChannel(userId, tab, channel);
   const n = (peekViewers.get(key) ?? 1) - 1;
   if (n <= 0) { peekViewers.delete(key); return true; }
   peekViewers.set(key, n);

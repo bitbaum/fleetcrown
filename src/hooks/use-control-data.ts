@@ -30,6 +30,7 @@ export interface ControlDataHook {
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion: string | null;
+  builderPresence: { cloud: boolean; local: boolean; any: boolean } | null;
   /** Connection-based presence (bridge SSE). null = no event yet → fall back
    *  to heartbeat age. true/false = authoritative live signal. */
   runnerConnected: boolean | null;
@@ -60,6 +61,7 @@ export function useControlData(): ControlDataHook {
   // the heartbeat-age fallback still governs the badge pre-rollout).
   // See docs/architecture/connection-presence.md.
   const [runnerConnected, setRunnerConnected] = useState<boolean | null>(null);
+  const [builderPresence, setBuilderPresence] = useState<{ cloud: boolean; local: boolean; any: boolean } | null>(null);
   const inFlight = useRef(false);
 
   const registry = data?.agentRegistry.agents ?? [];
@@ -79,6 +81,9 @@ export function useControlData(): ControlDataHook {
     try {
       const payload = await getJson<ControlData>("/api/control");
       setData(payload);
+      if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
+      if (payload.builderPresence?.any) setRunnerConnected(true);
+      else if (payload.builderPresence && !payload.builderPresence.any) setRunnerConnected(false);
       if (!agentDirty) {
         setAgent(payload.agentConfig.agent);
         setDraftModels({ [payload.agentConfig.agent]: payload.agentConfig.model });
@@ -207,8 +212,13 @@ export function useControlData(): ControlDataHook {
       es = new EventSource("/api/control/stream");
       es.addEventListener("projects-update", (e: MessageEvent) => {
         try {
-          const payload = JSON.parse(e.data) as { projects: FastProjectState[]; runnerConnected?: boolean };
+          const payload = JSON.parse(e.data) as {
+            projects: FastProjectState[];
+            runnerConnected?: boolean;
+            builderPresence?: { cloud: boolean; local: boolean; any: boolean };
+          };
           mergeProjectPatches(payload.projects);
+          if (payload.builderPresence) setBuilderPresence(payload.builderPresence);
           if (typeof payload.runnerConnected === "boolean") setRunnerConnected(payload.runnerConnected);
         } catch { /* ignore malformed events */ }
       });
@@ -352,6 +362,7 @@ export function useControlData(): ControlDataHook {
     runnerLastPushedAt: data?.runnerLastPushedAt ?? null,
     runnerVersion: data?.runnerVersion ?? null,
     runnerConnected,
+    builderPresence,
     refresh, inject, launchProject,
     runWithBrain, runCustomPrompt, saveAgent,
     handleAgentSelect, handleModelChange, setError,

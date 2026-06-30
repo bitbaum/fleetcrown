@@ -68,6 +68,10 @@ else
   (cd "$PROJECT_DIR" && npm run build)
 fi
 
+if [ -z "$NO_BUILD" ]; then
+  (cd "$PROJECT_DIR" && npm --prefix bridge run build)
+fi
+
 if [ ! -d "$STANDALONE/.next/static" ]; then
   echo "✗ $STANDALONE missing static assets — run npm run build first" >&2
   exit 1
@@ -106,28 +110,51 @@ ssh "$HOST" 'set -e
 
 # Schema-drift guard against the BOX database. The pre-push check (scripts/
 # check-schema-drift.ts) runs against the laptop DB; the box has its own
-# Postgres, so a table added in code but never pushed there silently 500s the
-# first feature that queries it (how /prompts, /loki and System cron went dark
-# locally). Print the schema-declared tables here, fetch the box's tables over
-# ssh, and diff — fail LOUDLY so the operator runs drizzle-kit push against the
-# box instead of trusting a half-broken deploy.
+# Postgres, so a table/column added in code but never pushed there silently
+# 500s the first feature that queries it. Print the schema-declared tables and
+# columns here, fetch the box's tables/columns over ssh, and diff — fail LOUDLY
+# instead of trusting a half-broken deploy.
 echo "→ schema-drift check (box DB)"
 DECLARED=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print 2>/dev/null | sort)
+DECLARED_COLUMNS=$(cd "$PROJECT_DIR" && npx tsx scripts/check-schema-drift.ts --print-columns 2>/dev/null | sort)
 BOX_TABLES=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | sort
 DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
 psql "$DBURL" -t -A -c "select table_name from information_schema.tables where table_schema = 'public'" 2>/dev/null
 REMOTE
 )
+BOX_COLUMNS=$(ssh "$HOST" 'LC_ALL=C bash -s' <<'REMOTE' | sort
+DBURL=$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
+psql "$DBURL" -t -A -c "select table_name || '.' || column_name from information_schema.columns where table_schema = 'public'" 2>/dev/null
+REMOTE
+)
 MISSING=$(comm -23 <(printf '%s\n' "$DECLARED") <(printf '%s\n' "$BOX_TABLES"))
-if [ -n "$MISSING" ]; then
+MISSING_COLUMNS=$(comm -23 <(printf '%s\n' "$DECLARED_COLUMNS") <(printf '%s\n' "$BOX_COLUMNS"))
+if [ -n "$MISSING" ] || [ -n "$MISSING_COLUMNS" ]; then
   echo "  ✗ box DB is missing declared tables:"
-  printf '%s\n' "$MISSING" | sed 's/^/    - /'
+  [ -n "$MISSING" ] && printf '%s\n' "$MISSING" | sed 's/^/    - /' || echo "    - none"
+  echo "  ✗ box DB is missing declared columns:"
+  [ -n "$MISSING_COLUMNS" ] && printf '%s\n' "$MISSING_COLUMNS" | sed 's/^/    - /' || echo "    - none"
   echo "  → run 'DATABASE_URL=<box> npx drizzle-kit push' before trusting this deploy"
   exit 1
 fi
-echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables present on box"
+echo "  ✓ schema: all $(printf '%s\n' "$DECLARED" | grep -c .) declared tables and $(printf '%s\n' "$DECLARED_COLUMNS" | grep -c .) declared columns present on box"
 
 echo "✓ deployed $(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}") to Hetzner — verified"
+
+# Event bridge — separate from the Next app and runner, but part of the same
+# control-plane protocol. Sync it here so SSE/rawkey/presence contracts cannot
+# drift between deploys.
+BRIDGE_DIR="/opt/fleetcrown/bridge"
+echo "→ sync event bridge → $HOST:$BRIDGE_DIR"
+rsync -az --delete --no-perms --omit-dir-times \
+  --exclude '.env' \
+  --exclude 'node_modules' \
+  "$PROJECT_DIR/bridge/" "$HOST:$BRIDGE_DIR/"
+ssh "$HOST" "chown -R ubuntu:ubuntu $BRIDGE_DIR \
+  && systemctl restart fleetcrown-bridge \
+  && sleep 2 \
+  && systemctl is-active fleetcrown-bridge >/dev/null"
+echo "  ✓ fleetcrown-bridge active"
 
 # Cloud builder (box-runner) — separate systemd unit from fleetcrown-app so app
 # deploys never kill running agent PTYs. Still sync runner code on every ship

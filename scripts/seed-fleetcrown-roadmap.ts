@@ -43,8 +43,9 @@ const ROADMAP_TAG = "autopilot-reliability";
 const BRIEF = [
   "FleetCrown — multi-user SaaS to command AI agent fleets across projects (the platform's own dogfood customer).",
   "Stack: Next.js 16 (App Router, Server Components/Actions), TypeScript strict, Tailwind 4 + shadcn/ui (always dark, .dark on <html>), Drizzle ORM (schema is the SSOT for types via $inferSelect/$inferInsert), PostgreSQL 17. Self-hosted on a Hetzner box (systemd fleetcrown-app serving the Next standalone build behind Caddy) — NOT Vercel.",
-  "Architecture: src/app = thin pages + API routes that delegate to src/db/queries (one file per domain) and components; src/db/schema = Drizzle tables (type SSOT); src/config = SSOT for navigation/channels/prompt-library; src/lib = orchestration contract, session, tools. home/ is the local-first orchestration library (watcher + worker tail one append-only JSONL event log). Fleet Runner (Electron desktop) is the sole local executor: every dispatch goes cloud /api/inject -> pending_command -> Fleet Runner polls and types into the agent terminal.",
-  "In-flight migration: agent execution is moving from zellij tab-name puppeting to FleetCrown-owned PTYs (node-pty). Cloud-vs-local split documented in docs/development/cloud-local-workflows.md (browser workflows vs local daemon needing Zellij + agent CLIs).",
+  "Architecture: src/app = thin pages + API routes that delegate to src/db/queries (one file per domain) and components; src/db/schema = Drizzle tables (type SSOT); src/config = SSOT for navigation/channels/prompt-library; src/lib = orchestration contract, session, tools. home/ is the local-first orchestration library (watcher + worker tail one append-only JSONL event log).",
+  "Execution (2026-06): The cloud builder is fleetcrown-box-runner.service on Hetzner — headless Fleet Runner core polling pending_commands and running agents in FleetCrown-owned node-pty PTYs. The web app is a control plane only (RUNTIME_AVAILABLE unset); Terminal → Cloud watches via peek-stream. Optional desktop Fleet Runner on the operator's computer shares the same queue.",
+  "Loki is the primary command surface (NL composer, fleet fast paths, move-forward). Control is the nerve center for fleet state. Priority plan SSOT: docs/architecture/priority-plan-2026-H2.md.",
   "Design system: a strict 4-layer token pipeline — globals.css :root raw values -> @theme inline Tailwind mappings -> ui-* component classes -> JSX (structure + layout only). Never use palette colors, hex, or arbitrary type sizes in components.",
   "Conventions: first-principles + SSOT/DRY/SoC/KISS/YAGNI; getCurrentUserId() for user id; <Modal>/<Drawer> primitives; lib/dates.ts for dates; useInlineEdit/useCreateMutation hooks; every table has user_id (multi-user), UUID PKs, JSONB metadata. Deploy via scripts/deploy-hetzner.sh (build -> rsync -> restart -> verify) with push-to-deploy on main.",
 ].join("\n");
@@ -56,23 +57,38 @@ type GoalSeed = {
   milestones: Milestone[];
 };
 
-// Each goal's milestones double as its acceptance criteria.
+// Ordered to match docs/architecture/priority-plan-2026-H2.md (Horizons A→B, defer i18n).
 const GOALS: GoalSeed[] = [
   {
-    title: "Runner stall: auto-recovery & alerting",
+    title: "Finish zellij -> FleetCrown-owned PTY terminal migration",
     description:
-      "Execution-stall detection shipped (pushes alive but the command loop is hung). Close the loop: recover or alert, never silently stall. Acceptance: a stalled runner is auto-recovered or the operator is alerted within one poll cycle.",
-    progress: 35,
+      "Own the agent terminal instead of puppeting zellij tab names. Horizon A: Terminal Cloud watches box-runner peek; web app must not spawn PTYs on prod. Acceptance: agents launch and receive injects through owned node-pty PTYs; zellij is no longer required on the cloud path.",
+    progress: 40,
     milestones: [
-      { title: "Detect execution-stall (pushes alive, command loop hung)", done: true },
-      { title: "Auto-recover: re-dispatch / restart runner on stall", done: false },
-      { title: "Alert operator (push / Telegram) when a stall is detected", done: false },
+      { title: "Single transport-parameterized xterm view", done: true },
+      { title: "node-pty owned-PTY executor on box-runner (cloud builder)", done: true },
+      { title: "Terminal Cloud = peek stream (not generic bash workspaces)", done: true },
+      { title: "Gate /api/workspaces on cloud control plane", done: true },
+      { title: "Cut dispatch path from zellij name-puppeting to owned PTY", done: false },
+      { title: "Remove zellij dependency from the launch flow", done: false },
+    ],
+  },
+  {
+    title: "One context assembler: Global+Project+Session into EVERY dispatch",
+    description:
+      "Every dispatch path must carry the same layered context from one assembler (Horizon B2). Acceptance: quick-send, autopilot, and inject-core all inject Global + Project + Session context; the inject-core bypass is closed.",
+    progress: 40,
+    milestones: [
+      { title: "Global operating principles injected (Global tier)", done: true },
+      { title: "Project brief + active goals injected via getProjectContext", done: true },
+      { title: "Session handoff injected on every dispatch path", done: false },
+      { title: "Close the /api/inject-core bypass (one assembler, all paths)", done: false },
     ],
   },
   {
     title: "Capture run outcomes (Done/Failed/commit), not just dispatches",
     description:
-      "Record what each run actually did, not merely that it was dispatched. Acceptance: every finished run persists an outcome + resulting commit SHA, queryable via the activity SSOT.",
+      "Record what each run actually did, not merely that it was dispatched (Horizon B3). Acceptance: every finished run persists an outcome + resulting commit SHA, queryable via the activity SSOT.",
     progress: 70,
     milestones: [
       { title: "Persist outcome (success/partial/error/hang/abort/timeout)", done: true },
@@ -84,7 +100,7 @@ const GOALS: GoalSeed[] = [
   {
     title: "Truthful-state chips on project cards",
     description:
-      "A card must never claim success when the evidence (git, handoff) contradicts it. Acceptance: contradictory state is always surfaced as a chip rather than trusted.",
+      "A card must never claim success when the evidence (git, handoff) contradicts it (Horizon B4). Acceptance: contradictory state is always surfaced as a chip rather than trusted.",
     progress: 50,
     milestones: [
       { title: "'no commit' warning when a done run left no git trace", done: true },
@@ -93,21 +109,20 @@ const GOALS: GoalSeed[] = [
     ],
   },
   {
-    title: "Finish zellij -> FleetCrown-owned PTY terminal migration",
+    title: "Runner stall: auto-recovery & alerting",
     description:
-      "Own the agent terminal instead of puppeting zellij tab names (case-sensitive, focus-fragile). Acceptance: agents launch and receive injects through FleetCrown-owned node-pty PTYs; zellij is no longer required.",
-    progress: 25,
+      "Execution-stall detection shipped (pushes alive but the command loop is hung). Close the loop: recover or alert, never silently stall (Horizon B5). Acceptance: a stalled runner is auto-recovered or the operator is alerted within one poll cycle.",
+    progress: 35,
     milestones: [
-      { title: "Single transport-parameterized xterm view", done: true },
-      { title: "node-pty owned-PTY executor in Fleet Runner", done: false },
-      { title: "Cut dispatch path from zellij name-puppeting to owned PTY", done: false },
-      { title: "Remove zellij dependency from the launch flow", done: false },
+      { title: "Detect execution-stall (pushes alive, command loop hung)", done: true },
+      { title: "Auto-recover: re-dispatch / restart runner on stall", done: false },
+      { title: "Alert operator (push / Telegram) when a stall is detected", done: false },
     ],
   },
   {
     title: "Deploy on origin/main + auto-migrate + rollback/alert",
     description:
-      "Make shipping safe and hands-off. Acceptance: pushing main runs DB migrations (ledger-based, never drizzle-kit push) and auto-rolls-back + alerts on a failed post-deploy health check.",
+      "Make shipping safe and hands-off (Horizon D3). Acceptance: pushing main runs DB migrations (ledger-based, never drizzle-kit push) and auto-rolls-back + alerts on a failed post-deploy health check.",
     progress: 45,
     milestones: [
       { title: "Push-to-deploy on main (pre-push backgrounds the deploy)", done: true },
@@ -117,21 +132,9 @@ const GOALS: GoalSeed[] = [
     ],
   },
   {
-    title: "One context assembler: Global+Project+Session into EVERY dispatch",
-    description:
-      "Every dispatch path must carry the same layered context from one assembler. Acceptance: quick-send, autopilot, and inject-core all inject Global + Project + Session context; the inject-core bypass is closed.",
-    progress: 40,
-    milestones: [
-      { title: "Global operating principles injected (Global tier)", done: true },
-      { title: "Project brief + active goals injected via getProjectContext", done: true },
-      { title: "Session handoff injected on every dispatch path", done: false },
-      { title: "Close the /api/inject-core bypass (one assembler, all paths)", done: false },
-    ],
-  },
-  {
     title: "i18n missing-key tooling + national-locale SLAs",
     description:
-      "From the revampit feedback: catch missing translation keys before they ship and track locale coverage. Acceptance: missing i18n keys fail CI; per-locale completeness is reported against defined national-locale SLAs (de-CH first).",
+      "Deferred per priority plan — not blocking dogfood. Acceptance: missing i18n keys fail CI; per-locale completeness is reported against defined national-locale SLAs (de-CH first).",
     progress: 0,
     milestones: [
       { title: "Tooling / CI check that fails on missing translation keys", done: false },

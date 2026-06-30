@@ -10,8 +10,11 @@ export const EXECUTOR_COPY = {
   /** Unified executor — cloud (box-runner) and/or this computer (desktop app) */
   builder: {
     online: "Builder online",
-    cloudOnline: "Cloud builder online",
-    localComputerOnline: "This computer online",
+  cloudOnline: "Cloud builder online",
+  localComputerOnline: "This computer online",
+  bothOnline: "Cloud + this computer online",
+  cloudOnlyDetail: "This computer offline — cloud builder runs the queue",
+  localOnlyDetail: "Cloud builder offline — this computer runs the queue",
     offline: "Builder offline",
     queued: "Queued",
     building: "Building",
@@ -107,21 +110,24 @@ export const EXECUTOR_COPY = {
   /** How Loki (and Control) reach the agent CLI — not a separate chat channel. */
   loki: {
     buildChain:
-      "Loki dispatches into the same builder queue as Control. A cloud or desktop builder claims the job, types into the agent terminal (Claude, Codex, …), and you watch on Terminal → Cloud or This computer.",
-    watchCloud: "Watch in Cloud →",
-    watchThisComputer: "Watch on this computer →",
+      "Loki dispatches into the same builder queue as Control. A cloud or desktop builder claims the job, types into the agent terminal (Claude, Codex, …), and you work alongside it on Terminal → Cloud or This computer.",
+    watchCloud: "Open in Cloud →",
+    watchThisComputer: "Open on this computer →",
   },
 
   terminal: {
     pageSubtitle:
-      "Watch agents in the cloud, or on this computer if you use the desktop app.",
+      "Full interactive terminals — type directly into cloud or desktop agent sessions, like Cursor.",
     cloudLabel: "Cloud",
     cloudLabelLocalHost: "Cloud (this server)",
     thisComputerLabel: "This computer",
     cloudHelp:
-      "Agents dispatched from Control run here when the cloud builder is online — including from your phone with your laptop closed.",
+      "Agents on the cloud builder (box-runner). Pick a project tab, click to focus, and type — keystrokes go straight to the agent PTY. Ctrl+C, arrows, and paste work.",
+    cloudLoading: "Looking for agents on the cloud builder…",
+    cloudEmpty: "No agents on the cloud builder right now.",
+    cloudEmptyHint: "Dispatch from Control or Loki — the builder claims jobs from the shared queue.",
     thisComputerHelp:
-      "Live view of agents running on this computer via the desktop app. Same queue as Cloud — only one runs each job.",
+      "Interactive view of agents on this computer via the desktop app. Same keystroke path as Cloud — click the terminal and type.",
     thisComputerEmpty: "No agents on this computer right now.",
     thisComputerEmptyHint: "Launch from Control — or use Cloud if only the server builder is running.",
     thisComputerLoading: "Looking for agents on this computer…",

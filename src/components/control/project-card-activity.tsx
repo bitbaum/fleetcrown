@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Copy, Check, Activity, RotateCcw } from "lucide-react";
 import { timeAgo } from "@/lib/dates";
 import type { ProjectState } from "@/lib/control-types";
-import type { ActivityItem } from "@/db/queries/prompt-history";
 import { buildProjectActivityLedger } from "./project-activity-ledger";
 import {
   ALL_ACTIVITY_LINK,
@@ -15,23 +14,22 @@ import {
 } from "@/config/control-labels";
 
 export function ProjectActivitySection({
-  injections,
+  activity,
   git,
   projectTab,
   onReusePrompt,
 }: {
-  injections: ActivityItem[];
+  activity: ProjectState["recentActivity"];
   git: ProjectState["git"];
-  /** Project key for the full-history deep link into /activity. */
   projectTab?: string;
-  /** Puts a past prompt back into the card's input for editing/re-dispatch. */
   onReusePrompt?: (text: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const ledger = buildProjectActivityLedger({ injections, git });
+  const ledger = buildProjectActivityLedger({ activity, git });
   const promptCount = ledger.filter((event) => event.kind === "user_prompt").length;
+  const outcomeCount = ledger.filter((event) => event.kind === "run_outcome").length;
   const commitCount = ledger.filter((event) => event.kind === "git_commit").length;
   const hasGitActivity = (git?.todayCount ?? 0) > 0 || commitCount > 0;
   if (ledger.length === 0 && !hasGitActivity) return null;
@@ -49,14 +47,20 @@ export function ProjectActivitySection({
   return (
     <div className="border-t border-border-subtle px-4 py-2.5 sm:px-5">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 ui-link-muted"
       >
         <Activity className="h-3.5 w-3.5" />
         <span className="font-medium">{PROJECT_ACTIVITY_TITLE}</span>
         {promptCount > 0 && (
-          <span className="text-text-muted/60" title="Prompts dispatched in the last 24h (up to 5 shown)">
+          <span className="text-text-muted/60" title="Recent dispatches">
             {recentDispatchChip(promptCount)}
+          </span>
+        )}
+        {outcomeCount > 0 && (
+          <span className="text-text-muted/60" title="Finished runs with outcomes">
+            {outcomeCount} run{outcomeCount === 1 ? "" : "s"}
           </span>
         )}
         {(git?.todayCount ?? 0) > 0 && (
@@ -75,6 +79,24 @@ export function ProjectActivitySection({
       )}
       {open && (
         <div className="mt-3 space-y-4">
+          {outcomeCount > 0 && (
+            <div className="space-y-1.5">
+              <p className="ui-kicker">Run outcomes</p>
+              {ledger.filter((event) => event.kind === "run_outcome").map((event) => (
+                <div key={event.id} className="flex items-start gap-2 text-xs">
+                  <span className="shrink-0 pt-0.5 text-text-muted tabular-nums">
+                    {timeAgo(event.occurredAt)}
+                  </span>
+                  <span className={`ui-tag shrink-0 ${event.status === "negative" ? "ui-tag-negative" : "ui-tag-positive"}`}>
+                    {event.title}
+                  </span>
+                  {event.body !== event.title && (
+                    <span className="min-w-0 flex-1 text-text-tertiary">{event.body}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           {promptCount > 0 && (
             <div className="space-y-1.5">
               <p className="ui-kicker">{RECENT_DISPATCHES_TITLE}</p>
@@ -88,9 +110,9 @@ export function ProjectActivitySection({
                   <div key={event.id} className="rounded-lg border border-transparent px-1.5 py-1 transition-colors hover:border-border-subtle hover:bg-surface-raised/50">
                     <div className="flex items-start gap-2 text-xs">
                       <span className="shrink-0 pt-0.5 text-text-muted tabular-nums">
-                        {event.occurredAt ? timeAgo(event.occurredAt) : ""}
+                        {timeAgo(event.occurredAt)}
                       </span>
-                      {event.kind === "user_prompt" && event.intent && (
+                      {event.intent && (
                         <span
                           className="shrink-0 mt-px rounded-full border border-accent-primary/30 bg-accent-muted px-1.5 py-0.5 text-micro font-medium uppercase tracking-wide text-accent-text"
                           title={`Templated dispatch — intent: ${event.intent}`}
@@ -99,6 +121,7 @@ export function ProjectActivitySection({
                         </span>
                       )}
                       <button
+                        type="button"
                         onClick={() => setExpandedId((current) => current === event.id ? null : event.id)}
                         className="min-w-0 flex-1 truncate text-left text-text-tertiary transition-colors hover:text-text-secondary"
                         title={fullText}
@@ -107,6 +130,7 @@ export function ProjectActivitySection({
                       </button>
                       {canCopy && onReusePrompt && (
                         <button
+                          type="button"
                           onClick={() => onReusePrompt(fullText)}
                           className="ui-icon-btn shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
                           title="Reuse — put this prompt back in the input to edit and send again"
@@ -116,6 +140,7 @@ export function ProjectActivitySection({
                       )}
                       {canCopy && (
                         <button
+                          type="button"
                           onClick={() => copyPrompt(event.id, fullText)}
                           className="ui-icon-btn shrink-0 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
                           title="Copy full prompt"

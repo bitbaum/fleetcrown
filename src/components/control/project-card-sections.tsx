@@ -18,8 +18,6 @@ import { STATE_DEFINITIONS, type ProjectStateKey } from "@/lib/control-states";
 export function ProjectCardHeader({
   project,
   tabOpen,
-  isClosed,
-  isClosing,
   isReady,
   isOrchReady,
   isRunning,
@@ -41,8 +39,6 @@ export function ProjectCardHeader({
 }: {
   project: ProjectState;
   tabOpen: boolean;
-  isClosed: boolean;
-  isClosing: boolean;
   isReady: boolean;
   isOrchReady: boolean;
   isRunning: boolean;

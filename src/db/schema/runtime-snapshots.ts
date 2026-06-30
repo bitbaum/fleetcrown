@@ -1,5 +1,6 @@
-import { pgTable, uuid, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, jsonb, primaryKey } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import type { RunnerChannel } from "./pending-commands";
 
 /**
  * One row per zellij pane the runner observed in the last heartbeat. Used by
@@ -24,8 +25,9 @@ export type PaneRecord = {
 /** Latest Zellij tab list pushed by the local runner (cloud control plane). */
 export const runtimeSnapshots = pgTable("runtime_snapshots", {
   userId: uuid("user_id")
-    .primaryKey()
+    .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  channel: text("channel").$type<RunnerChannel>().notNull().default("local"),
   openTabs: text("open_tabs").array().notNull().default([]),
   installedAgents: text("installed_agents").array().notNull().default([]),
   runnerVersion: text("runner_version"),
@@ -37,7 +39,9 @@ export const runtimeSnapshots = pgTable("runtime_snapshots", {
   panes: jsonb("panes").$type<PaneRecord[]>().notNull().default([]),
   observedAt: timestamp("observed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.channel] }),
+]);
 
 export type RuntimeSnapshot = typeof runtimeSnapshots.$inferSelect;
 export type NewRuntimeSnapshot = typeof runtimeSnapshots.$inferInsert;

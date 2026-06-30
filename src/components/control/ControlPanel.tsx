@@ -35,7 +35,7 @@ export function ControlPanel() {
     selectedAgent, model,
     switchableRegistry, selectedDefinition,
     hasPendingChange, savingAgent, lastTabResults, lastTabResultsAt,
-    runtimeAvailable, runnerLastPushedAt, runnerVersion, runnerConnected,
+    runtimeAvailable, runnerLastPushedAt, runnerVersion, runnerConnected, builderPresence,
     refresh, inject, launchProject, runWithBrain, runCustomPrompt,
     saveAgent, handleAgentSelect, handleModelChange,
   } = useControlData();
@@ -106,6 +106,7 @@ export function ControlPanel() {
   const runnerOffline = !runtimeAvailable && (
     runnerConnected === false
     || (runnerConnected !== true
+      && !(builderPresence?.cloud)
       && runnerAgoMs !== null
       && runnerAgoMs > RUNNER_OFFLINE_THRESHOLD_MS)
   );
@@ -309,6 +310,7 @@ export function ControlPanel() {
         runnerStateUnknown={runnerNeverSeen}
         runnerLastPushedAt={runnerLastPushedAt}
         runnerVersion={runnerVersion}
+        builderPresence={builderPresence}
         runnerExecutionStall={data.runnerExecutionStall}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}

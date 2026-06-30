@@ -114,19 +114,23 @@ async function handleSse(req: IncomingMessage, res: ServerResponse): Promise<voi
   // badge. See docs/architecture/connection-presence.md. Best-effort: a failed
   // presence write never breaks the SSE stream itself.
   const isRunner = url.searchParams.get("client") === "runner";
+  const channelParam = url.searchParams.get("channel");
+  const presenceChannel = channelParam === "cloud" ? "cloud" as const
+    : channelParam === "local" ? "local" as const
+    : "local" as const;
   if (isRunner) {
-    void presence.markConnect(pool, auth.userId).catch((err) =>
+    void presence.markConnect(pool, auth.userId, presenceChannel).catch((err) =>
       console.warn(`[presence] markConnect failed: ${(err as Error).message}`));
   }
-  console.log(`[sse] +${sub.userId.slice(0, 8)}${isRunner ? " (runner)" : ""} (replay since=${sinceId}, conns=${subs.stats().connections})`);
+  console.log(`[sse] +${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (replay since=${sinceId}, conns=${subs.stats().connections})`);
 
   req.on("close", () => {
     subs.remove(sub);
     if (isRunner) {
-      void presence.markDisconnect(pool, auth.userId).catch((err) =>
+      void presence.markDisconnect(pool, auth.userId, presenceChannel).catch((err) =>
         console.warn(`[presence] markDisconnect failed: ${(err as Error).message}`));
     }
-    console.log(`[sse] -${sub.userId.slice(0, 8)}${isRunner ? " (runner)" : ""} (conns=${subs.stats().connections})`);
+    console.log(`[sse] -${sub.userId.slice(0, 8)}${isRunner ? ` (runner:${presenceChannel})` : ""} (conns=${subs.stats().connections})`);
   });
 }
 

@@ -82,7 +82,8 @@ export type ProjectState = {
   closingAt: number | null;
   closedAt: number | null;
   recentCustomPrompts: RecentCustomPrompt[];
-  recentInjections: import("@/db/queries/prompt-history").ActivityItem[];
+  /** Unified timeline — dispatches, run outcomes, lifecycle signals (SSOT: activity.ts). */
+  recentActivity: import("@/db/queries/activity").ProjectActivityEvent[];
   /** Per-tab queue + autopilot toggle, streamed via /api/control/stream so
    *  per-card hooks read from props instead of polling /api/beacon/queue/*. */
   promptQueue?: string[];
@@ -143,6 +144,8 @@ export type ControlData = {
   runtimeAvailable: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion: string | null;
+  /** Cloud vs local builder SSE channels (bridge). null on local runtime host. */
+  builderPresence: { cloud: boolean; local: boolean; any: boolean } | null;
   /** Execution health: a runner can push snapshots while its command loop is
    *  hung, queuing dispatches forever. null when runtime is local. */
   runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;

@@ -8,3 +8,7 @@
 export function isRuntimeAvailable(): boolean {
   return process.env.RUNTIME_AVAILABLE === "true";
 }
+
+/** Error body when the cloud control plane must not spawn local PTYs (Horizon A2). */
+export const WORKSPACES_CLOUD_DISABLED =
+  "Local PTY workspaces are disabled on the cloud control plane. Watch agents on Terminal → Cloud (box-runner peek stream).";

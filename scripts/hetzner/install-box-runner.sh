@@ -51,6 +51,7 @@ Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=NODE_ENV=production
 Environment=FLEETCROWN_RUNNER_PTY=true
 Environment=FLEETCROWN_BOX_PREPARE=true
+Environment=FLEETCROWN_RUNNER_PRESENCE_CHANNEL=cloud
 Environment=FLEETCROWN_RUNNER_UNATTENDED=true
 Environment=FLEETCROWN_WEB_URL=https://fleetcrown.orangecat.ch
 Environment=FLEETCROWN_RUNNER_VERSION=box-0.8.9

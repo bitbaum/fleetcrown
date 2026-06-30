@@ -4,14 +4,16 @@ import { useState } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { BuilderAgentView } from "./BuilderAgentView";
 import { TerminalWorkspace } from "./TerminalWorkspace";
 import { LocalMachineView } from "./LocalMachineView";
 
 type Source = "server" | "machine";
 
 /**
- * Terminal page surface with a source toggle. **Cloud** = agents on the server
- * builder (box-runner / workspaces). **This computer** = desktop app agents.
+ * Terminal page surface with a source toggle. **Cloud** = agents on the box-runner
+ * (peek stream + interactive rawkey on prod). **This computer** = desktop app agents.
+ * Both are full xterm sessions — click to focus and type (Cursor-style).
  */
 export function TerminalSurface({
   local,
@@ -62,7 +64,11 @@ export function TerminalSurface({
 
       <div className="relative min-h-0 flex-1">
         <div className={cn("absolute inset-0", source !== "server" && "hidden")}>
-          <TerminalWorkspace />
+          {local ? (
+            <TerminalWorkspace />
+          ) : (
+            <BuilderAgentView variant="cloud" initialTab={initialTab} immersive={immersive} />
+          )}
         </div>
         <div className={cn("absolute inset-0", source !== "machine" && "hidden")}>
           <LocalMachineView initialTab={initialTab} immersive={immersive} />

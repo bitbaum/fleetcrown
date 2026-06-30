@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { executor } from "@/lib/agent-execution";
 import { ownsWorkspace } from "@/lib/agent-execution/ownership";
 import { getApiUserId } from "@/lib/session";
+import { isRuntimeAvailable, WORKSPACES_CLOUD_DISABLED } from "@/lib/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ const KEEPALIVE_MS = 15_000;
  *  → resume from that seq), then live output/status/exit events. This is the
  *  connection plane for the LocalPtyExecutor; the xterm in the UI consumes it. */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!isRuntimeAvailable()) {
+    return new Response(WORKSPACES_CLOUD_DISABLED, { status: 403 });
+  }
   const userId = await getApiUserId();
   const { id } = await params;
   if (!userId || !ownsWorkspace(userId, id)) {

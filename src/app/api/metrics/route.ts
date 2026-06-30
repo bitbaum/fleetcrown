@@ -35,7 +35,7 @@ export async function GET() {
   const [dispatch, runs, errors, tokens, runner, projects] = await Promise.all([
     getDispatchMetrics(userId),
     getRunMetrics(userId),
-    getErrorLogMetrics(userId),
+    getErrorLogMetrics(),
     getTokenMetrics(userId),
     getRunnerMetrics(userId),
     getProjectMetrics(userId),

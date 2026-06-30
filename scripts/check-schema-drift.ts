@@ -33,17 +33,28 @@ function loadEnvFile(file: string) {
 
 async function main() {
   // --print: emit the schema-declared table names (one per line) and exit, no
-  // DB needed. Lets a remote deploy (deploy-hetzner.sh) compare this list
-  // against the BOX database, which the laptop can't reach directly.
-  if (process.argv.includes("--print")) {
-    const { getTableName, is } = await import("drizzle-orm");
+  // DB needed. --print-columns emits table.column pairs. Lets a remote deploy
+  // compare this schema SSOT against the BOX database, which the laptop can't
+  // reach directly.
+  if (process.argv.includes("--print") || process.argv.includes("--print-columns")) {
+    const { getTableColumns, getTableName, is } = await import("drizzle-orm");
     const { PgTable } = await import("drizzle-orm/pg-core");
     const schema = await import("@/db/schema");
     const names = new Set<string>();
+    const columns = new Set<string>();
     for (const value of Object.values(schema)) {
-      if (is(value, PgTable)) names.add(getTableName(value));
+      if (!is(value, PgTable)) continue;
+      const tableName = getTableName(value);
+      names.add(tableName);
+      for (const column of Object.values(getTableColumns(value))) {
+        columns.add(`${tableName}.${column.name}`);
+      }
     }
-    console.log([...names].sort().join("\n"));
+    console.log(
+      process.argv.includes("--print-columns")
+        ? [...columns].sort().join("\n")
+        : [...names].sort().join("\n"),
+    );
     process.exit(0);
   }
 
@@ -56,37 +67,57 @@ async function main() {
   }
 
   // Dynamic imports so the env guard above runs before @/db tries to connect.
-  const { getTableName, is, sql } = await import("drizzle-orm");
+  const { getTableColumns, getTableName, is, sql } = await import("drizzle-orm");
   const { PgTable } = await import("drizzle-orm/pg-core");
   const schema = await import("@/db/schema");
 
   const declared = new Set<string>();
+  const declaredColumns = new Set<string>();
   for (const value of Object.values(schema)) {
-    if (is(value, PgTable)) declared.add(getTableName(value));
+    if (!is(value, PgTable)) continue;
+    const tableName = getTableName(value);
+    declared.add(tableName);
+    for (const column of Object.values(getTableColumns(value))) {
+      declaredColumns.add(`${tableName}.${column.name}`);
+    }
   }
 
   let live: Set<string>;
+  let liveColumns: Set<string>;
   try {
     const { db } = await import("@/db");
     const rows = (await db.execute(sql`
       select table_name from information_schema.tables where table_schema = 'public'
     `)) as unknown as Array<{ table_name: string }>;
     live = new Set(rows.map((r) => r.table_name));
+    const columnRows = (await db.execute(sql`
+      select table_name, column_name
+      from information_schema.columns
+      where table_schema = 'public'
+    `)) as unknown as Array<{ table_name: string; column_name: string }>;
+    liveColumns = new Set(columnRows.map((r) => `${r.table_name}.${r.column_name}`));
   } catch (err) {
     console.log(`→ schema-drift: database unreachable, skipping (${err instanceof Error ? err.message : String(err)})`);
     process.exit(0);
   }
 
   const missing = [...declared].filter((t) => !live.has(t)).sort();
+  const missingColumns = [...declaredColumns].filter((c) => !liveColumns.has(c)).sort();
 
-  if (missing.length > 0) {
-    console.error(`✗ schema-drift: ${missing.length} table(s) declared in src/db/schema are MISSING from the database:`);
+  if (missing.length > 0 || missingColumns.length > 0) {
+    if (missing.length > 0) {
+      console.error(`✗ schema-drift: ${missing.length} table(s) declared in src/db/schema are MISSING from the database:`);
+    }
     for (const t of missing) console.error(`    - ${t}`);
+    if (missingColumns.length > 0) {
+      console.error(`✗ schema-drift: ${missingColumns.length} column(s) declared in src/db/schema are MISSING from the database:`);
+    }
+    for (const c of missingColumns) console.error(`    - ${c}`);
     console.error("  Run `npm run migrate` (drizzle-kit push) to create them before pushing.");
     process.exit(1);
   }
 
-  console.log(`✓ schema-drift: all ${declared.size} declared tables exist in the database.`);
+  console.log(`✓ schema-drift: all ${declared.size} declared tables and ${declaredColumns.size} declared columns exist in the database.`);
   process.exit(0);
 }
 

@@ -16,9 +16,7 @@
  *   - CSI: `ESC [ … letter`  (color, cursor moves, mode switches)
  *   - OSC: `ESC ] … BEL`     (terminal title, hyperlink) — terminated by BEL
  */
-// eslint-disable-next-line no-control-regex
 const ANSI_CSI_RE = /\x1b\[[0-9;?]*[A-Za-z]/g;
-// eslint-disable-next-line no-control-regex
 const ANSI_OSC_RE = /\x1b\][^\x07]*\x07/g;
 
 /** Remove ANSI color, cursor-movement, and terminal-title escape sequences

@@ -76,9 +76,10 @@ export function Composer({
 
   const previewUrlsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
+    const previewUrls = previewUrlsRef.current;
     return () => {
-      for (const url of previewUrlsRef.current) URL.revokeObjectURL(url);
-      previewUrlsRef.current.clear();
+      for (const url of previewUrls) URL.revokeObjectURL(url);
+      previewUrls.clear();
     };
   }, []);
 

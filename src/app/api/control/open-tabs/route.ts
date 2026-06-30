@@ -1,9 +1,9 @@
 /**
- * GET /api/control/open-tabs — the tabs currently open on the user's machine.
+ * GET /api/control/open-tabs — agent tabs currently open on a builder.
  *
- * Cloud mode: the runner-pushed openTabs (full session list, now including
- * FleetCrown-owned PTY tabs). Local mode: a live zellij query. The /terminal
- * "My machine" view lists these and streams each live via /api/control/peek-stream.
+ * Cloud control plane: runner-pushed openTabs from box-runner (owned PTY tabs).
+ * Local runtime host (`RUNTIME_AVAILABLE=true`): live zellij query + owned PTYs.
+ * Terminal Cloud and This computer both list these and stream via peek-stream.
  */
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
@@ -12,17 +12,25 @@ import { getRuntimeSnapshot } from "@/db/queries/runtime-snapshots";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
   const userId = await getSessionUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const channelParam = new URL(req.url).searchParams.get("channel");
+  const requestedChannel = channelParam === "cloud" || channelParam === "local" ? channelParam : null;
 
   let tabs: string[] = [];
   if (isRuntimeAvailable()) {
     const { getZellijTabs } = await import("@/lib/zellij");
-    tabs = await getZellijTabs().catch(() => []);
+    tabs = requestedChannel === "cloud" ? [] : await getZellijTabs().catch(() => []);
   } else {
-    const snap = await getRuntimeSnapshot(userId).catch(() => null);
-    tabs = snap?.openTabs ?? [];
+    const snap = await getRuntimeSnapshot(userId, requestedChannel ?? undefined).catch(() => null);
+    if (!snap) {
+      tabs = [];
+    } else if (!requestedChannel) {
+      tabs = snap?.openTabs ?? [];
+    } else {
+      tabs = snap.openTabs;
+    }
   }
   return NextResponse.json({ tabs });
 }

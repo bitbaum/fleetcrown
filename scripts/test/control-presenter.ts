@@ -35,7 +35,7 @@ function stubProject(overrides: Partial<ProjectState> & Pick<ProjectState, "tab"
     closingAt: null,
     closedAt: null,
     recentCustomPrompts: [],
-    recentInjections: [],
+    recentActivity: [],
     recentOutcomes: [],
     latestOrchestrationRun: null,
     ...overrides,

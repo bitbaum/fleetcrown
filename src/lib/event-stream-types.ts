@@ -73,6 +73,8 @@ export function isKnownTable(t: string): t is NotifiedTable {
 // in sync.
 export const BRIDGE_NOTIFY_CHANNEL = "fc:state";
 
+export type BuilderChannel = "cloud" | "local";
+
 /** A raw terminal keystroke (verbatim bytes) bound for the runner's PTY. */
 export interface RawKeyEvent {
   kind: "rawkey";
@@ -82,6 +84,8 @@ export interface RawKeyEvent {
   tab: string;
   /** Raw bytes to write to the PTY, verbatim (no CR/prompt semantics). */
   b: string;
+  /** Target builder (box-runner vs desktop). Omit = any connected runner with a PTY. */
+  ch?: BuilderChannel;
 }
 
 /** A terminal resize bound for the runner's PTY. */
@@ -93,6 +97,7 @@ export interface ResizeEvent {
   c: number;
   /** Rows. */
   r: number;
+  ch?: BuilderChannel;
 }
 
 export type FastLaneEvent = RawKeyEvent | ResizeEvent;

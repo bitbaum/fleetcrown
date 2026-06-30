@@ -151,13 +151,13 @@ export function CommandPalette() {
       const raw =
         window.sessionStorage.getItem(RECENT_KEY) ??
         window.sessionStorage.getItem(RECENT_KEY_LEGACY);
-      if (raw) setRecent(JSON.parse(raw) as string[]); // eslint-disable-line react-hooks/set-state-in-effect
+      if (raw) setRecent(JSON.parse(raw) as string[]);
     } catch { /* ignore */ }
   }, [open]);
 
   useEffect(() => {
     if (open) {
-      setQuery(""); // eslint-disable-line react-hooks/set-state-in-effect
+      setQuery("");
       setHighlight(0);
       setPending(null);
       setNote(null);

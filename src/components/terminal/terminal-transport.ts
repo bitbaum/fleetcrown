@@ -7,6 +7,7 @@
  * writing a third factory — the view never changes.
  */
 import type { AgentEvent, AgentLifecycle } from "@/lib/agent-execution/types";
+import type { BuilderChannel } from "@/lib/event-stream-types";
 
 export interface TerminalStreamHandlers {
   /** Append bytes to the screen (a true byte delta). */
@@ -80,12 +81,15 @@ export function workspaceTransport(id: string): TerminalTransport {
  * snapshots otherwise (reset+repaint frames). Input/resize ride the rawkey fast
  * lane (/api/control/tab-inject-raw → bridge → runner PTY).
  */
-export function runnerTransport(tab: string): TerminalTransport {
+export function runnerTransport(tab: string, channel?: BuilderChannel): TerminalTransport {
+  const ch = channel ?? undefined;
   return {
-    key: `runner:${tab}`,
+    key: `runner:${channel ?? "any"}:${tab}`,
     convertEol: true,
     connect: (h) => {
-      const es = new EventSource(`/api/control/peek-stream?tab=${encodeURIComponent(tab)}`);
+      const params = new URLSearchParams({ tab });
+      if (ch) params.set("channel", ch);
+      const es = new EventSource(`/api/control/peek-stream?${params.toString()}`);
       es.addEventListener("ready", () => h.onConnected(true));
       es.addEventListener("frame", (e: MessageEvent) => {
         try {
@@ -97,7 +101,7 @@ export function runnerTransport(tab: string): TerminalTransport {
       es.onerror = () => h.onConnected(false);
       return () => es.close();
     },
-    sendKey: (data) => postJson("/api/control/tab-inject-raw", { kind: "key", tab, data }),
-    sendResize: (cols, rows) => void postJson("/api/control/tab-inject-raw", { kind: "resize", tab, cols, rows }),
+    sendKey: (data) => postJson("/api/control/tab-inject-raw", { kind: "key", tab, data, ...(ch ? { channel: ch } : {}) }),
+    sendResize: (cols, rows) => void postJson("/api/control/tab-inject-raw", { kind: "resize", tab, cols, rows, ...(ch ? { channel: ch } : {}) }),
   };
 }

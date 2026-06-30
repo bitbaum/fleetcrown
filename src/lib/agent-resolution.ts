@@ -71,8 +71,9 @@ export function hasAgentLabelMismatch(
   localAgent?: string | null,
   liveTab?: string,
 ): boolean {
-  if (!project.agentRunning || !project.activeAgents.length) return false;
-  const live = project.activeAgents[0]!;
+  if (!project.agentRunning) return false;
+  const live = resolveDetectedAgentIds(project, liveTab)[0];
+  if (!live) return false;
   const preferred = localAgent ?? project.agentPref;
   if (!preferred) return false;
   return preferred !== live;

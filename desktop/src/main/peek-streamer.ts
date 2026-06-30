@@ -25,6 +25,10 @@ type Stream = { stop: () => void }
 const streams = new Map<string, Stream>()
 
 const key = (tab: string) => tab.toLowerCase()
+const runnerChannel = (): 'cloud' | 'local' | undefined => {
+  const raw = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+  return raw === 'cloud' || raw === 'local' ? raw : undefined
+}
 
 async function postFrame(
   base: string,
@@ -34,10 +38,11 @@ async function postFrame(
   frame: string,
   append: boolean,
 ): Promise<void> {
+  const channel = runnerChannel()
   await fetch(`${base}/api/control/peek-frame`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tab, seq, frame, append }),
+    body: JSON.stringify({ tab, seq, frame, append, ...(channel ? { channel } : {}) }),
   }).catch(() => { /* transient — drop this delta; the stream self-heals */ })
 }
 

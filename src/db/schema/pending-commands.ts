@@ -22,6 +22,8 @@ export type NewPendingCommand = typeof pendingCommands.$inferInsert;
 
 export type InjectPayload = {
   tab: string;
+  /** Optional runner target. Cloud-host dispatches default this to "cloud". */
+  channel?: RunnerChannel;
   prompt: string;
   promptKey?: string;
   promptLabel?: string;
@@ -58,7 +60,13 @@ export type AutoContinuePayload = {
   enabled: boolean;
 };
 
-export type TabPayload = { tab: string };
+export type RunnerChannel = "cloud" | "local";
+
+export type TabPayload = {
+  tab: string;
+  /** Optional runner target. When set, only that builder channel may claim it. */
+  channel?: RunnerChannel;
+};
 
 export type LaunchAgentPayload = {
   tab: string;
@@ -76,6 +84,8 @@ export type LaunchAgentPayload = {
  */
 export type DispatchPayload = {
   tab: string;
+  /** Optional runner target. When set, only that builder channel may claim it. */
+  channel?: RunnerChannel;
   dir: string;
   agent: string;
   prompt: string;

@@ -17,19 +17,21 @@ import { executor } from "@/lib/agent-execution";
 import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { publishFastLaneEvent } from "@/lib/bridge-publish";
 
+const Channel = z.enum(["cloud", "local"]);
+
 const Body = z.discriminatedUnion("kind", [
-  // A burst of keystroke bytes (xterm onData). Bounded well under the bridge's
-  // 8KB NOTIFY payload limit; a normal keystroke is 1–3 bytes.
   z.object({
     kind: z.literal("key"),
     tab: z.string().trim().min(1).max(120),
     data: z.string().min(1).max(4000),
+    channel: Channel.optional(),
   }),
   z.object({
     kind: z.literal("resize"),
     tab: z.string().trim().min(1).max(120),
     cols: z.number().int().min(1).max(1000),
     rows: z.number().int().min(1).max(1000),
+    channel: Channel.optional(),
   }),
 ]);
 
@@ -52,11 +54,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Otherwise fan out to the runner via the bridge fast lane. Routed by userId,
-  // so a user can only drive their own tabs.
+  // so a user can only drive their own tabs. Optional channel targets cloud
+  // box-runner vs desktop Fleet Runner when both are online.
+  const ch = body.channel;
   if (body.kind === "key") {
-    await publishFastLaneEvent({ kind: "rawkey", u: userId, tab: body.tab, b: body.data });
+    await publishFastLaneEvent({ kind: "rawkey", u: userId, tab: body.tab, b: body.data, ...(ch ? { ch } : {}) });
   } else {
-    await publishFastLaneEvent({ kind: "resize", u: userId, tab: body.tab, c: body.cols, r: body.rows });
+    await publishFastLaneEvent({ kind: "resize", u: userId, tab: body.tab, c: body.cols, r: body.rows, ...(ch ? { ch } : {}) });
   }
   return NextResponse.json({ ok: true, mode: "bridge", tab: body.tab });
 }

@@ -253,6 +253,10 @@ export function TerminalView({
       });
 
       term.open(host);
+      if (interactive) {
+        host.tabIndex = 0;
+        host.addEventListener("mousedown", () => { term.focus(); });
+      }
       // Debug/automation handle: reach the live xterm instance from devtools or
       // an e2e harness (e.g. to assert copy/paste wiring) via
       // `document.querySelector('.xterm')._fcTerm`. Harmless in prod.
@@ -358,16 +362,18 @@ export function TerminalView({
   return (
     <div className={`flex flex-col gap-2 ${fill ? "h-full min-h-0" : ""}`}>
       {!compactChrome && (
-        <div className="flex items-center justify-between">
-          <span className="ui-micro-label">{connected ? "live" : "connecting…"}</span>
-          {onSend && (
+        <div className="flex items-center justify-between gap-2">
+          <span className="ui-micro-label">
+            {connected ? (interactive ? "live · click to focus, type directly" : "live") : "connecting…"}
+          </span>
+          {onSend && !interactive && (
             <button type="button" className="ui-btn-xs" onClick={() => setSendOpen((v) => !v)}>
               {sendOpen ? "Cancel" : "Send a line"}
             </button>
           )}
         </div>
       )}
-      {compactChrome && onSend && (
+      {compactChrome && onSend && !interactive && (
         <div className="flex justify-end">
           <button type="button" className="ui-btn-xs min-h-11" onClick={() => setSendOpen((v) => !v)}>
             {sendOpen ? "Cancel" : "Send a line"}
@@ -376,7 +382,7 @@ export function TerminalView({
       )}
       <div ref={hostRef} className={`${fill ? "min-h-0 flex-1" : compactChrome ? "min-h-0 flex-1" : "h-72"} w-full overflow-hidden rounded-md bg-black`} />
       <LinkBar links={links} onDismiss={() => setLinks([])} />
-      {onSend && sendOpen && (
+      {onSend && !interactive && sendOpen && (
         <div className="flex items-center gap-2">
           <input
             className="ui-input-compact flex-1"

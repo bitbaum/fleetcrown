@@ -1,6 +1,6 @@
 import { ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
 import { getProjectStatesByUserIds } from "@/db/queries/project-states";
-import { getRunnerConnected } from "@/db/queries/runner-presence";
+import { getBuilderPresence } from "@/db/queries/runner-presence";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog } from "@/lib/agent-catalog";
@@ -99,6 +99,7 @@ export async function GET() {
 
   let lastSent: FastProjectState[] = [];
   let lastRunnerConnected: boolean | null = null;
+  let lastBuilderPresence: { cloud: boolean; local: boolean; any: boolean } | null = null;
   let keepaliveTimer: ReturnType<typeof setTimeout> | null = null;
 
   const scanProjects = async (): Promise<FastProjectState[]> => {
@@ -150,7 +151,8 @@ export async function GET() {
         // Connection-based presence rides every stream event so the online
         // badge flips in <1s (the bridge pg_notify's this channel on
         // connect/disconnect). See docs/architecture/connection-presence.md.
-        const runnerConnected = await getRunnerConnected(userId).catch(() => lastRunnerConnected ?? false);
+        const builderPresence = await getBuilderPresence(userId).catch(() => lastBuilderPresence ?? { cloud: false, local: false, any: false });
+        const runnerConnected = builderPresence.any;
 
         const agentsKey = (a: string[]) => [...a].sort().join(",");
         const changed = current.filter((proj, i) => {
@@ -172,10 +174,14 @@ export async function GET() {
 
         // Push when projects changed OR presence flipped — a pure
         // connect/disconnect must still update the badge.
-        if (changed.length > 0 || runnerConnected !== lastRunnerConnected) {
+        const presenceChanged = !lastBuilderPresence
+          || lastBuilderPresence.cloud !== builderPresence.cloud
+          || lastBuilderPresence.local !== builderPresence.local;
+        if (changed.length > 0 || runnerConnected !== lastRunnerConnected || presenceChanged) {
           lastSent = current;
           lastRunnerConnected = runnerConnected;
-          send(sseEvent("projects-update", { projects: current, runnerConnected }));
+          lastBuilderPresence = builderPresence;
+          send(sseEvent("projects-update", { projects: current, runnerConnected, builderPresence }));
           if (keepaliveTimer) { clearTimeout(keepaliveTimer); keepaliveTimer = null; }
           scheduleKeepalive();
         }
@@ -193,8 +199,9 @@ export async function GET() {
         ? await scanProjects()
         : dbToFastState(confProjects, await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []));
       lastSent = initialProjects;
-      lastRunnerConnected = await getRunnerConnected(userId).catch(() => false);
-      send(sseEvent("projects-update", { projects: lastSent, runnerConnected: lastRunnerConnected }));
+      lastBuilderPresence = await getBuilderPresence(userId).catch(() => ({ cloud: false, local: false, any: false }));
+      lastRunnerConnected = lastBuilderPresence.any;
+      send(sseEvent("projects-update", { projects: lastSent, runnerConnected: lastRunnerConnected, builderPresence: lastBuilderPresence }));
       scheduleKeepalive();
 
       // Guard against concurrent ticks — events can fire faster than a tick completes.

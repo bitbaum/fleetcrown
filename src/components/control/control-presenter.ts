@@ -16,6 +16,7 @@ import {
 
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
+import { latestActivitySummary } from "./project-activity-ledger";
 
 export type RuntimeSyncContext = {
   /** True when the cloud has never received a runner runtime-state push. */
@@ -251,13 +252,11 @@ export function getTabActivityText(
   if (display?.isRunning && project.currentPrompt?.label) {
     return project.currentPrompt.label;
   }
-  // Idle: surface the last dispatch + when, from the activity stream the API
-  // already attaches (project.recentInjections). Without this the Activity
-  // column read "—" for every idle row even right after the agent ran work —
-  // a column literally labeled "Activity" showing nothing.
-  const last = project.recentInjections?.[0];
-  if (last) {
-    return `${last.displayText} · ${timeAgo(new Date(last.dispatchedAt).getTime())}`;
+  // Idle: surface the last activity event (dispatch or run outcome).
+  const summary = latestActivitySummary(project.recentActivity ?? []);
+  const lastAt = project.recentActivity?.[0]?.at;
+  if (summary && lastAt) {
+    return `${summary} · ${timeAgo(new Date(lastAt).getTime())}`;
   }
   return null;
 }
@@ -579,16 +578,17 @@ export function buildProjectOperationsSnapshot(
   const claimsLiveObservation =
     display.isRunning || display.isReady || display.isOrchestrationReady || display.isSessionOpen || display.tabOpen;
   const liveObserved = runtimeStateKnown && !syncStale && claimsLiveObservation;
-  const latestInjection = project.recentInjections[0];
-  const latestInjectionAgeS = latestInjection?.dispatchedAt
-    ? nowS - Math.floor(new Date(latestInjection.dispatchedAt).getTime() / 1000)
+  const latestActivity = project.recentActivity?.[0];
+  const latestActivityAgeS = latestActivity?.at
+    ? nowS - Math.floor(new Date(latestActivity.at).getTime() / 1000)
     : null;
   const recentDispatchSuffix =
-    latestInjection &&
-    latestInjectionAgeS !== null &&
-    latestInjectionAgeS >= 0 &&
-    latestInjectionAgeS < 30 * 60
-      ? `Last dispatch ${timeAgo(new Date(latestInjection.dispatchedAt).getTime())}`
+    latestActivity &&
+    latestActivity.kind === "dispatch" &&
+    latestActivityAgeS !== null &&
+    latestActivityAgeS >= 0 &&
+    latestActivityAgeS < 30 * 60
+      ? `Last dispatch ${timeAgo(new Date(latestActivity.at).getTime())}`
       : null;
 
   // Evidence labels are the LONG-form descriptions shown as subtitles next

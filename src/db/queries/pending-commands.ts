@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload } from "@/db/schema/pending-commands";
+import { pendingCommands, type NewPendingCommand, type InjectPayload, type DispatchPayload, type SwitchAgentPayload, type AutoContinuePayload, type TabPayload, type LaunchAgentPayload, type RunnerChannel } from "@/db/schema/pending-commands";
 import { eq, isNull, isNotNull, and, inArray, desc, sql } from "drizzle-orm";
 import type { FailedCommand } from "@/lib/control-types";
 import { STALE_RUN_MINUTES } from "./orchestration-runs";
@@ -202,7 +202,7 @@ export async function reclaimStalePendingCommands(userIds: string[]): Promise<nu
   return reclaimed.length;
 }
 
-export async function claimNextPendingCommand(userIds: string[], types?: string[]) {
+export async function claimNextPendingCommand(userIds: string[], types?: string[], runnerChannel?: RunnerChannel) {
   if (userIds.length === 0) return null;
   await purgeStalePendingCommands(userIds);
   await reclaimStalePendingCommands(userIds);
@@ -211,6 +211,12 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
     : inArray(pendingCommands.userId, userIds);
   const cleanTypes = types?.map((type) => type.trim()).filter(Boolean) ?? [];
   const typeFilter = cleanTypes.length > 0 ? inArray(pendingCommands.type, cleanTypes) : undefined;
+  const channelFilter = runnerChannel
+    ? sql`(
+        ${pendingCommands.payload}->>'channel' IS NULL
+        OR ${pendingCommands.payload}->>'channel' = ${runnerChannel}
+      )`
+    : sql`${pendingCommands.payload}->>'channel' IS NULL`;
   return db.transaction(async (tx) => {
     const [row] = await tx
       .select()
@@ -218,6 +224,7 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
       .where(and(
         userFilter,
         typeFilter,
+        channelFilter,
         isNull(pendingCommands.claimedAt),
         // Per-project serialization (FIFO by run age): a dispatch/inject is
         // eligible only when its own run is the OLDEST open run for the project —
@@ -237,16 +244,24 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
           OR ${pendingCommands.payload}->>'projectKey' IS NULL
           OR ${pendingCommands.payload}->>'runId' IS NULL
           OR NOT EXISTS (
-            SELECT 1 FROM orchestration_runs r
-            WHERE r.user_id = ${pendingCommands.userId}
-              AND r.project_key = ${pendingCommands.payload}->>'projectKey'
-              AND r.finished_at IS NULL
-              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
-              AND (r.started_at, r.id) < (
-                SELECT own.started_at, own.id FROM orchestration_runs own
-                WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
-              )
-          )
+	            SELECT 1 FROM orchestration_runs r
+	            WHERE r.user_id = ${pendingCommands.userId}
+	              AND r.project_key = ${pendingCommands.payload}->>'projectKey'
+	              AND r.finished_at IS NULL
+	              AND r.started_at > NOW() - INTERVAL '1 minute' * ${STALE_RUN_MINUTES}
+	              AND (
+	                r.state <> 'waiting'
+	                OR EXISTS (
+	                  SELECT 1 FROM pending_commands blocker
+	                  WHERE blocker.payload->>'runId' = r.id::text
+	                    AND blocker.executed_at IS NULL
+	                )
+	              )
+	              AND (r.started_at, r.id) < (
+	                SELECT own.started_at, own.id FROM orchestration_runs own
+	                WHERE own.id = (${pendingCommands.payload}->>'runId')::uuid
+	              )
+	          )
         )`,
       ))
       .orderBy(pendingCommands.createdAt)

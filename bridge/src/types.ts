@@ -20,6 +20,8 @@ export interface ChangeEvent {
 // this package ships separately on Hetzner). Raw keystrokes / resizes ride the
 // same fc:state NOTIFY channel, discriminated by `kind`, but are fanned out via
 // a distinct SSE event name with NO id so they bypass the replay buffer.
+export type BuilderChannel = "cloud" | "local";
+
 export interface RawKeyEvent {
   kind: "rawkey";
   /** Owning user UUID — fan-out routing key. */
@@ -28,6 +30,8 @@ export interface RawKeyEvent {
   tab: string;
   /** Raw bytes to write to the PTY, verbatim. */
   b: string;
+  /** Target builder (box-runner vs desktop). Omit = any connected runner with a PTY. */
+  ch?: BuilderChannel;
 }
 
 export interface ResizeEvent {
@@ -36,6 +40,7 @@ export interface ResizeEvent {
   tab: string;
   c: number;
   r: number;
+  ch?: BuilderChannel;
 }
 
 export type FastLaneEvent = RawKeyEvent | ResizeEvent;

@@ -10,7 +10,8 @@ import {
   RUNNER_STATE_DEFINITIONS,
   deriveRunnerStateKey,
 } from "@/lib/control-states";
-import { builderCompactLabel } from "@/lib/builder-presence";
+import { builderCompactLabel, builderPresenceDetail } from "@/lib/builder-presence";
+import type { BuilderChannelPresence } from "@/lib/builder-presence";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 
 // Single-line hint shown under the fleet chips when this mode is active.
@@ -35,6 +36,7 @@ type Props = {
   runnerStateUnknown: boolean;
   runnerLastPushedAt: string | null;
   runnerVersion?: string | null;
+  builderPresence?: BuilderChannelPresence | null;
   runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
@@ -58,6 +60,7 @@ export function ControlFleetStatus({
   runnerStateUnknown,
   runnerLastPushedAt,
   runnerVersion,
+  builderPresence,
   runnerExecutionStall,
   lastUpdated,
   automationMode,
@@ -103,7 +106,11 @@ export function ControlFleetStatus({
   const versionDetail = runnerStateKey === "connected" && runnerVersion
     ? `${EXECUTOR_COPY.builder.versionPrefix} v${runnerVersion}`
     : null;
-  const runnerDetail = [syncDetail, versionDetail].filter(Boolean).join(" · ") || null;
+  const compactLabel = builderCompactLabel(runnerStateKey, runnerVersion, builderPresence);
+  const presenceDetail = builderPresence && runnerStateKey === "connected"
+    ? builderPresenceDetail(builderPresence)
+    : null;
+  const runnerDetail = [syncDetail, versionDetail, presenceDetail].filter(Boolean).join(" · ") || null;
 
   const RunnerIcon = runnerStateKey === "setup_needed" || runnerStateKey === "offline" ? WifiOff : Radio;
   const runnerTone = runnerStateKey === "connected"
@@ -116,12 +123,6 @@ export function ControlFleetStatus({
   // need a glanceable indicator — dot + word + sync timestamp — so the offline
   // story isn't told three times across the page. runnerDef.description still
   // rides along as the hover tooltip for the curious.
-  const compactLabel = builderCompactLabel(runnerStateKey, runnerVersion);
-
-  // Counts come from the last Fleet Runner push. When it's offline or its
-  // state is uncertain, those numbers are stale — rendered as live, the user
-  // assumes "1 working" means an agent is actively making progress right now.
-  // Fade + a stale tooltip so the chips read as cached observations.
   const isStale = runnerOffline || runnerStateUnknown;
   const staleClass = isStale ? "opacity-60" : "";
   const staleTitle = isStale && runnerLastPushedAt

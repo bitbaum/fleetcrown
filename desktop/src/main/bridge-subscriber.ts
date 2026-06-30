@@ -136,6 +136,10 @@ export function startBridgeSubscriber(
     // open the same bridge without this flag and must NOT flip the badge.
     // See docs/architecture/connection-presence.md.
     sseUrl.searchParams.set('client', 'runner')
+    const presenceChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+    if (presenceChannel === 'cloud' || presenceChannel === 'local') {
+      sseUrl.searchParams.set('channel', presenceChannel)
+    }
 
     // One connection attempt schedules at most one reconnect. Destroying a
     // half-dead socket can fire both 'timeout' and 'error'/'end'; without this
@@ -242,7 +246,9 @@ export function startBridgeSubscriber(
     if (eventType === 'rawkey' || eventType === 'resize') {
       if (!data) return
       try {
-        const ev = JSON.parse(data)
+        const ev = JSON.parse(data) as { ch?: string }
+        const myChannel = (process.env.FLEETCROWN_RUNNER_PRESENCE_CHANNEL ?? 'local').trim()
+        if (ev.ch && (ev.ch === 'cloud' || ev.ch === 'local') && myChannel !== ev.ch) return
         if (eventType === 'rawkey') callbacks.onRawKey?.(ev as RawKeyEvent)
         else callbacks.onResize?.(ev as ResizeEvent)
       } catch {

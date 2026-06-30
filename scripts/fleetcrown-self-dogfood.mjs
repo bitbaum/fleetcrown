@@ -62,7 +62,13 @@ async function loginLocal(page) {
   if (await ownerTab.count()) await ownerTab.click({ force: true, timeout: 10_000 });
   await page.locator('input[type="password"]').first().fill(pw);
   await page.getByRole("button", { name: /sign in|continue|unlock/i }).last().click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 });
+  await Promise.race([
+    page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 }),
+    page.locator(".ui-error").waitFor({ state: "visible", timeout: 30_000 }).then(async () => {
+      const error = await page.locator(".ui-error").first().textContent();
+      throw new Error(`Owner-key sign-in failed: ${error?.trim() || "unknown error"}`);
+    }),
+  ]);
 }
 
 function copyBraveProfile() {
@@ -74,8 +80,8 @@ function copyBraveProfile() {
   return dest;
 }
 
-async function waitForApp(page) {
-  const deadline = Date.now() + 120_000;
+async function waitForApp(page, timeoutMs = 120_000) {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (!page.url().includes("/sign-in") && !page.url().includes("/sign-up")) {
       if (await page.locator(".app-page, .ui-loki-composer-input").count()) return;
@@ -85,9 +91,49 @@ async function waitForApp(page) {
   throw new Error("Sign-in required — log in in the browser window.");
 }
 
+async function loginEmailPasswordIfConfigured(page, callbackUrl = "/control") {
+  const email = process.env.DOGFOOD_EMAIL;
+  const password = process.env.DOGFOOD_PASSWORD;
+  if (!email || !password) return false;
+  logStep("login email/password");
+  await gotoPage(page, `${base}/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  await page.locator('input[type="email"]').first().fill(email);
+  await page.locator('input[type="password"]').first().fill(password);
+  await page.getByRole("button", { name: /sign in/i }).last().click();
+  await Promise.race([
+    page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), { timeout: 30_000 }),
+    page.locator(".ui-error").waitFor({ state: "visible", timeout: 30_000 }).then(async () => {
+      const error = await page.locator(".ui-error").first().textContent();
+      throw new Error(`Email/password sign-in failed: ${error?.trim() || "unknown error"}`);
+    }),
+  ]);
+  return true;
+}
+
 const report = { base, project, startedAt: new Date().toISOString(), shots: [], steps: [] };
 let profileDir = null;
 let context;
+let activePage = null;
+
+function logStep(step) {
+  console.log(`[dogfood] ${step}`);
+}
+
+async function gotoPage(page, url, waitUntil = "domcontentloaded", timeout = 60_000) {
+  logStep(`goto ${url}`);
+  await Promise.race([
+    page.goto(url, { waitUntil, timeout }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Navigation timed out after ${timeout}ms: ${url}`)), timeout)),
+  ]);
+}
+
+async function closeContext() {
+  if (!context) return;
+  await Promise.race([
+    context.close().catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, 5_000)),
+  ]);
+}
 
 try {
   if (isLocal) {
@@ -97,6 +143,7 @@ try {
       executablePath: fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined,
     });
     const page = await context.newPage({ viewport: { width: 1440, height: 900 } });
+    activePage = page;
     await loginLocal(page);
     report.steps.push({ step: "login", mode: "owner-key", url: page.url() });
 
@@ -113,19 +160,39 @@ try {
     report.shots.push(await shot(page, "01-control", "Control — fleet + fleetcrown card"));
 
     // ── 2. Loki — dispatch move forward ──
-    await page.goto(`${base}/loki`, { waitUntil: "domcontentloaded" });
-    await page.waitForSelector(".ui-loki-composer-input", { timeout: 30_000 });
-    await page.waitForTimeout(1000);
-    const projBtn = page.locator(".ui-loki-project").filter({
-      has: page.locator(".truncate", { hasText: new RegExp(project, "i") }),
-    });
-    if (await projBtn.count()) await projBtn.first().click();
-    report.shots.push(await shot(page, "02-loki-scoped", "Loki — fleetcrown selected"));
+    await page.goto(`${base}/loki?project=${encodeURIComponent(project)}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    await page.waitForSelector(".ui-loki-composer-input", { timeout: 60_000 });
+    await page.waitForFunction(
+      (name) => {
+        const pill = document.querySelector(".ui-loki-scope-pill")?.textContent?.trim();
+        if (pill?.toLowerCase().includes(name)) return true;
+        return [...document.querySelectorAll(".ui-loki-project-active .truncate")].some(
+          (el) => el.textContent?.trim().toLowerCase() === name,
+        );
+      },
+      project.toLowerCase(),
+      { timeout: 30_000 },
+    );
 
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
+    await page.waitForTimeout(400);
+    const composer = page.locator(".ui-loki-composer-input");
+    const text = await composer.inputValue();
+    if (!text.trim()) {
+      await composer.fill(`move forward on ${project}`);
+    }
+    await page.waitForFunction(
+      () => !document.querySelector('button[aria-label="Send"]')?.hasAttribute("disabled"),
+      { timeout: 15_000 },
+    );
+    const sendResponse = page.waitForResponse(
+      (res) => res.request().method() === "POST" && /\/api\/conversations\/[^/]+\/messages$/.test(new URL(res.url()).pathname),
+      { timeout: 120_000 },
+    );
     await page.getByRole("button", { name: "Send" }).click();
-    const gotDispatch = await page
-      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind, .ui-error", { timeout: 120_000 })
+    const messageResponse = await sendResponse.catch(() => null);
+    const gotDispatch = Boolean(messageResponse?.ok()) && await page
+      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind", { timeout: 30_000 })
       .then(() => true)
       .catch(() => false);
     await page.waitForTimeout(1500);
@@ -152,7 +219,7 @@ try {
     }
 
     // ── 3. Terminal Cloud ──
-    const cloud = page.getByRole("link", { name: /Watch in Cloud/i });
+    const cloud = page.getByRole("link", { name: /(?:Watch|Open) in Cloud/i });
     if (await cloud.count()) {
       await cloud.first().click();
       await page.waitForURL(/\/terminal/, { timeout: 20_000 });
@@ -178,23 +245,39 @@ try {
     await page.waitForTimeout(1000);
     report.shots.push(await shot(page, "05-projects-fleetcrown", "Projects — fleetcrown detail"));
 
-    await context.close();
   } else {
-    profileDir = copyBraveProfile();
-    context = await chromium.launchPersistentContext(profileDir, {
-      headless,
-      slowMo,
-      executablePath: fs.existsSync(BRAVE_BIN) ? BRAVE_BIN : undefined,
-      channel: fs.existsSync(BRAVE_BIN) ? undefined : "chrome",
-      viewport: { width: 1440, height: 900 },
-    });
-    const page = context.pages()[0] ?? (await context.newPage());
-    await page.goto(`${base}/control`, { waitUntil: "domcontentloaded" });
-    await waitForApp(page);
+    const hasDogfoodCredentials = Boolean(process.env.DOGFOOD_EMAIL && process.env.DOGFOOD_PASSWORD);
+    if (hasDogfoodCredentials) {
+      context = await chromium.launch({
+        headless,
+        slowMo,
+        executablePath: fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined,
+      });
+    } else {
+      profileDir = copyBraveProfile();
+      context = await chromium.launchPersistentContext(profileDir, {
+        headless,
+        slowMo,
+        executablePath: fs.existsSync(BRAVE_BIN) ? BRAVE_BIN : undefined,
+        channel: fs.existsSync(BRAVE_BIN) ? undefined : "chrome",
+        viewport: { width: 1440, height: 900 },
+      });
+    }
+    const page = "newPage" in context
+      ? await context.newPage({ viewport: { width: 1440, height: 900 } })
+      : (context.pages()[0] ?? (await context.newPage()));
+    activePage = page;
+    if (hasDogfoodCredentials) {
+      await loginEmailPasswordIfConfigured(page, "/control");
+      await waitForApp(page, 30_000);
+    } else {
+      await gotoPage(page, `${base}/control`);
+      await waitForApp(page);
+    }
     report.shots.push(await shot(page, "01-control-prod", "Prod Control"));
     report.steps.push({ step: "control", url: page.url() });
 
-    await page.goto(`${base}/loki`, { waitUntil: "domcontentloaded" });
+    await gotoPage(page, `${base}/loki`);
     await page.waitForSelector(".ui-loki-composer-input", { timeout: 60_000 });
     const projBtn = page.locator(".ui-loki-project").filter({
       has: page.locator(".truncate", { hasText: new RegExp(project, "i") }),
@@ -202,6 +285,16 @@ try {
     if (await projBtn.count()) await projBtn.first().click();
     report.shots.push(await shot(page, "02-loki-prod", "Prod Loki scoped"));
     await page.getByRole("button", { name: "Move forward", exact: true }).click();
+    await page.waitForTimeout(400);
+    const composer = page.locator(".ui-loki-composer-input");
+    const text = await composer.inputValue();
+    if (!text.trim()) {
+      await composer.fill(`move forward on ${project}`);
+    }
+    await page.waitForFunction(
+      () => !document.querySelector('button[aria-label="Send"]')?.hasAttribute("disabled"),
+      { timeout: 15_000 },
+    );
     await page.getByRole("button", { name: "Send" }).click();
     const gotDispatch = await page
       .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind, .ui-error", { timeout: 120_000 })
@@ -210,7 +303,8 @@ try {
     await page.waitForTimeout(2000);
     let lokiAudit = { status: null, bubble: null };
     if (!gotDispatch) {
-      note("loki-send", "high", "Prod Loki send did not return dispatch footer in 120s", "API or resolver hang — check /api/conversations messages route");
+      const status = messageResponse ? `${messageResponse.status()} ${messageResponse.statusText()}` : "no response";
+      note("loki-send", "high", `Prod Loki send did not return a successful dispatch footer (${status})`, "Check /api/conversations messages route and dispatch resolver logs");
       report.shots.push(await shot(page, "03-loki-timeout-prod", "Prod Loki timeout"));
     } else {
       lokiAudit = await page.evaluate(() => ({
@@ -221,7 +315,7 @@ try {
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
 
-    const cloud = page.getByRole("link", { name: /Watch in Cloud/i });
+    const cloud = page.getByRole("link", { name: /(?:Watch|Open) in Cloud/i });
     if (await cloud.count()) {
       await cloud.click();
       await page.waitForTimeout(2500);
@@ -233,23 +327,34 @@ try {
       const d = r.ok ? await r.json() : {};
       const fc = (d.projects ?? []).find((p) => p.tab?.toLowerCase() === "fleetcrown");
       return {
-        runnerConnected: d.runnerConnected,
+        runnerConnected: d.runnerConnected ?? d.builderPresence?.any ?? null,
+        builderPresence: d.builderPresence ?? null,
         runnerVersion: d.runnerVersion,
         fleetcrownState: fc?.stateKey ?? fc?.status ?? null,
       };
     });
     report.steps.push({ step: "control-api", audit: api });
-    if (!api.runnerConnected) note("presence", "high", "Control API reports runnerConnected=false while box-runner may be up", "Check bridge SSE + userId on runner_presence");
+    if (!api.runnerConnected) note("presence", "high", "Control API reports no connected builder while box-runner may be up", "Check bridge SSE + userId on runner_presence");
     if (lokiAudit.status?.includes("runs when the builder is online")) {
       note("dispatch-copy", "medium", "Still showing offline copy on prod after f755b4f", "Verify runnerConnected passed in inject response");
     }
-    await context.close();
   }
 
   report.weaknesses = weaknesses;
   report.shotDir = outDir;
   fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ ok: true, shotDir: outDir, weaknesses, steps: report.steps.map((s) => s.step) }, null, 2));
+} catch (err) {
+  report.error = String(err?.stack ?? err);
+  report.weaknesses = weaknesses;
+  report.shotDir = outDir;
+  try {
+    if (activePage) report.shots.push(await shot(activePage, "99-failure", "Failure state"));
+  } catch {}
+  fs.writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
+  console.error(report.error);
+  process.exitCode = 1;
 } finally {
+  await closeContext();
   if (profileDir) rmSync(profileDir, { recursive: true, force: true });
 }

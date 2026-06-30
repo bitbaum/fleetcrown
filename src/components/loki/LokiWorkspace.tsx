@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
+import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
 import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
@@ -11,21 +12,51 @@ import { Composer } from "./Composer";
 import { ProjectFilter } from "./ProjectFilter";
 import type { Attachment, ConversationSummary, LokiMessage, LokiProject, ModelChoice } from "./types";
 
+const REFETCH_TIMEOUT_MS = 15_000;
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REFETCH_TIMEOUT_MS);
+  try {
+    return await getJson<T>(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+export type LokiWorkspaceProps = {
+  initialProjects?: LokiProject[];
+  initialConversations?: ConversationSummary[];
+  loadErrors?: { projects?: string | null; conversations?: string | null };
+};
+
 /**
  * Client orchestrator for the Loki 3-pane surface. Owns selection state and
  * the data round-trips; the panes are pure presentation. The project filter is
  * applied client-side over the full conversation list (the server returns all
  * threads; filtering here keeps the list responsive without a refetch).
  */
-export function LokiWorkspace() {
+export function LokiWorkspace({
+  initialProjects,
+  initialConversations,
+  loadErrors,
+}: LokiWorkspaceProps = {}) {
   const searchParams = useSearchParams();
   const [composerPrefill, setComposerPrefill] = useState<string | null>(null);
 
-  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [convosLoading, setConvosLoading] = useState(true);
-  const [projects, setProjects] = useState<LokiProject[]>([]);
-  const [projectsLoading, setProjectsLoading] = useState(true);
+  const hasInitialProjects = initialProjects !== undefined;
+  const hasInitialConvos = initialConversations !== undefined;
+
+  const [conversations, setConversations] = useState<ConversationSummary[]>(initialConversations ?? []);
+  const [convosLoading, setConvosLoading] = useState(!hasInitialConvos);
+  const [convosError, setConvosError] = useState<string | null>(loadErrors?.conversations ?? null);
+
+  const [projects, setProjects] = useState<LokiProject[]>(initialProjects ?? []);
+  const [projectsLoading, setProjectsLoading] = useState(!hasInitialProjects);
+  const [projectsError, setProjectsError] = useState<string | null>(loadErrors?.projects ?? null);
+
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  const [selectionInitialized, setSelectionInitialized] = useState(false);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<LokiMessage[]>([]);
@@ -51,17 +82,45 @@ export function LokiWorkspace() {
     return () => window.removeEventListener("loki:prefill", handler);
   }, []);
 
-  useEffect(() => {
-    getJson<{ conversations: ConversationSummary[] }>("/api/conversations")
-      .then((d) => setConversations(d.conversations))
-      .catch(() => setError("Could not load conversations."))
-      .finally(() => setConvosLoading(false));
-
-    getJson<LokiProject[]>("/api/user-projects")
-      .then((d) => setProjects(d.map((p) => ({ id: p.id, name: p.name, topGoal: p.topGoal ?? null }))))
-      .catch(() => setError("Could not load projects."))
-      .finally(() => setProjectsLoading(false));
+  const reloadProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    setProjectsError(null);
+    try {
+      const rows = await fetchJson<Array<{ id: string; name: string; topGoal?: LokiProject["topGoal"] }>>(
+        "/api/user-projects",
+      );
+      setProjects(rows.map((p) => ({ id: p.id, name: p.name, topGoal: p.topGoal ?? null })));
+    } catch {
+      setProjectsError("Could not load projects.");
+    } finally {
+      setProjectsLoading(false);
+    }
   }, []);
+
+  const reloadConversations = useCallback(async () => {
+    setConvosLoading(true);
+    setConvosError(null);
+    try {
+      const data = await fetchJson<{ conversations: ConversationSummary[] }>("/api/conversations");
+      setConversations(data.conversations);
+    } catch {
+      setConvosError("Could not load conversations.");
+    } finally {
+      setConvosLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasInitialProjects) void reloadProjects();
+    if (!hasInitialConvos) void reloadConversations();
+  }, [hasInitialConvos, hasInitialProjects, reloadConversations, reloadProjects]);
+
+  useEffect(() => {
+    if (selectionInitialized || projectsLoading || projects.length === 0) return;
+    const fromUrl = resolveLokiProjectSelection(projects, searchParams.get("project"));
+    if (fromUrl.length > 0) setSelectedProjects(fromUrl);
+    setSelectionInitialized(true);
+  }, [projects, projectsLoading, searchParams, selectionInitialized]);
 
   // Load the active conversation's transcript.
   useEffect(() => {
@@ -190,6 +249,8 @@ export function LokiWorkspace() {
           conversations={visibleConversations}
           activeId={activeId}
           loading={convosLoading}
+          error={convosError}
+          onRetry={() => void reloadConversations()}
           onSelect={setActiveId}
           onNew={() => void createConversation()}
           onDelete={(id) => void deleteConversation(id)}
@@ -237,6 +298,8 @@ export function LokiWorkspace() {
           projects={projects}
           selected={selectedProjects}
           loading={projectsLoading}
+          error={projectsError}
+          onRetry={() => void reloadProjects()}
           onToggle={toggleProject}
         />
       </aside>
@@ -249,6 +312,8 @@ export function LokiWorkspace() {
               conversations={visibleConversations}
               activeId={activeId}
               loading={convosLoading}
+              error={convosError}
+              onRetry={() => void reloadConversations()}
               onSelect={(id) => { setActiveId(id); setHistoryOpen(false); }}
               onNew={() => { void createConversation(); setHistoryOpen(false); }}
               onDelete={(id) => void deleteConversation(id)}
@@ -263,6 +328,8 @@ export function LokiWorkspace() {
               projects={projects}
               selected={selectedProjects}
               loading={projectsLoading}
+              error={projectsError}
+              onRetry={() => void reloadProjects()}
               onToggle={toggleProject}
             />
           </div>

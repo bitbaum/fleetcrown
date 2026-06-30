@@ -58,7 +58,9 @@ async function waitForControlPrompt(page, projectTab, token) {
     const recent = last.recentActivity ?? [];
     const project = (last.projects ?? []).find((p) => p.tab === projectTab);
     const inRecent = recent.some((item) => item.displayText?.includes(token));
-    const inProject = project?.recentInjections?.some((item) => item.displayText?.includes(token));
+    const inProject = project?.recentActivity?.some(
+      (item) => item.title?.includes(token) || item.detail?.includes(token),
+    );
     if (inRecent && inProject) return { control: last, project };
     await page.waitForTimeout(500);
   }

@@ -3,10 +3,14 @@ import { z, readJsonBody } from "@/lib/api/route-helpers";
 import { executor } from "@/lib/agent-execution";
 import { ownsWorkspace } from "@/lib/agent-execution/ownership";
 import { getApiUserId } from "@/lib/session";
+import { isRuntimeAvailable, WORKSPACES_CLOUD_DISABLED } from "@/lib/runtime";
 
 export const runtime = "nodejs";
 
 async function authorize(id: string): Promise<string | NextResponse> {
+  if (!isRuntimeAvailable()) {
+    return NextResponse.json({ error: WORKSPACES_CLOUD_DISABLED }, { status: 403 });
+  }
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!ownsWorkspace(userId, id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });

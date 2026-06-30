@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { claimNextPendingCommand } from "@/db/queries/pending-commands";
 import { getApiUserId } from "@/lib/session";
 import { RUNNER_LONG_POLL_MS } from "@/lib/constants/runner";
+import type { RunnerChannel } from "@/db/schema/pending-commands";
 
 // Runner polls this to claim the next pending command.
 // Auth: Bearer (env token or ck_* agent token) OR browser session.
@@ -27,6 +28,9 @@ export async function GET(request: NextRequest) {
     ?.split(",")
     .map((type) => type.trim())
     .filter(Boolean);
+  const channelParam = request.nextUrl.searchParams.get("channel");
+  const runnerChannel: RunnerChannel | undefined =
+    channelParam === "cloud" || channelParam === "local" ? channelParam : undefined;
 
   // Long-poll: hold the request until a command arrives or the wait expires.
   const waitMs = Math.min(
@@ -36,13 +40,13 @@ export async function GET(request: NextRequest) {
   if (waitMs > 0) {
     const deadline = Date.now() + waitMs;
     while (Date.now() < deadline && !request.signal.aborted) {
-      const command = await claimNextPendingCommand(userIds, types);
+      const command = await claimNextPendingCommand(userIds, types, runnerChannel);
       if (command) return NextResponse.json({ command });
       await new Promise<void>((res) => setTimeout(res, 100));
     }
     return NextResponse.json({ command: null });
   }
 
-  const command = await claimNextPendingCommand(userIds, types);
+  const command = await claimNextPendingCommand(userIds, types, runnerChannel);
   return NextResponse.json({ command: command ?? null });
 }
