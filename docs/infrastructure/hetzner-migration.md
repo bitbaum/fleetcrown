@@ -6,7 +6,17 @@ Neon entirely. Every real app and every database now lives on the `bitbaum`
 box. Hosted accounts are kept frozen for 14 days as a fallback, then deleted
 (see Decommission below).
 
-## Box layout (bitbaum · 167.233.22.31 · CX23 2vCPU/4GB + 4GB swap)
+## Box layout (bitbaum · 167.233.22.31 · CX43 8 vCPU / 16 GB · 40 GB disk + 4GB swap)
+
+> **Disk caveat (2026-06-30):** the CPU/RAM were rescaled to CX43 (8 vCPU / 16 GB)
+> ~2026-06-16, but the rescale was done **"Nur CPU und RAM"** (CPU & RAM only), so
+> the disk is still stuck at the original **40 GB** (`df` shows 38 GB, ~85–92% full).
+> The full CX43 tier ships ~160 GB. To claim it requires a **disk-inclusive rescale**
+> (power off → Rescaling → the *irreversible* option), then `growpart /dev/sda 1 &&
+> resize2fs /dev/sda1` inside the box. As of 2026-06-30 a disk-inclusive rescale was
+> blocked by **limited Cloud-instance availability at Falkenstein** (Hetzner status
+> banner since 2026-06-26) — a detachable **Volume** is the capacity-independent
+> alternative. We only have **SSH** to the box, no Hetzner Console/API access.
 
 | Service                  | Port | Domain                          | DB                    |
 |--------------------------|------|---------------------------------|-----------------------|
@@ -132,10 +142,14 @@ first resolvable request.
 - **SMTP**: GoTrue + Auth.js reset-mail flows need an SMTP/Resend decision.
 - Ops scripts in revamp-info (audit-themes, set-confidence) still import the
   Neon driver — convert to pg before running them again.
-- Box is CX23 (4GB); CX43 (16GB, 12.96€) was sold out at Falkenstein during
-  the migration — rescale when in stock ("Nur CPU und RAM" so downgrades stay
-  possible). Hetzner automatic backups should also be enabled (console →
-  Backups → Aktivieren).
+- Box is now CX43 (8 vCPU / 16 GB, €17.29/mo) — CPU/RAM rescale completed
+  ~2026-06-16. ⚠️ **The "Nur CPU und RAM" advice below was a mistake**: it keeps
+  the disk frozen at the old 40 GB while charging for the bigger tier. For a
+  permanent always-on box we never downsize, so the disk-inclusive (irreversible)
+  rescale is what we actually want — it brings the disk to ~160 GB. Blocked as of
+  2026-06-30 by limited Falkenstein capacity; a Volume is the fallback. After any
+  disk grow: `growpart /dev/sda 1 && resize2fs /dev/sda1`. Hetzner automatic
+  backups should also be enabled (console → Backups → Aktivieren).
 
 ## Decommission (after 2026-06-26 if stable)
 

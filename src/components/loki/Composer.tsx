@@ -32,14 +32,16 @@ export function Composer({
   sending,
   onSend,
   defaultText = "",
-  scopedProject = null,
+  selectedProjects = [],
+  onRemoveProject,
 }: {
   disabled: boolean;
   sending: boolean;
   onSend: (text: string, choice: ModelChoice, attachments: Attachment[]) => void;
   defaultText?: string;
-  /** Selected project from the right pane — shown as a pill and used in quick chips. */
-  scopedProject?: string | null;
+  /** Selected projects from the project pane — visible inside the composer. */
+  selectedProjects?: string[];
+  onRemoveProject?: (name: string) => void;
 }) {
   const [text, setText] = useState(defaultText);
   const [agents, setAgents] = useState<LokiAgent[]>([]);
@@ -200,58 +202,16 @@ export function Composer({
   };
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !sending;
+  const scopedProjectForTemplate = selectedProjects.length === 1 ? selectedProjects[0] : null;
+  const selectedCountLabel =
+    selectedProjects.length === 0
+      ? "No project pinned"
+      : selectedProjects.length === 1
+        ? "1 project"
+        : `${selectedProjects.length} projects`;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        {scopedProject ? (
-          <span className="ui-loki-scope-pill">{scopedProject}</span>
-        ) : (
-          <span className="ui-loki-scope-hint">No project selected</span>
-        )}
-        {LOKI_SUGGESTED_ACTIONS.map((action) => (
-          <button
-            key={action.id}
-            type="button"
-            className="ui-btn-chip py-1 text-micro"
-            disabled={disabled || sending}
-            onClick={() => {
-              setText(fillSuggestedAction(action.template, scopedProject));
-              textareaRef.current?.focus();
-            }}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
-
-      {(attachments.length > 0 || attachNote) && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {attachments.map((a) => (
-            <span key={stageKey(a)} className="ui-loki-attach-chip">
-              {a.kind === "image" && a.previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- blob preview of a local paste
-                <img src={a.previewUrl} alt="" className="ui-loki-attach-thumb" />
-              ) : a.kind === "image" ? (
-                <ImageIcon className="h-3 w-3" />
-              ) : (
-                <Paperclip className="h-3 w-3" />
-              )}
-              <span className="max-w-32 truncate">{a.name}</span>
-              <button
-                type="button"
-                onClick={() => removeAttachment(stageKey(a))}
-                aria-label={`Remove ${a.name}`}
-                className="ui-loki-attach-remove"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-          {attachNote && <span className="text-xs text-status-warning">{attachNote}</span>}
-        </div>
-      )}
-
+    <div className="ui-loki-composer-wrap">
       <div className="relative">
         {(recording || transcribing) && (
           <div className="ui-voice-bar" role="status" aria-live="polite">
@@ -280,10 +240,48 @@ export function Composer({
           </div>
         )}
         <div className="ui-loki-composer">
+          <div className="ui-loki-composer-scope-row">
+            <span className="ui-loki-scope-hint">{selectedCountLabel}</span>
+            {selectedProjects.map((project) => (
+              <span key={project} className="ui-loki-scope-pill">
+                <span className="truncate">{project}</span>
+                {onRemoveProject && (
+                  <button
+                    type="button"
+                    className="ui-loki-scope-remove"
+                    onClick={() => onRemoveProject(project)}
+                    aria-label={`Remove ${project}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {!text.trim() && (
+            <div className="ui-loki-suggest-row">
+              {LOKI_SUGGESTED_ACTIONS.slice(0, 5).map((action) => (
+                <button
+                  key={action.id}
+                  type="button"
+                  className="ui-loki-suggest-chip"
+                  disabled={disabled || sending}
+                  onClick={() => {
+                    setText(fillSuggestedAction(action.template, scopedProjectForTemplate));
+                    textareaRef.current?.focus();
+                  }}
+                >
+                  {action.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           <textarea
             ref={textareaRef}
             className="ui-loki-composer-input"
-            rows={1}
+            rows={4}
             value={text}
             disabled={disabled || voice.status === "transcribing"}
             placeholder={
@@ -300,70 +298,102 @@ export function Composer({
               }
             }}
           />
+
+          {(attachments.length > 0 || attachNote) && (
+            <div className="ui-loki-attach-row">
+              {attachments.map((a) => (
+                <span key={stageKey(a)} className="ui-loki-attach-chip">
+                  {a.kind === "image" && a.previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- blob preview of a local paste
+                    <img src={a.previewUrl} alt="" className="ui-loki-attach-thumb" />
+                  ) : a.kind === "image" ? (
+                    <ImageIcon className="h-3 w-3" />
+                  ) : (
+                    <Paperclip className="h-3 w-3" />
+                  )}
+                  <span className="max-w-36 truncate">{a.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(stageKey(a))}
+                    aria-label={`Remove ${a.name}`}
+                    className="ui-loki-attach-remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              {attachNote && <span className="text-xs text-status-warning">{attachNote}</span>}
+            </div>
+          )}
+
           <div className="ui-loki-composer-actions">
-            {agents.length > 0 && (
-              <select
-                className="ui-loki-composer-select hidden sm:block"
-                value={choiceKey}
-                disabled={disabled}
-                onChange={(e) => setChoiceKey(e.target.value)}
-                aria-label="Model for this dispatch"
-              >
-                <option value={AUTO}>Auto</option>
-                {agents.map((a) => {
-                  const models = a.modelSuggestions.length > 0 ? a.modelSuggestions : [a.defaultModel];
-                  return models.map((m) => (
-                    <option key={`${a.id}${SEP}${m}`} value={`${a.id}${SEP}${m}`}>
-                      {a.label} · {m}
-                    </option>
-                  ));
-                })}
-              </select>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/png,image/jpeg,image/gif,image/webp,text/*,.ts,.tsx,.js,.jsx,.json,.md,.css,.html,.py,.go,.rs,.txt,.log,.yaml,.yml,.toml"
-              className="hidden"
-              onChange={(e) => handleFiles(e.target.files)}
-            />
-            <button
-              type="button"
-              className="ui-btn-icon p-2"
-              disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
-              onClick={() => fileInputRef.current?.click()}
-              aria-label="Attach file or screenshot"
-              title="Attach file or screenshot"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
-            {voice.isSupported && (
+            <div className="ui-loki-composer-tools">
+              {agents.length > 0 && (
+                <select
+                  className="ui-loki-composer-select"
+                  value={choiceKey}
+                  disabled={disabled}
+                  onChange={(e) => setChoiceKey(e.target.value)}
+                  aria-label="Agent and model"
+                >
+                  <option value={AUTO}>Auto</option>
+                  {agents.map((a) => {
+                    const models = a.modelSuggestions.length > 0 ? a.modelSuggestions : [a.defaultModel];
+                    return models.map((m) => (
+                      <option key={`${a.id}${SEP}${m}`} value={`${a.id}${SEP}${m}`}>
+                        {a.label} · {m}
+                      </option>
+                    ));
+                  })}
+                </select>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/png,image/jpeg,image/gif,image/webp,text/*,.ts,.tsx,.js,.jsx,.json,.md,.css,.html,.py,.go,.rs,.txt,.log,.yaml,.yml,.toml"
+                className="hidden"
+                onChange={(e) => handleFiles(e.target.files)}
+              />
               <button
                 type="button"
-                className="ui-btn-icon p-2"
-                disabled={disabled || voice.status === "transcribing"}
-                onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
-                aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
+                className="ui-loki-tool-btn"
+                disabled={disabled || attachments.length >= MAX_ATTACHMENTS}
+                onClick={() => fileInputRef.current?.click()}
+                aria-label="Attach file or screenshot"
+                title="Attach file or screenshot"
               >
-                {voice.status === "transcribing" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : voice.status === "recording" ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
+                <Paperclip className="h-4 w-4" />
               </button>
-            )}
-            <button
-              type="button"
-              className="ui-btn-icon-accent min-h-11 min-w-11 p-2"
-              disabled={disabled || !canSend}
-              onClick={submit}
-              aria-label="Send"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+              {voice.isSupported && (
+                <button
+                  type="button"
+                  className="ui-loki-tool-btn"
+                  disabled={disabled || voice.status === "transcribing"}
+                  onClick={voice.status === "recording" ? voice.stop : () => void voice.start()}
+                  aria-label={voice.status === "recording" ? "Stop recording" : "Voice input"}
+                >
+                  {voice.status === "transcribing" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : voice.status === "recording" ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+            </div>
+            <div className="ui-loki-composer-submit-row">
+              <button
+                type="button"
+                className="ui-loki-send-btn"
+                disabled={disabled || !canSend}
+                onClick={submit}
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

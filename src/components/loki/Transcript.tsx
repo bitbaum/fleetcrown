@@ -2,10 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { ExternalLink, MessageSquare, Monitor, TerminalSquare } from "lucide-react";
 import { MarkdownText } from "@/components/ui/markdown-text";
 import type { LokiMessage } from "./types";
-import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { dispatchStatusLabel } from "@/lib/dispatch-status";
 
 /** Human-readable label for an assistant turn's kind badge. SSOT for the
@@ -22,6 +21,12 @@ const KIND_LABEL: Record<string, string> = {
 function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   if (!meta) return null;
   const projectKey = typeof meta.projectKey === "string" ? meta.projectKey : null;
+  const projectKeys = projectKey
+    ? [projectKey]
+    : Array.isArray(meta.projectKeys)
+      ? meta.projectKeys.filter((v): v is string => typeof v === "string")
+      : [];
+  const primaryProject = projectKeys[0] ?? null;
   const failed = meta.ok === false;
   const runnerConnected =
     typeof meta.runnerConnected === "boolean" ? meta.runnerConnected : null;
@@ -35,29 +40,47 @@ function DispatchFooter({ meta }: { meta: Record<string, unknown> | null }) {
   const agent = typeof meta.agent === "string" ? meta.agent : null;
   const model = typeof meta.model === "string" ? meta.model : null;
   const pinned = agent ? `${agent}${model ? ` · ${model}` : ""}` : null;
+  const targetLabel =
+    projectKeys.length === 0
+      ? "No project target"
+      : projectKeys.length === 1
+        ? projectKeys[0]
+        : `${projectKeys.length} projects`;
   return (
-    <div className="ui-loki-dispatch-foot">
-      <span className={warn ? "ui-dot-warning" : "ui-dot-positive"} />
-      <span>{status}</span>
-      {pinned && <span className="text-text-tertiary">on {pinned}</span>}
-      {projectKey && (
-        <>
-          <Link href={`/control?focus=${encodeURIComponent(projectKey)}`} className="ui-link-subtle">
-            Open in Control →
+    <div className="ui-loki-dispatch-card">
+      <div className="ui-loki-dispatch-status">
+        <span className={warn ? "ui-dot-warning" : "ui-dot-positive"} />
+        <span className="font-medium text-text-primary">{status}</span>
+        <span className="text-text-tertiary">Target: {targetLabel}</span>
+        {pinned && <span className="text-text-tertiary">Agent: {pinned}</span>}
+      </div>
+      {primaryProject && (
+        <div className="ui-loki-dispatch-actions">
+          <Link href={`/control?focus=${encodeURIComponent(primaryProject)}`} className="ui-loki-dispatch-link">
+            <Monitor className="h-3.5 w-3.5" />
+            Control state
           </Link>
           <Link
-            href={`/terminal?source=server&tab=${encodeURIComponent(projectKey)}`}
-            className="ui-link-subtle"
+            href={`/terminal?source=server&tab=${encodeURIComponent(primaryProject)}`}
+            className="ui-loki-dispatch-link"
           >
-            {EXECUTOR_COPY.loki.watchCloud}
+            <TerminalSquare className="h-3.5 w-3.5" />
+            Cloud terminal
           </Link>
           <Link
-            href={`/terminal?source=machine&tab=${encodeURIComponent(projectKey)}`}
-            className="ui-link-subtle"
+            href={`/terminal?source=machine&tab=${encodeURIComponent(primaryProject)}`}
+            className="ui-loki-dispatch-link"
           >
-            {EXECUTOR_COPY.loki.watchThisComputer}
+            <ExternalLink className="h-3.5 w-3.5" />
+            This computer
           </Link>
-        </>
+          {projectKeys.length > 1 && (
+            <Link href="/control" className="ui-loki-dispatch-link">
+              <Monitor className="h-3.5 w-3.5" />
+              All selected
+            </Link>
+          )}
+        </div>
       )}
     </div>
   );

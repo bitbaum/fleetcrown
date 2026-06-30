@@ -111,8 +111,8 @@ export const EXECUTOR_COPY = {
   loki: {
     buildChain:
       "Loki dispatches into the same builder queue as Control. A cloud or desktop builder claims the job, types into the agent terminal (Claude, Codex, …), and you work alongside it on Terminal → Cloud or This computer.",
-    watchCloud: "Open in Cloud →",
-    watchThisComputer: "Open on this computer →",
+    watchCloud: "Cloud terminal",
+    watchThisComputer: "This computer",
   },
 
   terminal: {

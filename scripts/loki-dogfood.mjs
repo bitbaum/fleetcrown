@@ -72,10 +72,11 @@ async function waitForAuthenticated(page, timeoutMs = 180_000) {
 
 async function collectAudit(page) {
   return page.evaluate(() => {
-    const dispatchFoot = document.querySelector(".ui-loki-dispatch-foot");
-  const statusText = dispatchFoot?.querySelector("span:nth-of-type(2)")?.textContent?.trim() ?? "";
-    const links = dispatchFoot
-      ? [...dispatchFoot.querySelectorAll("a")].map((a) => ({
+    const dispatchCard = document.querySelector(".ui-loki-dispatch-card");
+    const statusText =
+      dispatchCard?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim() ?? "";
+    const links = dispatchCard
+      ? [...dispatchCard.querySelectorAll("a")].map((a) => ({
           text: a.textContent?.trim() ?? "",
           href: a.getAttribute("href") ?? "",
         }))
@@ -89,7 +90,7 @@ async function collectAudit(page) {
       assistantPreview: assistant,
       dispatchLinks: links,
       dispatchStatus: statusText,
-      scopePill: document.querySelector(".ui-loki-scope-pill")?.textContent?.trim() ?? null,
+      scopePills: [...document.querySelectorAll(".ui-loki-scope-pill")].map((el) => el.textContent?.trim() ?? ""),
     };
   });
 }
@@ -156,16 +157,16 @@ try {
   await page.waitForTimeout(300);
   await page.getByRole("button", { name: "Send" }).click();
 
-  await page.waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind", { timeout: 120_000 });
+  await page.waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 120_000 });
   await page.waitForTimeout(2000);
 
   const afterDispatch = await collectAudit(page);
   report.steps.push({ step: "after-dispatch", audit: afterDispatch });
   await page.screenshot({ path: path.join(outDir, "01-loki-dispatch.png"), fullPage: false });
 
-  const cloudLink = page.getByRole("link", { name: /Watch in Cloud/i });
+  const cloudLink = page.getByRole("link", { name: /Cloud terminal/i });
   if (!(await cloudLink.count())) {
-    throw new Error("Dispatch bubble missing “Watch in Cloud →” link");
+    throw new Error("Dispatch bubble missing “Cloud terminal” link");
   }
 
   await cloudLink.first().click();

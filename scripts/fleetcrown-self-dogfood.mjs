@@ -192,7 +192,7 @@ try {
     await page.getByRole("button", { name: "Send" }).click();
     const messageResponse = await sendResponse.catch(() => null);
     const gotDispatch = Boolean(messageResponse?.ok()) && await page
-      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind", { timeout: 30_000 })
+      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 30_000 })
       .then(() => true)
       .catch(() => false);
     await page.waitForTimeout(1500);
@@ -202,10 +202,10 @@ try {
       report.shots.push(await shot(page, "03-loki-timeout", "Loki — send hung or failed"));
     } else {
       lokiAudit = await page.evaluate(() => {
-        const foot = document.querySelector(".ui-loki-dispatch-foot");
+        const foot = document.querySelector(".ui-loki-dispatch-card");
         return {
           kind: document.querySelector(".ui-loki-kind")?.textContent?.trim(),
-          status: foot?.querySelector("span:nth-of-type(2)")?.textContent?.trim(),
+          status: foot?.querySelector(".ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim(),
           links: foot ? [...foot.querySelectorAll("a")].map((a) => a.textContent?.trim()) : [],
           bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
         };
@@ -219,7 +219,7 @@ try {
     }
 
     // ── 3. Terminal Cloud ──
-    const cloud = page.getByRole("link", { name: /(?:Watch|Open) in Cloud/i });
+    const cloud = page.getByRole("link", { name: /Cloud terminal/i });
     if (await cloud.count()) {
       await cloud.first().click();
       await page.waitForURL(/\/terminal/, { timeout: 20_000 });
@@ -297,7 +297,7 @@ try {
     );
     await page.getByRole("button", { name: "Send" }).click();
     const gotDispatch = await page
-      .waitForSelector(".ui-loki-dispatch-foot, .ui-loki-kind, .ui-error", { timeout: 120_000 })
+      .waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind, .ui-error", { timeout: 120_000 })
       .then(() => true)
       .catch(() => false);
     await page.waitForTimeout(2000);
@@ -308,14 +308,14 @@ try {
       report.shots.push(await shot(page, "03-loki-timeout-prod", "Prod Loki timeout"));
     } else {
       lokiAudit = await page.evaluate(() => ({
-        status: document.querySelector(".ui-loki-dispatch-foot span:nth-of-type(2)")?.textContent?.trim(),
+        status: document.querySelector(".ui-loki-dispatch-card .ui-loki-dispatch-status span:nth-of-type(2)")?.textContent?.trim(),
         bubble: document.querySelector(".ui-loki-bubble-assistant:last-of-type")?.textContent?.trim().slice(0, 200),
       }));
       report.shots.push(await shot(page, "03-loki-dispatch-prod", "Prod dispatch"));
     }
     report.steps.push({ step: "loki-dispatch", audit: lokiAudit });
 
-    const cloud = page.getByRole("link", { name: /(?:Watch|Open) in Cloud/i });
+    const cloud = page.getByRole("link", { name: /Cloud terminal/i });
     if (await cloud.count()) {
       await cloud.click();
       await page.waitForTimeout(2500);

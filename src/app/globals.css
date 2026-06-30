@@ -2843,25 +2843,60 @@
   .ui-loki-kind {
     @apply mb-1 inline-flex items-center gap-1 self-start text-micro uppercase tracking-wider text-text-muted;
   }
-  /* Outcome line under a dispatch bubble — status dot + text + Control link. */
-  .ui-loki-dispatch-foot {
-    @apply mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary;
+  /* Outcome card under a dispatch bubble — status, target, and the two
+     operational destinations the operator needs next: Control + Terminal. */
+  .ui-loki-dispatch-card {
+    @apply mt-2 max-w-full rounded-xl border border-border-subtle bg-surface-base px-3 py-2 text-xs text-text-secondary sm:max-w-[75%];
+  }
+  .ui-loki-dispatch-status {
+    @apply flex flex-wrap items-center gap-x-2 gap-y-1;
+  }
+  .ui-loki-dispatch-actions {
+    @apply mt-2 flex flex-wrap gap-1.5;
+  }
+  .ui-loki-dispatch-link {
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary;
   }
 
-  /* Composer (center pane, bottom). Stacks on phones so Send stays reachable. */
+  /* Composer (center pane, bottom). Grok-like: one large command object with
+     scope, attachments, tools, suggestions and send all visually connected. */
+  .ui-loki-composer-wrap {
+    @apply flex flex-col gap-2;
+  }
   .ui-loki-composer {
-    @apply flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-base p-2 sm:flex-row sm:items-end;
+    @apply flex flex-col gap-2 rounded-3xl border border-border-subtle bg-surface-base p-3 shadow-sm transition-colors focus-within:border-border-default sm:p-4;
+  }
+  .ui-loki-composer-scope-row {
+    @apply flex min-h-7 flex-wrap items-center gap-1.5;
   }
   .ui-loki-composer-input {
-    @apply max-h-40 w-full min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary outline-none;
+    @apply max-h-60 min-h-24 w-full resize-none bg-transparent px-1 py-1 text-base leading-relaxed text-text-primary placeholder:text-text-tertiary outline-none sm:min-h-28;
   }
   .ui-loki-composer-actions {
-    @apply flex shrink-0 items-center justify-end gap-1 self-stretch sm:self-auto;
+    @apply flex items-center justify-between gap-2 border-t border-border-subtle pt-2;
+  }
+  .ui-loki-composer-tools {
+    @apply flex min-w-0 flex-wrap items-center gap-1.5;
+  }
+  .ui-loki-composer-submit-row {
+    @apply flex shrink-0 items-center justify-end;
   }
   /* Inline model picker — low-profile so "Auto" reads as a quiet default and
      doesn't compete with the input for attention (cognitive-load north star). */
   .ui-loki-composer-select {
-    @apply h-8 max-w-full min-w-0 self-center rounded-lg border border-border-subtle bg-surface-base px-2 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary sm:max-w-48;
+    @apply h-9 max-w-36 rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary outline-none transition-colors hover:border-border-default focus:border-accent-primary sm:max-w-44;
+  }
+  .ui-loki-tool-btn {
+    @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-subtle bg-surface-raised text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .ui-loki-send-btn {
+    @apply inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .ui-loki-suggest-row {
+    @apply flex min-w-0 flex-1 gap-1.5 overflow-x-auto pr-1 sm:flex-none sm:justify-end;
+  }
+  .ui-loki-suggest-chip {
+    @apply inline-flex h-8 shrink-0 items-center rounded-full border border-border-subtle bg-surface-raised px-3 text-xs text-text-secondary transition-colors hover:border-border-default hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45;
   }
   /* Drawer scroll body — safe-area padding on phones */
   .ui-drawer-body {
@@ -2921,19 +2956,25 @@
   .ui-loki-attach-chip {
     @apply inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-secondary;
   }
+  .ui-loki-attach-row {
+    @apply flex flex-wrap items-center gap-1.5;
+  }
   .ui-loki-attach-thumb {
     @apply h-6 w-6 shrink-0 rounded object-cover;
   }
   .ui-loki-attach-remove {
-    @apply text-text-tertiary transition-colors hover:text-text-primary;
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-tertiary transition-colors hover:bg-surface-raised hover:text-text-primary;
   }
 
   /* Composer context — scoped project + quick-action chips. */
   .ui-loki-scope-pill {
-    @apply inline-flex items-center rounded-full border border-accent-primary/30 bg-accent-muted px-2.5 py-0.5 text-micro font-medium text-accent-text;
+    @apply inline-flex max-w-44 items-center gap-1 rounded-full border border-accent-primary/30 bg-accent-muted px-2.5 py-1 text-xs font-medium text-accent-text;
+  }
+  .ui-loki-scope-remove {
+    @apply -mr-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-accent-text/70 transition-colors hover:bg-accent-primary/15 hover:text-accent-text;
   }
   .ui-loki-scope-hint {
-    @apply text-micro text-text-tertiary;
+    @apply text-xs text-text-tertiary;
   }
 
   /* Project multi-select (right pane). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type VoiceInputStatus = "idle" | "recording" | "transcribing" | "error";
 
@@ -25,6 +25,19 @@ const DEFAULT_ENDPOINT = "/api/control/transcribe";
 const DEFAULT_MAX_DURATION_MS = 60_000;
 const MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg"];
 
+function subscribeVoiceSupport(): () => void {
+  return () => {};
+}
+
+function getVoiceSupportSnapshot(): boolean {
+  return typeof window.MediaRecorder !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia;
+}
+
+function getVoiceSupportServerSnapshot(): boolean {
+  return false;
+}
+
 /**
  * Drives a single MediaRecorder cycle and posts the resulting blob to the
  * transcription endpoint. Stateless across cycles — caller decides what to
@@ -41,15 +54,16 @@ export function useVoiceInput(opts: Options = {}): UseVoiceInputResult {
 
   const [status, setStatus] = useState<VoiceInputStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const isSupported = useSyncExternalStore(
+    subscribeVoiceSupport,
+    getVoiceSupportSnapshot,
+    getVoiceSupportServerSnapshot,
+  );
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const stopTimerRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
-
-  const isSupported = typeof window !== "undefined"
-    && typeof window.MediaRecorder !== "undefined"
-    && !!navigator.mediaDevices?.getUserMedia;
 
   const releaseStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());

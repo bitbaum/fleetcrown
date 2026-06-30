@@ -5,7 +5,7 @@ design spec for the original vision and is retained as the rationale of record; 
 **Shipped state** note below tracks what is actually live. See the `loki`/`control`
 commit series in git history for the implementation.
 
-**Last modified:** 2026-06-30 — Terminal interactive copy; channel-targeted rawkey for Cloud vs This computer.
+**Last modified:** 2026-06-30 — Grok-like composer pass; multi-project chips inside the composer; explicit Control/Terminal dispatch card.
 
 ### Shipped state (verified in the running app)
 
@@ -42,11 +42,14 @@ The Loki page (`/loki`) is live and in daily use as the dogfood surface. Confirm
 - **The Loki page (§4):** the 3-pane layout shipped as specced — conversation list (left),
   transcript (center) with the composer at the bottom, and the selectable **Projects**
   panel (right). Project tiles surface each project's active goal as a subtitle.
-- **Composer affordances (§4):** microphone, file attach (text + **screenshots via paste or picker**), and a **model picker** (defaults
-  to `Auto`, hidden on phones) are all present. Quick-action chips and a scoped-project pill sit above the composer.
+- **Composer affordances (§4):** one large Grok-like input owns the whole command:
+  selected-project chips, quick actions, text/screenshot attach, voice, compact model
+  picker (`Auto` by default), and send. Multiple selected projects are shown as chips
+  inside the composer and can be removed there.
 - **Dispatch parity (§5):** a Loki dispatch produces the same `pending_command` → builder →
-  agent-terminal path as a Control "Next best" click. Dispatch bubbles link to Control and
-  **Terminal → Cloud** or **This computer** — full interactive xterm (type directly, not watch-only).
+  agent-terminal path as a Control "Next best" click. Dispatch bubbles show a status
+  card with target, runner state, and direct links to **Control state**, **Cloud terminal**,
+  and **This computer** — full interactive xterm (type directly, not watch-only).
 - **Move forward:** "move forward", "keep building", "make progress", etc. dispatch
   `next_best` when one project is selected; otherwise batch `fleet-kick` (same as Control
   Start building scope). When the cloud builder is online, queued dispatches show
