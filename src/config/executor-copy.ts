@@ -45,7 +45,7 @@ export const EXECUTOR_COPY = {
   /** Cloud web app always queues; this means a live builder will drain it. */
   queuedWithBuilderOnline: "With builder — starting shortly",
   queuedWithBuilderOnlineLong:
-    "the builder will run this in the agent terminal (Claude or your chosen CLI on Cloud or this computer).",
+    "a builder is online and will claim it shortly. Use Control for state, or open Cloud terminal / This computer to watch and type in the agent session.",
 
   onboarding: {
     stepTitle: "You're ready to build",
