@@ -52,6 +52,7 @@ export async function GET() {
     suggestedUsername: suggestUsername(user.name, user.email),
     isTeamInvitee: teamInvitee,
     isReturningUser: projectCount > 0,
+    projectCount,
     runtimeAvailable: isRuntimeAvailable(),
     runnerConnected: runner.connected,
     runnerLive: runner.live,

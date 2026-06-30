@@ -31,6 +31,7 @@ type OnboardingBootstrap = {
   suggestedUsername?: string;
   isTeamInvitee?: boolean;
   isReturningUser?: boolean;
+  projectCount?: number;
   needsSessionRefresh?: boolean;
 };
 
@@ -74,9 +75,15 @@ export default function OnboardingPage() {
         const data = await getJson<OnboardingBootstrap>("/api/onboarding");
         if (cancelled) return;
 
-        if (data.complete) {
+        if (data.complete && (data.projectCount ?? 0) > 0) {
           if (data.needsSessionRefresh) await updateRef.current();
           router.replace(ROUTES.APP_HOME);
+          return;
+        }
+        if (data.complete && (data.projectCount ?? 0) === 0) {
+          if (data.needsSessionRefresh) await updateRef.current();
+          setStep(data.isTeamInvitee ? "connect" : "project");
+          setIsTeamInvitee(data.isTeamInvitee ?? false);
           return;
         }
 
