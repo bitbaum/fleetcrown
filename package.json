@@ -41,6 +41,7 @@
     "dogfood:self": "node scripts/fleetcrown-self-dogfood.mjs",
     "test:dispatch-status": "npx tsx scripts/test/dispatch-status.ts",
     "test:execution-access": "npx tsx scripts/test/execution-access.ts",
+    "test:loop-ssot": "npx tsx scripts/test/loop-ssot.ts",
     "test:loki-prefetch": "npx tsx scripts/test/loki-prefetch.ts",
     "test:digest": "npx tsx scripts/test/digest.ts",
     "test:auth": "npx tsx scripts/test/auth.ts",

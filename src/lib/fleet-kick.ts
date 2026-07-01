@@ -97,6 +97,7 @@ async function loadProjectOverrides(userId: string): Promise<Map<string, AutoInj
 export async function kickFleet(userId: string, opts: FleetKickOptions): Promise<FleetKickResult> {
   const skipped: Record<string, number> = {
     paused: 0,
+    no_path: 0,
     pending_command: 0,
     busy: 0,
     concurrency_cap: 0,
@@ -138,16 +139,18 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
       .map((s) => s.projectKey.toLowerCase()),
   );
 
-  const activeNames = projects
+  const activeProjects = projects
     .filter((p) => p.isActive !== false)
-    .map((p) => p.name);
+    .map((p) => ({ name: p.name, dirPath: p.dirPath }));
 
-  const candidates = sortProjectsForKick(activeNames, readyKeys).filter((name) => {
-    if (scope && !scope.has(name.toLowerCase())) {
+  const projectByName = new Map(activeProjects.map((p) => [p.name.toLowerCase(), p]));
+  const candidates = sortProjectsForKick(activeProjects.map((p) => p.name), readyKeys).filter((name) => {
+    const lower = name.toLowerCase();
+    if (scope && !scope.has(lower)) {
       skipped.not_in_scope++;
       return false;
     }
-    const override = overrides.get(name.toLowerCase());
+    const override = overrides.get(lower);
     if (override === "off") {
       skipped.paused++;
       return false;
@@ -162,6 +165,12 @@ export async function kickFleet(userId: string, opts: FleetKickOptions): Promise
     if (slotsAvailable <= 0) {
       skipped.concurrency_cap++;
       details.push({ projectKey, outcome: "skipped", reason: "concurrency_cap" });
+      continue;
+    }
+
+    if (!projectByName.get(projectKey.toLowerCase())?.dirPath) {
+      skipped.no_path++;
+      details.push({ projectKey, outcome: "skipped", reason: "no_path" });
       continue;
     }
 

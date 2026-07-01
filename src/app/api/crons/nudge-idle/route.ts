@@ -26,21 +26,9 @@ import { db } from "@/db";
 import { entities, beaconSettings, orchestrationRuns, pendingCommands } from "@/db/schema";
 import { logDebug } from "@/db/queries/debug-logs";
 import { requireCronAuth } from "@/lib/cron-auth";
-import { PROMPT_TEMPLATES } from "@/config/prompt-library";
-import { getProjectContext } from "@/db/queries/project-context";
-import { renderProjectContextBlock } from "@/lib/orchestration";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
-
-// Module-load: resolve the next-best template once. Throw on import if it's
-// missing — this cron is unattended; silent no-op would be worse than a
-// loud build failure.
-const NEXT_BEST_TEMPLATE = PROMPT_TEMPLATES.find((p) => p.id === "next-best-step");
-if (!NEXT_BEST_TEMPLATE) {
-  throw new Error("nudge-idle cron: PROMPT_TEMPLATES is missing 'next-best-step'");
-}
-// Narrow once for the rest of the file — TS doesn't follow the throw across
-// the module boundary into request handlers.
-const TEMPLATE = NEXT_BEST_TEMPLATE;
+import { getUserProjects } from "@/db/queries/user-projects";
+import { injectPrompt } from "@/lib/inject-core";
 
 const IDLE_WINDOW_HOURS = 2;
 const RENUDGE_COOLDOWN_HOURS = 6;
@@ -48,9 +36,11 @@ const MAX_NUDGES_PER_TICK = 25; // cap so a runaway misconfig can't fan out
 
 interface Skips {
   paused_per_project: number;
+  no_path: number;
   recent_activity: number;
   has_pending_command: number;
   recent_nudge: number;
+  inject_failed: number;
 }
 
 export async function GET(req: NextRequest) {
@@ -59,9 +49,11 @@ export async function GET(req: NextRequest) {
 
   const skipped: Skips = {
     paused_per_project: 0,
+    no_path: 0,
     recent_activity: 0,
     has_pending_command: 0,
     recent_nudge: 0,
+    inject_failed: 0,
   };
   const nudgedRows: Array<{ userId: string; projectId: string; projectName: string }> = [];
 
@@ -89,7 +81,8 @@ export async function GET(req: NextRequest) {
     for (const { userId } of activeUsers) {
       if (nudgedRows.length >= MAX_NUDGES_PER_TICK) break;
 
-      const projects = await db
+      const [projects, executableProjects] = await Promise.all([
+        db
         .select({
           id: entities.id,
           name: entities.name,
@@ -97,7 +90,10 @@ export async function GET(req: NextRequest) {
           metadata: entities.metadata,
         })
         .from(entities)
-        .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)));
+        .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT))),
+        getUserProjects(userId).catch(() => []),
+      ]);
+      const executableByName = new Map(executableProjects.map((project) => [project.name.toLowerCase(), project]));
 
       for (const proj of projects) {
         if (nudgedRows.length >= MAX_NUDGES_PER_TICK) break;
@@ -105,6 +101,11 @@ export async function GET(req: NextRequest) {
         // (a) Per-project pause.
         if (proj.autoInjectModeOverride === "off") {
           skipped.paused_per_project++;
+          continue;
+        }
+
+        if (!executableByName.get(proj.name.toLowerCase())?.dirPath) {
+          skipped.no_path++;
           continue;
         }
 
@@ -152,28 +153,14 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // Eligible — queue the nudge. Prepend the project's roadmap (brief +
-        // active goals) so the autonomous nudge aims at the goals, same as the
-        // dispatch path (renderTaskForAdapter). Same SSOT block, same source.
-        const contextBlock = renderProjectContextBlock(
-          (await getProjectContext(userId, proj.name)) ?? undefined,
-        );
-        const renderedPrompt = [
-          contextBlock,
-          TEMPLATE.template.replace(/\{\{project_name\}\}/g, proj.name),
-        ].filter(Boolean).join("\n\n");
-        await db.insert(pendingCommands).values({
-          userId,
-          type: "inject",
-          payload: {
-            tab: proj.name,
-            prompt: renderedPrompt,
-            promptKey: "next-best-step",
-            promptLabel: "Next Best Step (autonomous)",
-            projectId: proj.id,
-            projectKey: proj.name,
-          },
-        });
+        // Eligible — dispatch through the same SSOT as Control and Loki. This
+        // preserves project context/RAG assembly, run tracking, tenant execution
+        // policy, and the runner's self-healing `dispatch` command shape.
+        const inject = await injectPrompt({ tab: proj.name, promptKey: "next_best" }, userId);
+        if (inject.status >= 400 || inject.body.blocked === true) {
+          skipped.inject_failed++;
+          continue;
+        }
 
         const nextMetadata = { ...(proj.metadata ?? {}), lastNudgedAt: new Date().toISOString() };
         await db
