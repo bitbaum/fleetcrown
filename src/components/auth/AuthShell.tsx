@@ -1,19 +1,34 @@
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
+import { Children, cloneElement, isValidElement, useId, type ReactElement } from "react";
 import { PublicSurface } from "@/components/public/PublicSurface";
 import { PUBLIC_SURFACE } from "@/config/ui";
 
 export function AuthField({
   label,
   children,
+  htmlFor,
 }: {
   label: string;
   children: React.ReactNode;
+  htmlFor?: string;
 }) {
+  const generatedId = useId();
+  let fieldId = htmlFor;
+  let content = children;
+
+  if (!fieldId && Children.count(children) === 1) {
+    const only = Children.only(children);
+    if (isValidElement<React.InputHTMLAttributes<HTMLInputElement>>(only) && only.type === AuthInput) {
+      fieldId = only.props.id ?? generatedId;
+      content = cloneElement(only as ReactElement<React.InputHTMLAttributes<HTMLInputElement>>, { id: fieldId });
+    }
+  }
+
   return (
     <div className="space-y-1.5">
-      <label className="ui-auth-label">{label}</label>
-      {children}
+      <label className="ui-auth-label" htmlFor={fieldId}>{label}</label>
+      {content}
     </div>
   );
 }
@@ -165,17 +180,20 @@ export function AuthPrefixField({
   onChange,
   onEnter,
   placeholder,
+  id,
 }: {
   prefix: string;
   value: string;
   onChange: (value: string) => void;
   onEnter?: () => void;
   placeholder?: string;
+  id?: string;
 }) {
   return (
     <div className="ui-auth-prefix-field">
       <span className="ui-auth-prefix-label">{prefix}</span>
       <input
+        id={id}
         autoFocus
         value={value}
         onChange={(e) => onChange(e.target.value)}

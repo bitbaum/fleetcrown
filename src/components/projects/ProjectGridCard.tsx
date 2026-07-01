@@ -19,6 +19,7 @@ import { getProjectLinks } from "./project-detail-types";
 import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
 import { NAV } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 
 export type ProjectGridRow = {
   id: string;
@@ -47,6 +48,7 @@ export function ProjectGridCard({
   const signals = getHealthSignals(attrs);
   const hasIssues = signals.length > 0;
   const lokiPrompt = buildProjectLokiPrompt({ name: project.name, description, attrs });
+  const loopReadiness = deriveProjectLoopReadiness(project);
 
   return (
     <article
@@ -67,6 +69,17 @@ export function ProjectGridCard({
               <h3 className="truncate text-base font-semibold text-text-primary">{project.name}</h3>
               {project.readonly && <span className="ui-kicker shrink-0">team</span>}
               {status && <StatusBadge value={status} />}
+              <span
+                className={cn(
+                  "ui-micro-badge rounded-full",
+                  loopReadiness.tone === "positive"
+                    ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
+                    : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning",
+                )}
+                title={loopReadiness.description}
+              >
+                {loopReadiness.label}
+              </span>
             </div>
             {description ? (
               <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-text-secondary">{description}</p>
@@ -96,12 +109,17 @@ export function ProjectGridCard({
           </div>
         )}
 
-        {(project.dirPath || project.agentPref) && (
+        {(project.dirPath || project.agentPref || loopReadiness.reason === "no_path") && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-text-tertiary">
             {project.dirPath && (
               <code className="truncate rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-micro" title={project.dirPath}>
                 {project.dirPath.replace(/^.*\/([^/]+\/[^/]+)$/, "$1")}
               </code>
+            )}
+            {!project.dirPath && (
+              <span className="ui-micro-badge rounded-full border-status-warning/30 bg-status-warning/[0.08] text-status-warning">
+                add local path to run loops
+              </span>
             )}
             {project.agentPref && (
               <span className="ui-micro-badge rounded-full border-border-default bg-surface-overlay">{project.agentPref}</span>

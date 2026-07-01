@@ -14,6 +14,7 @@ import {
   resolveDisplayedAgentId,
 } from "@/lib/agent-resolution";
 import { deriveLoopState } from "@/lib/session-state";
+import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 import { TOAST_MEDIUM_MS, TOAST_LONG_MS } from "@/lib/constants/timings";
 
 /** Below this count, a no-op turn could be coincidence (queue drained between
@@ -98,6 +99,7 @@ export function ProjectStatusChips({
   // about to re-fire it for the 22nd no-op turn — invisible without this.
   // See src/lib/session-state.ts and the OC 2026-06-08 incident analysis.
   const loop = deriveLoopState(project.session);
+  const readiness = deriveProjectLoopReadiness(project, autoContinueEnabled ? "on" : "off");
   const showAwaitingUser = loop.awaitingUser;
   const showLoopSpiral =
     !showAwaitingUser && loop.state === "firing" && (loop.noOpCount ?? 0) >= LOOP_NO_OP_DISPLAY_THRESHOLD;
@@ -252,6 +254,15 @@ export function ProjectStatusChips({
           title="Automatic continuation (auto-injections when the agent waits) is paused for this project. Click the pause/play button in the input area to resume."
         >
           Auto paused
+        </span>
+      )}
+
+      {readiness.reason === "no_path" && (
+        <span
+          className={compact ? "text-status-warning" : statusChipClass("warning")}
+          title={readiness.description}
+        >
+          Needs path
         </span>
       )}
 

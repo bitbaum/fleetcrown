@@ -210,8 +210,9 @@ export default function OnboardingPage() {
             description={`Your public profile: ${APP_DOMAIN}/u/you`}
           />
           <AuthCard>
-            <AuthField label="Username">
+            <AuthField label="Username" htmlFor="onboarding-username">
               <AuthPrefixField
+                id="onboarding-username"
                 prefix={`${APP_DOMAIN}/u/`}
                 value={username}
                 onChange={setUsername}

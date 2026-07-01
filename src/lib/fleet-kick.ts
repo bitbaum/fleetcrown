@@ -20,6 +20,8 @@ import { DEFAULT_AUTO_INJECT_MODE, MAX_CONCURRENT_BUILDING } from "@/lib/constan
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { normalizeAutoInjectMode, type AutoInjectMode } from "@/config/beacon";
+import { sortProjectsForKick } from "@/lib/fleet-kick-format";
+export { formatFleetKickReply, sortProjectsForKick } from "@/lib/fleet-kick-format";
 
 export type FleetKickSource = "play_button" | "loki" | "api" | "control_selected";
 
@@ -53,19 +55,6 @@ export type FleetKickOptions = {
 function normalizeKeySet(keys: string[] | undefined): Set<string> | null {
   if (!keys || keys.length === 0) return null;
   return new Set(keys.map((k) => k.toLowerCase()));
-}
-
-/** Prefer agents that reported ready — they're waiting for the next instruction. */
-export function sortProjectsForKick(
-  names: string[],
-  readyKeys: Set<string>,
-): string[] {
-  return [...names].sort((a, b) => {
-    const ar = readyKeys.has(a.toLowerCase()) ? 0 : 1;
-    const br = readyKeys.has(b.toLowerCase()) ? 0 : 1;
-    if (ar !== br) return ar - br;
-    return a.localeCompare(b);
-  });
 }
 
 async function countActiveRuns(userId: string): Promise<number> {
@@ -239,19 +228,4 @@ function formatFleetKickMessage(input: {
     return EXECUTOR_COPY.fleetKick.slotsBusy(MAX_CONCURRENT_BUILDING);
   }
   return EXECUTOR_COPY.fleetKick.nothingToKick;
-}
-
-export function formatFleetKickReply(result: FleetKickResult): string {
-  const lines = [result.message];
-  const kickedNames = result.details.filter((d) => d.outcome === "kicked").map((d) => d.projectKey);
-  if (kickedNames.length > 0) {
-    lines.push("", "**Started:**", ...kickedNames.map((n) => `- ${n}`));
-  }
-  if (!result.runnerConnected && result.kicked > 0) {
-    lines.push("", EXECUTOR_COPY.queuedWhenOfflineLong);
-  }
-  if (result.kicked > 0) {
-    lines.push("", EXECUTOR_COPY.fleetKick.watchControl);
-  }
-  return lines.join("\n");
 }

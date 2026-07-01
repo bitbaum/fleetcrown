@@ -5,6 +5,7 @@ import { StatusBadge, getHealthSignals } from "./project-badges";
 import { shortProjectStatus } from "@/lib/projects-display";
 import type { ProjectGridRow } from "./ProjectGridCard";
 import { cn } from "@/lib/utils";
+import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 
 export function ProjectListRow({
   project,
@@ -20,6 +21,7 @@ export function ProjectListRow({
   const description = project.description ?? attrs["description"] ?? null;
   const signals = getHealthSignals(attrs);
   const line = nextStep ?? description;
+  const loopReadiness = deriveProjectLoopReadiness(project);
 
   return (
     <button
@@ -36,6 +38,17 @@ export function ProjectListRow({
           <span className="truncate text-sm font-medium text-text-primary">{project.name}</span>
           {project.readonly && <span className="ui-kicker shrink-0">team</span>}
           {statusLabel && <StatusBadge value={statusLabel} />}
+          <span
+            className={cn(
+              "ui-micro-badge hidden rounded-full sm:inline-flex",
+              loopReadiness.tone === "positive"
+                ? "border-status-positive/25 bg-status-positive/[0.08] text-status-positive"
+                : "border-status-warning/30 bg-status-warning/[0.08] text-status-warning",
+            )}
+            title={loopReadiness.description}
+          >
+            {loopReadiness.label}
+          </span>
         </div>
         {line && (
           <p className="mt-0.5 flex items-start gap-1.5 truncate text-xs text-text-tertiary">

@@ -182,7 +182,7 @@ function FormInner({
                 required
               />
             </AuthField>
-            <AuthField label="Password">
+            <AuthField label="Password" htmlFor="password">
               <div className="space-y-1">
                 <AuthInput
                   id="password"
@@ -226,6 +226,7 @@ function FormInner({
           <form onSubmit={handleOwnerPassword} className="space-y-3">
             <AuthField label="Owner password">
               <AuthInput
+                id="owner-password"
                 type="password"
                 value={ownerPwd}
                 onChange={(e) => setOwnerPwd(e.target.value)}

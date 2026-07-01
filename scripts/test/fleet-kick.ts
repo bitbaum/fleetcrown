@@ -3,9 +3,10 @@
  * Run: npm run test:fleet-kick
  */
 import assert from "node:assert/strict";
-import { sortProjectsForKick } from "@/lib/fleet-kick";
+import { formatFleetKickReply, sortProjectsForKick, type FleetKickReplyResult } from "@/lib/fleet-kick-format";
 import { isDevelopAllFleetRequest } from "@/lib/loki-fleet-commands";
 import { resolveDispatchTargets } from "@/lib/loki/dispatch-targets";
+import { deriveProjectLoopReadiness } from "@/lib/project-loop-readiness";
 import {
   shouldDispatchScreenshot,
   isDefaultVisionQuestion,
@@ -66,9 +67,38 @@ function testScreenshotDispatch() {
   assert.equal(isScreenshotImplementIntent("please implement the layout"), true);
 }
 
+function testProjectLoopReadiness() {
+  assert.equal(deriveProjectLoopReadiness({ dirPath: "/repo/app" }).label, "Loop-ready");
+  const missing = deriveProjectLoopReadiness({ dirPath: null });
+  assert.equal(missing.reason, "no_path");
+  assert.equal(missing.label, "Needs path");
+  const paused = deriveProjectLoopReadiness({ dirPath: "/repo/app", autoInjectModeOverride: "off" });
+  assert.equal(paused.reason, "project_paused");
+}
+
+function testFleetKickReplyExplainsSkippedProjects() {
+  const result: FleetKickReplyResult = {
+    runnerConnected: false,
+    fleetMode: "on",
+    kicked: 0,
+    activeBefore: 0,
+    details: [
+      { projectKey: "profile-only", outcome: "skipped", reason: "no_path" },
+      { projectKey: "queued", outcome: "skipped", reason: "pending_command" },
+    ],
+    message: "No idle projects to kick right now.",
+  };
+  const reply = formatFleetKickReply(result);
+  assert.match(reply, /\*\*Skipped:\*\*/);
+  assert.match(reply, /profile-only: needs a local path/);
+  assert.match(reply, /queued: already queued/);
+}
+
 testSortProjectsForKick();
 testDevelopAllFleetPhrases();
 testDispatchTargets();
 testScreenshotDispatch();
+testProjectLoopReadiness();
+testFleetKickReplyExplainsSkippedProjects();
 
 console.log("✓ fleet-kick helper tests passed");
