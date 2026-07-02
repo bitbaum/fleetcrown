@@ -15,6 +15,8 @@ interface Props {
   savingLabel?: string;
   /** Modal width. Default: "sm". */
   size?: "sm" | "md" | "lg";
+  /** Render with the modal already open (e.g. deep links like ?new=1). Default: false. */
+  defaultOpen?: boolean;
   /** Disables submit button (e.g. required field is empty). */
   canSubmit: boolean;
   saving: boolean;
@@ -39,6 +41,7 @@ export function ModalForm({
   submitLabel,
   savingLabel = "Saving…",
   size = "sm",
+  defaultOpen = false,
   canSubmit,
   saving,
   error,
@@ -46,7 +49,7 @@ export function ModalForm({
   onReset,
   children,
 }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   const close = () => {
     setOpen(false);

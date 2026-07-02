@@ -11,7 +11,12 @@ Part C BUILT 2026-07-02 (`b879625`, PR #55): per-project publish
 `OrangeCatPublishButton`) + changelog→wall promote (policy SSOT
 `src/config/orangecat-publish.ts`, wired into `appendDevLog`, sha256 dedupe ids,
 per-user OIDC tokens with refresh rotation in `orangecat-identity.ts`).
-Remaining: Part B (detect-and-suggest), settings "Connect OrangeCat" for existing
+Part B (FC side) STARTED 2026-07-02: OC→FC create deep link implemented —
+`/projects?new=1&name=<prefill>` opens the create-project dialog on load
+(prefilled name optional; query params survive the sign-in redirect via
+`callbackUrl`, so unauthenticated OC users land in the dialog after signing in).
+Remaining: Part B detect-and-suggest surfaces (OC-side "Build this with
+FleetCrown" link now has a target), settings "Connect OrangeCat" for existing
 users, embeds, and a periodic promote backfill/reconcile job (promote is currently
 fire-and-forget only).
 **Last updated:** 2026-07-02 (was 2026-06-16, reconciled with both agent tabs — corrected spine)
@@ -144,6 +149,15 @@ exact redirect-uri matching.
   → "Claim your public profile + wallet on OrangeCat" (prefilled from GitHub metadata).
 - *OrangeCat signup* → only when a builder signal is present (owns a `project`, or connects GitHub):
   "Build this with an AI fleet → FleetCrown."
+
+**Implemented (FC side, 2026-07-02) — OC→FC create deep link.** OrangeCat links to
+`https://fleetcrown.orangecat.ch/projects?new=1&name=<urlencoded prefill>`; the
+projects page opens the create-project dialog on load, name prefilled. Params are
+one-shot (stripped from the URL after opening so reload/back doesn't retrigger).
+Unauthenticated users bounce through `/sign-in?callbackUrl=/projects?new=1&name=…`
+("Continue with OrangeCat") and return with the params intact. Caveat: brand-new
+users are gated through `/onboarding` first, which drops the callback — they land
+on the app home, not the dialog, after onboarding.
 
 ---
 
