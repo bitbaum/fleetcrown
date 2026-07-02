@@ -16,6 +16,8 @@ export type EnabledAuthProviders = {
   google: boolean;
   /** "Sign in with X" via the OAuth 1.0a flow in src/app/api/x-login/*. */
   x: boolean;
+  /** "Login with OrangeCat" — OIDC against orangecat.ch (the identity SSOT). */
+  orangecat: boolean;
   /**
    * Whether to SHOW the owner-key (local password) sign-in tab. UI gate only:
    * a configured password AND the explicit opt-in flag. Deliberately NOT the
@@ -33,6 +35,9 @@ export function getEnabledAuthProviders(): EnabledAuthProviders {
     // X's OAuth 2.0 authorize endpoint 503s on this Pay-Per-Use account, so the
     // 1.0a consumer keys are the gate — not the 2.0 client id/secret.
     x: Boolean(process.env.X1_CONSUMER_KEY && process.env.X1_CONSUMER_SECRET),
+    orangecat: Boolean(
+      process.env.ORANGECAT_OAUTH_CLIENT_ID && process.env.ORANGECAT_OAUTH_CLIENT_SECRET,
+    ),
     localOwnerKeyTab: Boolean(process.env.LOCAL_AUTH_PASSWORD) && process.env.ENABLE_OWNER_KEY === "1",
   };
 }

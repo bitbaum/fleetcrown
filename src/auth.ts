@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { users, accounts, sessions, verificationTokens } from "@/db/schema";
 import { verifyPassword } from "@/lib/password";
-import { getDefaultUser, getUserById, getUserByEmail, updateUser } from "@/db/queries/users";
+import { getDefaultUser, getUserById, getUserByEmail, updateUser, setUserOrangeCatActorId } from "@/db/queries/users";
 import { getOrgMembershipCount, createPersonalOrg } from "@/db/queries/orgs";
 import { logDebug } from "@/db/queries/debug-logs";
 import { healReturningUserOnboarding, onboardingCompleteFlag } from "@/lib/onboarding-heal";
@@ -170,6 +170,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             await healReturningUserOnboarding(existing);
           }
 
+          // Cross-product identity bridge: on an OrangeCat OIDC sign-in the
+          // providerAccountId IS the OrangeCat actor_id (id_token.sub). Persist
+          // it so the rest of the app can resolve "this FC user = that OC actor"
+          // without joining through the accounts table. Idempotent — same value
+          // every sign-in.
+          const account = (message as { account?: { provider?: string; providerAccountId?: string } }).account;
+          if (
+            account?.provider === "orangecat" &&
+            account.providerAccountId &&
+            isValidUuid(account.providerAccountId) &&
+            existing?.orangecatActorId !== account.providerAccountId
+          ) {
+            await setUserOrangeCatActorId(message.user.id, account.providerAccountId);
+          }
+
           const memberCount = await getOrgMembershipCount(message.user.id);
           if (memberCount === 0) {
             const displayName = message.user.name ?? message.user.email?.split("@")[0] ?? "user";
@@ -193,6 +208,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // JWT strategy required for Credentials provider to work alongside DB adapter
   session: { strategy: "jwt" },
   providers: [
+    // "Login with OrangeCat" — OIDC against the OrangeCat authorization server
+    // (the identity SSOT; see docs/architecture/cross-product-identity-bridge.md
+    // Part A). Endpoints are discovered from the issuer's
+    // /.well-known/openid-configuration; id_token.sub is the user's OrangeCat
+    // actor_id, persisted to users.orangecatActorId in events.signIn below.
+    // Requesting the capability scopes here is the "one consent" grant: the
+    // adapter stores the access token on the accounts row, which later powers
+    // project publish + timeline promote without a separate API-key step.
+    ...(enabledProviders.orangecat ? [{
+      id: "orangecat",
+      name: "OrangeCat",
+      type: "oidc" as const,
+      issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? "https://orangecat.ch",
+      clientId: process.env.ORANGECAT_OAUTH_CLIENT_ID!,
+      clientSecret: process.env.ORANGECAT_OAUTH_CLIENT_SECRET!,
+      checks: ["pkce" as const, "state" as const],
+      authorization: {
+        params: {
+          scope: "openid profile email project.read project.write timeline.write wallet.read",
+        },
+      },
+      // Same policy as GitHub/Google below: OrangeCat verifies emails
+      // (Supabase/GoTrue), so linking an OC sign-in to an existing FC user
+      // with the same email is safe and matches user expectation.
+      allowDangerousEmailAccountLinking: true,
+    }] : []),
     // Conditionally mounted (like Google/X) so a missing key pair cleanly
     // drops the provider instead of mounting it with empty-string creds that
     // fail opaquely on use. env.ts also flags a half-set pair loudly at boot.

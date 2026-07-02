@@ -88,6 +88,14 @@ export async function updateUserPasswordHash(id: string, passwordHash: string) {
   await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, id));
 }
 
+/**
+ * Link (or clear) the user's OrangeCat actor — set on every "Login with
+ * OrangeCat" sign-in (id_token.sub), see events.signIn in src/auth.ts.
+ */
+export async function setUserOrangeCatActorId(id: string, orangecatActorId: string | null) {
+  await db.update(users).set({ orangecatActorId, updatedAt: new Date() }).where(eq(users.id, id));
+}
+
 export async function updateUser(id: string, patch: UpdateUserInput) {
   const [updated] = await db
     .update(users)

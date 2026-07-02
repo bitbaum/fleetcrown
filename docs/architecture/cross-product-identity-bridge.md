@@ -1,7 +1,13 @@
 # Cross-Product Identity Bridge — "Login with OrangeCat" + Project/Changelog Sync
 
-**Status:** Design / not yet built.
-**Last updated:** 2026-06-16 (reconciled with both agent tabs — corrected spine)
+**Status:** Parts A steps 1–2 BUILT. OrangeCat's OIDC provider shipped 2026-06-17
+(live at orangecat.ch: discovery/authorize/token/userinfo/jwks, PKCE, refresh rotation;
+`fleetcrown` client registered with redirect
+`https://fleetcrown.orangecat.ch/api/auth/callback/orangecat` and 7 scopes).
+FleetCrown relying party built 2026-07-02 (`orangecat` Auth.js OIDC provider,
+`users.orangecatActorId`, sign-in button — gated on ORANGECAT_OAUTH_CLIENT_ID/SECRET env).
+Parts B (detect-and-suggest), C (publish + changelog→wall), and embeds remain as specced.
+**Last updated:** 2026-07-02 (was 2026-06-16, reconciled with both agent tabs — corrected spine)
 **Scope:** FleetCrown ↔ OrangeCat. Touches both repos.
 **Companion spec:** `docs/architecture/PLATFORM_AND_COLLABORATION.md` (OrangeCat
 repo — the platform/serving side: publish bus, embed routes, OIDC provider internals).

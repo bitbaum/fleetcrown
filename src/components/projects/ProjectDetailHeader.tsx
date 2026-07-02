@@ -18,6 +18,7 @@ import {
   MaturityEditor,
 } from "./ProjectInlineEditors";
 import { ProjectDetailTabBar } from "./ProjectDetailTabBar";
+import { OrangeCatPublishButton } from "./OrangeCatPublishButton";
 import { patchJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { buildProjectLokiPrompt } from "@/lib/loki-prompts";
 import { compactRelativeDate } from "@/lib/dates";
@@ -158,6 +159,7 @@ export function ProjectDetailHeader({
               <GitBranch className="h-4 w-4" />
             </a>
           )}
+          {editable && <OrangeCatPublishButton projectId={projectId} />}
           {data?.runtimeState && (
             <Link
               href={NAV.control.href}

@@ -1,5 +1,6 @@
 import { and, asc, count, eq, ilike, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/db";
+import { promoteDevLogEntry } from "@/lib/integrations/orangecat-publish";
 import { entities, orgs, userProjects, type NewUserProject, type UserProject } from "@/db/schema";
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
@@ -194,10 +195,13 @@ export async function appendProjectDevLog(
 ): Promise<void> {
   const project = await db.query.userProjects.findFirst({
     where: and(eq(userProjects.userId, userId), ilike(userProjects.name, projectName)),
-    columns: { id: true, devLog: true },
+    columns: { id: true, devLog: true, name: true },
   });
   if (!project) return;
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
+  // Changelog→wall promote step (async, idempotent, non-blocking) — no-ops
+  // unless the project is published to OrangeCat and the user is linked.
+  promoteDevLogEntry(userId, project.id, project.name, entry);
 }
 
 export async function appendProjectDevLogByEntityProjectId(
@@ -207,10 +211,11 @@ export async function appendProjectDevLogByEntityProjectId(
 ): Promise<void> {
   const project = await db.query.userProjects.findFirst({
     where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)),
-    columns: { id: true, devLog: true },
+    columns: { id: true, devLog: true, name: true },
   });
   if (!project) return;
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
+  promoteDevLogEntry(userId, project.id, project.name, entry);
 }
 
 /**
