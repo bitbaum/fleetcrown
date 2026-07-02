@@ -30,6 +30,15 @@ function GoogleIcon() {
   );
 }
 
+function OrangeCatIcon() {
+  // Minimal monochrome cat mark — matches the GitHub/X icon treatment.
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
+      <path d="M12 4.5c-1 0-1.9.17-2.76.5L5.5 2v4.32A7.47 7.47 0 0 0 4.5 10c0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5c0-1.35-.36-2.61-1-3.68V2l-3.74 3c-.87-.33-1.77-.5-2.76-.5Zm-3 4.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5Zm6 0a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5ZM12 13l1.2 1.6a1.5 1.5 0 0 1-2.4 0L12 13Zm-1.5 5.4c.47.2.98.32 1.5.35.52-.03 1.03-.15 1.5-.35v1.35a5.9 5.9 0 0 1-3 0V18.4Z" />
+    </svg>
+  );
+}
+
 function XIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden>
@@ -41,11 +50,12 @@ function XIcon() {
 type Mode = "email" | "owner";
 
 function FormInner({
-  githubEnabled, googleEnabled, twitterEnabled, localAuthEnabled,
+  githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
 }: {
   githubEnabled: boolean;
   googleEnabled: boolean;
   twitterEnabled: boolean;
+  orangecatEnabled: boolean;
   localAuthEnabled: boolean;
 }) {
   const router = useRouter();
@@ -106,7 +116,7 @@ function FormInner({
     setError("");
   }
 
-  const hasOAuth = githubEnabled || googleEnabled || twitterEnabled;
+  const hasOAuth = githubEnabled || googleEnabled || twitterEnabled || orangecatEnabled;
 
   return (
     <AuthShell>
@@ -163,6 +173,17 @@ function FormInner({
                   >
                     <XIcon />
                     {oauthLoading === "twitter" ? "Redirecting…" : "Continue with X"}
+                  </AuthSecondaryButton>
+                )}
+                {orangecatEnabled && (
+                  <AuthSecondaryButton
+                    type="button"
+                    onClick={() => handleOAuth("orangecat")}
+                    disabled={oauthLoading !== null}
+                    className="ui-auth-secondary-btn-strong gap-2.5"
+                  >
+                    <OrangeCatIcon />
+                    {oauthLoading === "orangecat" ? "Redirecting…" : "Continue with OrangeCat"}
                   </AuthSecondaryButton>
                 )}
               </div>
@@ -251,11 +272,12 @@ function FormInner({
 }
 
 export function SignInForm({
-  githubEnabled, googleEnabled, twitterEnabled, localAuthEnabled,
+  githubEnabled, googleEnabled, twitterEnabled, orangecatEnabled, localAuthEnabled,
 }: {
   githubEnabled: boolean;
   googleEnabled: boolean;
   twitterEnabled: boolean;
+  orangecatEnabled: boolean;
   localAuthEnabled: boolean;
 }) {
   return (
@@ -264,6 +286,7 @@ export function SignInForm({
         githubEnabled={githubEnabled}
         googleEnabled={googleEnabled}
         twitterEnabled={twitterEnabled}
+        orangecatEnabled={orangecatEnabled}
         localAuthEnabled={localAuthEnabled}
       />
     </Suspense>

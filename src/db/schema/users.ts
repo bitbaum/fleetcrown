@@ -40,6 +40,10 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash"),
   isDefault: boolean("is_default").default(false),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  // Cross-product identity bridge — the linked OrangeCat actor (= OIDC
+  // id_token.sub from "Login with OrangeCat"). Null = not linked. See
+  // docs/architecture/cross-product-identity-bridge.md Part A.
+  orangecatActorId: uuid("orangecat_actor_id").unique(),
   // Billing
   plan: text("plan").$type<Plan>().default("free").notNull(),
   planStatus: text("plan_status").$type<PlanStatus>(),

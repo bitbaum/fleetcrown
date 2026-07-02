@@ -15,6 +15,7 @@ export default function SignInPage() {
       githubEnabled={providers.github}
       googleEnabled={providers.google}
       twitterEnabled={providers.x}
+      orangecatEnabled={providers.orangecat}
       localAuthEnabled={providers.localOwnerKeyTab}
     />
   );
