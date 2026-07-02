@@ -6,7 +6,14 @@
 `https://fleetcrown.orangecat.ch/api/auth/callback/orangecat` and 7 scopes).
 FleetCrown relying party built 2026-07-02 (`orangecat` Auth.js OIDC provider,
 `users.orangecatActorId`, sign-in button — gated on ORANGECAT_OAUTH_CLIENT_ID/SECRET env).
-Parts B (detect-and-suggest), C (publish + changelog→wall), and embeds remain as specced.
+Part C BUILT 2026-07-02 (`b879625`, PR #55): per-project publish
+(`src/lib/integrations/orangecat-publish.ts`, `user_projects.orangecatProjectId`,
+`OrangeCatPublishButton`) + changelog→wall promote (policy SSOT
+`src/config/orangecat-publish.ts`, wired into `appendDevLog`, sha256 dedupe ids,
+per-user OIDC tokens with refresh rotation in `orangecat-identity.ts`).
+Remaining: Part B (detect-and-suggest), settings "Connect OrangeCat" for existing
+users, embeds, and a periodic promote backfill/reconcile job (promote is currently
+fire-and-forget only).
 **Last updated:** 2026-07-02 (was 2026-06-16, reconciled with both agent tabs — corrected spine)
 **Scope:** FleetCrown ↔ OrangeCat. Touches both repos.
 **Companion spec:** `docs/architecture/PLATFORM_AND_COLLABORATION.md` (OrangeCat
