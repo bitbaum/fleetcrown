@@ -1651,6 +1651,10 @@
   /* Auth surface — same token system as ui-public-* so the marketing and
      auth surfaces flip together when the user changes theme. Kept as a
      separate namespace so they can diverge if the auth UX ever does. */
+  .ui-auth-main {
+    min-height: calc(100svh - var(--public-nav-height));
+    @apply relative z-10 flex items-center justify-center px-4 pb-16;
+  }
   .ui-auth-label {
     @apply block text-sm font-medium text-text-secondary;
   }
@@ -2257,6 +2261,29 @@
   }
 
   /* Override modal height cap + keep whole-panel scroll (simple modals without sticky header/footer) */
+  .ui-modal-panel {
+    max-height: calc(100svh - 2rem);
+    @apply relative w-full overflow-y-auto rounded-modal;
+  }
+  .ui-modal-panel-mobile-clearance {
+    margin-bottom: calc(var(--mobile-chrome-bottom) + 0.5rem);
+    max-height: calc(100svh - var(--mobile-chrome-bottom) - 2rem);
+  }
+  .ui-modal-panel-mobile-bottom {
+    margin-inline: 1rem;
+    margin-bottom: calc(var(--mobile-chrome-bottom) + 0.5rem);
+    max-height: calc(100svh - var(--mobile-chrome-bottom) - 2rem);
+  }
+  @media (min-width: 48rem) {
+    .ui-modal-panel-mobile-clearance,
+    .ui-modal-panel-mobile-bottom {
+      margin-bottom: 0;
+      max-height: calc(100dvh - 2rem);
+    }
+    .ui-modal-panel-mobile-bottom {
+      margin-inline: 0;
+    }
+  }
   .ui-modal-scrollable {
     max-height: var(--modal-max-height);
     @apply overflow-y-auto;

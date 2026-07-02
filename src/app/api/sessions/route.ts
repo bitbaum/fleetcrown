@@ -23,17 +23,17 @@ export type SessionData = {
 /** Find a session file matching the project name (case-insensitive, dash-tolerant). */
 function findSessionFile(projectName: string): string | null {
   const sessionsDir = SESSIONS_DIR();
-  if (!fs.existsSync(sessionsDir)) return null;
+  if (!fs.existsSync(/*turbopackIgnore: true*/ sessionsDir)) return null;
 
   const normalize = (s: string) => s.toLowerCase().replace(/[-_\s]/g, "");
   const target = normalize(projectName);
 
   try {
-    const files = fs.readdirSync(sessionsDir);
+    const files = fs.readdirSync(/*turbopackIgnore: true*/ sessionsDir);
     for (const file of files) {
       if (!file.endsWith(".md")) continue;
       const stem = path.basename(file, ".md");
-      if (normalize(stem) === target) return path.join(sessionsDir, file);
+      if (normalize(stem) === target) return path.join(/*turbopackIgnore: true*/ sessionsDir, file);
     }
   } catch {
     return null;
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   if (!filePath) return NextResponse.json({ found: false } satisfies SessionData);
 
   try {
-    const raw = fs.readFileSync(filePath, "utf-8");
+    const raw = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
     const parsed = parseSessionFile(raw);
     return NextResponse.json({ found: true, ...parsed, raw } satisfies SessionData);
   } catch {

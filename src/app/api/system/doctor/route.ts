@@ -30,18 +30,18 @@ async function shell(command: string, timeout = 5000): Promise<string> {
 
 function readTokenFile(): string {
   const path = `${homedir()}/.config/fleetcrown/fleet-runner-token`;
-  if (!existsSync(path)) return "";
-  return readFileSync(path, "utf8").trim();
+  if (!existsSync(/*turbopackIgnore: true*/ path)) return "";
+  return readFileSync(/*turbopackIgnore: true*/ path, "utf8").trim();
 }
 
 function readRunnerEnv(): Record<string, string> {
   // Fleet Runner writes runner.env; older installs wrote daemon.env. Prefer the
   // current name, fall back to the legacy file so existing machines keep working.
   const dir = `${homedir()}/.config/fleetcrown`;
-  const path = existsSync(`${dir}/runner.env`) ? `${dir}/runner.env` : `${dir}/daemon.env`;
-  if (!existsSync(path)) return {};
+  const path = existsSync(/*turbopackIgnore: true*/ `${dir}/runner.env`) ? `${dir}/runner.env` : `${dir}/daemon.env`;
+  if (!existsSync(/*turbopackIgnore: true*/ path)) return {};
   const out: Record<string, string> = {};
-  for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
+  for (const raw of readFileSync(/*turbopackIgnore: true*/ path, "utf8").split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith("#") || !line.includes("=")) continue;
     const [key, ...rest] = line.split("=");
@@ -126,8 +126,8 @@ export async function GET() {
   // points at the deleted bridge is broken; flag it.
   const stopHook = `${homedir()}/.claude/hooks/stop.sh`;
   const deadBridgeTarget = ".local/share/fleetcrown-beacon/agent-hook-bridge.sh";
-  const stopExists = existsSync(stopHook);
-  const stopReferencesDeadBridge = stopExists && readFileSync(stopHook, "utf8").includes(deadBridgeTarget);
+  const stopExists = existsSync(/*turbopackIgnore: true*/ stopHook);
+  const stopReferencesDeadBridge = stopExists && readFileSync(/*turbopackIgnore: true*/ stopHook, "utf8").includes(deadBridgeTarget);
   checks.push(check(
     "hooks",
     "Claude Stop hook",
@@ -189,7 +189,7 @@ export async function GET() {
     `${homedir()}/.local/share/cockpit-beacon`,
     "/tmp/cockpit-beacon",
     "/tmp/cockpit-hook-auth",
-  ].filter((path) => existsSync(path));
+  ].filter((path) => existsSync(/*turbopackIgnore: true*/ path));
   checks.push(check(
     "legacy-paths",
     "Legacy Cockpit paths",

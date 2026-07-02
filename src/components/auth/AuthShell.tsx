@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Children, cloneElement, isValidElement, useId, type ReactElement } from "react";
 import { PublicSurface } from "@/components/public/PublicSurface";
-import { PUBLIC_SURFACE } from "@/config/ui";
 
 export function AuthField({
   label,
@@ -103,10 +102,7 @@ export function AuthShell({
 }) {
   return (
     <PublicSurface right={navRight} showNav={false}>
-      <main
-        className="relative z-10 flex items-center justify-center px-4 pb-16"
-        style={{ minHeight: `calc(100vh - ${PUBLIC_SURFACE.navHeightPx}px)` }}
-      >
+      <main className="ui-auth-main">
         <div className="ui-auth-container">{children}</div>
       </main>
     </PublicSurface>

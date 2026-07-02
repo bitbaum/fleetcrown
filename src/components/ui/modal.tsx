@@ -14,10 +14,6 @@ const SIZE_CLASSES = {
 
 type Size = keyof typeof SIZE_CLASSES;
 
-/** Bottom inset so modal actions clear the floating mobile nav pill. */
-const MOBILE_CHROME_INSET =
-  "max-md:mb-[calc(var(--mobile-chrome-bottom)+0.5rem)] max-md:max-h-[calc(100svh-var(--mobile-chrome-bottom)-2rem)]";
-
 function useEscapeToClose(onClose: () => void, disabled: boolean) {
   useEffect(() => {
     if (disabled) return;
@@ -56,8 +52,8 @@ export function Modal({
       : "items-end md:items-center";
   const panelMargin =
     position === "bottom-mobile"
-      ? cn("mx-4 md:mx-0", MOBILE_CHROME_INSET, "md:mb-0 md:max-h-[calc(100vh-2rem)]")
-      : MOBILE_CHROME_INSET;
+      ? "ui-modal-panel-mobile-bottom"
+      : "ui-modal-panel-mobile-clearance";
   return (
     <div className={cn("fixed inset-0 z-[60] flex justify-center p-4", containerPos)}>
       <div
@@ -66,7 +62,7 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative w-full ui-card-shell-raised rounded-modal max-h-[calc(100vh-2rem)] overflow-y-auto",
+          "ui-modal-panel ui-card-shell-raised",
           SIZE_CLASSES[size],
           padded && "p-5 space-y-4",
           panelMargin,

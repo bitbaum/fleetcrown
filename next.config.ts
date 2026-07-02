@@ -46,6 +46,7 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingExcludes: {
     "/api/agent/launch": ["./next.config.ts"],
+    "/api/system/doctor": ["./next.config.ts"],
     // CRITICAL — without this glob the standalone build's per-route bundles
     // ballooned (the tracer copies traced deps into each), wasting disk and
     // build time. The desktop/ subtree is the Electron app + its
@@ -56,6 +57,7 @@ const nextConfig: NextConfig = {
     // `desktop/`. Nothing does. The "*" key applies the exclusion to
     // every route bundle.
     "*": [
+      "./next.config.ts",
       "./desktop/**",
       // The v0.6 event bridge is its own Node service that runs on the box
       // (alongside Postgres) — not part of the web app bundle. Excluding the
