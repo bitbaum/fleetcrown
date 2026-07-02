@@ -223,6 +223,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       issuer: process.env.ORANGECAT_OAUTH_ISSUER ?? "https://orangecat.ch",
       clientId: process.env.ORANGECAT_OAUTH_CLIENT_ID!,
       clientSecret: process.env.ORANGECAT_OAUTH_CLIENT_SECRET!,
+      // OrangeCat's token endpoint only supports client_secret_post (creds in
+      // the form body); Auth.js defaults to client_secret_basic, which OC
+      // rejects with 400 "client_id is required" at the code-exchange step.
+      client: { token_endpoint_auth_method: "client_secret_post" as const },
       checks: ["pkce" as const, "state" as const],
       authorization: {
         params: {
