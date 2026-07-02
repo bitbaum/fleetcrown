@@ -37,13 +37,15 @@ npm run test:dod-gate
 
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
+# No early exit here: the push-deploy block appended below must still run.
+# (A previous `exit 0` in this branch silently disabled push-to-deploy
+# whenever the local dev server was down.)
 if ! curl -sf --max-time 2 "$BASE/api/health" >/dev/null 2>&1; then
   echo "→ smoke: server not running at $BASE — skipping (start with npm run dev or install-app)"
-  exit 0
+else
+  echo "→ smoke: server detected at $BASE"
+  npm run smoke
 fi
-
-echo "→ smoke: server detected at $BASE"
-npm run smoke
 # >>> fleetcrown push-deploy >>>
 # Pushing main deploys to the Hetzner box (background; see /tmp/push-deploy-fleetcrown.log)
 if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then
