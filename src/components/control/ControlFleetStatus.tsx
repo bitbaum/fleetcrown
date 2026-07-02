@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Plus, RefreshCw, Radio, WifiOff, Zap, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/dates";
-import type { ControlDashboardState } from "./control-presenter";
+import type { ControlDashboardState, FleetPulse } from "./control-presenter";
 import type { AutoInjectMode } from "@/config/beacon";
 import { AutomationPolicyControl } from "./AutomationPolicyControl";
 import {
@@ -40,6 +41,8 @@ type Props = {
   runnerExecutionStall: { stalled: boolean; stalledCount: number; oldestSeconds: number } | null;
   lastUpdated: number | null;
   automationMode: AutoInjectMode;
+  /** Truthful hero headline — deriveFleetPulse(), computed by ControlPanel. */
+  fleetPulse: FleetPulse;
   automationSaving: boolean;
   refreshing: boolean;
   onRefresh: () => void;
@@ -64,6 +67,7 @@ export function ControlFleetStatus({
   runnerExecutionStall,
   lastUpdated,
   automationMode,
+  fleetPulse,
   automationSaving,
   refreshing,
   onRefresh,
@@ -174,19 +178,34 @@ export function ControlFleetStatus({
       <div className="ui-control-hero-autopilot">
         <div className="ui-control-autopilot-status">
           <p className="ui-control-autopilot-title">Fleet autopilot</p>
+          {/* Headline = what the fleet is ACTUALLY doing (deriveFleetPulse),
+              not what the mode toggle wishes. "Building" + pulsing green once
+              rendered over a fleet whose every recent run had failed. */}
           <p className="ui-control-autopilot-state">
-            {automationMode === "on" && (
+            {fleetPulse.key === "building" && (
               <span className="ui-dot ui-dot-positive animate-pulse shrink-0" aria-hidden="true" />
             )}
-            <span className="font-medium text-text-primary">
-              {automationMode === "on" ? "Building" : "Paused"}
-            </span>
-            {automationMode === "on" && working > 0 && (
+            {fleetPulse.key === "waiting" && (
+              <span className="ui-dot ui-dot-neutral shrink-0" aria-hidden="true" />
+            )}
+            {fleetPulse.key === "failing" && (
+              <span className="ui-dot ui-dot-negative shrink-0" aria-hidden="true" />
+            )}
+            <span className="font-medium text-text-primary">{fleetPulse.label}</span>
+            {fleetPulse.key === "building" && working > 0 && (
               <span className="text-text-muted">
                 · {working} agent{working === 1 ? "" : "s"} active
               </span>
             )}
           </p>
+          {fleetPulse.detail && (
+            <p className="text-xs text-status-negative">
+              {fleetPulse.detail}{" "}
+              <Link href="/activity?window=week" className="underline underline-offset-2">
+                Review failures
+              </Link>
+            </p>
+          )}
         </div>
         <AutomationPolicyControl
           mode={automationMode}

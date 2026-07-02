@@ -140,7 +140,7 @@ export function ProjectCardHeader({
                     </span>
                   )
                 )}
-                <OutcomeStreak outcomes={project.recentOutcomes} />
+                <OutcomeStreak outcomes={project.recentOutcomes} projectKey={project.tab} />
               </div>
               {/* Suppress the subtitle when it would just repeat the badge
                   with no timestamp to add ("Awaiting input / Awaiting input"). */}

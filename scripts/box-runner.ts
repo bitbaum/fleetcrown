@@ -38,7 +38,23 @@ function main(): void {
   }
   log(`v${VERSION} → ${WEB} (token ${token.slice(0, 9)}…, PTY=${process.env.FLEETCROWN_RUNNER_PTY !== "false"})`);
 
-  onPollerStatus((s) => log(formatTrayTooltip(s)));
+  // The desktop refreshes a tray tooltip from every poller status event
+  // (~every 2s). Headless, that verbatim stream wrote "connected · last poll
+  // 0s ago" to journald 40k times a day. Log only when the STATE changes
+  // (ignoring the volatile "last poll Ns ago" segment), plus a 15-minute
+  // liveness heartbeat so a quiet journal still proves the runner is alive.
+  let lastStatusLine = "";
+  let lastHeartbeatMs = 0;
+  onPollerStatus((s) => {
+    const line = formatTrayTooltip(s);
+    const stable = line.replace(/ · last poll \d+s ago/, "");
+    const now = Date.now();
+    if (stable !== lastStatusLine || now - lastHeartbeatMs > 15 * 60 * 1000) {
+      lastStatusLine = stable;
+      lastHeartbeatMs = now;
+      log(line);
+    }
+  });
 
   // Poller starts the bridge subscriber (presence + fast-path wake) itself; the
   // pusher publishes the runtime-state heartbeat. Together they are the whole

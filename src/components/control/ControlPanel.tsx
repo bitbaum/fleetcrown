@@ -8,7 +8,7 @@ import { postJson } from "@/lib/api/fetch";
 import { useControlData } from "@/hooks/use-control-data";
 import { useLaunchModal } from "@/hooks/use-launch-modal";
 import { useCreateProject } from "@/hooks/use-create-project";
-import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows } from "./control-presenter";
+import { buildControlPageState, buildProjectOperationsSnapshots, buildLiveTabRows, deriveFleetPulse } from "./control-presenter";
 import { ControlFleetStatus } from "./ControlFleetStatus";
 import { AttentionBar } from "./AttentionBar";
 import { RunnerStatusBanner } from "./RunnerStatusBanner";
@@ -124,6 +124,15 @@ export function ControlPanel() {
   const pageState = data ? buildControlPageState(data, nowS, runtimeStateKnown, runnerSyncStale) : null;
   const dashboard = pageState?.dashboard ?? null;
   const attention = pageState?.attention ?? [];
+  // Truthful hero headline: what the fleet is actually doing, from live
+  // working count + each project's latest run outcome — not the mode toggle.
+  const fleetPulse = deriveFleetPulse({
+    automationMode: automationPolicy.mode,
+    workingCount: dashboard?.runningCount ?? 0,
+    latestOutcomes: (data?.projects ?? [])
+      .map((p) => p.recentOutcomes?.[0])
+      .filter((o): o is NonNullable<typeof o> => Boolean(o)),
+  });
   const liveTabRows = useMemo(
     () => (data ? buildLiveTabRows(data.zellijTabs, data.projects, nowS, runnerSyncStale) : []),
     [data, nowS, runnerSyncStale],
@@ -314,6 +323,7 @@ export function ControlPanel() {
         runnerExecutionStall={data.runnerExecutionStall}
         lastUpdated={lastUpdated}
         automationMode={automationPolicy.mode}
+        fleetPulse={fleetPulse}
         automationSaving={automationPolicy.saving}
         refreshing={refreshing}
         onRefresh={() => refresh(true)}

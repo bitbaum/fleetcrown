@@ -2718,6 +2718,7 @@
   .ui-dot-positive { background-color: var(--status-positive); }
   .ui-dot-warning  { background-color: var(--status-warning); }
   .ui-dot-negative { background-color: var(--status-negative); }
+  .ui-dot-neutral  { background-color: var(--status-neutral); }
 
   /* Micro badge — shape only; caller adds color/bg/border-color classes */
   .ui-micro-badge {

@@ -16,6 +16,7 @@ import {
 
 export { inferAdapterFromTabName } from "@/lib/agent-resolution";
 import type { ControlData, ProjectState } from "@/lib/control-types";
+import type { OrchestrationOutcome } from "@/db/schema/orchestration-runs";
 import { latestActivitySummary } from "./project-activity-ledger";
 
 export type RuntimeSyncContext = {
@@ -165,6 +166,50 @@ export type ControlDashboardState = {
   idleCount: number;
   commitsToday: number;
 };
+
+/** Truthful fleet-pulse for the Control hero. */
+export type FleetPulse = {
+  key: "paused" | "building" | "waiting" | "failing";
+  label: string;
+  /** Secondary sentence for the failing state (rendered with an Activity link). */
+  detail: string | null;
+};
+
+const FAILED_OUTCOMES: ReadonlySet<string> = new Set(["error", "hang", "timeout"]);
+
+/**
+ * Derive what the fleet is ACTUALLY doing for the hero headline. The label
+ * used to be `mode === "on" ? "Building" : "Paused"` — pure aspiration: it
+ * showed "Building" with a pulsing green dot while 0 agents worked and every
+ * recent run had failed (the 2026-07-02 dead-fleet incident sat behind a
+ * green light for two days). Rules, in order:
+ *   - autopilot off                        → "Paused"
+ *   - any agent working right now          → "Building"
+ *   - nothing working + the latest run of ≥2 projects failed and NONE
+ *     succeeded                            → "Stalled" (+ detail, Activity link)
+ *   - nothing working                      → "Waiting to dispatch"
+ * user_abort counts as neutral (a human choice, not a systemic failure).
+ */
+export function deriveFleetPulse(input: {
+  automationMode: string;
+  workingCount: number;
+  /** Latest outcome per project, only for projects that have any run history. */
+  latestOutcomes: OrchestrationOutcome[];
+}): FleetPulse {
+  if (input.automationMode === "off") return { key: "paused", label: "Paused", detail: null };
+  if (input.workingCount > 0) return { key: "building", label: "Building", detail: null };
+
+  const failed = input.latestOutcomes.filter((o) => FAILED_OUTCOMES.has(o)).length;
+  const succeeded = input.latestOutcomes.filter((o) => o === "success" || o === "partial").length;
+  if (failed >= 2 && succeeded === 0) {
+    return {
+      key: "failing",
+      label: "Stalled",
+      detail: `The latest run on ${failed} projects failed and nothing is currently building.`,
+    };
+  }
+  return { key: "waiting", label: "Waiting to dispatch", detail: null };
+}
 
 export type AttentionItem = {
   project: ProjectState;

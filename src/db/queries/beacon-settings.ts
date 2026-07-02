@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { beaconSettings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { beaconSettings, userProjects } from "@/db/schema";
+import { and, eq, isNull, ne, or } from "drizzle-orm";
 import {
   DEFAULT_BEACON_COUNTDOWN_S,
   DEFAULT_BEACON_MIN_IDLE_S,
@@ -58,6 +58,31 @@ export async function getBeaconSettings(userId: string): Promise<BeaconSettingsD
     transcription_provider: rows[0].transcriptionProvider,
     auto_inject_mode:       coerceAutoInjectMode(rows[0].autoInjectMode),
   };
+}
+
+/**
+ * SSOT for "which users have fleet autopilot on" — for schedulers (crons) that
+ * fan out across users. A user counts as ON when auto_inject_mode != 'off',
+ * INCLUDING users with no beacon row at all: a missing row means
+ * DEFAULT_AUTO_INJECT_MODE ('on'), exactly like getBeaconSettings above.
+ * The nudge-idle cron previously raw-queried only EXISTING rows, so
+ * default-mode users were invisible to the scheduler and the fleet silently
+ * never nudged while the Control hero said "Autopilot on" (2026-07-02
+ * dead-fleet incident — one state, two interpretations).
+ * Scoped to users with active projects so the scheduler skips spectator accounts.
+ */
+export async function getFleetAutopilotUserIds(): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ userId: userProjects.userId })
+    .from(userProjects)
+    .leftJoin(beaconSettings, eq(beaconSettings.userId, userProjects.userId))
+    .where(
+      and(
+        eq(userProjects.isActive, true),
+        or(isNull(beaconSettings.autoInjectMode), ne(beaconSettings.autoInjectMode, "off")),
+      ),
+    );
+  return rows.map((r) => r.userId);
 }
 
 export async function upsertBeaconSettings(

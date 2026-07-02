@@ -34,8 +34,17 @@ export async function updateOrchestrationRun(
   return updated;
 }
 
-export async function cleanupStaleOrchestrationRuns(userId: string) {
-  await db
+export async function cleanupStaleOrchestrationRuns(userId?: string) {
+  const staleWhere = and(
+    // Both un-terminal states: "running" (runner picked it up) and "waiting"
+    // (opened but never closed). The local-runtime path opens runs as
+    // "waiting" and closes them from the session handoff; if the agent never
+    // writes a ready handoff (tab closed, process killed), the run would
+    // otherwise linger open forever — reap it as a timeout like a dead runner.
+    inArray(orchestrationRuns.state, ["waiting", "running"]),
+    lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
+  );
+  const reaped = await db
     .update(orchestrationRuns)
     .set({
       state: "error",
@@ -45,21 +54,19 @@ export async function cleanupStaleOrchestrationRuns(userId: string) {
       // vanishes from the autonomy feedback loop instead of counting as a
       // timeout — the exact truthful-state gap the loop must reflect.
       outcome: "timeout",
-      finishedAt: new Date(),
+      // Truthful duration: the run DIED at the timeout threshold, not at the
+      // moment a janitor happened to notice. Stamping reap-time here once
+      // produced "51h" durations in Activity for runs that timed out after
+      // 60 minutes — the reaper only ran on Control page loads and nobody
+      // opened Control for two days.
+      finishedAt: sql`${orchestrationRuns.startedAt} + make_interval(mins => ${STALE_RUN_MINUTES})`,
       payload: sql`jsonb_set(COALESCE(payload, '{}'), '{error}', '"Timed out — run exceeded maximum duration and was cleaned up"')`,
     })
-    .where(
-      and(
-        eq(orchestrationRuns.userId, userId),
-        // Both un-terminal states: "running" (runner picked it up) and "waiting"
-        // (opened but never closed). The local-runtime path opens runs as
-        // "waiting" and closes them from the session handoff; if the agent never
-        // writes a ready handoff (tab closed, process killed), the run would
-        // otherwise linger open forever — reap it as a timeout like a dead runner.
-        inArray(orchestrationRuns.state, ["waiting", "running"]),
-        lt(orchestrationRuns.startedAt, new Date(Date.now() - STALE_RUN_MINUTES * 60 * 1000)),
-      ),
-    );
+    // No userId (the cron janitor) → reap across ALL users; the page-load call
+    // sites keep passing their own userId for scope hygiene.
+    .where(userId ? and(eq(orchestrationRuns.userId, userId), staleWhere) : staleWhere)
+    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey });
+  return reaped;
 }
 
 /**

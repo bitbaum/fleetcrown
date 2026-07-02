@@ -2,7 +2,40 @@
 
 Notable, user-facing changes. Older history lives in the git log (conventional commits).
 
-**Last modified:** 2026-06-29 — subset loop control + screenshot dispatch routing.
+**Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
+
+## 2026-07-02 (b)
+
+### Fixed
+- **Autopilot scheduler saw zero users.** The nudge-idle cron only counted users with an
+  explicit `beacon_settings` row, but a missing row means autopilot ON (the default) —
+  so default-mode fleets were never nudged while the hero said "Autopilot on". One SSOT
+  helper (`getFleetAutopilotUserIds`) now decides enrollment for schedulers and UI alike.
+- **Stale runs are reaped on the clock, with truthful durations.** The run reaper only
+  fired on Control page loads; dead runs lingered "waiting" for 51 hours until someone
+  looked, then got stamped with fabricated 51-hour durations. Now an hourly cron reaps
+  fleet-wide and `finished_at` reflects the actual timeout threshold (60 min).
+
+### Changed
+- **The Control hero tells the truth.** "Building" used to mean "the autopilot toggle is
+  on" — it stayed green while zero agents worked and every recent run had failed. The
+  headline now derives from reality: Building (agents active) / Waiting to dispatch /
+  **Stalled** (latest runs failing, with a Review-failures link) / Paused.
+- **Run-outcome streaks are clickable.** The ✓/✗ glyph row on each project card now
+  deep-links to Activity filtered to that project — a failure signal leads to its cause
+  instead of dead-ending.
+- **Box-runner journal noise cut ~40k lines/day** — poller status logs on state change
+  (plus a 15-min liveness heartbeat), not every 2-second poll.
+
+## 2026-07-02 (a)
+
+### Added
+- **Login with OrangeCat** (identity bridge Part A) — OIDC sign-in against orangecat.ch;
+  fixed the token exchange (OC requires `client_secret_post`). Existing users can link
+  from Settings → Account → Connect OrangeCat.
+- **Publish to OrangeCat + changelog→wall promote** (bridge Part C) — opt-in per project;
+  devlog entries promote to the OC project wall with idempotent dedupe ids, backstopped
+  by a daily reconcile cron so a dropped promote is never silently lost.
 
 ## 2026-06-29 (t)
 

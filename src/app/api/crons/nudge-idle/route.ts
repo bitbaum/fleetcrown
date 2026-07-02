@@ -21,12 +21,13 @@
 // to */30 * * * * for tighter idle-nudge cadence.
 
 import { type NextRequest, NextResponse } from "next/server";
-import { and, eq, gt, ne, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, beaconSettings, orchestrationRuns, pendingCommands } from "@/db/schema";
+import { entities, orchestrationRuns, pendingCommands } from "@/db/schema";
 import { logDebug } from "@/db/queries/debug-logs";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { getFleetAutopilotUserIds } from "@/db/queries/beacon-settings";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { injectPrompt } from "@/lib/inject-core";
 
@@ -58,13 +59,20 @@ export async function GET(req: NextRequest) {
   const nudgedRows: Array<{ userId: string; projectId: string; projectName: string }> = [];
 
   try {
-    // 1. Users with fleet autopilot enabled (any non-off mode, incl. legacy rows).
-    const activeUsers = await db
-      .select({ userId: beaconSettings.userId })
-      .from(beaconSettings)
-      .where(ne(beaconSettings.autoInjectMode, "off"));
+    // 1. Users with fleet autopilot enabled — via the SSOT helper, which counts
+    // users with NO beacon row as on (missing row = DEFAULT_AUTO_INJECT_MODE).
+    // A raw `WHERE mode != 'off'` here once made default-mode users invisible
+    // to the scheduler: the hero said "Autopilot on" while the cron saw zero
+    // enrolled users and the fleet silently stopped (2026-07-02).
+    const activeUsers = (await getFleetAutopilotUserIds()).map((userId) => ({ userId }));
 
     if (activeUsers.length === 0) {
+      logDebug({
+        source: "api/crons/nudge-idle",
+        level: "info",
+        message: "Tick: no autopilot-on users with active projects — scheduler idle",
+        meta: { skipped },
+      });
       return NextResponse.json({
         ok: true,
         checkedUsers: 0,
