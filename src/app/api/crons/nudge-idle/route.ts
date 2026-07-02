@@ -27,13 +27,20 @@ import { entities, orchestrationRuns, pendingCommands } from "@/db/schema";
 import { logDebug } from "@/db/queries/debug-logs";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
+import { MAX_CONCURRENT_BUILDING } from "@/lib/constants/control";
 import { getFleetAutopilotUserIds } from "@/db/queries/beacon-settings";
 import { getUserProjects } from "@/db/queries/user-projects";
 import { injectPrompt } from "@/lib/inject-core";
 
 const IDLE_WINDOW_HOURS = 2;
 const RENUDGE_COOLDOWN_HOURS = 6;
-const MAX_NUDGES_PER_TICK = 25; // cap so a runaway misconfig can't fan out
+// Same cold-start throttle as fleet-kick (MAX_CONCURRENT_BUILDING): each tick
+// wakes at most 3 projects, and the idle/cooldown gates spread the rest over
+// later ticks. The old cap (25) predates the scheduler actually firing — it
+// was written while the user-selection bug made this cron a silent no-op; the
+// first real tick after that fix would have cold-started ~18 agent PTYs at
+// once on a 4 GB box.
+const MAX_NUDGES_PER_TICK = MAX_CONCURRENT_BUILDING;
 
 interface Skips {
   paused_per_project: number;
