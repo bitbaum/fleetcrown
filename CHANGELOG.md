@@ -30,6 +30,13 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 - **Deploys can't hang silently.** The restart ssh once hung 47 minutes after a
   successful restart, freezing the deploy before verification and the runner sync;
   it now runs under a hard timeout with keep-alives.
+- **Runs close again: every queued dispatch now carries the handoff exit-contract.**
+  The cloud dispatch path never told agents to write `~/.claude/sessions/<tab>.md`,
+  so box agents finished real work, searched for the contract, found nothing — and
+  their runs sat "waiting" until reaped as timeouts. The contract block is now SSOT
+  (`sessionHandoffContract`) shared by the local enrichment path and
+  `assembleInjectPrompt`, so run closure no longer depends on which machine executes
+  or whose dotfiles it has.
 
 ## 2026-07-02 (b)
 
