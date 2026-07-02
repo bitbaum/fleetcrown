@@ -85,7 +85,13 @@ rsync -az --delete \
   "$STANDALONE/" "$HOST:$APP_DIR/"
 
 echo "→ restart fleetcrown-app on box"
-ssh "$HOST" "chown -R ubuntu:ubuntu $APP_DIR \
+# timeout: this ssh once hung for 47 minutes AFTER the restart completed on
+# the box (channel never closed), freezing the deploy before verification and
+# the runner sync — the push looked deployed but the runner kept old code.
+# Every step below this one is idempotent, so a killed-and-rerun deploy is
+# always safe; a silently hung one is not.
+timeout 180 ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=6 "$HOST" \
+  "chown -R ubuntu:ubuntu $APP_DIR \
   && systemctl restart fleetcrown-app \
   && sleep 3 \
   && systemctl is-active fleetcrown-app >/dev/null"

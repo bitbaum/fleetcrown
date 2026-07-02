@@ -4,6 +4,27 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 **Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
 
+## 2026-07-02 (c)
+
+### Fixed
+- **Dispatched prompts no longer vanish into boot dialogs.** On a fresh clone the
+  trust-folder dialog ate the injected paste (the Enter accepted the dialog), the
+  output-activity check mistook boot redraw for generation, and six agents were acked
+  "injected" while sitting idle at an empty composer. Dispatch now verifies against the
+  CLI's own live session status (`~/.claude/sessions/<pid>.json` flips off "idle" when
+  a prompt submits) and re-injects once when verifiably idle.
+- **Box agents now read as Working.** The runtime pusher synthesizes the
+  direct-terminal observation from the CLI's live status, so a headless PTY agent
+  mid-task shows "Working" instead of "process detected, no lifecycle signal".
+- **Cloud runtime state can no longer freeze on a laptop snapshot.** With no
+  projects.conf (headless box) the pusher pushed zero project entries — project_states
+  was only ever fed by the laptop runner, so the UI froze on a days-old "5 awaiting
+  input" while real agents ran unseen. The pusher now derives projects from the agent
+  processes actually running.
+- **Deploys can't hang silently.** The restart ssh once hung 47 minutes after a
+  successful restart, freezing the deploy before verification and the runner sync;
+  it now runs under a hard timeout with keep-alives.
+
 ## 2026-07-02 (b)
 
 ### Fixed

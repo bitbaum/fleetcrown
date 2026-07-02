@@ -112,6 +112,73 @@ export function getAgentProcesses(
   return processes;
 }
 
+/** One live Claude Code session as reported by the CLI itself. */
+export type ClaudeLiveSession = {
+  pid: number;
+  cwd: string;
+  /** "idle" (at the composer) vs anything else (generating/working). */
+  status: string;
+  /** Epoch seconds of the last status flip. */
+  statusUpdatedAtS: number;
+};
+
+/**
+ * Claude Code (>= 2.x) writes live per-PID session status to
+ * ~/.claude/sessions/<pid>.json ({cwd, status, statusUpdatedAt}). This is the
+ * CLI's OWN ground truth for "is the agent generating right now" — no hooks,
+ * no handoff files. Two consumers:
+ *   - dispatch verification (poller): "did the injected prompt actually
+ *     submit" = status leaves "idle". The old output-activity heuristic was
+ *     fooled by boot-screen redraw, acking "injected" while the paste had
+ *     been eaten by the trust-folder dialog (2026-07-02: six agents launched,
+ *     all idle, all acked ok).
+ *   - runtime pusher (readFastState): synthesizes the "direct_terminal"
+ *     observation for agents with no prompt state file (headless box).
+ * Dead PIDs are skipped — a killed agent must not leave a forever-"working"
+ * ghost. Newest statusUpdatedAt wins per cwd.
+ */
+export function readClaudeLiveSessions(): Map<string, ClaudeLiveSession> {
+  const byCwd = new Map<string, ClaudeLiveSession>();
+  const dir = `${process.env.HOME ?? ""}/.claude/sessions`;
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(dir).filter((f) => f.endsWith(".json"));
+  } catch {
+    return byCwd; // no session dir — older CLI or non-claude agent
+  }
+  for (const f of files) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(`${dir}/${f}`, "utf-8")) as {
+        pid?: number; cwd?: string; status?: string; statusUpdatedAt?: number;
+      };
+      if (!raw.pid || !raw.cwd || typeof raw.status !== "string") continue;
+      if (!fs.existsSync(`/proc/${raw.pid}`)) continue; // stale file, dead agent
+      const entry: ClaudeLiveSession = {
+        pid: raw.pid,
+        cwd: raw.cwd,
+        status: raw.status,
+        statusUpdatedAtS: Math.floor((raw.statusUpdatedAt ?? 0) / 1000),
+      };
+      const prev = byCwd.get(raw.cwd);
+      if (!prev || entry.statusUpdatedAtS > prev.statusUpdatedAtS) byCwd.set(raw.cwd, entry);
+    } catch { /* unreadable/partial write — skip */ }
+  }
+  return byCwd;
+}
+
+/** Newest live Claude session running in `dir` (or a subdirectory of it). */
+export function claudeLiveSessionForDir(
+  sessions: Map<string, ClaudeLiveSession>,
+  dir: string,
+): ClaudeLiveSession | null {
+  let best: ClaudeLiveSession | null = null;
+  for (const [cwd, s] of sessions) {
+    if (cwd !== dir && !cwd.startsWith(`${dir}/`)) continue;
+    if (!best || s.statusUpdatedAtS > best.statusUpdatedAtS) best = s;
+  }
+  return best;
+}
+
 export type FastProjectState = {
   tab: string;
   agentRunning: boolean;
@@ -136,6 +203,7 @@ export function readFastState(
   agentCwds: string[]
 ): FastProjectState[] {
   const nowS = Math.floor(Date.now() / 1000);
+  const liveSessions = readClaudeLiveSessions();
   return projects.map(({ tab, dir, sessionLifecycleSignals = true, activeAgents = [], tabOpen = false }) => {
     const tmpReady   = readTmpTs(stateFile.ready(tab));
     const tmpLock    = readTmpTs(stateFile.lock(tab));
@@ -143,9 +211,23 @@ export function readFastState(
     const tmpClosed  = readTmpTs(stateFile.closed(tab));
 
     const rawCurrentPrompt = readCurrentPrompt(tab);
-    const currentPrompt = sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
+    let currentPrompt = sessionLifecycleSignals || rawCurrentPrompt?.source === "runner"
       ? rawCurrentPrompt
       : null;
+    // No prompt state file (headless box: nothing writes /tmp prompt state)
+    // but the CLI itself says it is generating → surface it as the
+    // direct-terminal observation so the agent reads as Working instead of
+    // "process detected, no lifecycle signal".
+    if (!currentPrompt) {
+      const live = claudeLiveSessionForDir(liveSessions, dir);
+      if (live && live.status !== "idle") {
+        currentPrompt = {
+          key: "direct_terminal",
+          label: "Direct terminal activity",
+          startedAt: live.statusUpdatedAtS,
+        };
+      }
+    }
 
     const liveAdapter = activeAgents[0] ?? "claude";
     return {

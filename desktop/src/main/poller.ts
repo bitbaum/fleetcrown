@@ -34,6 +34,7 @@ import { startPeek, stopPeek } from './peek-streamer'
 import { getAgentInstallCommand, isAgentId, listAgentRegistry, type Agent, type AgentOption } from '@/lib/agent-registry'
 import { resolveOutgoingAgentForDir, resolveRunningAgentsInDir } from '@/lib/agent-process-scan'
 import { findMatchingTab } from '@/lib/tab-match'
+import { readClaudeLiveSessions, claudeLiveSessionForDir } from '@/lib/control-fast-state'
 import {
   RUNNER_PTY_ENABLED,
   isPtyBacked,
@@ -361,6 +362,27 @@ async function waitForSessionFileBump(tab: string, baselineMtime: number, timeou
 }
 
 /**
+ * "Did the injected prompt actually submit?" — authoritative check against
+ * the CLI's own live session status (~/.claude/sessions/<pid>.json flips off
+ * "idle" the moment a prompt starts generating). Agents that don't write
+ * live status files (hermes/codex/…) fall back to the output-activity
+ * heuristic once, at the deadline.
+ */
+async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs
+  let sawLiveSession = false
+  while (Date.now() < deadline) {
+    const live = claudeLiveSessionForDir(readClaudeLiveSessions(), dir)
+    if (live) {
+      sawLiveSession = true
+      if (live.status !== 'idle') return true
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  return sawLiveSession ? false : isPtyBusy(tab)
+}
+
+/**
  * PATCH the pending_commands row done. Always called once per command
  * (success, error, or already-done dedup hit) so a claimed row never
  * lingers waiting for the 90s stale-claim reaper.
@@ -544,21 +566,21 @@ async function handleCommand(
           }
           if (ptyOk) {
             injectPty(tab, prompt)
-            // Verify via the owned PTY's own activity, not the session-file
-            // mtime. A submitted prompt keeps the agent generating → status
-            // stays "running"; a paste that never submitted falls quiet →
-            // "idle". The old mtime check was a false negative (that file only
-            // bumps when the agent FINISHES a turn, minutes later) and its
-            // retry re-injected the prompt, double-submitting into a busy agent.
-            await asleep(3500)
-            verified = isPtyBusy(tab)
-            if (!verified && launched) {
-              // Genuinely didn't start — the agent's TUI was likely still
-              // booting at inject time. Re-inject ONCE; safe because the agent
-              // is idle (not mid-turn), so this can't double-submit.
+            // Verify against the CLI's OWN session status (~/.claude/sessions/
+            // <pid>.json): a submitted prompt flips status off "idle". The
+            // previous output-activity heuristic (isPtyBusy) was fooled by
+            // boot-screen redraw — on a fresh clone the trust-folder dialog
+            // ate the paste (the injected Enter accepted the dialog), the TUI
+            // kept redrawing, and six agents were acked "injected" while
+            // sitting idle at an empty composer (2026-07-02). isPtyBusy stays
+            // as the fallback for agents that don't write live status files.
+            verified = await waitForAgentGenerating(dir, tab, 8000)
+            if (!verified) {
+              // Verifiably idle (not mid-turn) — a re-inject cannot
+              // double-submit. Covers the boot-dialog-ate-the-paste class:
+              // the first Enter dismissed the dialog, so this one lands.
               injectPty(tab, prompt)
-              await asleep(3500)
-              verified = isPtyBusy(tab)
+              verified = await waitForAgentGenerating(dir, tab, 8000)
             }
             ok = true
             text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
