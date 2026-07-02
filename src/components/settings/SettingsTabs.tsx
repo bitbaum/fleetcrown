@@ -37,6 +37,8 @@ type Props = {
   teamProjects: UserProject[];
   projectLimit: number | null;
   invitations: Invitation[];
+  /** Whether the OrangeCat OIDC provider is mounted (env-gated, server-derived). */
+  orangecatEnabled: boolean;
 };
 
 const TABS = [
@@ -75,7 +77,7 @@ function resolveInitialTab(): TabId {
   return HASH_TO_TAB[raw] ?? "profile";
 }
 
-export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectLimit, invitations }: Props) {
+export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectLimit, invitations, orangecatEnabled }: Props) {
   // Lazy initializer reads the URL hash once at first render so deep links
   // like /settings#agent or /settings#tokens (from RunnerStatusBanner's
   // onboarding link) open the right tab. Without this, the banner landed
@@ -111,7 +113,7 @@ export function SettingsTabs({ user, userPrefs, projects, teamProjects, projectL
         <ProfileSettings user={{ id: user.id, name: user.name, username: user.username, image: user.image }} />
       )}
       {activeTab === "account" && (
-        <AccountSettings user={{ email: user.email, hasPassword: user.hasPassword }} />
+        <AccountSettings user={{ email: user.email, hasPassword: user.hasPassword }} orangecatEnabled={orangecatEnabled} />
       )}
       {activeTab === "notifications" && (
         <NotificationSettings />

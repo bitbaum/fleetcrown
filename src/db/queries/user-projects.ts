@@ -201,7 +201,7 @@ export async function appendProjectDevLog(
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
   // Changelog→wall promote step (async, idempotent, non-blocking) — no-ops
   // unless the project is published to OrangeCat and the user is linked.
-  promoteDevLogEntry(userId, project.id, project.name, entry);
+  void promoteDevLogEntry(userId, project.id, project.name, entry);
 }
 
 export async function appendProjectDevLogByEntityProjectId(
@@ -215,7 +215,7 @@ export async function appendProjectDevLogByEntityProjectId(
   });
   if (!project) return;
   await writeDevLog(project.id, (project.devLog ?? []) as DevLogEntry[], entry);
-  promoteDevLogEntry(userId, project.id, project.name, entry);
+  void promoteDevLogEntry(userId, project.id, project.name, entry);
 }
 
 /**

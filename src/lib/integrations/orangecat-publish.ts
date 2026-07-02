@@ -117,19 +117,22 @@ interface PromoteContent {
   content?: Record<string, unknown>;
 }
 
+/** Outcome of a promote attempt — lets the backfill janitor count and report. */
+export type PromoteOutcome = "posted" | "skipped" | "failed";
+
 /**
- * Promote one publish-worthy moment onto the OrangeCat wall. Fire-and-forget:
- * never throws, never blocks the user action; a dropped promote is recoverable
- * later by backfill because external ids are deterministic.
+ * Promote one publish-worthy moment onto the OrangeCat wall. Never throws,
+ * never blocks the user action (call sites may `void` it); a dropped promote
+ * is recoverable by the backfill cron because external ids are deterministic.
  */
 export async function promoteMomentToOrangeCat(
   userId: string,
   userProjectId: string,
   moment: PromotableMoment,
   input: PromoteContent,
-): Promise<void> {
+): Promise<PromoteOutcome> {
   const policy = PROMOTE_POLICY[moment];
-  if (!policy?.enabled) return;
+  if (!policy?.enabled) return "skipped";
 
   try {
     let subjectId = input.subjectId;
@@ -140,10 +143,10 @@ export async function promoteMomentToOrangeCat(
       });
       subjectId = project?.orangecatProjectId ?? undefined;
     }
-    if (!subjectId) return; // not published to OC — nothing to promote onto
+    if (!subjectId) return "skipped"; // not published to OC — nothing to promote onto
 
     const link = await getOrangeCatLink(userId);
-    if (!link) return;
+    if (!link) return "skipped";
 
     const res = await fetch(`${OC_BASE}/api/v1/timeline/publish`, {
       method: "POST",
@@ -171,29 +174,32 @@ export async function promoteMomentToOrangeCat(
         externalId: input.externalId,
         status: res.status,
       });
+      return "failed";
     }
+    return "posted";
   } catch (err) {
     console.warn("[orangecat-publish] promote errored (non-fatal)", {
       userProjectId,
       moment,
       err,
     });
+    return "failed";
   }
 }
 
 /**
  * Promote a freshly appended dev-log entry (the changelog→wall loop).
  * Deterministic external id = hash of the entry, so the same entry retried
- * never double-posts.
+ * never double-posts (OC reconciles on source + external_id).
  */
 export function promoteDevLogEntry(
   userId: string,
   userProjectId: string,
   projectName: string,
   entry: DevLogEntry,
-): void {
+): Promise<PromoteOutcome> {
   const digest = createHash("sha256").update(JSON.stringify(entry)).digest("hex").slice(0, 24);
-  void promoteMomentToOrangeCat(userId, userProjectId, "devlog_entry", {
+  return promoteMomentToOrangeCat(userId, userProjectId, "devlog_entry", {
     externalId: `fleetcrown_devlog_${userProjectId}_${digest}`,
     title: `${projectName}: ${firstLine(entry.done) || "progress update"}`,
     description: [entry.done, entry.next ? `Next: ${entry.next}` : null]

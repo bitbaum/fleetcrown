@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, GitBranch, X as XIcon, Globe, Trash2 } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { Loader2, GitBranch, X as XIcon, Globe, Trash2, Cat } from "lucide-react";
 import { patchJson, postJson, deleteJson } from "@/lib/api/fetch";
 import { useFetch } from "@/hooks/use-fetch";
 import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
@@ -10,17 +11,34 @@ import { TOAST_MEDIUM_MS } from "@/lib/constants/timings";
 type ConnectedAccount = { provider: string; providerAccountId: string };
 
 const PROVIDER_META: Record<string, { label: string; icon: React.ElementType }> = {
-  github:  { label: "GitHub",  icon: GitBranch },
-  google:  { label: "Google",  icon: Globe     },
-  twitter: { label: "Twitter/X", icon: XIcon   },
+  github:    { label: "GitHub",    icon: GitBranch },
+  google:    { label: "Google",    icon: Globe     },
+  twitter:   { label: "Twitter/X", icon: XIcon     },
+  orangecat: { label: "OrangeCat", icon: Cat       },
 };
 
-function ConnectedAccountsSection({ hasPassword }: { hasPassword: boolean }) {
+function ConnectedAccountsSection({ hasPassword, orangecatEnabled }: { hasPassword: boolean; orangecatEnabled: boolean }) {
   const { data, refetch } = useFetch<{ accounts: ConnectedAccount[] }>("/api/me/connected-accounts");
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const connectedAccounts = data?.accounts ?? [];
+  // Bridge Part A settings-connect: existing FC users link their OrangeCat
+  // identity here (the sign-in button only covers the login page). The OIDC
+  // round-trip carries the capability scopes, so a successful link also
+  // unlocks Publish to OrangeCat — no separate API-key step.
+  const showOrangeCatConnect =
+    orangecatEnabled && !connectedAccounts.some((a) => a.provider === "orangecat");
+
+  const connectOrangeCat = async () => {
+    setConnecting(true);
+    setError(null);
+    // Auth.js links by verified-email match (allowDangerousEmailAccountLinking);
+    // an OC account with a DIFFERENT email signs into that other FC user
+    // instead of linking — same behavior as the sign-in page button.
+    await signIn("orangecat", { callbackUrl: "/settings#account" });
+  };
 
   const disconnect = async (provider: string) => {
     setDisconnecting(provider);
@@ -68,6 +86,19 @@ function ConnectedAccountsSection({ hasPassword }: { hasPassword: boolean }) {
           </div>
         );
       })}
+      {showOrangeCatConnect && (
+        <div className="flex items-center gap-3 rounded-lg border border-border-subtle bg-surface-base px-3 py-2.5">
+          <Cat className="h-4 w-4 shrink-0 text-text-secondary" />
+          <span className="flex-1 text-sm text-text-primary">OrangeCat</span>
+          <button
+            onClick={connectOrangeCat}
+            disabled={connecting}
+            className="ui-btn-xs"
+          >
+            {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Connect"}
+          </button>
+        </div>
+      )}
       {error && <p className="ui-error-xs">{error}</p>}
     </div>
   );
@@ -157,9 +188,11 @@ function SetInitialPasswordSection() {
 
 type Props = {
   user: { email: string | null; hasPassword: boolean };
+  /** Whether the OrangeCat OIDC provider is mounted (env-gated, server-derived). */
+  orangecatEnabled: boolean;
 };
 
-export function AccountSettings({ user }: Props) {
+export function AccountSettings({ user, orangecatEnabled }: Props) {
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
@@ -207,7 +240,7 @@ export function AccountSettings({ user }: Props) {
       {/* Connected OAuth accounts */}
       <div className="space-y-2">
         <label className="ui-kicker">Connected accounts</label>
-        <ConnectedAccountsSection hasPassword={user.hasPassword} />
+        <ConnectedAccountsSection hasPassword={user.hasPassword} orangecatEnabled={orangecatEnabled} />
       </div>
 
       {/* Set initial password (OAuth-only accounts with no password yet) */}
