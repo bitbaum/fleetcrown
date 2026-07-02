@@ -28,6 +28,9 @@ export const userProjects = pgTable("user_projects", {
   isActive:    boolean("is_active").default(true).notNull(),
   notes:       text("notes"),                    // free-form scratchpad visible in the profile panel
   devLog:      jsonb("dev_log").$type<DevLogEntry[]>().default([]).notNull(),
+  // Cross-product bridge Part C: the published OrangeCat project this project
+  // projects onto (opt-in "Publish to OrangeCat"). Null = not published.
+  orangecatProjectId: uuid("orangecat_project_id"),
   createdAt:   timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [

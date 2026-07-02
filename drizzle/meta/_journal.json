@@ -239,6 +239,13 @@
       "when": 1782000000000,
       "tag": "0034_users_orangecat_actor_id",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782000001000,
+      "tag": "0035_user_projects_orangecat_project_id",
+      "breakpoints": true
     }
   ]
 }
