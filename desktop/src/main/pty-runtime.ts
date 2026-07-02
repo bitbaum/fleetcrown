@@ -105,7 +105,14 @@ export async function launchAgentPty(
 export function injectPty(tab: string, text: string): void {
   const id = runnerWorkspaceId(tab);
   const body = text.replace(/[\r\n]+$/, "");
-  executor.write(id, body);
+  // Explicit bracketed paste (ESC[200~ … ESC[201~): the TUI ingests the whole
+  // blob as ONE atomic paste event. Without the markers, a big dispatch
+  // prompt (RAG context blocks) was still being ingested when the fixed-delay
+  // CRs below arrived — they were swallowed as in-paste newlines and the
+  // prompt sat in the composer unsubmitted (2026-07-02, all six box
+  // dispatches). Modern TUIs (Claude Code/Ink, readline ≥ bash 5.1) treat a
+  // CR AFTER the end marker as a real keypress: submit.
+  executor.write(id, `\x1b[200~${body}\x1b[201~`);
   setTimeout(() => executor.write(id, "\r"), 250);
   setTimeout(() => executor.write(id, "\r"), 800);
 }

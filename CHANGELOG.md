@@ -13,6 +13,12 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
   "injected" while sitting idle at an empty composer. Dispatch now verifies against the
   CLI's own live session status (`~/.claude/sessions/<pid>.json` flips off "idle" when
   a prompt submits) and re-injects once when verifiably idle.
+- **Dispatched prompts actually submit.** Big prompts (with context blocks) were still
+  being ingested by the TUI when the fixed-delay Enters arrived — swallowed as in-paste
+  newlines, prompt parked in the composer. Injection now wraps the body in explicit
+  bracketed-paste markers (atomic ingestion; the following Enter is a real keypress),
+  and the verify-retry first sends a bare Enter (submits a parked composer without
+  duplicating it) before falling back to a full re-inject.
 - **Box agents now read as Working.** The runtime pusher synthesizes the
   direct-terminal observation from the CLI's live status, so a headless PTY agent
   mid-task shows "Working" instead of "process detected, no lifecycle signal".

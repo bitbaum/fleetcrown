@@ -576,9 +576,16 @@ async function handleCommand(
             // as the fallback for agents that don't write live status files.
             verified = await waitForAgentGenerating(dir, tab, 8000)
             if (!verified) {
-              // Verifiably idle (not mid-turn) — a re-inject cannot
-              // double-submit. Covers the boot-dialog-ate-the-paste class:
-              // the first Enter dismissed the dialog, so this one lands.
+              // Most likely failure: the prompt is SITTING in the composer
+              // unsubmitted (paste landed, Enter got swallowed). A bare Enter
+              // submits it without duplicating the text; verifiably-idle means
+              // it can't interrupt a turn.
+              writeRawKey(tab, '\r')
+              verified = await waitForAgentGenerating(dir, tab, 6000)
+            }
+            if (!verified) {
+              // Composer was actually empty (boot dialog ate the paste) —
+              // re-inject the full prompt once.
               injectPty(tab, prompt)
               verified = await waitForAgentGenerating(dir, tab, 8000)
             }
