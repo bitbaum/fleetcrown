@@ -210,10 +210,35 @@ function buildPaneTopology(openTabs: string[]): PaneRecord[] {
   return records
 }
 
+/**
+ * Project registry for the runtime payload. The desktop reads the user's
+ * claude-projects.conf; the HEADLESS BOX has no such dotfile — it clones
+ * repos on demand (box-prepare) under a dev root. With an empty conf the
+ * pusher used to push ZERO project entries, so project_states was only ever
+ * fed by the laptop runner: when the laptop slept, the cloud UI froze on a
+ * days-old snapshot while real PTY agents ran unseen (2026-07-02 incident).
+ * Fallback: derive {tab, dir} from the agent processes actually running —
+ * the PTYs are the ground truth the payload exists to report.
+ */
+function projectEntries(agentProcesses: ReturnType<typeof getAgentProcesses>): { tab: string; dir: string }[] {
+  const conf = parseProjectsConf()
+  if (conf.length > 0) return conf
+  const seen = new Set<string>()
+  const out: { tab: string; dir: string }[] = []
+  for (const p of agentProcesses) {
+    const tab = p.cwd.split('/').filter(Boolean).pop() ?? p.cwd
+    if (!seen.has(tab.toLowerCase())) {
+      seen.add(tab.toLowerCase())
+      out.push({ tab, dir: p.cwd })
+    }
+  }
+  return out
+}
+
 function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[] {
   const agentRegistry = listAgentRegistry()
   const agentProcesses = getAgentProcesses(agentRegistry)
-  const projects = parseProjectsConf().map(({ tab, dir }) => {
+  const projects = projectEntries(agentProcesses).map(({ tab, dir }) => {
     const resolvedTab = resolveEffectiveTab(tab, openTabs)
     const projectProcesses = agentProcesses.filter((p) => p.cwd === dir || p.cwd.startsWith(`${dir}/`))
     const activeAgents = [...new Set(projectProcesses.map((p) => p.agentId))]
