@@ -101,7 +101,12 @@ export async function assembleInjectPrompt(
         adapter,
         intent,
         model,
-        customInstructions: customPrompt,
+        // The renderer embeds custom instructions adjacent to the context
+        // block; without an explicit header the task reads as text quoted
+        // INSIDE "Project context & goals" and well-aligned agents refuse it
+        // as a suspected injection (2026-07-03, twice). The header marks the
+        // boundary where operator authority begins.
+        customInstructions: `## Your task (direct operator instruction)\n${customPrompt}`,
         projectContext,
       },
       adapter,
