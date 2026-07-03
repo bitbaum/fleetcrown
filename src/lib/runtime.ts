@@ -9,6 +9,11 @@ export function isRuntimeAvailable(): boolean {
   return process.env.RUNTIME_AVAILABLE === "true";
 }
 
+/** Server-owned sandbox workspaces are an explicit hosted-execution opt-in. */
+export function isSandboxExecutorEnabled(): boolean {
+  return process.env.FLEETCROWN_EXECUTOR === "sandbox";
+}
+
 /** Error body when the cloud control plane must not spawn local PTYs (Horizon A2). */
 export const WORKSPACES_CLOUD_DISABLED =
-  "Local PTY workspaces are disabled on the cloud control plane. Watch agents on Terminal → Cloud (box-runner peek stream).";
+  "Server workspaces are disabled on this control plane. Watch agents on Terminal → Cloud (box-runner peek stream), or connect Fleet Runner on this computer.";

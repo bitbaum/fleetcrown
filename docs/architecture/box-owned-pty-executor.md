@@ -89,7 +89,7 @@ Two complementary cloud executors, both killing the laptop dependency:
 1. **P0 — prove one CLI on the box.** Install + auth `claude`; manually `executor.provision()` a workspace via `/api/workspaces` with `RUNTIME_AVAILABLE=true` in a *throwaway* box node process; confirm it spawns, streams over SSE, and accepts input. Validates node-pty + the CLI end-to-end. (No production wiring yet.)
 2. **P1 — headless box-runner (single-tenant).** Factor the desktop runner core into a headless package; run it as `fleetcrown-box-runner.service`; it polls the queue, executes via `LocalPtyExecutor`, sets presence online for the owner, streams via peek. Now Control/Terminal are live with the laptop off. **This is the milestone that deletes the dependency for you.**
 3. **P2 — more CLIs.** grok, codex, cursor — install + auth, incremental.
-4. **P3 — `SandboxExecutor`.** Per-user isolation (docker/microVM) → safe multi-tenant box execution.
+4. **P3 — `SandboxExecutor`.** Docker-backed substrate shipped behind `FLEETCROWN_EXECUTOR=sandbox`; public multi-tenant box execution still waits for per-user credentials, metering, and entitlement gates.
 5. **P4 — demote the desktop.** Reposition Fleet Runner as the *optional* power-user mode (your local env, your machine's CLIs/GPU); the box-runner is the default. "From anywhere" becomes literally true.
 
 ## Verification

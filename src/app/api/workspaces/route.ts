@@ -6,7 +6,7 @@ import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { provisionAgentWorkspace } from "@/lib/agent-execution/launch";
 import { isAgentId } from "@/lib/agent-registry";
 import { getApiUserId } from "@/lib/session";
-import { isRuntimeAvailable, WORKSPACES_CLOUD_DISABLED } from "@/lib/runtime";
+import { decideWorkspaceAccess } from "@/lib/workspace-access";
 
 // node-pty (the LocalPtyExecutor) only runs in the Node runtime.
 export const runtime = "nodejs";
@@ -33,9 +33,8 @@ const ProvisionBody = z.object({
 export async function POST(req: NextRequest) {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: WORKSPACES_CLOUD_DISABLED }, { status: 403 });
-  }
+  const access = await decideWorkspaceAccess(userId);
+  if (!access.ok) return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
 
   const data = await readJsonBody(req, ProvisionBody);
   if (data instanceof NextResponse) return data;
@@ -78,9 +77,8 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isRuntimeAvailable()) {
-    return NextResponse.json({ error: WORKSPACES_CLOUD_DISABLED }, { status: 403 });
-  }
+  const access = await decideWorkspaceAccess(userId);
+  if (!access.ok) return NextResponse.json({ error: access.error, code: access.code }, { status: access.status });
   const prefix = `${userId}:`;
   const workspaces = executor.list().filter((w) => w.id.startsWith(prefix));
   return NextResponse.json({ workspaces });

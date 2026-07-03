@@ -1,7 +1,8 @@
 # FleetCrown Agent Execution Platform
 
-**Status:** Architecture / north star. Supersedes the laptop-era zellij execution path.
-**Last updated:** 2026-06-17
+**Status:** Architecture / north star. LocalPtyExecutor shipped; Docker-backed
+SandboxExecutor substrate shipped behind an explicit env flag.
+**Last updated:** 2026-07-03
 **Scope:** How FleetCrown runs, streams, observes, and controls agent processes for
 many tenants on arbitrary client devices — without puppeting anyone's terminal.
 
@@ -81,7 +82,7 @@ Implementations are added in order — **same interface, no control-plane/UI cha
 | Executor | Backend | Serves |
 |----------|---------|--------|
 | `LocalPtyExecutor` | `node-pty` on one box | dev + single-box self-host; **proves the interface end-to-end** |
-| `SandboxExecutor` | Firecracker / gVisor / K8s / Fly Machines / e2b | **multi-tenant production scale** (replaces today's `pending_command` keystroke hack) |
+| `SandboxExecutor` | Docker today; Firecracker / gVisor / K8s / Fly Machines / e2b later | **multi-tenant production scale** (replaces today's `pending_command` keystroke hack) |
 | `LocalRunnerExecutor` *(optional)* | the user's own machine via Fleet Runner | power users who want "run on my hardware" |
 
 zellij/tmux are **not executors** — at most an *optional view* a power user attaches to a
@@ -106,7 +107,10 @@ not research.
    with **zero zellij**, single-tenant. This is the proving ground for the interface.
 3. **Unify the dashboard on the Executor model** — wrap or deprecate the existing
    zellij + cloud paths behind it; one mental model.
-4. **`SandboxExecutor`** — pick the sandbox tech; multi-tenant production isolation.
+4. **`SandboxExecutor`** — Docker-backed substrate behind `FLEETCROWN_EXECUTOR=sandbox`.
+   It enforces a workspace root, per-container resource limits, `no-new-privileges`,
+   `cap-drop=ALL`, and deny-by-default networking. This is the execution primitive;
+   product entitlements still decide who may use hosted execution.
 5. **Hibernation + autoscaling** — checkpoint idle agents, free compute; cost at scale.
 6. **Native-attach gateway (optional)** — let power users attach their own terminal to a
    workspace over the connection plane.
@@ -122,3 +126,20 @@ The Next.js app stays as the **control plane**. The `feat/embedded-terminal` wor
 (`@xterm/xterm`) is the **view** for step 2. The reliability fixes shipped 2026-06-17
 (timeouts, launch-state sentinel, verified inject) keep the **legacy zellij path** usable
 until `LocalPtyExecutor` replaces it — they are a bridge, explicitly not the destination.
+
+## SandboxExecutor Runtime Knobs
+
+The active executor is selected in `src/lib/agent-execution/index.ts`.
+
+- `FLEETCROWN_EXECUTOR=local-pty` (default): node-pty on the host.
+- `FLEETCROWN_EXECUTOR=sandbox`: Docker-backed sandbox.
+- `FLEETCROWN_SANDBOX_IMAGE`: image to run; default `ubuntu:24.04`.
+- `FLEETCROWN_SANDBOX_WORKSPACE_ROOT`: only `cwd` values under this root are accepted.
+- `FLEETCROWN_SANDBOX_NETWORK`: `none` (default) or `bridge`.
+- `FLEETCROWN_SANDBOX_CPUS`, `FLEETCROWN_SANDBOX_MEMORY`, `FLEETCROWN_SANDBOX_PIDS`: resource caps.
+- `FLEETCROWN_SANDBOX_USER`: `current` (default) or `root`.
+- `FLEETCROWN_SANDBOX_MOUNT`: `rw` (default) or `ro`.
+
+Important: this substrate does **not** by itself make hosted execution public. The
+shared cloud builder remains private until hosted entitlements, per-user
+credentials, metering, and onboarding smoke tests are complete.

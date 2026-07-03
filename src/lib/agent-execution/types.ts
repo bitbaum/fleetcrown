@@ -4,8 +4,8 @@
  *
  * Terminal-agnostic BY CONSTRUCTION: it traffics in a stable id, raw PTY bytes,
  * and structured events — never a zellij session/tab name. The same interface is
- * satisfied by LocalPtyExecutor (dev/self-host, here) and later SandboxExecutor
- * (Firecracker/gVisor/K8s/Fly/e2b, multi-tenant production) with zero changes to
+ * satisfied by LocalPtyExecutor (dev/self-host, here) and SandboxExecutor
+ * (Docker today; Firecracker/gVisor/K8s/Fly/e2b later) with zero changes to
  * the control plane or the UI. The interface is intentionally minimal — it is
  * defined BY its first real implementation (LocalPty) rather than guessed, and
  * grows only as a concrete executor needs it (snapshot/restore arrive with the

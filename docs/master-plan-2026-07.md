@@ -208,7 +208,7 @@ dispatches, and pays. Revenue-ever goes 0 → 1.
 
 | # | Item | Notes |
 |---|------|-------|
-| 2.1 | **`SandboxExecutor`** (box-owned-pty P3): per-tenant isolation (user + cgroup or container per workspace), resource limits, no cross-tenant filesystem | The single hardest remaining engineering gate; design doc first |
+| 2.1 | **`SandboxExecutor`** (box-owned-pty P3): per-tenant isolation (container per workspace), resource limits, no cross-tenant filesystem | Substrate shipped behind `FLEETCROWN_EXECUTOR=sandbox`; next gate is per-user credentials + metering + hosted entitlement |
 | 2.2 | Broaden box CLIs (P2): claude/codex/grok alongside hermes, per-user credentials | Cross-model verification needs >1 mind available hosted |
 | 2.3 | Metered hosted tier: dispatch-minutes or task-based; Stripe now, **OC rails (credits pattern) as the roadmap demonstration later** — mirrors OC's Cat Credits model | Don't invent a third billing model |
 | 2.4 | Hosted-runner (Hermes PR-mode) graduates from spike to a supported "no-runner-yet" fallback for onboarding | New users get a taste before installing anything |
@@ -264,8 +264,9 @@ public face, a wallet, and customers on OrangeCat.
 
 - **SandboxExecutor is genuinely hard** — multi-tenant code execution is a
   security product in itself. Mitigation: BYO tier carries revenue first, so
-  hosted execution ships when it's right, not when it's rushed. Design doc
-  and threat model before code.
+  hosted execution ships when it's right, not when it's rushed. The substrate
+  now exists behind a gate; credentials, metering, and entitlement come before
+  broad hosted execution.
 - **Two-front solo founder** — the phases interlock with OC's on purpose:
   FC Phase 0 = OC Phase 1's proof; FC Phase 1.5 = OC's channel #2; FC 2.3
   reuses OC's credits pattern. Agents execute nearly everything; the

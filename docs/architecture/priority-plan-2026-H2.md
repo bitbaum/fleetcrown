@@ -3,7 +3,7 @@
 ---
 created_date: 2026-06-30
 last_modified_date: 2026-06-30
-last_modified_summary: Multitenancy execution boundary documented and enforced: shared cloud builder remains private; external tenants use Fleet Runner until sandboxed hosted execution ships.
+last_modified_summary: Multitenancy execution boundary documented and enforced: shared cloud builder remains private; Docker SandboxExecutor substrate exists behind an env flag; external tenants use Fleet Runner until hosted entitlements, credentials, and metering ship.
 ---
 
 **North star:** Borrow the workers, own the bridge — one captain's interface over swappable runtimes, with verification and fleet governance you can trust.
@@ -54,7 +54,7 @@ Goal: Talk to Loki → work runs on cloud → watch it without mental model hack
 | C2 | Suggested next commands from fleet state | [ ] |
 | C3 | Control SSR/skeleton fleet header (no empty first paint) | [ ] |
 | C4 | Chip → send (Move forward one tap) | [ ] |
-| C5 | Hosted runner Phase 1 honest — sandboxed Hermes, docs updated | [ ] |
+| C5 | Hosted runner Phase 1 honest — sandboxed Hermes, docs updated | [ ] Sandbox substrate exists; hosted product path still gated |
 
 ## Horizon D — First external user (weeks 12–16)
 
