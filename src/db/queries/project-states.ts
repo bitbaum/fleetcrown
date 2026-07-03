@@ -171,13 +171,13 @@ export async function prependProjectPrompt(
 
 type SessionFields = Pick<
   NewProjectState,
-  "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth" |
+  "workspaceId" | "sessionStatus" | "sessionDone" | "sessionNext" | "sessionTests" | "sessionTodos" | "sessionHealth" |
     "sessionBlockReason" | "sessionNoOpCount"
 >;
 
 type RuntimeFields = Pick<
   NewProjectState,
-  "agentRunning" | "tabOpen" | "activeAgents" | "currentPromptKey" | "currentPromptLabel" |
+  "workspaceId" | "agentRunning" | "tabOpen" | "activeAgents" | "currentPromptKey" | "currentPromptLabel" |
     "currentPromptStartedAt" | "readyAt" | "lockAt" | "closingAt" | "closedAt"
 >;
 
@@ -196,7 +196,7 @@ export async function persistProjectRuntimeIfNewer(
     runtimeObservedAt: patch.runtimeObservedAt,
   };
   for (const key of [
-    "projectId", "tabName", "agentRunning", "tabOpen", "activeAgents", "currentPromptKey",
+    "projectId", "workspaceId", "tabName", "agentRunning", "tabOpen", "activeAgents", "currentPromptKey",
     "currentPromptLabel", "currentPromptStartedAt", "readyAt", "lockAt", "closingAt", "closedAt",
   ] as const) {
     const value = patch[key];
@@ -236,7 +236,7 @@ export async function persistProjectSessionIfNewer(
     sessionUpdatedAt: patch.sessionUpdatedAt,
   };
   for (const key of [
-    "projectId", "tabName", "sessionStatus", "sessionDone", "sessionNext",
+    "projectId", "workspaceId", "tabName", "sessionStatus", "sessionDone", "sessionNext",
     "sessionTests", "sessionTodos", "sessionHealth",
     "sessionBlockReason", "sessionNoOpCount",
   ] as const) {

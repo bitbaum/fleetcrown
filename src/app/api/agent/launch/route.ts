@@ -9,6 +9,7 @@ import { enqueueLaunchAgentCommand } from "@/db/queries/pending-commands";
 import { persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { stateFile } from "@/lib/agent-config";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 const LaunchAgentBody = z.object({
   tab: z.string().trim().min(1).max(120),
@@ -57,6 +58,7 @@ async function recordLaunchedState(
     await persistProjectRuntimeIfNewer({
       userId,
       projectKey: tab,
+      workspaceId: workspaceIdFor(userId, tab),
       tabName: tab,
       agentRunning: true,
       tabOpen: true,

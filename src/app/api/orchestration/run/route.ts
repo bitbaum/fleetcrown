@@ -32,6 +32,7 @@ import { logDebug } from "@/db/queries/debug-logs";
 import { APP_SLUG } from "@/config/brand";
 import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { executionAccessErrorBody, resolveQueuedExecution } from "@/lib/execution-access";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 const RunOrchestrationBody = z.object({
   projectId: z.string().uuid().nullable().optional(),
@@ -450,6 +451,7 @@ export async function POST(req: NextRequest) {
         projectKey: request.projectKey,
         projectId: request.projectId ?? null,
         userId,
+        workspaceId: workspaceIdFor(userId, request.projectKey),
         tabName: effectiveKey,
         runtimeObservedAt: new Date(),
         currentPromptKey: request.intent,

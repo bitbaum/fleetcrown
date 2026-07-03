@@ -77,6 +77,7 @@ import { writePromptQueueMirror } from "@/lib/prompt-queue-mirror";
 import { fetchAllGitStates } from "@/lib/git-state";
 import { matchProfile, matchProfileById, resolveAutoInjectOverride } from "@/lib/project-profile-match";
 import { resolveProjectSession } from "@/lib/project-session";
+import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 
 export type { ProjectProfile, CurrentPrompt, ProjectState, SessionState, GitState, ControlData, FailedCommand };
 export type { PromptMeta };
@@ -254,6 +255,7 @@ export async function GET() {
         projectKey: tab,
         projectId,
         userId: ownerUserId,
+        workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
         tabName: liveTab,
         sessionStatus: session.status,
         sessionDone:   session.done,
@@ -370,6 +372,7 @@ export async function GET() {
     id,
     projectId,
     tab,
+    workspaceId: dbState?.workspaceId ?? workspaceIdFor(ownerUserId, tab),
     liveTab,
     dir,
     agentPref,

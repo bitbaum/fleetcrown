@@ -66,6 +66,7 @@ export type ProjectState = {
   projectId: string | null;
   readonly?: boolean;
   tab: string;
+  workspaceId?: string | null;
   liveTab: string;
   dir: string;
   agentPref: string | null;

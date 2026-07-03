@@ -30,6 +30,7 @@ function sanitizePanes(raw: unknown[]): PaneRecord[] {
 
 interface ProjectRuntimePatch {
   tab: string;
+  workspaceId?: string;
   observedAt?: number;
   agentRunning: boolean;
   tabOpen: boolean;
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
     await persistProjectRuntimeIfNewer({
         projectKey:             p.tab,
         userId,
+        workspaceId:            typeof p.workspaceId === "string" && p.workspaceId.trim() ? p.workspaceId.trim() : undefined,
         tabName:                p.tab,
         runtimeObservedAt:      projectObservedAt,
         agentRunning:           p.agentRunning,
@@ -135,6 +137,7 @@ export async function POST(req: NextRequest) {
       const updated = await persistProjectSessionIfNewer({
         projectKey: p.tab,
         userId,
+        workspaceId: typeof p.workspaceId === "string" && p.workspaceId.trim() ? p.workspaceId.trim() : undefined,
         tabName: p.tab,
         sessionUpdatedAt: new Date(p.sessionUpdatedAt * 1000),
         ...(p.sessionStatus !== undefined && { sessionStatus: p.sessionStatus }),

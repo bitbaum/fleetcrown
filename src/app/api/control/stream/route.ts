@@ -31,9 +31,10 @@ function dbToFastState(
   const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
   return confProjects.map(({ tab, ownerUserId }) => {
     const r = byKey.get(`${ownerUserId}:${tab.toLowerCase()}`);
-    if (!r) return { tab, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
+    if (!r) return { tab, workspaceId: null, agentRunning: false, tabOpen: false, activeAgents: [], session: null, currentPrompt: null, readyAt: null, lockAt: null, closingAt: null, closedAt: null };
     return {
       tab,
+      workspaceId: r.workspaceId,
       agentRunning: r.agentRunning,
       tabOpen: r.tabOpen,
       activeAgents: r.activeAgents,
@@ -128,11 +129,14 @@ export async function GET() {
     if (!fast.some((p) => p.session === null)) return fast;
     const dbRows = await getProjectStatesByUserIds(ownerIds).catch((): DbProjectState[] => []);
     const byKey = new Map(dbRows.map((r) => [`${r.userId}:${r.projectKey.toLowerCase()}`, r]));
-    return fast.map((p, i) =>
-      p.session
-        ? p
-        : { ...p, session: resolveProjectSession(null, byKey.get(`${confProjects[i].ownerUserId}:${confProjects[i].tab.toLowerCase()}`)) },
-    );
+    return fast.map((p, i) => {
+      const dbRow = byKey.get(`${confProjects[i].ownerUserId}:${confProjects[i].tab.toLowerCase()}`);
+      return {
+        ...p,
+        workspaceId: p.workspaceId ?? dbRow?.workspaceId ?? null,
+        session: p.session ?? resolveProjectSession(null, dbRow),
+      };
+    });
   };
 
   const stream = new ReadableStream({

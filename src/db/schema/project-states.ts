@@ -7,6 +7,7 @@ export const projectStates = pgTable("project_states", {
   userId:                 uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   projectKey:             text("project_key").notNull(),
   projectId:              uuid("project_id").references(() => entities.id, { onDelete: "set null" }),
+  workspaceId:            text("workspace_id"),
   tabName:                text("tab_name").notNull(),
   agentRunning:           boolean("agent_running").notNull().default(false),
   tabOpen:                boolean("tab_open").notNull().default(false),
@@ -39,6 +40,7 @@ export const projectStates = pgTable("project_states", {
   primaryKey({ columns: [table.userId, table.projectKey] }),
   index("idx_project_states_user_id").on(table.userId),
   index("idx_project_states_project_id").on(table.projectId),
+  index("idx_project_states_workspace_id").on(table.workspaceId),
   // Case-insensitive uniqueness: the composite PK above is case-sensitive,
   // so 'cockpit' and 'FleetCrown' would otherwise create duplicate rows. See
   // drizzle/0012_project_states_unique_lower_key.sql for the migration that

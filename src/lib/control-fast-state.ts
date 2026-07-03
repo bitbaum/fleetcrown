@@ -181,6 +181,7 @@ export function claudeLiveSessionForDir(
 
 export type FastProjectState = {
   tab: string;
+  workspaceId?: string | null;
   agentRunning: boolean;
   tabOpen: boolean;
   activeAgents: string[];

@@ -36,7 +36,7 @@ import { getAgentProcesses, readFastState } from '@/lib/control-fast-state'
 import { listAgentRegistry } from '@/lib/agent-registry'
 import type { PaneRecord } from '@/db/schema/runtime-snapshots'
 import { loadToken, clearToken, isDevBaseOverride } from './token-store'
-import { listPtyTabs } from './pty-runtime'
+import { listPtyTabs, runnerWorkspaceId } from './pty-runtime'
 
 // Runner version is reported in the runtime-state heartbeat. The desktop sets
 // FLEETCROWN_RUNNER_VERSION from app.getVersion() before starting the pusher
@@ -146,6 +146,7 @@ async function pushOnce(): Promise<void> {
 
 type ProjectRuntimePayload = {
   tab: string
+  workspaceId?: string
   observedAt: number
   agentRunning: boolean
   tabOpen: boolean
@@ -259,6 +260,7 @@ function buildProjectRuntimePayload(openTabs: string[]): ProjectRuntimePayload[]
   const observedAt = Date.now()
   return readFastState(projects, agentCwds).map((state, index) => ({
     tab: projects[index]?.canonicalTab ?? state.tab,
+    workspaceId: runnerWorkspaceId(projects[index]?.canonicalTab ?? state.tab),
     observedAt,
     agentRunning: state.agentRunning,
     tabOpen: state.tabOpen,

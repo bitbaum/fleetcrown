@@ -5,6 +5,7 @@ import { getApiUserId } from "@/lib/session";
 
 const PatchBody = z.object({
   tabName:                z.string().optional(),
+  workspaceId:            z.string().optional(),
   readyAt:                z.string().datetime().optional(),
   closingAt:              z.string().datetime().optional(),
   closedAt:               z.string().datetime().optional(),
@@ -33,6 +34,7 @@ export async function PATCH(
     Object.entries({
       projectKey:             key,
       userId,
+      workspaceId:            d.workspaceId?.trim() || undefined,
       tabName:                d.tabName ?? key,
       runtimeObservedAt,
       readyAt:                d.readyAt                ? new Date(d.readyAt)                : undefined,

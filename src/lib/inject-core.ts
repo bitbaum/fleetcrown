@@ -448,6 +448,7 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
       projectKey: canonical,
       projectId,
       userId,
+      workspaceId: ptyWorkspaceId,
       tabName: effectiveTab,
       runtimeObservedAt: new Date(),
       currentPromptKey: promptKey ?? "custom",
