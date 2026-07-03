@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compactRelativeDate } from "@/lib/dates";
@@ -65,6 +65,12 @@ export function ProjectOperationsView({
   const workingCount = sourceSnapshots.filter(isWorking).length;
   const openIdleCount = sourceSnapshots.filter(isIdle).length;
   const normalizedQuery = query.trim().toLowerCase();
+  // Row positions FREEZE while the user is aiming: live state refreshes update
+  // card content but must not reshuffle rows mid-click (priority re-ranking
+  // moved the target under the cursor twice on 2026-07-03 — one dispatch went
+  // to the wrong project, one vanished). The ranking recomputes only when the
+  // sort mode, the query, or the SET of visible projects changes.
+  const frozenOrderRef = useRef<{ key: string; order: string[] }>({ key: "", order: [] });
   const visibleSnapshots = useMemo(() => {
     const filtered = normalizedQuery
       ? sourceSnapshots.filter((snapshot) => {
@@ -80,11 +86,18 @@ export function ProjectOperationsView({
         })
       : sourceSnapshots;
 
-    return [...filtered].sort((a, b) => {
+    const ranked = [...filtered].sort((a, b) => {
       if (sort === "az") return a.project.tab.localeCompare(b.project.tab);
       if (sort === "recent") return snapshotActivityMs(b) - snapshotActivityMs(a) || a.project.tab.localeCompare(b.project.tab);
       return sourceSnapshots.indexOf(a) - sourceSnapshots.indexOf(b);
     });
+
+    const setKey = `${sort}|${normalizedQuery}|${filtered.map((s) => s.project.tab).sort().join(",")}`;
+    if (frozenOrderRef.current.key !== setKey) {
+      frozenOrderRef.current = { key: setKey, order: ranked.map((s) => s.project.tab) };
+    }
+    const order = frozenOrderRef.current.order;
+    return [...filtered].sort((a, b) => order.indexOf(a.project.tab) - order.indexOf(b.project.tab));
   }, [normalizedQuery, sourceSnapshots, sort]);
   const selected =
     sourceSnapshots.find((snapshot) => snapshot.project.tab === selectedTab) ??
