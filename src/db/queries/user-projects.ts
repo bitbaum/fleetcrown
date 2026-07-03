@@ -90,6 +90,47 @@ export async function getPublicProjects(userId: string): Promise<UserProject[]> 
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
+/**
+ * Record a NEW session handoff as a changelog entry (devLog) — the single
+ * append point behind both handoff ingestion paths: /api/control (local
+ * runtime reads the session file directly) and /api/control/runtime-state
+ * (cloud: the runner pushes it). The cloud path once skipped this entirely,
+ * so box-executed runs closed without ever reaching the project changelog —
+ * or the OrangeCat wall (appendProjectDevLog* fires promoteDevLogEntry).
+ * Guard: only when the done text actually changed vs the previous handoff,
+ * so heartbeats re-pushing the same session never duplicate entries.
+ */
+export async function recordSessionHandoffChangelog(
+  userId: string,
+  input: {
+    projectId?: string | null;
+    tab: string;
+    dateMs: number;
+    previousDone: string | null | undefined;
+    done?: string;
+    next?: string;
+    tests?: string;
+    todos?: string;
+    health?: string;
+  },
+): Promise<void> {
+  const doneTrimmed = input.done?.trim();
+  if (!doneTrimmed || doneTrimmed === input.previousDone?.trim()) return;
+  const entry: DevLogEntry = {
+    date: new Date(input.dateMs).toISOString(),
+    done: doneTrimmed,
+    next: input.next?.trim() ?? "",
+    tests: input.tests?.trim() ?? "",
+    todos: input.todos?.trim() ?? "",
+    health: input.health?.trim() || "good",
+  };
+  if (input.projectId) {
+    await appendProjectDevLogByEntityProjectId(userId, input.projectId, entry);
+  } else {
+    await appendProjectDevLog(userId, input.tab, entry);
+  }
+}
+
 /** The user_projects row backing an entity project (devLog, gitUrl, OC link). */
 export async function getUserProjectByEntityId(userId: string, entityProjectId: string): Promise<UserProject | null> {
   const row = await db.query.userProjects.findFirst({

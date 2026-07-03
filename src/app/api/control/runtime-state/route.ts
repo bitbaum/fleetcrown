@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProjectStatesByUserId, persistProjectRuntimeIfNewer, persistProjectSessionIfNewer } from "@/db/queries/project-states";
+import { getProjectState, getProjectStatesByUserId, persistProjectRuntimeIfNewer, persistProjectSessionIfNewer } from "@/db/queries/project-states";
+import { recordSessionHandoffChangelog } from "@/db/queries/user-projects";
 import { upsertRuntimeSnapshotIfNewer } from "@/db/queries/runtime-snapshots";
 import type { PaneRecord } from "@/db/schema/runtime-snapshots";
 import { getApiUserId } from "@/lib/session";
@@ -127,7 +128,11 @@ export async function POST(req: NextRequest) {
     // Session files are timestamped at their source. Do not allow a delayed
     // heartbeat to replace newer session content already received.
     if (p.sessionUpdatedAt != null) {
-      await persistProjectSessionIfNewer({
+      // Previous handoff BEFORE the write — the changelog append below only
+      // fires when the done text actually changed (heartbeats re-push the
+      // same session every few minutes).
+      const prev = await getProjectState(userId, p.tab).catch(() => null);
+      const updated = await persistProjectSessionIfNewer({
         projectKey: p.tab,
         userId,
         tabName: p.tab,
@@ -140,7 +145,26 @@ export async function POST(req: NextRequest) {
         ...(p.sessionHealth !== undefined && { sessionHealth: p.sessionHealth }),
         ...(p.sessionBlockReason !== undefined && { sessionBlockReason: p.sessionBlockReason }),
         ...(p.sessionNoOpCount !== undefined && { sessionNoOpCount: p.sessionNoOpCount }),
-      }).catch((err) => console.error("[runtime-state] session write failed:", err));
+      }).catch((err) => {
+        console.error("[runtime-state] session write failed:", err);
+        return null;
+      });
+      // Changelog + OrangeCat promote for a NEW handoff — this route is the
+      // ONLY ingestion point for cloud-executed sessions; without this the
+      // devLog (and the OC wall) only ever heard about laptop sessions.
+      if (updated && prev) {
+        await recordSessionHandoffChangelog(userId, {
+          projectId: prev.projectId,
+          tab: p.tab,
+          dateMs: p.sessionUpdatedAt * 1000,
+          previousDone: prev.sessionDone,
+          done: p.sessionDone,
+          next: p.sessionNext,
+          tests: p.sessionTests,
+          todos: p.sessionTodos,
+          health: p.sessionHealth,
+        }).catch((err) => console.error("[runtime-state] changelog append failed:", err));
+      }
     }
   }));
 

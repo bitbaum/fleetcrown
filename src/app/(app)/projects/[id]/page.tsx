@@ -30,7 +30,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const attrs = detail.attrs;
   const name = detail.project.name;
   const links = getProjectLinks(attrs, userProject?.gitUrl ?? undefined);
-  const description = cleanDescription(detail.project.description) ?? attrs.description ?? null;
+  const rawDescription = cleanDescription(detail.project.description) ?? attrs.description ?? null;
+  // Some project descriptions are full technical briefs (1000+ words, written
+  // for agent context) — the header wants the gist, the full text stays in the
+  // brief attrs and Quick edit. First sentence-ish, hard-capped.
+  const description = rawDescription && rawDescription.length > 220
+    ? `${rawDescription.slice(0, rawDescription.lastIndexOf(" ", 220))}…`
+    : rawDescription;
   const orangecatUrl = userProject?.orangecatProjectId
     ? `https://orangecat.ch/projects/${userProject.orangecatProjectId}`
     : null;

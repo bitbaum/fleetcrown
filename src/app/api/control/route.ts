@@ -7,7 +7,7 @@ import { getRecentActivity, getRecentCustomPromptsByProjectKeys, type RecentCust
 import { getProjectActivityBatch, type ProjectActivityEvent } from "@/db/queries/activity";
 import { getProjectStatesByUserId, getProjectStatesByUserIds, persistProjectSessionIfNewer } from "@/db/queries/project-states";
 import type { ProjectState as DbProjectState } from "@/db/schema/project-states";
-import { appendProjectDevLog, appendProjectDevLogByEntityProjectId, ensureUserProjectEntityLinks, getOrgProjects } from "@/db/queries/user-projects";
+import { ensureUserProjectEntityLinks, getOrgProjects, recordSessionHandoffChangelog } from "@/db/queries/user-projects";
 import { readAgentPreferences, resolveAgentConfig } from "@/lib/agent-preferences";
 import { buildSwitchableAgentCatalog, type AgentAvailabilityOverride, type AgentCatalog } from "@/lib/agent-catalog";
 import {
@@ -261,19 +261,20 @@ export async function GET() {
         sessionNoOpCount:   session.noOpCount,
         sessionUpdatedAt: new Date(sessionMtimeMs),
       }).then((updated) => {
-        // Append only for the writer that won the timestamp race.
-        const doneTrimmed = session.done?.trim();
-        if (updated && dbState && doneTrimmed && doneTrimmed !== dbState.sessionDone?.trim()) {
-          const entry = {
-            date: new Date(sessionMtimeMs).toISOString(),
-            done: doneTrimmed,
-            next: session.next?.trim() ?? "",
-            tests: session.tests?.trim() ?? "",
-            todos: session.todos?.trim() ?? "",
-            health: session.health?.trim() || "good",
-          };
-          if (projectId) appendProjectDevLogByEntityProjectId(ownerUserId, projectId, entry).catch((err) => console.error("[control] devlog append failed:", err));
-          else appendProjectDevLog(ownerUserId, tab, entry).catch((err) => console.error("[control] devlog append failed:", err));
+        // Append only for the writer that won the timestamp race. Shared with
+        // the cloud ingestion path (runtime-state route) — one append point.
+        if (updated && dbState) {
+          recordSessionHandoffChangelog(ownerUserId, {
+            projectId,
+            tab,
+            dateMs: sessionMtimeMs,
+            previousDone: dbState.sessionDone,
+            done: session.done,
+            next: session.next,
+            tests: session.tests,
+            todos: session.todos,
+            health: session.health,
+          }).catch((err) => console.error("[control] devlog append failed:", err));
         }
       }).catch((err) => console.error("[control] session state write failed:", err));
     }
