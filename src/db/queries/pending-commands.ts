@@ -279,7 +279,7 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
 export async function markCommandExecuted(
   id: string,
   userId: string,
-  result: { ok: boolean; text?: string; error?: string; warning?: string; verified?: boolean },
+  result: { ok: boolean; text?: string; error?: string; warning?: string; verified?: boolean; workspaceId?: string },
 ): Promise<boolean> {
   const updated = await db
     .update(pendingCommands)

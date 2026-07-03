@@ -37,6 +37,7 @@ import { findMatchingTab } from '@/lib/tab-match'
 import { readClaudeLiveSessions, claudeLiveSessionForDir } from '@/lib/control-fast-state'
 import {
   RUNNER_PTY_ENABLED,
+  runnerWorkspaceId,
   isPtyBacked,
   launchAgentPty,
   injectPty,
@@ -412,7 +413,7 @@ async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000
  * (success, error, or already-done dedup hit) so a claimed row never
  * lingers waiting for the 90s stale-claim reaper.
  */
-type AckPayload = { ok: boolean; error?: string; text?: string; verified?: boolean; warning?: string }
+type AckPayload = { ok: boolean; error?: string; text?: string; verified?: boolean; warning?: string; workspaceId?: string }
 
 async function ackCommand(
   base: string,
@@ -471,6 +472,10 @@ async function handleCommand(
   let verified: boolean | undefined
   let warning: string | undefined
   let text: string | undefined
+  // Stage 2 (workspace addressing): the runner reports WHICH workspace served
+  // the command — today derived from the tab, later an opaque id; consumers
+  // address by this, not by name.
+  let workspaceId: string | undefined
 
   // Idempotency dedup. If the PATCH ack timed out on a previous run, the
   // server will hand us the same command again. Without this, the prompt
@@ -615,6 +620,7 @@ async function handleCommand(
               verified = await waitForAgentGenerating(dir, tab, 8000)
             }
             ok = true
+            workspaceId = runnerWorkspaceId(tab)
             text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
             if (!verified) {
               warning = detectAuthFailure(dir)
@@ -727,7 +733,7 @@ async function handleCommand(
     try { fs.writeFileSync(sentinel, '1', 'utf-8') } catch { /* tmpdir unwritable — fall back to "best effort" */ }
   }
 
-  await ackCommand(base, token, command, { ok, error, verified, warning, text })
+  await ackCommand(base, token, command, { ok, error, verified, warning, text, workspaceId })
 
   if (ok) {
     console.log(`[poller] handled ${command.type} command ${command.id}`)

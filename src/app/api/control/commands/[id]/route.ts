@@ -21,8 +21,10 @@ export async function PATCH(
   // "injected, but the agent isn't generating" never reached the DB or UI.
   const warning = typeof body.warning === "string" ? body.warning : undefined;
   const verified = typeof body.verified === "boolean" ? body.verified : undefined;
+  // Stage 2 (workspace addressing): which workspace served this command.
+  const workspaceId = typeof body.workspaceId === "string" ? body.workspaceId : undefined;
 
-  const updated = await markCommandExecuted(id, userId, { ok, text, error, warning, verified });
+  const updated = await markCommandExecuted(id, userId, { ok, text, error, warning, verified, workspaceId });
   if (!updated) return NextResponse.json({ error: "Command not found" }, { status: 404 });
 
   // Run ledger: project the runner's ack onto the dispatch's run. A clean ack
@@ -33,9 +35,9 @@ export async function PATCH(
     const command = await getCommandById(id);
     const runId = (command?.payload as { runId?: string } | null)?.runId;
     if (runId) {
-      if (!ok) void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error" });
-      else if (warning) void emitRunEvent(runId, userId, "blocked", { reason: warning });
-      else void emitRunEvent(runId, userId, "submitted", { text });
+      if (!ok) void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error", workspaceId });
+      else if (warning) void emitRunEvent(runId, userId, "blocked", { reason: warning, workspaceId });
+      else void emitRunEvent(runId, userId, "submitted", { text, workspaceId });
     }
   } catch { /* telemetry only — never fail the ack */ }
 

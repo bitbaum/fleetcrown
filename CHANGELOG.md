@@ -7,6 +7,11 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 ## 2026-07-03 (c)
 
 ### Added
+- **Workspace addressing begins (Stage 2).** The runner now reports WHICH workspace
+  served every dispatch; the id rides the ack into the command record and the run
+  ledger. Today it derives from the tab name — the point is the channel: consumers
+  address workspaces by id, so the derivation can later become opaque without
+  touching them again.
 - **Run ledger (Stage 1 of the execution-substrate redesign).** Every hop of a run's
   life now declares itself as an append-only event — dispatched, submitted, blocked
   (with reason: boot dialog, dead credentials), closed (with DoD-gated outcome or
