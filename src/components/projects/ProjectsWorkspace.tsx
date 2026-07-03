@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, FolderKanban, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -30,6 +30,7 @@ function parseFilter(raw: string | null): ProjectsPageFilter {
 
 export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [selectedId, setSelectedId] = useState<string | null>(() => searchParams.get("open"));
@@ -71,7 +72,10 @@ export function ProjectsWorkspace({ projects }: { projects: ProjectGridRow[] }) 
     }
   });
 
-  const openProject = (id: string) => setSelectedId(id);
+  // Card click → the FULL project page (/projects/[id], the dossier). The
+  // right-side drawer remains the quick-edit surface, reachable via the
+  // page's "Quick edit" button and existing ?open= deep links.
+  const openProject = (id: string) => router.push(`/projects/${id}`);
   const closeProject = () => {
     setSelectedId(null);
     const params = new URLSearchParams(window.location.search);

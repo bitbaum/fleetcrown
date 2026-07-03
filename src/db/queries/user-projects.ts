@@ -90,6 +90,14 @@ export async function getPublicProjects(userId: string): Promise<UserProject[]> 
     .orderBy(asc(userProjects.position), asc(userProjects.createdAt));
 }
 
+/** The user_projects row backing an entity project (devLog, gitUrl, OC link). */
+export async function getUserProjectByEntityId(userId: string, entityProjectId: string): Promise<UserProject | null> {
+  const row = await db.query.userProjects.findFirst({
+    where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entityProjectId)),
+  });
+  return row ?? null;
+}
+
 export async function getUserProject(id: string, userId: string): Promise<UserProject | null> {
   const [row] = await db
     .select()

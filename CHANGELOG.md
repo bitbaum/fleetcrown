@@ -4,6 +4,19 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 **Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
 
+## 2026-07-03 (a)
+
+### Added
+- **Full project pages.** Clicking a project now opens `/projects/[id]` — a real,
+  server-rendered dossier instead of the right-side drawer: **Done** (the changelog +
+  run history with outcomes, commits, and durations), **Now** (live agent state, latest
+  handoff checks, mission/brief), **Next** (resume state, linked goals with progress,
+  dispatch CTA), plus repo/live-site/OrangeCat/Control links and the outcome streak.
+  One SSOT assembly (`getProjectDossier`) composes existing data — devLog, runs, live
+  state, goals, attributes — with zero new tables; the agent-facing project context is
+  slated to converge on the same assembly so humans and agents read identical truth.
+  The drawer stays as the quick-edit surface (`Quick edit` button, `?open=` deep links).
+
 ## 2026-07-02 (c)
 
 ### Fixed
