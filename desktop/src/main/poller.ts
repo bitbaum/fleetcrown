@@ -375,7 +375,12 @@ async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000
     const live = claudeLiveSessionForDir(readClaudeLiveSessions(), dir)
     if (live) {
       sawLiveSession = true
-      if (live.status !== 'idle') return true
+      // Only a genuinely generating status verifies the submit. "idle" = at
+      // the composer; "waiting" = BLOCKED on user input (permission prompt,
+      // /login notice) — an inject acked against a "waiting" agent goes
+      // nowhere (2026-07-03: agent stuck at a 401 /login notice was acked
+      // "injected to running claude" with no warning).
+      if (live.status !== 'idle' && live.status !== 'waiting') return true
     }
     await new Promise((r) => setTimeout(r, 500))
   }
