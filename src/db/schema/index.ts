@@ -41,3 +41,4 @@ export * from "./frontier-digests";
 export * from "./frontier-proposals";
 
 export * from "./knowledge-embeddings";
+export * from "./run-events";

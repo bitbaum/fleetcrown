@@ -65,7 +65,7 @@ export async function cleanupStaleOrchestrationRuns(userId?: string) {
     // No userId (the cron janitor) → reap across ALL users; the page-load call
     // sites keep passing their own userId for scope hygiene.
     .where(userId ? and(eq(orchestrationRuns.userId, userId), staleWhere) : staleWhere)
-    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey });
+    .returning({ id: orchestrationRuns.id, projectKey: orchestrationRuns.projectKey, userId: orchestrationRuns.userId });
   return reaped;
 }
 

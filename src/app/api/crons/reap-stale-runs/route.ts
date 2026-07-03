@@ -14,12 +14,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { requireCronAuth } from "@/lib/cron-auth";
 import { logDebug } from "@/db/queries/debug-logs";
 import { cleanupStaleOrchestrationRuns } from "@/db/queries/orchestration-runs";
+import { emitRunEvent } from "@/db/queries/run-events";
 
 export async function GET(req: NextRequest) {
   const denied = requireCronAuth(req);
   if (denied) return denied;
 
   const reaped = await cleanupStaleOrchestrationRuns();
+  for (const run of reaped) {
+    // Run ledger: a reaped run's biography ends with an explicit timeout
+    // verdict — the janitor declares the close like any other closer.
+    void emitRunEvent(run.id, run.userId, "closed", { outcome: "timeout", by: "reaper" });
+  }
   if (reaped.length > 0) {
     await logDebug({
       source: "crons/reap-stale-runs",

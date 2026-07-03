@@ -17,6 +17,7 @@ import { workspaceIdFor } from "@/lib/agent-execution/ownership";
 import { executeInject } from "@/lib/executor";
 import { createOrchestrationEvent } from "@/db/queries/orchestration-events";
 import { createOrchestrationRun, isProjectBusy } from "@/db/queries/orchestration-runs";
+import { emitRunEvent } from "@/db/queries/run-events";
 import { insertPromptHistory } from "@/db/queries/prompt-history";
 import { getProjectState, persistProjectRuntimeIfNewer } from "@/db/queries/project-states";
 import { deriveProjectStateKey, projectStateDescription } from "@/lib/control-states";
@@ -270,6 +271,14 @@ export async function injectPrompt(params: InjectParams, userId: string): Promis
         },
       });
       runId = run.id;
+      // Run ledger: the first hop declares itself (Stage 1 of the
+      // execution-substrate redesign — every hop is an event, silence is
+      // visible by definition).
+      void emitRunEvent(run.id, userId, "dispatched", {
+        intent: eventIntent ?? "custom",
+        projectKey: canonical,
+        promptLabel,
+      });
     } catch (err) {
       console.error("[inject] tracked-run create failed:", err);
     }

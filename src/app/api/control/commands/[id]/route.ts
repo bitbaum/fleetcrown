@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { markCommandExecuted } from "@/db/queries/pending-commands";
+import { getCommandById, markCommandExecuted } from "@/db/queries/pending-commands";
+import { emitRunEvent } from "@/db/queries/run-events";
 import { getApiUserId } from "@/lib/session";
 
 // Runner calls this to mark a command as executed.
@@ -23,5 +24,20 @@ export async function PATCH(
 
   const updated = await markCommandExecuted(id, userId, { ok, text, error, warning, verified });
   if (!updated) return NextResponse.json({ error: "Command not found" }, { status: 404 });
+
+  // Run ledger: project the runner's ack onto the dispatch's run. A clean ack
+  // = the prompt verifiably submitted; a warning = the agent is blocked
+  // (boot dialog, dead credentials, not generating) — visible as an event
+  // instead of buried in a result column nobody queries.
+  try {
+    const command = await getCommandById(id);
+    const runId = (command?.payload as { runId?: string } | null)?.runId;
+    if (runId) {
+      if (!ok) void emitRunEvent(runId, userId, "blocked", { reason: error ?? "runner error" });
+      else if (warning) void emitRunEvent(runId, userId, "blocked", { reason: warning });
+      else void emitRunEvent(runId, userId, "submitted", { text });
+    }
+  } catch { /* telemetry only — never fail the ack */ }
+
   return NextResponse.json({ ok: true });
 }

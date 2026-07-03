@@ -4,6 +4,15 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 **Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
 
+## 2026-07-03 (c)
+
+### Added
+- **Run ledger (Stage 1 of the execution-substrate redesign).** Every hop of a run's
+  life now declares itself as an append-only event — dispatched, submitted, blocked
+  (with reason: boot dialog, dead credentials), closed (with DoD-gated outcome or
+  reaper timeout). A run parked between hops is visible by definition; the week's
+  incidents were all silent gaps between exactly these hops.
+
 ## 2026-07-03 (b)
 
 ### Fixed

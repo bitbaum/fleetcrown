@@ -55,6 +55,9 @@ async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId:
     }
   }
   await updateOrchestrationRun(runId, patch, userId);
+  // Run ledger: the closing hop declares itself with its (possibly DoD-gated)
+  // outcome — the run's biography ends with a verdict, not silence.
+  void emitRunEvent(runId, userId, "closed", { outcome: patch.outcome, state: patch.state });
 }
 // Canonical states/events (ORCHESTRATION_STATES, OrchestrationState, etc.) from
 // contract (see debt roadmap Priority 1 + openclaw plan). Raw fast-state (/tmp,
@@ -62,6 +65,7 @@ async function gateAndCloseRun(runId: string, closePatch: RunClosePatch, userId:
 // events table should be preferred for new code. This route is being thinned to
 // delegate more to lib/orchestration (deriveLifecycleState etc already used).
 import { getSessionUserId } from "@/lib/session";
+import { emitRunEvent } from "@/db/queries/run-events";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { getBuilderPresence } from "@/db/queries/runner-presence";
 import { isAgentId, listAgentRegistry } from "@/lib/agent-registry";
