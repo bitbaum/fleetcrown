@@ -116,13 +116,31 @@ export async function recordSessionHandoffChangelog(
 ): Promise<void> {
   const doneTrimmed = input.done?.trim();
   if (!doneTrimmed || doneTrimmed === input.previousDone?.trim()) return;
+
+  // Garbage gate. The changelog is a user-facing record (project pages, the
+  // OrangeCat wall) — writers that lie must be corrected at the door:
+  //   - a "done" that is actually an error dump must not carry health:good
+  //     (the retired hosted-Hermes path wrote "API call failed …" four times
+  //     with health good — rendered verbatim on the project page, 2026-07-03);
+  //   - repeats of a recent entry (retries, double-claims) must not stack.
+  const FAILURE_SIGNATURE = /api call failed|401 invalid|please run \/login|error:|made no file changes/i;
+  const looksFailed = FAILURE_SIGNATURE.test(doneTrimmed) || FAILURE_SIGNATURE.test(input.next ?? "");
+  const project = await db.query.userProjects.findFirst({
+    where: input.projectId
+      ? and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, input.projectId))
+      : and(eq(userProjects.userId, userId), ilike(userProjects.name, input.tab)),
+    columns: { devLog: true },
+  });
+  const recent = ((project?.devLog ?? []) as DevLogEntry[]).slice(-3);
+  if (recent.some((e) => e.done.trim() === doneTrimmed)) return;
+
   const entry: DevLogEntry = {
     date: new Date(input.dateMs).toISOString(),
     done: doneTrimmed,
     next: input.next?.trim() ?? "",
     tests: input.tests?.trim() ?? "",
     todos: input.todos?.trim() ?? "",
-    health: input.health?.trim() || "good",
+    health: looksFailed ? "broken" : (input.health?.trim() || "good"),
   };
   if (input.projectId) {
     await appendProjectDevLogByEntityProjectId(userId, input.projectId, entry);

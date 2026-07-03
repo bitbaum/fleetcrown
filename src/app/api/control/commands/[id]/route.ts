@@ -16,8 +16,12 @@ export async function PATCH(
   const ok = typeof body.ok === "boolean" ? body.ok : true;
   const error = typeof body.error === "string" ? body.error : undefined;
   const text = typeof body.text === "string" ? body.text : undefined;
+  // warning/verified previously fell on the floor here — the runner's honest
+  // "injected, but the agent isn't generating" never reached the DB or UI.
+  const warning = typeof body.warning === "string" ? body.warning : undefined;
+  const verified = typeof body.verified === "boolean" ? body.verified : undefined;
 
-  const updated = await markCommandExecuted(id, userId, { ok, text, error });
+  const updated = await markCommandExecuted(id, userId, { ok, text, error, warning, verified });
   if (!updated) return NextResponse.json({ error: "Command not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

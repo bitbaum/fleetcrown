@@ -279,11 +279,18 @@ export async function claimNextPendingCommand(userIds: string[], types?: string[
 export async function markCommandExecuted(
   id: string,
   userId: string,
-  result: { ok: boolean; text?: string; error?: string },
+  result: { ok: boolean; text?: string; error?: string; warning?: string; verified?: boolean },
 ): Promise<boolean> {
   const updated = await db
     .update(pendingCommands)
-    .set({ executedAt: new Date(), result })
+    // First ack wins: a double-claim's dedup re-ack ("already-done") once
+    // clobbered the original rich result — including the "agent isn't
+    // generating" warning — with a bare {ok:true}. COALESCE keeps the
+    // earliest (richest) result; executedAt still updates so the claim clears.
+    .set({
+      executedAt: new Date(),
+      result: sql`COALESCE(${pendingCommands.result}, ${JSON.stringify(result)}::jsonb)`,
+    })
     .where(and(eq(pendingCommands.id, id), eq(pendingCommands.userId, userId)))
     .returning({ id: pendingCommands.id });
   return updated.length > 0;

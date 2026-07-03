@@ -4,6 +4,26 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 
 **Last modified:** 2026-07-02 — fleet truth pass: honest hero, actionable failure streaks, self-running janitors.
 
+## 2026-07-03 (b)
+
+### Fixed
+- **Changelog garbage gate.** Failure text can no longer land as `health: good` (the
+  retired hosted-Hermes path wrote "API call failed…" four times, rendered verbatim on
+  the project page), and repeats of a recent entry no longer stack. Existing garbage
+  entries scrubbed from prod.
+- **Composer Send never fails silently** — an empty-state no-op now surfaces an error
+  instead of doing nothing.
+- **Dispatch acks: first ack wins and nothing falls on the floor.** The ack endpoint
+  dropped `warning`/`verified`, and a double-claim's dedup re-ack clobbered the rich
+  result with a bare ok.
+- **Dead-credential canary.** When a dispatch verify fails and the agent's transcript
+  shows a 401/login notice, the ack names the cause ("run claude setup-token on the
+  runner host") instead of letting runs time out namelessly.
+- **Dispatch authority framing** — agents refused legitimate dispatches as suspected
+  prompt injections; every queued dispatch now opens with an operator-dispatch
+  preamble, the task carries an explicit operator-instruction header, and the RAG
+  block is labeled read-only background.
+
 ## 2026-07-03 (a)
 
 ### Added

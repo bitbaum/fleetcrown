@@ -368,6 +368,26 @@ async function waitForSessionFileBump(tab: string, baselineMtime: number, timeou
  * live status files (hermes/codex/…) fall back to the output-activity
  * heuristic once, at the deadline.
  */
+/**
+ * Auth canary: after a failed generate-verify, check the newest Claude Code
+ * transcript for this dir for a credential failure. Dead box credentials
+ * caused two silent fleet outages (2026-07-02/03): every run just timed out
+ * with nothing naming the cause. Cheap — one file tail, only on verify failure.
+ */
+function detectAuthFailure(dir: string): boolean {
+  try {
+    const slug = dir.replace(/\//g, '-')
+    const projDir = `${process.env.HOME}/.claude/projects/${slug}`
+    const newest = fs.readdirSync(projDir)
+      .filter((f) => f.endsWith('.jsonl'))
+      .map((f) => ({ f, m: fs.statSync(`${projDir}/${f}`).mtimeMs }))
+      .sort((a, b) => b.m - a.m)[0]
+    if (!newest) return false
+    const tail = fs.readFileSync(`${projDir}/${newest.f}`, 'utf-8').slice(-4000)
+    return /401 Invalid authentication|Please run \/login/i.test(tail)
+  } catch { return false }
+}
+
 async function waitForAgentGenerating(dir: string, tab: string, timeoutMs = 8000): Promise<boolean> {
   const deadline = Date.now() + timeoutMs
   let sawLiveSession = false
@@ -596,7 +616,11 @@ async function handleCommand(
             }
             ok = true
             text = launched ? `launched ${agent} (pty) + injected` : `injected to running ${agent} (pty)`
-            if (!verified) warning = `${text}, but the agent isn't generating yet — it may still be booting or already idle`
+            if (!verified) {
+              warning = detectAuthFailure(dir)
+                ? `${text}, but the agent reports dead credentials (401/login required) — run 'claude setup-token' on the runner host`
+                : `${text}, but the agent isn't generating yet — it may still be booting or already idle`
+            }
             break
           }
           // PTY launch failed → fall through to the zellij path below.

@@ -114,7 +114,13 @@ export function useProjectCardActions({
   };
 
   const sendCustom = async () => {
-    if (!custom.trim()) return;
+    if (!custom.trim()) {
+      // Never no-op silently: when the controlled state is empty while the
+      // box LOOKS filled (dictation/autofill/synthetic input that bypassed
+      // React onChange), Send previously did nothing with zero feedback.
+      setSendError("Nothing to send — the composer is empty. Retype the prompt.");
+      return;
+    }
     const trimmed = custom.trim();
     setSending("custom");
     setSendError(null);
