@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 # Run the home/ inline self-tests every push (~14s, no external deps),
 # plus the dev-server smoke when the server is already up.
-# To run fully authenticated: COCKPIT_SESSION_TOKEN=<token> git push
+# To run fully authenticated: FLEETCROWN_SESSION_TOKEN=<token> git push
 
 set -e
 

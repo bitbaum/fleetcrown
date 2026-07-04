@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const customer = await stripe.customers.create({
       email: user.email ?? undefined,
       name:  user.name  ?? undefined,
-      metadata: { cockpitUserId: userId },
+      metadata: { fleetcrownUserId: userId },
     });
     customerId = customer.id;
     await updateUserBilling(userId, { stripeCustomerId: customerId });
@@ -49,9 +49,9 @@ export async function POST(req: NextRequest) {
     line_items:  [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
     cancel_url:  `${origin}/settings?billing=canceled`,
-    metadata:    { cockpitUserId: userId, plan },
+    metadata:    { fleetcrownUserId: userId, plan },
     subscription_data: {
-      metadata: { cockpitUserId: userId, plan },
+      metadata: { fleetcrownUserId: userId, plan },
     },
   });
 

@@ -1,3 +1,4 @@
+import { APP_SLUG } from "@/config/brand";
 import { runTool } from "@/lib/tools";
 import { shellEscape } from "@/lib/zellij";
 import type { OrchestrationTaskRequest } from "../contract";
@@ -23,7 +24,7 @@ type OpenClawAgentResponse = {
 
 export async function runOpenClawIntent(request: OrchestrationTaskRequest): Promise<OpenClawRunResult> {
   const prompt = renderTaskForAdapter({ ...request, adapter: "openclaw" }, "openclaw");
-  const sessionId = `cockpit:${request.projectKey}:${request.intent}:${Date.now()}`;
+  const sessionId = `${APP_SLUG}:${request.projectKey}:${request.intent}:${Date.now()}`;
   const command = `openclaw agent --agent main --session-id ${shellEscape(sessionId)} --message ${shellEscape(prompt)} --json`;
   const result = await runTool(command, 120000);
 

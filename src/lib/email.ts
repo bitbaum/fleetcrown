@@ -111,7 +111,7 @@ export function verifyEmailTemplate(verifyUrl: string, name: string) {
   const subject = `Verify your ${APP_NAME} email`;
   const html = emailShell(`
     <h2 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#09090b;">Verify your email</h2>
-    ${p(`Hi ${name}, welcome to ${APP_NAME}. Click the button below to verify your email address and activate your account.`)}
+    ${p(`Hi ${name}, welcome to ${APP_NAME}. Verifying your email is optional but helps with account recovery and password reset.`)}
     <div style="text-align:center;">${btn(verifyUrl, "Verify email →")}</div>
     ${small(`Or paste this link in your browser:<br><a href="${verifyUrl}" style="color:#6b7280;word-break:break-all;">${verifyUrl}</a>`)}
     ${small(`This link expires in 24 hours. If you didn't create a ${APP_NAME} account, you can safely ignore this email.`)}

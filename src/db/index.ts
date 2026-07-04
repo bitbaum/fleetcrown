@@ -19,8 +19,8 @@ const DATABASE_URL = getDatabasePoolUrl();
  * and `max: 5` keeps the pool footprint small enough that any real
  * connection leak would surface quickly rather than after a day of dev.
  */
-const globalForDb = globalThis as unknown as { __cockpitPg?: ReturnType<typeof postgres> };
-const client = globalForDb.__cockpitPg ?? postgres(DATABASE_URL, { max: 5 });
-if (process.env.NODE_ENV !== "production") globalForDb.__cockpitPg = client;
+const globalForDb = globalThis as unknown as { __fleetcrownPg?: ReturnType<typeof postgres> };
+const client = globalForDb.__fleetcrownPg ?? postgres(DATABASE_URL, { max: 5 });
+if (process.env.NODE_ENV !== "production") globalForDb.__fleetcrownPg = client;
 
 export const db = drizzle(client, { schema });

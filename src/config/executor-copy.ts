@@ -115,6 +115,15 @@ export const EXECUTOR_COPY = {
     watchThisComputer: "This computer",
   },
 
+  /** Short labels on dispatch / terminal actions — honest before click. */
+  honesty: {
+    queued: "Queued",
+    needsBuilder: "Needs builder",
+    needsGitHub: "Needs GitHub",
+    needsGateway: "Needs Loki gateway",
+    builderStarting: "Builder online — starting shortly",
+  },
+
   terminal: {
     pageSubtitle:
       "Full interactive terminals — type directly into cloud or desktop agent sessions, like Cursor.",

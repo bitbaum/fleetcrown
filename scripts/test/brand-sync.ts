@@ -17,6 +17,10 @@ import {
   APP_DOMAIN,
   BRIDGE_DOMAIN,
 } from "@/config/brand";
+import {
+  DRAFT_STORAGE_PREFIX,
+  PRIVATE_ZONE_COOKIE,
+} from "@/config/brand-storage";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -71,6 +75,11 @@ function runTests(): void {
       /^BRIDGE_URL="https:\/\/\$\{BRIDGE_DOMAIN\}\/sse"/m.test(shell),
       "_brand.sh BRIDGE_URL must be https://${BRIDGE_DOMAIN}/sse",
     );
+  });
+
+  check("storage keys derive from APP_SLUG", () => {
+    assert(PRIVATE_ZONE_COOKIE === `${APP_SLUG}-pz`, "private zone cookie drift");
+    assert(DRAFT_STORAGE_PREFIX === `${APP_SLUG}:draft:`, "draft prefix drift");
   });
 
   console.log(`\n${passed} brand-sync assertions passed.`);

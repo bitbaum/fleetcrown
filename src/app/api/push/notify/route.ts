@@ -6,6 +6,7 @@ import {
   pruneDeadEndpoints,
 } from "@/db/queries/push-subscriptions";
 import { configureWebPush, sendOne, isDeadStatus } from "@/lib/push";
+import { PUSH_TAG_PREFIX } from "@/config/brand-storage";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       title: title ?? defaultTitle(kind, projectName),
       body:  body  ?? defaultBody(kind, next),
       url:   `/control?focus=${encodeURIComponent(tab)}`,
-      tag:   `cockpit:${tab}`,
+      tag:   `${PUSH_TAG_PREFIX}${tab}`,
     };
 
     const results = await Promise.all(subs.map((s) => sendOne(s, payload)));

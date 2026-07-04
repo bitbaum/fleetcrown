@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { MessagesSquare, Plus, SlidersHorizontal } from "lucide-react";
 import { getJson, postJson, deleteJson, throwApiError } from "@/lib/api/fetch";
 import { resolveLokiProjectSelection } from "@/lib/loki/project-selection";
+import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
+import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { Drawer } from "@/components/ui/modal";
 import { ConversationList } from "./ConversationList";
 import { Transcript } from "./Transcript";
@@ -66,6 +68,11 @@ export function LokiWorkspace({
   // as permanent columns). Keeps the chat full-width on phones.
   const [historyOpen, setHistoryOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const builderPresence = useBuilderPresence();
+  const dispatchHonesty = deriveExecutorHonestyLabel({
+    runnerConnected: builderPresence.runnerConnected,
+    runtimeAvailable: builderPresence.runtimeAvailable,
+  });
 
   // Initial load — conversations + projects.
   useEffect(() => {
@@ -289,6 +296,7 @@ export function LokiWorkspace({
           onRemoveProject={toggleProject}
           disabled={false}
           sending={sending}
+          dispatchHonesty={dispatchHonesty}
           onSend={(t, choice, attachments) => void send(t, choice, attachments)}
         />
       </section>

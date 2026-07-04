@@ -11,17 +11,20 @@
  * /api/inject). Reads return "" when localStorage is unavailable (SSR or
  * private-browsing) — best-effort, no error states bubble out.
  */
+import {
+  DRAFT_STORAGE_PREFIX,
+  LEGACY_DRAFT_STORAGE_PREFIX,
+} from "@/config/brand-storage";
 
-const KEY_PREFIX = "cockpit:draft:";
-
-function key(tab: string): string {
-  return `${KEY_PREFIX}${tab}`;
+function keys(tab: string): [string, string] {
+  return [`${DRAFT_STORAGE_PREFIX}${tab}`, `${LEGACY_DRAFT_STORAGE_PREFIX}${tab}`];
 }
 
 export function getDraft(tab: string): string {
   if (typeof window === "undefined") return "";
   try {
-    return window.localStorage.getItem(key(tab)) ?? "";
+    const [current, legacy] = keys(tab);
+    return window.localStorage.getItem(current) ?? window.localStorage.getItem(legacy) ?? "";
   } catch {
     return "";
   }
@@ -30,10 +33,13 @@ export function getDraft(tab: string): string {
 export function setDraft(tab: string, text: string): void {
   if (typeof window === "undefined") return;
   try {
+    const [current, legacy] = keys(tab);
     if (text.trim()) {
-      window.localStorage.setItem(key(tab), text);
+      window.localStorage.setItem(current, text);
+      window.localStorage.removeItem(legacy);
     } else {
-      window.localStorage.removeItem(key(tab));
+      window.localStorage.removeItem(current);
+      window.localStorage.removeItem(legacy);
     }
   } catch {
     /* localStorage full, denied, or unsupported — fail silent */
@@ -43,7 +49,9 @@ export function setDraft(tab: string, text: string): void {
 export function clearDraft(tab: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(key(tab));
+    const [current, legacy] = keys(tab);
+    window.localStorage.removeItem(current);
+    window.localStorage.removeItem(legacy);
   } catch {
     /* ignore */
   }

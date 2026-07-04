@@ -5,11 +5,12 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
+import { PRIVATE_ZONE_COOKIE, LEGACY_PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
+
+export { PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
 
 /** Matches client sessionStorage TTL in use-private-zone.ts */
 export const PRIVATE_ZONE_TTL_MS = 30 * 60 * 1000;
-
-export const PRIVATE_ZONE_COOKIE = "cockpit-pz";
 
 /**
  * Resolve the effective PIN hash for a user.
@@ -87,7 +88,9 @@ export async function isPrivateZoneUnlocked(userId: string): Promise<boolean> {
   // No PIN configured → no gate, always "unlocked".
   if (!(await isPrivateZoneConfigured(userId))) return true;
   const jar = await cookies();
-  const token = jar.get(PRIVATE_ZONE_COOKIE)?.value;
+  const token =
+    jar.get(PRIVATE_ZONE_COOKIE)?.value ??
+    jar.get(LEGACY_PRIVATE_ZONE_COOKIE)?.value;
   if (!token) return false;
   return verifyPrivateZoneCookieValue(token, userId);
 }

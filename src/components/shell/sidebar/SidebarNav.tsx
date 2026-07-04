@@ -11,7 +11,10 @@ import { SidebarNavItem } from "./SidebarNavItem";
 // Per-browser UI preference — which sidebar sections the user has expanded.
 // SSOT for defaults lives here; new sections need exactly one entry to opt in
 // to the toggle behaviour.
-const STORAGE_KEY = "cockpit-sidebar-sections-v1";
+import {
+  SIDEBAR_SECTIONS_STORAGE_KEY,
+  LEGACY_SIDEBAR_SECTIONS_STORAGE_KEY,
+} from "@/config/brand-storage";
 const DEFAULT_EXPANDED: Record<string, boolean> = {
   work: true,      // operational items the user is in every day
   private: false,  // hidden until the user explicitly opens it
@@ -21,7 +24,9 @@ const DEFAULT_EXPANDED: Record<string, boolean> = {
 function loadExpanded(): Record<string, boolean> {
   if (typeof window === "undefined") return DEFAULT_EXPANDED;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(SIDEBAR_SECTIONS_STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_SIDEBAR_SECTIONS_STORAGE_KEY);
     if (!raw) return DEFAULT_EXPANDED;
     const parsed = JSON.parse(raw) as Record<string, boolean>;
     return { ...DEFAULT_EXPANDED, ...parsed };
@@ -67,7 +72,8 @@ export function SidebarNav({
     setExpanded((prev) => {
       const next = { ...prev, [id]: !prev[id] };
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        window.localStorage.setItem(SIDEBAR_SECTIONS_STORAGE_KEY, JSON.stringify(next));
+        window.localStorage.removeItem(LEGACY_SIDEBAR_SECTIONS_STORAGE_KEY);
       } catch {
         // localStorage failures shouldn't break navigation.
       }

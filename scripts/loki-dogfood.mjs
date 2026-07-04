@@ -9,7 +9,7 @@
  *   BASE=https://fleetcrown.orangecat.ch PROJECT=fleetcrown node scripts/loki-dogfood.mjs
  *   HEADLESS=1 node scripts/loki-dogfood.mjs
  *
- * Optional: COCKPIT_SESSION_TOKEN=<authjs token> skips profile copy.
+ * Optional: `FLEETCROWN_SESSION_TOKEN=<authjs token>` skips profile copy (`COCKPIT_SESSION_TOKEN` legacy).
  */
 import fs, { cpSync, mkdtempSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -23,7 +23,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const projectNeedle = (process.env.PROJECT ?? "fleetcrown").toLowerCase();
 const headless = process.env.HEADLESS === "1";
-const sessionToken = process.env.COCKPIT_SESSION_TOKEN?.trim();
+const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 
 const BRAVE_PROFILE =
   process.env.BRAVE_PROFILE ??

@@ -176,7 +176,7 @@ grep -rn "text-gray-\|text-slate-\|text-zinc-\|text-blue-\|text-green-\|text-red
 ### Data Flow
 - **Server Components** for DB data (commitments, entities, subscriptions) — query directly
 - **Client Components** for tool data (calendar, weather, GitHub) — fetch via API routes
-- **API routes** shell out to Ivy's tools via `lib/tools.ts` for live data (gog, weather.sh, github-status.sh)
+- **API routes** shell out to local CLI tools via `lib/tools.ts` for live data (gog, weather.sh, github-status.sh) when `isRuntimeAvailable()`
 
 ### Database
 - Connection: `DATABASE_URL` env var (required, fail-fast if missing)
@@ -228,7 +228,7 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | Projects | /projects | 15 projects + GitHub CI, inline editors for name/desc/status/maturity |
 | Habits | /habits | 30-day heatmap per habit, streak indicator, summary stats |
 | Events | /events | Opportunities and deadlines, type-chip filter, archive flow |
-| Prompts | /prompts | Prompt library, run-now via Ivy, schedule as cron job |
+| Prompts | /prompts | Prompt library, run-now via Loki, schedule as cron job |
 | System | /system | Gateway, memory, disk, uptime, autopilot jobs |
 | Memory | /memory | Knowledge graph stats and recent activity |
 | Thoughts | /thoughts | Published essays on architecture and execution systems |

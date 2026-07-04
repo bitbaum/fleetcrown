@@ -1,38 +1,34 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
 
 /**
- * Serves the @cockpit/agent CLI script body so a new customer can install
+ * Serves the @fleetcrown/agent CLI script body so a new customer can install
  * it from the cloud without needing the package to be published on npm.
  *
- * The package exists at packages/agent/bin/cockpit-agent.js but is NOT
- * published — `npm view @cockpit/agent` returns 404 — and the repo itself
- * is private, so the raw GitHub URL is also gated. Until the package
- * ships to npm publicly, this endpoint is the only working install path.
+ * The package lives at packages/agent/bin/fleetcrown-agent.js and is NOT
+ * published to npm — this endpoint is the working install path until it is.
  *
  * Public (no auth) — matches the matcher exception in src/proxy.ts.
  * Designed to be piped: curl -fsSL ${APP_URL}/api/agent/install | node - init --token ck_…
- *
- * next.config.ts includes packages/agent/bin/** in this route's
- * outputFileTracingIncludes so the file lands in the standalone build
- * bundle (it would otherwise be tree-shaken out as not imported).
  */
 export async function GET() {
   try {
-    const filePath = path.join(process.cwd(), "packages", "agent", "bin", "cockpit-agent.js");
+    const filePath = path.join(process.cwd(), "packages", "agent", "bin", "fleetcrown-agent.js");
     const body = await readFile(filePath, "utf8");
     return new NextResponse(body, {
       status: 200,
       headers: {
         "Content-Type": "application/javascript; charset=utf-8",
         "Cache-Control": "public, max-age=300, s-maxage=300",
+        "X-FleetCrown-Agent": `${APP_SLUG}-agent`,
       },
     });
   } catch (e) {
-    console.error("[agent/install] failed to read agent script:", (e as Error)?.message);
+    console.error(`[${APP_SLUG}/agent/install] failed to read agent script:`, (e as Error)?.message);
     return NextResponse.json(
-      { error: "Agent script unavailable" },
+      { error: `${APP_NAME} agent script unavailable` },
       { status: 500 },
     );
   }

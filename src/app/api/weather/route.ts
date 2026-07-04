@@ -116,9 +116,13 @@ export async function GET() {
   // Local runtime — richer weather.sh output (handles fancier formatting / sunrise).
   const extraEnv: Record<string, string> = geo
     ? {
+        FLEETCROWN_LAT: String(geo.latitude),
+        FLEETCROWN_LON: String(geo.longitude),
+        FLEETCROWN_TZ: geo.timezone,
+        // Legacy names — weather.sh on older installs may still read these.
         COCKPIT_LAT: String(geo.latitude),
         COCKPIT_LON: String(geo.longitude),
-        COCKPIT_TZ:  geo.timezone,
+        COCKPIT_TZ: geo.timezone,
       }
     : {};
 

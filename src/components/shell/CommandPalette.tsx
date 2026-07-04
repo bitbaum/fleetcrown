@@ -10,6 +10,10 @@ import { useVoiceInput } from "@/hooks/use-voice-input";
 import { NAV_ITEMS, type NavItem } from "@/config/navigation";
 import { PROMPT_TEMPLATES, type PromptTemplate } from "@/config/prompt-library";
 import type { AgentPrompt } from "@/app/api/prompts/agent/route";
+import {
+  PALETTE_RECENT_STORAGE_KEY,
+  LEGACY_PALETTE_RECENT_STORAGE_KEY,
+} from "@/config/brand-storage";
 import { cn } from "@/lib/utils";
 
 type PaletteEntry =
@@ -27,8 +31,6 @@ const SWITCHABLE_AGENT_IDS = ["claude", "cursor", "codex", "gemini", "grok"] as 
 
 type UserProjectLite = { id: string; name: string; dirPath?: string | null; isActive?: boolean };
 
-const RECENT_KEY = "fleetcrown.palette.recent";
-const RECENT_KEY_LEGACY = "cockpit.palette.recent";
 const RECENT_LIMIT = 6;
 
 export function CommandPalette() {
@@ -149,8 +151,8 @@ export function CommandPalette() {
       // 2026-06 rebrand. The next pushRecent writes under the new key, so
       // the legacy entry stops being read once the user picks anything.
       const raw =
-        window.sessionStorage.getItem(RECENT_KEY) ??
-        window.sessionStorage.getItem(RECENT_KEY_LEGACY);
+        window.sessionStorage.getItem(PALETTE_RECENT_STORAGE_KEY) ??
+        window.sessionStorage.getItem(LEGACY_PALETTE_RECENT_STORAGE_KEY);
       if (raw) setRecent(JSON.parse(raw) as string[]);
     } catch { /* ignore */ }
   }, [open]);
@@ -405,7 +407,7 @@ export function CommandPalette() {
 function pushRecent(key: string, setRecent: React.Dispatch<React.SetStateAction<string[]>>) {
   setRecent((prev) => {
     const next = [key, ...prev.filter((k) => k !== key)].slice(0, RECENT_LIMIT);
-    try { window.sessionStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try { window.sessionStorage.setItem(PALETTE_RECENT_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
 }

@@ -9,6 +9,7 @@ import {
   PRIVATE_ZONE_COOKIE,
   privateZoneCookieOptions,
 } from "@/lib/private-zone";
+import { LEGACY_PRIVATE_ZONE_COOKIE } from "@/config/brand-storage";
 import { getSessionUserId } from "@/lib/session";
 
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -84,6 +85,7 @@ export async function DELETE() {
 
   const jar = await cookies();
   jar.delete(PRIVATE_ZONE_COOKIE);
+  jar.delete(LEGACY_PRIVATE_ZONE_COOKIE);
 
   return NextResponse.json({ ok: true });
 }

@@ -45,11 +45,13 @@ PAGE_ROUTES=(
 # DB-backed API GETs. Exercises drizzle, the postgres connection, and the
 # query layer — catches silent regressions a page-only smoke would miss.
 # Tool-dependent endpoints (/api/calendar, /api/weather, /api/github) are
-# omitted because they depend on the local Ivy gateway being up.
+# omitted from unauthenticated smoke — calendar needs local `gog` on a runtime host;
+# weather uses open-meteo on cloud or weather.sh locally.
 #
 # AUTH_ROUTES require a valid session. Without one they return 401 (correct).
 # We accept 200 OR 401 — either proves the route isn't crashing (500).
-# Set COCKPIT_SESSION_TOKEN=<token> to run them fully authenticated.
+# Set FLEETCROWN_SESSION_TOKEN=<token> to run them fully authenticated.
+# COCKPIT_SESSION_TOKEN is still accepted (legacy).
 PUBLIC_API_ROUTES=(
   "/api/health"
   "/api/system"
@@ -79,9 +81,17 @@ AUTH_API_ROUTES=(
 )
 
 # Optional session cookie for authenticated smoke runs.
+# HTTPS deployments use the __Secure- prefixed Auth.js cookie name.
 CURL_AUTH_ARGS=()
-if [ -n "${COCKPIT_SESSION_TOKEN:-}" ]; then
-  CURL_AUTH_ARGS=(-H "Cookie: authjs.session-token=${COCKPIT_SESSION_TOKEN}")
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/_brand.sh"
+SMOKE_SESSION_TOKEN="$(_brand_env SESSION_TOKEN)"
+if [ -n "${SMOKE_SESSION_TOKEN}" ]; then
+  if [[ "${BASE}" == https://* ]]; then
+    CURL_AUTH_ARGS=(-H "Cookie: __Secure-authjs.session-token=${SMOKE_SESSION_TOKEN}")
+  else
+    CURL_AUTH_ARGS=(-H "Cookie: authjs.session-token=${SMOKE_SESSION_TOKEN}")
+  fi
 fi
 
 # 1) Probe the base URL once so we fail fast with a clear message

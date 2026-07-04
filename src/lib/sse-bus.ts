@@ -1,7 +1,8 @@
 import { EventEmitter } from "events";
+import { APP_SLUG } from "@/config/brand";
 
 // Global singleton keyed on globalThis — survives Next.js hot-reload in dev.
-const KEY = "$$cockpit_sse_bus";
+const KEY = `$$${APP_SLUG}_sse_bus`;
 if (!(globalThis as Record<string, unknown>)[KEY]) {
   const e = new EventEmitter();
   e.setMaxListeners(500);
@@ -36,7 +37,7 @@ export function emitPeekFrame(userId: string, tab: string, payload: PeekFrame, c
 
 // Viewer ref-count per (user, tab): the first viewer triggers peek_start, the
 // last triggers peek_stop, so the runner only streams a pane while watched.
-const VKEY = "$$cockpit_peek_viewers";
+const VKEY = `$$${APP_SLUG}_peek_viewers`;
 if (!(globalThis as Record<string, unknown>)[VKEY]) {
   (globalThis as Record<string, unknown>)[VKEY] = new Map<string, number>();
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,7 +30,18 @@ export default function SetupPage() {
       const res = await postJson("/api/setup", { name, password });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Setup failed."); return; }
-      router.push(ROUTES.SIGN_IN);
+
+      const signInRes = await signIn("user-password", {
+        userId: data.userId as string,
+        password,
+        redirect: false,
+      });
+      if (!signInRes?.ok) {
+        setError("Account created — sign in with your password.");
+        router.push(ROUTES.SIGN_IN);
+        return;
+      }
+      router.push(ROUTES.APP_HOME);
     } catch {
       setError("Something went wrong.");
     } finally {
@@ -92,7 +104,7 @@ export default function SetupPage() {
       </AuthCard>
 
       <p className="ui-auth-footer">
-        Already have an account?{" "}
+        After setup you&apos;ll land in the app signed in. Already have an account?{" "}
         <Link href={ROUTES.SIGN_IN} className="ui-auth-footer-link">
           Sign in
         </Link>

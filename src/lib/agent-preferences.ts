@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
+import { APP_SLUG } from "@/config/brand";
 import { HOME } from "@/lib/constants";
 import { AGENT_DEFAULT_MODELS, type Agent, sanitizeAgentId, syncAgentSettings } from "@/lib/agent-registry";
 
 const DEFAULT_AGENT: Agent = "claude";
 
-const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
+const AGENT_PREFERENCES_FILE = path.join(HOME, ".config", `${APP_SLUG}-agent.json`);
+const LEGACY_AGENT_PREFERENCES_FILE = path.join(HOME, ".config", "cockpit-agent.json");
 
 export type AgentPreferences = {
   defaultAgent: Agent;
@@ -44,7 +46,10 @@ function normalizePreferences(raw: Partial<AgentPreferences & LegacyAgentConfig>
 
 export function readAgentPreferences(): AgentPreferences {
   try {
-    const raw = JSON.parse(fs.readFileSync(AGENT_PREFERENCES_FILE, "utf-8")) as Partial<AgentPreferences & LegacyAgentConfig>;
+    const file = fs.existsSync(AGENT_PREFERENCES_FILE)
+      ? AGENT_PREFERENCES_FILE
+      : LEGACY_AGENT_PREFERENCES_FILE;
+    const raw = JSON.parse(fs.readFileSync(file, "utf-8")) as Partial<AgentPreferences & LegacyAgentConfig>;
     return normalizePreferences(raw);
   } catch {
     const defaultAgent = DEFAULT_AGENT;

@@ -8,6 +8,9 @@ import { PRIMARY_INTENTS, ACTION_INTENTS, MORE_INTENTS } from "@/config/control-
 import { PASTE_FROM_HISTORY_TITLE } from "@/config/control-labels";
 import { APP_NAME } from "@/config/brand";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
+import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
+import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import type { OrchestrationTaskIntentId } from "@/lib/orchestration";
 import type { ProjectState } from "@/lib/control-types";
 import { PromptInput } from "./prompt-input";
@@ -127,6 +130,11 @@ export function IntentButtonPanel({
   const [showMore, setShowMore] = useState(false);
   const [showLibraryPrompts, setShowLibraryPrompts] = useState(false);
   const [clearingContext, setClearingContext] = useState(false);
+  const builderPresence = useBuilderPresence();
+  const dispatchHonesty = deriveExecutorHonestyLabel({
+    runnerConnected: builderPresence.runnerConnected,
+    runtimeAvailable: runtimeAvailable || builderPresence.runtimeAvailable,
+  });
 
   const { listening, processing, micError, toggleMic, waveformBars, recordingSeconds, maxRecordingSeconds, wrapSend, wrapEnqueue } = useMicComposer({
     custom,
@@ -206,6 +214,10 @@ export function IntentButtonPanel({
       {/* Action area — hidden when banner is active (banner owns the primary CTA) */}
       {!bannerActive && primary && (
         <div className="space-y-2 border-t border-border-subtle pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="ui-kicker">Quick dispatch</p>
+            <ExecutorHonestyChip honesty={dispatchHonesty} />
+          </div>
           {/* Primary CTA: Next best — full width, visually elevated.
               Tooltip makes the AI-dispatch nature explicit per the unified
               prompt UX (2026-05-31) — every other prompt-click on /control

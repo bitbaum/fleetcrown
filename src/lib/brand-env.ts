@@ -13,6 +13,11 @@ export function envAlias(key: string, fallback = ""): string {
   );
 }
 
+/** Auth.js session cookie value for smoke / dogfood scripts. */
+export function smokeSessionToken(): string {
+  return envAlias("SESSION_TOKEN");
+}
+
 // Boolean form — "1" means true, anything else is false.
 export function envAliasBool(key: string): boolean {
   return envAlias(key) === "1";

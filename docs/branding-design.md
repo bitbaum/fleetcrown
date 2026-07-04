@@ -1,8 +1,8 @@
 # FleetCrown Branding & Design System
 
 **Created:** 2026-03-01  
-**Last modified:** 2026-06-27  
-**Last modified summary:** Added responsive/mobile discipline and link to responsive-design SSOT.
+**Last modified:** 2026-07-04  
+**Last modified summary:** Document brand-storage.ts; clarify COCKPIT_* as legacy env migration only.
 
 **Decision: We are using FleetCrown.**
 
@@ -17,6 +17,11 @@ FleetCrown is locked as the product name. The criteria below were used to evalua
   - Marketing: `MARKETING_TAGLINE`, `MARKETING_SUBTITLE`, `MARKETING_HERO_*`, `MARKETING_POSITIONING`, `APP_TAGLINE`, `APP_DESCRIPTION`, `APP_KICKER`
   - URL helpers and `PRODUCT_NAME` alias (use this in marketing copy instead of hardcoding the name).
   - `APP_EMAIL_FROM`
+- **Client persistence**: `src/config/brand-storage.ts`
+  - Cookie names, localStorage keys, push tags — all prefixed with `APP_SLUG`.
+  - `LEGACY_*` constants are read-only migration paths from the pre-FleetCrown rename.
+- **Env aliases**: `src/lib/brand-env.ts` (`envAlias`, `smokeSessionToken`)
+  - Resolves `APP_*` → `FLEETCROWN_*` → `COCKPIT_*` so old machine env vars keep working.
 - **Shell**: `scripts/_brand.sh`
   - Same three core values + `_brand_env` (for legacy COCKPIT_* / FLEETCROWN_* transition) and `_brand_tmp`.
   - Sourced by daemons, installers, hooks, beacon, etc.

@@ -73,6 +73,7 @@ declare module "next-auth" {
       username: string | null;
       onboardedAt: Date | null;
       onboardingComplete?: boolean;
+      emailVerified?: Date | null;
     };
   }
 }
@@ -441,6 +442,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.username = dbUser.username ?? null;
         token.onboardedAt = dbUser.onboardedAt ?? null;
         token.onboardingComplete = onboardingCompleteFlag(dbUser);
+        token.emailVerified = dbUser.emailVerified ?? null;
       } else if (email) {
         token.email = email;
       }
@@ -455,6 +457,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           username: (token.username as string | null) ?? null,
           onboardedAt: (token.onboardedAt as Date | null) ?? null,
           onboardingComplete: token.onboardingComplete === true,
+          emailVerified: (token.emailVerified as Date | null) ?? null,
         },
       };
     },

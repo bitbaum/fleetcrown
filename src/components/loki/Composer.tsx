@@ -12,6 +12,8 @@ import {
   type StagedAttachment,
 } from "@/lib/loki/attachments";
 import { LOKI_SUGGESTED_ACTIONS, fillSuggestedAction } from "@/config/loki-suggested-actions";
+import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
+import type { ExecutorHonestyLabel } from "@/lib/executor-honesty";
 import type { Attachment, LokiAgent, ModelChoice } from "./types";
 
 const AUTO = "";
@@ -34,6 +36,7 @@ export function Composer({
   defaultText = "",
   selectedProjects = [],
   onRemoveProject,
+  dispatchHonesty = null,
 }: {
   disabled: boolean;
   sending: boolean;
@@ -42,6 +45,8 @@ export function Composer({
   /** Selected projects from the project pane — visible inside the composer. */
   selectedProjects?: string[];
   onRemoveProject?: (name: string) => void;
+  /** Shown beside Send when dispatches queue without a live builder. */
+  dispatchHonesty?: ExecutorHonestyLabel | null;
 }) {
   const [text, setText] = useState(defaultText);
   const [agents, setAgents] = useState<LokiAgent[]>([]);
@@ -384,6 +389,7 @@ export function Composer({
               )}
             </div>
             <div className="ui-loki-composer-submit-row">
+              <ExecutorHonestyChip honesty={dispatchHonesty} />
               <button
                 type="button"
                 className="ui-loki-send-btn"

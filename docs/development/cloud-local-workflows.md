@@ -2,13 +2,15 @@
 
 ---
 created_date: 2026-05-21
-last_modified_date: 2026-06-30
-last_modified_summary: Terminal interactive copy + channel-targeted rawkey (cloud vs local); cloud-local workflows.
+last_modified_date: 2026-07-04
+last_modified_summary: Cross-link to user-flow-audit.md (exhaustive flow grades).
 ---
 
 FleetCrown is a **hybrid** product: the hosted web app (cloud control plane) owns auth, the database, and the UI. Agents run via the **builder** — the cloud service on Hetzner (box-runner) and/or the optional desktop app on your computer. Users never need to pick; both share one queue.
 
 User-facing copy lives in `src/config/executor-copy.ts`. Internal docs may still say Fleet Runner / box-runner.
+
+> **Flow completeness:** see [user-flow-audit.md](./user-flow-audit.md) for every UI-implied flow and its A/B/C/D grade (~37% fully work in hosted prod without extra runtime).
 
 > **Fleet Runner desktop** = optional app on your computer. **box-runner** = the same engine headless on Hetzner. Together they are the **builder**.
 

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
+import { deriveExecutorHonestyLabel } from "@/lib/executor-honesty";
+import { ExecutorHonestyChip } from "@/components/executor/ExecutorHonestyChip";
+import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { BuilderAgentView } from "./BuilderAgentView";
 import { TerminalWorkspace } from "./TerminalWorkspace";
 import { LocalMachineView } from "./LocalMachineView";
@@ -28,10 +31,20 @@ export function TerminalSurface({
 }) {
   const [source, setSource] = useState<Source>(initialSource ?? "server");
   const t = EXECUTOR_COPY.terminal;
+  const builderPresence = useBuilderPresence();
+  const cloudHonesty = deriveExecutorHonestyLabel({
+    runnerConnected: builderPresence.runnerConnected,
+    runtimeAvailable: local || builderPresence.runtimeAvailable,
+  });
+  const machineHonesty = deriveExecutorHonestyLabel({
+    runnerConnected: builderPresence.builderPresence?.local ?? builderPresence.runnerConnected,
+    runtimeAvailable: false,
+  });
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => setSource("server")}
@@ -46,6 +59,10 @@ export function TerminalSurface({
         >
           {t.thisComputerLabel}
         </button>
+        </div>
+        <ExecutorHonestyChip
+          honesty={source === "server" ? cloudHonesty : machineHonesty}
+        />
       </div>
 
       {source === "server" && !immersive && (

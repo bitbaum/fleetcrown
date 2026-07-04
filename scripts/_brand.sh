@@ -26,3 +26,15 @@ APP_URL="https://${APP_DOMAIN}"
 BRIDGE_URL="https://${BRIDGE_DOMAIN}/sse"
 
 export APP_NAME APP_SLUG APP_DOMAIN BRIDGE_DOMAIN APP_URL BRIDGE_URL
+
+# Resolve APP_<SUFFIX> → FLEETCROWN_<SUFFIX> → COCKPIT_<SUFFIX> (legacy).
+# Usage: token="$(_brand_env SESSION_TOKEN)"
+_brand_env() {
+  local suffix="$1"
+  local fallback="${2:-}"
+  local app="APP_${suffix}"
+  local fleet="FLEETCROWN_${suffix}"
+  local legacy="COCKPIT_${suffix}"
+  printf '%s' "${!app:-${!fleet:-${!legacy:-$fallback}}}"
+}
+export -f _brand_env

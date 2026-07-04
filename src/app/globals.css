@@ -2225,6 +2225,17 @@
     @apply inline-flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-overlay px-2.5 py-1 text-xs font-medium text-text-tertiary;
   }
 
+  /* Executor honesty chips — Control / Loki / Terminal dispatch affordances */
+  .ui-executor-honesty-neutral {
+    @apply inline-flex shrink-0 items-center rounded-full border border-border-default bg-surface-overlay px-2 py-0.5 text-micro font-medium text-text-secondary;
+  }
+  .ui-executor-honesty-warning {
+    @apply inline-flex shrink-0 items-center rounded-full border border-status-warning/30 bg-status-warning-subtle px-2 py-0.5 text-micro font-medium text-status-warning;
+  }
+  .ui-executor-honesty-positive {
+    @apply inline-flex shrink-0 items-center rounded-full border border-status-positive/30 bg-status-positive-subtle px-2 py-0.5 text-micro font-medium text-status-positive;
+  }
+
   /* Mobile-only right-edge fade — visual hint that a horizontally-scrolling row has more content off-screen.
      Applied to scroll containers; vanishes at sm: when the row wraps naturally. */
   .ui-scroll-fade-right {

@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
     const customer = await stripe.customers.create({
       email:    user.email    ?? undefined,
       name:     user.name     ?? undefined,
-      metadata: { cockpitUserId: session.user.id },
+      metadata: { fleetcrownUserId: session.user.id },
     });
     customerId = customer.id;
     await updateUserBilling(session.user.id, { stripeCustomerId: customerId });
@@ -61,9 +61,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plan
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${origin}/settings?billing=success`,
     cancel_url:  `${origin}/settings?billing=canceled`,
-    metadata:    { cockpitUserId: session.user.id, plan },
+    metadata:    { fleetcrownUserId: session.user.id, plan },
     subscription_data: {
-      metadata: { cockpitUserId: session.user.id, plan },
+      metadata: { fleetcrownUserId: session.user.id, plan },
     },
   });
 
