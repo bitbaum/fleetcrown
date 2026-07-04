@@ -116,8 +116,7 @@ try {
       {
         name: "__Secure-authjs.session-token",
         value: sessionToken,
-        domain: "fleetcrown.orangecat.ch",
-        path: "/",
+        url: base,
         secure: true,
         httpOnly: true,
         sameSite: "Lax",
@@ -139,6 +138,16 @@ try {
   await waitForAuthenticated(page);
   report.steps.push({ step: "authenticated", url: page.url() });
 
+  const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
+  if (smokePin) {
+    const pinRes = await page.request.post(`${base}/api/auth/pin`, {
+      data: { pin: smokePin },
+    });
+    if (pinRes.ok()) {
+      report.steps.push({ step: "pin-unlocked" });
+    }
+  }
+
   await page.waitForSelector(".ui-loki-composer-input, .ui-empty-page", { timeout: 60_000 });
   await page.waitForTimeout(1500);
 
@@ -155,7 +164,7 @@ try {
 
   await page.getByRole("button", { name: "Move forward", exact: true }).click();
   await page.waitForTimeout(300);
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.locator(".ui-loki-send-btn").click();
 
   await page.waitForSelector(".ui-loki-dispatch-card, .ui-loki-kind", { timeout: 120_000 });
   await page.waitForTimeout(2000);

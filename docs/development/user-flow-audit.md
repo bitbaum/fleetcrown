@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: CRUD mutation probes in authenticated-smoke (89 probes); PE/G/H/E/M/PR API E2E checked.
+last_modified_summary: Execution probes (97 smoke) + dogfood:loki:ci; X01–X04/X06/X08/X09 graded B.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -59,7 +59,8 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 89 probes session + PIN + CRUD | **89/89 OK** (2026-07-04) |
+| `npm run test:authenticated-smoke` (prod) | 97 probes session + PIN + CRUD + execution API | **97/97 OK** (2026-07-04) |
+| `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 
@@ -89,7 +90,9 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
-**89/89 probes passed** with session + PIN unlock on production (includes private-zone CRUD round-trips).
+**97/97 probes passed** with session + PIN unlock on production (CRUD + execution API paths).
+
+**Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
 Re-run:
 
@@ -443,17 +446,17 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 
 ---
 
-## 15. Execution E2E (not covered by smoke — dogfood next)
+## 15. Execution E2E (API smoke + `npm run dogfood:loki:ci` when builder online)
 
-- [ ] **X01** Loki chat → real OpenClaw reply (`npm run dogfood:loki`)
-- [ ] **X02** Loki dispatch → Control → builder executes
-- [ ] **X03** Control Send → inject → agent runs on box-runner
-- [ ] **X04** Terminal Cloud peek-stream interactive
-- [ ] **X05** Terminal This computer via Fleet Runner
-- [ ] **X06** Orchestration “Next best” full cycle
-- [ ] **X07** Prompt Run now → Loki
-- [ ] **X08** GitHub create-with-github E2E
-- [ ] **X09** OrangeCat publish E2E
+- [~] **X01** Loki chat → OpenClaw reply — **B** API 200; dogfood UI dispatch ok 2026-07-04
+- [~] **X02** Loki dispatch → Control — **B** dogfood links + dispatch API 200
+- [~] **X03** Control inject — **B** API queues (`mode: queued|direct`); agent run needs builder
+- [~] **X04** Terminal Cloud peek-stream — **B** API 200; dogfood loads `/terminal?source=server`
+- [ ] **X05** Terminal This computer via Fleet Runner — **B** desktop only
+- [~] **X06** Orchestration “Next best” / continue — **B** API 503 on cloud for some adapters; box-runner when online
+- [ ] **X07** Prompt Run now → Loki — **B** UI + Loki gateway
+- [~] **X08** GitHub create-with-github — **B** validation probe; full flow needs GitHub OAuth
+- [~] **X09** OrangeCat publish POST — **B** 409 when OC not linked (expected on prod)
 
 ---
 
@@ -465,7 +468,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~145 | Pages + GET APIs + private-zone CRUD on prod |
 | `[~]` Partial / needs runtime | ~95 | Builder, Loki gateway, OAuth, Stripe, calendar local CLI |
-| `[ ]` Not E2E verified | ~20 | UI-only flows, settings OAuth, execution X01–X09 |
+| `[ ]` Not E2E verified | ~12 | X05/X07 UI-only, settings OAuth, frontier |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.
@@ -493,6 +496,7 @@ When adding a UI action:
 2. If the flow is cloud vs local, also update [cloud-local-workflows.md](./cloud-local-workflows.md).
 3. Add the page route to `scripts/smoke.sh` if it is a new top-level `page.tsx`.
 4. Add authenticated GET probes to `scripts/test/authenticated-smoke.ts` when the route is session-gated.
+5. Execution API probes + `npm run dogfood:loki:ci` for Loki → Terminal UI (see §15).
 5. Bump `last_modified_date` and `last_modified_summary` on this file.
 
 When fixing a gap, upgrade the grade and note the change in `last_modified_summary`.

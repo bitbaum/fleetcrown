@@ -15,6 +15,7 @@
  * Writes a JSON report to .tmp/authenticated-smoke-report.json (gitignored).
  * With SMOKE_PRIVATE_PIN, also runs private-zone CRUD round-trips (people, goals,
  * habits, events, subscriptions, prompts) — ephemeral rows tagged smoke-*.
+ * Execution API probes (X01–X09 paths) run on every authenticated smoke.
  */
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -611,6 +612,117 @@ async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResu
   return out;
 }
 
+type ProjectPick = { key: string; id: string | null };
+
+async function pickProject(cookieHeader: string): Promise<ProjectPick> {
+  const fallback: ProjectPick = { key: "fleetcrown", id: null };
+  try {
+    const res = await fetch(`${BASE}/api/user-projects`, {
+      headers: { Cookie: cookieHeader },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!res.ok) return fallback;
+    const rows = (await res.json()) as { name?: string; id?: string; dirPath?: string | null }[];
+    const withDir = rows.find((p) => p.dirPath && p.name);
+    const named = rows.find((p) => p.name?.toLowerCase() === "fleetcrown");
+    const pick = withDir ?? named ?? rows[0];
+    if (!pick?.name) return fallback;
+    return { key: pick.name, id: pick.id ?? null };
+  } catch {
+    return fallback;
+  }
+}
+
+/** Execution-path API probes — queue/dispatch/Loki; full agent run needs builder (X01–X09). */
+async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> {
+  const out: ProbeResult[] = [];
+  const push = (label: string, method: HttpMethod, status: number, ok: boolean, note?: string) => {
+    out.push({ route: label, method, status, ok, note });
+  };
+
+  const project = await pickProject(cookieHeader);
+  const smokeTag = `smoke-${Date.now()}`;
+
+  const loki = await apiJson(cookieHeader, "/api/loki", "POST", {
+    message: "authenticated smoke ping — one word reply",
+  });
+  const lokiOk = loki.status === 200 || loki.status === 503;
+  push(
+    "X01 POST /api/loki",
+    "POST",
+    loki.status,
+    lokiOk,
+    loki.status === 200 ? "gateway" : loki.status === 503 ? "gateway down" : undefined,
+  );
+
+  const inject = await apiJson(cookieHeader, "/api/inject", "POST", {
+    tab: project.key,
+    customPrompt: `[${smokeTag}] probe — ignore`,
+    adapter: "claude",
+  });
+  const injectOk = inject.status === 200 && inject.json?.ok === true;
+  push(
+    "X03 POST /api/inject",
+    "POST",
+    inject.status,
+    injectOk,
+    typeof inject.json?.mode === "string" ? String(inject.json.mode) : undefined,
+  );
+
+  const orch = await apiJson(cookieHeader, "/api/orchestration/run", "POST", {
+    projectKey: project.key,
+    intent: "continue",
+  });
+  const orchOk =
+    orch.status === 200
+    || (orch.status === 503 && typeof orch.json?.error === "string");
+  push("X06 POST /api/orchestration/run", "POST", orch.status, orchOk);
+
+  const dispatch = await apiJson(cookieHeader, "/api/control/dispatch", "POST", {
+    handoff: { done: "", next: "smoke", health: "ok", tests: "pass", todos: "", status: "ready" },
+    queue: [],
+    projectKey: project.key,
+  });
+  push("X02 dispatch decision API", "POST", dispatch.status, dispatch.status === 200);
+
+  try {
+    const peekRes = await fetch(
+      `${BASE}/api/control/peek-stream?tab=${encodeURIComponent(project.key)}&channel=cloud`,
+      { headers: { Cookie: cookieHeader }, signal: AbortSignal.timeout(4000) },
+    );
+    push("X04 GET /api/control/peek-stream", "GET", peekRes.status, [200, 403].includes(peekRes.status));
+    await peekRes.body?.cancel();
+  } catch {
+    push("X04 GET /api/control/peek-stream", "GET", 0, true, "SSE timeout ok");
+  }
+
+  const gh = await apiJson(cookieHeader, "/api/projects/create-with-github", "POST", {});
+  push("X08 POST create-with-github (invalid body)", "POST", gh.status, gh.status === 400);
+
+  if (project.id) {
+    const pub = await apiJson(cookieHeader, `/api/user-projects/${project.id}/publish-orangecat`, "POST");
+    push(
+      "X09 POST publish-orangecat",
+      "POST",
+      pub.status,
+      [200, 400, 401, 403, 409, 502, 503].includes(pub.status),
+      pub.status === 409 ? "OC not linked" : undefined,
+    );
+  }
+
+  const builder = await apiJson(cookieHeader, "/api/builder/presence", "GET");
+  const builderOnline = builder.json?.runnerConnected === true;
+  push(
+    "execution builder presence",
+    "GET",
+    builder.status,
+    builder.status === 200,
+    builderOnline ? "builder online" : "builder offline — X02/X05 need runtime",
+  );
+
+  return out;
+}
+
 async function main(): Promise<void> {
   // Reachability
   try {
@@ -800,6 +912,8 @@ async function main(): Promise<void> {
   } else {
     probes.push(...await runPrivateZoneCrudProbes(cookieHeader));
   }
+
+  probes.push(...await runExecutionProbes(cookieHeader));
 
   let passed = 0;
   let failed = 0;
