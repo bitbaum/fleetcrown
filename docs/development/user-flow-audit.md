@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: UI flow dogfood (PE11/H05/G07/PR04/X07); dogfood:ui-flows:ci; 112-probe smoke unchanged.
+last_modified_summary: Pre-push prod dogfood when SMOKE_PRIVATE_PIN set (ui-flows + conditional loki).
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -62,6 +62,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | `npm run test:authenticated-smoke` (prod) | 112 probes session + PIN + CRUD + execution + settings | **112/112 OK** (2026-07-04) |
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/PR04/X07 UI flows | **ok** 2026-07-04 |
+| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | ui-flows always; loki when builder online |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 

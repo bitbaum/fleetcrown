@@ -46,6 +46,10 @@ else
   echo "→ smoke: server detected at $BASE"
   npm run smoke
 fi
+
+echo "→ test:pre-push-prod-dogfood"
+npm run test:pre-push-prod-dogfood
+
 # >>> fleetcrown push-deploy >>>
 # Pushing main deploys to the Hetzner box (background; see /tmp/push-deploy-fleetcrown.log)
 if git symbolic-ref --short HEAD 2>/dev/null | grep -qx main; then

@@ -46,6 +46,7 @@
     "test:execution-access": "npx tsx scripts/test/execution-access.ts",
     "test:workspace-access": "npx tsx scripts/test/workspace-access.ts",
     "test:authenticated-smoke": "npx tsx scripts/test/authenticated-smoke.ts",
+    "test:pre-push-prod-dogfood": "bash scripts/test/pre-push-prod-dogfood.sh",
     "test:loop-ssot": "npx tsx scripts/test/loop-ssot.ts",
     "test:auth-a11y": "npx tsx scripts/test/auth-a11y.ts",
     "test:loki-prefetch": "npx tsx scripts/test/loki-prefetch.ts",
