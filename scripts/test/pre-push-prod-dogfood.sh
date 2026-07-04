@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Optional production UI dogfood on git push when SMOKE_PRIVATE_PIN is set.
 #
-#   SMOKE_PRIVATE_PIN=55550 git push          # ui-flows always; loki if builder online
-#   DOFOOD_LOKI_ON_PUSH=1 … git push          # force loki dogfood even when builder offline
+#   SMOKE_PRIVATE_PIN=55550 git push          # smoke + ui-flows; loki if builder online
+#   DOGFOOD_LOKI_ON_PUSH=1 … git push         # force loki dogfood even when builder offline
 #
 # Requires AUTH_SECRET + HETZNER_IP (or FLEETCROWN_SESSION_TOKEN) for JWT mint.
 # Skips silently when SMOKE_PRIVATE_PIN is unset so default pushes stay fast.
@@ -26,11 +26,14 @@ echo "→ prod dogfood: minting session ($BASE)"
 TOKEN="$(npx tsx scripts/test/print-session-token.ts)"
 export FLEETCROWN_SESSION_TOKEN="$TOKEN"
 
+echo "→ test:authenticated-smoke"
+npm run test:authenticated-smoke
+
 echo "→ dogfood:ui-flows:ci"
 node scripts/ui-flow-dogfood.mjs
 
 RUN_LOKI=0
-if [ "${DOFOOD_LOKI_ON_PUSH:-}" = "1" ]; then
+if [ "${DOGFOOD_LOKI_ON_PUSH:-${DOFOOD_LOKI_ON_PUSH:-}}" = "1" ]; then
   RUN_LOKI=1
 else
   PRESENCE="$(curl -sf --max-time 20 \
@@ -45,5 +48,5 @@ if [ "$RUN_LOKI" = "1" ]; then
   echo "→ dogfood:loki:ci"
   node scripts/loki-dogfood.mjs
 else
-  echo "→ dogfood:loki:ci skipped (builder offline — export DOFOOD_LOKI_ON_PUSH=1 to force)"
+  echo "→ dogfood:loki:ci skipped (builder offline — export DOGFOOD_LOKI_ON_PUSH=1 to force)"
 fi

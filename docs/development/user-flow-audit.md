@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: Pre-push prod dogfood when SMOKE_PRIVATE_PIN set (ui-flows + conditional loki).
+last_modified_summary: Pre-push prod dogfood now includes authenticated smoke; G07 full dispatch dogfood; ST02/CH04/M04 manual runbooks.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -62,7 +62,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | `npm run test:authenticated-smoke` (prod) | 112 probes session + PIN + CRUD + execution + settings | **112/112 OK** (2026-07-04) |
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/PR04/X07 UI flows | **ok** 2026-07-04 |
-| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | ui-flows always; loki when builder online |
+| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | authenticated smoke + ui-flows; loki when builder online (**ok** 2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 
@@ -96,7 +96,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 
 **Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
-**UI flows:** `SMOKE_PRIVATE_PIN=… npm run dogfood:ui-flows:ci` — Ask Loki from People card, habits heatmap, goal → Control prefill, prompt fork, Run with Loki modal.
+**UI flows:** `SMOKE_PRIVATE_PIN=… npm run dogfood:ui-flows:ci` — Ask Loki from People card, habits heatmap, goal → Control prefill + harmless full dispatch when builder is online, prompt fork, Run with Loki modal.
 
 Re-run:
 
@@ -333,7 +333,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [x] **G04** Inline edit title/desc/progress/date — **A** smoke PATCH
 - [x] **G05** Milestones add/toggle/remove — **A** smoke PATCH milestones
 - [x] **G06** Complete / abandon / delete — **A** smoke DELETE
-- [~] **G07** Control dispatch from card — **B** UI prefill → `/control` (`dogfood:ui-flows:ci`); agent run needs builder
+- [~] **G07** Control dispatch from card — **B** UI prefill → `/control` + harmless full-dispatch smoke when builder online (`dogfood:ui-flows:ci` ok 2026-07-04)
 - [~] **G08** When PIN locked — **C**
 
 ## 7c. Private zone — `/habits`
@@ -359,7 +359,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [x] **M01** Page load — **A** + PIN
 - [x] **M02** Create subscription — **A** smoke POST
 - [x] **M03** Mark paid / inline edit / cancel / reactivate / delete — **A** smoke PATCH/POST/DELETE
-- [ ] **M04** External verify/cancel URLs — manual
+- [ ] **M04** External verify/cancel URLs — manual runbook below
 
 ## 7f. Private zone — `/memory`
 
@@ -403,7 +403,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 ## 11. `/settings`
 
 - [x] **ST01** Profile — name, username — **A** smoke PATCH
-- [~] **ST02** Account — OAuth connect/disconnect — **B** smoke lists accounts; connect needs OAuth UI
+- [~] **ST02** Account — OAuth connect/disconnect — **B** smoke lists accounts; connect needs OAuth UI; manual runbook below
 - [~] **ST03** Account — set/change password — **B** smoke rejects wrong password; change needs real credential
 - [x] **ST04** Notifications prefs — **A** smoke PATCH
 - [x] **ST05** Appearance — **A**
@@ -425,7 +425,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [~] **CH01** `GET /api/checkout/:plan` — **B**
 - [~] **CH02** `POST /api/stripe/checkout` — **B**
 - [~] **CH03** Billing portal — **B** smoke 503
-- [ ] **CH04** Webhook subscription sync — E2E
+- [ ] **CH04** Webhook subscription sync — E2E; manual runbook below
 - [x] **CH05** Plan limits on project count — **A** enforcement
 
 ---
@@ -466,12 +466,40 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 
 <!-- checklist ends above -->
 
+## Manual Runbooks
+
+These are deliberately not automated in CI because they require a third-party
+account UI, signed webhook secret, or live billing destination. Keep screenshots
+or report notes in `.tmp/` only.
+
+### ST02 OAuth Connect / Disconnect
+
+1. Open `/settings` on prod as the operator.
+2. In **Account**, click the GitHub connect action and complete GitHub OAuth.
+3. Confirm `/api/sessions` still returns 200 and the account appears in the settings account list.
+4. Disconnect only a non-primary OAuth account; do not remove the last sign-in method.
+5. Reconnect and confirm sign-in still works in a clean browser profile.
+
+### CH04 Stripe Webhook Subscription Sync
+
+1. In Stripe test mode, send a signed `checkout.session.completed` or subscription lifecycle event to the prod webhook endpoint.
+2. Confirm the webhook returns 2xx and the subscription state changes in `/money` or the relevant account billing view.
+3. Replay the same event and confirm idempotency: no duplicate subscription row or duplicated activity.
+4. Send one event with an invalid signature and confirm it is rejected.
+
+### M04 External Verify / Cancel URLs
+
+1. Open `/money` with the private zone unlocked.
+2. For a subscription that has `verifyUrl`, click the source/verify action and confirm it opens the expected provider URL in a new tab.
+3. For a subscription that has `cancelUrl`, click cancel/manage and confirm it opens the expected provider cancellation or account-management URL.
+4. Do not complete a real cancellation unless intentionally testing a disposable subscription.
+
 ## Scorecard (2026-07-04)
 
 | Bucket | Count | Notes |
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~149 | + PE11, H05, PR04 UI dogfood |
-| `[~]` Partial / needs runtime | ~93 | G07 prefill only; X07 modal Loki |
+| `[~]` Partial / needs runtime | ~93 | G07 UI dispatch when builder online; X07 modal Loki |
 | `[ ]` Not E2E verified | ~5 | X05 desktop, ST02 OAuth UI, CH04 webhook, M04 manual, ME02 env |
 | **Total checklist items** | **~250** | Sections 0–15 |
 

@@ -19,6 +19,7 @@ const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/
 const headless = process.env.HEADLESS !== "0";
 const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();
 const smokePin = process.env.SMOKE_PRIVATE_PIN?.trim();
+const fullDispatchEnabled = process.env.UI_FLOW_FULL_DISPATCH !== "0";
 
 const report = {
   base,
@@ -31,6 +32,13 @@ async function unlockPin(page) {
   if (!smokePin) return false;
   const res = await page.request.post(`${base}/api/auth/pin`, { data: { pin: smokePin } });
   return res.ok();
+}
+
+async function builderOnline(page) {
+  const res = await page.request.get(`${base}/api/builder/presence`);
+  if (!res.ok()) return false;
+  const data = await res.json().catch(() => ({}));
+  return Boolean(data.runnerConnected || data.builderPresence?.any || data.runtimeAvailable);
 }
 
 async function launchContext() {
@@ -97,10 +105,50 @@ async function runG07(page) {
       return null;
     }
   });
+
+  const fullDispatch = {
+    attempted: false,
+    ok: false,
+    skipped: null,
+    status: null,
+  };
+
+  const canDispatch = fullDispatchEnabled && await builderOnline(page);
+  if (!canDispatch) {
+    fullDispatch.skipped = fullDispatchEnabled ? "builder offline" : "UI_FLOW_FULL_DISPATCH=0";
+  } else {
+    fullDispatch.attempted = true;
+    const prompt = [
+      `Smoke UI flow ${new Date().toISOString()}.`,
+      "Verify that the goal-card Control dispatch path reaches the executor.",
+      "Do not edit files, do not run mutating commands, and respond with a short acknowledgement only.",
+    ].join(" ");
+    await page.locator("textarea").first().fill(prompt);
+    await page.locator("textarea").first().press("Enter");
+
+    const status = await Promise.race([
+      page.getByText("Sent ✓").waitFor({ timeout: 120_000 }).then(() => "sent"),
+      page.getByText(/Fleet Runner is offline|Failed to run task/i).waitFor({ timeout: 120_000 }).then(() => "error"),
+    ]).catch(() => "timeout");
+
+    fullDispatch.status = status;
+    const control = await page.request.get(`${base}/api/control`);
+    if (control.ok()) {
+      const data = await control.json().catch(() => ({}));
+      const selectedProject = Array.isArray(data.projects)
+        ? data.projects.find((p) => p.tab === prefill?.tab)
+        : null;
+      fullDispatch.ok = status === "sent" || Boolean(selectedProject?.latestOrchestrationRun);
+    } else {
+      fullDispatch.ok = status === "sent";
+    }
+  }
+
   return {
-    ok: Boolean(prefill?.tab && prefill?.prompt),
+    ok: Boolean(prefill?.tab && prefill?.prompt) && (!fullDispatch.attempted || fullDispatch.ok),
     url: page.url(),
     prefill,
+    fullDispatch,
   };
 }
 
