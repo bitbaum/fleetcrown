@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Optional production UI dogfood on git push when SMOKE_PRIVATE_PIN is set.
 #
-#   SMOKE_PRIVATE_PIN=55550 git push          # smoke + ui-flows; loki if builder online
+#   git push                                  # auto when SMOKE_PRIVATE_PIN is in .env.local
+#   SMOKE_PRIVATE_PIN=55550 git push          # explicit override
 #   DOGFOOD_LOKI_ON_PUSH=1 … git push         # force loki dogfood even when builder offline
 #
 # Requires AUTH_SECRET + HETZNER_IP (or FLEETCROWN_SESSION_TOKEN) for JWT mint.
@@ -12,6 +13,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$REPO_ROOT"
+
+load_repo_env() {
+  local f="$1"
+  if [ -f "$f" ]; then
+    set -a
+    # shellcheck source=/dev/null
+    source "$f"
+    set +a
+  fi
+}
+
+# Auto-enable when SMOKE_PRIVATE_PIN is in .env.local (no need to export on git push).
+load_repo_env "$REPO_ROOT/.env.local"
+load_repo_env "$REPO_ROOT/.env.hetzner.local"
 
 if [ -z "${SMOKE_PRIVATE_PIN:-}" ]; then
   echo "→ prod dogfood: skipped (set SMOKE_PRIVATE_PIN to enable ui-flows + loki on push)"

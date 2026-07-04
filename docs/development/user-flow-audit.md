@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: ME02 graded [x] with 23 chunks; M04/ST02/CH04 partial smoke and UI dogfood probes.
+last_modified_summary: Pre-push prod dogfood auto-loads SMOKE_PRIVATE_PIN from .env.local.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -63,7 +63,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/M04/ST02/PR04/X07 UI flows | **ok** 2026-07-04 |
 | `npm run dogfood:machine:ci` (prod) | X05 full path when local Fleet Runner online | skips when desktop offline |
-| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | authenticated smoke + ui-flows + machine; loki when builder online (**ok** 2026-07-04) |
+| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | reads `.env.local`; smoke + ui-flows + machine; loki when builder online (**ok** 2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 

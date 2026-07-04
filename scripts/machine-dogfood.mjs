@@ -16,6 +16,22 @@ const root = process.cwd();
 const outDir = path.join(root, ".tmp", "machine-dogfood");
 fs.mkdirSync(outDir, { recursive: true });
 
+function readLocalEnv() {
+  const envPath = path.join(root, ".env.local");
+  if (!fs.existsSync(envPath)) return;
+  for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const idx = trimmed.indexOf("=");
+    if (idx === -1) continue;
+    const key = trimmed.slice(0, idx);
+    const value = trimmed.slice(idx + 1).replace(/^"|"$/g, "");
+    if (!process.env[key]) process.env[key] = value;
+  }
+}
+
+readLocalEnv();
+
 const base = (process.env.BASE ?? "https://fleetcrown.orangecat.ch").replace(/\/$/, "");
 const headless = process.env.HEADLESS !== "0";
 const sessionToken = (process.env.FLEETCROWN_SESSION_TOKEN ?? process.env.COCKPIT_SESSION_TOKEN)?.trim();

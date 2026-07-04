@@ -213,8 +213,8 @@ npx tsx home/worker.ts --start  # Run a single home/ piece for iteration
 
 A husky pre-commit hook runs `tsc --noEmit` and `eslint src/` automatically.
 A husky pre-push hook runs `npm run test:home` (always) and `npm run smoke`
-(if the dev server is up) before pushing. When `SMOKE_PRIVATE_PIN` is set,
-`npm run test:pre-push-prod-dogfood` runs authenticated prod smoke and headless
+(if the dev server is up) before pushing. When `SMOKE_PRIVATE_PIN` is in
+`.env.local` (or exported), `npm run test:pre-push-prod-dogfood` runs authenticated prod smoke and headless
 prod UI dogfood (`ui-flows` always; `dogfood:loki` when builder online; `dogfood:machine` when local Fleet Runner connected).
 Smoke is opt-in (needs the dev server running) — run before opening a PR.
 
