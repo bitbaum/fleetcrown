@@ -50,3 +50,6 @@ if [ "$RUN_LOKI" = "1" ]; then
 else
   echo "→ dogfood:loki:ci skipped (builder offline — export DOGFOOD_LOKI_ON_PUSH=1 to force)"
 fi
+
+echo "→ dogfood:machine (skips when no local Fleet Runner)"
+node scripts/machine-dogfood.mjs

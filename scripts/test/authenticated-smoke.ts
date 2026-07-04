@@ -712,6 +712,7 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
 
   const builder = await apiJson(cookieHeader, "/api/builder/presence", "GET");
   const builderOnline = builder.json?.runnerConnected === true;
+  const localBuilderOnline = builder.json?.builderPresence?.local === true;
   push(
     "execution builder presence",
     "GET",
@@ -719,6 +720,29 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
     builder.status === 200,
     builderOnline ? "builder online" : "builder offline — X02/X05 need runtime",
   );
+
+  if (localBuilderOnline) {
+    const openLocal = await apiJson(cookieHeader, "/api/control/open-tabs?channel=local", "GET");
+    push("X05 GET /api/control/open-tabs?channel=local", "GET", openLocal.status, openLocal.status === 200);
+    const localTabs = Array.isArray(openLocal.json?.tabs) ? (openLocal.json.tabs as string[]) : [];
+    if (localTabs.length > 0) {
+      try {
+        const peekRes = await fetch(
+          `${BASE}/api/control/peek-stream?tab=${encodeURIComponent(localTabs[0])}&channel=local`,
+          { headers: { Cookie: cookieHeader }, signal: AbortSignal.timeout(4000) },
+        );
+        push(
+          "X05 GET /api/control/peek-stream?channel=local",
+          "GET",
+          peekRes.status,
+          [200, 403].includes(peekRes.status),
+        );
+        await peekRes.body?.cancel();
+      } catch {
+        push("X05 GET /api/control/peek-stream?channel=local", "GET", 0, true, "SSE timeout ok");
+      }
+    }
+  }
 
   return out;
 }
@@ -835,6 +859,7 @@ async function runSettingsSystemProbes(
 
   if (privateZoneLocked) {
     push("SY03 frontier proposals", "GET", 0, false, "skipped — PIN locked");
+    push("ME02 GET /api/memory/rag-stats", "GET", 0, false, "skipped — PIN locked");
   } else {
     const frontier = await apiJson(cookieHeader, "/api/frontier/proposals", "GET");
     push("SY03 GET /api/frontier/proposals", "GET", frontier.status, frontier.status === 200);
@@ -855,6 +880,16 @@ async function runSettingsSystemProbes(
       missing.status,
       missing.status === 404,
       proposals.length > 0 ? `${proposals.length} open (not mutated)` : "none open",
+    );
+
+    const rag = await apiJson(cookieHeader, "/api/memory/rag-stats", "GET");
+    const ragEnabled = rag.json?.enabled === true;
+    push(
+      "ME02 GET /api/memory/rag-stats",
+      "GET",
+      rag.status,
+      rag.status === 200 && typeof rag.json?.enabled === "boolean",
+      ragEnabled ? `chunks=${rag.json?.totalChunks ?? 0}` : "RAG disabled (no EMBEDDINGS_BASE_URL)",
     );
   }
 

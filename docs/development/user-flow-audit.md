@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: X05 partial via loki dogfood This computer shell; lint fix in agent install route.
+last_modified_summary: ME02 rag-stats API + smoke probe; machine dogfood for X05 when Fleet Runner local online.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -59,10 +59,11 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 112 probes session + PIN + CRUD + execution + settings | **112/112 OK** (2026-07-04) |
+| `npm run test:authenticated-smoke` (prod) | 113 probes session + PIN + CRUD + execution + settings + RAG | **113/113 OK** (2026-07-04) |
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/PR04/X07 UI flows | **ok** 2026-07-04 |
-| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | authenticated smoke + ui-flows; loki when builder online (**ok** 2026-07-04) |
+| `npm run dogfood:machine:ci` (prod) | X05 full path when local Fleet Runner online | skips when desktop offline |
+| `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | authenticated smoke + ui-flows + machine; loki when builder online (**ok** 2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 
@@ -92,7 +93,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
-**112/112 probes passed** with session + PIN unlock on production.
+**113/113 probes passed** with session + PIN unlock on production.
 
 **Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
@@ -364,7 +365,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 ## 7f. Private zone — `/memory`
 
 - [x] **ME01** Page load + stats — **A** + PIN
-- [ ] **ME02** RAG index stats (embeddings server) — **B** env
+- [~] **ME02** RAG index stats (embeddings server) — **B** smoke GET `/api/memory/rag-stats` (enabled flag + chunk count when `EMBEDDINGS_BASE_URL` set)
 
 ---
 
@@ -456,7 +457,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [~] **X02** Loki dispatch → Control — **B** dogfood links + dispatch API 200
 - [~] **X03** Control inject — **B** API queues (`mode: queued|direct`); agent run needs builder
 - [~] **X04** Terminal Cloud peek-stream — **B** API 200; dogfood loads `/terminal?source=server`
-- [~] **X05** Terminal This computer via Fleet Runner — **B** dogfood loads shell + empty/honest state when desktop offline; live PTY needs Fleet Runner
+- [~] **X05** Terminal This computer via Fleet Runner — **B** loki dogfood shell always; `dogfood:machine:ci` + open-tabs/peek when `builderPresence.local`
 - [~] **X06** Orchestration “Next best” / continue — **B** API 503 on cloud for some adapters; box-runner when online
 - [~] **X07** Prompt Run now → Loki — **B** `dogfood:ui-flows:ci` modal result 2026-07-04
 - [~] **X08** GitHub create-with-github — **B** validation probe; full flow needs GitHub OAuth
@@ -499,8 +500,8 @@ or report notes in `.tmp/` only.
 | Bucket | Count | Notes |
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~149 | + PE11, H05, PR04 UI dogfood |
-| `[~]` Partial / needs runtime | ~93 | G07 UI dispatch when builder online; X07 modal Loki |
-| `[ ]` Not E2E verified | ~4 | ST02 OAuth UI, CH04 webhook, M04 manual, ME02 env |
+| `[~]` Partial / needs runtime | ~94 | G07/X05/X07 when builder online; ME02 RAG env |
+| `[ ]` Not E2E verified | ~3 | ST02 OAuth UI, CH04 webhook, M04 manual |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.
