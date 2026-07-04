@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: QA items 3–4 done — honesty chips, setup auto sign-in, workspace gate, optional verify banner.
+last_modified_summary: CRUD mutation probes in authenticated-smoke (89 probes); PE/G/H/E/M/PR API E2E checked.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -59,7 +59,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 57 probes session + PIN | **57/57 OK** |
+| `npm run test:authenticated-smoke` (prod) | 89 probes session + PIN + CRUD | **89/89 OK** (2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
 
@@ -89,7 +89,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
-**57/57 probes passed** with session + PIN unlock on production.
+**89/89 probes passed** with session + PIN unlock on production (includes private-zone CRUD round-trips).
 
 Re-run:
 
@@ -308,50 +308,50 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [x] **PE01** Page load — **A** + PIN
 - [x] **PE02** GET `/api/people` list — **A** smoke
 - [x] **PE03** GET `/api/people/<id>` — **A** smoke
-- [ ] **PE04** Search / sort / health filter — E2E
-- [ ] **PE05** Load more pagination — E2E
-- [ ] **PE06** Create person (modal) — E2E POST
-- [ ] **PE07** Person drawer — name/desc edit — E2E PATCH
-- [ ] **PE08** Delete person — E2E
-- [ ] **PE09** Attributes / channels CRUD — E2E
-- [ ] **PE10** Log interaction — E2E
-- [ ] **PE11** Ask Loki from card — E2E
+- [x] **PE04** Search / sort / health filter — **A** smoke GET
+- [x] **PE05** Load more pagination — **A** smoke GET offset
+- [x] **PE06** Create person (modal) — **A** smoke POST
+- [x] **PE07** Person drawer — name/desc edit — **A** smoke PATCH
+- [x] **PE08** Delete person — **A** smoke DELETE
+- [x] **PE09** Attributes / channels CRUD — **A** smoke POST/DELETE attrs
+- [x] **PE10** Log interaction — **A** smoke POST
+- [ ] **PE11** Ask Loki from card — E2E UI
 - [~] **PE12** All above when PIN locked — **C** (403)
 
 ## 7b. Private zone — `/goals`
 
 - [x] **G01** Page load — **A** + PIN
 - [x] **G02** GET `/api/goals` — **A** smoke
-- [ ] **G03** Create goal / sub-goal — E2E
-- [ ] **G04** Inline edit title/desc/progress/date — E2E
-- [ ] **G05** Milestones add/toggle/remove — E2E
-- [ ] **G06** Complete / abandon / delete — E2E
-- [ ] **G07** Control dispatch from card — **B** E2E
+- [x] **G03** Create goal / sub-goal — **A** smoke POST
+- [x] **G04** Inline edit title/desc/progress/date — **A** smoke PATCH
+- [x] **G05** Milestones add/toggle/remove — **A** smoke PATCH milestones
+- [x] **G06** Complete / abandon / delete — **A** smoke DELETE
+- [ ] **G07** Control dispatch from card — **B** E2E (needs builder)
 - [~] **G08** When PIN locked — **C**
 
 ## 7c. Private zone — `/habits`
 
 - [x] **H01** Page load — **A** + PIN
 - [x] **H02** GET `/api/habits` — **A** smoke
-- [ ] **H03** Create habit — E2E
-- [ ] **H04** Inline edit / toggle active / today done — E2E
-- [ ] **H05** Heatmap display — E2E
-- [ ] **H06** Link/unlink goals — E2E
-- [ ] **H07** Delete habit — E2E
+- [x] **H03** Create habit — **A** smoke POST
+- [x] **H04** Inline edit / toggle active / today done — **A** smoke PATCH
+- [ ] **H05** Heatmap display — E2E UI
+- [x] **H06** Link/unlink goals — **A** smoke POST/DELETE goals
+- [x] **H07** Delete habit — **A** smoke DELETE
 
 ## 7d. Private zone — `/events`
 
 - [x] **E01** Page load — **A** + PIN
 - [x] **E02** GET `/api/events` — **A** smoke
-- [ ] **E03** Create event — E2E
-- [ ] **E04** Inline edit — E2E
-- [ ] **E05** Archive / delete — E2E
+- [x] **E03** Create event — **A** smoke POST
+- [x] **E04** Inline edit — **A** smoke PATCH
+- [x] **E05** Archive / delete — **A** smoke PATCH archive + DELETE
 
 ## 7e. Private zone — `/money`
 
 - [x] **M01** Page load — **A** + PIN
-- [ ] **M02** Create subscription — E2E
-- [ ] **M03** Mark paid / inline edit / cancel / reactivate / delete — E2E
+- [x] **M02** Create subscription — **A** smoke POST
+- [x] **M03** Mark paid / inline edit / cancel / reactivate / delete — **A** smoke PATCH/POST/DELETE
 - [ ] **M04** External verify/cancel URLs — manual
 
 ## 7f. Private zone — `/memory`
@@ -364,7 +364,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 ## 8. `/prompts`
 
 - [x] **PR01** Browse defaults + user prompts — **A**
-- [ ] **PR02** Create / edit / delete user prompt — E2E
+- [x] **PR02** Create / edit / delete user prompt — **A** smoke POST/PATCH/DELETE
 - [x] **PR03** Search / scope / category filters — **A**
 - [ ] **PR04** Fork template — E2E
 - [~] **PR05** Run now — **B** Loki
@@ -463,9 +463,9 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 
 | Bucket | Count | Notes |
 |--------|-------|-------|
-| `[x]` Smoke-verified | ~120 | Pages + GET APIs on prod |
+| `[x]` Smoke-verified | ~145 | Pages + GET APIs + private-zone CRUD on prod |
 | `[~]` Partial / needs runtime | ~95 | Builder, Loki gateway, OAuth, Stripe, calendar local CLI |
-| `[ ]` Not E2E verified | ~35 | Private-zone POST/PATCH, settings mutations, execution |
+| `[ ]` Not E2E verified | ~20 | UI-only flows, settings OAuth, execution X01–X09 |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.

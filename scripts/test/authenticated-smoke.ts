@@ -13,6 +13,8 @@
  *   SMOKE_EMAIL=you@example.com SMOKE_PASSWORD=… npm run test:authenticated-smoke
  *
  * Writes a JSON report to .tmp/authenticated-smoke-report.json (gitignored).
+ * With SMOKE_PRIVATE_PIN, also runs private-zone CRUD round-trips (people, goals,
+ * habits, events, subscriptions, prompts) — ephemeral rows tagged smoke-*.
  */
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,9 +29,11 @@ config({ path: ".env.hetzner.local" });
 const BASE = (process.env.BASE ?? "http://localhost:3000").replace(/\/$/, "");
 const ERROR_BOUNDARY = "Something went wrong";
 
+type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+
 type ProbeResult = {
   route: string;
-  method: "GET" | "POST";
+  method: HttpMethod;
   status: number;
   ok: boolean;
   note?: string;
@@ -314,7 +318,7 @@ async function probe(
   cookieHeader: string,
   route: string,
   opts: {
-    method?: "GET" | "POST";
+    method?: HttpMethod;
     body?: unknown;
     expectStatus?: number[];
     checkBody?: boolean;
@@ -327,14 +331,14 @@ async function probe(
   const headers: Record<string, string> = {
     Cookie: cookieHeader,
   };
-  if (method === "POST") headers["Content-Type"] = "application/json";
+  if (method !== "GET" && opts.body !== undefined) headers["Content-Type"] = "application/json";
 
   let res: Response;
   try {
     res = await fetch(`${BASE}${route}`, {
       method,
       headers,
-      body: method === "POST" && opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: method !== "GET" && opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: AbortSignal.timeout(45_000),
     });
   } catch (e) {
@@ -366,6 +370,245 @@ async function probe(
 
   const ok = expect.includes(res.status) && !note;
   return { route: opts.label ?? route, method, status: res.status, ok, note };
+}
+
+async function apiJson(
+  cookieHeader: string,
+  route: string,
+  method: HttpMethod,
+  body?: unknown,
+): Promise<{ status: number; json: Record<string, unknown> | null }> {
+  const headers: Record<string, string> = { Cookie: cookieHeader };
+  if (method !== "GET" && body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(`${BASE}${route}`, {
+    method,
+    headers,
+    body: method !== "GET" && body !== undefined ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(45_000),
+  });
+  const text = await res.text();
+  try {
+    return { status: res.status, json: JSON.parse(text) as Record<string, unknown> };
+  } catch {
+    return { status: res.status, json: null };
+  }
+}
+
+function idFrom(json: Record<string, unknown> | null, ...keys: string[]): string | null {
+  if (!json) return null;
+  for (const key of keys) {
+    const val = json[key];
+    if (val && typeof val === "object" && "id" in val && typeof (val as { id: unknown }).id === "string") {
+      return (val as { id: string }).id;
+    }
+    if (typeof val === "string") return val;
+  }
+  return null;
+}
+
+/** Private-zone POST/PATCH/DELETE round-trips — creates ephemeral rows tagged smoke-*. */
+async function runPrivateZoneCrudProbes(cookieHeader: string): Promise<ProbeResult[]> {
+  const tag = `smoke-${Date.now()}`;
+  const out: ProbeResult[] = [];
+
+  const push = (label: string, method: HttpMethod, status: number, ok: boolean, note?: string) => {
+    out.push({ route: label, method, status, ok, note });
+  };
+
+  // People — search, create, patch, attrs, interaction, delete
+  {
+    const search = await probe(cookieHeader, "/api/people?q=smoke&sort=recent&limit=5&offset=50", {
+      jsonOk: true,
+      label: "PE04/05 people search+pagination",
+    });
+    out.push(search);
+
+    const created = await apiJson(cookieHeader, "/api/people", "POST", {
+      name: `${tag} person`,
+      description: "authenticated-smoke",
+    });
+    const personId = idFrom(created.json, "person");
+    push("PE06 POST /api/people", "POST", created.status, created.status === 201 && Boolean(personId));
+    if (personId) {
+      const patched = await apiJson(cookieHeader, `/api/people/${personId}`, "PATCH", {
+        description: "smoke patched",
+      });
+      push("PE07 PATCH /api/people/<id>", "PATCH", patched.status, patched.status === 200);
+
+      const attr = await apiJson(cookieHeader, `/api/people/${personId}/attrs`, "POST", {
+        key: "smoke_tag",
+        value: tag,
+      });
+      push("PE09 POST /api/people/<id>/attrs", "POST", attr.status, attr.status === 200);
+
+      const interaction = await apiJson(cookieHeader, `/api/people/${personId}/interactions`, "POST", {
+        channel: "smoke",
+        direction: "outbound",
+        summary: "authenticated-smoke probe",
+      });
+      push("PE10 POST /api/people/<id>/interactions", "POST", interaction.status, interaction.status === 201);
+
+      const attrDel = await apiJson(cookieHeader, `/api/people/${personId}/attrs`, "DELETE", { key: "smoke_tag" });
+      push("PE09 DELETE /api/people/<id>/attrs", "DELETE", attrDel.status, attrDel.status === 200);
+
+      const deleted = await apiJson(cookieHeader, `/api/people/${personId}`, "DELETE");
+      push("PE08 DELETE /api/people/<id>", "DELETE", deleted.status, deleted.status === 200);
+    }
+  }
+
+  // Goals — create, sub-goal, patch milestones, delete
+  {
+    const created = await apiJson(cookieHeader, "/api/goals", "POST", {
+      title: `${tag} goal`,
+      description: "smoke",
+    });
+    const goalId = idFrom(created.json, "goal");
+    push("G03 POST /api/goals", "POST", created.status, created.status === 201 && Boolean(goalId));
+
+    let childId: string | null = null;
+    if (goalId) {
+      const child = await apiJson(cookieHeader, "/api/goals", "POST", {
+        title: `${tag} sub-goal`,
+        parentGoalId: goalId,
+      });
+      childId = idFrom(child.json, "goal");
+      push("G03 POST /api/goals (sub-goal)", "POST", child.status, child.status === 201 && Boolean(childId));
+
+      const patched = await apiJson(cookieHeader, `/api/goals/${goalId}`, "PATCH", {
+        progress: 42,
+        milestones: [{ title: "smoke milestone", done: false }],
+      });
+      push("G04/G05 PATCH /api/goals/<id>", "PATCH", patched.status, patched.status === 200);
+
+      if (childId) {
+        const delChild = await apiJson(cookieHeader, `/api/goals/${childId}`, "DELETE");
+        push("G06 DELETE /api/goals/<id> (sub)", "DELETE", delChild.status, delChild.status === 200);
+      }
+      const delGoal = await apiJson(cookieHeader, `/api/goals/${goalId}`, "DELETE");
+      push("G06 DELETE /api/goals/<id>", "DELETE", delGoal.status, delGoal.status === 200);
+    }
+  }
+
+  // Habits — create, patch done/title, link goal, delete
+  {
+    const goalForLink = await apiJson(cookieHeader, "/api/goals", "POST", { title: `${tag} link-goal` });
+    const linkGoalId = idFrom(goalForLink.json, "goal");
+
+    const created = await apiJson(cookieHeader, "/api/habits", "POST", {
+      title: `${tag} habit`,
+      frequency: "daily",
+    });
+    const habitId = idFrom(created.json, "habit");
+    push("H03 POST /api/habits", "POST", created.status, created.status === 201 && Boolean(habitId));
+
+    if (habitId) {
+      const done = await apiJson(cookieHeader, `/api/habits/${habitId}`, "PATCH", { done: true });
+      push("H04 PATCH /api/habits/<id> done", "PATCH", done.status, done.status === 200);
+
+      const renamed = await apiJson(cookieHeader, `/api/habits/${habitId}`, "PATCH", {
+        title: `${tag} habit renamed`,
+      });
+      push("H04 PATCH /api/habits/<id> title", "PATCH", renamed.status, renamed.status === 200);
+
+      if (linkGoalId) {
+        const linked = await apiJson(cookieHeader, `/api/habits/${habitId}/goals`, "POST", {
+          goalId: linkGoalId,
+        });
+        push("H06 POST /api/habits/<id>/goals", "POST", linked.status, linked.status === 200);
+
+        const unlinked = await apiJson(cookieHeader, `/api/habits/${habitId}/goals`, "DELETE", {
+          goalId: linkGoalId,
+        });
+        push("H06 DELETE /api/habits/<id>/goals", "DELETE", unlinked.status, unlinked.status === 200);
+      }
+
+      const deleted = await apiJson(cookieHeader, `/api/habits/${habitId}`, "DELETE");
+      push("H07 DELETE /api/habits/<id>", "DELETE", deleted.status, deleted.status === 200);
+    }
+
+    if (linkGoalId) {
+      await apiJson(cookieHeader, `/api/goals/${linkGoalId}`, "DELETE");
+    }
+  }
+
+  // Events — create, patch, archive, delete
+  {
+    const created = await apiJson(cookieHeader, "/api/events", "POST", {
+      name: `${tag} event`,
+      type: "deadline",
+      description: "smoke",
+    });
+    const eventId = idFrom(created.json, "event");
+    push("E03 POST /api/events", "POST", created.status, created.status === 201 && Boolean(eventId));
+
+    if (eventId) {
+      const patched = await apiJson(cookieHeader, `/api/events/${eventId}`, "PATCH", {
+        description: "smoke patched",
+      });
+      push("E04 PATCH /api/events/<id>", "PATCH", patched.status, patched.status === 200);
+
+      const archived = await apiJson(cookieHeader, `/api/events/${eventId}`, "PATCH", { status: "archived" });
+      push("E05 PATCH /api/events/<id> archive", "PATCH", archived.status, archived.status === 200);
+
+      const deleted = await apiJson(cookieHeader, `/api/events/${eventId}`, "DELETE");
+      push("E05 DELETE /api/events/<id>", "DELETE", deleted.status, deleted.status === 200);
+    }
+  }
+
+  // Money — create subscription, patch, reactivate, delete
+  {
+    const created = await apiJson(cookieHeader, "/api/subscriptions", "POST", {
+      name: `${tag} sub`,
+      vendor: "smoke",
+      amount: 9.5,
+      currency: "CHF",
+      frequency: "monthly",
+    });
+    const subId = idFrom(created.json, "subscription");
+    push("M02 POST /api/subscriptions", "POST", created.status, created.status === 201 && Boolean(subId));
+
+    if (subId) {
+      const patched = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "PATCH", {
+        notes: "smoke patched",
+      });
+      push("M03 PATCH /api/subscriptions/<id>", "PATCH", patched.status, patched.status === 200);
+
+      const cancelled = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "PATCH", {
+        status: "cancelled",
+      });
+      push("M03 PATCH /api/subscriptions/<id> cancel", "PATCH", cancelled.status, cancelled.status === 200);
+
+      const reactivated = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "POST");
+      push("M03 POST /api/subscriptions/<id> reactivate", "POST", reactivated.status, reactivated.status === 200);
+
+      const deleted = await apiJson(cookieHeader, `/api/subscriptions/${subId}`, "DELETE");
+      push("M03 DELETE /api/subscriptions/<id>", "DELETE", deleted.status, deleted.status === 200);
+    }
+  }
+
+  // Prompts — create, patch, delete (not private-zone but same harness)
+  {
+    const created = await apiJson(cookieHeader, "/api/prompts", "POST", {
+      name: `${tag} prompt`,
+      body: "smoke prompt body",
+      scope: "global",
+      tags: ["smoke"],
+    });
+    const promptId = idFrom(created.json, "prompt");
+    push("PR02 POST /api/prompts", "POST", created.status, created.status === 201 && Boolean(promptId));
+
+    if (promptId) {
+      const patched = await apiJson(cookieHeader, `/api/prompts/${promptId}`, "PATCH", {
+        description: "smoke patched",
+      });
+      push("PR02 PATCH /api/prompts/<id>", "PATCH", patched.status, patched.status === 200);
+
+      const deleted = await apiJson(cookieHeader, `/api/prompts/${promptId}`, "DELETE");
+      push("PR02 DELETE /api/prompts/<id>", "DELETE", deleted.status, deleted.status === 200);
+    }
+  }
+
+  return out;
 }
 
 async function main(): Promise<void> {
@@ -545,7 +788,18 @@ async function main(): Promise<void> {
     );
   }
 
-  // Private zone PIN status (already probed above; omit duplicate)
+  // Private-zone CRUD round-trips (requires PIN unlock)
+  if (privateZoneLocked) {
+    probes.push({
+      route: "private-zone CRUD",
+      method: "POST",
+      status: 0,
+      ok: false,
+      note: "skipped — set SMOKE_PRIVATE_PIN",
+    });
+  } else {
+    probes.push(...await runPrivateZoneCrudProbes(cookieHeader));
+  }
 
   let passed = 0;
   let failed = 0;
