@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: Execution probes (97 smoke) + dogfood:loki:ci; X01–X04/X06/X08/X09 graded B.
+last_modified_summary: Settings/cron/agent-token smoke (112 probes); ST/SY/PR06 graded; frontier non-mutating.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -59,7 +59,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 97 probes session + PIN + CRUD + execution API | **97/97 OK** (2026-07-04) |
+| `npm run test:authenticated-smoke` (prod) | 112 probes session + PIN + CRUD + execution + settings | **112/112 OK** (2026-07-04) |
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
 | Codebase mapping | Every `page.tsx`, shell component, `api/*/route.ts` | complete |
@@ -90,7 +90,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
-**97/97 probes passed** with session + PIN unlock on production (CRUD + execution API paths).
+**112/112 probes passed** with session + PIN unlock on production.
 
 **Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
@@ -371,7 +371,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [x] **PR03** Search / scope / category filters — **A**
 - [ ] **PR04** Fork template — E2E
 - [~] **PR05** Run now — **B** Loki
-- [ ] **PR06** Schedule cron — E2E
+- [x] **PR06** Schedule cron — **A** smoke POST/PATCH (disabled after create)
 
 ---
 
@@ -387,29 +387,29 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 ## 10. `/system`
 
 - [x] **SY01** System stats poll — **A**
-- [~] **SY02** Fleet doctor — **B**
-- [ ] **SY03** Frontier proposals accept/dismiss — E2E
+- [x] **SY02** Fleet doctor — **A** smoke GET
+- [~] **SY03** Frontier proposals accept/dismiss — **B** smoke GET + 404 validation (no prod mutation)
 - [~] **SY04** Global auto-continue all — **B**
 - [x] **SY05** Cron jobs list — **A**
-- [ ] **SY06** Cron run-now / edit — E2E
+- [x] **SY06** Cron run-now / edit — **A** smoke POST/PATCH; run-now 503 on hosted (needs openclaw)
 - [x] **SY07** Memory / failures / audit cards read — **A**
 
 ---
 
 ## 11. `/settings`
 
-- [x] **ST01** Profile — name, username — **A** page load
-- [ ] **ST02** Account — OAuth connect/disconnect — E2E
-- [ ] **ST03** Account — set/change password — E2E
-- [x] **ST04** Notifications prefs — **A** page
+- [x] **ST01** Profile — name, username — **A** smoke PATCH
+- [~] **ST02** Account — OAuth connect/disconnect — **B** smoke lists accounts; connect needs OAuth UI
+- [~] **ST03** Account — set/change password — **B** smoke rejects wrong password; change needs real credential
+- [x] **ST04** Notifications prefs — **A** smoke PATCH
 - [x] **ST05** Appearance — **A**
-- [x] **ST06** Voice (Loki writing voice) — **A**
+- [x] **ST06** Voice (Loki writing voice) — **A** smoke PATCH
 - [x] **ST07** Privacy — PIN set/change/remove — **A**
 - [~] **ST08** Privacy — export/delete — **D** roadmap
 - [x] **ST09** Location — **A** page
 - [x] **ST10** Agent tokens list — **A** smoke
-- [ ] **ST11** Agent token mint/revoke — E2E
-- [~] **ST12** Fleet lifecycle / beacon — **B**
+- [x] **ST11** Agent token mint/revoke — **A** smoke POST/DELETE
+- [x] **ST12** Fleet lifecycle / beacon — **A** smoke PUT/PATCH
 - [x] **ST13** Projects registry — **A**
 - [x] **ST14** Team invite create — **A** page
 - [~] **ST15** Billing / Stripe — **B** (503 portal on prod)
@@ -430,7 +430,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 
 - [~] **OC01** Connect OrangeCat OIDC — **B**
 - [x] **OC02** Publish GET state — **A** smoke
-- [ ] **OC03** Publish POST — **B** E2E
+- [~] **OC03** Publish POST — **B** smoke 409 when OC not linked
 - [~] **OC04** Auto-promote dev-log — **B** cron
 - [x] **OC05** OC → FC `?new=1&name=` — **A**
 
@@ -468,7 +468,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~145 | Pages + GET APIs + private-zone CRUD on prod |
 | `[~]` Partial / needs runtime | ~95 | Builder, Loki gateway, OAuth, Stripe, calendar local CLI |
-| `[ ]` Not E2E verified | ~12 | X05/X07 UI-only, settings OAuth, frontier |
+| `[ ]` Not E2E verified | ~8 | X05/X07 UI-only, ST02 OAuth UI, CH04 webhook |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.

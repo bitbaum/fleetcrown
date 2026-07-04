@@ -30,7 +30,7 @@ config({ path: ".env.hetzner.local" });
 const BASE = (process.env.BASE ?? "http://localhost:3000").replace(/\/$/, "");
 const ERROR_BOUNDARY = "Something went wrong";
 
-type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
+type HttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 type ProbeResult = {
   route: string;
@@ -723,6 +723,144 @@ async function runExecutionProbes(cookieHeader: string): Promise<ProbeResult[]> 
   return out;
 }
 
+/** Settings, cron, agent tokens, frontier — API round-trips (no OAuth flows). */
+async function runSettingsSystemProbes(
+  cookieHeader: string,
+  privateZoneLocked: boolean,
+): Promise<ProbeResult[]> {
+  const out: ProbeResult[] = [];
+  const push = (label: string, method: HttpMethod, status: number, ok: boolean, note?: string) => {
+    out.push({ route: label, method, status, ok, note });
+  };
+
+  const tag = `smoke-${Date.now()}`;
+
+  const doctor = await apiJson(cookieHeader, "/api/system/doctor", "GET");
+  push("SY02 GET /api/system/doctor", "GET", doctor.status, doctor.status === 200);
+
+  const meGet = await apiJson(cookieHeader, "/api/me", "GET");
+  if (meGet.status === 200 && typeof meGet.json?.name === "string") {
+    const mePatch = await apiJson(cookieHeader, "/api/me", "PATCH", { name: meGet.json.name });
+    push("ST01 PATCH /api/me profile", "PATCH", mePatch.status, mePatch.status === 200);
+  }
+
+  const accounts = await apiJson(cookieHeader, "/api/me/connected-accounts", "GET");
+  push("ST02 GET /api/me/connected-accounts", "GET", accounts.status, accounts.status === 200);
+
+  const badPwd = await apiJson(cookieHeader, "/api/me/password", "PATCH", {
+    currentPassword: "definitely-wrong-smoke-password",
+    newPassword: "another-wrong-smoke-password",
+  });
+  push(
+    "ST03 PATCH /api/me/password (reject wrong)",
+    "PATCH",
+    badPwd.status,
+    [400, 401].includes(badPwd.status),
+  );
+
+  const notif = await apiJson(cookieHeader, "/api/notification-preferences", "PATCH", {
+    emailDigestCadence: "none",
+  });
+  push("ST04 PATCH /api/notification-preferences", "PATCH", notif.status, notif.status === 200);
+
+  const prefsGet = await apiJson(cookieHeader, "/api/me/preferences", "GET");
+  if (prefsGet.status === 200) {
+    const voice = prefsGet.json?.writingVoice ?? null;
+    const prefsPatch = await apiJson(cookieHeader, "/api/me/preferences", "PATCH", {
+      writingVoice: typeof voice === "string" ? voice : null,
+    });
+    push("ST06 PATCH /api/me/preferences voice", "PATCH", prefsPatch.status, prefsPatch.status === 200);
+  }
+
+  const fleetGet = await apiJson(cookieHeader, "/api/settings/fleet-lifecycle", "GET");
+  if (fleetGet.status === 200 && fleetGet.json?.settings) {
+    const fleetPut = await apiJson(cookieHeader, "/api/settings/fleet-lifecycle", "PUT", {
+      settings: fleetGet.json.settings,
+    });
+    push("ST12 PUT /api/settings/fleet-lifecycle", "PUT", fleetPut.status, fleetPut.status === 200);
+  }
+
+  const beaconGet = await apiJson(cookieHeader, "/api/beacon-settings", "GET");
+  if (beaconGet.status === 200) {
+    const countdown = typeof beaconGet.json?.countdown_seconds === "number"
+      ? beaconGet.json.countdown_seconds
+      : 8;
+    const beaconPatch = await apiJson(cookieHeader, "/api/beacon-settings", "PATCH", {
+      countdown_seconds: countdown,
+    });
+    push("ST12 PATCH /api/beacon-settings", "PATCH", beaconPatch.status, beaconPatch.status === 200);
+  }
+
+  const tokenCreate = await apiJson(cookieHeader, "/api/agent-tokens", "POST", {
+    label: `${tag} token`,
+  });
+  const tokenId = typeof tokenCreate.json?.id === "string" ? tokenCreate.json.id : null;
+  push("ST11 POST /api/agent-tokens", "POST", tokenCreate.status, tokenCreate.status === 200 && Boolean(tokenId));
+  if (tokenId) {
+    const tokenDel = await apiJson(cookieHeader, "/api/agent-tokens", "DELETE", { id: tokenId });
+    push("ST11 DELETE /api/agent-tokens", "DELETE", tokenDel.status, tokenDel.status === 200);
+  }
+
+  const cronCreate = await apiJson(cookieHeader, "/api/crons", "POST", {
+    name: `${tag} cron`,
+    scheduleExpr: "0 6 * * *",
+    message: "authenticated smoke — disabled immediately",
+  });
+  const cronJob = cronCreate.json?.job as { id?: string } | undefined;
+  const cronId = cronJob?.id ?? null;
+  push(
+    "PR06/SY06 POST /api/crons",
+    "POST",
+    cronCreate.status,
+    cronCreate.status === 200 && Boolean(cronId),
+  );
+
+  if (cronId) {
+    const cronPatch = await apiJson(cookieHeader, "/api/crons", "PATCH", {
+      id: cronId,
+      enabled: false,
+      message: "smoke disabled",
+    });
+    push("SY06 PATCH /api/crons", "PATCH", cronPatch.status, cronPatch.status === 200);
+
+    const cronRun = await apiJson(cookieHeader, "/api/crons/run", "POST", { id: cronId });
+    push(
+      "SY06 POST /api/crons/run",
+      "POST",
+      cronRun.status,
+      cronRun.status === 503 || cronRun.status === 200,
+      cronRun.status === 503 ? "needs local openclaw" : undefined,
+    );
+  }
+
+  if (privateZoneLocked) {
+    push("SY03 frontier proposals", "GET", 0, false, "skipped — PIN locked");
+  } else {
+    const frontier = await apiJson(cookieHeader, "/api/frontier/proposals", "GET");
+    push("SY03 GET /api/frontier/proposals", "GET", frontier.status, frontier.status === 200);
+
+    const proposals = Array.isArray(frontier.json?.proposals)
+      ? (frontier.json.proposals as { id: string }[])
+      : [];
+    void proposals;
+    const missing = await apiJson(
+      cookieHeader,
+      "/api/frontier/proposals/00000000-0000-0000-0000-000000000001",
+      "POST",
+      { action: "dismiss" },
+    );
+    push(
+      "SY03 POST /api/frontier/proposals (validation)",
+      "POST",
+      missing.status,
+      missing.status === 404,
+      proposals.length > 0 ? `${proposals.length} open (not mutated)` : "none open",
+    );
+  }
+
+  return out;
+}
+
 async function main(): Promise<void> {
   // Reachability
   try {
@@ -914,6 +1052,7 @@ async function main(): Promise<void> {
   }
 
   probes.push(...await runExecutionProbes(cookieHeader));
+  probes.push(...await runSettingsSystemProbes(cookieHeader, privateZoneLocked));
 
   let passed = 0;
   let failed = 0;
