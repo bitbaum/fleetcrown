@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: Pre-push prod dogfood now includes authenticated smoke; G07 full dispatch dogfood; ST02/CH04/M04 manual runbooks.
+last_modified_summary: X05 partial via loki dogfood This computer shell; lint fix in agent install route.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -456,7 +456,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [~] **X02** Loki dispatch → Control — **B** dogfood links + dispatch API 200
 - [~] **X03** Control inject — **B** API queues (`mode: queued|direct`); agent run needs builder
 - [~] **X04** Terminal Cloud peek-stream — **B** API 200; dogfood loads `/terminal?source=server`
-- [ ] **X05** Terminal This computer via Fleet Runner — **B** desktop only
+- [~] **X05** Terminal This computer via Fleet Runner — **B** dogfood loads shell + empty/honest state when desktop offline; live PTY needs Fleet Runner
 - [~] **X06** Orchestration “Next best” / continue — **B** API 503 on cloud for some adapters; box-runner when online
 - [~] **X07** Prompt Run now → Loki — **B** `dogfood:ui-flows:ci` modal result 2026-07-04
 - [~] **X08** GitHub create-with-github — **B** validation probe; full flow needs GitHub OAuth
@@ -500,7 +500,7 @@ or report notes in `.tmp/` only.
 |--------|-------|-------|
 | `[x]` Smoke-verified | ~149 | + PE11, H05, PR04 UI dogfood |
 | `[~]` Partial / needs runtime | ~93 | G07 UI dispatch when builder online; X07 modal Loki |
-| `[ ]` Not E2E verified | ~5 | X05 desktop, ST02 OAuth UI, CH04 webhook, M04 manual, ME02 env |
+| `[ ]` Not E2E verified | ~4 | ST02 OAuth UI, CH04 webhook, M04 manual, ME02 env |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.

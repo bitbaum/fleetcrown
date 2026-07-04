@@ -191,6 +191,30 @@ try {
   report.steps.push({ step: "terminal-cloud", audit: terminalAudit });
   await page.screenshot({ path: path.join(outDir, "02-terminal-cloud.png"), fullPage: false });
 
+  await page.getByRole("button", { name: "This computer", exact: true }).click();
+  await page.waitForTimeout(2000);
+
+  const machineAudit = await page.evaluate(() => {
+    const toggles = [...document.querySelectorAll(".ui-chip-toggle, .ui-chip-toggle-active")];
+    const machineActive = toggles.some(
+      (el) => el.textContent?.includes("This computer") && el.classList.contains("ui-chip-toggle-active"),
+    );
+    const visiblePane = [...document.querySelectorAll(".absolute.inset-0")].find(
+      (el) => !el.classList.contains("hidden"),
+    );
+    const emptyText = visiblePane?.querySelector(".ui-empty-page")?.textContent?.trim() ?? "";
+    const hasPane = Boolean(visiblePane?.querySelector(".ui-term-pane-active, .xterm"));
+    return {
+      url: location.href,
+      machineActive,
+      emptyText: emptyText.slice(0, 200),
+      hasPane,
+      hasErrorBoundary: document.body.textContent?.includes("Something went wrong") ?? false,
+    };
+  });
+  report.steps.push({ step: "terminal-machine", audit: machineAudit });
+  await page.screenshot({ path: path.join(outDir, "03-terminal-machine.png"), fullPage: false });
+
   const controlProbe = await page.evaluate(async () => {
     const res = await fetch("/api/control");
     if (!res.ok) return { ok: false, status: res.status };
@@ -204,11 +228,20 @@ try {
   });
   report.steps.push({ step: "control-api", audit: controlProbe });
 
+  const machineShellOk =
+    machineAudit.machineActive &&
+    !machineAudit.hasErrorBoundary &&
+    (machineAudit.hasPane ||
+      machineAudit.emptyText.includes("No agents on this computer") ||
+      machineAudit.emptyText.includes("Fleet Runner"));
+
   report.ok =
     afterDispatch.kind === "Dispatched" &&
     afterDispatch.dispatchLinks.some((l) => l.href.includes("source=server")) &&
+    afterDispatch.dispatchLinks.some((l) => l.href.includes("source=machine")) &&
     !afterDispatch.dispatchStatus?.includes("runs when the builder is online") &&
-    terminalAudit.url.includes("source=server");
+    terminalAudit.url.includes("source=server") &&
+    machineShellOk;
 
   console.log(JSON.stringify(report, null, 2));
   console.log(`screenshots → ${outDir}`);

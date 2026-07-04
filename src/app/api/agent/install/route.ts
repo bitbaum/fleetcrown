@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
+import { APP_DOMAIN, APP_NAME, APP_SLUG } from "@/config/brand";
 
 /**
  * Serves the @fleetcrown/agent CLI script body so a new customer can install
@@ -11,7 +11,7 @@ import { APP_NAME, APP_SLUG, APP_URL } from "@/config/brand";
  * published to npm — this endpoint is the working install path until it is.
  *
  * Public (no auth) — matches the matcher exception in src/proxy.ts.
- * Designed to be piped: curl -fsSL ${APP_URL}/api/agent/install | node - init --token ck_…
+ * Designed to be piped: curl -fsSL https://${APP_DOMAIN}/api/agent/install | node - init --token ck_…
  */
 export async function GET() {
   try {
