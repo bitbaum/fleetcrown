@@ -1,5 +1,5 @@
 /**
- * Headless UI dogfood — PE11, H05, G07, PR04, X07 (prompt Run → Loki).
+ * Headless UI dogfood — PE11, H05, G07, M04, ST02, PR04, X07.
  *
  * Usage:
  *   node scripts/ui-flow-dogfood.mjs
@@ -152,6 +152,66 @@ async function runG07(page) {
   };
 }
 
+async function runM04(page) {
+  await page.goto(`${base}/money`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForTimeout(800);
+
+  const verifyLink = page.locator('a[title^="Verify at"]').first();
+  const cancelLink = page.getByRole("link", { name: /Cancel at /i }).first();
+  const hasVerify = (await verifyLink.count()) > 0;
+  const hasCancel = (await cancelLink.count()) > 0;
+  if (!hasVerify && !hasCancel) {
+    return { ok: false, note: "no subscription rows with verify/cancel links" };
+  }
+
+  let verifyHref = null;
+  let cancelHref = null;
+  if (hasVerify) verifyHref = await verifyLink.getAttribute("href");
+  if (hasCancel) cancelHref = await cancelLink.getAttribute("href");
+
+  const verifyOk = !verifyHref || verifyHref.startsWith("https://");
+  const cancelOk = !cancelHref || cancelHref.startsWith("https://");
+  return {
+    ok: verifyOk && cancelOk && (hasVerify || hasCancel),
+    hasVerify,
+    hasCancel,
+    verifyHref,
+    cancelHref,
+  };
+}
+
+async function runSt02(page) {
+  await page.goto(`${base}/settings#account`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForTimeout(1200);
+
+  const accountTab = page.getByRole("button", { name: "Account", exact: true });
+  if (await accountTab.count()) {
+    await accountTab.click();
+    await page.waitForTimeout(600);
+  }
+
+  const hasSection = (await page.getByText("Connected accounts").count()) > 0;
+  const hasConnected = (await page.getByText("Connected", { exact: true }).count()) > 0;
+  const connectBtn = page.getByRole("button", { name: /^Connect$/i });
+  const hasConnect = (await connectBtn.count()) > 0;
+  const accountsRes = await page.request.get(`${base}/api/me/connected-accounts`, {
+    headers: { Cookie: `__Secure-authjs.session-token=${sessionToken}` },
+  });
+  const accountsOk = accountsRes.ok();
+  const accountCount = accountsOk
+    ? (await accountsRes.json().catch(() => ({})))?.accounts?.length ?? 0
+    : 0;
+
+  return {
+    ok: hasSection && accountsOk && (hasConnected || hasConnect || accountCount > 0),
+    hasSection,
+    hasConnected,
+    hasConnect,
+    accountCount,
+    accountsStatus: accountsRes.status(),
+  };
+}
+
 async function runPr04(page) {
   await page.goto(`${base}/prompts`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForTimeout(800);
@@ -235,6 +295,13 @@ try {
   if (smokePin) await unlockPin(page);
   report.flows.G07 = await runG07(page);
   await page.screenshot({ path: path.join(outDir, "g07-control.png") });
+
+  if (smokePin) await unlockPin(page);
+  report.flows.M04 = await runM04(page);
+  await page.screenshot({ path: path.join(outDir, "m04-money-links.png") });
+
+  report.flows.ST02 = await runSt02(page);
+  await page.screenshot({ path: path.join(outDir, "st02-settings-accounts.png") });
 
   report.flows.PR04 = await runPr04(page);
 

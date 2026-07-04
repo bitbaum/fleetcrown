@@ -3,7 +3,7 @@
 ---
 created_date: 2026-07-04
 last_modified_date: 2026-07-04
-last_modified_summary: ME02 rag-stats API + smoke probe; machine dogfood for X05 when Fleet Runner local online.
+last_modified_summary: ME02 graded [x] with 23 chunks; M04/ST02/CH04 partial smoke and UI dogfood probes.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -31,7 +31,7 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | # | Initiative | Status |
 |---|------------|--------|
 | 1 | Flow-status matrix in this doc | [x] Done 2026-07-04 |
-| 2 | Authenticated smoke + PIN on prod (`npm run test:authenticated-smoke`) | [x] 57/57 2026-07-04 |
+| 2 | Authenticated smoke + PIN on prod (`npm run test:authenticated-smoke`) | [x] 115/115 2026-07-04 |
 | 3 | UI honesty labels on Control/Loki/Terminal (queued / needs builder / needs GitHub) | [x] `executor-copy.ts` + `ExecutorHonestyChip` on Control intents, Loki composer, Terminal toggle |
 | 4 | Fix top “feels broken” gaps (setup→sign-in, verify-email enforcement, `/control/workspace`) | [x] Setup auto sign-in; verify-email optional banner + email copy; workspace gated on hosted |
 
@@ -59,9 +59,9 @@ SSOT for **every user-facing flow implied by the UI**, with a working-status gra
 | Method | Scope | Result |
 |--------|-------|--------|
 | Production `scripts/smoke.sh` (unauthenticated) | 44 routes | **44/44 OK** |
-| `npm run test:authenticated-smoke` (prod) | 113 probes session + PIN + CRUD + execution + settings + RAG | **113/113 OK** (2026-07-04) |
+| `npm run test:authenticated-smoke` (prod) | 115 probes session + PIN + CRUD + RAG + billing SSOT | **115/115 OK** (2026-07-04) |
 | `npm run dogfood:loki:ci` (prod, builder online) | Loki dispatch → Terminal Cloud UI | **ok** 2026-07-04 |
-| `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/PR04/X07 UI flows | **ok** 2026-07-04 |
+| `npm run dogfood:ui-flows:ci` (prod, PIN) | PE11/H05/G07/M04/ST02/PR04/X07 UI flows | **ok** 2026-07-04 |
 | `npm run dogfood:machine:ci` (prod) | X05 full path when local Fleet Runner online | skips when desktop offline |
 | `SMOKE_PRIVATE_PIN` + `git push` | Pre-push `test:pre-push-prod-dogfood` | authenticated smoke + ui-flows + machine; loki when builder online (**ok** 2026-07-04) |
 | Unit/inline tests | auth, onboarding, execution-access, workspace-access, dispatch-gates, fleet-kick, loop-ssot, executor | all passed |
@@ -93,7 +93,7 @@ Report written to `.tmp/authenticated-smoke-report.json`.
 | `/api/calendar`, `/api/weather`, `/api/github` | **200** on prod | Today tool cards **A** for read |
 | Dynamic `/api/projects/<id>`, `/api/people/<id>`, OC publish GET | 200 | Drawer/dossier load **A** |
 
-**113/113 probes passed** with session + PIN unlock on production.
+**115/115 probes passed** with session + PIN unlock on production.
 
 **Dogfood:** `SMOKE_PRIVATE_PIN=… BASE=https://fleetcrown.orangecat.ch npm run dogfood:loki:ci` — UI round-trip Loki → dispatch bubble → Terminal Cloud (requires builder online for `ok: true`).
 
@@ -360,12 +360,12 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [x] **M01** Page load — **A** + PIN
 - [x] **M02** Create subscription — **A** smoke POST
 - [x] **M03** Mark paid / inline edit / cancel / reactivate / delete — **A** smoke PATCH/POST/DELETE
-- [ ] **M04** External verify/cancel URLs — manual runbook below
+- [~] **M04** External verify/cancel URLs — **B** SSOT smoke + UI links on `/money` (`dogfood:ui-flows:ci`)
 
 ## 7f. Private zone — `/memory`
 
 - [x] **ME01** Page load + stats — **A** + PIN
-- [~] **ME02** RAG index stats (embeddings server) — **B** smoke GET `/api/memory/rag-stats` (enabled flag + chunk count when `EMBEDDINGS_BASE_URL` set)
+- [x] **ME02** RAG index stats (embeddings server) — **A** smoke GET `/api/memory/rag-stats` (`chunks=23` on prod 2026-07-04)
 
 ---
 
@@ -404,7 +404,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 ## 11. `/settings`
 
 - [x] **ST01** Profile — name, username — **A** smoke PATCH
-- [~] **ST02** Account — OAuth connect/disconnect — **B** smoke lists accounts; connect needs OAuth UI; manual runbook below
+- [~] **ST02** Account — OAuth connect/disconnect — **B** smoke lists accounts + settings Connect shell (`dogfood:ui-flows:ci`); full OAuth needs browser
 - [~] **ST03** Account — set/change password — **B** smoke rejects wrong password; change needs real credential
 - [x] **ST04** Notifications prefs — **A** smoke PATCH
 - [x] **ST05** Appearance — **A**
@@ -426,7 +426,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [~] **CH01** `GET /api/checkout/:plan` — **B**
 - [~] **CH02** `POST /api/stripe/checkout` — **B**
 - [~] **CH03** Billing portal — **B** smoke 503
-- [ ] **CH04** Webhook subscription sync — E2E; manual runbook below
+- [~] **CH04** Webhook subscription sync — **B** smoke rejects invalid webhook signature (503 when Stripe off on prod)
 - [x] **CH05** Plan limits on project count — **A** enforcement
 
 ---
@@ -499,9 +499,9 @@ or report notes in `.tmp/` only.
 
 | Bucket | Count | Notes |
 |--------|-------|-------|
-| `[x]` Smoke-verified | ~149 | + PE11, H05, PR04 UI dogfood |
-| `[~]` Partial / needs runtime | ~94 | G07/X05/X07 when builder online; ME02 RAG env |
-| `[ ]` Not E2E verified | ~3 | ST02 OAuth UI, CH04 webhook, M04 manual |
+| `[x]` Smoke-verified | ~151 | + ME02 RAG chunks on prod |
+| `[~]` Partial / needs runtime | ~95 | M04/ST02/CH04 partial; X05/X07 when builder |
+| `[ ]` Not E2E verified | ~0 | Manual runbooks remain for full OAuth / Stripe live / external click-through |
 | **Total checklist items** | **~250** | Sections 0–15 |
 
 **Full implied outcome on hosted prod** (grade **A** end-to-end): still **~40%** — smoke proves shells and read APIs; execution and many mutations are unchecked.

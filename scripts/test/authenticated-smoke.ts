@@ -23,6 +23,7 @@ import { resolve } from "node:path";
 import { config } from "dotenv";
 
 import { smokeSessionToken } from "@/lib/brand-env";
+import { SUBSCRIPTION_META } from "@/config/subscriptions";
 
 config({ path: ".env.local" });
 config({ path: ".env.hetzner.local" });
@@ -884,12 +885,13 @@ async function runSettingsSystemProbes(
 
     const rag = await apiJson(cookieHeader, "/api/memory/rag-stats", "GET");
     const ragEnabled = rag.json?.enabled === true;
+    const ragChunks = typeof rag.json?.totalChunks === "number" ? rag.json.totalChunks : 0;
     push(
       "ME02 GET /api/memory/rag-stats",
       "GET",
       rag.status,
-      rag.status === 200 && typeof rag.json?.enabled === "boolean",
-      ragEnabled ? `chunks=${rag.json?.totalChunks ?? 0}` : "RAG disabled (no EMBEDDINGS_BASE_URL)",
+      rag.status === 200 && typeof rag.json?.enabled === "boolean" && (!ragEnabled || ragChunks > 0),
+      ragEnabled ? `chunks=${ragChunks}` : "RAG disabled (no EMBEDDINGS_BASE_URL)",
     );
   }
 
@@ -1025,6 +1027,44 @@ async function main(): Promise<void> {
 
   // Stripe portal — configured or 503
   probes.push(await probe(cookieHeader, "/api/stripe/portal", { expectStatus: [200, 303, 307, 503] }));
+
+  const webhookRes = await fetch(`${BASE}/api/stripe/webhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+    signal: AbortSignal.timeout(15_000),
+  });
+  probes.push({
+    route: "CH04 POST /api/stripe/webhook (invalid sig)",
+    method: "POST",
+    status: webhookRes.status,
+    ok: [400, 503].includes(webhookRes.status),
+    note: webhookRes.status === 503 ? "Stripe not configured" : "signature rejected",
+  });
+
+  const metaIssues: string[] = [];
+  for (const [name, meta] of Object.entries(SUBSCRIPTION_META)) {
+    try {
+      if (!meta.verifyUrl.startsWith("https://") || !meta.cancelUrl.startsWith("https://")) {
+        metaIssues.push(name);
+        continue;
+      }
+      new URL(meta.verifyUrl);
+      new URL(meta.cancelUrl);
+    } catch {
+      metaIssues.push(name);
+    }
+  }
+  probes.push({
+    route: "M04 SUBSCRIPTION_META verify/cancel URLs",
+    method: "GET",
+    status: metaIssues.length === 0 ? 200 : 0,
+    ok: metaIssues.length === 0,
+    note:
+      metaIssues.length === 0
+        ? `${Object.keys(SUBSCRIPTION_META).length} providers`
+        : metaIssues.join(", "),
+  });
 
   // Dynamic detail routes from list payloads
   const headers = { Cookie: cookieHeader };
