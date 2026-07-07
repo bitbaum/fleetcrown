@@ -1,7 +1,7 @@
 // Verifies the cross-agent inbox parser (src/lib/agent-comms.ts) against the
 // real PROTOCOL.md message shapes seen in ~/.claude/cross-project/inbox-*.md.
 // Run: npx tsx scripts/test/agent-comms.ts
-import { parseInbox, dedupeAndSort } from "@/lib/agent-comms";
+import { parseInbox, dedupeAndSort, extractSchema } from "@/lib/agent-comms";
 
 let pass = 0;
 let fail = 0;
@@ -79,6 +79,26 @@ new
 const sorted = dedupeAndSort(parseInbox(ORDER));
 eq(sorted[0].body, "new", "newest first");
 eq(sorted[1].body, "old", "oldest last");
+
+// Schema extraction: type/status lifted from a JSON payload in the body,
+// tolerant of pretty-printing and surrounding prose; absent → undefined.
+const RESULT = `## 2026-07-06 13:58 — from @kivvi to @fleetcrown
+**Re**: round-trip proof
+
+Round-trip PROOF:
+{ "id":"t0-handshake", "from":"kivvi", "to":"fleetcrown", "type":"result",
+  "status":"done" }
+Evidence: green.
+`;
+const r = parseInbox(RESULT)[0];
+eq(r.type, "result", "type lifted from body JSON");
+eq(r.status, "done", "status lifted from body JSON");
+
+eq(extractSchema('prose only, no payload').type, undefined, "no payload → type undefined");
+eq(extractSchema('"type":"escalation"').type, "escalation", "escalation type parsed");
+eq(extractSchema('"type":"bogus"').type, undefined, "unknown type ignored (constrained set)");
+eq(extractSchema('"status":"in_progress"').status, "in_progress", "multi-word status parsed");
+eq(r.body.includes('"type":"result"'), true, "body remains SSOT (payload not stripped)");
 
 console.log(`${pass}/${pass + fail} agent-comms cases passed`);
 if (fail > 0) process.exit(1);

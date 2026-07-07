@@ -6,10 +6,19 @@ import { Eye, MessagesSquare, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { cn } from "@/lib/utils";
-import type { AgentMessage } from "@/lib/agent-comms";
+import type { AgentMessage, MessageType } from "@/lib/agent-comms";
 
 type CommsResp = { messages: AgentMessage[]; unavailable?: { code: string; message: string } };
 type TabsResp = { tabs: string[]; unavailable?: { message: string } };
+
+// Protocol message type → tag colour. Escalation is negative so the captain
+// can't miss it; result positive; question needs-attention; task is a dispatch.
+const TYPE_TAG: Record<MessageType, string> = {
+  escalation: "ui-tag-negative",
+  result: "ui-tag-positive",
+  question: "ui-tag-warning",
+  task: "ui-tag-accent",
+};
 
 /** Collapse a tab name to its bus identity: "revamp-it" / "Fleetcrown" → "revampit" / "fleetcrown". */
 function busName(tab: string): string {
@@ -119,8 +128,11 @@ export function AgentsCockpit() {
             {messages.map((m) => (
               <li key={m.id} className="ui-card-shell px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-medium text-text-secondary">
-                    {m.from} <span className="text-text-muted">→</span> {m.to}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    {m.type && <span className={cn("ui-tag", TYPE_TAG[m.type])}>{m.type}</span>}
+                    <span className="truncate text-xs font-medium text-text-secondary">
+                      {m.from} <span className="text-text-muted">→</span> {m.to}
+                    </span>
                   </span>
                   <span className="shrink-0 text-nano tabular-nums text-text-muted" title={m.ts}>
                     {m.ts.slice(5)}

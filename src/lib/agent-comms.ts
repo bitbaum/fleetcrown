@@ -11,6 +11,13 @@
  * reusable by any caller — see scripts/test/agent-comms.ts.
  */
 
+/** The protocol message kinds agents emit (see PROTOCOL.md schema). */
+export const MESSAGE_TYPES = ["task", "result", "question", "escalation"] as const;
+export type MessageType = (typeof MESSAGE_TYPES)[number];
+
+export const MESSAGE_STATUSES = ["open", "claimed", "in_progress", "done", "blocked"] as const;
+export type MessageStatus = (typeof MESSAGE_STATUSES)[number];
+
 export type AgentMessage = {
   id: string;
   ts: string;
@@ -19,7 +26,24 @@ export type AgentMessage = {
   re: string;
   body: string;
   read: boolean;
+  /** Parsed from a schema payload in the body when present; undefined otherwise. */
+  type?: MessageType;
+  status?: MessageStatus;
 };
+
+// Agents echo the agreed schema as a JSON payload inside the body, e.g.
+// `{ "id":"t0", "type":"result", "status":"done", ... }`. We lift only the two
+// constrained fields with a targeted regex rather than parsing the whole object,
+// which is robust to pretty-printing and surrounding prose. The body stays SSOT.
+const TYPE_RE = new RegExp(`"type"\\s*:\\s*"(${MESSAGE_TYPES.join("|")})"`);
+const STATUS_RE = new RegExp(`"status"\\s*:\\s*"(${MESSAGE_STATUSES.join("|")})"`);
+
+/** Best-effort extraction of the protocol `type`/`status` from a message body. */
+export function extractSchema(body: string): { type?: MessageType; status?: MessageStatus } {
+  const type = body.match(TYPE_RE)?.[1] as MessageType | undefined;
+  const status = body.match(STATUS_RE)?.[1] as MessageStatus | undefined;
+  return { type, status };
+}
 
 // Header: "## 2026-07-06 13:16 — from @kivvi to @fleetcrown" (time optional).
 const HEADER_RE = /^##\s+(.+?)\s+—\s+from\s+@(\S+)\s+to\s+@(\S+)\s*$/;
@@ -61,6 +85,7 @@ export function parseInbox(text: string): AgentMessage[] {
       re,
       body,
       read,
+      ...extractSchema(body),
     });
     cur = null;
     re = "";
