@@ -47,4 +47,10 @@ done < <(grep -v '^#' "$MANIFEST")
 sb=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 https://supabase.orangecat.ch/auth/v1/settings -H "apikey: invalid" 2>/dev/null)
 printf "%-4s %-22s public=%s (401/200 expected)\n" "$([ "$sb" = 401 ] || [ "$sb" = 200 ] && echo OK || { echo FAIL; fail=1; })" "supabase-stack" "$sb"
 
+# SSE-block guard: the bridge (4001) MUST NOT have `encode` — compression
+# buffers the event stream so the disconnect never fires and presence goes
+# stale. See scripts/hetzner/box-units/Caddyfile.snippet + connection-presence.
+enc=$(box "awk '/bridge\\.orangecat\\.ch/,/^}/' /etc/caddy/Caddyfile 2>/dev/null | grep -c '^[[:space:]]*encode'" 2>/dev/null | tr -d '[:space:]')
+printf "%-4s %-22s %s\n" "$([ "${enc:-1}" = 0 ] && echo 'OK ' || { echo FAIL; fail=1; })" "bridge-sse-no-encode" "encode lines in bridge block: ${enc:-?}"
+
 exit $fail

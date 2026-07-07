@@ -1,0 +1,30 @@
+# FleetCrown-owned Caddy blocks on the bitbaum box (/etc/caddy/Caddyfile).
+# Captured here for recoverability + audit — the box Caddyfile is handcrafted
+# and NOT auto-synced by sync-infra.sh (which owns the other apps' vhosts).
+# If you change the live Caddyfile, update this snippet too.
+#
+# SSE RULE (load-bearing): a block that proxies an SSE endpoint must NOT have
+# `encode` — compression buffers the stream, so the client disconnect never
+# reaches the origin and presence goes stale. It must have `flush_interval -1`
+# so each event frame is flushed immediately. verify.sh asserts the bridge
+# block stays encode-free.
+
+# Bridge (4001) — SSE only (presence, rawkey, peek). encode deliberately absent.
+bridge.orangecat.ch {
+	# (encode removed for SSE: compression buffers the stream)
+	reverse_proxy 127.0.0.1:4001 {
+		# SSE needs each frame flushed immediately.
+		flush_interval -1
+	}
+}
+
+# FleetCrown app (4002) — mostly regular pages (compressible), so `encode` is
+# a deliberate keep; the /control peek SSE tolerates it because flush_interval
+# -1 forces per-frame flushing. The load-bearing presence SSE runs on the
+# bridge (4001) above, which is correctly encode-free.
+fleetcrown.orangecat.ch {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4002 {
+		flush_interval -1
+	}
+}
