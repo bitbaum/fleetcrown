@@ -151,6 +151,20 @@ export async function getRecentActivity(userId: string, hours = 24, limit = 30):
   return rows.map(toActivityItem);
 }
 
+// The single most-recent dispatch for a project — powers the Duet watch view,
+// where each pane shows one agent's last prompt, live. Matched case-insensitively
+// on projectKey because the dispatch tab and the registered project name can
+// differ in case (see recordSessionHandoffChangelog's ilike match).
+export async function getLastPromptByProjectKey(userId: string, projectKey: string): Promise<ActivityItem | null> {
+  const [row] = await db
+    .select(DISPATCH_COLS)
+    .from(promptHistory)
+    .where(and(eq(promptHistory.userId, userId), sql`lower(${promptHistory.projectKey}) = lower(${projectKey})`))
+    .orderBy(desc(promptHistory.dispatchedAt))
+    .limit(1);
+  return row ? toActivityItem(row) : null;
+}
+
 export async function getProjectPromptActivity(userId: string, projectId: string, limit = 50): Promise<ActivityItem[]> {
   const rows = await db
     .select(DISPATCH_COLS)

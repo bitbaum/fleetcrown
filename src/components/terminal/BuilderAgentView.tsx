@@ -5,6 +5,7 @@ import { Loader2, MonitorSmartphone } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { EXECUTOR_COPY } from "@/config/executor-copy";
 import { TerminalView } from "./TerminalView";
+import { TabVoiceMic } from "./TabVoiceMic";
 import { runnerTransport } from "./terminal-transport";
 import { cn } from "@/lib/utils";
 
@@ -72,7 +73,16 @@ export function BuilderAgentView({
   }
 
   return (
-    <div className={cn("flex h-full min-h-0 flex-col gap-2 md:flex-row md:gap-3", immersive && "gap-2")}>
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      {/* Voice control-input: speak → transcribe → dispatch into the selected
+          tab. Always visible above the split so it's equally reachable on phone
+          (the primary use case) and desktop. */}
+      {active && (
+        <div className="flex shrink-0 items-center">
+          <TabVoiceMic tab={active} channel={builderChannel} compact={immersive} />
+        </div>
+      )}
+      <div className={cn("flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-3", immersive && "gap-2")}>
       {tabs.length > 1 && (
         <select
           className="ui-input-compact shrink-0 md:hidden"
@@ -108,6 +118,7 @@ export function BuilderAgentView({
             compactChrome={immersive}
           />
         )}
+      </div>
       </div>
     </div>
   );
