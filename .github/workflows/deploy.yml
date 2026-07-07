@@ -1,0 +1,84 @@
+# CI-gated production deploy (DevOps remediation #2).
+#
+# Today the Hetzner deploy fires from the LOCAL pre-push hook, so a red CI still
+# ships and `--no-verify` skips every gate. This workflow makes CI the gate:
+# it runs ONLY after the CI workflow finishes successfully on main, then builds
+# and ships. A failing CI → no deploy.
+#
+# ┌─ BEFORE YOU ENABLE THIS (it is inert until on `main` + secrets exist) ─────┐
+# │ 1. Add repo secret HETZNER_SSH_KEY = a private key whose public half is in │
+# │    the box's root authorized_keys (a deploy-only key, ideally).            │
+# │ 2. (optional) repo variable HETZNER_IP (defaults to 167.233.22.31).       │
+# │ 3. DISABLE the local hook or you'll deploy twice: comment out the          │
+# │    `>>> fleetcrown push-deploy >>>` block in .husky/pre-push.              │
+# │ 4. Merge this file to main. First run: watch the "Build" step — it builds  │
+# │    against a schema-only Postgres (no seed); if a page pre-renders off real │
+# │    data and fails, add a minimal seed step here.                            │
+# └────────────────────────────────────────────────────────────────────────────┘
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]        # the job in ci.yml
+    types: [completed]
+
+# One deploy at a time; never cancel a ship mid-flight.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Only on a GREEN CI run that was on main.
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    # Build does DB queries during static pre-render, so give it a schema-only
+    # Postgres (drizzle-kit push below). No real data — see the seed caveat above.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: fleetcrown
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/fleetcrown
+      HETZNER_IP: ${{ vars.HETZNER_IP || '167.233.22.31' }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}  # deploy the exact CI-green commit
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Push schema to CI Postgres (build needs it)
+        run: npx drizzle-kit push
+
+      - name: Build (app + bridge)
+        run: |
+          npm run build
+          npm --prefix bridge run build
+
+      - name: SSH setup
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$HETZNER_IP" >> ~/.ssh/known_hosts 2>/dev/null
+          printf 'Host %s\n  IdentityFile ~/.ssh/id_deploy\n  IdentitiesOnly yes\n' "$HETZNER_IP" >> ~/.ssh/config
+
+      - name: Ship to box (reuses deploy-hetzner.sh — flock, rollback, verify)
+        run: bash scripts/deploy-hetzner.sh --no-build

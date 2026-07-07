@@ -45,6 +45,14 @@ StartLimitIntervalSec=0
 Type=simple
 User=ubuntu
 WorkingDirectory=/opt/fleetcrown/runner
+# Blast-radius containment: hide co-tenant app secrets, backups, and the box SSH
+# keys from the runner AND every agent PTY it spawns (kernel-enforced). The
+# runner only needs its own dir + fresh clones under /home/ubuntu/dev + the
+# claude CLI in /home/ubuntu/.local — never another /opt/<app>. Keep in sync with
+# scripts/hetzner/harden-box-runner.sh (which applies this to an existing box).
+NoNewPrivileges=true
+PrivateTmp=true
+InaccessiblePaths=-/home/ubuntu/.ssh -/opt/orangecat -/opt/kivvi -/opt/botsmann -/opt/datacat-api -/opt/datacat-web -/opt/petvity -/opt/printcraft -/opt/reparaturbonus-zh -/opt/revamp-info -/opt/revampit -/opt/sbb-lost-found -/opt/solon -/opt/surf-your-life -/opt/vitareba -/opt/aoz-wohnen -/opt/supabase -/opt/backups -/opt/monitoring -/opt/_appcron
 EnvironmentFile=/opt/fleetcrown/runner/.env
 Environment=HOME=/home/ubuntu
 Environment=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin
