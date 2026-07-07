@@ -11,6 +11,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { logDebug } from "@/db/queries/debug-logs";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+// Unauthenticated by design (a crashing client may have no valid session), so
+// cap per IP to stop a flood from growing debug_logs unbounded. Generous enough
+// that a real crash-storm during an incident still gets recorded.
+const RATE_LIMIT = 60;
+const RATE_WINDOW_MS = 60_000;
 
 const Body = z.object({
   digest: z.string().max(200).optional(),
@@ -20,6 +27,9 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!checkRateLimit(`debug-log:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS)) {
+    return NextResponse.json({ ok: false, error: "rate limited" }, { status: 429 });
+  }
   const raw = await req.json().catch(() => ({}));
   const parsed = Body.safeParse(raw);
   if (!parsed.success) {

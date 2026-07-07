@@ -10,8 +10,17 @@ import { isRuntimeAvailable } from "@/lib/runtime";
 import { callGroqTranscribe } from "@/lib/groq";
 import { getApiUserId } from "@/lib/session";
 import { getBeaconSettings } from "@/db/queries/beacon-settings";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const execFileAsync = promisify(execFile);
+
+// This route is excluded from the auth matcher (the beacon mic can be public),
+// and every call bills the Groq Whisper API or spawns ffmpeg + python3 Whisper.
+// Without these guards it is an open cost-drain / CPU-exhaustion vector. Cap the
+// upload and rate-limit per IP.
+const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // ~10 min of Opus; far above any real clip
+const RATE_LIMIT = 20;                     // transcriptions
+const RATE_WINDOW_MS = 60_000;             // per minute per IP
 
 // Resolve scripts/transcribe.py for both deployment modes:
 //   • `npm run dev`           → cwd = repo root            → scripts/transcribe.py
@@ -172,9 +181,16 @@ async function attemptLocalWhisper(audio: File, model: string): Promise<AttemptR
 //
 // Returns either { text } or an HTTP error matching the failing branch's status.
 export async function POST(req: NextRequest) {
+  if (!checkRateLimit(`transcribe:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS)) {
+    return NextResponse.json({ error: "Too many transcription requests — slow down." }, { status: 429 });
+  }
+
   const form = await req.formData();
   const audio = form.get("audio") as File | null;
   if (!audio) return NextResponse.json({ error: "No audio" }, { status: 400 });
+  if (audio.size > MAX_AUDIO_BYTES) {
+    return NextResponse.json({ error: "Audio too large (max 10 MB)." }, { status: 413 });
+  }
 
   const { whisperModel: model, provider } = await readTranscriptionSettings();
 

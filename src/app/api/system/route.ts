@@ -2,12 +2,23 @@ import { NextResponse } from "next/server";
 import { runTool } from "@/lib/tools";
 import { OPENCLAW_GATEWAY_URL } from "@/lib/constants";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { getSessionUserId } from "@/lib/session";
+
+// The empty payload returned to unauthenticated callers and when no runtime is
+// present — same shape the /system page already handles, so a monitor polling
+// this GET keeps working but learns nothing about host capacity/load.
+const EMPTY = { mem: null, swap: null, disk: null, uptime: null, gatewayStatus: "down", runtime: false };
 
 export async function GET() {
+  // GET is excluded from the auth matcher for runner/monitoring reachability,
+  // but host mem/disk/uptime is real telemetry — only expose it to a signed-in
+  // user; everyone else gets the benign empty payload (no 401 that could break
+  // a poller, no fingerprintable capacity data).
+  if (!(await getSessionUserId())) {
+    return NextResponse.json(EMPTY);
+  }
   if (!isRuntimeAvailable()) {
-    return NextResponse.json({
-      mem: null, swap: null, disk: null, uptime: null, gatewayStatus: "down", runtime: false,
-    });
+    return NextResponse.json(EMPTY);
   }
   // LC_ALL=C forces English column headers and reliable awk parsing.
   // df -BM emits values like "238444M" — gsub strips the M and % so the
