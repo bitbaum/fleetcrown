@@ -38,6 +38,8 @@ ssh "$HOST" "cat > /etc/systemd/system/fleetcrown-embed.service" <<'UNIT'
 [Unit]
 Description=FleetCrown local embeddings server (fastembed, OpenAI-compatible)
 After=network-online.target
+# Keep retrying past the default start-limit instead of locking to "failed".
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -84,6 +86,7 @@ Description=Reindex fleet knowledge daily
 
 [Timer]
 OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=300
 Persistent=true
 
 [Install]

@@ -94,6 +94,9 @@ Description=appcron timer ${app} ${job}
 
 [Timer]
 OnCalendar=${oncal}
+# Jitter so the many fixed-time app crons (several at 08:00) don't fire builds
+# and curls simultaneously on the shared cores.
+RandomizedDelaySec=300
 Persistent=true
 Unit=${unit}.service
 

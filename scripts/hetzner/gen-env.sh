@@ -31,7 +31,12 @@ fi
     case "$line" in \#*|"") continue;; esac
     key="${line%%=*}"
     val="${line#*=}"
-    val="${val%\"}"; val="${val#\"}"; val="${val%\\n}"   # strip quotes + literal trailing \n
+    val="${val%\"}"; val="${val#\"}"                     # strip surrounding quotes
+    # Strip ALL literal \n / \r sequences and real CR/LF anywhere in the value —
+    # not just one trailing token. A prior incident corrupted secrets with
+    # multiple embedded \n, which broke all email + the private-zone PIN.
+    val="${val//\\n/}"; val="${val//\\r/}"
+    val="${val//$'\n'/}"; val="${val//$'\r'/}"
     case "$key" in
       VERCEL|VERCEL_*|NX_DAEMON|TURBO_*) continue ;;
       DATABASE_URL|DIRECT_URL|POSTGRES_URL|POSTGRES_PRISMA_URL|POSTGRES_URL_NON_POOLING)

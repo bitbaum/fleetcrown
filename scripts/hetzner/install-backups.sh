@@ -115,6 +115,7 @@ Description=Daily Postgres backup timer
 
 [Timer]
 OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=300
 Persistent=true
 Unit=pg-backup.service
 
