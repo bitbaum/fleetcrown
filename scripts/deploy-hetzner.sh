@@ -41,6 +41,46 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# ── Serialize deploys (fix: concurrent-build collision) ──────────────────────
+# Two near-simultaneous pushes to main each background a deploy; without a lock
+# both run `npm run build` in the shared .next tree and collide ("Another next
+# build process is already running"), and the OLDER ref can win the race. A
+# blocking lock serializes deploys so the NEWEST ref ships last; every step
+# below is idempotent, so waiting is always safe.
+LOCK_FILE="${FLEETCROWN_DEPLOY_LOCK:-/tmp/fleetcrown-deploy.lock}"
+exec 9>"$LOCK_FILE"
+if command -v flock >/dev/null 2>&1; then
+  if ! flock -w 900 9; then
+    echo "✗ deploy: timed out after 15m waiting for an in-flight deploy — aborting" >&2
+    exit 1
+  fi
+fi
+
+# ── Deploy-result sink (fix: exit 0 masked failed deploys) ───────────────────
+# The push-deploy hook backgrounds this script and its exit code dies in a
+# detached log nobody reads. Record every outcome: a final status line, a
+# desktop notification (best-effort), and a row in the box debug_logs so a
+# failed deploy surfaces on /system instead of being invisible until a 503.
+DEPLOY_REF_SHORT="$(git -C "$PROJECT_DIR" rev-parse --short "${REF:-HEAD}" 2>/dev/null || echo unknown)"
+report_deploy_status() {
+  local code=$?
+  local level msg
+  if [ "$code" = 0 ]; then
+    level=info; msg="deploy OK: ${DEPLOY_REF_SHORT} to Hetzner"
+  else
+    level=error; msg="deploy FAILED (exit ${code}): ${DEPLOY_REF_SHORT} — see /tmp/push-deploy-fleetcrown.log"
+  fi
+  echo "→ ${msg}"
+  command -v notify-send >/dev/null 2>&1 && notify-send "FleetCrown deploy" "$msg" >/dev/null 2>&1 || true
+  # Durable record in the box DB — best-effort, must never change the exit code.
+  # msg is fixed text + a short SHA (no single-quotes), so it is SQL-safe here.
+  ssh -o ConnectTimeout=10 "$HOST" "LC_ALL=C bash -s" >/dev/null 2>&1 <<REMOTE || true
+DBURL=\$(grep -oP '^DATABASE_URL=\K.*' /opt/fleetcrown/app/.env 2>/dev/null | head -1 | tr -d '"')
+[ -n "\$DBURL" ] && psql "\$DBURL" -q -c "insert into debug_logs (source, level, message) values ('deploy', '${level}', '${msg}')" 2>/dev/null
+REMOTE
+}
+trap report_deploy_status EXIT
+
 git_head() { git -C "$PROJECT_DIR" rev-parse HEAD 2>/dev/null || echo unknown; }
 
 if [ -n "$NO_BUILD" ]; then
@@ -77,6 +117,30 @@ if [ ! -d "$STANDALONE/.next/static" ]; then
   exit 1
 fi
 
+# Snapshot the current box build for one-command rollback (fix: in-place rsync
+# left no way back from a broken restart). Excludes backups/ so we don't copy
+# the dump store every deploy; .env + launch.sh ARE snapshotted so a rollback
+# restores a coherent tree.
+echo "→ snapshot current box build → $APP_DIR.prev"
+ssh "$HOST" "test -d '$APP_DIR' && rsync -a --delete --exclude backups '$APP_DIR/' '$APP_DIR.prev/'" \
+  || echo "  (no prior build to snapshot)"
+
+# Restore the previous build if a ship fails its restart/verification, so a
+# broken deploy doesn't strand the box. --delete but --exclude backups, so the
+# dump store is never touched; .env/launch.sh come from the snapshot.
+rollback_box() {
+  echo "↩ deploy failed after ship — rolling box back to previous build" >&2
+  if ssh "$HOST" "test -d '$APP_DIR.prev' \
+    && rsync -a --delete --exclude backups '$APP_DIR.prev/' '$APP_DIR/' \
+    && chown -R ubuntu:ubuntu '$APP_DIR' \
+    && systemctl restart fleetcrown-app && sleep 3 \
+    && systemctl is-active fleetcrown-app >/dev/null"; then
+    echo "  ✓ rolled back to previous build" >&2
+  else
+    echo "  ✗ ROLLBACK FAILED — box needs manual attention" >&2
+  fi
+}
+
 echo "→ rsync standalone → $HOST:$APP_DIR"
 rsync -az --delete \
   --exclude '.env' \
@@ -90,17 +154,19 @@ echo "→ restart fleetcrown-app on box"
 # the runner sync — the push looked deployed but the runner kept old code.
 # Every step below this one is idempotent, so a killed-and-rerun deploy is
 # always safe; a silently hung one is not.
-timeout 180 ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=6 "$HOST" \
+if ! timeout 180 ssh -o ServerAliveInterval=15 -o ServerAliveCountMax=6 "$HOST" \
   "chown -R ubuntu:ubuntu $APP_DIR \
   && systemctl restart fleetcrown-app \
   && sleep 3 \
-  && systemctl is-active fleetcrown-app >/dev/null"
+  && systemctl is-active fleetcrown-app >/dev/null"; then
+  echo "✗ restart failed on box" >&2; rollback_box; exit 1
+fi
 
-# Post-deploy verification — fails the deploy LOUDLY (set -e) instead of
-# shipping a silently-broken auth/email config. Catches the X-saga failure
-# mode: a provider silently un-mounting when its env keys go missing.
+# Post-deploy verification — fails the deploy LOUDLY instead of shipping a
+# silently-broken auth/email config, and rolls back. Catches the X-saga
+# failure mode: a provider silently un-mounting when its env keys go missing.
 echo "→ post-deploy verification"
-ssh "$HOST" 'set -e
+if ! ssh "$HOST" 'set -e
   base=http://127.0.0.1:4002
   code=$(curl -s -o /dev/null -w "%{http_code}" "$base/sign-in")
   echo "  /sign-in: $code"; [ "$code" = 200 ] || { echo "  ✗ sign-in not 200"; exit 1; }
@@ -112,7 +178,9 @@ ssh "$HOST" 'set -e
   for p in github google x-1a email-password; do
     echo "$prov" | grep -q "\"$p\"" || { echo "  ✗ auth provider missing: $p"; exit 1; }
   done
-  echo "  ✓ providers mounted: github google x-1a email-password"'
+  echo "  ✓ providers mounted: github google x-1a email-password"'; then
+  echo "✗ post-deploy verification failed" >&2; rollback_box; exit 1
+fi
 
 # Schema-drift guard against the BOX database. The pre-push check (scripts/
 # check-schema-drift.ts) runs against the laptop DB; the box has its own
