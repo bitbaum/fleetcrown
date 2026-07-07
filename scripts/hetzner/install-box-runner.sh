@@ -17,17 +17,21 @@ set -euo pipefail
 HOST="${1:-root@167.233.22.31}"
 RUNNER_DIR="/opt/fleetcrown/runner"
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Runner Unix owner — set FLEETCROWN_RUNNER_OWNER=fcrunner after the migration
+# (migrate-box-runner-to-fcrunner.sh). Defaults to ubuntu (no change until then).
+RUNNER_OWNER="${FLEETCROWN_RUNNER_OWNER:-ubuntu}"
+RUNNER_UHOME="$([ "$RUNNER_OWNER" = fcrunner ] && echo /home/fcrunner || echo /home/ubuntu)"
 
 echo "→ box-runner: syncing source into ${HOST}:${RUNNER_DIR} (node_modules untouched)"
 rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/src/"        "${HOST}:${RUNNER_DIR}/src/"
 rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/desktop/src/" "${HOST}:${RUNNER_DIR}/desktop/src/"
 rsync -az --no-perms --omit-dir-times "${REPO_ROOT}/scripts/"    "${HOST}:${RUNNER_DIR}/scripts/"
 rsync -a "${REPO_ROOT}/tsconfig.json" "${HOST}:${RUNNER_DIR}/tsconfig.json"
-ssh "$HOST" "chown -R ubuntu:ubuntu ${RUNNER_DIR}/src ${RUNNER_DIR}/desktop ${RUNNER_DIR}/scripts ${RUNNER_DIR}/tsconfig.json"
+ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER ${RUNNER_DIR}/src ${RUNNER_DIR}/desktop ${RUNNER_DIR}/scripts ${RUNNER_DIR}/tsconfig.json"
 
 echo "→ box-runner: minting runner token if absent"
-ssh "$HOST" "sudo -u ubuntu -H bash -c '
-  TF=/home/ubuntu/.config/fleetcrown/fleet-runner-token
+ssh "$HOST" "sudo -u $RUNNER_OWNER -H bash -c '
+  TF=$RUNNER_UHOME/.config/fleetcrown/fleet-runner-token
   if [ -s \"\$TF\" ]; then echo \"   token present, skipping mint\"; else
     cd ${RUNNER_DIR} && set -a && . ./.env && set +a && node_modules/.bin/tsx scripts/mint-box-runner-token.ts
   fi
