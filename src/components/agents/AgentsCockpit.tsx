@@ -6,16 +6,7 @@ import { Eye, MessagesSquare, Loader2 } from "lucide-react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useBuilderPresence } from "@/hooks/use-builder-presence";
 import { cn } from "@/lib/utils";
-
-type AgentMessage = {
-  id: string;
-  ts: string;
-  from: string;
-  to: string;
-  re: string;
-  body: string;
-  read: boolean;
-};
+import type { AgentMessage } from "@/lib/agent-comms";
 
 type CommsResp = { messages: AgentMessage[]; unavailable?: { code: string; message: string } };
 type TabsResp = { tabs: string[]; unavailable?: { message: string } };

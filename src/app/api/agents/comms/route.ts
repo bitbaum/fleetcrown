@@ -15,73 +15,11 @@
 import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
+import { parseInbox, dedupeAndSort, type AgentMessage } from "@/lib/agent-comms";
 
 export const runtime = "nodejs";
 
-export type AgentMessage = {
-  id: string;
-  ts: string;
-  from: string;
-  to: string;
-  re: string;
-  body: string;
-  read: boolean;
-};
-
-const HEADER_RE = /^##\s+(.+?)\s+—\s+from\s+@(\S+)\s+to\s+@(\S+)\s*$/;
-
-/** Parse one inbox file's PROTOCOL blocks into structured messages. */
-function parseInbox(text: string): AgentMessage[] {
-  const lines = text.split("\n");
-  const out: AgentMessage[] = [];
-  let cur: { ts: string; from: string; to: string; body: string[] } | null = null;
-  let re = "";
-  let read = false;
-
-  const flush = () => {
-    if (!cur) return;
-    const body = cur.body.join("\n").trim();
-    out.push({
-      id: `${cur.from}->${cur.to}@${cur.ts}`,
-      ts: cur.ts,
-      from: cur.from,
-      to: cur.to,
-      re,
-      body,
-      read,
-    });
-    cur = null;
-    re = "";
-    read = false;
-  };
-
-  for (const line of lines) {
-    const h = line.match(HEADER_RE);
-    if (h) {
-      flush();
-      cur = { ts: h[1].trim(), from: h[2], to: h[3], body: [] };
-      continue;
-    }
-    if (!cur) continue;
-    const reMatch = line.match(/^\*\*Re\*\*:\s*(.*)$/);
-    if (reMatch) {
-      re = reMatch[1].trim();
-      continue;
-    }
-    if (/^READ:\s*/i.test(line.trim())) {
-      read = true;
-      continue;
-    }
-    cur.body.push(line);
-  }
-  flush();
-  return out;
-}
-
-/** Sort key: PROTOCOL timestamps are "YYYY-MM-DD HH:MM" (lexicographically sortable). */
-function tsKey(ts: string): string {
-  return ts;
-}
+export type { AgentMessage };
 
 export async function GET() {
   const userId = await getSessionUserId();
@@ -120,12 +58,5 @@ export async function GET() {
     }
   }
 
-  // Reverse-chronological. De-dupe by id (the same message can appear if a
-  // sender also copies it to its own inbox).
-  const seen = new Set<string>();
-  const deduped = messages
-    .filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
-    .sort((a, b) => tsKey(b.ts).localeCompare(tsKey(a.ts)));
-
-  return NextResponse.json({ messages: deduped });
+  return NextResponse.json({ messages: dedupeAndSort(messages) });
 }
