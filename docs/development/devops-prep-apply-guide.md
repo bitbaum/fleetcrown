@@ -37,10 +37,24 @@ bash scripts/hetzner/harden-box-runner.sh --revert
 Fresh box-runner installs get the same containment automatically
 (`install-box-runner.sh` now bakes it into the unit).
 
-**Stronger follow-up (later, not scripted):** a dedicated `fcrunner` user +
-secret broker. It needs the `claude` CLI moved out of `/home/ubuntu` and the
-runner token/`.config` relocated — more moving parts, so left as a documented
-next step rather than a blind migration.
+**Stronger version — dedicated `fcrunner` user** (`migrate-box-runner-to-fcrunner.sh`):
+runs the box-runner as an unprivileged `fcrunner` that owns only its own dir, and
+hides *all* of `/home/ubuntu` + every co-tenant `/opt/<app>`. More invasive than
+the drop-in (it copies the `claude` CLI + its auth to the new home), so treat it
+as the thorough follow-up once the drop-in is proven.
+
+```bash
+bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --dry-run   # print the plan
+bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh             # apply
+# THEN set FLEETCROWN_RUNNER_OWNER=fcrunner in the deploy env (push-deploy hook)
+# or the next deploy chowns the runner dir back to ubuntu.
+bash scripts/hetzner/migrate-box-runner-to-fcrunner.sh --revert    # roll back
+```
+
+Verify after applying: dispatch a task and confirm the agent **authenticates**
+under the new home (the one real risk is claude auth surviving the home copy —
+the script prints the exact creds-copy fallback if it doesn't). `deploy-hetzner.sh`
+and `install-box-runner.sh` now honor `FLEETCROWN_RUNNER_OWNER` (default `ubuntu`).
 
 ---
 

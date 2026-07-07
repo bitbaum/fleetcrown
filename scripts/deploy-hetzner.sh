@@ -16,6 +16,10 @@ set -euo pipefail
 
 HOST="root@${HETZNER_IP:-167.233.22.31}"
 APP_DIR="/opt/fleetcrown/app"
+# The box-runner's Unix owner. Defaults to ubuntu; set to fcrunner AFTER running
+# migrate-box-runner-to-fcrunner.sh so the runner-code sync doesn't chown the
+# dir back to ubuntu on every deploy. The app + bridge stay ubuntu-owned.
+RUNNER_OWNER="${FLEETCROWN_RUNNER_OWNER:-ubuntu}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 STANDALONE="$PROJECT_DIR/.next/standalone"
@@ -244,7 +248,7 @@ rsync -az --no-perms --omit-dir-times \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
 rsync -a "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
-ssh "$HOST" "chown -R ubuntu:ubuntu $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
+ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"
 
 echo "→ restart fleetcrown-box-runner (cloud builder)"
 ssh "$HOST" "systemctl restart fleetcrown-box-runner \
