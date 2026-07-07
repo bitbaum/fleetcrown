@@ -38,6 +38,7 @@
     "test:desktop-command-validator": "npx tsx scripts/test/desktop-command-validator.ts",
     "test:tab-match": "npx tsx scripts/test/tab-match.ts",
     "test:agent-comms": "npx tsx scripts/test/agent-comms.ts",
+    "test:unit": "npx tsx scripts/test-unit.ts",
     "test:activity-ssot": "node scripts/activity-ssot-check.mjs",
     "dogfood:loki": "node scripts/loki-dogfood.mjs",
     "dogfood:loki:ci": "FLEETCROWN_SESSION_TOKEN=$(npx tsx scripts/test/print-session-token.ts) HEADLESS=1 node scripts/loki-dogfood.mjs",

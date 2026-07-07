@@ -8,32 +8,14 @@ set -e
 echo "→ test:home"
 npm run test:home
 
-echo "→ test:autopilot-defaults"
-npm run test:autopilot-defaults
-
-echo "→ test:fleet-kick"
-npm run test:fleet-kick
-
-echo "→ test:digest"
-npm run test:digest
-
-echo "→ test:auth"
-npm run test:auth
-
-echo "→ test:prompt-history"
-npm run test:prompt-history
+# All pure unit tests via the glob runner — same suite CI runs, so a green
+# push and a green CI can't diverge. (Replaces the hand-listed test:* calls;
+# new scripts/test/*.ts are picked up automatically.)
+echo "→ test:unit"
+npm run test:unit
 
 echo "→ check:schema (drift guard — skips if DB unreachable)"
 npm run check:schema
-
-echo "→ test:brand-sync"
-npm run test:brand-sync
-
-echo "→ test:project-session"
-npm run test:project-session
-
-echo "→ test:dod-gate"
-npm run test:dod-gate
 
 BASE="${COCKPIT_URL:-http://localhost:3000}"
 
