@@ -71,20 +71,24 @@ carries over). A red CI → no deploy. This works with direct pushes to main
 
 ### Enable steps (in order)
 
+The workflow ships on main but is **dormant** — it does nothing until the
+`DEPLOY_VIA_CI` switch is `true`. Flip these in order:
+
 1. **Add the deploy key** — repo → Settings → Secrets and variables → Actions:
    - Secret `HETZNER_SSH_KEY` = a private key whose public half is in the box's
      `root` `~/.ssh/authorized_keys` (mint a deploy-only key, don't reuse a personal one).
    - (optional) Variable `HETZNER_IP` (defaults to `167.233.22.31`).
 2. **Disable the local hook** (or you deploy twice): comment out the
    `>>> fleetcrown push-deploy >>>` block in `.husky/pre-push`.
-3. **Merge this branch to main.** The workflow activates on the next CI-green run.
+3. **Flip the switch:** add repo **variable** `DEPLOY_VIA_CI` = `true`. The
+   workflow now runs on the next CI-green push to main.
 4. **Watch the first run's "Build" step.** It builds against a schema-only
    Postgres (via `drizzle-kit push`, no seed). If a page pre-renders off real
    data and the build fails, add a minimal seed step to `deploy.yml`.
 
 ### Rollback
-Re-enable the `.husky/pre-push` block and delete `.github/workflows/deploy.yml`
-(or disable it in the Actions tab).
+Set `DEPLOY_VIA_CI` back to `false` (instant pause) and re-enable the
+`.husky/pre-push` block.
 
 ### Optional extra layer — branch protection
 `deploy.yml` alone already means "red CI can't ship." If you also want to stop a
