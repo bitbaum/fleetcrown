@@ -27,6 +27,8 @@ src/
 │   ├── ui/        → Shared primitives (Card, Modal, Drawer, Field, PageLayout)
 │   ├── shell/     → AppShell, Sidebar, MobileNav (Today/Control/Projects + Loki + More), AskLokiButton → /loki
 │   ├── control/   → ControlPanel, ProjectCard, ProjectTile, ProjectProfile (fleet command)
+│   ├── agents/    → AgentsCockpit (roster + inter-agent comms feed, parses ~/.claude/cross-project/inbox-*.md)
+│   ├── duet/      → DuetView, DuetPane (watch two agents' last prompts side by side, live off one bridge SSE)
 │   ├── today/     → CalendarCard, WeatherCard, CommitmentsCard, SubscriptionsCard, HabitsList
 │   ├── people/    → PeopleGrid, PersonCard, PersonDetail
 │   ├── projects/  → ProjectGrid, ProjectDetail (split into header/tabs/inline-editors)
@@ -223,6 +225,8 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | View | Route | Status |
 |------|-------|--------|
 | Control | /control | Fleet command center: dispatch intents to AI agents, real-time SSE status, per-project cards, git sync guard |
+| Agents | /agents | Fleet roster (open tabs + presence/active dots) beside a live inter-agent comms feed parsed from ~/.claude/cross-project/inbox-*.md; message-type badges (task/result/question/escalation) |
+| Duet | /duet | Watch two agents side by side — each pane shows a project's last dispatched prompt, updating live off one bridge SSE connection |
 | Today | /today | Calendar, weather, commitments, bills, daily habit check-off, log conversation |
 | People | /people | 1,286 contacts, search, detail panel, inline name/notes edit |
 | Money | /money | Subscriptions, monthly burn |
