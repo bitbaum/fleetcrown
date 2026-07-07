@@ -9,8 +9,16 @@ import { and, desc, eq, lt, or, sql } from "drizzle-orm";
  */
 export function logDebug(entry: Omit<NewDebugLog, "id" | "createdAt">): Promise<unknown> {
   return db.insert(debugLogs).values(entry).catch((err) => {
-    // Telemetry failed — log to stderr as the absolute last resort.
-    console.error("[debug-logs] insert failed:", err, "for entry:", { source: entry.source, level: entry.level, message: entry.message });
+    // Telemetry failed (e.g. Postgres down — the one failure you most need
+    // recorded). Fall back to stderr so journald still captures it, and include
+    // meta: it holds the stack/digest, so dropping it would be a partial
+    // blackout exactly when the DB sink is unavailable.
+    console.error("[debug-logs] insert failed:", err, "for entry:", {
+      source: entry.source,
+      level: entry.level,
+      message: entry.message,
+      meta: entry.meta ?? null,
+    });
   });
 }
 

@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
 import { getSessionUserId } from "@/lib/session";
 import { isRuntimeAvailable } from "@/lib/runtime";
 import { parseInbox, dedupeAndSort, type AgentMessage } from "@/lib/agent-comms";
+import { logDebug } from "@/db/queries/debug-logs";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,13 @@ export async function GET() {
   let files: string[] = [];
   try {
     files = readdirSync(dir).filter((f) => /^inbox-.+\.md$/.test(f));
-  } catch {
+  } catch (err) {
+    // ENOENT = the bus dir doesn't exist yet (no sprint ever started) — genuinely
+    // empty, not a fault. Anything else (permissions, wrong path) is a real error
+    // that would otherwise masquerade as "no messages"; record it.
+    if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
+      logDebug({ source: "api/agents/comms", level: "error", message: "failed to read comms inbox dir", meta: { dir, error: String(err) } });
+    }
     return NextResponse.json({ messages: [] });
   }
 
