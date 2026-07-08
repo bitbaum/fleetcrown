@@ -1175,6 +1175,24 @@
   .ui-public-surface-card-meta {
     @apply mt-auto pt-8 font-mono text-xs text-text-tertiary;
   }
+  /* Pricing card — reuses the surface-card shell; the featured variant lifts
+     the recommended tier with an accent border + panel shadow. */
+  .ui-public-price-card {
+    @apply flex flex-col rounded-2xl border border-border-subtle bg-surface-base p-6 text-left;
+  }
+  .ui-public-price-card-featured {
+    @apply border-accent-primary;
+    box-shadow: var(--shadow-panel-strong);
+  }
+  .ui-public-price-badge {
+    @apply inline-flex items-center rounded-full border border-accent-primary px-2.5 py-0.5 text-micro uppercase tracking-[0.15em] text-accent-text;
+  }
+  .ui-public-price-amount {
+    @apply font-heading text-4xl font-semibold text-text-primary;
+  }
+  .ui-public-price-feature {
+    @apply flex items-start gap-2.5 text-sm leading-snug text-text-secondary;
+  }
   .ui-public-terminal-demo {
     @apply rounded-2xl border border-border-subtle bg-black p-6 text-left text-white;
     box-shadow: var(--shadow-panel-strong);

@@ -73,6 +73,11 @@ export const PUBLIC_NAV: PublicNavEntry[] = [
     ],
   },
   {
+    kind: "link",
+    label: "Pricing",
+    href: "/pricing",
+  },
+  {
     kind: "external",
     label: "OrangeCat",
     href: "https://orangecat.ch",

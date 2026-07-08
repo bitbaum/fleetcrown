@@ -22,6 +22,7 @@ ERROR_BOUNDARY_MARKER="Something went wrong"
 # and public-surface pages (/whitepaper).
 PAGE_ROUTES=(
   "/"
+  "/pricing"
   "/whitepaper"
   "/today"
   "/control"

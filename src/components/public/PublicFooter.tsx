@@ -17,6 +17,7 @@ const FOOTER_GROUPS = [
   {
     heading: "Product",
     links: [
+      { label: "Pricing", href: "/pricing" },
       { label: "Download", href: "/download" },
       { label: "Sign in", href: "/sign-in" },
       { label: "Docs", href: "/docs/quickstart" },
