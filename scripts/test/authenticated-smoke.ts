@@ -960,6 +960,12 @@ async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResul
   push("SH03 POST create share", "POST", created.status, created.status === 200 && Boolean(token));
   if (!token) return out;
 
+  // The returned url must be a real public link (canonical base URL), not the
+  // internal bind (https://0.0.0.0:4002) that req.nextUrl.origin yields on the box.
+  const url = typeof share?.url === "string" ? share.url : "";
+  const publicUrl = /^https?:\/\//.test(url) && !url.includes("0.0.0.0") && url.includes(token);
+  push("SH03b share url is a public link", "GET", created.status, publicUrl, publicUrl ? undefined : `bad url: ${url}`);
+
   // 2. Public page renders for a valid token
   out.push(await probe(cookieHeader, `/share/project/${token}`, {
     checkBody: true, expectStatus: [200], label: "SH04 public shared page (200)",
