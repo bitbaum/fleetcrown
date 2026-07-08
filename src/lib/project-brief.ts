@@ -157,6 +157,71 @@ Rules:
 - Derive from the spec's own roadmap/phases/milestones if it states them; otherwise infer a sensible build order from its scope.
 - Milestones are engineering deliverables, not marketing. No installation/usage instructions.`;
 
+// ── Reconcile (sync fields from an updated doc) ───────────────────────────────
+// Instead of overwriting every field, diff the project's CURRENT fields against
+// an updated doc and return a PATCH: only the fields whose value should change,
+// plus up to 3 proposed NEW attributes for important facts that don't fit the
+// existing schema. The caller previews this and applies only what the user OKs —
+// so manual edits survive and nothing is silently clobbered.
+
+export const ReconcilePatchSchema = z.object({
+  // Only fields whose value should change, keyed by existing field/attribute key.
+  updates: z.record(z.string(), z.string().trim().min(1).max(FIELD_LIMIT)).default({}),
+  // Proposed new custom attributes — capped, snake_case, user-approved before write.
+  newAttributes: z
+    .array(
+      z.object({
+        key: z.string().regex(/^[a-z][a-z0-9_]{1,39}$/, "key must be snake_case"),
+        label: z.string().trim().min(1).max(60),
+        value: z.string().trim().min(1).max(FIELD_LIMIT),
+      }),
+    )
+    .max(3)
+    .default([]),
+});
+export type ReconcilePatch = z.infer<typeof ReconcilePatchSchema>;
+
+const RECONCILE_SYSTEM = `You reconcile a project's structured fields with an UPDATED document.
+You are given the CURRENT fields ("key: value" per line) and the UPDATED doc. Return ONLY a JSON patch:
+{"updates": {"<existing_key>": "<new value>"}, "newAttributes": [{"key":"snake_case","label":"Human Label","value":"..."}]}
+
+Rules:
+- "updates": include ONLY fields whose value should CHANGE given the doc. OMIT unchanged fields entirely. Never touch a field the doc doesn't speak to. Keep each value concise (max 400 chars), matching the existing style.
+- "newAttributes": propose AT MOST 3 new fields for important facts in the doc that fit no existing key (e.g. pricing_model, moat, compliance, go_to_market). snake_case key + short human label. Omit if nothing warrants it.
+- Never invent facts absent from the doc. Never delete fields.`;
+
+/** Diff current fields against an updated doc → a patch (changed fields + proposed new ones). Throws on Groq/parse failure. */
+export async function reconcileProfile(
+  projectName: string,
+  currentFields: Record<string, string>,
+  newDoc: string,
+): Promise<ReconcilePatch> {
+  const current = Object.entries(currentFields)
+    .filter(([, v]) => v?.trim())
+    .map(([k, v]) => `${k}: ${v}`)
+    .join("\n");
+  const prompt = `Project: ${projectName}\n\nCURRENT FIELDS:\n${current || "(none yet)"}\n\nUPDATED DOC:\n${newDoc.slice(0, 12_000)}`;
+  let raw = "";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      raw = await callGroqText(prompt, {
+        systemPrompt: RECONCILE_SYSTEM,
+        maxTokens: 1600,
+        temperature: 0.2,
+        timeoutMs: 25_000,
+      });
+      break;
+    } catch (e) {
+      const is429 = e instanceof Error && e.message.includes("429");
+      if (!is429 || attempt >= 1) throw e;
+      await new Promise((r) => setTimeout(r, 20_000));
+    }
+  }
+  const parsed = ReconcilePatchSchema.safeParse(parseModelJson(raw));
+  if (!parsed.success) throw new Error(`reconcile output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  return parsed.data;
+}
+
 /** Extract an ordered build roadmap (milestones) from spec text. Throws on Groq/parse failure. */
 export async function extractRoadmap(projectName: string, sourceText: string): Promise<Roadmap> {
   const prompt = `Project name: ${projectName}\n\nSpec:\n${sourceText.slice(0, 12_000)}`;

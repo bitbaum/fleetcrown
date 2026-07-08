@@ -32,6 +32,7 @@ import {
   getProjectLinks,
 } from "./project-detail-types";
 import { ProjectBriefFill } from "./ProjectBriefFill";
+import { ProjectDocSync } from "./ProjectDocSync";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
@@ -308,6 +309,7 @@ export function OverviewTab({
               hasRepo={getProjectLinks(attrs, data.gitUrl).repo !== null}
               onReload={onReload}
             />
+            <ProjectDocSync projectId={projectId} onReload={onReload} />
           </div>
         </details>
       )}
