@@ -5,7 +5,7 @@ excerpt: A prompt is a single throw of the dice. A harness is the table, the rul
 publishedAt: 2026-06-25
 tags: architecture,agents,harness,strategy
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 7
 ---
 

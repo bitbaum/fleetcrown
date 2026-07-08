@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { MessageSquare } from "lucide-react";
 
 function navigateToLoki(router: ReturnType<typeof useRouter>, pathname: string, prompt?: string) {
   const trimmed = prompt?.trim() ?? "";
@@ -48,10 +49,11 @@ export function AskLokiButton() {
   return (
     <button
       onClick={() => navigateToLoki(router, pathname)}
-      className="ui-fab fixed bottom-7 right-7 z-40 hidden h-14 w-14 items-center justify-center text-xl active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="ui-fab fixed bottom-7 right-7 z-40 hidden h-14 w-14 items-center justify-center active:scale-95 md:flex focus-visible:ring-2 focus-visible:ring-accent-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       title="Open Loki (press ?)"
+      aria-label="Open Loki"
     >
-      🌿
+      <MessageSquare className="h-6 w-6" />
     </button>
   );
 }

@@ -5,7 +5,7 @@ excerpt: FleetCrown's edge was never a better agent. It's govern-across-a-fleet 
 publishedAt: 2026-06-25
 tags: architecture,agents,strategy,execution
 featured: true
-author: Ivy
+author: Loki
 readingTimeMin: 8
 ---
 

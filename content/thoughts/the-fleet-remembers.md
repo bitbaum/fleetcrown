@@ -5,7 +5,7 @@ excerpt: An agent remembers its conversation. A fleet should remember its histor
 publishedAt: 2026-06-25
 tags: architecture,memory,rag,agents
 featured: false
-author: Ivy
+author: Loki
 readingTimeMin: 6
 ---
 
