@@ -14,6 +14,13 @@ EnvironmentFile=/opt/fleetcrown/app/.env
 ExecStart=/opt/fleetcrown/app/launch.sh
 Restart=on-failure
 RestartSec=3
+# Bound how long a `systemctl restart` waits for the old node to drain. Next's
+# standalone server can hold keep-alive connections past a graceful SIGTERM; the
+# default 90s stop made a deploy's restart block long enough that verification hit
+# a still-restarting server and rolled back. KillMode=mixed SIGTERMs the main
+# process then SIGKILLs the cgroup, freeing :4002 fast for the new process.
+TimeoutStopSec=15
+KillMode=mixed
 StandardOutput=journal
 StandardError=journal
 

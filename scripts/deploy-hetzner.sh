@@ -169,11 +169,22 @@ fi
 # Post-deploy verification — fails the deploy LOUDLY instead of shipping a
 # silently-broken auth/email config, and rolls back. Catches the X-saga
 # failure mode: a provider silently un-mounting when its env keys go missing.
+#
+# The /sign-in check POLLS for readiness (up to ~20s) rather than curling once:
+# a slow-to-stop old Next process pushes the new one's first-accept past the
+# restart's `sleep 3`, and a single immediate curl then failed the deploy and
+# rolled back a build that was actually fine. Poll until the server accepts, and
+# only then run the (one-shot) health/provider assertions.
 echo "→ post-deploy verification"
 if ! ssh "$HOST" 'set -e
   base=http://127.0.0.1:4002
-  code=$(curl -s -o /dev/null -w "%{http_code}" "$base/sign-in")
-  echo "  /sign-in: $code"; [ "$code" = 200 ] || { echo "  ✗ sign-in not 200"; exit 1; }
+  code=000
+  for i in $(seq 1 20); do
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "$base/sign-in" || echo 000)
+    [ "$code" = 200 ] && break
+    sleep 1
+  done
+  echo "  /sign-in: $code"; [ "$code" = 200 ] || { echo "  ✗ sign-in not 200 after 20s"; exit 1; }
   # /api/health returns 503 when env.ts finds a fatal/error config issue
   hcode=$(curl -s -o /dev/null -w "%{http_code}" "$base/api/health")
   echo "  /api/health: $hcode"; [ "$hcode" = 200 ] || { echo "  ✗ env health degraded — see debug_logs source=instrumentation/env"; exit 1; }
@@ -246,6 +257,7 @@ rsync -az --no-perms --omit-dir-times \
 rsync -az --no-perms --omit-dir-times \
   "$PROJECT_DIR/scripts/box-runner.ts" \
   "$PROJECT_DIR/scripts/mint-box-runner-token.ts" \
+  "$PROJECT_DIR/scripts/reindex-knowledge.ts" \
   "$HOST:$RUNNER_DIR/scripts/"
 rsync -a "$PROJECT_DIR/tsconfig.json" "$HOST:$RUNNER_DIR/tsconfig.json"
 ssh "$HOST" "chown -R $RUNNER_OWNER:$RUNNER_OWNER $RUNNER_DIR/src $RUNNER_DIR/desktop $RUNNER_DIR/scripts $RUNNER_DIR/tsconfig.json"

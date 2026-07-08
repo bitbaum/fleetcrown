@@ -231,7 +231,7 @@ Smoke is opt-in (needs the dev server running) — run before opening a PR.
 | People | /people | 1,286 contacts, search, detail panel, inline name/notes edit |
 | Money | /money | Subscriptions, monthly burn |
 | Goals | /goals | Hierarchical tree, progress, milestones, inline target-date / progress edit |
-| Projects | /projects | 15 projects + GitHub CI, inline editors for name/desc/status/maturity |
+| Projects | /projects | 15 projects + GitHub CI, inline editors for name/desc/status/maturity; per-project dossier + shareable public link (/share/project/[token], audience-scoped resource visibility) |
 | Habits | /habits | 30-day heatmap per habit, streak indicator, summary stats |
 | Events | /events | Opportunities and deadlines, type-chip filter, archive flow |
 | Prompts | /prompts | Prompt library, run-now via Loki, schedule as cron job |

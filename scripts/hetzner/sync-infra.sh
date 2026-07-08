@@ -47,6 +47,11 @@ WorkingDirectory=/opt/$NAME/app
 ExecStart=/opt/$NAME/app/launch.sh
 Restart=on-failure
 RestartSec=3
+# Bound the stop phase so a `systemctl restart` can't block on a slow-draining
+# Next process (default 90s). KillMode=mixed SIGTERMs the main proc then SIGKILLs
+# the cgroup, freeing the port fast for the new process.
+TimeoutStopSec=15
+KillMode=mixed
 StandardOutput=journal
 StandardError=journal
 

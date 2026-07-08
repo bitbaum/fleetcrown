@@ -898,6 +898,115 @@ async function runSettingsSystemProbes(
   return out;
 }
 
+/**
+ * Shareable-dossier lifecycle — create → public-render → update → revoke →
+ * public-404. Only mutates a project with NO active share (snapshots the GET
+ * state first), so it never revokes a link the user meant to keep; if the
+ * picked project is already shared it does a read-only public-render check and
+ * skips the destructive steps. Leaves the project share-free again on success.
+ */
+async function runShareLifecycleProbes(cookieHeader: string): Promise<ProbeResult[]> {
+  const out: ProbeResult[] = [];
+  const push = (label: string, method: HttpMethod, status: number, ok: boolean, note?: string) => {
+    out.push({ route: label, method, status, ok, note });
+  };
+  const shareOf = (json: Record<string, unknown> | null): Record<string, unknown> | null => {
+    const s = json?.share;
+    return s && typeof s === "object" ? (s as Record<string, unknown>) : null;
+  };
+
+  // The share route keys on the project ENTITY id (entities.id), which the
+  // user-projects payload exposes as entityProjectId.
+  let entityId: string | null = null;
+  try {
+    const res = await fetch(`${BASE}/api/user-projects`, {
+      headers: { Cookie: cookieHeader },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (res.ok) {
+      const rows = (await res.json()) as { entityProjectId?: string }[];
+      entityId = rows.find((r) => r.entityProjectId)?.entityProjectId ?? null;
+    }
+  } catch { /* ignore */ }
+
+  if (!entityId) {
+    push("SH01 share lifecycle", "GET", 0, true, "skipped — no project with an entity id");
+    return out;
+  }
+
+  const base = `/api/projects/${entityId}/share`;
+
+  const initial = await apiJson(cookieHeader, base, "GET");
+  push("SH01 GET share state", "GET", initial.status, initial.status === 200);
+  const preShare = shareOf(initial.json);
+
+  if (preShare) {
+    // Read-only path — the project is already shared; confirm its public page
+    // renders but do NOT mutate (revoking would break a live link).
+    const token = typeof preShare.token === "string" ? preShare.token : "";
+    if (token) {
+      out.push(await probe(cookieHeader, `/share/project/${token}`, {
+        checkBody: true, expectStatus: [200], label: "SH02 public shared page (existing)",
+      }));
+    }
+    push("SH03 lifecycle mutate", "POST", 0, true, "skipped — project already shared (not mutating)");
+    return out;
+  }
+
+  // 1. Create
+  const created = await apiJson(cookieHeader, base, "POST", { audience: "advisor", includeRepo: false });
+  const share = shareOf(created.json);
+  const token = typeof share?.token === "string" ? share.token : "";
+  push("SH03 POST create share", "POST", created.status, created.status === 200 && Boolean(token));
+  if (!token) return out;
+
+  // 2. Public page renders for a valid token
+  out.push(await probe(cookieHeader, `/share/project/${token}`, {
+    checkBody: true, expectStatus: [200], label: "SH04 public shared page (200)",
+  }));
+
+  // 3. Update — re-POST reuses the SAME active share row (token stays stable)
+  const updated = await apiJson(cookieHeader, base, "POST", { audience: "public", includeRepo: true });
+  const updatedShare = shareOf(updated.json);
+  const sameToken = updatedShare?.token === token;
+  push(
+    "SH05 POST update share",
+    "POST",
+    updated.status,
+    updated.status === 200 && sameToken && updatedShare?.audience === "public",
+    sameToken ? undefined : "token changed on update",
+  );
+
+  // 4. GET reflects the update
+  const afterUpdate = await apiJson(cookieHeader, base, "GET");
+  push(
+    "SH06 GET reflects update",
+    "GET",
+    afterUpdate.status,
+    afterUpdate.status === 200 && shareOf(afterUpdate.json)?.audience === "public",
+  );
+
+  // 5. Revoke
+  const revoked = await apiJson(cookieHeader, base, "DELETE");
+  push("SH07 DELETE revoke share", "DELETE", revoked.status, revoked.status === 200);
+
+  // 6. Public page 404s once the token is revoked
+  out.push(await probe(cookieHeader, `/share/project/${token}`, {
+    expectStatus: [404], label: "SH08 public page 404 after revoke",
+  }));
+
+  // 7. No active share remains — project is clean again
+  const afterRevoke = await apiJson(cookieHeader, base, "GET");
+  push(
+    "SH09 GET share null after revoke",
+    "GET",
+    afterRevoke.status,
+    afterRevoke.status === 200 && shareOf(afterRevoke.json) === null,
+  );
+
+  return out;
+}
+
 async function main(): Promise<void> {
   // Reachability
   try {
@@ -1127,6 +1236,7 @@ async function main(): Promise<void> {
   }
 
   probes.push(...await runExecutionProbes(cookieHeader));
+  probes.push(...await runShareLifecycleProbes(cookieHeader));
   probes.push(...await runSettingsSystemProbes(cookieHeader, privateZoneLocked));
 
   let passed = 0;
