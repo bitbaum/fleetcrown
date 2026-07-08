@@ -12,10 +12,12 @@
 import { askGatewayAgent, isGatewayConfigured } from "@/lib/openclaw-gateway";
 import { callGroqText, GROQ_FAST_MODEL } from "@/lib/groq";
 import { getUserPreferences } from "@/db/queries/user-preferences";
+import { buildLokiFleetContext } from "@/lib/loki-fleet-context";
 import { APP_NAME } from "@/config/brand";
 
 const LOKI_SYSTEM_PROMPT =
-  `You are Loki, a helpful AI assistant inside ${APP_NAME} — a personal life operating system for builders. Be concise and direct.`;
+  `You are Loki, the assistant inside ${APP_NAME} — the captain's layer over a builder's fleet of AI agents and projects. ` +
+  `When fleet context about the operator's projects is provided, treat it as current ground truth and answer specifically and accurately from it; if a question falls outside it, say so rather than inventing detail. Be concise and direct.`;
 
 // The user's Settings → Voice preference, layered onto whichever brain answers.
 // SSOT for turning that free-text instruction into a directive — applied to both
@@ -44,15 +46,27 @@ export type AskLokiResult = { status: number; body: Record<string, unknown> };
  * web thread; all web sessions share the same agent (`main`) and its memory.
  */
 export async function askLoki(message: string, opts?: { sessionKey?: string; userId?: string }): Promise<AskLokiResult> {
-  // Resolve the caller's writing-voice preference once; null when no user or none set.
-  const voice = opts?.userId ? (await getUserPreferences(opts.userId).then((p) => p.writingVoice).catch(() => null)) : null;
+  // Resolve the caller's writing-voice preference + fleet context once. The
+  // fleet context (all projects + RAG detail) is what makes Loki "on top of"
+  // the operator's work rather than a generic chat — see loki-fleet-context.
+  // Both are best-effort: a slow/failed lookup degrades to plain Loki, never a
+  // broken turn.
+  const [voice, fleetContext] = await Promise.all([
+    opts?.userId ? getUserPreferences(opts.userId).then((p) => p.writingVoice).catch(() => null) : Promise.resolve(null),
+    opts?.userId ? buildLokiFleetContext(opts.userId, message).catch(() => "") : Promise.resolve(""),
+  ]);
+
+  // The message the brain actually sees: fleet context (read-only background)
+  // ahead of the operator's question. Used by both the gateway and Groq paths
+  // so Loki answers with project knowledge regardless of which one serves it.
+  const contextualMessage = fleetContext ? `${fleetContext}\n\n---\n\n${message}` : message;
 
   // Real Loki: the OpenClaw agent (same brain + memory as Telegram). The voice
   // rides in as a one-line preface so the shared `main` agent honours it per-turn
   // without mutating its own persistent personality.
   if (isGatewayConfigured()) {
     const v = voice?.trim();
-    const prefaced = v ? `[Voice for this reply — ${v}]\n\n${message}` : message;
+    const prefaced = v ? `[Voice for this reply — ${v}]\n\n${contextualMessage}` : contextualMessage;
     const res = await askGatewayAgent(prefaced, { sessionKey: opts?.sessionKey });
     if (res.ok) {
       return {
@@ -68,8 +82,9 @@ export async function askLoki(message: string, opts?: { sessionKey?: string; use
   }
 
   // Groq fallback — DEGRADED, labelled `via: "groq-fallback"` (not the real Loki brain).
+  // Still gets the fleet context so a degraded Loki is at least project-aware.
   try {
-    const { text, model } = await callGroq(message, voice);
+    const { text, model } = await callGroq(contextualMessage, voice);
     return { status: 200, body: { ok: true, text, model, durationMs: 0, via: "groq-fallback" } };
   } catch (e) {
     // Surface the actual Groq cause so the user can act (rotate key / wait out
