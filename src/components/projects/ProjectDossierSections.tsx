@@ -10,6 +10,7 @@ import type { ProjectDossier, ProjectRunRow } from "@/db/queries/project-dossier
 import type { DevLogEntry } from "@/db/schema/user-projects";
 import { DevLogList } from "@/components/shared/DevLogList";
 import { GoalProgressBar } from "@/components/shared/GoalProgressBar";
+import { GoalEditor } from "@/components/projects/GoalEditor";
 import { timeAgo } from "@/lib/dates";
 import { APP_LOCALE } from "@/lib/constants";
 
@@ -60,10 +61,14 @@ export function NowSection({ dossier }: { dossier: ProjectDossier }) {
     [
       ["Mission", attrs.mission],
       ["Stack", attrs.stack],
-      ["Definition of done", attrs.definition_of_done],
       ["Status", attrs.status],
     ] as Array<[string, string | undefined]>
   ).filter((row): row is [string, string] => Boolean(row[1]));
+
+  const goalMaxTurns = (() => {
+    const n = parseInt(attrs.goal_max_turns ?? "", 10);
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 20) : null;
+  })();
 
   return (
     <SectionShell kicker="Now" title="Status quo">
@@ -83,16 +88,19 @@ export function NowSection({ dossier }: { dossier: ProjectDossier }) {
           </p>
         )}
       </div>
-      {briefRows.length > 0 && (
-        <dl className="space-y-2 border-t border-border-subtle pt-3">
-          {briefRows.map(([label, value]) => (
-            <div key={label}>
-              <dt className="ui-micro-label">{label}</dt>
-              <dd className="text-sm leading-relaxed text-text-secondary">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      <dl className="space-y-2 border-t border-border-subtle pt-3">
+        {briefRows.map(([label, value]) => (
+          <div key={label}>
+            <dt className="ui-micro-label">{label}</dt>
+            <dd className="text-sm leading-relaxed text-text-secondary">{value}</dd>
+          </div>
+        ))}
+        <GoalEditor
+          projectKey={detail.project.name}
+          definitionOfDone={attrs.definition_of_done ?? null}
+          maxTurns={goalMaxTurns}
+        />
+      </dl>
     </SectionShell>
   );
 }
