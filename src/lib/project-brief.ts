@@ -127,6 +127,60 @@ export async function extractProjectProfile(projectName: string, sourceText: str
   return parsed.data;
 }
 
+// ── Roadmap decomposition (spec → milestones) ────────────────────────────────
+// The brief flow fills flat fields; this turns a spec into an ordered build
+// roadmap the caller creates as project goals. This is the "decompose the doc"
+// half of spec ingestion.
+
+export const RoadmapSchema = z.object({
+  milestones: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(120),
+        // Description carries the acceptance criteria — the bar that milestone
+        // must clear — so each goal is verifiable, not vague.
+        description: z.string().trim().max(500).optional(),
+      }),
+    )
+    .max(8),
+});
+export type Roadmap = z.infer<typeof RoadmapSchema>;
+
+const ROADMAP_SYSTEM = `You turn a product/engineering spec into an ordered BUILD ROADMAP.
+Respond with ONLY a JSON object — no prose, no markdown fences:
+{"milestones":[{"title":"...","description":"..."}]}
+
+Rules:
+- 3 to 7 milestones, ordered so each builds on the last and is independently shippable.
+- "title": one imperative line naming the deliverable (max 100 chars), e.g. "Define the core data model".
+- "description": 1-2 sentences INCLUDING the acceptance criteria — the objective bar that milestone must clear to be done (max 400 chars).
+- Derive from the spec's own roadmap/phases/milestones if it states them; otherwise infer a sensible build order from its scope.
+- Milestones are engineering deliverables, not marketing. No installation/usage instructions.`;
+
+/** Extract an ordered build roadmap (milestones) from spec text. Throws on Groq/parse failure. */
+export async function extractRoadmap(projectName: string, sourceText: string): Promise<Roadmap> {
+  const prompt = `Project name: ${projectName}\n\nSpec:\n${sourceText.slice(0, 12_000)}`;
+  let raw = "";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      raw = await callGroqText(prompt, {
+        systemPrompt: ROADMAP_SYSTEM,
+        maxTokens: 1200,
+        temperature: 0.2,
+        timeoutMs: 25_000,
+      });
+      break;
+    } catch (e) {
+      const is429 = e instanceof Error && e.message.includes("429");
+      if (!is429 || attempt >= 1) throw e;
+      await new Promise((r) => setTimeout(r, 20_000));
+    }
+  }
+  const parsed = RoadmapSchema.safeParse(parseModelJson(raw));
+  if (!parsed.success) throw new Error(`roadmap output failed validation: ${parsed.error.issues[0]?.message ?? "unknown"}`);
+  return parsed.data;
+}
+
 /**
  * Write an extracted profile to the project's SSOT: description on the
  * entity row, everything else as attributes. Returns the applied fields
