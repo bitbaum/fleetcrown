@@ -33,6 +33,7 @@ import {
 } from "./project-detail-types";
 import { ProjectBriefFill } from "./ProjectBriefFill";
 import { ProjectDocSync } from "./ProjectDocSync";
+import { ProjectProvision } from "./ProjectProvision";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
@@ -304,6 +305,7 @@ export function OverviewTab({
             Fill or update profile
           </summary>
           <div className="ui-project-drawer-panel-body">
+            {!data.gitUrl && <ProjectProvision projectId={projectId} onReload={onReload} />}
             <ProjectBriefFill
               projectId={projectId}
               hasRepo={getProjectLinks(attrs, data.gitUrl).repo !== null}
