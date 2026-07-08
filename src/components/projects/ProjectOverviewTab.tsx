@@ -34,6 +34,7 @@ import {
 import { ProjectBriefFill } from "./ProjectBriefFill";
 import { ProjectDocSync } from "./ProjectDocSync";
 import { ProjectProvision } from "./ProjectProvision";
+import { ProjectLokiChat } from "./ProjectLokiChat";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
@@ -312,6 +313,7 @@ export function OverviewTab({
               onReload={onReload}
             />
             <ProjectDocSync projectId={projectId} onReload={onReload} />
+            <ProjectLokiChat projectKey={data.name} />
           </div>
         </details>
       )}
