@@ -44,7 +44,7 @@ function runDuration(run: ProjectRunRow): string | null {
 }
 
 /** NOW — live session state + the latest handoff's health signals + brief. */
-export function NowSection({ dossier }: { dossier: ProjectDossier }) {
+export function NowSection({ dossier, interactive = true }: { dossier: ProjectDossier; interactive?: boolean }) {
   const { state, detail } = dossier;
   const attrs = detail.attrs;
   const latest = latestDevLog(dossier);
@@ -95,18 +95,20 @@ export function NowSection({ dossier }: { dossier: ProjectDossier }) {
             <dd className="text-sm leading-relaxed text-text-secondary">{value}</dd>
           </div>
         ))}
-        <GoalEditor
-          projectKey={detail.project.name}
-          definitionOfDone={attrs.definition_of_done ?? null}
-          maxTurns={goalMaxTurns}
-        />
+        {interactive && (
+          <GoalEditor
+            projectKey={detail.project.name}
+            definitionOfDone={attrs.definition_of_done ?? null}
+            maxTurns={goalMaxTurns}
+          />
+        )}
       </dl>
     </SectionShell>
   );
 }
 
 /** NEXT — the resume state from the latest handoff + linked goals. */
-export function NextSection({ dossier }: { dossier: ProjectDossier }) {
+export function NextSection({ dossier, interactive = true }: { dossier: ProjectDossier; interactive?: boolean }) {
   const latest = latestDevLog(dossier);
   const next = latest?.next?.trim() || dossier.detail.attrs.next_step?.trim() || null;
   const goals = dossier.detail.linkedGoals;
@@ -134,11 +136,13 @@ export function NextSection({ dossier }: { dossier: ProjectDossier }) {
           ))}
         </div>
       )}
-      <div className="pt-1">
-        <Link href="/control" className="ui-btn-secondary inline-flex">
-          Dispatch from Control
-        </Link>
-      </div>
+      {interactive && (
+        <div className="pt-1">
+          <Link href="/control" className="ui-btn-secondary inline-flex">
+            Dispatch from Control
+          </Link>
+        </div>
+      )}
     </SectionShell>
   );
 }

@@ -35,6 +35,8 @@ import { ProjectBriefFill } from "./ProjectBriefFill";
 import { ProjectDocSync } from "./ProjectDocSync";
 import { ProjectProvision } from "./ProjectProvision";
 import { ProjectLokiChat } from "./ProjectLokiChat";
+import { ProjectResources } from "./ProjectResources";
+import { ProjectTeardown } from "./ProjectTeardown";
 import { BusinessPlanSection } from "./BusinessPlanSection";
 import { HEALTH_SIGNAL_CONFIG } from "./project-badges";
 import { AddAttrInline, AttrRow, ClaudeSession, DevLogSection } from "./project-overview-helpers";
@@ -318,6 +320,13 @@ export function OverviewTab({
         </details>
       )}
 
+      <ProjectResources
+        projectId={projectId}
+        resources={data.resources ?? []}
+        editable={editable}
+        onReload={onReload}
+      />
+
       {editable && (missingSuggested.length > 0 || missingBuild.length > 0) && (
         <details className="ui-project-drawer-panel">
           <summary className="ui-project-drawer-panel-summary">
@@ -541,6 +550,15 @@ export function OverviewTab({
             <ClaudeSession tabName={data.runtimeState?.tabName ?? data.name} />
           </div>
         </details>
+      )}
+
+      {editable && (
+        <ProjectTeardown
+          projectId={projectId}
+          hasRepo={Boolean(getProjectLinks(attrs, data.gitUrl).repo)}
+          hasLocalPath={Boolean(data.dirPath)}
+          onDeleted={() => window.location.assign("/projects")}
+        />
       )}
     </div>
   );

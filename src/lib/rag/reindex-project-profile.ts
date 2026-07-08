@@ -8,12 +8,14 @@ import { db } from "@/db";
 import { entities } from "@/db/schema";
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { getProjectContext } from "@/db/queries/project-context";
+import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
 import { upsertKnowledge } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 
 async function reindexProjectProfile(userId: string, projectKey: string): Promise<void> {
   if (!embeddingsEnabled()) return;
-  const ctx = await getProjectContext(userId, projectKey).catch(() => null);
+  const dossier = await getProjectDossierByProjectKey(userId, projectKey).catch(() => null);
+  const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, projectKey).catch(() => null);
   if (!ctx?.trim()) return;
   await upsertKnowledge(userId, {
     sourceType: "project_profile",

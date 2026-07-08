@@ -1,7 +1,7 @@
 import type { Milestone } from "@/db/schema/goals";
-import type { DevLogEntry } from "@/db/schema/user-projects";
+import type { DevLogEntry, ProjectResource } from "@/db/schema/user-projects";
 import type { ProjectActivityEvent } from "@/db/queries/activity";
-export type { DevLogEntry };
+export type { DevLogEntry, ProjectResource };
 // The project profile's activity feed is the unified activity read-model SSOT
 // (prompts + run outcomes + lifecycle), the same type the /control panel uses.
 export type { ProjectActivityEvent };
@@ -73,6 +73,7 @@ export type ProjectData = {
   type: string;
   description: string | null;
   gitUrl: string | null;
+  dirPath: string | null;
   source: string | null;
   createdAt: string | null;
   readonly?: boolean;
@@ -81,6 +82,8 @@ export type ProjectData = {
   interactions: Array<{ channel: string; direction: string; summary: string | null; occurredAt: string }>;
   linkedJobs: LinkedJob[];
   linkedGoals: LinkedGoal[];
+  resources: ProjectResource[];
+  notes: string | null;
   devLog: DevLogEntry[];
   activity: ProjectActivityEvent[];
   runtimeState: ProjectRuntimeState | null;

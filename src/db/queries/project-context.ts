@@ -10,10 +10,11 @@
  */
 import { and, eq, desc } from "drizzle-orm";
 import { db } from "@/db";
-import { entities, goals } from "@/db/schema";
+import { entities, goals, userProjects } from "@/db/schema";
 import type { Milestone } from "@/db/schema/goals";
 import { ENTITY_TYPE, GOAL_STATUS } from "@/lib/constants/statuses";
 import { renderOperatingPrinciples } from "@/config/operating-principles";
+import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "./project-dossier";
 import { fetchAttributesByEntityIds } from "./utils";
 
 const MAX_GOALS = 6;
@@ -39,6 +40,9 @@ const DRIVING_FIELDS: ReadonlyArray<readonly [string, string]> = [
  * description and no active goals (so callers can omit the section entirely).
  */
 export async function getProjectContext(userId: string, projectKey: string): Promise<string | null> {
+  const dossier = await getProjectDossierByProjectKey(userId, projectKey).catch(() => null);
+  if (dossier) return renderProjectDossierForAgent(dossier);
+
   // Global tier first — the founder's cross-project engineering standards apply
   // to every dispatch regardless of whether this project has a brief/goals yet.
   const blocks: string[] = [renderOperatingPrinciples()];
@@ -52,7 +56,7 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
   const entity = projectEntities.find((e) => e.name.toLowerCase() === projectKey.toLowerCase());
 
   if (entity) {
-    const [activeGoals, attrsByEntity] = await Promise.all([
+    const [activeGoals, attrsByEntity, runtimeProject] = await Promise.all([
       db
         .select({ title: goals.title, progress: goals.progress, milestones: goals.milestones })
         .from(goals)
@@ -60,6 +64,10 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
         .orderBy(desc(goals.updatedAt))
         .limit(MAX_GOALS),
       fetchAttributesByEntityIds([entity.id]),
+      db.query.userProjects.findFirst({
+        where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, entity.id)),
+        columns: { notes: true, resources: true },
+      }),
     ]);
     const attrs = attrsByEntity.get(entity.id) ?? {};
 
@@ -74,6 +82,18 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
     for (const [key, label] of DRIVING_FIELDS) {
       const v = attrs[key]?.trim();
       if (v) projectLines.push(`${label}: ${v}`);
+    }
+    const notes = runtimeProject?.notes?.trim();
+    if (notes) projectLines.push(`Operator notes: ${notes}`);
+    const resources = (runtimeProject?.resources ?? [])
+      .filter((r) => r.title?.trim() || r.url?.trim() || r.notes?.trim())
+      .slice(0, 12);
+    if (resources.length > 0) {
+      projectLines.push("Resources (docs, datasets, credentials, references):");
+      for (const r of resources) {
+        const meta = [r.kind, r.url, r.notes].filter(Boolean).join(" — ");
+        projectLines.push(`- ${r.title}${meta ? ` (${meta})` : ""}`);
+      }
     }
     if (activeGoals.length > 0) {
       projectLines.push("Active goals (the roadmap — aim work at these, highest-impact first):");

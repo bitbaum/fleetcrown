@@ -12,6 +12,17 @@ export type DevLogEntry = {
   health: string;
 };
 
+export type ProjectResource = {
+  id: string;
+  kind: "link" | "doc" | "spec" | "dataset" | "credential" | "environment" | "design" | "other";
+  visibility?: "private" | "team" | "public";
+  sensitivity?: "normal" | "internal" | "secret" | "credential";
+  title: string;
+  url?: string;
+  notes?: string;
+  createdAt: string;
+};
+
 export const userProjects = pgTable("user_projects", {
   id:          uuid("id").primaryKey().defaultRandom(),
   userId:      uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -27,6 +38,7 @@ export const userProjects = pgTable("user_projects", {
   position:    integer("position").default(0),  // user-defined sort order
   isActive:    boolean("is_active").default(true).notNull(),
   notes:       text("notes"),                    // free-form scratchpad visible in the profile panel
+  resources:   jsonb("resources").$type<ProjectResource[]>().default([]).notNull(),
   devLog:      jsonb("dev_log").$type<DevLogEntry[]>().default([]).notNull(),
   // Cross-product bridge Part C: the published OrangeCat project this project
   // projects onto (opt-in "Publish to OrangeCat"). Null = not published.

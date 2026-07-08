@@ -9,6 +9,7 @@
 
 import { getAllDistinctUserIds, getUserProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
+import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
 import { upsertKnowledgeBatch, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
@@ -25,7 +26,8 @@ async function main() {
     const items: KnowledgeItem[] = [];
     for (const p of projects) {
       // project_profile: the same rich context block we inject per dispatch.
-      const ctx = await getProjectContext(userId, p.name).catch(() => null);
+      const dossier = await getProjectDossierByProjectKey(userId, p.name).catch(() => null);
+      const ctx = dossier ? renderProjectDossierForAgent(dossier) : await getProjectContext(userId, p.name).catch(() => null);
       const profile = [p.name, p.description, p.stack, ctx].filter(Boolean).join("\n");
       if (profile.trim()) {
         items.push({ sourceType: "project_profile", sourceId: p.name, chunk: profile.slice(0, 6000), metadata: { project: p.name } });

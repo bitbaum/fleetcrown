@@ -1,12 +1,10 @@
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { getProjectDossier } from "@/db/queries/project-dossier";
+import { getActiveProjectShare } from "@/db/queries/project-shares";
 import { PageLayout } from "@/components/ui/page-layout";
-import { OutcomeStreak } from "@/components/control/OutcomeStreak";
-import { DoneSection, NowSection, NextSection } from "@/components/projects/ProjectDossierSections";
-import { getProjectLinks } from "@/components/projects/project-detail-types";
-import { cleanDescription } from "@/lib/project-display";
+import { ProjectDossierView } from "@/components/projects/ProjectDossierView";
+import { ProjectSharePanel } from "@/components/projects/ProjectSharePanel";
 import { ROUTES } from "@/config/auth";
 
 export const metadata = { title: "Project" };
@@ -26,67 +24,28 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const dossier = await getProjectDossier(session.user.id, id).catch(() => null);
   if (!dossier) notFound();
 
-  const { detail, userProject, outcomes } = dossier;
-  const attrs = detail.attrs;
-  const name = detail.project.name;
-  const links = getProjectLinks(attrs, userProject?.gitUrl ?? undefined);
-  const rawDescription = cleanDescription(detail.project.description) ?? attrs.description ?? null;
-  // Some project descriptions are full technical briefs (1000+ words, written
-  // for agent context) — the header wants the gist, the full text stays in the
-  // brief attrs and Quick edit. First sentence-ish, hard-capped.
-  const description = rawDescription && rawDescription.length > 220
-    ? `${rawDescription.slice(0, rawDescription.lastIndexOf(" ", 220))}…`
-    : rawDescription;
-  const orangecatUrl = userProject?.orangecatProjectId
-    ? `https://orangecat.ch/projects/${userProject.orangecatProjectId}`
+  const share = dossier.ownerId === session.user.id
+    ? await getActiveProjectShare(session.user.id, id).catch(() => null)
     : null;
+  const shareForClient = share ? {
+    token: share.token,
+    url: `/share/project/${share.token}`,
+    audience: share.audience as "advisor" | "team" | "public",
+    includeRoadmap: share.includeRoadmap,
+    includeChangelog: share.includeChangelog,
+    includeResources: share.includeResources,
+    includeRepo: share.includeRepo,
+    includeLiveUrl: share.includeLiveUrl,
+  } : null;
 
   return (
     <PageLayout
-      title={name}
-      subtitle={description ?? undefined}
+      title="Project"
+      subtitle="Living dossier for humans and agents"
       maxWidth="max-w-5xl"
-      right={
-        <Link href={`/projects?open=${detail.project.id}`} className="ui-btn-secondary">
-          Quick edit
-        </Link>
-      }
+      right={!dossier.readonly ? <ProjectSharePanel projectId={id} initialShare={shareForClient} /> : undefined}
     >
-      {/* Identity strip: state chips + streak + outbound links. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {attrs.status && <span className="ui-tag ui-tag-neutral">{attrs.status}</span>}
-        {attrs.maturity && <span className="ui-tag ui-tag-neutral">{attrs.maturity}</span>}
-        {outcomes.length > 0 && (
-          <OutcomeStreak outcomes={outcomes.map((o) => o.outcome)} projectKey={name} />
-        )}
-        <span className="flex flex-wrap items-center gap-x-3 text-xs">
-          {links.repo && (
-            <a href={links.repo} target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">
-              Repository
-            </a>
-          )}
-          {links.prodUrl && (
-            <a href={links.prodUrl} target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">
-              Live site
-            </a>
-          )}
-          {orangecatUrl && (
-            <a href={orangecatUrl} target="_blank" rel="noopener noreferrer" className="text-accent-text underline-offset-2 hover:underline">
-              OrangeCat
-            </a>
-          )}
-          <Link href="/control" className="text-accent-text underline-offset-2 hover:underline">
-            Control
-          </Link>
-        </span>
-      </div>
-
-      {/* Now / Next side-by-side on desktop; Done gets the full width below. */}
-      <div className="grid gap-5 md:grid-cols-2">
-        <NowSection dossier={dossier} />
-        <NextSection dossier={dossier} />
-      </div>
-      <DoneSection dossier={dossier} />
+      <ProjectDossierView dossier={dossier} mode="private" />
     </PageLayout>
   );
 }

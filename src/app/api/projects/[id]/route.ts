@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { getSessionUserId } from "@/lib/session";
 import { readIdParam, readJsonBody } from "@/lib/api/route-helpers";
 import { readCronJobs } from "@/lib/crons";
@@ -6,6 +9,9 @@ import { patchProject, deleteProject, PatchProjectBody, resolveProjectDetailWith
 import { scheduleProjectProfileReindexByEntityId } from "@/lib/rag/reindex-project-profile";
 import { getProjectActivity } from "@/db/queries/activity";
 import { getProjectStateByProjectId } from "@/db/queries/project-states";
+import { getUserProjectByEntityId } from "@/db/queries/user-projects";
+import { getGithubToken } from "@/lib/github-token";
+import { deprovisionGithubRepo } from "@/lib/github-provision";
 
 function getLinkedJobs(projectId: string, projectName: string) {
   const nameLower = projectName.toLowerCase();
@@ -58,7 +64,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const userId = await getSessionUserId();
@@ -66,9 +72,39 @@ export async function DELETE(
   const idOrResp = await readIdParam(params);
   if (idOrResp instanceof NextResponse) return idOrResp;
 
+  const resolved = await resolveProjectDetailWithOrgFallback(userId, idOrResp);
+  if (!resolved || resolved.ownerId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const userProject = await getUserProjectByEntityId(userId, idOrResp).catch(() => null);
+  const deprovision = req.nextUrl.searchParams.get("deprovision");
+  const deleteLocal = req.nextUrl.searchParams.get("deleteLocal") === "1";
+
+  if (deprovision === "archive-repo" || deprovision === "delete-repo") {
+    const gitUrl = resolved.detail.project.gitUrl ?? userProject?.gitUrl ?? null;
+    if (!gitUrl) return NextResponse.json({ error: "No GitHub repo is linked to this project." }, { status: 400 });
+    const token = await getGithubToken(userId);
+    if (!token) return NextResponse.json({ error: "No GitHub account linked. Sign in with GitHub first." }, { status: 400 });
+    const gh = await deprovisionGithubRepo(token, gitUrl, deprovision === "delete-repo" ? "delete" : "archive");
+    if (!gh.ok) return NextResponse.json({ error: gh.error, detail: gh.detail }, { status: gh.status });
+  }
+
+  if (deleteLocal && userProject?.dirPath) {
+    const local = safeLocalProjectPath(userProject.dirPath);
+    if (!local.ok) return NextResponse.json({ error: local.error }, { status: 400 });
+    await fs.rm(local.path, { recursive: true, force: true });
+  }
+
   const deleted = await deleteProject(userId, idOrResp);
   if (!deleted) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ok: true });
+}
+
+function safeLocalProjectPath(dirPath: string): { ok: true; path: string } | { ok: false; error: string } {
+  const devRoot = path.resolve(process.env.FLEETCROWN_BOX_DEV_ROOT || path.join(os.homedir(), "dev"));
+  const target = path.resolve(dirPath);
+  if (target === devRoot || !target.startsWith(devRoot + path.sep)) {
+    return { ok: false, error: "Refusing to delete a folder outside the configured dev root." };
+  }
+  return { ok: true, path: target };
 }
 
 export async function GET(
@@ -84,7 +120,7 @@ export async function GET(
   const resolved = await resolveProjectDetailWithOrgFallback(userId, id);
   if (!resolved) return NextResponse.json(null, { status: 404 });
   const { detail, ownerId } = resolved;
-  const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog } = detail;
+  const { project, createdAt, attrs, relations, recentInteractions, linkedGoals, devLog, resources, notes } = detail;
   const readonly = ownerId !== userId;
 
   // Runtime state + activity both belong to the project owner — fetch under their
@@ -92,12 +128,13 @@ export async function GET(
   // runner writes. Activity is the unified read-model SSOT (prompts + run
   // outcomes + lifecycle, deduped) keyed by project name — the same source the
   // /control Activity panel uses, instead of a parallel bespoke assembly.
-  const [runtimeState, activity] = await Promise.all([
+  const [runtimeState, activity, userProjectForDetail] = await Promise.all([
     getProjectStateByProjectId(ownerId, id).catch(() => null),
     getProjectActivity(ownerId, project.name, { days: 90, limit: 50 }).catch((e) => {
       console.error("[projects/[id]] activity query failed:", e);
       return [];
     }),
+    getUserProjectByEntityId(ownerId, id).catch(() => null),
   ]);
 
   const linkedJobs = getLinkedJobs(project.id, project.name);
@@ -108,6 +145,7 @@ export async function GET(
     type: project.type,
     description: project.description,
     gitUrl: project.gitUrl ?? null,
+    dirPath: userProjectForDetail?.dirPath ?? null,
     source: project.source,
     createdAt: createdAt instanceof Date ? createdAt.toISOString() : (createdAt ?? null),
     readonly: readonly || undefined,
@@ -116,6 +154,8 @@ export async function GET(
     interactions: recentInteractions,
     linkedJobs,
     linkedGoals,
+    resources,
+    notes,
     devLog: [...(devLog ?? [])].reverse().slice(0, 20),
     activity,
     runtimeState: runtimeState ? {

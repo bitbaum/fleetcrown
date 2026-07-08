@@ -1,7 +1,7 @@
 import { ENTITY_TYPE } from "@/lib/constants/statuses";
 import { db } from "@/db";
 import { entities, entityRelations, interactions, goals, userProjects, orgMemberships, orgs } from "@/db/schema";
-import { eq, and, desc, inArray, ilike } from "drizzle-orm";
+import { eq, and, desc, inArray, ilike, or } from "drizzle-orm";
 import { fetchAttributesByEntityIds, getOrgPeerIds } from "./utils";
 import { findProjectEntityByName } from "./project-merge";
 import { z } from "zod";
@@ -144,6 +144,22 @@ export async function getProjectAutopilotOverride(
 }
 
 export async function deleteProject(userId: string, id: string) {
+  const [project] = await db
+    .select({ id: entities.id, name: entities.name })
+    .from(entities)
+    .where(and(eq(entities.id, id), eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)))
+    .limit(1);
+  if (!project) return null;
+
+  await db
+    .delete(userProjects)
+    .where(
+      and(
+        eq(userProjects.userId, userId),
+        or(eq(userProjects.entityProjectId, id), ilike(userProjects.name, project.name)),
+      ),
+    );
+
   const [deleted] = await db
     .delete(entities)
     .where(and(eq(entities.id, id), eq(entities.userId, userId)))
@@ -321,14 +337,14 @@ export async function getProjectDetail(userId: string, id: string) {
     db.query.userProjects
       .findFirst({
         where: and(eq(userProjects.userId, userId), eq(userProjects.entityProjectId, project.id)),
-        columns: { devLog: true },
+        columns: { devLog: true, resources: true, notes: true },
       })
       .then(
         (linked) =>
           linked ??
           db.query.userProjects.findFirst({
             where: and(eq(userProjects.userId, userId), ilike(userProjects.name, project.name)),
-            columns: { devLog: true },
+            columns: { devLog: true, resources: true, notes: true },
           }),
       ),
   ]);
@@ -361,6 +377,8 @@ export async function getProjectDetail(userId: string, id: string) {
     })),
     linkedGoals,
     devLog: userProject?.devLog ?? null,
+    resources: userProject?.resources ?? [],
+    notes: userProject?.notes ?? null,
   };
 }
 

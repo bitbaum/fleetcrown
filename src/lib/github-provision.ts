@@ -16,9 +16,17 @@ export type ProvisionedRepo = {
   owner: { login: string };
 };
 
+const GITHUB_REPO_RE = /github\.com[/:]([^/]+)\/([^/#?]+?)(?:\.git)?(?:[/#?].*)?$/i;
+
 /** GitHub-slug a display name the same way `gh repo create` would. */
 export function repoSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+export function parseGithubRepoUrl(gitUrl: string): { owner: string; repo: string } | null {
+  const match = GITHUB_REPO_RE.exec(gitUrl.trim());
+  if (!match) return null;
+  return { owner: match[1]!, repo: match[2]!.replace(/\.git$/i, "") };
 }
 
 /**
@@ -125,4 +133,39 @@ export async function provisionGithubRepo(
   }
 
   return { ok: true, repo, templateSeeded };
+}
+
+export type DeprovisionResult =
+  | { ok: true }
+  | { ok: false; status: number; error: string; detail?: string };
+
+export async function deprovisionGithubRepo(
+  token: string,
+  gitUrl: string,
+  mode: "archive" | "delete",
+): Promise<DeprovisionResult> {
+  const parsed = parseGithubRepoUrl(gitUrl);
+  if (!parsed) return { ok: false, status: 400, error: "Linked repo is not a GitHub repository URL." };
+  const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`, {
+    method: mode === "delete" ? "DELETE" : "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      "Content-Type": "application/json",
+    },
+    body: mode === "archive" ? JSON.stringify({ archived: true }) : undefined,
+  });
+  if (res.ok || res.status === 204) return { ok: true };
+  let detail = "";
+  try {
+    const body = await res.json();
+    detail = body?.message ?? "";
+  } catch { /* ignore */ }
+  return {
+    ok: false,
+    status: res.status === 404 ? 404 : 502,
+    error: `GitHub ${mode === "delete" ? "delete" : "archive"} failed (${res.status})`,
+    detail,
+  };
 }
