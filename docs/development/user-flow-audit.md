@@ -2,8 +2,8 @@
 
 ---
 created_date: 2026-07-04
-last_modified_date: 2026-07-04
-last_modified_summary: Pre-push prod dogfood auto-loads SMOKE_PRIVATE_PIN from .env.local.
+last_modified_date: 2026-07-08
+last_modified_summary: Added public /pricing page (Stripe-aware CTAs, gated until keys land); registered in smoke.sh.
 ---
 
 SSOT for **every user-facing flow implied by the UI**, with a working-status grade per flow. Use this for QA planning, onboarding honesty, and prioritising fixes.
@@ -162,6 +162,7 @@ FLEETCROWN_SESSION_TOKEN=… BASE=https://fleetcrown.orangecat.ch npm run smoke
 - [~] **A15** First-time setup `/setup` — **C** (no email on user)
 - [~] **A16** `/` → `/setup` when 0 users — **C**
 - [x] **A17** Public marketing pages — **A**
+- [x] **A17b** Pricing `/pricing` — **A** public page; CTAs start free (Stripe checkout when `isStripeReady()`)
 - [x] **A18** Download Fleet Runner — **A**
 - [x] **A19** Legal / docs / releases — **A**
 - [x] **A20** Frontier public digest — **A** read

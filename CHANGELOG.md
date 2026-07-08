@@ -7,6 +7,12 @@ Notable, user-facing changes. Older history lives in the git log (conventional c
 ## 2026-07-08
 
 ### Added
+- **Public pricing page** at `/pricing`. Four tiers (Free / Personal / Pro / Team)
+  built on the one gate the code enforces — project count — with the captain-layer
+  capabilities listed once as "included in every plan" rather than faked as per-tier
+  gates. Honest about billing: paid CTAs open checkout only once Stripe is
+  configured; until then every CTA starts a free signup — no dead buttons — and it
+  flips live automatically when keys land.
 - **Essay — _Every Ship, One Bridge_.** Where agent work runs (your laptop, a box
   you own, the provider's own cloud) is not who commands it. The execution-locus
   landscape and why the captain sits over every locus, not one.

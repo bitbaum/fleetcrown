@@ -193,7 +193,7 @@ customer running their own fleet."
 | # | Item | Notes |
 |---|------|-------|
 | 1.1 | **Finish onboarding**: sign-up → create first project → install runner (desktop or headless) → first dispatch → watch it live. This is priority-plan D2, promoted to the top | The magic moment; measure it |
-| 1.2 | **/pricing page + Stripe price IDs** for free/personal/pro/team; flip `isStripeReady()` from dark to live | Closes the OC plan's named trust gap (its item 2.3) |
+| 1.2 | **/pricing page + Stripe price IDs** for free/personal/pro/team; flip `isStripeReady()` from dark to live | Closes the OC plan's named trust gap (its item 2.3). **Page SHIPPED 2026-07-08** (`/pricing`, Stripe-aware CTAs, `src/config/plans.ts` SSOT); remaining = founder connects Stripe + sets price IDs → `isStripeReady()` flips it live automatically |
 | 1.3 | Per-user agent-token setup documented + surfaced in onboarding (priority-plan D1) | BYO keys = BYO cost = clean unit economics |
 | 1.4 | Runner install polish: apt repo / auto-update / headless-box one-liner (D4) + `MissingCLIsBanner` accuracy | The runner IS the activation funnel |
 | 1.5 | **Bridge Part B — detect-and-suggest**, both directions ("Claim your public profile + wallet on OrangeCat" post-onboarding) | OC plan's acquisition channel #2 |
