@@ -1,18 +1,34 @@
-// Backfill the fleet-knowledge vector index (P0: project profiles + dev-logs).
+// Backfill the fleet-knowledge vector index — everything Loki should know about
+// the operator's work, in one searchable place:
+//   project_profile (dossier) · dev_log · goal (roadmaps/task-lists) · thought
+//   (the published strategic essays — how the projects relate).
 //
 // Run on the box (where pgvector + the embed server live):
 //   EMBEDDINGS_BASE_URL=http://127.0.0.1:7997/v1 DATABASE_URL=… \
 //     node_modules/.bin/tsx scripts/reindex-knowledge.ts
 //
 // Idempotent — upserts on (user_id, source_type, source_id). Safe to re-run.
-// Later phases add orchestration_outcome / decision / entity / commitment sources.
+// Later phases can add orchestration_outcome / decision / entity / commitment.
 
 import { getAllDistinctUserIds, getUserProjects } from "@/db/queries/user-projects";
 import { getProjectContext } from "@/db/queries/project-context";
 import { getProjectDossierByProjectKey, renderProjectDossierForAgent } from "@/db/queries/project-dossier";
+import { getGoals, type GoalWithChildren } from "@/db/queries/goals";
+import { listThoughts } from "@/lib/thoughts-content";
 import { upsertKnowledgeBatch, type KnowledgeItem } from "@/db/queries/knowledge-embeddings";
 import { embeddingsEnabled } from "@/lib/rag/embeddings";
 import type { DevLogEntry } from "@/db/schema/user-projects";
+import type { Milestone } from "@/db/schema/goals";
+
+/** Flatten the goal tree (parents + nested children) into one list. */
+function flattenGoals(nodes: GoalWithChildren[]): GoalWithChildren[] {
+  const out: GoalWithChildren[] = [];
+  for (const n of nodes) {
+    out.push(n);
+    if (n.children?.length) out.push(...flattenGoals(n.children));
+  }
+  return out;
+}
 
 async function main() {
   if (!embeddingsEnabled()) {
@@ -39,6 +55,32 @@ async function main() {
         items.push({ sourceType: "dev_log", sourceId: `${p.name}:devlog`, chunk: `Dev log for ${p.name}:\n${recent}`.slice(0, 6000), metadata: { project: p.name } });
       }
     }
+
+    // goal: each project's roadmap / task list. What every project is trying to
+    // achieve — the raw material for cross-project synthesis ("how do these fit
+    // together"). entityName is the project the goal belongs to (joined query).
+    const goals = await getGoals(userId).catch(() => [] as GoalWithChildren[]);
+    for (const g of flattenGoals(goals)) {
+      const ms = ((g.milestones as Milestone[] | null) ?? [])
+        .map((m) => `${m.done ? "✓" : "○"} ${m.title}`).join("; ");
+      const chunk = [
+        `Goal${g.entityName ? ` for ${g.entityName}` : ""}: ${g.title}`,
+        g.description ?? "",
+        `Status: ${g.status} · ${g.progress ?? 0}% complete`,
+        ms ? `Milestones: ${ms}` : "",
+      ].filter(Boolean).join("\n");
+      items.push({ sourceType: "goal", sourceId: `goal:${g.id}`, chunk: chunk.slice(0, 4000), metadata: { project: g.entityName ?? "", title: g.title } });
+    }
+
+    // thought: the published strategic essays. This is where the operator has
+    // written down HOW the projects relate (three-layer thesis, the two halves,
+    // etc.) — so Loki can reason about synergies from first-hand sources, not
+    // guess. Global content, indexed per user so per-user retrieval reaches it.
+    for (const t of listThoughts()) {
+      const chunk = [`Essay: ${t.title}`, t.summary, "", t.body].filter(Boolean).join("\n").slice(0, 6000);
+      items.push({ sourceType: "thought", sourceId: `thought:${t.slug}`, chunk, metadata: { title: t.title, slug: t.slug } });
+    }
+
     const n = await upsertKnowledgeBatch(userId, items);
     totalChunks += n;
     console.log(`[reindex] user ${userId.slice(0, 8)}…: ${n}/${items.length} chunks (${projects.length} projects)`);

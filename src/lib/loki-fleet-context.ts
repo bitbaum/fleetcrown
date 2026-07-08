@@ -28,11 +28,21 @@ async function buildRetrievedDetail(userId: string, query: string): Promise<stri
   if (!embeddingsEnabled() || !query.trim()) return "";
   const hits = await searchKnowledge(userId, query, { k: RAG_K }).catch(() => []);
   if (hits.length === 0) return "";
+  // Source-aware labels so Loki cites where each fact came from — a companion
+  // that shows its work. Kind + project (or essay title) precede the chunk.
   const lines = hits.map((h) => {
-    const project = (h.metadata?.project as string | undefined) ?? h.sourceId;
-    return `- [${project}] ${h.chunk.replace(/\s+/g, " ").slice(0, RAG_CHUNK_MAX)}`;
+    const project = (h.metadata?.project as string | undefined) ?? "";
+    const title = (h.metadata?.title as string | undefined) ?? "";
+    let label: string;
+    switch (h.sourceType) {
+      case "thought": label = `essay: ${title || h.sourceId}`; break;
+      case "goal":    label = `${project || "goal"} · goal${title ? `: ${title}` : ""}`; break;
+      case "dev_log": label = `${project} · dev log`; break;
+      default:        label = project || h.sourceId; // project_profile / dossier
+    }
+    return `- [${label}] ${h.chunk.replace(/\s+/g, " ").slice(0, RAG_CHUNK_MAX)}`;
   });
-  return ["### Relevant detail (retrieved from your project knowledge)", ...lines].join("\n");
+  return ["### Relevant detail (retrieved from your project knowledge — cite the [source] when you use it)", ...lines].join("\n");
 }
 
 /**
