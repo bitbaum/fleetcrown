@@ -94,9 +94,35 @@ export async function verifyDefinitionOfDone(
  * keeps its outcome. When the bar isn't met, downgrade success → partial and
  * write the gap into `next` so autopilot's continue-loop picks it up as the
  * next instruction ("don't stop until the bar holds").
+ *
+ * Turn cap (goal-mode): `opts.maxTurns` bounds how many times the gate will
+ * re-loop a goal. `opts.priorPartials` is how many times it has ALREADY looped
+ * (consecutive partial closes). Once that reaches the cap, the gate STOPS
+ * downgrading — the run keeps its success outcome, so there is no gap for the
+ * continue-loop to pick up and it halts. The cap is thus enforced entirely here,
+ * without touching the loop. `next` records that the goal was capped, so the
+ * captain sees it stopped short rather than silently. No cap (maxTurns null) =
+ * unchanged behavior: loop until met.
  */
-export function applyDoDGate(patch: RunClosePatch, verdict: DoDVerdict): RunClosePatch {
+export function applyDoDGate(
+  patch: RunClosePatch,
+  verdict: DoDVerdict,
+  opts: { priorPartials?: number; maxTurns?: number | null } = {},
+): RunClosePatch {
   if (patch.outcome !== "success" || verdict.met) return patch;
+
+  const { maxTurns, priorPartials = 0 } = opts;
+  if (maxTurns != null && priorPartials >= maxTurns) {
+    // Cap reached — stop looping. Keep success (no gap → loop ends), but flag it.
+    return {
+      ...patch,
+      summary: {
+        ...patch.summary,
+        next: `Goal not met after ${maxTurns} attempt(s) — stopping and escalating to the captain. Last gap: ${verdict.gap || "the stated bar is not evidenced in the handoff"}.`,
+      },
+    };
+  }
+
   return {
     ...patch,
     outcome: "partial",

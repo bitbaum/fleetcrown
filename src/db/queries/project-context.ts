@@ -94,15 +94,31 @@ export async function getProjectContext(userId: string, projectKey: string): Pro
 
 /** A project's definition_of_done (the autopilot stop-gate bar), or null. */
 export async function getProjectDefinitionOfDone(userId: string, projectKey: string): Promise<string | null> {
+  return (await getProjectGoalConfig(userId, projectKey)).definitionOfDone;
+}
+
+/**
+ * The goal config that drives the DoD stop-gate for a project: the bar itself
+ * (`definition_of_done`) plus an optional turn cap (`goal_max_turns`) that bounds
+ * how many times the loop re-tries before escalating. maxTurns null = loop until
+ * met (unchanged behavior). One attribute fetch.
+ */
+export async function getProjectGoalConfig(
+  userId: string,
+  projectKey: string,
+): Promise<{ definitionOfDone: string | null; maxTurns: number | null }> {
   const rows = await db
     .select({ id: entities.id, name: entities.name })
     .from(entities)
     .where(and(eq(entities.userId, userId), eq(entities.type, ENTITY_TYPE.PROJECT)));
   const entity = rows.find((e) => e.name.toLowerCase() === projectKey.toLowerCase());
-  if (!entity) return null;
+  if (!entity) return { definitionOfDone: null, maxTurns: null };
   const attrs = (await fetchAttributesByEntityIds([entity.id])).get(entity.id) ?? {};
-  const dod = attrs["definition_of_done"]?.trim();
-  return dod || null;
+  const dod = attrs["definition_of_done"]?.trim() || null;
+  const rawTurns = parseInt(attrs["goal_max_turns"] ?? "", 10);
+  // Clamp to a sane range; ignore garbage. No cap unless a valid positive value.
+  const maxTurns = Number.isFinite(rawTurns) && rawTurns > 0 ? Math.min(rawTurns, 20) : null;
+  return { definitionOfDone: dod, maxTurns };
 }
 
 /** The single goal a project is currently aiming at, for at-a-glance UI. */
